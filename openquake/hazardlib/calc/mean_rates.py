@@ -75,7 +75,8 @@ def calc_mean_rates(rmap, gweights, imtls):
     N = len(rmap.array)
     rates = numpy.zeros((N, M, L1))
     for m, imt in enumerate(imtls):
-        rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [gw[imt] for gw in gweights]
+        rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [
+            gw[imt] for gw in gweights]
     return rates
 
 
