@@ -1,4 +1,4 @@
-APPLICATION_MODE = aelo
+APPLICATION_MODE = 'aelo'
 
 # # Static Folder
 # STATIC_ROOT = ''
