@@ -616,7 +616,13 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     """
     Compute disaggregation for the given source.
 
-    :returns: rates of shape (Ma, D, E, M, P), rates of shape (M, L1)
+    :param groups: groups containing a single source ID
+    :param sitecol: a SiteCollection
+    :param reduced_lt: a FullLogicTree reduced to the source ID
+    :param edges_shapedic: pair (bin_edges, shapedic)
+    :param oq: Oqparam instance
+    :param monitor: a Monitor instance
+    :returns: source_id, rates(Ma, D, E, M, P), rates(M, L1)
     """
     assert len(sitecol) == 1, sitecol
     if not hasattr(reduced_lt, 'rlzs_by_g'):
@@ -625,7 +631,7 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
-    iml3 = rmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
+    iml3 = rmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # (M, P, Z)
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
