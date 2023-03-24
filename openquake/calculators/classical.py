@@ -797,13 +797,15 @@ class ClassicalCalculator(base.HazardCalculator):
             est_time = self.classical_time / float(fraction) + delta
             logging.info('Estimated time: %.1f hours', est_time / 3600)
 
-        # generate plots
-        if 'hmaps-stats' in self.datastore:
+        # generate hazard map plots
+        if 'hmaps-stats' in self.datastore and self.N > 1000:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))
             mh = dict(zip(self.oqparam.imtls, maxhaz))
             logging.info('The maximum hazard map values are %s', mh)
             if Image is None or not self.from_engine:  # missing PIL
+                return
+            if self.N < 1000:  # few sites, don't plot
                 return
             M, P = hmaps.shape[2:]
             logging.info('Saving %dx%d mean hazard maps', M, P)
