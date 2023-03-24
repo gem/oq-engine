@@ -52,6 +52,7 @@ from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo
+from openquake.engine.aelo import get_params_from
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -600,8 +601,9 @@ def aelo_run(request):
                             content_type=JSON, status=400)
 
     # build a LogContext object associated to a database job
+    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
     [jobctx] = engine.create_jobs(
-        [dict(calculation_mode='custom', description='AELO for ' + siteid)],
+        [params],
         config.distribution.log_level, None, utils.get_user(request), None)
     job_id = jobctx.calc_id
 
