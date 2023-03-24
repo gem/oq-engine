@@ -312,5 +312,8 @@ class PreClassicalCalculator(base.HazardCalculator):
 
     def post_execute(self, csm):
         """
-        Do nothing
+        Raise an error if the sources were all discarded
         """
+        num_sites = self.datastore['source_info']['num_sites']
+        if (num_sites == 0).all():
+            raise RuntimeError('There are no sources close to the site(s)')
