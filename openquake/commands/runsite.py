@@ -48,11 +48,10 @@ def main(lon: valid.longitude, lat: valid.latitude, *,
     params = get_params_from(dict(lon=lon, lat=lat))
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
-    with jobctx:
-        if slowest:
-            engine_profile(jobctx, slowest or 40)
-        else:
-            engine.run_jobs([jobctx])
+    if slowest:
+        engine_profile(jobctx, slowest or 40)
+    else:
+        engine.run_jobs([jobctx])
 
 main.lon = 'longitude of the site to analyze'
 main.lat = 'latitude of the site to analyze'
