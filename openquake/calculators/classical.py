@@ -839,7 +839,7 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
 
 def disagg_by_source(parent, csm, mon):
     """
-    :returns: pairs (source_id, disagg_rates)
+    :returns: [(source_id, disagg_rates5D, rates2D), ...]
     """
     oq = parent['oqparam']
     # oq.cachedir = datastore.get_datadir()
@@ -857,7 +857,7 @@ def disagg_by_source(parent, csm, mon):
     for source_id in rel_ids:
         smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-        relt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
+        relt = FullLogicTree(smlt, gslt)
         logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = relt.reduce_groups(csm.src_groups, source_id)
