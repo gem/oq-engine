@@ -855,7 +855,7 @@ def disagg_by_source(parent, csm, mon):
 
     smap = parallel.Starmap(disagg.disagg_source, h5=mon.h5)
     for source_id in rel_ids:
-        smlt = csm.full_lt.source_model_lt.reduce(source_id)
+        smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
         relt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
         logging.info('Considering source %s (%d realizations)',

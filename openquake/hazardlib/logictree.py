@@ -431,11 +431,12 @@ class SourceModelLogicTree(object):
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
-    def reduce(self, source_id):
+    def reduce(self, source_id, num_samples=None):
         """
         :returns: a new logic tree reduced to a single source
         """
-        new = self.__class__(self.filename, self.seed, self.num_samples,
+        num_samples = self.num_samples if num_samples is None else num_samples
+        new = self.__class__(self.filename, self.seed, num_samples,
                              self.sampling_method, self.test_mode,
                              self.branchID, source_id)
         return new
