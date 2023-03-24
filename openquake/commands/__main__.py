@@ -40,14 +40,9 @@ for key in DISPLAY_NAME:
     assert key in dic, key
 
 
-# global settings, like logging and warnings
+# set logging and warnings
 def oq():
-    args = set(sys.argv[1:])
-    if 'engine' not in args and 'dbserver' not in args:
-        # oq engine and oq dbserver define their own log levels
-        level = logging.DEBUG if 'debug' in args else logging.INFO
-        logging.basicConfig(level=level)
-
+    logging.basicConfig(level=logging.INFO, handlers=[])
     warnings.simplefilter(  # make sure we do not make efficiency errors
         "error", category=sparse.SparseEfficiencyWarning)
     sap.run(commands, prog='oq')

@@ -36,7 +36,7 @@ import requests
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp)
+    random_filter, countby, group_array, get_duplicates, gettemp, shortlist)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -665,7 +665,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, branchID=None):
+def get_source_model_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -684,7 +684,7 @@ def get_source_model_lt(oqparam, branchID=None):
     return smlt
 
 
-def get_full_lt(oqparam, branchID=None):
+def get_full_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -738,7 +738,8 @@ def get_full_lt(oqparam, branchID=None):
         logging.info('There is a source specific logic tree')
     dupl = source_model_lt.get_duplicated_sources()
     if dupl:
-        logging.info('There are {:_d} duplicated sources'.format(len(dupl)))
+        logging.info('There are {:_d} duplicated sources {}'.
+                     format(len(dupl), shortlist(list(dupl))))
     return full_lt
 
 
@@ -808,7 +809,7 @@ def get_cache_path(oqparam, h5=None):
     return ''
 
 
-def get_composite_source_model(oqparam, h5=None, branchID=None):
+def get_composite_source_model(oqparam, h5=None, branchID=''):
     """
     Parse the XML and build a complete composite source model in memory.
 

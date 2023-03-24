@@ -20,7 +20,9 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import contexts, calc
+from openquake.hazardlib import contexts
+from openquake.hazardlib.calc.mean_rates import (
+    calc_rmap, calc_mean_rates, to_rates)
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -52,6 +54,23 @@ class LogicTreeTestCase(CalculatorTestCase):
                                   delta=delta)
         return got
 
+    def tearDown(self):
+        oq = self.calc.oqparam
+        if oq.use_rates:  # compare with mean_rates
+            print('Comparing mean_rates')
+            poes = self.calc.datastore.sel('hcurves-stats', stat='mean')[:, 0]
+            exp_rates = to_rates(poes)  # shape (N, M, L1)
+            # NB: the exp_rates are wrong at small levels because the hcurves
+            # are stored at 32 bit and that make a big difference around log(0)
+            csm = self.calc.datastore['_csm']
+            full_lt = self.calc.datastore['full_lt'].init()
+            sitecol = self.calc.datastore['sitecol']
+            rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
+            mean_rates = calc_mean_rates(rmap, full_lt.g_weights, oq.imtls)
+            er = exp_rates[exp_rates < 1]
+            mr = mean_rates[mean_rates < 1]
+            aac(mr, er, atol=1e-6)
+
     def test_case_01(self):
         # same source in two source models, use_rates
         self.assert_curves_ok(['curve-mean.csv'], case_01.__file__)
@@ -68,13 +87,13 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
-        raise unittest.SkipTest
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
 
     def test_case_05_bis(self):
         # use_rates, two sources, two uncertainties per source, sampling
-        raise unittest.SkipTest
-        self.assert_curves_ok(['curve-mean-bis.csv'], case_05.__file__)
+        self.run_calc(case_05.__file__, 'job_bis.ini')
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/curve-mean-bis.csv', fname)
 
     def test_case_06(self):
         # two source model, use_rates and disagg_by_src
@@ -100,8 +119,7 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.assertEqual(info.loc[b'3'].weight, 3914)
 
     def test_case_07_bis(self):
-        # check disagg_by_source with sampling
-        raise unittest.SkipTest('Not working yet')
+        # same as 07 but with sampling
         self.run_calc(case_07.__file__, 'sampling.ini')
         fnames = export(('hcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -241,7 +259,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
-        numpy.testing.assert_equal(ids, ['A;0', 'A;1', 'B'])
+        numpy.testing.assert_equal(ids, ['A!0', 'A!1', 'B'])
 
     def test_case_19(self):
         # test for nontrivial GMPE logictree and AvgGMPE
@@ -253,7 +271,7 @@ hazard_uhs-std.csv
 
         # checking the mean rates
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
-        mean_rates = calc.disagg.to_rates(mean_poes)
+        mean_rates = to_rates(mean_poes)
         rates_by_source = self.calc.datastore['disagg_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
 
@@ -541,10 +559,10 @@ hazard_uhs-std.csv
         # extendModel with sampling and reduction to single source
         self.run_calc(case_68.__file__, 'job1.ini')
 
-        # check the reduction from 1o to 2 realizations
+        # check the reduction from 10 to 3 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        ae(rlzs['branch_path'], [b'AA~A', b'B.~A'])
-        aac(rlzs['weight'], [.7, .3])
+        ae(rlzs['branch_path'], [b'AA~A', b'AB~A', b'B.~A'])
+        aac(rlzs['weight'], [.4, .3, .3])
 
         # check the hazard curves
         fnames = export(('hcurves', 'csv'), self.calc.datastore)

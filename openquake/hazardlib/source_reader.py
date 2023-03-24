@@ -33,6 +33,7 @@ from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
+TWO24 = 2 ** 24  # 16,777,216
 TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
 
@@ -63,7 +64,9 @@ def gzpik(obj):
 
 def fragmentno(src):
     "Postfix after :.; as an integer"
+    # in disagg/case-12 one has source IDs like 'SL_kerton:665!1'
     fragment = re.split('[:.;]', src.source_id, 1)[1]
+    fragment = fragment.split('!')[0]
     return int(fragment.replace('.', '').replace(';', ''))
 
 
@@ -152,7 +155,7 @@ def _fix_dupl_ids(src_groups):
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
-            # duplicate IDs with different checksums, see cases 11, 13, 20
+            # # logic tree variations of the same source
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
@@ -217,6 +220,7 @@ def add_checksums(srcs):
 def find_false_duplicates(smdict):
     """
     Discriminate different sources with same ID (false duplicates)
+    and put a question mark in their source ID
     """
     acc = general.AccumDict(accum=[])
     atomic = set()
@@ -236,7 +240,12 @@ def find_false_duplicates(smdict):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)
             add_checksums(srcs)
-            if len(general.groupby(srcs, checksum)) > 1:
+            gb = general.groupby(srcs, checksum)
+            if len(gb) > 1:
+                for i, same_checksum in enumerate(gb.values()):
+                    # sources with the same checksum get the same ID
+                    for src in same_checksum:
+                        src.source_id += '!%d' % i
                 found.append(srcid)
     return found
 
