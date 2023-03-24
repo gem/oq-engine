@@ -1178,10 +1178,7 @@ def total_losses(asset_df, losses_by_lt, kind, ideduc=False):
     :param kind: kind of total loss (i.e. "structural+nonstructural")
     :param ideduc: if True compute the insurance claim
     """
-    if kind in TOTLOSSES:
-        ltypes = kind.split('+')
-    else:
-        raise ValueError(kind)
+    ltypes = kind.split('+')
     losses_by_lt[kind] = df = _agg([losses_by_lt[lt] for lt in ltypes])
     # event loss table eid aid variance loss
     if ideduc:

@@ -383,10 +383,12 @@ class PostRiskCalculator(base.RiskCalculator):
             self.policy_df = self.datastore.read_df('policy')
             self.treaty_df = self.datastore.read_df('treaty_df')
             # there must be a single loss type (possibly a total type)
-            if oq.total_losses and self.datastore[
-                    'assetcol/array']['ideductible'].any():
+            ideduc = self.datastore['assetcol/array']['ideductible'].any()
+            if (oq.total_losses or len(oq.loss_types) == 1) and ideduc:
+                # claim already computed and present in risk_by_event
                 lt = 'claim'
             else:
+                # claim to be computed from the policies
                 [lt] = oq.inputs['reinsurance']
             loss_id = scientific.LOSSID[lt]
             parent = self.datastore.parent
@@ -405,7 +407,7 @@ class PostRiskCalculator(base.RiskCalculator):
             rbp = pandas.concat(list(smap))
             if len(rbp) == 0:
                 raise ValueError('No data in risk_by_event for %r' % lt)
-            rbe = reinsurance._by_event(rbp, self.treaty_df, self._monitor)
+            rbe = reinsurance.by_event(rbp, self.treaty_df, self._monitor)
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
         if oq.investigation_time and oq.return_periods != [0]:
