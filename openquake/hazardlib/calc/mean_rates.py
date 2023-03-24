@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import numpy
 from openquake.baselib import sap
 from openquake.hazardlib.calc.hazard_curve import classical
@@ -58,6 +59,8 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     for group, cmaker in zip(src_groups, cmakers):
         G = len(cmaker.gsims)
         dic = classical(group, sitecol, cmaker)
+        if len(dic['rup_data']) == 0:  # the group was filtered away
+            continue
         rates = to_rates(dic['pmap'].array)
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
         for i, g in enumerate(cmaker.gidx):
@@ -81,12 +84,23 @@ def calc_mean_rates(rmap, gweights, imtls):
 
 
 def main(job_ini):
+    """
+    Compute the mean rates from scratch without source splitting and without
+    parallelization, pretty useful when debugging single site calculations
+    """
     from openquake.commonlib import readinput
     from openquake.calculators.views import text_table
     oq = readinput.get_oqparam(job_ini)
     csm = readinput.get_composite_source_model(oq)
     sitecol = readinput.get_site_collection(oq)
     assert len(sitecol) <= oq.max_sites_disagg, sitecol
+    if 'site_model' in oq.inputs:
+        # TODO: see if it can be done in get_site_collection
+        assoc_dist = (oq.region_grid_spacing * 1.414
+                      if oq.region_grid_spacing else 5)  # Graeme's 5km
+        sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
+    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
+                 len(sitecol), oq.imtls.size, csm.full_lt.Gt)
     rmap, ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
     rates = calc_mean_rates(rmap, csm.full_lt.g_weights, oq.imtls)
     N, M, L1 = rates.shape
@@ -96,6 +110,9 @@ def main(job_ini):
     print('Mean hazard rates for the first site')
     print(text_table(mrates[0], ext='org'))
 
+main.job_ini = 'path to a job.ini file'
+
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     sap.run(main)
