@@ -20,12 +20,13 @@ import os
 import sys
 import time
 from openquake.baselib import sap
+from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
 
 
 # for instance, to run the demos in parallel:
 # python -m openquake.engine.multirun demos/hazard
-def main(dirname, job_ini='job.ini', multi=True):
+def main(dirname, job_ini='job.ini', multi=True, **kw):
     assert os.path.exists(dirname), dirname
     inis = []
     for cwd, dirs, files in os.walk(dirname):
@@ -36,6 +37,7 @@ def main(dirname, job_ini='job.ini', multi=True):
         sys.exit('No %s files found' % job_ini)
     print('running ' + ' '.join(inis))
 
+    inis = [get_params(ini, kw) for ini in inis]
     from openquake.server import dbserver  # avoid CodeDependencyError
     dbserver.ensure_on()
     t0 = time.time()
