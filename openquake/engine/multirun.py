@@ -35,8 +35,9 @@ def main(dirname, job_ini='job.ini', concurrent=0, **kw):
                 inis.append(os.path.join(cwd, f))
     if not inis:
         sys.exit('No %s files found' % job_ini)
-    print('running ' + ' '.join(inis))
 
+    inis.sort()
+    print('running ' + ' '.join(inis))
     inis = [get_params(ini, kw) for ini in inis]
     from openquake.server import dbserver  # avoid CodeDependencyError
     dbserver.ensure_on()
