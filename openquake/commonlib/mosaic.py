@@ -115,11 +115,6 @@ class MosaicGetter:
         logging.info(Counter(model_by_site.values()))
         return model_by_site
 
-try:
-    MODELS = MosaicGetter().get_models_list()
-except:  # missing fiona
-    MODELS = []
-
 
 def main(sites_csv_path, models_boundaries_shp_path):
     logging.basicConfig(level=logging.INFO)
