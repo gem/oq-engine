@@ -1020,7 +1020,9 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
         procs[proc.sentinel] = proc
         while len(procs) >= chunksize:  # wait for something to finish
             for finished in wait(procs):
+                procs[finished].join()
                 del procs[finished]
     while procs:
         for finished in wait(procs):
+            procs[finished].join()
             del procs[finished]
