@@ -46,15 +46,24 @@ def from_file(fname):
     """
     t0 = time.time()
     model = os.environ.get('OQ_MODEL', '')
+    max_sites_per_model = os.environ.get('OQ_MAX_SITES_PER_MODEL', 1)
     allparams = []
-    tags =[]
+    tags = []
+    count_sites_per_model = {}
     with open(fname) as f:
         for line in f:
             siteid, lon, lat = line.split(',')
-            if model in siteid:
-                dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
-                tags.append(siteid)
-                allparams.append(get_params_from(dic))
+            if model and model not in siteid:
+                continue
+            if model in count_sites_per_model:
+                count_sites_per_model[model] += 1
+            else:
+                count_sites_per_model[model] = 1
+            if count_sites_per_model[model] > max_sites_per_model:
+                continue
+            dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
+            tags.append(siteid)
+            allparams.append(get_params_from(dic))
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
                                  None, getpass.getuser(), None)
@@ -73,7 +82,7 @@ def from_file(fname):
     print('Total time: %.1f minutes' % dt)
 
 
-def main(lonlat_or_fname, *, hc: int=None, slowest: int=None):
+def main(lonlat_or_fname, *, hc: int = None, slowest: int = None):
     """
     Run a PSHA analysis on the given lon, lat
     """
