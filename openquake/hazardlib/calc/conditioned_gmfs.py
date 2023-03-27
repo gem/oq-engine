@@ -483,13 +483,12 @@ def get_conditioned_mean_and_covariance(
         # Compute the distribution of the conditional between-event
         # residual B|Y2=y2
         mu_BD_yD = T_D @ mu_HD_yD
-        cov_BD_BD_yD = numpy.sqrt(
-            numpy.diag(numpy.linalg.multi_dot([T_D, cov_HD_HD_yD, T_D.T])))
+        cov_BD_BD_yD = numpy.linalg.multi_dot([T_D, cov_HD_HD_yD, T_D.T])
 
-        # Get the nominal bias and its variance as the means of the
-        # conditional between-event residual mean and covariance
+        # Get the nominal bias and its standard deviation as the means of the
+        # conditional between-event residual mean and standard deviation
         nominal_bias_mean = numpy.mean(mu_BD_yD)
-        nominal_bias_stddev = numpy.sqrt(numpy.mean(cov_BD_BD_yD))
+        nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
         logging.info(
             "GMM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f",
             gmm_name, target_imt.string, nominal_bias_mean, nominal_bias_stddev)
@@ -584,6 +583,12 @@ def get_conditioned_mean_and_covariance(
         # for the target sites
         cov_BY_BY_yD = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T])
 
+        # Both conditioned covariance matrices can contain extremely
+        # small negative values due to limitations of floating point
+        # operations (~ -10^-17 to -10^-15), these are clipped to zero
+        cov_WY_WY_wD = cov_WY_WY_wD.clip(min=0)
+        cov_BY_BY_yD = cov_BY_BY_yD.clip(min=0)
+
         # Finally, compute the conditioned mean
         # of the ground motion at the target sites
         mu_Y_yD = mu_Y + mu_BY_yD + RC @ (zeta_D - mu_BD_yD)
@@ -633,16 +638,16 @@ def _compute_spatial_cross_correlation_matrix(
         spatial_correl, cross_correl_within):
     if imt_1 == imt_2:
         # Since we have a single IMT, no cross-correlation terms to be computed
-        spatial_correlation_matrix = correlation.jbcorrelation(
-            distance_matrix, imt_1, spatial_correl.vs30_clustering
+        spatial_correlation_matrix = spatial_correl._get_correlation_matrix(
+            distance_matrix, imt_1
         )
         spatial_cross_correlation_matrix = spatial_correlation_matrix
     else:
-        spatial_correlation_matrix_1 = correlation.jbcorrelation(
-            distance_matrix, imt_1, spatial_correl.vs30_clustering
+        spatial_correlation_matrix_1 = spatial_correl._get_correlation_matrix(
+            distance_matrix, imt_1
         )
-        spatial_correlation_matrix_2 = correlation.jbcorrelation(
-            distance_matrix, imt_2, spatial_correl.vs30_clustering
+        spatial_correlation_matrix_2 = spatial_correl._get_correlation_matrix(
+            distance_matrix, imt_2
         )
         spatial_correlation_matrix = numpy.maximum(
             spatial_correlation_matrix_1, spatial_correlation_matrix_2
