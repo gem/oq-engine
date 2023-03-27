@@ -46,7 +46,7 @@ def from_file(fname):
     """
     t0 = time.time()
     model = os.environ.get('OQ_MODEL', '')
-    max_sites_per_model = os.environ.get('OQ_MAX_SITES_PER_MODEL', 1)
+    max_sites_per_model = int(os.environ.get('OQ_MAX_SITES_PER_MODEL', 1))
     allparams = []
     tags = []
     count_sites_per_model = {}
@@ -59,7 +59,8 @@ def from_file(fname):
                 count_sites_per_model[model] += 1
             else:
                 count_sites_per_model[model] = 1
-            if count_sites_per_model[model] > max_sites_per_model:
+            if (model in count_sites_per_model
+                    and count_sites_per_model[model] > max_sites_per_model):
                 continue
             dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
             tags.append(siteid)
@@ -101,6 +102,7 @@ def main(lonlat_or_fname, *, hc: int = None, slowest: int = None):
         engine_profile(jobctx, slowest or 40)
     else:
         engine.run_jobs([jobctx])
+
 
 main.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
 main.hc = 'previous calculation ID'
