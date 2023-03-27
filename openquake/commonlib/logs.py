@@ -35,14 +35,17 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 DATABASE = '%s:%d' % valid.host_port()
+MODELS = []  # to be populated in get_tag
 
 
 def get_tag(job_ini):
     """
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
+    if not MODELS:  # first time
+        MODELS.extend(mosaic.MosaicGetter().get_models_list())
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
-    if len(splits) > 3 and splits[-3] in mosaic.MODELS:
+    if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR
     return ''
 

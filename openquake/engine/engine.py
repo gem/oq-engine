@@ -32,6 +32,7 @@ import logging
 import itertools
 import platform
 from os.path import getsize
+from datetime import datetime
 import psutil
 import h5py
 import numpy
@@ -294,7 +295,7 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=USER, hc_id=None, multi=False, host=None):
+                user_name=USER, hc_id=None, multi=True, host=None):
     """
     Create job records on the database.
 
@@ -358,12 +359,14 @@ def cleanup(kind):
         logs.dbcmd('workers_kill', config.zworkers)
 
 
-def run_jobs(jobctxs):
+def run_jobs(jobctxs, concurrent_jobs=3):
     """
     Run jobs using the specified config file and other options.
 
     :param jobctxs:
         List of LogContexts
+    :param concurrent_jobs:
+        How many jobs to run concurrently (default 3)
     """
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     if hc_id:
@@ -388,7 +391,8 @@ def run_jobs(jobctxs):
             logs.dbcmd('finish', job.calc_id, 'aborted')
         return jobctxs
     for job in jobctxs:
-        dic = {'status': 'executing', 'pid': _PID}
+        dic = {'status': 'executing', 'pid': _PID,
+               'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
@@ -398,7 +402,7 @@ def run_jobs(jobctxs):
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
-            parallel.multispawn(run_calc, allargs, num_cores=3)
+            parallel.multispawn(run_calc, allargs, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
