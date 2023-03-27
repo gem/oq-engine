@@ -21,6 +21,7 @@ import getpass
 import logging
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
+from openquake.calculators.views import text_table
 from openquake.engine.aelo import get_params_from
 from openquake.engine import engine
 
@@ -43,11 +44,14 @@ def main(fname):
                                  None, getpass.getuser(), None)
     for logctx, tag in zip(logctxs, tags):
         logctx.tag = tag
-    engine.run_jobs(logctxs, concurrent_jobs=2)
+    engine.run_jobs(logctxs, concurrent_jobs=8)
     out = []
     for logctx in logctxs:
         job = dbcmd('get_job', logctx.calc_id)
         tb = dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
 
-main.fname = 'file with triple (siteid, lon, lat)'
+    header = ['job_id', 'description', 'error']
+    print(text_table(out, header, ext='org'))
+
+main.fname = 'CSV file with fields siteid, lon, lat'
