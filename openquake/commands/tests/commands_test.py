@@ -465,7 +465,7 @@ class ZipTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        jobs = create_jobs([job_ini, job_ini], 'error', multi=True)
+        jobs = create_jobs([job_ini, job_ini], 'error')
         run_jobs(jobs)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(

@@ -112,7 +112,7 @@ def main(job_ini,
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
                     loglevel, exports, params, user_name, host)
     jobs = create_jobs(job_ini, loglevel, hc_id=hc,
-                       user_name=user_name, host=host)
+                       user_name=user_name, host=host, multi=False)
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)

@@ -294,7 +294,7 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=USER, hc_id=None, multi=False, host=None):
+                user_name=USER, hc_id=None, multi=True, host=None):
     """
     Create job records on the database.
 

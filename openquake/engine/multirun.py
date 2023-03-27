@@ -43,7 +43,7 @@ def main(dirname, job_ini='job.ini', concurrent=0, **kw):
     dbserver.ensure_on()
     t0 = time.time()
     if concurrent:  # in parallel
-        ctxs = run_jobs(create_jobs(inis, multi=True), concurrent)
+        ctxs = run_jobs(create_jobs(inis), concurrent)
         out = [(ctx.calc_id, ini) for ctx, ini in zip(ctxs, inis)]
     else:  # sequentially
         out = []
