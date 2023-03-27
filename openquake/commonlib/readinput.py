@@ -36,7 +36,7 @@ import requests
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp)
+    random_filter, countby, group_array, get_duplicates, gettemp, shortlist)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -244,13 +244,7 @@ def get_params(job_ini, kw={}):
     if isinstance(job_ini, pathlib.Path):
         job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
-        if '://gitlab' in job_ini:
-            # TODO: this is not working even if curl works
-            token = os.environ['GITLAB_TOKEN']
-            auth = {'Authorization': 'PRIVATE-TOKEN ' + token}
-            resp = requests.get(job_ini, headers=auth)
-        else:
-            resp = requests.get(job_ini)
+        resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
         with open(job_ini, 'wb') as f:
             f.write(resp.content)
@@ -633,7 +627,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
         for branch in gsim_lt.branches:
             for k, w in sorted(branch.weight.dic.items()):
                 if k != 'weight':
-                    logging.warning(
+                    logging.debug(
                         'Using weight=%s instead of %s for %s %s',
                         branch.weight.dic['weight'], w, branch.gsim, k)
                     del branch.weight.dic[k]
@@ -665,7 +659,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, branchID=None):
+def get_source_model_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -684,7 +678,7 @@ def get_source_model_lt(oqparam, branchID=None):
     return smlt
 
 
-def get_full_lt(oqparam, branchID=None):
+def get_full_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -738,7 +732,8 @@ def get_full_lt(oqparam, branchID=None):
         logging.info('There is a source specific logic tree')
     dupl = source_model_lt.get_duplicated_sources()
     if dupl:
-        logging.info('There are {:_d} duplicated sources'.format(len(dupl)))
+        logging.info('There are {:_d} duplicated sources {}'.
+                     format(len(dupl), shortlist(list(dupl))))
     return full_lt
 
 
@@ -808,7 +803,7 @@ def get_cache_path(oqparam, h5=None):
     return ''
 
 
-def get_composite_source_model(oqparam, h5=None, branchID=None):
+def get_composite_source_model(oqparam, h5=None, branchID=''):
     """
     Parse the XML and build a complete composite source model in memory.
 

@@ -1,4 +1,6 @@
-APPLICATION_MODE = aelo
+import os
+
+APPLICATION_MODE = 'aelo'
 
 # # Static Folder
 # STATIC_ROOT = ''

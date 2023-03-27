@@ -514,7 +514,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_par(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
-            raise RuntimeError('Filtered away all ruptures??')
+            raise RuntimeError('There are no ruptures close to the site(s)')
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
@@ -797,13 +797,15 @@ class ClassicalCalculator(base.HazardCalculator):
             est_time = self.classical_time / float(fraction) + delta
             logging.info('Estimated time: %.1f hours', est_time / 3600)
 
-        # generate plots
-        if 'hmaps-stats' in self.datastore:
+        # generate hazard map plots
+        if 'hmaps-stats' in self.datastore and self.N > 1000:
             hmaps = self.datastore.sel('hmaps-stats', stat='mean')  # NSMP
             maxhaz = hmaps.max(axis=(0, 1, 3))
             mh = dict(zip(self.oqparam.imtls, maxhaz))
             logging.info('The maximum hazard map values are %s', mh)
             if Image is None or not self.from_engine:  # missing PIL
+                return
+            if self.N < 1000:  # few sites, don't plot
                 return
             M, P = hmaps.shape[2:]
             logging.info('Saving %dx%d mean hazard maps', M, P)
@@ -837,25 +839,9 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
     return python3compat.decode(sorted(source_ids))
 
 
-def sanity_check(source_id, rates, disagg_by_src):
-    """
-    Check that the rates computed with the restricted logic tree and
-    restricted groups are consistent with the full rates.
-
-    :param source_id: base ID of a source
-    :param rates: matrix of rates of shape (M, L1)
-    :param disagg_by_src: dataset with shape (N, M, L1, Ns)
-    """
-    srcids = disagg_by_src.src_id[:]
-    srcid = source_id.encode('utf8')
-    srcidx = numpy.where(srcids == srcid)[0][0]
-    expected_rates = disagg_by_src.array[0, :, :, srcidx]  # shape (M, L1)
-    numpy.testing.assert_allclose(rates, expected_rates)
-
-
 def disagg_by_source(parent, csm, mon):
     """
-    :returns: pairs (source_id, disagg_rates)
+    :returns: [(source_id, disagg_rates5D, rates2D), ...]
     """
     oq = parent['oqparam']
     # oq.cachedir = datastore.get_datadir()
@@ -871,18 +857,12 @@ def disagg_by_source(parent, csm, mon):
 
     smap = parallel.Starmap(disagg.disagg_source, h5=mon.h5)
     for source_id in rel_ids:
-        smlt = csm.full_lt.source_model_lt.reduce(source_id)
+        smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
-        relt = FullLogicTree(smlt, gslt, 'reduce-rlzs')
+        relt = FullLogicTree(smlt, gslt)
         logging.info('Considering source %s (%d realizations)',
                      source_id, relt.get_num_paths())
         groups = relt.reduce_groups(csm.src_groups, source_id)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, edges_shp, oq))
-    items = []
-    for source_id, rates5D, rates2D in smap:
-        if oq.use_rates:
-            logging.info('Checking the mean rates for source %s', source_id)
-            sanity_check(source_id, rates2D, parent['disagg_by_src'])
-        items.append((source_id, rates5D, rates2D))
-    return items
+    return list(smap)  # [(source_id, rates5D, rates2D), ...]

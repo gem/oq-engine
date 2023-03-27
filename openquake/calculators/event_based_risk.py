@@ -323,10 +323,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if hasattr(self, 'policy_df') and 'reinsurance' not in oq.inputs:
             sec_losses.append(
                 partial(insurance_losses, policy_df=self.policy_df))
+        ideduc = self.assetcol['ideductible'].any()
         if oq.total_losses:
-            ideduc = self.assetcol['ideductible'].any()
             sec_losses.append(
                 partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
+        elif ideduc:
+            # subtract the insurance deductible for a single loss_type
+            [lt] = oq.loss_types
+            sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
+            
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N

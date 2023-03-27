@@ -351,7 +351,7 @@ class ProbabilityMap(object):
     def expand(self, full_lt):
         """
         Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
-        with shape (N, L, R)
+        with shape (N, L, R): works only for rates
         """
         N, L, G = self.array.shape
         assert G == full_lt.Gt, (G, full_lt.Gt)
@@ -359,7 +359,10 @@ class ProbabilityMap(object):
         out = ProbabilityMap(range(N), L, R).fill(0.)
         for g, rlzs in full_lt.rlzs_by_g.items():
             for sid in range(N):
-                combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
+                for rlz in rlzs:
+                    out.array[sid, :, rlz] += self.array[sid, :, g]
+                # NB: for probabilities use
+                # combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
         return out
 
     # used in calc_hazard_curves

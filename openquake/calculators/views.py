@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree
+from openquake.hazardlib import logictree, calc
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util
@@ -924,6 +924,20 @@ def view_extreme_gmvs(token, dstore):
     return msg + '\nCould not extract extreme GMVs for ' + imt0
 
 
+@view.add('mean_rates')
+def view_mean_rates(token, dstore):
+    """
+    Display mean hazard rates for the first site
+    """
+    oq = dstore['oqparam']
+    assert oq.use_rates
+    poes = dstore.sel('hcurves-stats', site_id=0, stat='mean')[0, 0]  # NRML1
+    rates = numpy.zeros(poes.shape[1], dt(oq.imtls))
+    for m, imt in enumerate(oq.imtls):
+        rates[imt] = calc.disagg.to_rates(poes[m])
+    return rates
+
+
 @view.add('mean_disagg')
 def view_mean_disagg(token, dstore):
     """
@@ -1147,12 +1161,10 @@ def view_risk_by_event(token, dstore):
     df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
     del df['loss_id']
     del df['variance']
-    agg_keys = dstore['agg_keys'][:]
-    df = df[df.agg_id < df.agg_id.max()].sort_values('loss', ascending=False)
-    df['agg_key'] = decode(agg_keys[df.agg_id.to_numpy()])
+    df = df[df.agg_id == df.agg_id.max()].sort_values('loss', ascending=False)
     del df['agg_id']
     out = io.StringIO()
-    df[:20].to_csv(out, sep='\t', index=False, float_format='%.1f',
+    df[:49].to_csv(out, sep='\t', index=False, float_format='%.1f',
                    line_terminator='\r\n')
     return out.getvalue()
 

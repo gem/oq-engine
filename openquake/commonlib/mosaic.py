@@ -8,8 +8,9 @@ import csv
 import os
 from shapely.geometry import Point, shape
 from collections import Counter
-from openquake.baselib import sap, config
+from openquake.baselib import sap
 from openquake.hazardlib.geo.packager import fiona
+from openquake.qa_tests_data import mosaic
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
@@ -20,8 +21,8 @@ class MosaicGetter:
     """
     def __init__(self, shapefile_path=None):
         if shapefile_path is None:  # read from openquake.cfg
-            shapefile_path = os.path.join(config.directory.mosaic_dir,
-                                          'ModelBoundaries.shp')
+            mosaic_dir = os.path.dirname(mosaic.__file__)
+            shapefile_path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
         self.shapefile_path = shapefile_path
 
     def get_models_list(self):
@@ -114,11 +115,6 @@ class MosaicGetter:
                     lon, lat, strict=False)
         logging.info(Counter(model_by_site.values()))
         return model_by_site
-
-try:
-    MODELS = MosaicGetter().get_models_list()
-except:  # missing fiona
-    MODELS = []
 
 
 def main(sites_csv_path, models_boundaries_shp_path):

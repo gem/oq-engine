@@ -58,8 +58,8 @@ def check_maxmag(pointlike):
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
         if maxmag >= 8.:
-            logging.warning('%s %s has maximum magnitude %s',
-                            src.__class__.__name__, src.source_id, maxmag)
+            logging.info('%s %s has maximum magnitude %s',
+                         src.__class__.__name__, src.source_id, maxmag)
 
 
 def collapse_nphc(src):
@@ -312,5 +312,8 @@ class PreClassicalCalculator(base.HazardCalculator):
 
     def post_execute(self, csm):
         """
-        Do nothing
+        Raise an error if the sources were all discarded
         """
+        num_sites = self.datastore['source_info']['num_sites']
+        if (num_sites == 0).all():
+            raise RuntimeError('There are no sources close to the site(s)')
