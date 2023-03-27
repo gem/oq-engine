@@ -19,7 +19,7 @@
 import numpy
 from openquake.baselib import sap, performance
 from openquake.commonlib import datastore, readinput
-from openquake.calculators.classical import disagg_by_source
+from openquake.calculators.classical import store_mean_disagg_bysrc
 
 U32 = numpy.uint32
 
@@ -40,9 +40,7 @@ def main(parent_id):
         csm.init(full_lt)
         mon = performance.Monitor(
             'disaggregate by source', measuremem=True, h5=dstore.hdf5)
-        for source_id, disagg_rates, haz_rates in disagg_by_source(parent, csm, mon):
-            dstore['disagg-source/' + source_id] = dict(rates5D=disagg_rates,
-                                                        rates2D=haz_rates)
+        store_mean_disagg_bysrc(parent, dstore, csm, mon)
 
 
 if __name__ == '__main__':

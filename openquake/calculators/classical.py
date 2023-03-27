@@ -672,11 +672,7 @@ class ClassicalCalculator(base.HazardCalculator):
                               src_id=srcids))
 
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
-            triples = disagg_by_source(self.datastore, self.csm,
-                                       self.monitor('disaggregate by source'))
-            for source_id, rates5D, rates2D in triples:
-                self.datastore['disagg_source/' + source_id] = dict(
-                    rates5D=rates5D, rates2D=rates2D)
+            store_mean_disagg_bysrc(self.datastore, self.csm)
 
     def _create_hcurves_maps(self):
         oq = self.oqparam
@@ -839,10 +835,12 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
     return python3compat.decode(sorted(source_ids))
 
 
-def disagg_by_source(parent, csm, mon):
-    """
-    :returns: [(source_id, disagg_rates5D, rates2D), ...]
-    """
+def middle(arr):
+    return [(m1+m2) / 2 for m1, m2 in zip(arr, arr[1:])]
+
+
+def store_mean_disagg_bysrc(dstore, csm):
+    parent = dstore.parent or dstore
     oq = parent['oqparam']
     # oq.cachedir = datastore.get_datadir()
     oq.mags_by_trt = {
@@ -850,13 +848,15 @@ def disagg_by_source(parent, csm, mon):
                 for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
-    edges_shp = disagg.get_edges_shapedic(oq, sitecol)
+    edges, shp = disagg.get_edges_shapedic(oq, sitecol)
     rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
 
-    smap = parallel.Starmap(disagg.disagg_source, h5=mon.h5)
-    for source_id in rel_ids:
+    smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
+    src2idx = {}
+    for idx, source_id in enumerate(rel_ids):
+        src2idx[source_id] = idx
         smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
         relt = FullLogicTree(smlt, gslt)
@@ -864,5 +864,14 @@ def disagg_by_source(parent, csm, mon):
                      source_id, relt.get_num_paths())
         groups = relt.reduce_groups(csm.src_groups, source_id)
         assert groups, 'No groups for %s' % source_id
-        smap.submit((groups, sitecol, relt, edges_shp, oq))
-    return list(smap)  # [(source_id, rates5D, rates2D), ...]
+        smap.submit((groups, sitecol, relt, (edges, shp), oq))
+    mags, dists, lons, lats, eps, trts = edges
+    arr = numpy.zeros(
+        (len(rel_ids), shp['M'], shp['P'], shp['mag'], shp['dist'], shp['eps']))
+    for srcid, rates5D, rates2D in smap:
+        arr[src2idx[srcid]] = rates5D
+    dic = dict(
+        shape_descr=['source_id', 'imt', 'poe', 'mag', 'dist', 'eps'],
+        source_id=rel_ids, imt=list(oq.imtls), poe=oq.poes,
+        mag=middle(mags), dist=middle(dists), eps=middle(eps))
+    dstore['mean_disagg_bysrc'] = hdf5.ArrayWrapper(arr, dic)
