@@ -18,6 +18,7 @@
 
 import os
 import sys
+import time
 import logging
 import getpass
 import cProfile
@@ -43,6 +44,7 @@ def from_file(fname):
     """
     Run a PSHA analysis on the given sites
     """
+    t0 = time.time()
     model = os.environ.get('OQ_MODEL', '')
     allparams = []
     tags =[]
@@ -67,6 +69,8 @@ def from_file(fname):
 
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
+    dt = (time.time() - t0) / 60
+    print('Total time: %.1f minutes', dt)
 
 
 def main(lonlat_or_fname, *, hc: int=None, slowest: int=None):
