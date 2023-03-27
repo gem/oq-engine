@@ -855,6 +855,25 @@ class SourceModelLogicTree(object):
         # AUS event based was hanging with a slower implementation
         return {src: sd[src]['branch'] for src in u[c > 1]}
 
+    def fix_false_dupl(self, found, smdict):
+        """
+        Fix the source IDs for false duplicates in source_data
+        """
+        smlt_dir = os.path.dirname(self.filename)
+        sd = self.source_data
+        cnt = AccumDict(accum=0)
+        for row in sd:
+            for srcid in found:
+                if row['source'] == srcid:
+                    fname = os.path.abspath(
+                        os.path.join(smlt_dir, row['fname']))
+                    row['source'] += '!%d' % cnt[srcid]
+                    cnt[srcid] += 1
+                    for grp in smdict[fname].src_groups:
+                        for src in grp:
+                            if src.source_id == srcid:
+                                src.source_id = row['source']
+        
     # SourceModelLogicTree
     def __toh5__(self):
         tbl = []

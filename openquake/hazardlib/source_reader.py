@@ -193,6 +193,7 @@ def get_csm(oq, full_lt, h5=None):
 
     found = find_false_duplicates(smdict)
     if found:
+        full_lt.source_model_lt.fix_false_dupl(found, smdict)    
         logging.warning('Found different sources with same ID %s',
                         general.shortlist(found))
 
@@ -241,11 +242,7 @@ def find_false_duplicates(smdict):
                                    'duplicated: %s', srcid)
             add_checksums(srcs)
             gb = general.groupby(srcs, checksum)
-            if len(gb) > 1:
-                for i, same_checksum in enumerate(gb.values()):
-                    # sources with the same checksum get the same ID
-                    for src in same_checksum:
-                        src.source_id += '!%d' % i
+            if len(gb) > 1:  # different checksums
                 found.append(srcid)
     return found
 
