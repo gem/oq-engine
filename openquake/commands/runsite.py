@@ -70,7 +70,7 @@ def from_file(fname):
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
-    print('Total time: %.1f minutes', dt)
+    print('Total time: %.1f minutes' % dt)
 
 
 def main(lonlat_or_fname, *, hc: int=None, slowest: int=None):
