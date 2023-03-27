@@ -32,6 +32,7 @@ import logging
 import itertools
 import platform
 from os.path import getsize
+from datetime import datetime
 import psutil
 import h5py
 import numpy
@@ -390,7 +391,8 @@ def run_jobs(jobctxs, concurrent_jobs=3):
             logs.dbcmd('finish', job.calc_id, 'aborted')
         return jobctxs
     for job in jobctxs:
-        dic = {'status': 'executing', 'pid': _PID}
+        dic = {'status': 'executing', 'pid': _PID,
+               'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
