@@ -51,7 +51,7 @@ def from_file(fname):
             siteid, lon, lat = line.split(',')
             if model in siteid:
                 dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
-                tags.append('%(siteid)s(%(lon)s, %(lat)s)' % dic)
+                tags.append(siteid)
                 allparams.append(get_params_from(dic))
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
