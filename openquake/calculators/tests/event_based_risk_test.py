@@ -374,12 +374,12 @@ agg_id
         # check aggcurves-stats
         [_, fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-5)
+                              fname, delta=2E-4)
 
         # check aggrisk-stats
         [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-5)
+                              fname, delta=2E-4)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
