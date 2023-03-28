@@ -40,7 +40,7 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 
-def from_file(fname):
+def from_file(fname, concurrent_jobs=8):
     """
     Run a PSHA analysis on the given sites
     """
@@ -69,7 +69,7 @@ def from_file(fname):
                                  None, getpass.getuser(), None)
     for logctx, tag in zip(logctxs, tags):
         logctx.tag = tag
-    engine.run_jobs(logctxs, concurrent_jobs=8)
+    engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     for logctx in logctxs:
         job = dbcmd('get_job', logctx.calc_id)
@@ -82,15 +82,17 @@ def from_file(fname):
     print('Total time: %.1f minutes' % dt)
 
 
-def main(lonlat_or_fname, *, hc: int = None, slowest: int = None):
+def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
+         concurrent_jobs: int = 8):
     """
     Run a PSHA analysis on the given lon, lat
     """
+    print(f'Concurrent jobs: {concurrent_jobs}')
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
 
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname)
+        from_file(lonlat_or_fname, concurrent_jobs)
         return
     lon, lat = lonlat_or_fname.split(',')
     params = get_params_from(dict(lon=lon, lat=lat))
@@ -100,9 +102,10 @@ def main(lonlat_or_fname, *, hc: int = None, slowest: int = None):
     if slowest:
         engine_profile(jobctx, slowest or 40)
     else:
-        engine.run_jobs([jobctx])
+        engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
 
 
 main.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
 main.hc = 'previous calculation ID'
 main.slowest = 'profile and show the slowest operations'
+main.concurrent_jobs = 'maximum number of concurrent jobs'
