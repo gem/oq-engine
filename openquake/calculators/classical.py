@@ -133,40 +133,6 @@ def store_ctxs(dstore, rupdata_list, grp_id):
             else:
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
-
-# NB: changed to also aggregate source IDs with exclamation marks
-def semicolon_aggregate(probs, source_ids):
-    """
-    :param probs: array of shape (..., Ns)
-    :param source_ids: list of source IDs (some with semicolons) of length Ns
-    :returns: array of shape (..., Ns) and list of length N with N < Ns
-
-    This is used to aggregate array of rates in the case of sources
-    which are variations of a base source. Here is an example with Ns=7
-    sources reducible to N=4 base sources:
-
-    >>> source_ids = ['A;0', 'A;1', 'A;2', 'B', 'C', 'D;0', 'D;1']
-    >>> probs = numpy.array([[.01, .02, .03, .04, .05, .06, .07],
-    ...                      [.00, .01, .02, .03, .04, .05, .06]])
-
-    `semicolon_aggregate` effectively reduces the array of rates
-    from 7 to 4 components, however for storage convenience it does not
-    change the shape, so the missing components are zeros:
-
-    >>> semicolon_aggregate(probs, source_ids)  # (2, 7) => (2, 4)
-    (array([[0.06, 0.04, 0.05, 0.13, 0.  , 0.  , 0.  ],
-           [0.03, 0.03, 0.04, 0.11, 0.  , 0.  , 0.  ]]), array(['A', 'B', 'C', 'D'], dtype='<U1'))
-
-    It is assumed that the semicolon sources are independent, i.e. not mutex.
-    """
-    srcids = [basename(srcid, '!;') for srcid in source_ids]
-    unique, indices = numpy.unique(srcids, return_inverse=True)
-    new = numpy.zeros_like(probs)
-    for i, s1, s2 in performance.idx_start_stop(indices):
-        new[..., i] = probs[..., s1:s2].sum(axis=-1)
-    return new, unique
-
-
 #  ########################### task functions ############################ #
 
 
@@ -355,7 +321,7 @@ class Hazard:
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of disagg_by_src key is a source ID
-                idx = self.srcidx[basename(key, '!:')]
+                idx = self.srcidx[basename(key, '!;:')]
                 disagg_by_src[..., idx] += self.get_rates(pmap)
         self.datastore['disagg_by_src/array'][:] = disagg_by_src
 
@@ -660,20 +626,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
-        if 'disagg_by_src' in list(self.datastore):
-            srcids = python3compat.decode(
-                self.datastore['source_info']['source_id'])
-            if any(';' in srcid for srcid in srcids) or any(
-                    '!' in srcid for srcid in srcids):
-                # enable reduction of the array disagg_by_src
-                arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
-                arr, srcids = semicolon_aggregate(arr, srcids)
-                del self.datastore['disagg_by_src']
-                self.datastore['disagg_by_src'] = hdf5.ArrayWrapper(
-                    arr, dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
-                              site_id=self.N, imt=list(oq.imtls), lvl=self.L1,
-                              src_id=srcids))
-
         if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
             store_mean_disagg_bysrc(self.datastore, self.csm)
 
