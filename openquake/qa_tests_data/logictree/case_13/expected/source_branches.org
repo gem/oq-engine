@@ -1,5 +1,4 @@
-| trt                  | sources                 | branches                                      |
-|----------------------+-------------------------+-----------------------------------------------|
-| Active Shallow Crust | 0_0 0_1 1_0 1_1 2_0 2_1 | aFault_aPriori_D2_1 bFault_stitched_D2_1_Char |
-| Active Shallow Crust | 122_1 3_0 3_1           | bFault_stitched_D2_1_Char                     |
-| Active Shallow Crust | 89_0 89_1               | aFault_aPriori_D2_1                           |
+| trt                  | sources                               | branches                  |
+|----------------------+---------------------------------------+---------------------------|
+| Active Shallow Crust | 0_0!0 0_1!0 1_0!0 ... 2_1!0 89_0 89_1 | aFault_aPriori_D2_1       |
+| Active Shallow Crust | 0_0!1 0_1!1 122_1 ... 2_1!1 3_0 3_1   | bFault_stitched_D2_1_Char |
