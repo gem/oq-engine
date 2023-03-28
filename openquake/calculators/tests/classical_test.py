@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
 import gzip
-import unittest
 import numpy
 from openquake.baselib import parallel, general
 from openquake.baselib.python3compat import decode

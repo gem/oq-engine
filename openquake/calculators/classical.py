@@ -32,7 +32,7 @@ except ImportError:
 from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
-    AccumDict, DictArray, block_splitter, groupby, humansize, pprod)
+    AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -836,10 +836,17 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
 
 
 def middle(arr):
-    return [(m1+m2) / 2 for m1, m2 in zip(arr, arr[1:])]
+    """
+    :returns: middle values of an array (length N -> N-1)
+    """
+    return [(m1 + m2) / 2 for m1, m2 in zip(arr, arr[1:])]
 
 
 def store_mean_disagg_bysrc(dstore, csm):
+    """
+    Compute and store the mean disaggregatiob by Mag_Dist_Eps for
+    each relevant source in the source model
+    """
     parent = dstore.parent or dstore
     oq = parent['oqparam']
     # oq.cachedir = datastore.get_datadir()
@@ -860,18 +867,20 @@ def store_mean_disagg_bysrc(dstore, csm):
         smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
         relt = FullLogicTree(smlt, gslt)
+        Z = relt.get_num_paths()
+        assert Z
         logging.info('Considering source %s (%d realizations)',
-                     source_id, relt.get_num_paths())
+                     source_id, Z)
         groups = relt.reduce_groups(csm.src_groups, source_id)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, (edges, shp), oq))
     mags, dists, lons, lats, eps, trts = edges
     arr = numpy.zeros(
-        (len(rel_ids), shp['M'], shp['P'], shp['mag'], shp['dist'], shp['eps']))
+        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P']))
     for srcid, rates5D, rates2D in smap:
-        arr[src2idx[srcid]] = rates5D
+        arr[src2idx[srcid]] = disagg.to_probs(rates5D)
     dic = dict(
-        shape_descr=['source_id', 'imt', 'poe', 'mag', 'dist', 'eps'],
+        shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt', 'poe'],
         source_id=rel_ids, imt=list(oq.imtls), poe=oq.poes,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
     dstore['mean_disagg_bysrc'] = hdf5.ArrayWrapper(arr, dic)

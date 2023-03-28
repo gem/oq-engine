@@ -543,6 +543,19 @@ def export_disagg_by_src(ekey, dstore):
     return fnames
 
 
+@export.add(('mean_disagg_bysrc', 'csv'))
+def export_mean_disagg_bysrc(ekey, dstore):
+    sitecol = dstore['sitecol']
+    df = dstore['mean_disagg_bysrc'].to_dframe()
+    fname = dstore.export_path('%s.%s' % ekey)
+    com = dstore.metadata.copy()
+    com['lon'] = sitecol.lons[0]
+    com['lat'] = sitecol.lats[0]
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer.save(df, fname, comment=com)
+    return [fname]
+
+
 @export.add(('disagg-rlzs', 'csv'),
             ('disagg-stats', 'csv'),
             ('disagg-rlzs-traditional', 'csv'),
