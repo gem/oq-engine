@@ -12,7 +12,7 @@ xmlns:gml="http://www.opengis.net/gml"
 	tectonicRegion="Active Shallow Crust"
 	>
 		<areaSource
-            id="ASCTRAS407"
+            id="ASCTRAS407:0"
             name="TRAS407"
             >
                 <areaGeometry>
@@ -49,7 +49,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
 	    <areaSource
-            id="ASCTRAS407"
+            id="ASCTRAS407:1"
             name="TRAS407"
             >
                 <areaGeometry>
@@ -86,7 +86,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </areaSource>
 	    <areaSource
-            id="ASCTRAS407"
+            id="ASCTRAS407:2"
             name="TRAS407"
             >
                 <areaGeometry>
