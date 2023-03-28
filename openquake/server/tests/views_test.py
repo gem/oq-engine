@@ -356,6 +356,8 @@ class EngineServerTestCase(django.test.TestCase):
         resp = self.c.get('/v1/ini_defaults')
         self.assertEqual(resp.status_code, 200)
         # make sure an old name still works
+        dic = resp.json()
+        self.assertIsNone(dic['reference_depth_to_1pt0km_per_sec'])
         self.assertIn(b'individual_curves', resp.content)
 
     def test_validate_zip(self):

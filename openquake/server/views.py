@@ -40,6 +40,7 @@ from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
+import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
@@ -235,7 +236,10 @@ def get_ini_defaults(request):
         obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
-            ini_defs[name] = obj.default
+            if isinstance(obj.default, float) and numpy.isnan(obj.default):
+                ini_defs[name] = None
+            else:
+                ini_defs[name] = obj.default
     return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
 
 
