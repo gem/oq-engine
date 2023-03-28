@@ -165,7 +165,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             oq = self.oqparam
             self.M = len(oq.imtls)
             self.L1 = oq.imtls.size // self.M
-            sources = sorted(set(map(basename, self.csm.get_sources())))
+            sources = self.csm.get_basenames()
             size, msg = general.get_nbytes_msg(
                 dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
             if size > TWO32:

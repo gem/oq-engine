@@ -159,7 +159,7 @@ def semicolon_aggregate(probs, source_ids):
 
     It is assumed that the semicolon sources are independent, i.e. not mutex.
     """
-    srcids = [re.split('[!;]', srcid)[0] for srcid in source_ids]
+    srcids = [basename(srcid, '!;') for srcid in source_ids]
     unique, indices = numpy.unique(srcids, return_inverse=True)
     new = numpy.zeros_like(probs)
     for i, s1, s2 in performance.idx_start_stop(indices):
@@ -355,7 +355,8 @@ class Hazard:
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of disagg_by_src key is a source ID
-                disagg_by_src[..., self.srcidx[key]] = self.get_rates(pmap)
+                idx = self.srcidx[basename(key, '!:')]
+                disagg_by_src[..., idx] += self.get_rates(pmap)
         self.datastore['disagg_by_src/array'][:] = disagg_by_src
 
 
@@ -496,8 +497,7 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             maxw = self.max_weight
         self.init_poes()
-        srcidx = {
-            rec[0]: i for i, rec in enumerate(self.csm.source_info.values())}
+        srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
         if not performance.numba:
@@ -881,7 +881,7 @@ def store_mean_disagg_bysrc(dstore, csm):
     arr = numpy.zeros(
         (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P']))
     for srcid, rates5D, rates2D in smap:
-        idx = src2idx[re.split('[!;]', srcid)[0]]
+        idx = src2idx[basename(srcid, '!;')]
         arr[idx] = disagg.to_probs(rates5D)
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt', 'poe'],

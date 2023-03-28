@@ -472,6 +472,15 @@ class CompositeSourceModel:
                 srcs.extend(src_group)
         return srcs
 
+    def get_basenames(self):
+        """
+        :returns: a sorted list of source names stripped of the suffixes
+        """
+        sources = set()
+        for src in self.get_sources():
+            sources.add(basename(src, '!:.'))
+        return sorted(sources)
+
     def get_mags_by_trt(self):
         """
         :returns: a dictionary trt -> magnitudes in the sources as strings
