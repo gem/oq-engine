@@ -24,7 +24,7 @@ import h5py
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby, block_splitter
-from openquake.hazardlib.contexts import read_cmakers, basename
+from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
@@ -165,7 +165,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             oq = self.oqparam
             self.M = len(oq.imtls)
             self.L1 = oq.imtls.size // self.M
-            sources = sorted(set(map(basename, self.csm.get_sources())))
+            sources = self.csm.get_basenames()
             size, msg = general.get_nbytes_msg(
                 dict(N=self.N, M=self.M, L1=self.L1, Ns=len(sources)))
             if size > TWO32:

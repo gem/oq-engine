@@ -1137,7 +1137,7 @@ class FullLogicTree(object):
             return srcs
         out = []
         for src in srcs:
-            srcid = re.split('[:;.]', src.source_id)[0]
+            srcid = re.split('[:;!.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
