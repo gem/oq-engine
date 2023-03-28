@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml>
+  <logicTree logicTreeID="">
+    <logicTreeBranchSet branchSetID="bs_07" uncertaintyType="gmpeModel" applyToTectonicRegionType="SSC">
+      <logicTreeBranch branchID="b_07_21">
+	<uncertaintyModel gmpe_name="PezeshkEtAl2011NEHRPBC">NRCan15SiteTerm</uncertaintyModel>
+	<uncertaintyWeight>0.50000</uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch branchID="b_07_22">
+	<uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+	<uncertaintyWeight>0.50000</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

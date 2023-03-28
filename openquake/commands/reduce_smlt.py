@@ -18,6 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import logging
+from openquake.baselib.general import group_array
 from openquake.hazardlib.logictree import SourceModelLogicTree, nrml
 
 
@@ -27,23 +28,25 @@ def main(smlt_path, src_id):
     to the given source
     """
     # reduce the logic tree file
-    smlt = SourceModelLogicTree(smlt_path)
-    smlt.reduce(src_id)
+    smlt = SourceModelLogicTree(smlt_path).reduce(src_id)
     ltnode = smlt.to_node()
     redpath = 'reduced/' + smlt_path[len(smlt.basepath):]
     logging.info('Creating %s', redpath)
+    if not os.path.exists('reduced'):
+        os.mkdir('reduced')
     with open(redpath, 'wb') as f:
         nrml.write([ltnode], f)
 
     # reduce the source model files
-    for path, srcs in smlt.srcs_by_path.items():
+    dic = group_array(smlt.source_data, 'fname')
+    for path, array in dic.items():
         redpath = 'reduced/' + path
         logging.info('Creating %s', redpath)
         if not os.path.exists(os.path.dirname(redpath)):
             os.makedirs(os.path.dirname(redpath))
         sm = nrml.read(os.path.join(smlt.basepath, path)).sourceModel
         for grp in sm:
-            grp.nodes = [src for src in grp if src['id'] in srcs]
+            grp.nodes = [src for src in grp if src['id'] in array['source']]
         with open(redpath, 'wb') as f:
             nrml.write([sm], f)
 
