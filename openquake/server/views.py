@@ -601,7 +601,13 @@ def aelo_run(request):
                             content_type=JSON, status=400)
 
     # build a LogContext object associated to a database job
-    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+    try:
+        params = get_params_from(
+            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+    except ValueError as exc:
+        response_data = {'status': 'failed', 'error_msg': str(exc)}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=406)
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_user(request), None)
