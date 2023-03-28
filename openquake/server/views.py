@@ -607,7 +607,7 @@ def aelo_run(request):
     except ValueError as exc:
         response_data = {'status': 'failed', 'error_msg': str(exc)}
         return HttpResponse(
-            content=json.dumps(response_data), content_type=JSON, status=406)
+            content=json.dumps(response_data), content_type=JSON, status=400)
     [jobctx] = engine.create_jobs(
         [params],
         config.distribution.log_level, None, utils.get_user(request), None)

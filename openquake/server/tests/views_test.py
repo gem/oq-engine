@@ -451,7 +451,7 @@ class EngineServerTestCase(django.test.TestCase):
             # a test-specific directory
             with self.settings(EMAIL_FILE_PATH=email_dir):
                 resp = self.post('aelo_run', params)
-                if resp.status_code == 406:
+                if resp.status_code == 400:
                     self.assertIsNotNone(failure_reason)
                     content = json.loads(resp.content)
                     self.assertIn(failure_reason, content['error_msg'])
