@@ -134,6 +134,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
                 hdf5.extend(dstore['rup/' + par], numpy.full(nr, numpy.nan))
 
 
+# NB: changed to also aggregate source IDs with exclamation marks
 def semicolon_aggregate(probs, source_ids):
     """
     :param probs: array of shape (..., Ns)
