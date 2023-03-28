@@ -883,6 +883,7 @@ class SourceModelLogicTree(object):
         # SerializeSmltTestCase which has a logic tree with 3 branchsets
         # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
         vars(self).update(attrs)
+        self.test_mode = False
         bsets = []
         self.branches = {}
         self.bsetdict = json.loads(attrs['bsetdict'])
