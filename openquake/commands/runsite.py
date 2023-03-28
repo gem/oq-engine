@@ -59,8 +59,7 @@ def from_file(fname):
                 count_sites_per_model[model] += 1
             else:
                 count_sites_per_model[model] = 1
-            if (model in count_sites_per_model
-                    and count_sites_per_model[model] > max_sites_per_model):
+            if count_sites_per_model[model] > max_sites_per_model:
                 continue
             dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
             tags.append(siteid)
