@@ -356,7 +356,9 @@ class EngineServerTestCase(django.test.TestCase):
         resp = self.c.get('/v1/ini_defaults')
         self.assertEqual(resp.status_code, 200)
         # make sure an old name still works
-        self.assertIn(b'individual_curves', resp.content)
+        dic = resp.json()
+        assert 'reference_depth_to_1pt0km_per_sec' not in dic
+        self.assertIn(b'asset_hazard_distance', resp.content)
 
     def test_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
