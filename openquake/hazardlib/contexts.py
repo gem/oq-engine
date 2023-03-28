@@ -263,15 +263,12 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
-def basename(src):
+def basename(src, splitchars='.:'):
     """
     :returns: the base name of a split source
     """
     src_id = src if isinstance(src, str) else src.source_id
-    splits = re.split('[.:]', src_id, 1)
-    if len(splits) == 2 and ';' in splits[1]:
-        return splits[0] + ';' + splits[1].split(';')[1]
-    return splits[0]
+    return re.split('[%s]' % splitchars, src_id)[0]
 
 
 def get_num_distances(gsims):
