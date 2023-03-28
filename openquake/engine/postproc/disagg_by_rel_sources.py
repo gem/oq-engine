@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy
-from openquake.baselib import sap, performance
+from openquake.baselib import sap
 from openquake.commonlib import datastore, readinput
 from openquake.calculators.classical import store_mean_disagg_bysrc
 
@@ -38,9 +38,7 @@ def main(parent_id):
         full_lt = readinput.get_full_lt(parent['oqparam'])
         csm = parent['_csm']
         csm.init(full_lt)
-        mon = performance.Monitor(
-            'disaggregate by source', measuremem=True, h5=dstore.hdf5)
-        store_mean_disagg_bysrc(parent, dstore, csm, mon)
+        store_mean_disagg_bysrc(dstore, csm)
 
 
 if __name__ == '__main__':
