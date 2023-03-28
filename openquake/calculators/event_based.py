@@ -31,7 +31,7 @@ from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
 from openquake.hazardlib.calc.gmf import GmfComputer
-from openquake.hazardlib.shakemap.conditioned_gmfs import ConditionedGmfComputer
+from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.site import SiteCollection
