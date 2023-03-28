@@ -551,18 +551,20 @@ class SourceModelLogicTree(object):
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 if self.branchID and branchnode['branchID'] != self.branchID:
                     continue
-                num_source_ids = 0
+                vals = []  # filenames with sources in it
                 try:
-                    for fname in value_node.text.strip().split():
+                    for fname in value_node.text.split():
                         if (fname.endswith(('.xml', '.nrml'))
                                 and not self.test_mode):
-                            num_source_ids += self.collect_source_model_data(
+                            ok = self.collect_source_model_data(
                                 branchnode['branchID'], fname)
+                            if ok:
+                                vals.append(fname)
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if num_source_ids == 0:  # when reducing to a given source_id
-                    value = ''
+                if self.source_id:  # only the files containing source_id
+                    value = ' '.join(vals)
             branch_id = branchnode.attrib.get('branchID')
             branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
