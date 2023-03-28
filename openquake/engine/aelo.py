@@ -38,7 +38,8 @@ def get_params_from(inputs):
     """
     getter = mosaic.MosaicGetter()
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
-    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(
+        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']

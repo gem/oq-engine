@@ -451,6 +451,11 @@ class EngineServerTestCase(django.test.TestCase):
             # a test-specific directory
             with self.settings(EMAIL_FILE_PATH=email_dir):
                 resp = self.post('aelo_run', params)
+                if resp.status_code == 400:
+                    self.assertIsNotNone(failure_reason)
+                    content = json.loads(resp.content)
+                    self.assertIn(failure_reason, content['error_msg'])
+                    return
                 self.assertEqual(resp.status_code, 200)
                 # the job is supposed to start
                 # and, if failure_reason is not None, to fail afterwards
@@ -529,7 +534,6 @@ class EngineServerTestCase(django.test.TestCase):
     #         lon=lon, lat=lat, vs30='800.0', siteid='JPN_SITE')
     #     self.aelo_run(params)
 
-    @unittest.skip('FIXME')
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
             lon='-86.0', lat='88.0', vs30='800.0', siteid='SOMEWHERE')
