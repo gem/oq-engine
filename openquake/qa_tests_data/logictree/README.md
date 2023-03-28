@@ -1,5 +1,6 @@
 | Test ID | Description                                                                |
 |---------|----------------------------------------------------------------------------|
+| case_04 | KOR model, extendModel with bang sources                                   |
 | case_07 | Test 3 source models with a duplicate source, i.e. nontrivial trt_smrs     |
 | case_08 | Source Specific Logic Tree on 1 source, the other ignored                  |
 | case_09 | Source Specific Logic Tree on 1 source                                     |
