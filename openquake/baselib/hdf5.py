@@ -656,7 +656,7 @@ class ArrayWrapper(object):
             self.array[idx] = val
 
     def __toh5__(self):
-        return self.to_dict(), {}
+        return vars(self), {}
 
     def __fromh5__(self, dic, attrs):
         for k, v in dic.items():
@@ -741,7 +741,8 @@ class ArrayWrapper(object):
                     'There are %d extra-fields but %d dimensions in %s' %
                     (len(self._extra), shape[-1], self))
         shape_descr = tuple(decode(d) for d in self.shape_descr)
-        fields = shape_descr + self._extra
+        extra = tuple(decode(d) for d in self._extra)
+        fields = shape_descr + extra
         out = []
         tags = []
         idxs = []

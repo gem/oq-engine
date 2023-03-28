@@ -55,6 +55,8 @@ class LogicTreeTestCase(CalculatorTestCase):
         return got
 
     def tearDown(self):
+        if not hasattr(self, 'calc'):  # some test broke
+            return
         oq = self.calc.oqparam
         if oq.use_rates:  # compare with mean_rates
             print('Comparing mean_rates')
@@ -92,6 +94,10 @@ class LogicTreeTestCase(CalculatorTestCase):
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
+
+        # test mean_disagg_bysrc
+        [fname] = export(('mean_disagg_bysrc', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_disagg_bysrc.csv', fname)
 
     def test_case_05_bis(self):
         # use_rates, two sources, two uncertainties per source, sampling
