@@ -237,7 +237,7 @@ def get_ini_defaults(request):
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
             if isinstance(obj.default, float) and numpy.isnan(obj.default):
-                ini_defs[name] = None
+                pass
             else:
                 ini_defs[name] = obj.default
     return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)

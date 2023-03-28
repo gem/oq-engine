@@ -357,8 +357,8 @@ class EngineServerTestCase(django.test.TestCase):
         self.assertEqual(resp.status_code, 200)
         # make sure an old name still works
         dic = resp.json()
-        self.assertIsNone(dic['reference_depth_to_1pt0km_per_sec'])
-        self.assertIn(b'individual_curves', resp.content)
+        assert 'reference_depth_to_1pt0km_per_sec' not in dic
+        self.assertIn(b'asset_hazard_distance', resp.content)
 
     def test_validate_zip(self):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
