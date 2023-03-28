@@ -730,10 +730,6 @@ def get_full_lt(oqparam, branchID=''):
                 'try to use sampling or reduce the source model' % p)
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
-    dupl = source_model_lt.get_duplicated_sources()
-    if dupl:
-        logging.info('There are {:_d} duplicated sources {}'.
-                     format(len(dupl), shortlist(list(dupl))))
     return full_lt
 
 

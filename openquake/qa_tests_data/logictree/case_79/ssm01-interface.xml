@@ -12,7 +12,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Subduction Interface"
         >
             <complexFaultSource
-            id="IF-CFS-GRID03"
+            id="IF-CFS-GRID03:1"
             name="Hellenic Arc - GRID03"
             >
                 <complexFaultGeometry>

@@ -89,7 +89,6 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_04(self):
         # KOR model
-        raise unittest.SkipTest('not working yet')
         self.assert_curves_ok(['curve-mean.csv'], case_04.__file__)
 
     def test_case_05(self):
@@ -609,7 +608,6 @@ hazard_uhs-std.csv
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
     def test_case_79(self):
-        raise unittest.SkipTest('not working yet')
         # disagg_by_src with semicolon sources
         self.run_calc(case_79.__file__, 'job.ini')
 
