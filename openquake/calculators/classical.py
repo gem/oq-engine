@@ -18,6 +18,7 @@
 
 import io
 import os
+import re
 import time
 import psutil
 import logging
@@ -38,7 +39,7 @@ from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
-from openquake.commonlib import calc, readinput
+from openquake.commonlib import calc
 from openquake.calculators import base, getters, extract
 
 U16 = numpy.uint16
@@ -157,7 +158,7 @@ def semicolon_aggregate(probs, source_ids):
 
     It is assumed that the semicolon sources are independent, i.e. not mutex.
     """
-    srcids = [srcid.split(';')[0] for srcid in source_ids]
+    srcids = [re.split('[!;]', srcid)[0] for srcid in source_ids]
     unique, indices = numpy.unique(srcids, return_inverse=True)
     new = numpy.zeros_like(probs)
     for i, s1, s2 in performance.idx_start_stop(indices):
@@ -661,7 +662,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if 'disagg_by_src' in list(self.datastore):
             srcids = python3compat.decode(
                 self.datastore['source_info']['source_id'])
-            if any(';' in srcid for srcid in srcids):
+            if any(';' in srcid for srcid in srcids) or any(
+                    '!' in srcid for srcid in srcids):
                 # enable reduction of the array disagg_by_src
                 arr = self.disagg_by_src = self.datastore['disagg_by_src'][:]
                 arr, srcids = semicolon_aggregate(arr, srcids)
@@ -878,7 +880,8 @@ def store_mean_disagg_bysrc(dstore, csm):
     arr = numpy.zeros(
         (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P']))
     for srcid, rates5D, rates2D in smap:
-        arr[src2idx[srcid]] = disagg.to_probs(rates5D)
+        idx = src2idx[re.split('[!;]', srcid)[0]]
+        arr[idx] = disagg.to_probs(rates5D)
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt', 'poe'],
         source_id=rel_ids, imt=list(oq.imtls), poe=oq.poes,
