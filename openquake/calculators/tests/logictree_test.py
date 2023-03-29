@@ -569,10 +569,10 @@ hazard_uhs-std.csv
         # extendModel with sampling and reduction to single source
         self.run_calc(case_68.__file__, 'job1.ini')
 
-        # check the reduction from 10 to 3 realizations
+        # check the reduction from 10 to 2 realizations
         rlzs = extract(self.calc.datastore, 'realizations').array
-        ae(rlzs['branch_path'], [b'AA~A', b'AB~A', b'B.~A'])
-        aac(rlzs['weight'], [.4, .3, .3])
+        ae(rlzs['branch_path'], [b'AA~A', b'B.~A'])
+        aac(rlzs['weight'], [.7, .3])
 
         # check the hazard curves
         fnames = export(('hcurves', 'csv'), self.calc.datastore)
