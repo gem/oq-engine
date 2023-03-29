@@ -1190,16 +1190,16 @@ def norm(qdict, params):
     return dic
 
 
-@extract.add('disagg_by_src')
-def extract_disagg_by_src(dstore, what):
+@extract.add('rates_by_src')
+def extract_rates_by_src(dstore, what):
     """
-    Extract the disagg_by_src information.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt=PGA&poe=.001
+    Extract the rates_by_src information.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/rates_by_src?site_id=0&imt=PGA&poe=.001
     """
     qdict = parse(what)
-    dset = dstore['disagg_by_src/array']
+    dset = dstore['rates_by_src/array']
     oq = dstore['oqparam']
-    src_id = dstore['disagg_by_src/src_id'][:]
+    src_id = dstore['rates_by_src/src_id'][:]
     [imt] = qdict['imt']
     [poe] = qdict['poe']
     [site_id] = qdict.get('site_id', ['0'])

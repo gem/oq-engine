@@ -315,15 +315,15 @@ class Hazard:
 
     def store_disagg(self, pmaps):
         """
-        Store data inside disagg_by_src
+        Store data inside rates_by_src
         """
-        disagg_by_src = self.datastore['disagg_by_src/array'][()]
+        rates_by_src = self.datastore['rates_by_src/array'][()]
         for key, pmap in pmaps.items():
             if isinstance(key, str):
-                # in case of disagg_by_src key is a source ID
+                # in case of rates_by_src key is a source ID
                 idx = self.srcidx[basename(key, '!;:')]
-                disagg_by_src[..., idx] += self.get_rates(pmap)
-        self.datastore['disagg_by_src/array'][:] = disagg_by_src
+                rates_by_src[..., idx] += self.get_rates(pmap)
+        self.datastore['rates_by_src/array'][:] = rates_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -626,7 +626,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('%s in #%d' % (msg, self.datastore.calc_id))
             elif slow_tasks:
                 logging.info(msg)
-        if 'disagg_by_src' in self.datastore and self.N == 1 and len(oq.poes):
+        if 'rates_by_src' in self.datastore and self.N == 1 and len(oq.poes):
             store_mean_disagg_bysrc(self.datastore, self.csm)
 
     def _create_hcurves_maps(self):
@@ -782,7 +782,7 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
     source_ids = set()
     for im in imts:
         for poe in poes:
-            aw = extract.extract(dstore, f'disagg_by_src?imt={im}&poe={poe}')
+            aw = extract.extract(dstore, f'rates_by_src?imt={im}&poe={poe}')
             poe_array = aw.array['poe']  # for each source in decreasing order
             max_poe = poe_array[0]
             rel = aw.array[poe_array > threshold * max_poe]
