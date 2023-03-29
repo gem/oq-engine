@@ -1209,7 +1209,7 @@ def extract_rates_by_src(dstore, what):
     lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
     rates = dset[site_id, imt_id, lvl_id]  # shape Ns
-    arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
+    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('poe', '<f8')])
     arr['src_id'] = src_id
     arr['poe'] = rates
     arr.sort(order='poe')
