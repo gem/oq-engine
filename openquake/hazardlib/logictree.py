@@ -541,6 +541,7 @@ class SourceModelLogicTree(object):
             branches[0].uncertaintyWeight.text = 1.
         values = []
         bsno = len(self.branchsets)
+        zeros = []
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -566,16 +567,28 @@ class SourceModelLogicTree(object):
                 if self.source_id:  # only the files containing source_id
                     value = ' '.join(vals)
             branch_id = branchnode.attrib.get('branchID')
-            branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
                 raise LogicTreeError(
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
+            if value != '':
+                branch = Branch(bs_id, branch_id, weight, value)
+                self.branches[branch_id] = branch
+                self.shortener[branch_id] = keyno(
+                    branch_id, bsno, brno, self.filename)
+                branchset.branches.append(branch)
+            else:
+                zero_id = branch_id
+                zero_no = brno
+                zeros.append(weight)
+            weight_sum += weight
+        if zeros:
+            branch = Branch(bs_id, zero_id, sum(zeros), '')
             self.branches[branch_id] = branch
             self.shortener[branch_id] = keyno(
-                branch_id, bsno, brno, self.filename)
+                zero_id, bsno, zero_no, self.filename)
             branchset.branches.append(branch)
-            weight_sum += weight
+
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
                 branchset_node, self.filename,

@@ -1233,7 +1233,9 @@ class SourceConverter(RuptureConverter):
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
             sg.update(src)
-        if sg.src_interdep == 'mutex':
+        if sg and sg.src_interdep == 'mutex':
+            # sg can be empty if source_id is specified and it is different
+            # from any source in sg
             if len(node) and len(srcs_weights) != len(node):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'
