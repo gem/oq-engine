@@ -1431,7 +1431,7 @@ def view_relevant_sources(token, dstore):
     """
     imt = token.split(':')[1]
     poe = dstore['oqparam'].poes[0]
-    aw = extract(dstore, f'disagg_by_src?imt={imt}&poe={poe}')
+    aw = extract(dstore, f'rates_by_src?imt={imt}&poe={poe}')
     poes = aw.array['poe']  # for each source in decreasing order
     max_poe = poes[0]
     return aw.array[poes > .1 * max_poe]
