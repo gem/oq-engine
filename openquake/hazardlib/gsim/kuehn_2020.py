@@ -314,10 +314,13 @@ def _log_hinge(x, x0, a, b0, b1, delta):
     Returns the logistic hinge function for the magnitude and source-depth
     terms, as described in Equation 4.3
     """
-    xdiff = x - x0
-    xdiff = xdiff.astype('float64')
-    return a + b0 * xdiff + (b1 - b0) * delta * np.log(1 + np.exp(xdiff /
-                                                                  delta))
+    xdiff = (x - x0).astype('float64')
+    # this is tested in oq-risk-tests disaggregation/NZ2
+    # the cast is needed since one has xdiff =~ 100, delta=1 and
+    # np.exp(100) overflows at 32 bits
+    # NB: in disaggregation the contexts are saved at 32 bit!
+    return a + b0 * xdiff + (b1 - b0) * delta * np.log(
+        1 + np.exp(xdiff / delta))
 
 
 def get_magnitude_scaling_term(C, trt, mbreak, mag):
