@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,9 @@ import logging
 import os.path
 import socket
 import cProfile
+import warnings
 import getpass
+from pandas.core.common import SettingWithCopyWarning
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
@@ -52,7 +54,8 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     # set the logs first of all
     log = logs.init("job", dic, getattr(logging, loglevel.upper()),
                     user_name=user_name, host=host)
-
+    logs.dbcmd('update_job', log.calc_id,
+               {'status': 'executing', 'pid': os.getpid()})
     with log, performance.Monitor('total runtime', measuremem=True) as monitor:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         if reuse_input:  # enable caching
@@ -79,6 +82,8 @@ def main(job_ini,
     """
     Run a calculation
     """
+    # os.environ['OQ_DISTRIBUTE'] = 'processpool'
+    warnings.filterwarnings("error", category=SettingWithCopyWarning)
     if not os.environ.get('OQ_DATABASE'):
         dbserver.ensure_on()
     user_name = getpass.getuser()
@@ -107,7 +112,7 @@ def main(job_ini,
         return _run(job_ini[0], concurrent_tasks, pdb, reuse_input,
                     loglevel, exports, params, user_name, host)
     jobs = create_jobs(job_ini, loglevel, hc_id=hc,
-                       user_name=user_name, host=host)
+                       user_name=user_name, host=host, multi=False)
     for job in jobs:
         job.params.update(params)
         job.params['exports'] = ','.join(exports)

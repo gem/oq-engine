@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -290,6 +290,8 @@ DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
+    'rates_by_src': 'Hazard Rates by Source',
+    'mean_disagg_bysrc': 'Mean Disaggregation Rates By Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
     'avg_losses-rlzs': 'Average Asset Losses',
@@ -315,7 +317,8 @@ DISPLAY_NAME = {
     'hcurves': 'Hazard Curves',
     'hmaps': 'Hazard Maps',
     'uhs': 'Uniform Hazard Spectra',
-    'disagg': 'Disaggregation Outputs',
+    'disagg-rlzs': 'Disaggregation Outputs Per Realization',
+    'disagg-stats': 'Statistical Disaggregation Outputs',
     'realizations': 'Realizations',
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
@@ -363,7 +366,9 @@ def del_calc(db, job_id, user, force=False):
     :param job_id: job ID, can be an integer or a string
     :param user: username
     :param force: delete even if there are dependent calculations
-    :returns: None if everything went fine or an error message
+    :returns: a dict with key "success" and value indicating
+        the job id of the calculation or of its ancestor, or key "error"
+        and value describing what went wrong
     """
     job_id = int(job_id)
     dependent = db(
@@ -398,11 +403,13 @@ def del_calc(db, job_id, user, force=False):
                 '%s and you are %s' % (job_id, owner, user)}
 
     fname = path + ".hdf5"
-    try:
-        os.remove(fname)
-    except OSError as exc:  # permission error
-        return {"error": 'Could not remove %s: %s' % (fname, exc)}
-    return {"success": fname}
+    # A calculation could fail before it produces a hdf5
+    if os.path.isfile(fname):
+        try:
+            os.remove(fname)
+        except OSError as exc:  # permission error
+            return {"error": 'Could not remove %s: %s' % (fname, exc)}
+    return {"success": str(job_id)}
 
 
 def log(db, job_id, timestamp, level, process, message):
@@ -437,7 +444,8 @@ def get_log(db, job_id):
     out = []
     for log in logs:
         time = str(log.timestamp)[:-4]  # strip decimals
-        out.append('[%s #%d %s] %s' % (time, job_id, log.level, log.message))
+        out.append('[%s #%d %s] %s %s' %
+                   (time, job_id, log.level, log.process, log.message))
     return out
 
 
@@ -659,7 +667,6 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    # strange: understand why the filter returns two lines or zero lines
     log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
              job_id)
     if not log:

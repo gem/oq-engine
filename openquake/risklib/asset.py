@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -160,6 +160,7 @@ class Asset(object):
                  location,
                  values,
                  area=1,
+                 ideductible=0,
                  retrofitted=None,
                  calc=costcalculator):
         """
@@ -175,6 +176,8 @@ class Asset(object):
             geographic location of the asset
         :param dict values:
             asset values keyed by loss types
+        :param ideductible:
+            insurance deductible (default 0)
         :param retrofitted:
             asset retrofitted value
         :param calc:
@@ -189,6 +192,7 @@ class Asset(object):
         self.location = location
         self.values = values
         self.area = area
+        self.ideductible = ideductible
         self._retrofitted = retrofitted
         self.calc = calc
 
@@ -408,6 +412,7 @@ class AssetCollection(object):
 
     def update_tagcol(self, aggregate_by):
         """
+        Possibly adds tags 'id' and 'site_id'
         """
         self.aggregate_by = aggregate_by
         ts = tagset(aggregate_by)
@@ -676,7 +681,7 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     # 'value-nonstructural', 'value-occupants', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if first_asset._retrofitted else []
-    float_fields = loss_types + retro
+    float_fields = loss_types + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagnames
                   if name not in ('id', 'site_id')]
     tagi = {str(name): i for i, name in enumerate(tagnames)}
@@ -711,6 +716,8 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     value = asset.location[1]
                 elif field.startswith('occupants_'):
                     value = asset.values[field]
+                elif field == 'ideductible':
+                    value = asset.ideductible
                 elif field == 'retrofitted':
                     value = asset.retrofitted()
                 elif field in tagnames:
@@ -1038,7 +1045,7 @@ class Exposure(object):
                 elif missing:
                     raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
-                'retrofitted': float, None: object}
+                'retrofitted': float, 'ideductible': float, None: object}
         for f in strfields:
             conv[f] = str
         revmap = {}  # oq -> inp
@@ -1075,6 +1082,10 @@ class Exposure(object):
 
     def _add_asset(self, idx, asset, param):
         values = {}
+        try:
+            ideductible = asset['ideductible']
+        except ValueError:
+            ideductible = 0
         try:
             retrofitted = asset['retrofitted']
         except ValueError:
@@ -1126,7 +1137,7 @@ class Exposure(object):
         except ValueError:
             area = 1
         ass = Asset(prefix + asset_id, idx, idxs, number, location, values,
-                    area, retrofitted, self.cost_calculator)
+                    area, ideductible, retrofitted, self.cost_calculator)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):

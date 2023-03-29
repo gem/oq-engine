@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -72,6 +72,22 @@ def _site_amplification(ctx, C):
     return C['k'] * np.log10(v0/800)
 
 
+def _gen2ref_rock_scaling(C, vs30, kappa0, imt):
+    """
+    Computes the generic-to reference rock scaling factor as presented
+    in:
+    Lanzano, G., C. Felicetta, F. Pacor, D. Spallarossa, and P. Traversa
+    (2022). Generic-To-Reference Rock Scaling Factors for Seismic Ground Motion
+    in Italy, Bull. Seismol. Soc. Am. 112, 1583–1606, doi: 10.1785/0120210063
+
+    The coefficients are from table S2. They allow to scale the grond motion to
+    a reference rock from a generic site.
+
+    kappa0 is in meter.
+    """
+    return C['a'] + C['b'] * np.log10(vs30/800.0) + C['c'] * kappa0
+
+
 def _get_mechanism(ctx, C):
     """
     Compute the part of the second term of the equation 1 (FM(SoF)):
@@ -88,10 +104,11 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
     Ground-Motion Prediction Model for Shallow Crustal Earthquakes in Italy",
     Bull Seismol. Soc. Am., DOI 10.1785/0120180210
     SA are given up to 10 s.
-    The prediction is valid for RotD50, which is the median of the
-    distribution of the intensity measures, obtained from the combination
-    of the two horizontal components across all nonredundant azimuths
-    (Boore, 2010).
+
+    The horizontal component of motion corresponds to RotD50, i.e. the median
+    of the distribution of the intensity measures, obtained from the
+    combination of the two horizontal components across all nonredundant
+    azimuths (Boore, 2010).
     """
     #: Supported tectonic region type is 'active shallow crust' because the
     #: equations have been derived from data from Italian database ITACA, as
@@ -190,6 +207,47 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
     8.000   1.5146417080    0.6053146580    0.2927231020    0.3021009530    -1.4528220690   -0.0001882700   -0.5054615800   0.0012388470    -0.0011382590   0.1605307940    0.1737530120    0.1769475170    6.3000000000    4.2884159230    5.4984545260
     9.000   1.4186859130    0.5413850170    0.2751627760    0.3283351620    -1.4351308790   0.0000000000    -0.5015172920   0.0083605610    0.0036314410    0.1593645820    0.1666775610    0.1771272580    6.3000000000    4.5884949620    6.0000000000
     10.000  1.3142120360    0.4897308100    0.2536297690    0.3484436940    -1.4421713740   0.0000000000    -0.4867303450   0.0170019340    0.0044164240    0.1580884750    0.1616666450    0.1776399420    6.3000000000    4.6826704140    6.2391199410
+    """)
+
+    COEFFS_SITE = CoeffsTable(sa_damping=5, table="""
+    IMT     a       b       c
+    PGA	    0.107	-0.394	-11.775
+    0.01	0.107	-0.394	-11.775
+    0.025	0.137	-0.381	-12.812
+    0.04	0.168	-0.343	-14.276
+    0.05	0.182	-0.320	-15.012
+    0.07	0.180	-0.278	-15.428
+    0.10	0.162	-0.269	-15.014
+    0.15	0.119	-0.321	-13.081
+    0.20	0.084	-0.377	-11.228
+    0.25	0.057	-0.428	-9.620
+    0.30	0.042	-0.477	-8.360
+    0.35	0.030	-0.531	-7.276
+    0.40	0.018	-0.557	-6.266
+    0.45	0.009	-0.595	-5.563
+    0.50	0.002	-0.617	-5.174
+    0.60	-0.006	-0.651	-4.621
+    0.70	-0.010	-0.677	-4.184
+    0.75	-0.010	-0.677	-3.968
+    0.80	-0.009	-0.681	-3.756
+    0.90	-0.007	-0.690	-3.473
+    1.00	-0.008	-0.701	-3.298
+    1.20	-0.010	-0.721	-2.947
+    1.40	-0.012	-0.730	-2.630
+    1.60	-0.015	-0.739	-2.337
+    1.80	-0.021	-0.754	-2.054
+    2.00	-0.024	-0.747	-1.685
+    2.50	-0.026	-0.733	-0.954
+    3.00	-0.024	-0.691	-0.632
+    3.50	-0.020	-0.657	-0.499
+    4.00	-0.016	-0.636	-0.444
+    4.50	-0.016	-0.621	-0.437
+    5.00	-0.022	-0.600	-0.349
+    6.00	-0.034	-0.558	-0.409
+    7.00	-0.043	-0.529	-0.519
+    8.00	-0.048	-0.505	-0.601
+    9.00	-0.052	-0.502	-0.493
+    10.0	-0.055	-0.487	-0.414
     """)
 
 
@@ -313,3 +371,92 @@ class LanzanoEtAl2019_RJB_OMOscaled(LanzanoEtAl2019_RJB_OMO):
     3.00    2.1181011   0.7855378   0.3585875   0.1917373   -1.3622292  -0.0000725  -0.6907295  -0.0523142  -0.0534722  0.1730562   0.2046940   0.1856376   5.8000000   4.0000000   5.0089808
     4.00    1.8623784   0.7742294   0.3863289   0.2209747   -1.3605497  -0.0004515  -0.6361326  -0.0850829  -0.0481923  0.1729191   0.1933427   0.1876985   5.8000000   4.0000000   5.1428287
   """)
+
+
+class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
+    """
+    Implements GMPE developed by G.Lanzano, L.Luzi, F.Pacor, L.Luzi,
+    C.Felicetta, R.Puglia, S. Sgobba, M. D'Amico and published as "A Revised
+    Ground-Motion Prediction Model for Shallow Crustal Earthquakes in Italy",
+    Bull Seismol. Soc. Am., DOI 10.1785/0120180210
+    SA are given up to 10 s.
+
+    The horizontal component of motion corresponds to RotD50, i.e. the median
+    of the distribution of the intensity measures, obtained from the
+    combination of the two horizontal components across all nonredundant
+    azimuths (Boore, 2010).
+
+    In this version we scale the ground-motion to reference rock conditions
+    using the findings of Lanzano et al. (2020) "Generic-To-Reference Rock
+    Scaling Factors for Seismic Ground Motion in Italy", BSSA, 112(3),
+    https://doi.org/10.1785/0120210063
+    """
+    #: Supported tectonic region type is 'active shallow crust' because the
+    #: equations have been derived from data from Italian database ITACA, as
+    #: explained in the 'Introduction'.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
+
+    #: Set of :mod:`intensity measure types <openquake.hazardlib.imt>`
+    #: this GSIM can calculate. A set should contain classes from module
+    #: :mod:`openquake.hazardlib.imt`.
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
+
+    #: Supported intensity measure component is orientation-independent
+    #: measure :attr:`~openquake.hazardlib.const.IMC.RotD50`
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
+
+    #: Supported standard deviation types are inter-event, intra-event
+    #: and total, page 1904
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+
+    #: Required site parameter is only Vs30
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'kappa0'}
+
+    #: Required rupture parameters are magnitude and rake (eq. 1).
+    REQUIRES_RUPTURE_PARAMETERS = {'rake', 'mag'}
+
+    #: Required distance measure is R Joyner-Boore distance (eq. 1).
+    REQUIRES_DISTANCES = {'rjb'}
+
+    COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
+    COEFFS_SITE = LanzanoEtAl2019_RJB_OMO.COEFFS_SITE
+
+    def __init__(self, **kwargs):
+        """
+        Instantiate the model. When the kappa0 value is provided when
+        initializing the class, this overrides the kappa0 value assigned to
+        the site.
+        """
+        super().__init__(**kwargs)
+        self.kappa0 = kwargs.get('kappa0', None)
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        See :meth:`superclass method
+        <.base.GroundShakingIntensityModel.compute>`
+        for spec of input and result values.
+        """
+        if self.kappa0 is not None:
+            ctx.kappa0 = self.kappa0
+        [dist_type] = self.REQUIRES_DISTANCES
+        for m, imt in enumerate(imts):
+            C = self.COEFFS[imt]
+            imean = (_compute_magnitude(ctx, C) +
+                     _compute_distance(ctx, dist_type, C) +
+                     _site_amplification(ctx, C) +
+                     _get_mechanism(ctx, C))
+
+            istddevs = _get_stddevs(C)
+
+            # Return stddevs in terms of natural log scaling
+            sig[m], tau[m], phi[m] = np.log(10.0 ** np.array(istddevs))
+
+            # Apply correction to reference according to Lanzano et al.
+            # (2022; BSSA)
+            SCOF = self.COEFFS_SITE[imt]
+            adjustment = _gen2ref_rock_scaling(SCOF, ctx.vs30, ctx.kappa0, imt)
+            imean += adjustment
+
+            # Convert units to g, but only for PGA and SA (not PGV):
+            mean[m] = np.log((10.0 ** (imean - 2.0)) / g)

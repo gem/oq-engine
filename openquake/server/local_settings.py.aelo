@@ -1,0 +1,22 @@
+import os
+
+APPLICATION_MODE = 'aelo'
+
+# # Static Folder
+# STATIC_ROOT = ''
+
+# WEBUI config uncomment and set properly if needed
+# WEBUIURL = 'http://localhost:8800/'
+
+# turn on USE_X_FORWARDED_HOST to expose the webui via a proxy server
+# USE_X_FORWARDED_HOST = True
+
+# enable WEBUI_PATHPREFIX to place webui pages below a specific path
+# WEBUI_PATHPREFIX='/path/prefix'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = os.environ.get('EMAIL_PORT', 587)
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')

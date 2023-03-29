@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -91,7 +91,7 @@ class GmfComputer(object):
         None or an instance of Amplifier
 
     :param sec_perils:
-        Tuple of secondary perils. See 
+        Tuple of secondary perils. See
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
@@ -124,7 +124,7 @@ class GmfComputer(object):
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-        self.seed = rupture.rup_id
+        self.seed = rupture.seed
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
         if not ctxs:
             raise FarAwayRupture
@@ -320,7 +320,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
                           dict(truncation_level=truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
-    rupture.rup_id = seed
+    rupture.seed = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
     res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)

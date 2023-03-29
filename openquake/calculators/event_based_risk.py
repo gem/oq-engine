@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,7 +25,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, parallel, general
+from openquake.baselib import (
+    hdf5, performance, parallel, general, python3compat)
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs
@@ -82,7 +83,18 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
+def debugprint(ln, asset_loss_table, adf):
+    """
+    Print risk_by_event in a reasonable format. To be used with --nd
+    """
+    if '+' in ln or ln == 'claim':
+        df = asset_loss_table.set_index('aid').rename(columns={'loss': ln})
+        df['asset_id'] = python3compat.decode(adf.id[df.index].to_numpy())
+        del df['variance']
+        print(df)
+
+
+def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -90,16 +102,19 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
+    if ideduc:
+        xtypes.append('claim')
     loss_by_AR = {ln: [] for ln in xtypes}
     correl = int(oq.asset_correlation)
     (A, R, K), L = ARK, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
     for out in outputs:
-        for li, ln in enumerate(oq.ext_loss_types):
+        for li, ln in enumerate(xtypes):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
+            # debugprint(ln, alt, adf)
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
@@ -202,7 +217,9 @@ def event_based_risk(df, oqparam, monitor):
     """
     with monitor('reading assets/crmodel', measuremem=True):
         # can aggregate millions of asset by using few GBs of RAM
-        items = monitor.read('assets').groupby('taxonomy')
+        adf = monitor.read('assets')
+        ideduc = adf.ideductible.any()
+        items = adf.groupby('taxonomy')
         taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
@@ -218,7 +235,7 @@ def event_based_risk(df, oqparam, monitor):
                             int(oqparam.asset_correlation))
 
     avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
-                      crmodel, ARK, aggids, rlz_id, monitor)
+                      crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor)
     return dict(avg=avg, alt=alt)
 
 
@@ -306,8 +323,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if hasattr(self, 'policy_df') and 'reinsurance' not in oq.inputs:
             sec_losses.append(
                 partial(insurance_losses, policy_df=self.policy_df))
+        ideduc = self.assetcol['ideductible'].any()
         if oq.total_losses:
-            sec_losses.append(partial(total_losses, kind=oq.total_losses))
+            sec_losses.append(
+                partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
+        elif ideduc:
+            # subtract the insurance deductible for a single loss_type
+            [lt] = oq.loss_types
+            sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
+            
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N
@@ -328,6 +352,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         base.create_risk_by_event(self)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+        self.xtypes = oq.ext_loss_types
+        if self.assetcol['ideductible'].any():
+            self.xtypes.append('claim')
+
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
@@ -350,7 +378,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
         self.avg_losses = {}
-        for lt in oq.ext_loss_types:
+        for lt in self.xtypes:
             self.avg_losses[lt] = numpy.zeros((self.A, R), F32)
             self.datastore.create_dset(
                 'avg_losses-rlzs/' + lt, F32, (self.A, R))
@@ -443,7 +471,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # sanity check on the risk_by_event
         alt = self.datastore.read_df('risk_by_event')
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
-        upper_limit = self.E * (K + 1) * len(oq.ext_loss_types)
+        upper_limit = self.E * (K + 1) * len(self.xtypes)
         size = len(alt)
         assert size <= upper_limit, (size, upper_limit)
         # sanity check on uniqueness by (agg_id, loss_id, event_id)
@@ -454,7 +482,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                (len(arr) - len(uni)))
 
         if oq.avg_losses:
-            for lt in oq.ext_loss_types:
+            for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]
@@ -473,5 +501,4 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         prc.assetcol = self.assetcol
         if hasattr(self, 'exported'):
             prc.exported = self.exported
-        with prc.datastore:
-            prc.run(exports='')
+        prc.run(exports='')

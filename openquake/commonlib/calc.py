@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import itertools
-import warnings
 import logging
 from unittest.mock import Mock
 import numpy
@@ -75,92 +74,6 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
     return curves
 
 
-def get_mean_curve(dstore, imt, site_id=0):
-    """
-    Extract the mean hazard curve from the datastore for the first site.
-    """
-    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
-        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
-    else:  # there is only 1 realization
-        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
-    return arr[site_id, 0, 0]
-
-
-def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
-    """
-    Extract the poe corresponding to the given iml by looking at the mean
-    curve for the given imt. `iml` can also be an array.
-    """
-    imls = dstore['oqparam'].imtls[imt]
-    mean_curve = get_mean_curve(dstore, imt, site_id)
-    return numpy.interp(imls, mean_curve)[iml]
-
-
-# ######################### hazard maps ################################### #
-
-# cutoff value for the poe
-EPSILON = 1E-30
-
-
-def compute_hazard_maps(curves, imls, poes):
-    """
-    Given a set of hazard curve poes, interpolate hazard maps at the specified
-    ``poes``.
-
-    :param curves:
-        Array of floats of shape N x L. Each row represents a curve, where the
-        values in the row are the PoEs (Probabilities of Exceedance)
-        corresponding to the ``imls``.
-        Each curve corresponds to a geographical location.
-    :param imls:
-        Intensity Measure Levels associated with these hazard ``curves``. Type
-        should be an array-like of floats.
-    :param poes:
-        Value(s) on which to interpolate a hazard map from the input
-        ``curves``. Can be an array-like or scalar value (for a single PoE).
-    :returns:
-        An array of shape N x P, where N is the number of curves and P the
-        number of poes.
-    """
-    log_poes = numpy.log(poes)
-    if len(log_poes.shape) == 0:
-        # `poes` was passed in as a scalar;
-        # convert it to 1D array of 1 element
-        log_poes = log_poes.reshape(1)
-    P = len(log_poes)
-
-    if len(curves.shape) == 1:
-        # `curves` was passed as 1 dimensional array, there is a single site
-        curves = curves.reshape((1,) + curves.shape)  # 1 x L
-
-    N, L = curves.shape  # number of levels
-    if L != len(imls):
-        raise ValueError('The curves have %d levels, %d were passed' %
-                         (L, len(imls)))
-
-    hmap = numpy.zeros((N, P))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        # avoid RuntimeWarning: divide by zero for zero levels
-        imls = numpy.log(numpy.array(imls[::-1]))
-    for n, curve in enumerate(curves):
-        # the hazard curve, having replaced the too small poes with EPSILON
-        log_curve = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
-        for p, log_poe in enumerate(log_poes):
-            if log_poe > log_curve[-1]:
-                # special case when the interpolation poe is bigger than the
-                # maximum, i.e the iml must be smaller than the minimum;
-                # extrapolate the iml to zero as per
-                # https://bugs.launchpad.net/oq-engine/+bug/1292093;
-                # then the hmap goes automatically to zero
-                pass
-            else:
-                # exp-log interpolation, to reduce numerical errors
-                # see https://bugs.launchpad.net/oq-engine/+bug/1252770
-                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
-    return hmap
-
-
 # #########################  GMF->curves #################################### #
 
 # NB (MS): the approach used here will not work for non-poissonian models
@@ -207,7 +120,7 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
-
+# TODO: see if it can be simplified, in terms of compute_hmap4
 def make_hmaps(pmaps, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability maps.
@@ -222,7 +135,7 @@ def make_hmaps(pmaps, imtls, poes):
     for pmap in pmaps:
         hmap = probability_map.ProbabilityMap(pmaps[0].sids, M, P).fill(0)
         for m, imt in enumerate(imtls):
-            data = compute_hazard_maps(
+            data = probability_map.compute_hazard_maps(
                 pmap.array[:, m], imtls[imt], poes)  # (N, P)
             for idx, imls in enumerate(data):
                 for p, iml in enumerate(imls):
@@ -270,7 +183,7 @@ class RuptureImporter(object):
         eid_rlz = []
         for rup in proxies:
             ebr = EBRupture(
-                Mock(rup_id=rup['seed']), rup['source_id'],
+                Mock(seed=rup['seed']), rup['source_id'],
                 rup['trt_smr'], rup['n_occ'], e0=rup['e0'],
                 scenario='scenario' in self.oqparam.calculation_mode)
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():

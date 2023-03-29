@@ -997,9 +997,10 @@ types of analysis are currently supported:
    Traditional results - such as hazard curves - can be obtained by
    post- processing the set of computed ground-motion fields.
 
--  *Scenario Based Seismic Hazard Analysis*, allowing the calculation of ground motion fields from a
-   single earthquake rupture scenario taking into account ground-motion
-   aleatory variability.
+-  *Scenario Based Seismic Hazard Analysis*, allowing the calculation of ground motion 
+   fields from a single earthquake rupture scenario taking into account ground motion
+   aleatory variability. The ground motion fields can be conditioned to observed data,
+   when available.
 
 Each workflow has a modular structure, so that intermediate results can
 be exported and analyzed. Each calculator can be extended independently
@@ -1095,9 +1096,17 @@ The main calculators used to perform this analysis are:
 
 Scenario based Seismic Hazard Analysis 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In case of Scenario Based Seismic Hazard Analysis, the input data 
-consist of a single earthquake rupture
-model and one or more ground-motion models. Using the Ground Motion
+In case of Scenario Based Seismic Hazard Analysis, the engine simulates a set of 
+ground motion fields (GMFs) at the target sites for the requested set of 
+intensity measure types. This set of GMFs can then be used in 
+:ref:`Scenario Damage Assessment` and :ref:`Scenario Risk Assessment`
+to estimate the distribution of potential damage, economic losses, fatalities, 
+and other consequences. The scenario calculator is useful for simulating 
+both historical and hypothetical earthquakes.
+
+In case of Scenario Based Seismic Hazard Analysis, 
+The input data consist of a single earthquake rupture model and 
+one or more ground-motion models (GSIMs). Using the Ground Motion
 Field Calculator, multiple realizations of ground shaking can be
 computed, each realization sampling the aleatory uncertainties in the
 ground-motion model. The main calculator used to perform this analysis
@@ -1105,6 +1114,13 @@ is the *Ground Motion Field Calculator*, which was already introduced
 during the description of the event based PSHA workflow (see
 Section  :ref:`Event based PSHA`).
 
+Starting from OpenQuake engine v3.16, it is possible to condition the
+ground shaking to observations, such as ground motion recordings and 
+macroseismic intensity observations. The simulated ground motion fields 
+are cross-spatially correlated, and can reduce considerably the uncertainty 
+and bias in the resulting loss and damage estimates.
+The implementation of the conditioning of ground motion fields in the engine 
+was performed following closely the procedure proposed by Engler et al. (2022).
 
 As the scenario calculator does not need to determine the probability of
 occurrence of the specific rupture, but only sufficient information to
@@ -1752,10 +1768,10 @@ example of a seismic source model:
           </logicTree>
       </nrml>
 
-The Ground Motion System The Ground Motion
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-System defines the models and the possible epistemic uncertainties
-related to ground motion modelling to be incorporated into the
+The Ground Motion System
+^^^^^^^^^^^^^^^^^^^^^^^^
+The Ground Motion System defines the models and the possible epistemic 
+uncertainties related to ground motion modelling to be incorporated into the
 calculation.
 
 .. _gmlt:
@@ -1763,11 +1779,11 @@ calculation.
 The Ground Motion Logic Tree
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The structure of the *Ground-Motion Logic Tree* consists of a list of ground
+The structure of the *Ground Motion Logic Tree* consists of a list of ground
 motion prediction equations for each tectonic region used to
 characterise the sources in the PSHA input model.
 
-The example below in shows a simple *Ground-Motion Logic Tree*. This logic tree assumes that all
+The example below in shows a simple *Ground Motion Logic Tree*. This logic tree assumes that all
 the sources in the PSHA input model belong to “Active Shallow Crust” and
 uses for calculation the B. S.-J. Chiou and Youngs (2008) Ground Motion Prediction Equation.
 
@@ -1811,8 +1827,7 @@ different types of seismic hazard calculations.
 
 Classical PSHA 
 ~~~~~~~~~~~~~~
-In the
-following we describe the overall structure and the most typical
+In the following we describe the overall structure and the most typical
 parameters of a configuration file to be used for the computation of a
 seismic hazard map using a classical PSHA methodology.
 
@@ -2124,7 +2139,7 @@ description of each parameter is provided below.
    measure levels corresponding to the probability of exceedance
    value(s) provided here. The computations use the
    ``investigation_time`` and the ``intensity_measure_types_and_levels``
-   defined in the “Calculation configuration” section (see page ). For
+   defined in the “Calculation configuration” section. For
    the ``poes_disagg`` the intensity measure level(s) for the
    disaggregation are inferred by performing a classical calculation and
    by inverting the hazard curves.
@@ -2155,14 +2170,15 @@ description of each parameter is provided below.
    ``Lon_Lat_TRT``, ``Mag_Dist``, ``Mag_Dist_Eps``, ``Mag_Lon_Lat``,
    ``TRT``. If none are specified, then all are computed. More details
    of the disaggregation output are given in the “Outputs from Hazard
-   Disaggregation” section, see page )
+   Disaggregation” section)
 
 -  ``disagg_by_src``: optional; if specified and set to true,
    disaggregation by source is computed, if possible.
 
 -  ``num_rlzs_disagg``: optional; specifies the number of realizations
    to be used, selecting those that yield intensity measure levels
-   closest to the mean.
+   closest to the mean. Starting from engine 3.17 the default is 0,
+   which means considering all realizations.
 
 Alternatively to ``num_rlzs_disagg``, the user can specify the index or
 indices of the realizations to disaggregate as a list of comma-separated
@@ -2177,9 +2193,7 @@ integers. For example:
 If ``num_rlzs_disagg`` is specified, the user cannot specify
 ``rlz_index``, and vice versa. If ``num_rlzs_disagg`` or ``rlz_index``
 are specified, the mean disaggregation is automatically computed from
-the selected realizations. If neither is specified, the realization that
-yields the intensity measure level closest to the mean level will be
-selected.
+the selected realizations.
 
 As mentioned above, the user also has the option to perform
 disaggregation by directly specifying the intensity measure level to be
@@ -2194,7 +2208,7 @@ example is shown below:
 
 If ``iml_disagg`` is specified, the user should not include
 ``intensity_measure_types_and_levels`` in the “Calculation
-configuration” section (see page ) since it is explicitly given here.
+configuration” section since it is explicitly given here.
 
 The OQ Engine supports the calculation of two typologies of disaggregation 
 result involving :math:`\epsilon`. The standard approach used by the 
@@ -2284,9 +2298,13 @@ previously in the ``intensity_measure_types_and_levels`` option.
 
 Scenario hazard 
 ~~~~~~~~~~~~~~~
-In order to run this
-calculator, the parameter ``calculation_mode`` needs to be set to
-``scenario``. The basic job configuration file required for running a
+In order to run this calculator, the parameter ``calculation_mode`` needs to be set to
+``scenario``. The user can run scenario calculations with and without conditioning the
+ground shaking to station and macroseismic data. 
+The ground motion fields will be computed at each of the sites and for
+each of the intensity measure types specified in the job configuration file.
+
+The basic job configuration file required for running a
 scenario hazard calculation is shown in
 :ref:`the listing <lst:config_scenario_hazard>` below.
 
@@ -2302,12 +2320,15 @@ scenario hazard calculation is shown in
       [sites]
       sites_csv = sites.csv
 
+      [station_data]
+      station_data_file = stationlist.csv
+
       [rupture]
       rupture_model_file = rupture_model.xml
       rupture_mesh_spacing = 2.0
 
       [site_params]
-      site_model_file = site_model.xml
+      site_model_file = site_model.csv site_model_stations.csv
 
       [correlation]
       ground_motion_correlation_model = JB2009
@@ -2322,53 +2343,149 @@ scenario hazard calculation is shown in
       number_of_ground_motion_fields = 1000
 
 Most of the job configuration parameters required for running a scenario
-hazard calculation seen in the example in
-`the listing <lst:config_scenario_hazard>` above
-are the same as those described in the previous sections for the
-classical PSHA calculator
-(Section  :ref:`Classical PSHA`)
-and the event-based PSHA calculator
-(Section  :ref:`Event based PSHA`).
+hazard calculation seen in the example in :ref:`the listing <lst:config_scenario_hazard>` 
+above are the same as those described in the previous sections for the
+classical PSHA calculator (Section  :ref:`Classical PSHA`)
+and the event-based PSHA calculator (Section  :ref:`Event based PSHA`).
 The set of sites at which the ground motion fields will be produced can
-be specifed by using either the ``sites`` or ``sites_csv`` parameters,
+be specifed by using the ``sites`` or ``sites_csv`` parameters,
 or the ``region`` and ``region_grid_spacing`` parameters, similar to the
-classical PSHA and event-based PSHA calculators. The parameter unique to
-the scenario calculator is described below:
+classical PSHA and event-based PSHA calculators; other options include the 
+definition of the sites through the ``site_model_file`` or the 
+exposure model (see Section :ref:`Exposure Models`).
+
+The parameters unique to the scenario calculator are described below:
 
 -  ``number_of_ground_motion_fields``: this parameter is used to specify
    the number of Monte Carlo simulations of the ground motion values at
-   the specified sites
+   the specified sites.
+
+-  ``station_data_file``: this is an optional parameter used to specify
+   the observed intensity values for one or more intensity measure types 
+   at a set of ground motion recording stations. See example file in 
+   :numref:`input:station_data`.
 
 -  ``gsim``: this parameter indicates the name of a ground motion
-   prediction equation (a list of available GMPEs can be obtained using
-   ``oq info gsims`` and these are also documented at:
-   http://docs.openquake.org/oq-engine/stable/openquake.hazardlib.gsim.html)
+   prediction equation. Note: There are other option to indicate the
+   ground motion models, see the sections below.
 
-Multiple ground motion prediction equations can be used for a scenario
-hazard calculation by providing a GMPE logic tree file (described
-previously in Section :ref:`gmlt`) using the
-parameter ``gsim_logic_tree_file``. In this case, the OpenQuake engine generates
-ground motion fields for all GMPEs specified in the logic tree file. The
-*Branch* weights in the logic tree file are ignored in a scenario analysis
-and only the individual *Branch* results are computed. Mean or quantile
-ground motion fields will not be generated.
+Note that each of the GSIMs specified for a conditioned GMF calculation must provide 
+the within-event and between-event standard deviations separately. If a GSIM of interest 
+provides only the total standard deviation, a (non-ideal) workaround might be for 
+the user to specify the ratio between the within-event and between-event standard deviations, 
+which the engine will use to add the between and within standard deviations to the GSIM.
 
-The ground motion fields will be computed at each of the sites and for
-each of the intensity measure types specified in the job configuration
-file. The above calculation can be run using the command line:
+**Station data csv file**
+This csv file contains the observed intensity values available from ground motion 
+recordings and macroseismic intensity data. One or multiple intensity measure types 
+can be indicated for all observations. An example of such a file is shown below in
+:numref:`input:station_data`.
 
-.. code:: shell-session
+When conditiong the ground motion fields to station data, all of the site parameters 
+required by the GMMs will also need to be provided for the set of sites in the station_data_file.
+This is specified in the configuration file by including in the ``site_model_file`` section
+a ``site_model_stations.csv`` file.
 
-   user@ubuntu:~$ oq engine --run job.ini
+.. container::
 
-After the calculation is completed, a message similar to the following
-will be displayed:
+   .. table:: Example of station data csv file
+      :name: input:station_data
 
-.. code:: shell-session
+      +-----------------+--------------+------------+----------+--------------+-----------+--------------+---------------+------------------+---------------+------------------+
+      | STATION_ID      | STATION_NAME | LONGITUDE  | LATITUDE | STATION_TYPE | PGA_VALUE | PGA_LN_SIGMA | SA(0.3)_VALUE | SA(0.3)_LN_SIGMA | SA(1.0)_VALUE | SA(1.0)_LN_SIGMA |
+      +=================+==============+============+==========+==============+===========+==============+===============+==================+===============+==================+
+      | VIGA            | LAS VIGAS    | -99.23326  | 16.7587  | seismic      | 0.355     | 0            | 0.5262        | 0                | 0.1012        | 0                |
+      | VNTA            | LA VENTA     | -99.81885  | 16.91426 | seismic      | 0.2061    | 0            | 0.3415        | 0                | 0.1051        | 0                |
+      | COYC            | COYUCA       | -100.08996 | 16.99778 | seismic      | 0.1676    | 0            | 0.2643        | 0                | 0.0872        | 0                |
+      | ⋮               | ⋮             | ⋮          | ⋮        | ⋮             | ⋮         | ⋮            | ⋮              | ⋮                | ⋮             | ⋮                |
+      | UTM_14Q_041_186 | NA           | -99.7982   | 16.86687 | macroseismic | 0.6512    | 0.8059       | 0.9535        | 1.0131           | 0.4794        | 1.0822           |
+      | UTM_14Q_041_185 | NA           | -99.79761  | 16.77656 | macroseismic | 0.5797    | 0.8059       | 0.8766        | 1.0131           | 0.4577        | 1.0822           |
+      | UTM_14Q_040_186 | NA           | -99.89182  | 16.86655 | macroseismic | 0.477     | 0.8059       | 0.722         | 1.0131           | 0.3223        | 1.0822           |
+      | ⋮               | ⋮             | ⋮          | ⋮        | ⋮             | ⋮         | ⋮            | ⋮              | ⋮                | ⋮             | ⋮                |
+      +-----------------+--------------+------------+----------+--------------+-----------+--------------+---------------+------------------+---------------+------------------+
 
-   Calculation 260 completed in 3 seconds. Results:
-     id | name
-    569 | Ground Motion Fields
+The following parameters are mandatory:
+-  ``STATION_ID``: string; subject to the same validity checks as the ``id`` fields 
+   in other input files.
+
+-  ``LONGITUDE``, ``LATITUDE``: floats; valid longitude and latitude values.
+
+-  ``STATION_TYPE``: string; currently the only two valid options are 'seismic' 
+   and 'macroseismic'.
+
+-  ``<IMT>_VALUE``, ``<IMT>_LN_SIGMA``, ``<IMT>_STDDEV``: floats; for each IMT observed at 
+   the recording stations, two values should be provided:
+
+   -  for IMTs that are assumed to be lognormally distributed (eg. PGV, PGA, SA), 
+      these would be the median and lognormal standard deviation using the column 
+      headers <IMT>_VALUE, <IMT>_LN_SIGMA respectively.
+
+   -  for other IMTs (e.g., MMI), these would simply be the mean and standard deviation 
+      using the column headers <IMT>_VALUE, <IMT>_STDDEV respectively.
+
+The following parameters are optional:
+-  ``STATION_NAME``: string; free form and not subject to the same constraints as the 
+   `STATION_ID` field. The optional STATION_NAME field can contain information that aids 
+   in identifying a particular station.
+
+-  Other fields: could contain notes about the station, flags indicating outlier status for 
+   the values reported by the station, site information, etc., but these optional fields 
+   will not be read by the station_data_file parser.
+
+**Ground motion models**
+The user can choose to specify one or multiple GSIMs (or GMPEs) for the scenario calculation 
+using any of the options below. A list of available GSIMs can be obtained using
+``oq info gsims`` in the terminal, and these are also documented at 
+http://docs.openquake.org/oq-engine/stable/openquake.hazardlib.gsim.html.
+
+-  A single ground motion model, e.g., ``gsim = BooreAtkinson2008``.
+
+-  A GSIM logic tree (see Section :ref:`gmlt`). In this case multiple ground motion models 
+   can be specified in a GMPE logic tree file  using the parameter ``gsim_logic_tree_file``. 
+   In this case, the OpenQuake engine generates ground motion fields for all GMPEs specified 
+   in the logic tree file. The *Branch* weights in the logic tree file are ignored in a 
+   scenario analysis and only the individual *Branch* results are computed. 
+   Mean or quantile ground motion fields will not be generated.
+
+-  A weighted average GSIM: starting from OpenQuake engine v3.8 it is possible to indicate an
+   AvgGMPE that computes the geometric mean of the underlying GMPEs, similarly to AvgSA.
+   In the configuration file, a weighted average GSIM can be specified as
+   ``gsim_logic_tree_file = gsim_weighted_avg.xml``, where the file ``gsim_weighted_avg.xml`` 
+   can be constructed using the modifiable GMPE structure for AvgGMPE as shown in the example below:
+   
+.. container:: listing
+
+   .. code:: xml
+      :name: modifiable GMPE
+      :number-lines:
+
+      <?xml version="1.0" encoding="UTF-8"?>
+      <nrml xmlns:gml="http://www.opengis.net/gml" 
+            xmlns="http://openquake.org/xmlns/nrml/0.4">
+      <logicTree logicTreeID='lt1'>
+         <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet 
+            branchSetID="bs1" 
+            uncertaintyType="gmpeModel" 
+            applyToTectonicRegionType="Active Shallow Crust">
+            <logicTreeBranch branchID="br1">
+               <uncertaintyModel>
+                  [AvgGMPE]
+                  b1.AbrahamsonEtAl2014.weight=0.22
+                  b2.BooreEtAl2014.weight=0.22
+                  b3.CampbellBozorgnia2014.weight=0.22
+                  b4.ChiouYoungs2014.weight=0.22
+                  b5.Idriss2014.weight=0.12
+               </uncertaintyModel>
+               <uncertaintyWeight>
+                  1.0
+               </uncertaintyWeight>
+            </logicTreeBranch>
+            </logicTreeBranchSet>
+         </logicTreeBranchingLevel>
+      </logicTree>
+      </nrml>
+
 
 .. _`chap:hazoutputs`:
 
@@ -2802,8 +2919,7 @@ sampled from the logic tree. An example of such a file is shown below in
 
 Outputs from Scenario Hazard Analysis 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-By
-default, the scenario hazard calculator computes and stores Ground Motion Fields for
+By default, the scenario hazard calculator computes and stores Ground Motion Fields for
 each GMPE specified in the job configuration file. The Ground Motion Fields will be
 computed at each of the sites and for each of the intensity measure
 types specified in the job configuration file.
@@ -2832,8 +2948,9 @@ latitude and longitude coordinates.
       1        6       99      0.514       0.340           1.202
       ======== ======= ======= =========== =============== ===============
 
-In this example, the gmfs have been computed using two different GMPEs,
-so the realization indices (’rlzi’) in the first column of the example
+In this example, the gmfs have been computed using two different GMPEs
+(and without conditioning the ground shaking to observations), so 
+the realization indices (’rlzi’) in the first column of the example
 gmfs file are either 0 or 1. The gmfs file lists the ground motion
 values for 100 simulations of the scenario, so the event indices (’eid’)
 in the third column go from 0–99. There are seven sites with indices 0–6
@@ -2858,6 +2975,13 @@ intensity measure types specified in the job configuration file.
       5           -122.00000 38.22500
       6           -121.88600 38.11300
       =========== ========== ========
+
+For scenario hazard calculations that consider the conditioning of  
+the ground shaking to siesmic station or macroseismic observations,
+the nominal event bias, one bias value for each IMT, and for every GSIM 
+used in the calculation is displayed and stored in the calculation log.
+The calculation log can be obtained using ``oq engine --show-log CALC_ID`` 
+in the terminal.
 
 .. _`chap:hazdemos`:
 

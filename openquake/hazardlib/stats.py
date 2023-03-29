@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2022 GEM Foundation
+# Copyright (c) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -42,7 +42,7 @@ def truncnorm_sf(phi_b, values):
     Fast survival function for truncated normal distribution.
     Assumes zero mean, standard deviation equal to one and symmetric
     truncation. It is faster than using scipy.stats.truncnorm.sf.
-    
+
     :param phi_b:
          ndtr(truncation_level); assume phi_b > .5
     :param values:
@@ -190,6 +190,8 @@ def quantile_curve(quantile, curves, weights=None):
     >>> arr = numpy.array([.15, .25, .3, .4, .5, .6, .75, .8, .9])
     >>> quantile_curve(.8, arr)
     array(0.76)
+    >>> quantile_curve(.85, numpy.array([.15, .15, .15]))  # constant array
+    array(0.15)
     """
     if not isinstance(curves, numpy.ndarray):
         curves = numpy.array(curves)
@@ -281,7 +283,7 @@ def calc_stats(df, kfields, stats, weights):
             for vf in vfields:
                 values = numpy.zeros_like(weights)  # shape R
                 values[group.rlz_id] = getattr(group, vf).to_numpy()
-                v = apply_stat(func, values, weights)
+                v = func(values, weights)
                 acc[vf].append(v)
             acc['stat'].append(name)
     return pandas.DataFrame(acc)
@@ -345,8 +347,19 @@ def apply_stat(f, arraylist, *extra, **kw):
     >>> apply_stat(mean_curve, [a1, a2])
     array([([2.5, 3.5], 4.5)], dtype=[('a', '<f8', (2,)), ('b', '<f8')])
     """
-    dtype = arraylist[0].dtype
-    shape = arraylist[0].shape
+    # NB: we are extending the calculation of statistics to the case of an
+    # arraylist containing some scalars
+    for arr in arraylist:
+        if isinstance(arr, numpy.ndarray):
+            dtype = arr.dtype
+            shape = arr.shape
+            break
+    else:
+        raise ValueError('No array found in the arraylist %s' % arraylist)
+    # promote scalars to arrays of the given dtype and shape
+    for i, arr in enumerate(arraylist):
+        if numpy.isscalar(arr):
+            arraylist[i] = numpy.ones(shape, dtype) * arr
     if dtype.names:  # composite array
         new = numpy.zeros(shape, dtype)
         for name in dtype.names:

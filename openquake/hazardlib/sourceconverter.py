@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
+import math
 import operator
 import collections
 import pickle
@@ -167,7 +168,7 @@ class SourceGroup(collections.abc.Sequence):
         return sorted(source_stats_dict.values())
 
     def __init__(self, trt, sources=None, name=None, src_interdep='indep',
-                 rup_interdep='indep', grp_probability=None,
+                 rup_interdep='indep', grp_probability=1.,
                  min_mag={'default': 0}, max_mag=None,
                  temporal_occurrence_model=None, cluster=False):
         # checks
@@ -267,6 +268,12 @@ class SourceGroup(collections.abc.Sequence):
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
 
+    def get_trt_smr(self):
+        """
+        :returns: the .trt_smr attribute of the underlying sources
+        """
+        return self.sources[0].trt_smr
+
     def count_ruptures(self):
         """
         Set src.num_ruptures on each source in the group
@@ -338,7 +345,7 @@ class SourceGroup(collections.abc.Sequence):
             name=self.name or '',
             src_interdep=self.src_interdep,
             rup_interdep=self.rup_interdep,
-            grp_probability=self.grp_probability or '')
+            grp_probability=self.grp_probability or '1')
         return numpy.array(lst, source_dt), attrs
 
     def __fromh5__(self, array, attrs):
@@ -687,7 +694,8 @@ class SourceConverter(RuptureConverter):
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
-                 source_nodes=()):
+                 source_nodes=(),
+                 infer_occur_rates=False):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -700,6 +708,7 @@ class SourceConverter(RuptureConverter):
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
         self.source_nodes = source_nodes
+        self.infer_occur_rates = infer_occur_rates
 
     def convert_node(self, node):
         """
@@ -1129,8 +1138,11 @@ class SourceConverter(RuptureConverter):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
             # NB: the sections will be fixed later on, in source_reader
-            mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
-                                   dic['mag'], dic['rake'])
+            mfs = MultiFaultSource(sid, name, trt, idxs,
+                                   dic['probs_occur'],
+                                   dic['mag'], dic['rake'],
+                                   self.investigation_time,
+                                   self.infer_occur_rates)
             return mfs
         probs = []
         mags = []
@@ -1158,7 +1170,9 @@ class SourceConverter(RuptureConverter):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes,
+                               self.investigation_time,
+                               self.infer_occur_rates)
         return mfs
 
     def convert_sourceModel(self, node):
@@ -1187,7 +1201,7 @@ class SourceConverter(RuptureConverter):
         # Set attributes related to occurrence
         sg.src_interdep = node.attrib.get('src_interdep', 'indep')
         sg.rup_interdep = node.attrib.get('rup_interdep', 'indep')
-        sg.grp_probability = node.attrib.get('grp_probability')
+        sg.grp_probability = node.attrib.get('grp_probability', 1)
         # Set the cluster attribute
         sg.cluster = node.attrib.get('cluster') == 'true'
         # Filter admitted cases
@@ -1219,7 +1233,9 @@ class SourceConverter(RuptureConverter):
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
             sg.update(src)
-        if sg.src_interdep == 'mutex':
+        if sg and sg.src_interdep == 'mutex':
+            # sg can be empty if source_id is specified and it is different
+            # from any source in sg
             if len(node) and len(srcs_weights) != len(node):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'
@@ -1230,7 +1246,7 @@ class SourceConverter(RuptureConverter):
                 tot += sw
             with context(self.fname, node):
                 numpy.testing.assert_allclose(
-                    tot, 1., err_msg='sum(srcs_weights)', rtol=1e-04)
+                    tot, 1., err_msg='sum(srcs_weights)', atol=5E-6)
 
         # check that, when the cluster option is set, the group has a temporal
         # occurrence model properly defined

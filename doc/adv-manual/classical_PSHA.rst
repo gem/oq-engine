@@ -883,8 +883,8 @@ curve. The ``lvl`` field is an integer corresponding to the intensity
 measure level in the hazard curve.
 
 There is a consistency check comparing the mean hazard curves
-with the value obtained by composing the probab `disagg_by_src` array,
-for the heighest level of each intensity measure type.
+with the value obtained by composing the probabilities in the
+disagg_by_src` array, for the heighest level of each intensity measure type.
 
 It should be noticed that many hazard models contain thousands of
 sources and as a consequence the ``disagg_by_src`` matrix can be
@@ -1025,7 +1025,7 @@ the following::
 
 The number of columns will depend from the number of sites. The
 conditional spectrum calculator, like the disaggregation calculator,
-is mean to be run on a very small number of sites, normally one.
+is meant to be run on a very small number of sites, normally one.
 In this example there are two sites 0 and 1 and the columns ``val0``
 and ``val`` give the value of the conditional spectrum on such sites
 respectively, while the columns ``std0`` and ``std1`` give the corresponding

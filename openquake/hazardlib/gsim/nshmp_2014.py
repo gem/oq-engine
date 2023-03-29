@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -52,7 +52,7 @@ class NSHMP2014(base.GMPE):
     CampbellBozorgnia2014, BooreEtAl2014, AbrahamsonEtAl2014) and `sgn`
     (one of -1, 0, +1).
     """
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ()
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = ()
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ()

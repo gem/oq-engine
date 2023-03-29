@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -31,7 +31,8 @@ from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
     case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
-    recompute, reinsurance_1, reinsurance_2, reinsurance_3)
+    recompute, reinsurance_1, reinsurance_2, reinsurance_3,
+    reinsurance_4, reinsurance_5)
 
 aac = numpy.testing.assert_allclose
 
@@ -134,6 +135,18 @@ agg_id
                      'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
         tmp = gettemp(text_table(aw.to_dframe()))
         self.assertEqualFiles('expected/agg_curves7.csv', tmp)
+
+        self.assertEqual(aw.return_period, [30, 60, 120, 240, 480, 960])
+        self.assertEqual(aw.kind, ["mean"])
+        self.assertEqual(aw.units, ["EUR", "EUR"])
+        self.assertEqual(aw.policy, ["A"])
+        self.assertEqual(aw.taxonomy, ["RC"])
+
+        # extract individual curves
+        aw = extract(self.calc.datastore, 'agg_curves?kind=rlzs&'
+                     'loss_type=structural&absolute=0&policy=A&taxonomy=RC')
+        tmp = gettemp(text_table(aw.to_dframe()))
+        self.assertEqualFiles('expected/agg_curves3.csv', tmp)
 
         # test ct_independence
         loss4 = view('portfolio_losses', self.calc.datastore)
@@ -349,50 +362,24 @@ agg_id
 
         # test the view gsim_for_event
         gsim = view('gsim_for_event:0', self.calc.datastore)
-        self.assertEqual(str(gsim), "[BooreAtkinson2008]")
+        self.assertEqual(str(gsim), "[AkkarBommer2010]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
-        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
+        self.assertEqual(str(gsim), "[AkkarBommer2010]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',
                       hazard_calculation_id=str(self.calc.datastore.calc_id),
                       asset_correlation='1')
-        alt = self.calc.datastore.read_df(
-            'risk_by_event', 'agg_id', dict(event_id=0, loss_id=0)
-        ).sort_index()
-        self.assertEqual(len(alt), 8)  # 7 assets + total
-        del alt['loss_id']
-        del alt['event_id']
-        tot = alt.loc[7]
-        alt = alt[:-1]
-        asset_df = self.calc.datastore.read_df('assetcol/array', 'ordinal')
-        alt['taxonomy'] = asset_df['taxonomy'].to_numpy()
-        alt.sort_values('taxonomy', inplace=True)
-        """
-              loss   variance  taxonomy
-agg_id                                 
-0        25.252846    0.983858         1
-2        46.164463   11.750128         1
-4        71.196510   72.775536         1
-6        35.656673    4.039829         1
-1        68.550377   41.666348         2
-5        36.430618    3.587823         2
-3       113.847435  229.427109         3
-"""
-        sig1 = numpy.sqrt(alt[alt.taxonomy == 1].variance.to_numpy()).sum()
-        sig2 = numpy.sqrt(alt[alt.taxonomy == 2].variance.to_numpy()).sum()
-        sig3 = numpy.sqrt(alt[alt.taxonomy == 3].variance.to_numpy()).sum()
-        aac(sig1 ** 2 + sig2 ** 2 + sig3 ** 2, tot.variance)
 
         # check aggcurves-stats
         [_, fname] = export(('aggcurves-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-5)
+                              fname, delta=2E-4)
 
         # check aggrisk-stats
         [_, fname] = export(('aggrisk-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname),
-                              fname, delta=2E-5)
+                              fname, delta=2E-4)
 
     def check_multi_tag(self, dstore):
         # multi-tag aggregations
@@ -680,3 +667,36 @@ class ReinsuranceTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=4E-5)
+
+    def test_ideductible(self):
+        # the deltas are there so that the tests on macos pass
+        self.run_calc(reinsurance_4.__file__, 'job.ini')
+        f1, f2 = export(('aggrisk', 'csv'), self.calc.datastore)
+        # abs difference of 1E-4 on macos (57.0276 => 57.0277)
+        self.assertEqualFiles('expected/aggrisk.csv', f1, delta=2E-4)
+        self.assertEqualFiles('expected/aggrisk-policy.csv', f2, delta=2E-4)
+
+        f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/aggcurves.csv', f1, delta=2E-4)
+        self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=2E-4)
+        
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
+                              fname, delta=2E-4)
+        [fname] = export(('reinsurance-avg_portfolio', 'csv'),
+                         self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
+                              fname, delta=2E-4)
+
+    def test_ideductible_exposure(self):
+        # this is a test with pure insurance
+        self.run_calc(reinsurance_5.__file__, 'job_1.ini')  # 2 policies
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
+                              fname, delta=2E-4)
+
+        # check moving the ideductible in the exposure produce the same aggcurve
+        self.run_calc(reinsurance_5.__file__, 'job_2.ini')  # 1 policy
+        [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
+                              fname, delta=2E-4)

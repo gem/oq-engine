@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2022 GEM Foundation
+# Copyright (C) 2018-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,8 +41,9 @@ def zip_all(directory, ini):
     total = sum(os.path.getsize(z) for z in zips)
     if os.path.exists('jobs.zip'):
         os.remove('jobs.zip')
-    general.zipfiles(zips, 'jobs.zip', log=logging.info)
-    logging.info('Generated %s of jobs.zip', general.humansize(total))
+    fname = general.zipfiles(zips, 'jobs.zip', log=logging.info)
+    logging.info('Compressed %s -> %s of jobs.zip', general.humansize(total),
+                 general.humansize(os.path.getsize(fname)))
 
 
 # useful for the demos

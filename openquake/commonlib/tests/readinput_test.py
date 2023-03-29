@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,11 +27,10 @@ from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
-from openquake.qa_tests_data.classical import (
-        case_2, case_15, case_21, case_34)
+from openquake.qa_tests_data.logictree import case_02, case_15, case_21
+from openquake.qa_tests_data.classical import case_34
 from openquake.qa_tests_data.event_based import case_16
-from openquake.qa_tests_data.event_based_risk import (
-    case_2 as ebr2, case_caracas)
+from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
 
 
 TMP = tempfile.gettempdir()
@@ -449,7 +448,7 @@ Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
         self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
 
         # test a call used in the GEM4ALL importer, XML + CSV
-        fname = os.path.join(os.path.dirname(ebr2.__file__),
+        fname = os.path.join(os.path.dirname(case_2.__file__),
                              'exposure.xml')
         for ass in asset.Exposure.read([fname]).assets:
             # make sure all the attributes exist
@@ -465,7 +464,7 @@ Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
 class GetCompositeSourceModelTestCase(unittest.TestCase):
 
     def test_reduce_source_model(self):
-        case2 = os.path.dirname(case_2.__file__)
+        case2 = os.path.dirname(case_02.__file__)
         smlt = os.path.join(case2, 'source_model_logic_tree.xml')
         found, total = readinput.reduce_source_model(smlt, [], remove=False)
         self.assertEqual(found, 0)
@@ -482,7 +481,7 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
 
     def test_wrong_trts_in_reqv(self):
         # invalid TRT in job.ini [reqv]
-        oq = readinput.get_oqparam('job.ini', case_2)
+        oq = readinput.get_oqparam('job.ini', case_02)
         fname = oq.inputs['reqv'].pop('active shallow crust')
         oq.inputs['reqv']['act shallow crust'] = fname
         with self.assertRaises(ValueError) as ctx:
@@ -502,7 +501,9 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
     def test_with_site_model(self):
         oq = readinput.get_oqparam('job.ini', case_34)
         ssclt = readinput.get_composite_source_model(oq)
-        self.assertEqual(ssclt.source_model_lt.source_ids['956'], ['b1'])
+        self.assertEqual(
+            list(ssclt.source_model_lt.source_data[0]),
+            ['b1', 'Active Shallow Crust', 'source_model.xml', '956'])
 
 
 class SitecolAssetcolTestCase(unittest.TestCase):

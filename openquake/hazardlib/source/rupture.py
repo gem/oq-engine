@@ -1,6 +1,6 @@
 # coding: utf-8
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -70,7 +70,7 @@ rupture_dt = numpy.dtype([
     ('id', U32),
     ('seed', U32),
     ('source_id', '<S16'),
-    ('trt_smr', U16),
+    ('trt_smr', U32),
     ('code', U8),
     ('n_occ', U32),
     ('mag', F32),
@@ -98,7 +98,7 @@ def to_csv_array(ruptures):
     for rec, rup in zip(arr, ruptures):
         # s0=number of multi surfaces, s1=number of rows, s2=number of columns
         arrays = surface_to_arrays(rup.surface)  # shape (s0, 3, s1, s2)
-        rec['seed'] = rup.rup_id
+        rec['seed'] = rup.seed
         rec['mag'] = rup.mag
         rec['rake'] = rup.rake
         rec['lon'] = rup.hypocenter.x
@@ -177,7 +177,7 @@ def _get_rupture(rec, geom=None, trt=None):
 
     # build rupture
     rupture = object.__new__(rupture_cls)
-    rupture.rup_id = rec['seed']
+    rupture.seed = rec['seed']
     rupture.surface = surface
     rupture.mag = rec['mag']
     rupture.rake = rec['rake']
@@ -250,7 +250,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
-    rup_id = 0  # set to a value > 0 by the engine
+    seed = 0  # set to a value > 0 by the engine
     _code = {}
 
     @classmethod
@@ -697,7 +697,7 @@ class ExportedRupture(object):
     Simplified Rupture class with attributes rupid, events_by_ses, indices
     and others, used in export.
 
-    :param rupid: rupture rup_id ID
+    :param rupid: rupture.seed ID
     :param events_by_ses: dictionary ses_idx -> event records
     :param indices: site indices
     """
@@ -722,7 +722,7 @@ class EBRupture(object):
     """
     def __init__(self, rupture, source_id, trt_smr, n_occ=1,
                  id=None, e0=0, scenario=False):
-        assert rupture.rup_id > 0  # sanity check
+        assert rupture.seed > 0  # sanity check
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
@@ -732,15 +732,20 @@ class EBRupture(object):
         self.scenario = scenario
 
     @property
+    def trt_smrs(self):
+        # used only in hazardlib/tests/calc/scenario_test.py
+        return self.trt_smr,
+
+    @property
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
     @property
-    def rup_id(self):
+    def seed(self):
         """
         Seed of the rupture
         """
-        return self.rupture.rup_id
+        return self.rupture.seed
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
@@ -756,8 +761,7 @@ class EBRupture(object):
                 dic[rlz_id] = eids
         else:  # event_based
             j = 0
-            histo = general.random_histogram(
-                self.n_occ, len(rlzs), self.rup_id)
+            histo = general.random_histogram(self.n_occ, len(rlzs), self.seed)
             for rlz, n in zip(rlzs, histo):
                 dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
                 j += n
@@ -771,7 +775,7 @@ class EBRupture(object):
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
-            self.__class__.__name__, self.rup_id, self.n_occ)
+            self.__class__.__name__, self.seed, self.n_occ)
 
 
 class RuptureProxy(object):
@@ -844,7 +848,8 @@ def get_ruptures(fname_csv):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        tup = (u, row['seed'], 'no-source', aw.trts.index(row['trt']),
+        trt_smr = aw.trts.index(row['trt']) * 2**24
+        tup = (u, row['seed'], 'no-source', trt_smr,
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)

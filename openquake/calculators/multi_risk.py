@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -70,7 +70,8 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     occupants = [name for name in assetcol.array.dtype.names
                  if name.startswith('occupants')]
     for name, dt in assetcol.array.dtype.descr:
-        if name not in {'area', 'value-occupants', 'ordinal', 'id'}:
+        if name not in {
+                'area', 'value-occupants', 'ordinal', 'id', 'ideductible'}:
             dtlist.append((name, dt))
     dtlist.sort()
     dtlist.insert(0, ('id', '<S100'))

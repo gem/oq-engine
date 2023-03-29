@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2022 GEM Foundation
+# Copyright (C) 2017-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -51,7 +51,7 @@ class LossCurveExporter(object):
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
         self.loss_types = dstore.get_attr('crm', 'loss_types')
-        self.R = dstore['full_lt'].get_num_rlzs()
+        self.R = dstore['full_lt'].get_num_paths()
 
     def parse(self, what):
         """

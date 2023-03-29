@@ -178,7 +178,7 @@ the portfolio of assets within the specified effective investigation time.
 
 The PML for a given return period is built from the losses in the event loss
 table. The algorithm used is documented in detail in the [advanced
-manual](https://docs.openquake.org/oq-engine/advanced/event_based.html?highlight=pml#the-probable-maximum-loss-pml-and-the-loss-curves) at
+manual](https://docs.openquake.org/oq-engine/advanced/latest/event_based.html#the-probable-maximum-loss-pml-and-the-loss-curves) at
 the end of the section about risk calculations. The section also explains
 why sometimes the PML or the loss curves contain NaN values (the
 effective investigation time is too short compared to the return period).

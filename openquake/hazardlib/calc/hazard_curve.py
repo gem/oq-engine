@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -165,12 +165,7 @@ def calc_hazard_curves(
     for i, grp in enumerate(groups):
         for src in grp:
             tom = getattr(src, 'temporal_occurrence_model', None)
-            if tom:
-                span = tom.time_span
-            else:
-                span = kwargs.get('investigation_time')
-                if span:
-                    tom = PoissonTOM(span)
+            span = tom.time_span if tom else kwargs['investigation_time']
             src.weight = src.count_ruptures()
             src.grp_id = i
             src.id = idx

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2022, GEM Foundation
+# Copyright (C) 2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,11 +20,10 @@ import os
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-from openquake.baselib.general import DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.commonlib import datastore
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 
@@ -50,7 +49,7 @@ class MRD01TestCase(unittest.TestCase):
         self.cmaker = cmaker.restrict(self.imts)
 
         # Read contexts
-        [self.ctx] = self.cmaker.read_ctxs(self.dstore)
+        self.ctx = read_ctx_by_grp(self.dstore)[0]
 
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()
@@ -191,7 +190,7 @@ class MRD01TestCase(unittest.TestCase):
 
             fig, axs = plt.subplots(1, 1)
             fig.set_size_inches(9, 6)
-            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrdd[:, :, 0, 0])
+            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrdd[:, :, 0])
             _ = plt.contour(np.log(imlc1), np.log(imlc2), mrdi[:, :, 0, 0],
                             colors='orange', linestyles='dashed')
             _ = plt.colorbar(mappable=plt1)

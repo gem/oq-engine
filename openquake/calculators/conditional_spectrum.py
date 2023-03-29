@@ -22,10 +22,13 @@ Conditional spectrum calculator, inspired by the disaggregation calculator
 import logging
 import numpy
 
-from openquake.baselib import general, performance
-from openquake.commonlib.calc import compute_hazard_maps, get_mean_curve
+from openquake.baselib import general, parallel
+from openquake.baselib.python3compat import decode
+from openquake.hazardlib.probability_map import (
+    compute_hazard_maps, get_mean_curve)
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib import valid
+from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, outdict
 from openquake.calculators import base
 
@@ -72,7 +75,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
                         'experimental')
 
         oq = self.oqparam
-        self.full_lt = self.datastore['full_lt']
+        self.full_lt = self.datastore['full_lt'].init()
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)
@@ -105,16 +108,17 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
-        out = general.AccumDict()  # grp_id => dict
 
         # Computing CS
-        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
+        toms = decode(dstore['toms'][:])
+        ctx_by_grp = read_ctx_by_grp(dstore)
+        smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
+        for gid, ctx in ctx_by_grp.items():
+            tom = valid.occurrence_model(toms[gid])
             cmaker = self.cmakers[gid]
-            cmaker.poes = oq.poes
-            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
-            for ctx in ctxs:
-                out += get_cs_out(cmaker, ctx, imti, self.imls)
-
+            smap.submit((cmaker, ctx, imti, self.imls, tom))
+        out = smap.reduce()
+        
         # Apply weights and get two dictionaries with integer keys
         # (corresponding to the rlz ID) and array values
         # of shape (M, N, 3, P) where:
@@ -125,14 +129,13 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         outdic, outmean = self._apply_weights(out)
 
         # Computing standard deviation
-        for gid, start, stop in performance.idx_start_stop(rdata['grp_id']):
+        smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
+        for gid, ctx in ctx_by_grp.items():
             cmaker = self.cmakers[gid]
-            cmaker.poes = oq.poes
-            ctxs = cmaker.read_ctxs(dstore, slice(start, stop))
-            for ctx in ctxs:
-                res = get_cs_out(cmaker, ctx, imti, self.imls, outmean[0])
-                for g in res:
-                    out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
+            smap.submit((cmaker, ctx, imti, self.imls, tom, outmean[0]))
+        for res in smap:
+            for g in res:
+                out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
         return out
 
     def convert_and_save(self, dsetname, outdic):
@@ -157,11 +160,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
     def _apply_weights(self, acc):
         # build conditional spectra for each realization
-        rlzs_by_g = self.datastore['rlzs_by_g'][()]
         outdic = outdict(self.M, self.N, self.P, 0, self.R)
-        for _g, rlzs in enumerate(rlzs_by_g):
+        for g, rlzs in self.full_lt.rlzs_by_g.items():
             for r in rlzs:
-                outdic[r] += acc[_g]
+                outdic[r] += acc[g]
         self.convert_and_save('cs-rlzs', outdic)
 
         # build final conditional mean and std

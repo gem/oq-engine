@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -49,7 +49,8 @@ structural+nonstructural structural+contents nonstructural+contents
 structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
-structural_ins nonstructural_ins reinsurance'''.split())
+structural_ins nonstructural_ins
+reinsurance claim'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
@@ -930,12 +931,22 @@ def scenario_damage(fragility_functions, gmvs):
 
 def annual_frequency_of_exceedence(poe, t_haz):
     """
-    :param poe: array of probabilities of exceedence
+    :param poe: array of probabilities of exceedence in time t_haz
     :param t_haz: hazard investigation time
     :returns: array of frequencies (with +inf values where poe=1)
     """
-    assert not (poe == 1).any()  # avoid log(0)
+    # replace 1 with the closest to 1 float64 number to avoid log(1-1)
+    poe[poe == 1.] = .9999999999999999
     return - numpy.log(1-poe) / t_haz
+
+
+def probability_of_exceedance(afoe, t_risk):
+    """
+    :param afoe: array of annual frequencies of exceedence
+    :param t_risk: risk investigation time
+    :returns: array of probabilities of exceedance in time t_risk
+    """
+    return 1 - numpy.exp(-t_risk * afoe)
 
 
 def classical_damage(
@@ -969,23 +980,27 @@ def classical_damage(
     else:
         imls = hazard_imls
         poes = numpy.array(hazard_poes)
-    afe = annual_frequency_of_exceedence(poes, investigation_time)
-    annual_frequency_of_occurrence = pairwise_diff(
-        pairwise_mean([afe[0]] + list(afe) + [afe[-1]]))
+
+    # convert the hazard probabilities of exceedance to
+    # annual frequencies of exceedance, and then occurrence
+    afoes = annual_frequency_of_exceedence(poes, investigation_time)
+    afoos = pairwise_diff(
+        pairwise_mean([afoes[0]] + list(afoes) + [afoes[-1]]))
     poes_per_damage_state = []
     for ff in fragility_functions:
-        fx = annual_frequency_of_occurrence @ ff(imls)
+        fx = afoos @ ff(imls)
         poe_per_damage_state = 1. - numpy.exp(-fx * risk_investigation_time)
         poes_per_damage_state.append(poe_per_damage_state)
     poos = pairwise_diff([1] + poes_per_damage_state + [0])
     return poos
 
 #
-# Classical
+# Classical Risk
 #
 
 
-def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
+def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios,
+              investigation_time, risk_investigation_time):
     """
     :param vulnerability_function:
         an instance of
@@ -997,6 +1012,10 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
         the hazard curve
     :param loss_ratios:
         a tuple of C loss ratios
+    :param investigation_time:
+        hazard investigation time
+    :param risk_investigation_time:
+        risk investigation time
     :returns:
         an array of shape (2, C)
     """
@@ -1013,13 +1032,23 @@ def classical(vulnerability_function, hazard_imls, hazard_poes, loss_ratios):
 
     # interpolate the hazard curve
     poes = interpolate.interp1d(hazard_imls, hazard_poes)(imls)
+    if abs((1-poes).mean()) < 1E-4:  # flat curve
+        raise ValueError('The hazard curve is flat (all ones) probably due to '
+                         'a (hazard) investigation time too large')
 
-    # compute the poos
-    pos = pairwise_diff(poes)
-    lrem_po = numpy.empty(lrem.shape)
-    for idx, po in enumerate(pos):
-        lrem_po[:, idx] = lrem[:, idx] * po  # column * po
-    return numpy.array([loss_ratios, lrem_po.sum(axis=1)])
+    # convert the hazard probabilities of exceedance ot annual
+    # frequencies of exceedance, and then occurrence
+    afoes = annual_frequency_of_exceedence(poes, investigation_time)
+    afoos = pairwise_diff(afoes)
+
+    # compute the annual frequency of exceedance of the loss ratios
+    # lrem = loss ratio exceedance matrix
+    lr_afoes = numpy.empty(lrem.shape)
+    for idx, afoo in enumerate(afoos):
+        lr_afoes[:, idx] = lrem[:, idx] * afoo  # column * afoo
+    lr_poes = probability_of_exceedance(
+        lr_afoes.sum(axis=1), risk_investigation_time)
+    return numpy.array([loss_ratios, lr_poes])
 
 
 # used in classical_risk only
@@ -1142,17 +1171,22 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         losses_by_lt[lt + '_ins'] = new
 
 
-def total_losses(asset_df, losses_by_lt, kind):
+def total_losses(asset_df, losses_by_lt, kind, ideduc=False):
     """
     :param asset_df: DataFrame of assets
     :param losses_by_lt: lt -> DataFrame[eid, aid]
     :param kind: kind of total loss (i.e. "structural+nonstructural")
+    :param ideduc: if True compute the insurance claim
     """
-    if kind in TOTLOSSES:
-        ltypes = kind.split('+')
-    else:
-        raise ValueError(kind)
-    losses_by_lt[kind] = _agg([losses_by_lt[lt] for lt in ltypes])
+    ltypes = kind.split('+')
+    losses_by_lt[kind] = df = _agg([losses_by_lt[lt] for lt in ltypes])
+    # event loss table eid aid variance loss
+    if ideduc:
+        loss = df.loss.to_numpy()
+        ideductible = asset_df.ideductible[df.aid].to_numpy()
+        df = df.copy()
+        df['loss'] = numpy.maximum(loss - ideductible, 0)
+        losses_by_lt['claim'] = df 
 
 
 def insurance_loss_curve(curve, deductible, insurance_limit):

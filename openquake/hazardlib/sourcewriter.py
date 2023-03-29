@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -689,7 +689,7 @@ def build_source_group(source_group):
         attrs['src_interdep'] = source_group.src_interdep
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
-    if source_group.grp_probability is not None:
+    if source_group.grp_probability != 1.0:
         attrs['grp_probability'] = source_group.grp_probability
     if source_group.cluster:
         attrs['cluster'] = 'true'

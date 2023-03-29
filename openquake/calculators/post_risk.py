@@ -382,14 +382,32 @@ class PostRiskCalculator(base.RiskCalculator):
             logging.warning('Reinsurance calculations are still experimental')
             self.policy_df = self.datastore.read_df('policy')
             self.treaty_df = self.datastore.read_df('treaty_df')
-            alt = self.datastore.read_df('risk_by_event')
             # there must be a single loss type (possibly a total type)
-            [lt] = oq.inputs['reinsurance']
-            agg_loss_table = alt[alt.loss_id == scientific.LOSSID[lt]]
-            if len(agg_loss_table) == 0:
-                raise ValueError('No losses for reinsurance %s' % lt)
-            rbp, rbe = reinsurance.by_policy_event(
-                agg_loss_table, self.policy_df, self.treaty_df, self._monitor)
+            ideduc = self.datastore['assetcol/array']['ideductible'].any()
+            if (oq.total_losses or len(oq.loss_types) == 1) and ideduc:
+                # claim already computed and present in risk_by_event
+                lt = 'claim'
+            else:
+                # claim to be computed from the policies
+                [lt] = oq.inputs['reinsurance']
+            loss_id = scientific.LOSSID[lt]
+            parent = self.datastore.parent
+            if parent and 'risk_by_event' in parent:
+                dstore = parent
+            else:
+                dstore = self.datastore
+            ct = oq.concurrent_tasks or 1
+
+            # now aggregate risk_by_event by policy
+            allargs = [(dstore, pdf, self.treaty_df, loss_id)
+                       for pdf in numpy.array_split(self.policy_df, ct)]
+            self.datastore.swmr_on()
+            smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
+                                    h5=self.datastore.hdf5)
+            rbp = pandas.concat(list(smap))
+            if len(rbp) == 0:
+                raise ValueError('No data in risk_by_event for %r' % lt)
+            rbe = reinsurance.by_event(rbp, self.treaty_df, self._monitor)
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
         if oq.investigation_time and oq.return_periods != [0]:

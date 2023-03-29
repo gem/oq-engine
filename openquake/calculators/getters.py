@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2022 GEM Foundation
+# Copyright (C) 2018-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,8 +20,8 @@ import operator
 import numpy
 
 from openquake.baselib import general, hdf5
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib import probability_map, stats
+from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
     BaseRupture, RuptureProxy, to_arrays)
 from openquake.commonlib import datastore
@@ -38,7 +38,7 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(pcurve, imtls, stat, weights):
+def build_stat_curve(pcurve, imtls, stat, weights, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
@@ -53,9 +53,15 @@ def build_stat_curve(pcurve, imtls, stat, weights):
             ws = [w[imt] for w in weights]
             if sum(ws) == 0:  # expect no data for this IMT
                 continue
-            array[slc, 0] = stat(poes[:, slc], ws)
+            if use_rates:
+                array[slc, 0] = to_probs(stat(to_rates(poes[:, slc]), ws))
+            else:
+                array[slc, 0] = stat(poes[:, slc], ws)
     else:
-        array[:, 0] = stat(poes, weights)
+        if use_rates:
+            array[:, 0] = to_probs(stat(to_rates(poes), weights))
+        else:
+            array[:, 0] = stat(poes, weights)
     return probability_map.ProbabilityCurve(array)
 
 
@@ -82,15 +88,6 @@ class HcurvesGetter(object):
         self.full_lt = dstore['full_lt']
         self.sslt = self.full_lt.source_model_lt.decompose()
         self.source_info = dstore['source_info'][:]
-        self.disagg_by_grp = dstore['disagg_by_grp'][:]
-        gsim_lt = self.full_lt.gsim_lt
-        self.bysrc = {}  # src_id -> (start, gsims, weights)
-        for row in self.source_info:
-            dis = self.disagg_by_grp[row['grp_id']]
-            trt = decode(dis['grp_trt'])
-            weights = gsim_lt.get_weights(trt)
-            self.bysrc[decode(row['source_id'])] = (
-                dis['grp_start'], gsim_lt.values[trt], weights)
 
     def get_hcurve(self, src_id, imt=None, site_id=0, gsim_idx=None):
         """
@@ -106,6 +103,7 @@ class HcurvesGetter(object):
             return weights @ curves
         return dset[start + gsim_idx, site_id, imt_slc]
 
+    # NB: not used right now
     def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
         """
         Return the curves associated to the given src, imt and gsim_idx
@@ -139,18 +137,18 @@ class PmapGetter(object):
     :param dstore: a DataStore instance or file system path to it
     :param sids: the subset of sites to consider (if None, all sites)
     """
-    def __init__(self, dstore, weights, slices, imtls=(), poes=(), ntasks=1):
+    def __init__(self, dstore, full_lt, slices, imtls=(), poes=(), use_rates=0):
         self.filename = dstore if isinstance(dstore, str) else dstore.filename
-        if len(weights[0].dic) == 1:  # no weights by IMT
-            self.weights = numpy.array([w['weight'] for w in weights])
+        if len(full_lt.weights[0].dic) == 1:  # no weights by IMT
+            self.weights = numpy.array([w['weight'] for w in full_lt.weights])
         else:
-            self.weights = weights
+            self.weights = full_lt.weights
         self.imtls = imtls
         self.poes = poes
-        self.ntasks = ntasks
-        self.num_rlzs = len(weights)
+        self.use_rates = use_rates
+        self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.rlzs_by_g = dstore['rlzs_by_g'][()]
+        self.rlzs_by_g = full_lt.rlzs_by_g
         self.slices = slices
         self._pmap = {}
 
@@ -221,10 +219,11 @@ class PmapGetter(object):
         pmap = self.init()
         pc0 = probability_map.ProbabilityCurve(
             numpy.zeros((self.L, self.num_rlzs)))
-        try:
-            pc0.combine(pmap[sid], self.rlzs_by_g)
-        except KeyError:  # no hazard for sid
-            pass
+        if sid not in pmap:  # no hazard for sid
+            return pc0
+        for g, rlzs in self.rlzs_by_g.items():
+            probability_map.combine_probs(
+                pc0.array, pmap[sid].array[:, g], rlzs)
         return pc0
 
     def get_mean(self):
@@ -264,7 +263,6 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     :returns: a list of RuptureGetters
     """
     full_lt = dstore['full_lt']
-    rlzs_by_gsim = full_lt.get_rlzs_by_gsim()
     rup_array = dstore['ruptures'][slc]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
@@ -277,7 +275,7 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
             proxies, maxweight, operator.itemgetter('n_occ'),
             key=operator.itemgetter('trt_smr')):
         trt_smr = block[0]['trt_smr']
-        rbg = rlzs_by_gsim[trt_smr]
+        rbg = full_lt.get_rlzs_by_gsim(trt_smr)
         rg = RuptureGetter(block, dstore.filename, trt_smr,
                            full_lt.trt_by(trt_smr), rbg)
         rgetters.append(rg)

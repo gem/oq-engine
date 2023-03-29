@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -502,5 +502,5 @@ class GMPE(GroundShakingIntensityModel):
             mL1 = m * L1
             if imtweight and imtweight.dic.get(imt) == 0:
                 # set by the engine when parsing the gsim logictree
-                # when 0 ignore the contribution: see _build_trts_branches
+                # when 0 ignore the contribution: see _build_branches
                 out[:, mL1:mL1 + L1] = 0
