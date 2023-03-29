@@ -799,26 +799,26 @@ def get_cache_path(oqparam, h5=None):
     return ''
 
 
-def get_composite_source_model(oqparam, h5=None, branchID=''):
+def get_composite_source_model(oqparam, dstore=None, branchID=''):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param h5:
-         an open hdf5.File where to store the source info
+    :param dstore:
+         an open datastore where to save the source info
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     full_lt = get_full_lt(oqparam, branchID)
-    path = get_cache_path(oqparam, h5)
+    path = get_cache_path(oqparam, dstore)
     if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import
         with datastore.read(os.path.realpath(path)) as ds:
             csm = ds['_csm']
             csm.init(full_lt)
     else:
-        csm = source_reader.get_csm(oqparam, full_lt, h5)
-        _check_csm(csm, oqparam, h5)
+        csm = source_reader.get_csm(oqparam, full_lt, dstore)
+        _check_csm(csm, oqparam, dstore)
     return csm
 
 

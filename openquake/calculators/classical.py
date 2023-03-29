@@ -263,7 +263,9 @@ class Hazard:
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
+        self.M = len(oq.imtls)
         self.L = oq.imtls.size
+        self.L1 = self.L // self.M
         self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
         self.offset = 0
@@ -274,15 +276,13 @@ class Hazard:
         :param pmap: a ProbabilityMap
         :returns: an array of rates of shape (N, M, L1)
         """
-        M = len(self.imtls)
-        L1 = self.L // M
         out = numpy.zeros((self.N, self.L))
         rates = disagg.to_rates(pmap.array)  # shape (N, L, G)
         for trt_smr in pmap.trt_smrs:
             allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
             for i, rlzs in enumerate(allrlzs):
                 out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
-        return out.reshape((self.N, M, L1))
+        return out.reshape((self.N, self.M, self.L1))
 
     def store_poes(self, g, pnes, pnes_sids):
         """
@@ -387,9 +387,9 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.haz.store_poes(g, pnemap.array[:, :, i], pnemap.sids)
         return acc
 
-    def create_dsets(self):
+    def create_rup(self):
         """
-        Store some empty datasets in the datastore
+        Create the rup datasets *before* starting the calculation
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
@@ -397,7 +397,6 @@ class ClassicalCalculator(base.HazardCalculator):
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             params.update(cm.REQUIRES_DISTANCES)
         if self.few_sites:
-            # self.oqparam.time_per_task = 1_000_000  # disable task splitting
             descr = []  # (param, dt)
             for param in sorted(params):
                 if param == 'sids':
@@ -421,6 +420,18 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.create_df('_poes', poes_dt.items())
         self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
+
+        oq = self.oqparam
+        if oq.disagg_by_src:
+            M = len(oq.imtls)
+            L1 = oq.imtls.size // M
+            sources = self.csm.get_basenames()
+            rates_by_src = numpy.zeros((self.N, M, L1, len(sources)))
+            dic = dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
+                       site_id=self.N, imt=list(oq.imtls),
+                       lvl=L1, src_id=numpy.array(sources))
+            self.datastore['rates_by_src'] = hdf5.ArrayWrapper(
+                rates_by_src, dic)
 
     def check_memory(self, N, L, maxw):
         """
@@ -496,7 +507,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Regular case
         """
-        self.create_dsets()  # create the rup/ datasets BEFORE swmr_on()
+        self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
         acc = self.run_one(self.sitecol, maxw)
         if self.oqparam.disagg_by_src:
             self.haz.store_disagg(acc)
@@ -811,7 +822,10 @@ def store_mean_disagg_bysrc(dstore, csm):
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    if 'rates_by_src' in parent:
+        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+    else:
+        rel_ids = get_rel_source_ids(dstore, oq.imtls, oq.poes, threshold=.1)
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
 

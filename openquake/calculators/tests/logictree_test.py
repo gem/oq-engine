@@ -89,7 +89,13 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_04(self):
         # KOR model
-        self.assert_curves_ok(['curve-mean.csv'], case_04.__file__)
+        self.run_calc(case_04.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id)
+
+        [fname] = export(('hcurves', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/curve-mean.csv', fname)
 
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum

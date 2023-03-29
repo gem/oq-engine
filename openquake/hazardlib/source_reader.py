@@ -160,7 +160,7 @@ def _fix_dupl_ids(src_groups):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
 
-def get_csm(oq, full_lt, h5=None):
+def get_csm(oq, full_lt, dstore=None):
     """
     Build source models from the logic tree and to store
     them inside the `source_full_lt` dataset.
@@ -182,14 +182,14 @@ def get_csm(oq, full_lt, h5=None):
     # (for instance in oq-engine/demos) so the processpool must be used
     dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
             else 'processpool')
-    # NB: h5 is None in logictree_test.py
+    # NB: dstore is None in logictree_test.py
     allargs = []
     for fname in full_lt.source_model_lt.info.smpaths:
         allargs.append((fname, converter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
-                              h5=h5 if h5 else None).reduce()
+                              h5=dstore if dstore else None).reduce()
     parallel.Starmap.shutdown()  # save memory
-    fix_geometry_sections(smdict, h5)
+    fix_geometry_sections(smdict, dstore)
 
     found = find_false_duplicates(smdict)
     if found:
@@ -250,7 +250,7 @@ def find_false_duplicates(smdict):
     return found
 
 
-def fix_geometry_sections(smdict, h5):
+def fix_geometry_sections(smdict, dstore):
     """
     If there are MultiFaultSources, fix the sections according to the
     GeometryModels (if any).
@@ -279,9 +279,10 @@ def fix_geometry_sections(smdict, h5):
     sections = [sections[suid] for suid in sorted(sections)]
     for idx, sec in enumerate(sections):
         sec.suid = idx
-    if h5 and sections:
-        h5.save_vlen('multi_fault_sections',
-                     [kite_to_geom(sec) for sec in sections])
+    if dstore and sections:
+        with hdf5.File(dstore.tempname, 'w') as h5:
+            h5.save_vlen('multi_fault_sections',
+                         [kite_to_geom(sec) for sec in sections])
 
     # fix the MultiFaultSources
     section_idxs = []
@@ -291,8 +292,8 @@ def fix_geometry_sections(smdict, h5):
                 if hasattr(src, 'set_sections'):
                     if not sections:
                         raise RuntimeError('Missing geometryModel files!')
-                    if h5:
-                        src.hdf5path = h5.filename
+                    if dstore:
+                        src.hdf5path = dstore.tempname
                     src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                                         for idxs in src.rupture_idxs]
                     for idxs in src.rupture_idxs:
