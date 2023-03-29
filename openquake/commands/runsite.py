@@ -25,6 +25,7 @@ import cProfile
 from openquake.baselib import config, performance
 from openquake.commonlib.logs import dbcmd
 from openquake.calculators import views
+from openquake.server import dbserver
 from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
 
@@ -96,6 +97,7 @@ def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     """
     Run a PSHA analysis on the given lon, lat
     """
+    dbserver.ensure_on()
     print(f'Concurrent jobs: {concurrent_jobs}')
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
