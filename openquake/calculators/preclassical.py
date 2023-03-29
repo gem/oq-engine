@@ -177,7 +177,9 @@ class PreClassicalCalculator(base.HazardCalculator):
             arr = numpy.zeros((self.N, self.M, self.L1, len(sources)))
             dic = dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
                        site_id=self.N, imt=list(self.oqparam.imtls),
-                       lvl=self.L1, src_id=sources)
+                       lvl=self.L1, src_id=numpy.array(sources))
+            # NB: the array numpy.array(sources) is CRITICAL for JPN
+            # damn h5py breaking silently for long lists of strings!!
             self.datastore['rates_by_src'] = hdf5.ArrayWrapper(arr, dic)
 
     def populate_csm(self):
