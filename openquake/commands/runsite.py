@@ -40,27 +40,36 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 
-def from_file(fname):
+def from_file(fname, concurrent_jobs=8):
     """
     Run a PSHA analysis on the given sites
     """
     t0 = time.time()
     model = os.environ.get('OQ_MODEL', '')
+    max_sites_per_model = int(os.environ.get('OQ_MAX_SITES_PER_MODEL', 1))
     allparams = []
-    tags =[]
+    tags = []
+    count_sites_per_model = {}
     with open(fname) as f:
         for line in f:
             siteid, lon, lat = line.split(',')
-            if model in siteid:
-                dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
-                tags.append(siteid)
-                allparams.append(get_params_from(dic))
+            if model and model not in siteid:
+                continue
+            if model in count_sites_per_model:
+                count_sites_per_model[model] += 1
+            else:
+                count_sites_per_model[model] = 1
+            if count_sites_per_model[model] > max_sites_per_model:
+                continue
+            dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
+            tags.append(siteid)
+            allparams.append(get_params_from(dic))
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
                                  None, getpass.getuser(), None)
     for logctx, tag in zip(logctxs, tags):
         logctx.tag = tag
-    engine.run_jobs(logctxs, concurrent_jobs=8)
+    engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     for logctx in logctxs:
         job = dbcmd('get_job', logctx.calc_id)
@@ -73,15 +82,17 @@ def from_file(fname):
     print('Total time: %.1f minutes' % dt)
 
 
-def main(lonlat_or_fname, *, hc: int=None, slowest: int=None):
+def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
+         concurrent_jobs: int = 8):
     """
     Run a PSHA analysis on the given lon, lat
     """
+    print(f'Concurrent jobs: {concurrent_jobs}')
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
 
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname)
+        from_file(lonlat_or_fname, concurrent_jobs)
         return
     lon, lat = lonlat_or_fname.split(',')
     params = get_params_from(dict(lon=lon, lat=lat))
@@ -91,8 +102,10 @@ def main(lonlat_or_fname, *, hc: int=None, slowest: int=None):
     if slowest:
         engine_profile(jobctx, slowest or 40)
     else:
-        engine.run_jobs([jobctx])
+        engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
+
 
 main.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
 main.hc = 'previous calculation ID'
 main.slowest = 'profile and show the slowest operations'
+main.concurrent_jobs = 'maximum number of concurrent jobs'
