@@ -69,6 +69,10 @@ def from_file(fname, concurrent_jobs=8):
             dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
             tags.append(siteid)
             allparams.append(get_params_from(dic))
+
+    # FIXME: remove this
+    print(tags)
+
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
                                  None, getpass.getuser(), None)
