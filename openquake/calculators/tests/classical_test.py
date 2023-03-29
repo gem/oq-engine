@@ -640,7 +640,7 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_82(self):
         # two mps, only one should be collapsed and use reqv
         self.run_calc(case_82.__file__, 'job.ini')
-        [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        [f1] = export(('rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/disagg_by_src.csv', f1)
 
     def test_case_84(self):
@@ -648,5 +648,5 @@ class ClassicalTestCase(CalculatorTestCase):
         # one is collapsed using reqv, while the other two are specified 
         # as 'not collapsed' in the job file field reqv_ignore_sources
         self.run_calc(case_84.__file__, 'job.ini')
-        [f] = export(('disagg_by_src', 'csv'), self.calc.datastore)
+        [f] = export(('rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/dbs.csv', f)
