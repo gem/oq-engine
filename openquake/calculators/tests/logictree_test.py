@@ -282,7 +282,7 @@ hazard_uhs-std.csv
         # checking the mean rates
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
         mean_rates = to_rates(mean_poes)
-        rates_by_source = self.calc.datastore['disagg_by_src'][0]  # (M, L1, Ns)
+        rates_by_source = self.calc.datastore['rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
 
     def test_case_20(self):
@@ -325,17 +325,17 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
     def test_case_20_bis(self):
-        # disagg_by_src
+        # rates_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
-        dbs = self.calc.datastore['disagg_by_src']
+        dbs = self.calc.datastore['rates_by_src']
         ae(dbs.shape_descr, [b'site_id', b'imt', b'lvl', b'src_id'])
         ae(dbs.site_id, 1)
         ae(dbs.imt, [b'PGA', b'SA(1.0)'])
         ae(dbs.lvl, 4)
         ae(dbs.src_id, [b'CHAR1', b'COMFLT1', b'SFLT1'])
 
-        # testing extract_disagg_by_src
-        aw = extract(self.calc.datastore, 'disagg_by_src?imt=PGA&poe=1E-3')
+        # testing extract_rates_by_src
+        aw = extract(self.calc.datastore, 'rates_by_src?imt=PGA&poe=1E-3')
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
         self.assertEqual(aw.poe, .001)

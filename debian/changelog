@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added output `rates_by_src`
   * Fixed method '/v1/ini_defaults' returning NaNs for the site parameters
   * Added output `mean_disagg_bysrc` for single site calculations with use_rates
   * Added command `oq reduce_smlt`
@@ -25,7 +26,7 @@
     level
   * Internal: added a parameter `use_rates` to compute statistical hazard curves
     in terms of rates, not probabilities
-  * Changed `disagg_by_src` to work in terms of rates, not probabilities
+  * Internal: changed `disagg_by_src` to work in terms of rates
   * Added command `oq runpsha <lon> <lat>` for mosaic PSHA calculations
   * Enhanced --reuse-input to reuse preclassical calculations if possible
   * Normalized IMTs in the `minimum_intensity` dictionary (i.e. SA(1.)=>SA(1.0))

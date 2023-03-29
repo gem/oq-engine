@@ -172,13 +172,13 @@ class PreClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError(
                     'The matrix disagg_by_src is too large: %s' % msg)
             size = self.N * self.M * self.L1 * len(sources) * 8
-            logging.info('Creating disagg_by_src of size %s',
+            logging.info('Creating rates_by_src of size %s',
                          general.humansize(size))
             arr = numpy.zeros((self.N, self.M, self.L1, len(sources)))
             dic = dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
                        site_id=self.N, imt=list(self.oqparam.imtls),
                        lvl=self.L1, src_id=sources)
-            self.datastore['disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
+            self.datastore['rates_by_src'] = hdf5.ArrayWrapper(arr, dic)
 
     def populate_csm(self):
         oq = self.oqparam

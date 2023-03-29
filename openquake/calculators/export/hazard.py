@@ -518,11 +518,11 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg_by_src', 'csv'))
-def export_disagg_by_src(ekey, dstore):
+@export.add(('rates_by_src', 'csv'))
+def export_rates_by_src(ekey, dstore):
     oq = dstore['oqparam']
     if len(oq.poes) == 0:
-        raise ValueError('disagg_by_src cannot be exported, poes are missing')
+        raise ValueError('rates_by_src cannot be exported, poes are missing')
     sitecol = dstore['sitecol']
     fnames = []
     header=['imt', 'poe_id', 'src_id', 'value']
@@ -533,11 +533,11 @@ def export_disagg_by_src(ekey, dstore):
         out = []
         for imt in oq.imtls:
             for poe_id, poe in enumerate(oq.poes):
-                aw = extract(dstore, 'disagg_by_src?site_id=%d&imt=%s&poe=%s'%
+                aw = extract(dstore, 'rates_by_src?site_id=%d&imt=%s&poe=%s'%
                              (sid, imt, poe))
                 for src_id, val in aw.array:
                     out.append((imt, poe_id, src_id, val))
-        fname = dstore.export_path('disagg_by_src-%d.csv' % sid)
+        fname = dstore.export_path('rates_by_src-%d.csv' % sid)
         writers.write_csv(fname, out, header=header, comment=com, fmt='%.5E')
         fnames.append(fname)
     return fnames
