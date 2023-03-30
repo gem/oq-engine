@@ -46,8 +46,10 @@ def from_file(fname, concurrent_jobs=8):
     Run a PSHA analysis on the given sites
     """
     t0 = time.time()
-    single_model = os.environ.get('OQ_MODEL', '')
-    only_siteids = os.environ.get('OQ_SITEIDS', '')
+    only_models = os.environ.get('OQ_ONLY_MODELS', '')
+    exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
+    only_siteids = os.environ.get('OQ_ONLY_SITEIDS', '')
+    exclude_siteids = os.environ.get('OQ_EXCLUDE_SITEIDS', '')
     max_sites_per_model = int(os.environ.get('OQ_MAX_SITES_PER_MODEL', 1))
     allparams = []
     tags = []
@@ -55,10 +57,14 @@ def from_file(fname, concurrent_jobs=8):
     with open(fname) as f:
         for line in f:
             siteid, lon, lat = line.split(',')
+            if exclude_siteids and siteid in exclude_siteids.split(','):
+                continue
             if only_siteids and siteid not in only_siteids.split(','):
                 continue
             curr_model = siteid[:3]
-            if single_model and single_model != curr_model:
+            if exclude_models and curr_model in exclude_models:
+                continue
+            if only_models and curr_model not in only_models:
                 continue
             try:
                 count_sites_per_model[curr_model] += 1
