@@ -84,15 +84,20 @@ def from_file(fname, concurrent_jobs=8):
         logctx.tag = tag
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
+    count_errors = 0
     for logctx in logctxs:
         job = dbcmd('get_job', logctx.calc_id)
         tb = dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
+        if tb:
+            count_errors += 1
 
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
+    if count_errors:
+        sys.exit(f'{count_errors} error(s) occurred')
 
 
 def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
