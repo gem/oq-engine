@@ -54,14 +54,11 @@ def combine_mrds(acc, rlzs_by_g):
     """
     Sum the mean rates with the right weights
     """
-    rlzs = rlzs_by_g['rlzs']
     weig = rlzs_by_g['weight']
     g = next(iter(acc))  # first key
     out = numpy.zeros(acc[g].shape)  # shape (L1, L1, N)
     for g in acc:
-        value = acc[g]
-        for rlz in rlzs[g]:
-            out += weig[rlz] * value
+        out += acc[g] * weig[g]
     return out
 
 
