@@ -25,10 +25,19 @@ from openquake.hazardlib import contexts, cross_correlation
 from openquake.commonlib import datastore
 
 
-def compute_mrd(ctx, N, cmaker, crosscorr, imt1, imt2,
+class Input(object):
+    # here just to give a sensible .weight attribute
+    def __init__(self, ctx, cmaker, N):
+        self.ctx = ctx
+        self.cmaker = cmaker
+        self.N = N
+        self.weight = len(ctx)
+
+
+def compute_mrd(inp, crosscorr, imt1, imt2,
                 meabins, sigbins, monitor):
     """
-    :param ctx: a context array
+    :param inp: an Input object (contexts, contextm maker, num_sites)
     :param N: the total number of sites
     :param cmaker: a ContextMaker instance
     :param crosscorr: cross correlation model
@@ -38,9 +47,9 @@ def compute_mrd(ctx, N, cmaker, crosscorr, imt1, imt2,
     :param sigbins: bins for the sigmas
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
-    mrd = calc_mean_rate_dist(ctx, N, cmaker, crosscorr,
+    mrd = calc_mean_rate_dist(inp.ctx, inp.N, inp.cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
-    return {g: mrd[:, :, :, i] for i, g in enumerate(cmaker.gidx)}
+    return {g: mrd[:, :, :, i] for i, g in enumerate(inp.cmaker.gidx)}
 
 
 def combine_mrds(acc, rlzs_by_g, rlz_weight):
@@ -92,7 +101,7 @@ def main(parent_id, config):
         for grp_id, ctx in ctx_by_grp.items():
             cmaker = cmakers[grp_id]
             for slc in general.gen_slices(0, len(ctx), blocksize):
-                smap.submit((ctx[slc], N, cmaker, crosscorr, imt1, imt2,
+                smap.submit((Input(ctx[slc], cmaker, N), crosscorr, imt1, imt2,
                              meabins, sigbins))
         acc = smap.reduce()
         mrd = dstore.create_dset('_mrd', float, (L1, L1, N))
