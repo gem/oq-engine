@@ -71,9 +71,6 @@ def from_file(fname, concurrent_jobs=8):
             tags.append(siteid)
             allparams.append(get_params_from(dic))
 
-    # FIXME: remove this
-    print(tags)
-
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
                                  None, getpass.getuser(), None)
