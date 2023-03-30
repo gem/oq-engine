@@ -28,4 +28,4 @@ class PostProcTestCase(CalculatorTestCase):
 
         self.run_calc(case_mrd.__file__, 'job.ini', hazard_calculation_id=hc_id)
         mrd = self.calc.datastore['mrd'][:]
-        assert abs(mrd.mean() - 8.166417e-05) < 1e-6
+        assert abs(mrd.mean() - 8.403599676e-6) < 1e-10
