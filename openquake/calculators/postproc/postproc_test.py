@@ -20,19 +20,12 @@ import os
 import pytest
 import pandas
 from openquake.commonlib import logs, datastore
-from openquake.calculators.postproc import compute_mrd, disagg_by_rel_sources
+from openquake.calculators.postproc import disagg_by_rel_sources
 from openquake.calculators import base
 from openquake.qa_tests_data import mosaic
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
 MOSAIC = os.path.dirname(mosaic.__file__)
-
-
-def test_compute_mrd():
-    parent = os.path.join(DATA, 'calc_001.hdf5')
-    config = os.path.join(DATA, 'mrd.toml')
-    mrd = compute_mrd.main(parent, config)
-    assert abs(mrd.mean() - 1.04e-05) < 1e-6
 
 
 @pytest.mark.parametrize('model', ['CCA', 'EUR'])
