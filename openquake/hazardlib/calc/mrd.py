@@ -229,6 +229,6 @@ def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
     mrd = numpy.zeros((len1, len1, nsites, G))
     for sid in range(nsites):
         update_mrd_indirect(
-            ctxt[ctxt.sids == sid], cmaker, corrm,
+            ctxt[ctxt.sids == sid], cm, corrm,
             bins_mea, bins_sig, mrd[:, :, sid], mon)
     return mrd
