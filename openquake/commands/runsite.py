@@ -25,6 +25,7 @@ import cProfile
 from openquake.baselib import config, performance
 from openquake.commonlib.logs import dbcmd
 from openquake.calculators import views
+from openquake.server import dbserver
 from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
 
@@ -45,7 +46,10 @@ def from_file(fname, concurrent_jobs=8):
     Run a PSHA analysis on the given sites
     """
     t0 = time.time()
-    single_model = os.environ.get('OQ_MODEL', '')
+    only_models = os.environ.get('OQ_ONLY_MODELS', '')
+    exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
+    only_siteids = os.environ.get('OQ_ONLY_SITEIDS', '')
+    exclude_siteids = os.environ.get('OQ_EXCLUDE_SITEIDS', '')
     max_sites_per_model = int(os.environ.get('OQ_MAX_SITES_PER_MODEL', 1))
     allparams = []
     tags = []
@@ -53,8 +57,14 @@ def from_file(fname, concurrent_jobs=8):
     with open(fname) as f:
         for line in f:
             siteid, lon, lat = line.split(',')
+            if exclude_siteids and siteid in exclude_siteids.split(','):
+                continue
+            if only_siteids and siteid not in only_siteids.split(','):
+                continue
             curr_model = siteid[:3]
-            if single_model and single_model != curr_model:
+            if exclude_models and curr_model in exclude_models:
+                continue
+            if only_models and curr_model not in only_models:
                 continue
             try:
                 count_sites_per_model[curr_model] += 1
@@ -66,6 +76,7 @@ def from_file(fname, concurrent_jobs=8):
             dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
             tags.append(siteid)
             allparams.append(get_params_from(dic))
+
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
                                  None, getpass.getuser(), None)
@@ -73,15 +84,20 @@ def from_file(fname, concurrent_jobs=8):
         logctx.tag = tag
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
+    count_errors = 0
     for logctx in logctxs:
         job = dbcmd('get_job', logctx.calc_id)
         tb = dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
+        if tb:
+            count_errors += 1
 
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt)
+    if count_errors:
+        sys.exit(f'{count_errors} error(s) occurred')
 
 
 def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
@@ -89,6 +105,7 @@ def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     """
     Run a PSHA analysis on the given lon, lat
     """
+    dbserver.ensure_on()
     print(f'Concurrent jobs: {concurrent_jobs}')
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')

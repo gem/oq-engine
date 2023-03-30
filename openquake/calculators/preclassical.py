@@ -298,3 +298,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             num_sites = self.datastore['source_info']['num_sites']
             if (num_sites == 0).all():
                 raise RuntimeError('There are no sources close to the site(s)')
+
+    def post_process(self):
+        # needed, otherwise the parent method would be called too early
+        pass

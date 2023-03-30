@@ -45,7 +45,7 @@ from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
 from openquake.commonlib import readinput, datastore, logs
 from openquake.calculators.export import export as exp
-from openquake.calculators import getters
+from openquake.calculators import getters, postproc
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -241,6 +241,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
+                self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
                 if kw.get('pdb'):  # post-mortem debug
@@ -986,7 +987,13 @@ class HazardCalculator(BaseCalculator):
             recs, source_reader.source_info_dt)
 
     def post_process(self):
-        """For compatibility with the engine"""
+       	"""
+        Run postprocessing function, if any
+        """
+        oq = self.oqparam
+        if oq.postproc_func:
+            func = getattr(postproc, oq.postproc_func).main
+            func(self.datastore, **oq.postproc_args)
 
 
 class RiskCalculator(HazardCalculator):

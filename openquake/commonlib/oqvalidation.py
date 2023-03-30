@@ -556,6 +556,16 @@ pointsource_distance:
   Example: *pointsource_distance = 50*.
   Default: {'default': 1000}
 
+postproc_func:
+  Specify a postprocessing function in calculators/postproc.
+  Example: *postproc_func = compute_mrd*
+  Default: '' (no postprocessing)
+
+postproc_args:
+  Specify the arguments to be passed to the postprocessing function
+  Example: *postproc_args = {'imt': 'PGA'}*
+  Default: {} (no arguments)
+
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.
@@ -970,6 +980,8 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
+    postproc_func = valid.Param(valid.simple_id, '')
+    postproc_args = valid.Param(valid.dictionary, {})
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
