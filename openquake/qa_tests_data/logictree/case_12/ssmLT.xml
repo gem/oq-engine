@@ -9,18 +9,14 @@
       <uncertaintyModel>
         ssm/GridMultiSources_C_L50_BG.xml
       </uncertaintyModel>
-      <uncertaintyWeight>
-        0.5
-      </uncertaintyWeight>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
     </logicTreeBranch>
     
     <logicTreeBranch branchID="smooth_collapsed">
       <uncertaintyModel>
         ssm/GridMultiSources_C.xml
       </uncertaintyModel>
-      <uncertaintyWeight>
-        0.5
-      </uncertaintyWeight>
+      <uncertaintyWeight>0.5</uncertaintyWeight>
     </logicTreeBranch>
     
   </logicTreeBranchSet>
@@ -45,7 +41,6 @@
     
   </logicTreeBranchSet>
   <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
-                      applyToBranches="b_m0.05 b_e0.0 b_p0.05"
                       branchSetID="mmax">
     
     <logicTreeBranch branchID="m_m0.2">

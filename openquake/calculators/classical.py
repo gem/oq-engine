@@ -840,6 +840,7 @@ def store_mean_disagg_bysrc(dstore, csm):
         assert Z
         logging.info('Considering source %s (%d realizations)',
                      source_id, Z)
+        print(relt.rlzs)
         groups = relt.reduce_groups(csm.src_groups, source_id)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, (edges, shp), oq))

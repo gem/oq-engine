@@ -1,43 +1,13 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <nrml>
-	<logicTree logicTreeID="">
-		<logicTreeBranchSet branchSetID="bs_00" uncertaintyType="gmpeModel" applyToTectonicRegionType="Tectonic_Type_A">
-			<logicTreeBranch branchID="b_00_00">
-				<uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
-				<uncertaintyWeight>0.50000</uncertaintyWeight>
-			</logicTreeBranch>
-			<logicTreeBranch branchID="b_00_01">
-				<uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
-				<uncertaintyWeight>0.50000</uncertaintyWeight>
-			</logicTreeBranch>
-		</logicTreeBranchSet>
-		<logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Tectonic_Type_B">
-			<logicTreeBranch branchID="b_01_02">
-				<uncertaintyModel>ChiouYoungs2014</uncertaintyModel>
-				<uncertaintyWeight>0.25000</uncertaintyWeight>
-			</logicTreeBranch>
-			<logicTreeBranch branchID="b_01_03">
-				<uncertaintyModel>AkkarEtAlRjb2014</uncertaintyModel>
-				<uncertaintyWeight>0.25000</uncertaintyWeight>
-			</logicTreeBranch>
-			<logicTreeBranch branchID="b_01_04">
-				<uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
-				<uncertaintyWeight>0.25000</uncertaintyWeight>
-			</logicTreeBranch>
-			<logicTreeBranch branchID="b_01_05">
-				<uncertaintyModel gmpe_name="PezeshkEtAl2011NEHRPBC">NRCan15SiteTerm</uncertaintyModel>
-				<uncertaintyWeight>0.25000</uncertaintyWeight>
-			</logicTreeBranch>
-		</logicTreeBranchSet>
-		<logicTreeBranchSet branchSetID="bs_02" uncertaintyType="gmpeModel" applyToTectonicRegionType="Tectonic_Type_C">
-			<logicTreeBranch branchID="b_02_06">
-				<uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
-				<uncertaintyWeight>0.50000</uncertaintyWeight>
-			</logicTreeBranch>
-			<logicTreeBranch branchID="b_02_07">
-				<uncertaintyModel gmpe_name="PezeshkEtAl2011NEHRPBC">NRCan15SiteTerm</uncertaintyModel>
-				<uncertaintyWeight>0.50000</uncertaintyWeight>
-			</logicTreeBranch>
-		</logicTreeBranchSet>
-	</logicTree>
+  <logicTree logicTreeID="">
+    <logicTreeBranchSet branchSetID="bs_02"
+                        uncertaintyType="gmpeModel"
+                        applyToTectonicRegionType="Tectonic_Type_C">
+      <logicTreeBranch branchID="b_02_06">
+	<uncertaintyModel>AtkinsonBoore2006Modified2011</uncertaintyModel>
+	<uncertaintyWeight>1</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
 </nrml>

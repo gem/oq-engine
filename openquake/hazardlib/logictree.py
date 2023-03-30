@@ -503,15 +503,26 @@ class SourceModelLogicTree(object):
         else:
             prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
             app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
+            '''
+            TODO:  # exclude empty branches
+            if all(self.branches[app2br].value == ''
+                   for app2br in app2brs.split()):
+                self.previous_branches = branchset.branches
+                print([self.branches[app2br].value
+                       for app2br in app2brs.split()])
+                return
+            '''
             if app2brs != prev_ids:
                 branchset.applied = app2brs
                 self.apply_branchset(
                     app2brs, branchset_node.lineno, branchset)
-                for brid in set(prev_ids.split()) - set(app2brs.split()):
-                    self.branches[brid].bset = dummy = dummy_branchset()
-                    [dummybranch] = dummy.branches
-                    self.branches[dummybranch.branch_id] = dummybranch
-                    dummies.append(dummybranch)
+                not_applied = set(prev_ids.split()) - set(app2brs.split())
+                for brid in not_applied:
+                    if brid in self.branches:
+                        self.branches[brid].bset = dummy = dummy_branchset()
+                        [dummybranch] = dummy.branches
+                        self.branches[dummybranch.branch_id] = dummybranch
+                        dummies.append(dummybranch)
             else:  # apply to all previous branches
                 for branch in self.previous_branches:
                     branch.bset = branchset
@@ -575,20 +586,17 @@ class SourceModelLogicTree(object):
                 # with logic tree reduction a branch can be empty
                 # see case_68_bis
                 zero_id = branch_id
-                zero_no = brno
                 zeros.append(weight)
             else:
                 branch = Branch(bs_id, branch_id, weight, value)
                 self.branches[branch_id] = branch
-                self.shortener[branch_id] = keyno(
-                    branch_id, bsno, brno, self.filename)
                 branchset.branches.append(branch)
+            self.shortener[branch_id] = keyno(
+                branch_id, bsno, brno, self.filename)
             weight_sum += weight
         if zeros:
             branch = Branch(bs_id, zero_id, sum(zeros), '')
             self.branches[branch_id] = branch
-            self.shortener[branch_id] = keyno(
-                zero_id, bsno, zero_no, self.filename)
             branchset.branches.append(branch)
 
         if abs(weight_sum - 1.0) > pmf.PRECISION:
