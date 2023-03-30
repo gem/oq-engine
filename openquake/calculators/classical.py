@@ -249,13 +249,11 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, cmakers, full_lt, srcidx):
+    def __init__(self, dstore, full_lt, srcidx):
         self.datastore = dstore
-        self.cmakers = cmakers
         oq = dstore['oqparam']
         self.full_lt = full_lt
         self.weights = full_lt.rlzs['weight']
-        self.totgsims = sum(len(cm.gsims) for cm in self.cmakers)
         self.imtls = oq.imtls
         self.level_weights = oq.imtls.array.flatten() / oq.imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
@@ -474,7 +472,7 @@ class ClassicalCalculator(base.HazardCalculator):
             maxw = self.max_weight
         self.init_poes()
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, self.cmakers, self.full_lt, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
