@@ -556,6 +556,16 @@ pointsource_distance:
   Example: *pointsource_distance = 50*.
   Default: {'default': 1000}
 
+postproc_func:
+  Specify a postprocessing function in calculators/postproc.
+  Example: *postproc_func = compute_mrd*
+  Default: '' (no postprocessing)
+
+postproc_args:
+  Specify the arguments to be passed to the postprocessing function
+  Example: *postproc_args = {'imt': 'PGA'}*
+  Default: {} (no arguments)
+
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.

@@ -17,7 +17,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 import pytest
 import pandas
 from openquake.commonlib import logs, datastore
