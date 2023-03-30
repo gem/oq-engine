@@ -956,7 +956,7 @@ class HazardCalculator(BaseCalculator):
         """
         keep_trts = set()
         nrups = []
-        for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
+        for grp_id, trt_smrs in enumerate(self.csm.get_trt_smrs()):
             trti, smrs = numpy.divmod(trt_smrs, 2**24)
             trt = self.full_lt.trts[trti[0]]
             nr = rel_ruptures.get(grp_id, 0)
@@ -984,8 +984,6 @@ class HazardCalculator(BaseCalculator):
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
-        if 'trt_smrs' not in self.datastore:
-            self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
 
     def post_process(self):
         """For compatibility with the engine"""

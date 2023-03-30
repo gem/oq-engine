@@ -249,14 +249,12 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, srcidx):
+    def __init__(self, dstore, cmakers, full_lt, srcidx):
         self.datastore = dstore
+        self.cmakers = cmakers
         oq = dstore['oqparam']
         self.full_lt = full_lt
-        self.weights = numpy.array(
-            [r.weight['weight'] for r in full_lt.get_realizations()])
-        self.cmakers = read_cmakers(dstore, full_lt)
-        self.collect_rlzs = oq.collect_rlzs
+        self.weights = full_lt.rlzs['weight']
         self.totgsims = sum(len(cm.gsims) for cm in self.cmakers)
         self.imtls = oq.imtls
         self.level_weights = oq.imtls.array.flatten() / oq.imtls.array.sum()
@@ -393,7 +391,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         params = {'grp_id', 'occurrence_rate', 'clon', 'clat', 'rrup',
                   'probs_occur', 'sids', 'src_id', 'rup_id', 'weight'}
-        for cm in read_cmakers(self.datastore):
+        for cm in self.cmakers:
             params.update(cm.REQUIRES_RUPTURE_PARAMETERS)
             params.update(cm.REQUIRES_DISTANCES)
         if self.few_sites:
@@ -415,6 +413,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # which are a preclassical concept
 
     def init_poes(self):
+        self.cmakers = read_cmakers(self.datastore)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.datastore.create_df('_poes', poes_dt.items())
@@ -475,12 +474,10 @@ class ClassicalCalculator(base.HazardCalculator):
             maxw = self.max_weight
         self.init_poes()
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        self.haz = Hazard(self.datastore, self.cmakers, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-
-        self.cmakers = self.haz.cmakers
 
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
