@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="North Africa - Smoothed Seismicity"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Tectonic_Type_C"
+        >
+            <pointSource
+            id="SC_10:124"
+            name="SC_10:124"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            30 31
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        45.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="1.1405643421744331" bValue="1.09617657849" maxMag="5.58" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="60.0" probability="0.6" rake="45.0" strike="240.0"/>
+                    <nodalPlane dip="45.0" probability="0.4" rake="90.0" strike="240.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="0.283334"/>
+                    <hypoDepth depth="15.0" probability="0.383333"/>
+                    <hypoDepth depth="25.0" probability="0.2"/>
+                    <hypoDepth depth="35.0" probability="0.133333"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
