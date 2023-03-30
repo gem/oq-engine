@@ -21,11 +21,11 @@ from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.postproc import case_mrd
 
 
-class ClassicalTestCase(CalculatorTestCase):
+class PostProcTestCase(CalculatorTestCase):
     def test_mrd(self):
         self.run_calc(case_mrd.__file__, 'job.ini', postproc_func='dummy')
         hc_id = str(self.calc.datastore.calc_id)
 
         self.run_calc(case_mrd.__file__, 'job.ini', hazard_calculation_id=hc_id)
         mrd = self.calc.datastore['mrd'][:]
-        assert abs(mrd.mean() - 8.166417e-05) < 1e-6
+        assert abs(mrd.mean() - 8.403599676e-6) < 1e-10

@@ -84,10 +84,10 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
     dstore.swmr_on()
     smap = parallel.Starmap(compute_mrd, h5=dstore)
     for grp_id, ctx in ctx_by_grp.items():
+        # NB: a trivial splitting would case num_tasks-dependency!
         cmaker = cmakers[grp_id]
-        for slc in general.gen_slices(0, len(ctx), blocksize):
-            smap.submit((Input(ctx[slc], cmaker, N), crosscorr, imt1, imt2,
-                         meabins, sigbins))
+        smap.submit((Input(ctx, cmaker, N), crosscorr, imt1, imt2,
+                     meabins, sigbins))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
     mrd[:] = combine_mrds(acc, dstore['rlzs_by_g'][:])

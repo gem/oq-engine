@@ -155,9 +155,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         dset[:] = arr
 
     def store(self):
-        # store full_lt, trt_smrs, toms
+        # store full_lt, toms
         self.datastore['full_lt'] = self.csm.full_lt
-        self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
         self.datastore['toms'] = numpy.array(
             [sg.get_tom_toml(self.oqparam.investigation_time)
              for sg in self.csm.src_groups], hdf5.vstr)
@@ -166,7 +165,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         csm = self.csm
         self.store()
-        cmakers = read_cmakers(self.datastore, csm.full_lt)
+        cmakers = read_cmakers(self.datastore, csm)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
@@ -276,7 +275,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.info('Copying csm from %s', realpath)
             with h5py.File(realpath, 'r') as cache:  # copy _csm
                 cache.copy(cache['_csm'], self.datastore.hdf5)
-            self.store()  # full_lt, trt_smrs, toms
+            self.store()  # full_lt, toms
         else:
             self.populate_csm()
             try:
