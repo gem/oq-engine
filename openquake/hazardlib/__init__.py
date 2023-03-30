@@ -143,8 +143,8 @@ def read_hparams(job_ini):
             else:
                 params[key] = val
     params['imtls'] = general.DictArray(params['imtls'])
-    #if 'poes' in params:
-    #    params['poes'] = valid.probabilities(params['poes'])
+    if 'poes' in params:
+        params['poes'] = valid.probabilities(params['poes'])
     return params
 
 
