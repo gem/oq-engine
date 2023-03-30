@@ -51,6 +51,9 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
 
 
 def combine_mrds(acc, rlzs_by_g):
+    """
+    Sum the mean rates with the right weights
+    """
     rlzs = rlzs_by_g['rlzs']
     weig = rlzs_by_g['weight']
     g = next(iter(acc))  # first key
@@ -80,11 +83,9 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     n = sum(len(ctx) for ctx in ctx_by_grp.values())
     logging.info('Read {:_d} contexts'.format(n))
-    blocksize = numpy.ceil(n / oq.concurrent_tasks)
-    dstore.swmr_on()
     smap = parallel.Starmap(compute_mrd, h5=dstore)
     for grp_id, ctx in ctx_by_grp.items():
-        # NB: a trivial splitting would case num_tasks-dependency!
+        # NB: a trivial splitting of the contexts would case task-dependency!
         cmaker = cmakers[grp_id]
         smap.submit((Input(ctx, cmaker, N), crosscorr, imt1, imt2,
                      meabins, sigbins))
