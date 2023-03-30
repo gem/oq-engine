@@ -1,3 +1,6 @@
+  [Anirudh Rao]
+  * Added a verification test suite for the Conditioned GMFs calculator
+
   [Michele Simionato]
   * Added output `rates_by_src`
   * Fixed method '/v1/ini_defaults' returning NaNs for the site parameters
