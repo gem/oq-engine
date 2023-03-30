@@ -413,7 +413,7 @@ class ClassicalCalculator(base.HazardCalculator):
         # which are a preclassical concept
 
     def init_poes(self):
-        self.cmakers = read_cmakers(self.datastore)
+        self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
         self.datastore.create_df('_poes', poes_dt.items())

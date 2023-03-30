@@ -1647,10 +1647,10 @@ def get_cmakers(src_groups, full_lt, oq):
     return cmakers
 
 
-def read_cmakers(dstore, full_lt=None):
+def read_cmakers(dstore, csm=None):
     """
     :param dstore: a DataStore-like object
-    :param full_lt: a FullLogicTree instance, if given
+    :param csm: a CompositeSourceModel instance, if given
     :returns: a list of ContextMaker instances, one per source group
     """
     from openquake.hazardlib.site_amplification import AmplFunction
@@ -1662,10 +1662,10 @@ def read_cmakers(dstore, full_lt=None):
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
-    trt_smrs = dstore['trt_smrs'][:]
-    if full_lt is None:
-        full_lt = dstore['full_lt'].init()
-    cmakers = get_cmakers(trt_smrs, full_lt, oq)
+    if csm is None:
+        csm = dstore['_csm']
+        csm.full_lt = dstore['full_lt'].init()
+    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)
