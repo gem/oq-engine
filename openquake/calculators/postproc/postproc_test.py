@@ -30,8 +30,6 @@ MOSAIC = os.path.dirname(mosaic.__file__)
 
 
 def test_compute_mrd():
-    if os.environ.get('JENKINS_URL'):
-        raise unittest.SkipTest('Hanging on Jenkins')
     parent = os.path.join(DATA, 'calc_001.hdf5')
     config = os.path.join(DATA, 'mrd.toml')
     mrd = compute_mrd.main(parent, config)
