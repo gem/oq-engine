@@ -84,6 +84,7 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
     dstore.swmr_on()
     smap = parallel.Starmap(compute_mrd, h5=dstore)
     for grp_id, ctx in ctx_by_grp.items():
+        # NB: a trivial splitting would case num_tasks-dependency!
         cmaker = cmakers[grp_id]
         smap.submit((Input(ctx, cmaker, N), crosscorr, imt1, imt2,
                      meabins, sigbins))
