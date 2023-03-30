@@ -47,7 +47,7 @@ def from_file(fname, concurrent_jobs=8):
     """
     t0 = time.time()
     single_model = os.environ.get('OQ_MODEL', '')
-    single_siteid = os.environ.get('OQ_SITEID', '')
+    only_siteids = os.environ.get('OQ_SITEIDS', '')
     max_sites_per_model = int(os.environ.get('OQ_MAX_SITES_PER_MODEL', 1))
     allparams = []
     tags = []
@@ -55,7 +55,7 @@ def from_file(fname, concurrent_jobs=8):
     with open(fname) as f:
         for line in f:
             siteid, lon, lat = line.split(',')
-            if single_siteid and single_siteid != siteid:
+            if only_siteids and siteid not in only_siteids.split(','):
                 continue
             curr_model = siteid[:3]
             if single_model and single_model != curr_model:
