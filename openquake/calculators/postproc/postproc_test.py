@@ -24,8 +24,8 @@ import pandas
 from openquake.baselib import general, hdf5
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import logs, datastore
-from openquake.engine.postproc.rupture_histogram import compute_histogram
-from openquake.engine.postproc import compute_mrd, disagg_by_rel_sources
+from openquake.calculators.postproc.rupture_histogram import compute_histogram
+from openquake.calculators.postproc import compute_mrd, disagg_by_rel_sources
 from openquake.calculators import base
 from openquake.qa_tests_data import mosaic
 
