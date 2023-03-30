@@ -19,50 +19,14 @@
 import os
 import unittest
 import pytest
-import numpy
 import pandas
-from openquake.baselib import general, hdf5
-from openquake.hazardlib.contexts import ContextMaker
 from openquake.commonlib import logs, datastore
-from openquake.calculators.postproc.rupture_histogram import compute_histogram
 from openquake.calculators.postproc import compute_mrd, disagg_by_rel_sources
 from openquake.calculators import base
 from openquake.qa_tests_data import mosaic
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
 MOSAIC = os.path.dirname(mosaic.__file__)
-rupdata = '''\
-sids,mag,rrup
-0,5.5,100.
-0,6.6,110.
-0,7.3,120.
-0,7.3,130.
-0,7.3,140.
-0,7.3,150.
-0,7.5,160.
-0,7.8,120.
-0,7.8,120.
-0,7.8,120.
-'''
-
-
-def test_compute_histogram():
-    ctx = hdf5.read_csv(
-        general.gettemp(rupdata),
-        {'sids': numpy.uint32, 'mag': float, 'rrup': float}
-    ).array.view(numpy.recarray)
-    params = {'mag': numpy.unique(ctx.mag), 'imtls': {'PGA': [.1, .2]}}
-    cmaker = ContextMaker('*', [], params)
-    
-    magbins = numpy.linspace(2, 10.2, 20)
-    dstbins = numpy.linspace(0, 1000., 50)
-    dic = compute_histogram(ctx, cmaker, magbins, dstbins)
-    assert dic == {(0, 9, 5): 1,
-                   (0, 11, 6): 1,
-                   (0, 13, 6): 1,
-                   (0, 13, 7): 2,
-                   (0, 13, 8): 2,
-                   (0, 14, 6): 3}
 
 
 def test_compute_mrd():
