@@ -18,7 +18,7 @@
 
 import logging
 import numpy
-from openquake.baselib import parallel, general
+from openquake.baselib import parallel
 from openquake.hazardlib.calc.mrd import calc_mean_rate_dist
 from openquake.hazardlib import contexts, cross_correlation as cc
 
