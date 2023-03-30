@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Zone TSZ074"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Stable Crust Non Cratonic"
+        >
+            <pointSource
+            id="uh_set1_mmax1_TSZ074:19"
+            name="uh_set1_mmax1_TSZ074:19"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            12.350569725036621 43.234378814697266
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    Leonard2014_SCR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.0082369" bValue="0.9456" maxMag="7.08" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="60.0" probability="0.25" rake="-90.0" strike="60.0"/>
+                    <nodalPlane dip="60.0" probability="0.25" rake="-90.0" strike="120.0"/>
+                    <nodalPlane dip="60.0" probability="0.25" rake="-90.0" strike="0.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="0.59"/>
+                    <hypoDepth depth="15.0" probability="0.36"/>
+                    <hypoDepth depth="27.5" probability="0.05"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="uh_set1_mmax1_TSZ074:124"
+            name="uh_set1_mmax1_TSZ074:124"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            12.25156021118164 43.09239959716797
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    Leonard2014_SCR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="1.9539947" bValue="0.9456" maxMag="7.08" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="60.0" probability="0.25" rake="-90.0" strike="60.0"/>
+                    <nodalPlane dip="60.0" probability="0.25" rake="-90.0" strike="120.0"/>
+                    <nodalPlane dip="60.0" probability="0.25" rake="-90.0" strike="0.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="0.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="0.59"/>
+                    <hypoDepth depth="15.0" probability="0.36"/>
+                    <hypoDepth depth="27.5" probability="0.05"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
