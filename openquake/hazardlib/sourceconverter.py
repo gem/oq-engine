@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import math
 import operator
 import collections
 import pickle
@@ -254,8 +253,10 @@ class SourceGroup(collections.abc.Sequence):
         src.min_mag = max(src.min_mag, self.min_mag.get(self.trt)
                           or self.min_mag['default'])
         if hasattr(src, 'mags'):
-            # honor minimum_magnitude
-            src.mags = src.mags[src.mags >= src.min_mag]
+            # honor minimum_magnitude for multifault sources
+            ok = src.mags >= src.min_mag
+            for attr in 'mags rupture_idxs probs_occur rakes'.split():
+                setattr(src, attr, numpy.array(getattr(src, attr))[ok])
         if src.min_mag and not src.get_mags():  # filtered out
             return
         # checking mutex ruptures
