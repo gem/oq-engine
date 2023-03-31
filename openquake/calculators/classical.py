@@ -368,10 +368,10 @@ class ClassicalCalculator(base.HazardCalculator):
             pm.grp_id = grp_id
             pm.gidx = pnemap.gidx
             pm.trt_smrs = pnemap.trt_smrs
-        for c, g in enumerate(pnemap.gidx):
-            i = c % pnemap.array.shape[2]
+        G = pnemap.array.shape[2]
+        for i, g in enumerate(pnemap.gidx):
             if g in acc:
-                acc[g].multiply_pnes(pnemap, i)
+                acc[g].multiply_pnes(pnemap, i % G)
                 self.n_outs[g] -= 1
                 assert self.n_outs[g] > -1, (g, self.n_outs[g])
                 if self.n_outs[g] == 0:  # no other tasks for this g
@@ -380,7 +380,8 @@ class ClassicalCalculator(base.HazardCalculator):
                         self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
             else:  # single output
                 with self.monitor('storing PoEs', measuremem=True):
-                    self.haz.store_poes(g, pnemap.array[:, :, i], pnemap.sids)
+                    self.haz.store_poes(
+                        g, pnemap.array[:, :, i % G], pnemap.sids)
         return acc
 
     def create_rup(self):
