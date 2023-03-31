@@ -73,7 +73,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :returns: a list of integers (usually of 1 element)
         """
         trt_smr = self.trt_smr
-        return [trt_smr] if isinstance(trt_smr, int) else trt_smr
+        return (trt_smr,) if isinstance(trt_smr, int) else trt_smr
 
     def serial(self, ses_seed):
         """
