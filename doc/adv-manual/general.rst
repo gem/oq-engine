@@ -125,8 +125,11 @@ You can also have a magnitude-dependent maximum distance::
 
 In this case, given a site, the engine will completely discard
 ruptures with magnitude below 5, keep ruptures up to 100 km for
-magnitudes between 5 and 6, keep ruptures up to 200 km for magnitudes
-between 6 and 7, keep ruptures up to 300 km for magnitudes over 7.
+magnitudes between 5 and 6 (the maximum distance in this magnitude
+range will vary linearly between 0 and 100), keep ruptures up to 200
+km for magnitudes between 6 and 7 (with `maximum_distance` increasing
+linearly from 100 to 200 km from magnitude 6 to magnitude 7), keep
+ruptures up to 300 km for magnitudes over 7.
 
 You can have both trt-dependent and mag-dependent maximum distance::
 

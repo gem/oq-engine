@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Honored `minimum_magnitude` for MultiFaultSources
   * Overhauled the experimental postprocessing framework and fixed many
     bugs in the `compute_mrd` postprocessor
 
