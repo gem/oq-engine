@@ -259,8 +259,6 @@ class SourceGroup(collections.abc.Sequence):
                 setattr(src, attr, numpy.array(getattr(src, attr))[ok])
         if src.min_mag and not src.get_mags():  # filtered out
             return
-        if hasattr(src, 'data') and len(src.data) == 0:
-            raise ValueError('Probably missing .hdf5 file with rupture data!')
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
                 self.rup_interdep == 'mutex'):
