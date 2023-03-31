@@ -1619,18 +1619,15 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
 
 def get_cmakers(src_groups, full_lt, oq):
     """
-    :params src_groups: a list of SourceGroups (or trt_smrs arrays)
+    :params src_groups: a list of SourceGroups
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    if isinstance(src_groups, numpy.ndarray):  # passed trt_smrs
-        all_trt_smrs = src_groups
-    else:
-        all_trt_smrs = []
-        for sg in src_groups:
-            src = sg.sources[0]
-            all_trt_smrs.append(src.trt_smrs)
+    all_trt_smrs = []
+    for sg in src_groups:
+        src = sg.sources[0]
+        all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):

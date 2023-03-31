@@ -57,6 +57,8 @@ class LogicTreeTestCase(CalculatorTestCase):
     def tearDown(self):
         if not hasattr(self, 'calc'):  # some test broke
             return
+        if 'hcurves-stats' not in self.calc.datastore:  # not produced
+            return
         oq = self.calc.oqparam
         if oq.use_rates:  # compare with mean_rates
             print('Comparing mean_rates')
@@ -174,6 +176,13 @@ class LogicTreeTestCase(CalculatorTestCase):
     def test_case_12(self):
         # akin to NAF model
         self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
+
+    def test_case_12_bis(self):
+        # test reduction with empty branches
+        self.run_calc(case_12.__file__, 'job_bis.ini')
+        rlzs = self.calc.datastore['full_lt'].rlzs
+        fname = general.gettemp(text_table(rlzs, ext='org'))
+        self.assertEqualFiles('expected/realizations.org', fname)
 
     def test_case_13(self):
         self.assert_curves_ok(
