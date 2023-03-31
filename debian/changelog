@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Overhauled the experimental postprocessing framework and fixed many
+    bugs in the `compute_mrd` postprocessor
+
   [Anirudh Rao]
   * Added a verification test suite for the Conditioned GMFs calculator
 
