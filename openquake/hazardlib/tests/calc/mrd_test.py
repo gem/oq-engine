@@ -20,7 +20,6 @@ import os
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-from openquake.baselib.general import DictArray
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
@@ -58,8 +57,8 @@ class MRD01TestCase(unittest.TestCase):
     def test_direct(self):
 
         # Compute the MRD
-        imls1 = self.oqp.hazard_imtls[self.imts[0]]
-        imls2 = self.oqp.hazard_imtls[self.imts[1]]
+        imls1 = self.oqp.imtls[self.imts[0]]
+        imls2 = self.oqp.imtls[self.imts[1]]
         len1 = len(imls1) - 1
         len2 = len(imls2) - 1
         assert len(self.oqp.sites) == 1
@@ -72,17 +71,15 @@ class MRD01TestCase(unittest.TestCase):
         afe = - np.log(1-poes)
         afo = afe[:, :, :, :-1] - afe[:, :, :, 1:]
 
-        imts = list(self.oqp.hazard_imtls)
+        imts = list(self.oqp.imtls)
         idx1 = imts.index(self.imts[0])
         idx2 = imts.index(self.imts[1])
 
         afo1 = afo[0, 0, idx1, :]
         afo2 = afo[0, 0, idx2, :]
 
-        tmp = self.oqp.hazard_imtls[self.imts[0]]
-        c1 = tmp[:-1] + np.diff(tmp) / 2
-        tmp = self.oqp.hazard_imtls[self.imts[1]]
-        c2 = tmp[:-1] + np.diff(tmp) / 2
+        c1 = imls1[:-1] + np.diff(imls1) / 2
+        c2 = imls2[:-1] + np.diff(imls2) / 2
 
         # Compute marginal
         cm1 = imls1[:-1] + np.diff(imls1) / 2
@@ -134,14 +131,13 @@ class MRD01TestCase(unittest.TestCase):
         afo1 = afo[0, 0, idx1, :]
         afo2 = afo[0, 0, idx2, :]
 
-        tmp = self.oqp.imtls[self.imts[0]]
-        c1 = tmp[:-1] + np.diff(tmp) / 2
-        tmp = self.oqp.imtls[self.imts[1]]
-        c2 = tmp[:-1] + np.diff(tmp) / 2
-
-        # Compute marginal
         imls1 = self.oqp.imtls[self.imts[0]]
         imls2 = self.oqp.imtls[self.imts[1]]
+
+        c1 = imls1[:-1] + np.diff(imls1) / 2
+        c2 = imls2[:-1] + np.diff(imls2) / 2
+
+        # Compute marginal
         cm1 = imls1[:-1] + np.diff(imls1) / 2
         marg1 = np.squeeze(np.sum(mrd, axis=0))
         cm2 = imls2[:-1] + np.diff(imls2) / 2
