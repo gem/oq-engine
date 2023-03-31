@@ -55,18 +55,16 @@ class MRD01TestCase(unittest.TestCase):
         self.crosscorr = BakerJayaram2008()
 
     def test(self):
-
         # Compute the MRD
         imls1 = self.oqp.imtls[self.imts[0]]
         imls2 = self.oqp.imtls[self.imts[1]]
         len1 = len(imls1) - 1
         len2 = len(imls2) - 1
-        assert len(self.oqp.sites) == 1
         mrd = np.zeros((len1, len2, len(self.cmaker.gsims)))
         update_mrd(self.ctx, self.cmaker, self.crosscorr, mrd)
 
         # Loading Hazard Curves.
-        # The poes array is 4D: |sites| x || x |IMTs| x |IMLs|
+        # The poes array is 4D: |sites| x |stats| x |IMTs| x |IMLs|
         poes = self.dstore['hcurves-stats'][:]
         afe = - np.log(1-poes)
         afo = afe[:, :, :, :-1] - afe[:, :, :, 1:]
@@ -82,9 +80,7 @@ class MRD01TestCase(unittest.TestCase):
         c2 = imls2[:-1] + np.diff(imls2) / 2
 
         # Compute marginal
-        cm1 = imls1[:-1] + np.diff(imls1) / 2
         marg1 = np.squeeze(np.sum(mrd, axis=0))
-        cm2 = imls2[:-1] + np.diff(imls2) / 2
         marg2 = np.squeeze(np.sum(mrd, axis=1))
 
         # Test
@@ -94,9 +90,9 @@ class MRD01TestCase(unittest.TestCase):
         if PLOT:
             plt.title('Direct method test')
             plt.plot(c1, afo1, label=f'HC {self.imts[0]}')
-            plt.plot(cm1, marg1, 'o', mfc='None')
+            plt.plot(c1, marg1, 'o', mfc='None')
             plt.plot(c2, afo2, label=f'HC {self.imts[1]}')
-            plt.plot(cm2, marg2, 'o', mfc='None', )
+            plt.plot(c2, marg2, 'o', mfc='None', )
             plt.xlabel('Spectral Acceleration, S$_a$ [g]')
             plt.ylabel('Annual Rate of Occurrence')
             plt.legend()
@@ -115,34 +111,13 @@ class MRD01TestCase(unittest.TestCase):
 
         # Compute the MRD
         mon = Monitor('multivariate')
-        mrd = calc_mean_rate_dist(self.ctx, 1, self.cmaker, self.crosscorr,
-                                  imt1, imt2, be_mea, be_sig, mon)
+        mrdi = calc_mean_rate_dist(self.ctx, 1, self.cmaker, self.crosscorr,
+                                   imt1, imt2, be_mea, be_sig, mon)
         print(mon)
 
-        # Loading Hazard Curves.
-        # The poes array is 4D: |sites| x || x |IMTs| x |IMLs|
-        poes = self.dstore['hcurves-stats'][:]
-        afe = - np.log(1-poes)
-        afo = afe[:, :, :, :-1] - afe[:, :, :, 1:]
-
-        imts = list(self.oqp.imtls)
-        idx1 = imts.index(self.imts[0])
-        idx2 = imts.index(self.imts[1])
-
-        afo1 = afo[0, 0, idx1, :]
-        afo2 = afo[0, 0, idx2, :]
-
-        imls1 = self.oqp.imtls[self.imts[0]]
-        imls2 = self.oqp.imtls[self.imts[1]]
-
-        c1 = imls1[:-1] + np.diff(imls1) / 2
-        c2 = imls2[:-1] + np.diff(imls2) / 2
-
         # Compute marginal
-        cm1 = imls1[:-1] + np.diff(imls1) / 2
-        marg1 = np.squeeze(np.sum(mrd, axis=0))
-        cm2 = imls2[:-1] + np.diff(imls2) / 2
-        marg2 = np.squeeze(np.sum(mrd, axis=1))
+        marg1 = mrdi.sum(axis=0)[:, 0, 0]  # shape (44, 1, 1)
+        marg2 = mrdi.sum(axis=1)[:, 0, 0]  # shape (44, 1, 1)
 
         # Test
         np.testing.assert_almost_equal(marg1, afo1, decimal=5)
@@ -151,9 +126,9 @@ class MRD01TestCase(unittest.TestCase):
         if PLOT:
             plt.title('Indirect method test')
             plt.plot(c1, afo1, label=f'HC {self.imts[0]}')
-            plt.plot(cm1, marg1, 'o', mfc='None')
+            plt.plot(c1, marg1, 'o', mfc='None')
             plt.plot(c2, afo2, label=f'HC {self.imts[1]}')
-            plt.plot(cm2, marg2, 'o', mfc='None', )
+            plt.plot(c2, marg2, 'o', mfc='None', )
             plt.xlabel('Spectral Acceleration, S$_a$ [g]')
             plt.ylabel('Annual Rate of Occurrence')
             plt.legend()
@@ -167,21 +142,7 @@ class MRD01TestCase(unittest.TestCase):
         be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
         be_sig = np.arange(0.50, 0.70, 0.01)
 
-        # Set params
-        imls1 = self.oqp.imtls[self.imts[0]]
-        imls2 = self.oqp.imtls[self.imts[1]]
-        len1 = len(imls1)-1
-
-        # Compute the MRD: indirect
-        imt1, imt2 = self.imts
-        mrdi = calc_mean_rate_dist(self.ctx, 1, self.cmaker, self.crosscorr,
-                                   imt1, imt2, be_mea, be_sig)
-
-        # Compute the MRD: direct
-        mrdd = np.zeros((len1, len1, len(self.cmaker.gsims)))
-        update_mrd(self.ctx, self.cmaker, self.crosscorr, mrdd)
-
-        np.testing.assert_almost_equal(mrdi[:, :, 0], mrdd)
+        np.testing.assert_almost_equal(mrdi[:, :, 0], mrd)
 
         if PLOT:
             imlc1 = np.diff(imls1) / 2 + imls1[:-1]
@@ -189,7 +150,7 @@ class MRD01TestCase(unittest.TestCase):
 
             fig, axs = plt.subplots(1, 1)
             fig.set_size_inches(9, 6)
-            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrdd[:, :, 0, 0])
+            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrd[:, :, 0, 0])
             _ = plt.contour(np.log(imlc1), np.log(imlc2), mrdi[:, :, 0, 0],
                             colors='orange', linestyles='dashed')
             _ = plt.colorbar(mappable=plt1)
