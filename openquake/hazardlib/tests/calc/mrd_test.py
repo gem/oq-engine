@@ -54,7 +54,7 @@ class MRD01TestCase(unittest.TestCase):
         # Set the cross correlation model
         self.crosscorr = BakerJayaram2008()
 
-    def test_direct(self):
+    def test(self):
 
         # Compute the MRD
         imls1 = self.oqp.imtls[self.imts[0]]
@@ -104,7 +104,8 @@ class MRD01TestCase(unittest.TestCase):
             plt.grid(which='major', ls='--', color='grey')
             plt.show()
 
-    def test_indirect(self):
+        ## test_indirect
+
         # Bin edges
         lefts = [-3, -2, 1, 2]
         numb = [80, 80, 10]
@@ -160,7 +161,8 @@ class MRD01TestCase(unittest.TestCase):
             plt.grid(which='major', ls='--', color='grey')
             plt.show()
 
-    def test_compare(self):
+        ## test_compare
+
         # Bin edges
         be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
         be_sig = np.arange(0.50, 0.70, 0.01)
