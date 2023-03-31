@@ -45,9 +45,10 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
     :param sigbins: bins for the sigmas
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
+    G = len(inp.cmaker.gsims)
     mrd = calc_mean_rate_dist(inp.ctx, inp.N, inp.cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
-    return {g: mrd[:, :, :, i] for i, g in enumerate(inp.cmaker.gidx)}
+    return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gidx)}
 
 
 def combine_mrds(acc, rlzs_by_g):
