@@ -80,8 +80,8 @@ class MRD01TestCase(unittest.TestCase):
         c2 = imls2[:-1] + np.diff(imls2) / 2
 
         # Compute marginal
-        marg1 = np.squeeze(np.sum(mrd, axis=0))
-        marg2 = np.squeeze(np.sum(mrd, axis=1))
+        marg1 = mrd.sum(axis=0)[:, 0]  # shape (44, 1) => 44
+        marg2 = mrd.sum(axis=1)[:, 0]  # shape (44, 1) => 44
 
         # Test
         np.testing.assert_almost_equal(marg1, afo1, decimal=5)
@@ -116,8 +116,8 @@ class MRD01TestCase(unittest.TestCase):
         print(mon)
 
         # Compute marginal
-        marg1 = mrdi.sum(axis=0)[:, 0, 0]  # shape (44, 1, 1)
-        marg2 = mrdi.sum(axis=1)[:, 0, 0]  # shape (44, 1, 1)
+        marg1 = mrdi.sum(axis=0)[:, 0, 0]  # shape (44, 1, 1) => 44
+        marg2 = mrdi.sum(axis=1)[:, 0, 0]  # shape (44, 1, 1) => 44
 
         # Test
         np.testing.assert_almost_equal(marg1, afo1, decimal=5)
@@ -141,17 +141,13 @@ class MRD01TestCase(unittest.TestCase):
         # Bin edges
         be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
         be_sig = np.arange(0.50, 0.70, 0.01)
-
         np.testing.assert_almost_equal(mrdi[:, :, 0], mrd)
 
         if PLOT:
-            imlc1 = np.diff(imls1) / 2 + imls1[:-1]
-            imlc2 = np.diff(imls2) / 2 + imls2[:-1]
-
             fig, axs = plt.subplots(1, 1)
             fig.set_size_inches(9, 6)
-            plt1 = plt.contourf(np.log(imlc1), np.log(imlc2), mrd[:, :, 0, 0])
-            _ = plt.contour(np.log(imlc1), np.log(imlc2), mrdi[:, :, 0, 0],
+            plt1 = plt.contourf(np.log(c1), np.log(c2), mrd[:, :, 0, 0])
+            _ = plt.contour(np.log(c1), np.log(c2), mrdi[:, :, 0, 0],
                             colors='orange', linestyles='dashed')
             _ = plt.colorbar(mappable=plt1)
             _ = plt.title('MRD')
