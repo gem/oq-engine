@@ -497,35 +497,37 @@ class SourceModelLogicTree(object):
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.root_branchset = branchset
-        elif not branchset.branches:
+        if not branchset.branches:
             del self.bsetdict[bsid]
             return
+        prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
+        app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
+        missing = set(prev_ids.split()) - set(app2brs.split())
+        if missing:
+            # apply only to some branches
+            branchset.applied = app2brs
+            self.apply_branchset(
+                app2brs, branchset_node.lineno, branchset)
+            not_applied = set(prev_ids.split()) - set(app2brs.split())
+            for brid in not_applied:
+                if brid in self.branches:
+                    self.branches[brid].bset = dummy = dummy_branchset()
+                    [dummybranch] = dummy.branches
+                    self.branches[dummybranch.branch_id] = dummybranch
+                    dummies.append(dummybranch)
         else:
-            prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
-            app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
-            '''
-            TODO:  # exclude empty branches
-            if all(self.branches[app2br].value == ''
-                   for app2br in app2brs.split()):
-                self.previous_branches = branchset.branches
-                print([self.branches[app2br].value
-                       for app2br in app2brs.split()])
-                return
-            '''
-            if app2brs != prev_ids:
-                branchset.applied = app2brs
-                self.apply_branchset(
-                    app2brs, branchset_node.lineno, branchset)
-                not_applied = set(prev_ids.split()) - set(app2brs.split())
-                for brid in not_applied:
-                    if brid in self.branches:
-                        self.branches[brid].bset = dummy = dummy_branchset()
-                        [dummybranch] = dummy.branches
-                        self.branches[dummybranch.branch_id] = dummybranch
-                        dummies.append(dummybranch)
-            else:  # apply to all previous branches
-                for branch in self.previous_branches:
-                    branch.bset = branchset
+            # apply to all previous branches
+            for branch in self.previous_branches:
+                branch.bset = branchset
+        '''
+        TODO:  # exclude empty branches
+        if all(self.branches[app2br].value == ''
+               for app2br in app2brs.split()):
+            self.previous_branches = branchset.branches
+            print([self.branches[app2br].value
+                   for app2br in app2brs.split()])
+            return
+        '''
         self.previous_branches = branchset.branches + dummies
         self.branchsets.append(branchset)
 
