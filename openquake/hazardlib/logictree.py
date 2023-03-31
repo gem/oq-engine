@@ -224,7 +224,7 @@ def collect_info(smltpath, branchID=''):
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
-                                h5paths.add(os.path.abspath(hdf5file))
+                                h5paths.add(hdf5file)
                     if os.environ.get('OQ_REDUCE'):  # only take first branch
                         break
     return Info(sorted(smpaths), sorted(h5paths), applytosources)
