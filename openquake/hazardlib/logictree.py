@@ -218,8 +218,9 @@ def collect_info(smltpath, branchID=''):
                     if branchID and branchID != br['branchID']:
                         continue
                     with context(smltpath, br):
-                        fnames = unique(br.uncertaintyModel.text.split())
-                        smpaths.update(abs_paths(smltpath, fnames))
+                        fnames = abs_paths(
+                            smltpath, unique(br.uncertaintyModel.text.split()))
+                        smpaths.update(fnames)
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):

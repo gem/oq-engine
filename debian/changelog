@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed bug in `oq zip`: when starting from a directory different from the
+    job.ini directory, .hdf5 files for nonparametric ruptures were not included
   * Honored `minimum_magnitude` for MultiFaultSources
   * Overhauled the experimental postprocessing framework and fixed many
     bugs in the `compute_mrd` postprocessor
