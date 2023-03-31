@@ -253,6 +253,9 @@ class SourceGroup(collections.abc.Sequence):
             src.tectonic_region_type, self.trt)
         src.min_mag = max(src.min_mag, self.min_mag.get(self.trt)
                           or self.min_mag['default'])
+        if hasattr(src, 'mags'):
+            # honor minimum_magnitude
+            src.mags = src.mags[src.mags >= src.min_mag]
         if src.min_mag and not src.get_mags():  # filtered out
             return
         # checking mutex ruptures
