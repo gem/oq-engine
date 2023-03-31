@@ -173,6 +173,14 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_12(self):
         # akin to NAF model
+        # test reduction with empty branches
+        self.run_calc(case_12.__file__, 'job.ini', source_id='BG_10',
+                      calculation_mode='preclassical')
+        rlzs = self.calc.datastore['full_lt'].rlzs
+        fname = general.gettemp(text_table(rlzs, ext='org'))
+        self.assertEqualFiles('expected/realizations.org', fname)
+
+        # run full calculation
         self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
 
     def test_case_13(self):

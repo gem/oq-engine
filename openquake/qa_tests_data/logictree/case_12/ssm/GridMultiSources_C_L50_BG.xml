@@ -12,8 +12,8 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Tectonic_Type_C"
         >
             <pointSource
-            id="BG_10:124"
-            name="BG_10:124"
+            id="BG_10"
+            name="BG_10"
             >
                 <pointGeometry>
                     <gml:Point>

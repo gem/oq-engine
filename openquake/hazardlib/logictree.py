@@ -502,6 +502,14 @@ class SourceModelLogicTree(object):
             return
         prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
         app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
+        apply2empty = set()
+        for app2br in app2brs.split():
+            if app2br not in self.branches or self.branches[app2br].value == '':
+                apply2empty.add(app2br)
+        if apply2empty:
+            # skip branchset (see test_case_12)
+            self.previous_branches = branchset.branches
+            return
         missing = set(prev_ids.split()) - set(app2brs.split())
         if missing:
             # apply only to some branches
@@ -519,15 +527,6 @@ class SourceModelLogicTree(object):
             # apply to all previous branches
             for branch in self.previous_branches:
                 branch.bset = branchset
-        '''
-        TODO:  # exclude empty branches
-        if all(self.branches[app2br].value == ''
-               for app2br in app2brs.split()):
-            self.previous_branches = branchset.branches
-            print([self.branches[app2br].value
-                   for app2br in app2brs.split()])
-            return
-        '''
         self.previous_branches = branchset.branches + dummies
         self.branchsets.append(branchset)
 
