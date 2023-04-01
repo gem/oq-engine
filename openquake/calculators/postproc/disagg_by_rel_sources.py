@@ -70,6 +70,7 @@ def main(dstore):
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
 
+    logging.info('Reading the source model')
     csm = dstore['_csm']
     csm.init(dstore['full_lt'].init())
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
