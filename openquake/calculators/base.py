@@ -21,6 +21,7 @@ import abc
 import pdb
 import json
 import time
+import inspect
 import logging
 import operator
 import traceback
@@ -993,6 +994,8 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         if oq.postproc_func:
             func = getattr(postproc, oq.postproc_func).main
+            if 'csm' in inspect.getargspec(func).args:
+                oq.postproc_args['csm'] = self.csm
             func(self.datastore, **oq.postproc_args)
 
 

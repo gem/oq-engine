@@ -47,7 +47,7 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr, arr[1:])]
 
 
-def main(dstore):
+def main(dstore, csm):
     """
     Compute and store the mean disaggregatiob by Mag_Dist_Eps for
     each relevant source in the source model
@@ -70,9 +70,6 @@ def main(dstore):
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
 
-    logging.info('Reading the source model')
-    csm = dstore['_csm']
-    csm.init(dstore['full_lt'].init())
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
     src2idx = {}
     for idx, source_id in enumerate(rel_ids):

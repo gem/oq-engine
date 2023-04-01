@@ -36,10 +36,9 @@ from openquake.baselib.general import (
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters, extract
+from openquake.calculators import base, getters, postproc
 
 U16 = numpy.uint16
 U32 = numpy.uint32
