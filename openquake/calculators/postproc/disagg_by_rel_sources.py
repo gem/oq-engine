@@ -52,11 +52,11 @@ def main(dstore):
     Compute and store the mean disaggregatiob by Mag_Dist_Eps for
     each relevant source in the source model
     """
-    csm = dstore['_csm']
-    csm.init(dstore['full_lt'].init())
-    parent = dstore.parent or dstore
     oq = dstore['oqparam']
+    if len(oq.poes) == 0:
+        return
     # oq.cachedir = datastore.get_datadir()
+    parent = dstore.parent or dstore
     oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
@@ -70,6 +70,8 @@ def main(dstore):
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
 
+    csm = dstore['_csm']
+    csm.init(dstore['full_lt'].init())
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
     src2idx = {}
     for idx, source_id in enumerate(rel_ids):
