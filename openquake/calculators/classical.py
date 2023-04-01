@@ -618,7 +618,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         """
-        Check for slow tasks and fix disagg_by_src if needed
+        Check for slow tasks
         """
         oq = self.oqparam
         task_info = self.datastore.read_df('task_info', 'taskname')
