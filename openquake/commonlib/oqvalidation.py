@@ -460,12 +460,12 @@ max_sites_disagg:
   Default: 10
 
 pmap_max_gb:
-   Control the memory used in large classical calculations. The default is .5
+   Control the memory used in large classical calculations. The default is .4
    (meant for people with 2 GB per core or less) but you increase it if you
    have plenty of memory, thus producing less tiles and making the calculation
-   more efficient. For small calculations it has basically no effect.
+   more efficient. For small calculations it has no effect.
    Example: *pmap_max_gb = 2*
-   Default: .5
+   Default: .4
 
 max_weight:
   INTERNAL
@@ -964,7 +964,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_gb = valid.Param(valid.positivefloat, .5)
+    pmap_max_gb = valid.Param(valid.positivefloat, .4)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
