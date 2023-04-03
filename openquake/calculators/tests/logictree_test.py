@@ -163,6 +163,11 @@ class LogicTreeTestCase(CalculatorTestCase):
              'hazard_curve-smltp_b1_b3-gsimltp_b1.csv'],
             case_10.__file__)
 
+        # test extract/hcurves/rlz-0
+        haz = vars(extract(self.calc.datastore, 'hcurves?kind=rlz-1'))
+        self.assertEqual(sorted(haz), ['_extra', 'k', 'kind', 'rlz-001', 'rlzs'])
+        self.assertEqual(haz['rlz-001'].shape, (1, 1, 4))  # (N, M, L)
+
     def test_case_11(self):
         self.assert_curves_ok(
             ['hazard_curve-mean.csv',
@@ -202,7 +207,7 @@ class LogicTreeTestCase(CalculatorTestCase):
             text_table(view('extreme_sites', self.calc.datastore)))
         self.assertEqualFiles('expected/extreme_sites.rst', csv)
 
-        # test extract/hcurves/rlz-0, used by the npz exports
+        # test extract/hcurves/mean, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
         self.assertEqual(sorted(haz), ['_extra', 'all', 'investigation_time'])
         self.assertEqual(
