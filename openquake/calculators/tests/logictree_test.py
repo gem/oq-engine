@@ -166,7 +166,7 @@ class LogicTreeTestCase(CalculatorTestCase):
         # test extract/hcurves/rlz-0
         haz = vars(extract(self.calc.datastore, 'hcurves?kind=rlz-1'))
         self.assertEqual(sorted(haz), ['_extra', 'k', 'kind', 'rlz-001', 'rlzs'])
-        self.assertEqual(haz['rlz-001'].shape, (1, 1, 4))  # (N, M, L)
+        self.assertEqual(haz['rlz-001'].shape, (1, 1, 4))  # (N, M, L1)
 
     def test_case_11(self):
         self.assert_curves_ok(

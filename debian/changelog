@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed documentation of the Extractor for hazard curves and maps
   * Fixed bug in `oq zip`: when starting from a directory different from the
     job.ini directory, .hdf5 files for nonparametric ruptures were not included
   * Honored `minimum_magnitude` for MultiFaultSources
