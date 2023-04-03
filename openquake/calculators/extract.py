@@ -1139,12 +1139,11 @@ def extract_disagg(dstore, what):
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
-    # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
 
     # compute axis mid points, except for the TRT axis
-    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
+    axis = [(ax[:-1] + ax[1:]) / 2. if ax.dtype != object
             else ax for ax in axis]
     if len(axis) == 1:  # i.e. Mag or Dist
         values = numpy.array([axis[0]] + list(matrix.T))  # i.e. shape (2, 3)
@@ -1154,7 +1153,7 @@ def extract_disagg(dstore, what):
         # with the 2 axis above there are 2 grids of shape (3, 4) each
         values = [g.flatten() for g in grids] + [matrix[..., z].flatten()
                                                  for z in range(Z)]
-        # list of arrays of lenghts [12, 12, 12]
+        # list of 3 arrays of lengths [12, 12, 12]
         values = numpy.array(values)  # shape (3, 12)
     attrs = qdict.copy()
     for k in disag_tup:

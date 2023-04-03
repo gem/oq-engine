@@ -593,7 +593,7 @@ def export_disagg_csv(ekey, dstore):
                   tectonic_region_types=decode(bins['TRT'].tolist()),
                   lon=lon, lat=lat)
         if name == 'disagg-stats':
-            rlzcols = list(oq.hazard_stats())
+            rlzcols = ['mean']  # the only support stats at the moment
         else:
             rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
             weights = numpy.array([rlzs[r].weight['weight']
@@ -608,8 +608,7 @@ def export_disagg_csv(ekey, dstore):
             values = []
             nonzeros = []
             for m, p in iproduct(M, P):
-                imt = imts[m]
-                aw = extract(dstore, ex % (k, imt, s, p, spec))
+                aw = extract(dstore, ex % (k, imts[m], s, p, spec))
                 # for instance for Mag_Dist [(mag, dist, poe0, poe1), ...]
                 poes = aw[:, len(splits):]
                 if 'trt' in header:
@@ -617,7 +616,7 @@ def export_disagg_csv(ekey, dstore):
                 else:
                     nonzeros.append(poes.any())  # nonzero poes
                 for row in aw:
-                    values.append([imt, poes_disagg[p]] + list(row))
+                    values.append([imts[m], poes_disagg[p]] + list(row))
             if any(nonzeros):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
