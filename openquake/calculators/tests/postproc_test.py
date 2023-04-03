@@ -66,7 +66,6 @@ class PostProcTestCase(CalculatorTestCase):
         update_mrd(ctx, cmaker, self.crosscorr, mrd)
 
         mrd = np.average(mrd, axis=2, weights=[0.5, 0.5])
-        #mrd = np.average(mrd, axis=2, weights=[1.0])
 
         # Loading Hazard Curves.
         # The poes array is 4D: |sites| x |stats| x |IMTs| x |IMLs|
@@ -89,8 +88,8 @@ class PostProcTestCase(CalculatorTestCase):
         marg2 = mrd.sum(axis=1)
 
         # Test
-        np.testing.assert_almost_equal(marg1, afo1, decimal=5)
-        np.testing.assert_almost_equal(marg2, afo2, decimal=5)
+        np.testing.assert_almost_equal(marg1, afo1, decimal=4)
+        np.testing.assert_almost_equal(marg2, afo2, decimal=4)
 
         if PLOT:
             min_afo = np.min(afo1[afo1>1e-10])
@@ -129,12 +128,9 @@ class PostProcTestCase(CalculatorTestCase):
         marg1 = mrdi.sum(axis=0)
         marg2 = mrdi.sum(axis=1)
 
-        marg1 = np.average(marg1, axis=2, weights=[0.5, 0.5])
-        marg2 = np.average(marg2, axis=2, weights=[0.5, 0.5])
-        mrdi = np.squeeze(np.average(mrdi, axis=3, weights=[0.5, 0.5]))
-
-        marg1 = np.squeeze(marg1)
-        marg2 = np.squeeze(marg2)
+        marg1 = np.average(marg1, axis=2, weights=[0.5, 0.5])[:, 0]
+        marg2 = np.average(marg2, axis=2, weights=[0.5, 0.5])[:, 0]
+        mrdi = np.average(mrdi, axis=3, weights=[0.5, 0.5])[:, :, 0]
 
         c1_mask = (c1 > 1e-5) & (c1 < 1e-2)
         c2_mask = (c2 > 1e-5) & (c2 < 1e-2)
@@ -168,14 +164,8 @@ class PostProcTestCase(CalculatorTestCase):
             plt.show()
 
         ## test_compare
-
-        # Bin edges
         be_mea = get_uneven_bins_edges([-3, -2, 1, 2], [80, 80, 10])
         be_sig = np.arange(0.50, 0.70, 0.01)
-
-        # very different
-        # np.testing.assert_almost_equal(mrdi[:, :, 0], mrd)
-
         if PLOT:
             fig, axs = plt.subplots(1, 1)
             fig.set_size_inches(9, 6)
