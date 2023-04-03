@@ -19,7 +19,7 @@
 | case_45 | MMI with disagg_by_src and sampling                                        |
 | case_46 | Test applyToBranches                                                       |
 | case_56 | Sensitivity Analysis on area_source_discretization                         |
-| case_58 | Test for the truncatedGRFromSlipAbsolute epistemic uncertainty             |
+| case_58 | Test for the truncatedGRFromSlipAbsolute and geometry uncertainty          |
 | case_59 | Test for NRCan15SiteTerm                                                   |
 | case_67 | Tricky Source Specific Logic Tree                                          |
 | case_68 | Test extendModel                                                           |
