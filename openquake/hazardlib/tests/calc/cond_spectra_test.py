@@ -112,7 +112,7 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # The hazard for the target IMT and poe
         inp.cmaker.poes = [0.000404]
-        imls = [0.394359437]
+        imls = np.array([[0.394359437]])
 
         mom1 = get_cs_out(inp.cmaker, ctx1, imti, imls, tom)[0]
         mom2 = get_cs_out(inp.cmaker, ctx2, imti, imls, tom)[0]

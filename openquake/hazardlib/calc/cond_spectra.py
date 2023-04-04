@@ -83,7 +83,7 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
 
 
 # http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf
-def get_cs_out(cmaker, ctxt, imti, imls, tom, _c=None):
+def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     """
     Compute the contributions to the conditional spectra, in a form
     suitable for later composition.
@@ -95,7 +95,7 @@ def get_cs_out(cmaker, ctxt, imti, imls, tom, _c=None):
     :param imti:
         IMT index in the range 0..M-1
     :param imls:
-        P intensity measure levels for the IMT specified by the index;
+        (N, P) intensity measure levels for the IMT specified by the index;
         they are in correspondence with the probabilities in cmaker.poes
     :param tom:
         a temporal occurrence model
@@ -107,18 +107,16 @@ def get_cs_out(cmaker, ctxt, imti, imls, tom, _c=None):
         (M, N, O, P) with O=3
 
     """
-    assert len(imls) == len(cmaker.poes), (len(cmaker.poes), len(imls))
-    sids = numpy.unique(ctxt.sids)
-    N = len(sids)
+    N, P = imlsNP.shape
+    assert P == len(cmaker.poes), (len(cmaker.poes), P)
     M = len(cmaker.imtls)
-    P = len(imls)
 
     # This is the output dictionary as explained above
     out = outdict(M, N, P, cmaker.gidx.min(), cmaker.gidx.max() + 1)
     imt_ref = cmaker.imts[imti]
     rho = numpy.array([cmaker.cross_correl.get_correlation(imt_ref, imt)
                        for imt in cmaker.imts])
-    for sid in sids:
+    for sid, imls in enumerate(imlsNP):
         ctx = ctxt[ctxt.sids == sid]
         mean_stds = cmaker.get_mean_stds([ctx])  # (4, G, M, U)
 
