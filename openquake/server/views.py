@@ -623,12 +623,15 @@ def aelo_run(request):
     outputs_uri_api = request.build_absolute_uri(
         reverse('results', args=[job_id]))
 
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+
     traceback_uri = request.build_absolute_uri(
         reverse('traceback', args=[job_id]))
 
     response_data = dict(
         status='created', job_id=job_id, outputs_uri=outputs_uri_api,
-        traceback_uri=traceback_uri)
+        log_uri=log_uri, traceback_uri=traceback_uri)
 
     job_owner_email = request.user.email
     if not job_owner_email:
