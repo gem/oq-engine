@@ -164,7 +164,6 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         for g, rlzs in self.full_lt.rlzs_by_g.items():
             for r in rlzs:
                 outdic[r] += acc[g]
-        self.convert_and_save('cs-rlzs', outdic)
 
         # build final conditional mean and std
         weights = self.datastore['weights'][:]
