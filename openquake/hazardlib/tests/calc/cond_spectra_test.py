@@ -111,7 +111,7 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # The hazard for the target IMT and poe
         inp.cmaker.poes = [0.000404]
-        imls = [0.394359437]
+        imls = np.array([[0.394359437]])
 
         mom1 = get_cs_out(inp.cmaker, ctx1, imti, imls, tom)[0]
         mom2 = get_cs_out(inp.cmaker, ctx2, imti, imls, tom)[0]
@@ -137,7 +137,7 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # The hazard for the target IMT and poe=0.002105
         cmaker.poes = [0.002105]
-        imls = [0.238531932]
+        imls = np.array([[0.238531932]])
 
         # Compute mean CS
         outdic = get_cs_out(cmaker, ctx, imti, imls, tom)

@@ -24,8 +24,7 @@ import numpy
 
 from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.probability_map import (
-    compute_hazard_maps, get_mean_curve)
+from openquake.hazardlib.probability_map import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
@@ -89,20 +88,26 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         self.periods = [from_string(imt).period for imt in self.imts]
+
         # extract imls from the "mean" hazard map
-        curve = get_mean_curve(self.datastore, oq.imt_ref)
-        # there is 1 site
-        [self.imls] = compute_hazard_maps(curve, oq.imtls[oq.imt_ref], oq.poes)
-        self.P = P = len(self.imls)
+        if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+            curves = dstore.sel('hcurves-stats', stat='mean', imt=oq.imt_ref)
+        else:  # there is only 1 realization
+            curves = dstore.sel('hcurves-rlzs', rlz_id=0, imt=oq.imt_ref)
+        self.imls = compute_hazard_maps(  # shape (N, L) => (N, P)
+            curves[:, 0, 0, :], oq.imtls[oq.imt_ref], oq.poes)
+        N, self.P = self.imls.shape
+
+        # create outputs
         self.datastore.create_dset(
             'cs-rlzs', float, (self.R, M, self.N, 2, self.P))
         self.datastore.set_shape_descr(
             'cs-rlzs', rlz_id=self.R, period=self.periods,  sid=self.N,
-            cs=2, poe_id=P)
-        self.datastore.create_dset('cs-stats', float, (1, M, self.N, 2, P))
+            cs=2, poe_id=self.P)
+        self.datastore.create_dset('cs-stats', float, (1, M, self.N, 2, self.P))
         self.datastore.set_shape_descr(
             'cs-stats', stat='mean', period=self.periods, sid=self.N,
-            cs=['spec', 'std'], poe_id=P)
+            cs=['spec', 'std'], poe_id=self.P)
         self.cmakers = read_cmakers(self.datastore)
         # self.datastore.swmr_on()
         # IMPORTANT!! we rely on the fact that the classical part
