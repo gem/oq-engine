@@ -350,8 +350,8 @@ def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
         raise
     else:
         conn.commit()
-    dt = time.time() - t0
-    logging.info('Upgrade completed in %s seconds', dt)
+    if versions_applied:
+        logging.info('Upgrade completed in %s seconds', time.time() - t0)
     return versions_applied
 
 
