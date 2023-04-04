@@ -668,9 +668,7 @@ class ArrayWrapper(object):
 
     def __repr__(self):
         if hasattr(self, 'shape_descr'):
-            assert len(self.shape) == len(self.shape_descr), (
-                self.shape_descr, self.shape)
-            lst = ['%s=%d' % (descr.decode('utf8'), size)
+            lst = ['%s=%d' % (descr, size)
                    for descr, size in zip(self.shape_descr, self.shape)]
             return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
         elif hasattr(self, 'shape'):
@@ -704,7 +702,7 @@ class ArrayWrapper(object):
                 dic[k] = v
         return toml.dumps(dic)
 
-    def to_dframe(self):
+    def to_dframe(self, skip_zeros=True):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
         (T1, ..., TN) which are list of tags of lenghts (D1, ..., DN) into
@@ -769,10 +767,14 @@ class ArrayWrapper(object):
                                itertools.product(*tags)):
             val = self.array[idx]
             if isinstance(val, numpy.ndarray):
-                if val.sum():
-                    out.append(values + tuple(val))
-            elif val:  # is a scalar
-                out.append(values + (val,))
+                tup = tuple(val)
+            else:
+                tup = (val,)
+            if skip_zeros:
+                if sum(tup):
+                    out.append(values + tup)
+            else:
+                out.append(values + tup)
         return pandas.DataFrame(out, columns=fields)
 
     def to_dict(self):
