@@ -22,7 +22,7 @@ Conditional spectrum calculator, inspired by the disaggregation calculator
 import logging
 import numpy
 
-from openquake.baselib import parallel
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.probability_map import (
     compute_hazard_maps, get_mean_curve)
@@ -54,6 +54,19 @@ def to_spectra(outdic, n, p):
     return out
 
 
+def build_spectra(dstore, name, R, oq, spectra):
+    N = len(spectra)
+    stats = list(oq.hazard_stats())
+    kind = 'rlz' if 'rlzs' in name else 'stat'
+    dic = dict(shape_descr=['site_id', 'poe', kind, 'period'])
+    dic['site_id'] = numpy.arange(N)
+    dic[kind] = numpy.arange(R) if kind == 'rlz' else stats
+    dic['poe'] = list(oq.poes)
+    dic['period'] = [from_string(imt).period for imt in oq.imtls]
+    hdf5.ArrayWrapper(spectra, dic, ['mea', 'std']).save(name, dstore.hdf5)
+    #dstore.hdf5[name] = hdf5.ArrayWrapper(spectra, dic, ['mea', 'std'])
+
+
 @base.calculators.add('conditional_spectrum')
 class ConditionalSpectrumCalculator(base.HazardCalculator):
     """
@@ -79,7 +92,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)
-        self.M = M = len(self.imts)
+        self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         totrups = len(dstore['rup/mag'])
@@ -93,16 +106,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         curve = get_mean_curve(self.datastore, oq.imt_ref)
         # there is 1 site
         [self.imls] = compute_hazard_maps(curve, oq.imtls[oq.imt_ref], oq.poes)
-        self.P = P = len(self.imls)
-        self.datastore.create_dset(
-            'cs-rlzs', float, (self.R, M, self.N, 2, self.P))
-        self.datastore.set_shape_descr(
-            'cs-rlzs', rlz_id=self.R, period=self.periods,  sid=self.N,
-            cs=2, poe_id=P)
-        self.datastore.create_dset('cs-stats', float, (1, M, self.N, 2, P))
-        self.datastore.set_shape_descr(
-            'cs-stats', stat='mean', period=self.periods, sid=self.N,
-            cs=['spec', 'std'], poe_id=P)
+        self.P = len(self.imls)
         self.cmakers = read_cmakers(self.datastore)
         # self.datastore.swmr_on()
         # IMPORTANT!! we rely on the fact that the classical part
@@ -142,14 +146,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         Save the conditional spectra
         """
-        for n in range(self.N):
-            for p in range(self.P):  # shape (R, M, N, 2, P)
-                self.datastore[dsetname][:, :, n, :, p] = to_spectra(
-                    outdic, n, p)  # shape (R, M, 2)
-        attrs = dict(imls=self.imls, periods=self.periods)
-        if self.oqparam.poes:
-            attrs['poes'] = self.oqparam.poes
-        self.datastore.set_attrs(dsetname, **attrs)
+        spe = numpy.array([[to_spectra(outdic, n, p) for p in range(self.P)]
+                           for n in range(self.N)])
+        build_spectra(self.datastore, dsetname, self.R, self.oqparam, spe)
 
     def post_execute(self, acc):
         # apply weights

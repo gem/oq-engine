@@ -783,6 +783,21 @@ class ArrayWrapper(object):
         """
         return {k: v for k, v in vars(self).items() if not k.startswith('_')}
 
+    def save(self, path, h5):
+        fields = ['shape_descr'] + self.shape_descr
+        for k in fields + ['array']:
+            arr = getattr(self, k)
+            if not isinstance(arr, numpy.ndarray):
+                if len(arr) and isinstance(arr[0], str):
+                    arr = encode(arr)
+                arr = numpy.array(arr)
+            dset = h5.create_dataset('%s/%s' % (path, k), arr.shape, arr.dtype)
+            dset[:] = arr
+        attrs = h5[path].attrs
+        attrs['_extra'] = self._extra
+        attrs['__pyclass__'] = cls2dotname(self.__class__)
+        h5.flush()
+
 
 def decode_array(values):
     """
