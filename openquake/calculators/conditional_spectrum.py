@@ -22,7 +22,7 @@ Conditional spectrum calculator, inspired by the disaggregation calculator
 import logging
 import numpy
 
-from openquake.baselib import general, parallel
+from openquake.baselib import parallel
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib.probability_map import (
     compute_hazard_maps, get_mean_curve)
