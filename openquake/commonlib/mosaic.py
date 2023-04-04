@@ -5,6 +5,7 @@ import pprint
 import logging
 import time
 import csv
+import sys
 import os
 from shapely.geometry import Point, shape
 from collections import Counter
@@ -29,6 +30,9 @@ class MosaicGetter:
         """
         Returns a list of all models in the shapefile
         """
+        if fiona is None:
+            print('fiona/GDAL is not installed properly!', sys.stderr)
+            return []
         with fiona.open(self.shapefile_path, 'r') as shp:
             models = [polygon['properties']['code'] for polygon in shp]
         return models
