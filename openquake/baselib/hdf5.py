@@ -707,8 +707,8 @@ class ArrayWrapper(object):
     def to_dframe(self):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
-        T1, ..., TN which are list of tags of lenghts D1, ... DN into
-        a DataFrame with rows (tag1, ... tagN, extra1, ... extraM) of maximum
+        (T1, ..., TN) which are list of tags of lenghts (D1, ..., DN) into
+        a DataFrame with rows (tag1, ..., tagN, value) of maximum
         length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
@@ -725,6 +725,17 @@ class ArrayWrapper(object):
         0       RC       RES  2000.0
         1       RC       IND  5000.0
         2     WOOD       RES   500.0
+
+        It is also possible to pass M > 1 extra fields an convert an array of
+        shape  (D1, ..., DN, M) and attributes (T1, ..., TN) into a DataFrame
+        with rows (tag1, ..., tagN, value1, ..., valueM).
+
+        >>> dic = dict(shape_descr=['taxonomy'], taxonomy=['RC', 'WOOD'])
+        >>> aw = ArrayWrapper(arr, dic, ['RES', 'IND', 'COM'])
+        >>> pprint(aw.to_dframe())
+          taxonomy     RES     IND  COM
+        0       RC  2000.0  5000.0  0.0
+        1     WOOD   500.0     0.0  0.0
         """
         if hasattr(self, 'array'):
             names = self.array.dtype.names
