@@ -33,7 +33,17 @@ def outdict(M, N, P, start, stop):
 
 def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
             phi_b, invtime, c, _c=None):
-    M, O, P = c.shape
+    # `mean_stds` is an array with the values of mean of log(gm) and the
+    # corresponding standard deviation. The size of this array is 4 x M x U
+    # where M is the number if IMLs and U is the number of ruptures considered.
+    # `probs` is an array with the probabilities of at least one occurrence of
+    # a given rupture. `rho` is a vector of size M with the correlation
+    # coefficients. `imti` is the index of the conditioning IMT. `imls` is a
+    # list with the IMLs (corresponding to different probabilities of
+    # exceedance) for the conditioning IMT. `cs_poes` are the probabilities of
+    # exceedance characterising the values in `imls`. `phi_b` is float.
+    # `invtime` is the investigation time [yr]. `c` has shape M x ? x ?
+    M, O, _ = c.shape
     mu = mean_stds[0]  # shape (M, U)
     sig = mean_stds[1]  # shape (M, U)
 
@@ -45,12 +55,13 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
         eps = (numpy.log(iml) - mu[imti]) / sig[imti]
         poes = truncnorm_sf(phi_b, eps)
 
-        # Converting to rates and dividing by the rate of
-        # exceedance of the reference IMT and level
+        # Converting to rates and dividing by the rate of exceedance of the
+        # reference IMT and level.  This is eq. 13 of the OQ Engine Underlying
+        # Hazard Science Book.
         ws = -numpy.log((1. - probs) ** poes) / invtime
 
         # Normalizing by the AfE for the investigated IMT and level
-        ws /= -numpy.log(1. - cs_poes[p])
+        ws /= -numpy.log(1. - cs_poes[p]) / invtime
 
         # weights not summing up to 1
         c[:, 0, p] = ws.sum()
