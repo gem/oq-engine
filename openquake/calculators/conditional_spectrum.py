@@ -132,7 +132,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # 3 is the number of statistical momenta
         # P is the the number of IMLs
         outdic, outmean = self._apply_weights(out)
-        
+
         # Computing standard deviation
         smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
         for gid, ctx in ctx_by_grp.items():

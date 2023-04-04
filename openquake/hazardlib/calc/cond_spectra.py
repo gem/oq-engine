@@ -98,8 +98,6 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     """
     N, P = imlsNP.shape
     assert P == len(cmaker.poes), (len(cmaker.poes), P)
-    sids = numpy.unique(ctxt.sids)
-    N = len(sids)
     M = len(cmaker.imtls)
 
     # This is the output dictionary as explained above
@@ -107,7 +105,7 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     imt_ref = cmaker.imts[imti]
     rho = numpy.array([cmaker.cross_correl.get_correlation(imt_ref, imt)
                        for imt in cmaker.imts])
-    for sid, imls in zip(sids, imlsNP):
+    for sid, imls in enumerate(imlsNP):
         ctx = ctxt[ctxt.sids == sid]
         mean_stds = cmaker.get_mean_stds([ctx])  # (4, G, M, U)
 
