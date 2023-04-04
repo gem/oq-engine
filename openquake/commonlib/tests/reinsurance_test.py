@@ -983,8 +983,9 @@ rur_Ant_1,10000,100,.1,.2''')
                 'aggregate_by = policy\n', ''))
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_oqparam(self.jobfname)
-        self.assertIn('expected aggregate_by=policy; got []',
-                      str(ctx.exception))
+        self.assertIn(
+            "The field `aggregate_by = policy` in the %s file is required for"
+            " reinsurance calculations." % self.jobfname, str(ctx.exception))
 
     def test_correct_aggregate_by_policy_semicolon_taxonomy(self):
         with open(self.jobfname, 'w') as job:
@@ -1010,8 +1011,9 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_oqparam(self.jobfname)
         self.assertIn(
-            "expected aggregate_by=policy; got [['policy', 'taxonomy']]",
-            str(ctx.exception))
+            "The field `aggregate_by = policy` in the %s file is required for"
+            " reinsurance calculations. Got `aggregate_by = [['policy',"
+            " 'taxonomy']]` instead." % self.jobfname, str(ctx.exception))
 
     def test_missing_total_losses(self):
         with open(self.jobfname, 'w') as job:
