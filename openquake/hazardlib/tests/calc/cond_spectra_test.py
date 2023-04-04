@@ -138,7 +138,7 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # The hazard for the target IMT and poe=0.002105
         cmaker.poes = [0.002105]
-        imls = [0.0483352]
+        imls = np.array([[0.0483352]])
 
         # Compute mean CS
         outdic = get_cs_out(cmaker, ctx, imti, imls, tom)
