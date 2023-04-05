@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed conditional spectrum with investigation time different from 1 year
+
   [Michele Simionato]
   * Fixed documentation of the Extractor for hazard curves and maps
   * Fixed bug in `oq zip`: when starting from a directory different from the
