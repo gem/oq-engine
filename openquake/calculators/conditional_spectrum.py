@@ -24,8 +24,7 @@ import numpy
 
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.probability_map import (
-    compute_hazard_maps, get_mean_curve)
+from openquake.hazardlib.probability_map import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
@@ -102,13 +101,17 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         self.periods = [from_string(imt).period for imt in self.imts]
+
         # extract imls from the "mean" hazard map
-        curve = get_mean_curve(self.datastore, oq.imt_ref)
-        # there is 1 site
-        [self.imls] = compute_hazard_maps(curve, oq.imtls[oq.imt_ref], oq.poes)
-        self.P = len(self.imls)
+        if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+            curves = dstore.sel('hcurves-stats', stat='mean', imt=oq.imt_ref)
+        else:  # there is only 1 realization
+            curves = dstore.sel('hcurves-rlzs', rlz_id=0, imt=oq.imt_ref)
+        self.imls = compute_hazard_maps(  # shape (N, L) => (N, P)
+            curves[:, 0, 0, :], oq.imtls[oq.imt_ref], oq.poes)
+        N, self.P = self.imls.shape
         self.cmakers = read_cmakers(self.datastore)
-        # self.datastore.swmr_on()
+
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
