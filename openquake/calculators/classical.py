@@ -38,7 +38,7 @@ from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
 from openquake.commonlib import calc
-from openquake.calculators import base, getters, postproc
+from openquake.calculators import base, getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
