@@ -53,7 +53,10 @@ def to_spectra(outdic, n, p):
     return out
 
 
-def build_spectra(dstore, name, R, oq, spectra):
+def store_spectra(dstore, name, R, oq, spectra):
+    """
+    Store the conditional spectra array
+    """
     N = len(spectra)
     stats = list(oq.hazard_stats())
     kind = 'rlz' if 'rlzs' in name else 'stat'
@@ -120,7 +123,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # Computing CS
         toms = decode(dstore['toms'][:])
         ctx_by_grp = read_ctx_by_grp(dstore)
-        smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(get_cs_out, h5=self.datastore)
         for gid, ctx in ctx_by_grp.items():
             tom = valid.occurrence_model(toms[gid])
             cmaker = self.cmakers[gid]
@@ -152,7 +156,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         spe = numpy.array([[to_spectra(outdic, n, p) for p in range(self.P)]
                            for n in range(self.N)])
-        build_spectra(self.datastore, dsetname, self.R, self.oqparam, spe)
+        store_spectra(self.datastore, dsetname, self.R, self.oqparam, spe)
 
     def post_execute(self, acc):
         # apply weights

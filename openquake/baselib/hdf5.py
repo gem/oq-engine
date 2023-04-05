@@ -799,8 +799,7 @@ class ArrayWrapper(object):
                 arr = numpy.array(arr)
             dset = h5.create_dataset('%s/%s' % (path, k), arr.shape, arr.dtype)
             dset[:] = arr
-        attrs = h5[path].attrs
-        attrs['__pyclass__'] = cls2dotname(self.__class__)
+        h5[path].attrs['__pyclass__'] = cls2dotname(self.__class__)
         h5.flush()
 
 

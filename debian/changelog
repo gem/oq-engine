@@ -1,8 +1,11 @@
+  [Michele Simionato]
+  * Changed the conditional spectrum storage and fixed the exporter to export
+    all PoEs
+
   [Marco Pagani]
   * Fixed conditional spectrum with investigation time different from 1 year
 
   [Michele Simionato]
-  * Internal: changed the conditional spectrum storage
   * Fixed documentation of the Extractor for hazard curves and maps
   * Fixed bug in `oq zip`: when starting from a directory different from the
     job.ini directory, .hdf5 files for nonparametric ruptures were not included
