@@ -140,6 +140,18 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # P is the the number of IMLs
         outdic, outmean = self._apply_weights(out)
 
+        # sanity check: the mean conditional spectrum must be close to the imls
+        ref_idx = list(oq.imtls).index(oq.imt_ref)
+        mean_cs = numpy.exp(outmean[0][ref_idx, :, 1, :])  # shape (N, P)
+        for n in range(self.N):
+            for p in range(self.P):
+                diff = abs(1. - self.imls[n, p]/ mean_cs[n, p])
+                if diff > .03:
+                    logging.warning('Conditional Spectrum vs mean IML\nfor '
+                                    'site_id=%d, poe=%s, imt=%s: %.5f vs %.5f',
+                                    n, oq.poes[p], oq.imt_ref,
+                                    mean_cs[n, p], self.imls[n, p])
+
         # Computing standard deviation
         smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
         for gid, ctx in ctx_by_grp.items():
