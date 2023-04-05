@@ -59,6 +59,10 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     precalc = 'classical'
     accept_precalc = ['classical', 'disaggregation']
 
+    def pre_execute(self):
+        raise RuntimeError('Please use a more recent version of the engine '
+                           'to run conditional spectrum calculations')
+
     def execute(self):
         """
         Compute the conditional spectrum in a sequential way.
@@ -68,9 +72,6 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         assert self.N <= self.oqparam.max_sites_disagg, (
             self.N, self.oqparam.max_sites_disagg)
-        logging.warning('Conditional spectrum calculations are still '
-                        'experimental')
-
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt']
         self.trts = list(self.full_lt.gsim_lt.values)
