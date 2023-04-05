@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed conditional spectrum with investigation time different from 1 year
+
   [Michele Simionato]
   * Internal: changed the conditional spectrum storage
   * Fixed documentation of the Extractor for hazard curves and maps
