@@ -165,7 +165,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # test extract/hcurves/rlz-0
         haz = vars(extract(self.calc.datastore, 'hcurves?kind=rlz-1'))
-        self.assertEqual(sorted(haz), ['_extra', 'k', 'kind', 'rlz-001', 'rlzs'])
+        self.assertEqual(sorted(haz), ['extra', 'k', 'kind', 'rlz-001', 'rlzs'])
         self.assertEqual(haz['rlz-001'].shape, (1, 1, 4))  # (N, M, L1)
 
     def test_case_11(self):
@@ -209,7 +209,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # test extract/hcurves/mean, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
-        self.assertEqual(sorted(haz), ['_extra', 'all', 'investigation_time'])
+        self.assertEqual(sorted(haz), ['all', 'extra', 'investigation_time'])
         self.assertEqual(
             haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
         array = haz['all']['mean']

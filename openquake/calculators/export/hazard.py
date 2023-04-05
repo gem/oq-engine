@@ -362,22 +362,15 @@ def export_hmaps_xml(ekey, dstore):
 @export.add(('cs-stats', 'csv'))
 def export_cond_spectra(ekey, dstore):
     sitecol = dstore['sitecol']
-    dset = dstore[ekey[0]]  # shape (1, M, N, 2, P)
-    periods = dset.attrs['periods']
-    imls = dset.attrs['imls']
+    aw = dstore[ekey[0]]  # shape (N, P, K, M, 2)
+    dframe = aw.to_dframe()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fnames = []
     for n in sitecol.sids:
-        spe = dset[0, :, n, 0]  # shape M, P
-        std = dset[0, :, n, 1]  # shape M, P
+        df = dframe[dframe.site_id == n]
+        del df['site_id']
         fname = dstore.export_path('conditional-spectrum-%d.csv' % n)
-        dic = dict(sa_period=periods)
-        for p in range(len(imls)):
-            dic['val%d' % p] = spe[:, p]
-            dic['std%d' % p] = std[:, p]
-        df = pandas.DataFrame(dic)
         comment = dstore.metadata.copy()
-        comment['imls'] = list(imls)
         comment['site_id'] = n
         comment['lon'] = sitecol.lons[n]
         comment['lat'] = sitecol.lats[n]
