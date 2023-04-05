@@ -594,7 +594,9 @@ def export_disagg_csv(ekey, dstore):
         metadata.update(md)
         for k in oq.disagg_outputs:
             aw = extract(dstore, ex % (k, s, spec))
-            df = aw.to_dframe().sort_values(['imt', 'poe'])
+            if aw.array.sum() == 0:
+                continue
+            df = aw.to_dframe(skip_zeros=False).sort_values(['imt', 'poe'])
             # move the columns imt and poe at the beginning for backward compat
             cols = [col for col in df.columns if col not in ('imt', 'poe')]
             cols = ['imt', 'poe'] + cols

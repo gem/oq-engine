@@ -1,4 +1,7 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-git4ad6096bca', start_date='2023-04-04T08:18:59', checksum=154257206, investigation_time=1.0, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -72.19554763962729], lat_bin_edges=[2.80136, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], lon=-74.0, lat=4.6, weights=[1.0], rlz_ids=[0]"
+#,,,,"generated_by='OpenQuake engine 3.17.0-git86ba1a86ad', start_date='2023-04-05T09:00:50', checksum=154257206, investigation_time=1.0, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -72.19554763962729], lat_bin_edges=[2.80136, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], lon=-74.0, lat=4.6, weights=[1.0], rlz_ids=[0]"
 imt,poe,mag,dist,rlz0
+PGA,1.00000E-04,6.50000E+00,2.00000E+01,0.00000E+00
+PGA,1.00000E-04,6.50000E+00,6.00000E+01,0.00000E+00
+PGA,1.00000E-04,6.50000E+00,1.00000E+02,0.00000E+00
 PGA,1.00000E-04,6.50000E+00,1.40000E+02,1.57727E-05
 PGA,1.00000E-04,6.50000E+00,1.80000E+02,8.47002E-05
