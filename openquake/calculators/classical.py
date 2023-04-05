@@ -571,10 +571,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Global pmap size %s', humansize(totsize))
 
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        # using submit avoids the .task_queue and thus core starvation
-        for args in allargs:
-            smap.submit(args)
+        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
