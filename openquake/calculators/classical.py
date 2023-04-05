@@ -552,7 +552,8 @@ class ClassicalCalculator(base.HazardCalculator):
             elif sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
-                blks = block_splitter(sg, maxw, get_weight, sort=True)
+                blks = block_splitter(  # produce more tasks if ntiles
+                    sg, maxw/2 if ntiles > 1 else maxw, get_weight, sort=True)
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
