@@ -1139,8 +1139,8 @@ def extract_disagg(dstore, what):
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
 
-    # compute axis mid points, except for the TRT axis
-    axis = [(ax[:-1] + ax[1:]) / 2. if ax.dtype != object
+    # compute axis mid points, except for string axis (i.e. TRT)
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype.char != 'S'
             else ax for ax in axis]
     attrs = qdict.copy()
     for k, ax in zip(disag_tup, axis):
