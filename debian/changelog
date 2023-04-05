@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the conditional spectrum storage and fixed the exporter to export
+    all PoEs
+
   [Marco Pagani]
   * Fixed conditional spectrum with investigation time different from 1 year
 

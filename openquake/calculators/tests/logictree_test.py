@@ -165,7 +165,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # test extract/hcurves/rlz-0
         haz = vars(extract(self.calc.datastore, 'hcurves?kind=rlz-1'))
-        self.assertEqual(sorted(haz), ['_extra', 'k', 'kind', 'rlz-001', 'rlzs'])
+        self.assertEqual(sorted(haz), ['extra', 'k', 'kind', 'rlz-001', 'rlzs'])
         self.assertEqual(haz['rlz-001'].shape, (1, 1, 4))  # (N, M, L1)
 
     def test_case_11(self):
@@ -209,7 +209,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # test extract/hcurves/mean, used by the npz exports
         haz = vars(extract(self.calc.datastore, 'hcurves'))
-        self.assertEqual(sorted(haz), ['_extra', 'all', 'investigation_time'])
+        self.assertEqual(sorted(haz), ['all', 'extra', 'investigation_time'])
         self.assertEqual(
             haz['all'].dtype.names, ('lon', 'lat', 'depth', 'mean'))
         array = haz['all']['mean']
@@ -352,11 +352,11 @@ hazard_uhs-std.csv
         # rates_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
         dbs = self.calc.datastore['rates_by_src']
-        ae(dbs.shape_descr, [b'site_id', b'imt', b'lvl', b'src_id'])
-        ae(dbs.site_id, 1)
-        ae(dbs.imt, [b'PGA', b'SA(1.0)'])
-        ae(dbs.lvl, 4)
-        ae(dbs.src_id, [b'CHAR1', b'COMFLT1', b'SFLT1'])
+        ae(dbs.shape_descr, ['site_id', 'imt', 'lvl', 'src_id'])
+        ae(dbs.site_id, [0])
+        ae(dbs.imt, ['PGA', 'SA(1.0)'])
+        ae(dbs.lvl, [0, 1, 2, 3])
+        ae(dbs.src_id, ['CHAR1', 'COMFLT1', 'SFLT1'])
 
         # testing extract_rates_by_src
         aw = extract(self.calc.datastore, 'rates_by_src?imt=PGA&poe=1E-3')
