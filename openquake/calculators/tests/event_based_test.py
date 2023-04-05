@@ -586,6 +586,9 @@ class EventBasedTestCase(CalculatorTestCase):
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures2.csv', f, delta=1E-5)
         
+        # check the full_ruptures can be imported in a scenario
+        self.run_calc(case_29.__file__, 'scenario.ini')
+
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]
                          for period in numpy.arange(0.1,  1, 0.001)}
