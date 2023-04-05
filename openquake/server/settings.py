@@ -291,7 +291,10 @@ if LOCKDOWN:
 
     LOGIN_REDIRECT_URL = '%s/engine/' % WEBUI_PATHPREFIX
     LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
-    LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % WEBUI_PATHPREFIX, )
+    LOGIN_EXEMPT_URLS = (
+        '%s/accounts/ajax_login/' % WEBUI_PATHPREFIX,
+        '%s/reset_password' % WEBUI_PATHPREFIX,
+    )
     LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
 
     AUTH_PASSWORD_VALIDATORS = [
