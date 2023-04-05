@@ -133,11 +133,11 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
 
-
 def classical(srcs, sitecol, cmaker, monitor):
     """
     Call the classical calculator in hazardlib
     """
+    # NB: removing the yield would case terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     for sites in sitecol.split_in_tiles(cmaker.ntiles):
