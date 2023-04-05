@@ -257,7 +257,7 @@ We fixed a bug such that using the ``--hc`` option caused the site model of
 the child calculation to be associated incorrectly.
 
 We fixed the conditional spectrum calculator which was giving incorrect
-results, but it should still be considered on experimental status.
+results, but it should still be considered experimental.
 
 We fixed a bug in the `classical_risk` calculator, where the `avg_losses`
 output was not stored and therefore not exportable
