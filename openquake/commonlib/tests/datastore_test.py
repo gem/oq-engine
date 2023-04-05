@@ -22,8 +22,8 @@ import sys
 import unittest
 import tempfile
 import numpy
-from openquake.commonlib.datastore import new, read
-from openquake.commonlib import logs
+from openquake.baselib import hdf5
+from openquake.commonlib import datastore, logs
 
 
 class DataStoreTestCase(unittest.TestCase):
@@ -31,11 +31,12 @@ class DataStoreTestCase(unittest.TestCase):
     Testing the complex interaction between datastore and database
     """
     def setUp(self):
-        log = logs.init("job", {'calculation_mode': 'scenario',
-                                'sites': '0 0'})
-        self.dstore = new(log.calc_id, log.get_oqparam())
+        log = logs.init(
+            "job", {'calculation_mode': 'scenario', 'sites': '0 0'})
+        self.dstore = datastore.new(log.calc_id, log.get_oqparam())
 
     def tearDown(self):
+        self.dstore.close()
         self.dstore.clear()
 
     def test_hdf5(self):
@@ -82,17 +83,17 @@ class DataStoreTestCase(unittest.TestCase):
 
         # case of a non-existing directory
         with self.assertRaises(OSError):
-            read(42, 'r', '/fake/directory')
+            datastore.read(42, 'r', '/fake/directory')
         # case of a non-existing file
         with self.assertRaises(IOError):
-            read(42, 'r', '/tmp')
+            datastore.read(42, 'r', '/tmp')
         # case of no read permission
         tmp = tempfile.mkdtemp()
         fname = os.path.join(tmp, 'calc_42.hdf5')
         open(fname, 'w').write('')
         os.chmod(fname, 0)
         with self.assertRaises(IOError) as ctx:
-            read(42, 'r', tmp)
+            datastore.read(42, 'r', tmp)
         self.assertIn('permission denied', str(ctx.exception).lower())
         os.remove(fname)
 
@@ -163,3 +164,21 @@ class DataStoreTestCase(unittest.TestCase):
         df = self.dstore.read_df('test')
         numpy.testing.assert_equal(df['val_'].loc[0], [1])
         numpy.testing.assert_equal(df['val_'].loc[1], [2, 3])
+
+    def test_ArrayWrapper(self):
+        dic = dict(shape_descr=['taxonomy', 'occupancy'],
+                   taxonomy=['RC', 'WOOD'],
+                   occupancy=['RES', 'IND', 'COM'])
+        arr = numpy.zeros((2, 3))
+        arr[0, 0] = 2000.
+        arr[0, 1] = 5000.
+        arr[1, 0] = 500.
+        aw = hdf5.ArrayWrapper(arr, dic)
+        self.dstore['aw'] = aw
+        aw1 = self.dstore['aw']
+        print(aw1)
+        aw.save('aw2', self.dstore.hdf5)
+        aw2 = self.dstore['aw2']
+        print(aw2)
+        print(self.dstore.getitem('aw/taxonomy'))
+        print(self.dstore.getitem('aw2/taxonomy'))

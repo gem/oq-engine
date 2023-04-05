@@ -63,7 +63,8 @@ def build_spectra(dstore, name, R, oq, spectra):
     dic['poe'] = list(oq.poes)
     dic['period'] = [from_string(imt).period for imt in oq.imtls]
     hdf5.ArrayWrapper(spectra, dic, ['mea', 'std']).save(name, dstore.hdf5)
-    #dstore.hdf5[name] = hdf5.ArrayWrapper(spectra, dic, ['mea', 'std'])
+    # NB: the following would segfault
+    # dstore.hdf5[name] = hdf5.ArrayWrapper(spectra, dic, ['mea', 'std'])
 
 
 @base.calculators.add('conditional_spectrum')
