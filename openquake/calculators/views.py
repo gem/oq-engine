@@ -1417,8 +1417,9 @@ def view_event_based_mfd(token, dstore):
     """
     Compare n_occ/eff_time with occurrence_rate
     """
-    aw = extract(dstore, 'event_based_mfd?')
-    return pandas.DataFrame(aw.to_dict()).set_index('mag')
+    dic = extract(dstore, 'event_based_mfd?').to_dict()
+    del dic['extra']
+    return pandas.DataFrame(dic).set_index('mag')
 
 
 # used in the AELO project

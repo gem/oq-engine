@@ -617,15 +617,21 @@ def aelo_run(request):
         config.distribution.log_level, None, utils.get_user(request), None)
     job_id = jobctx.calc_id
 
-    outputs_uri = request.build_absolute_uri(
+    outputs_uri_web = request.build_absolute_uri(
         reverse('outputs', args=[job_id]))
+
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
 
     traceback_uri = request.build_absolute_uri(
         reverse('traceback', args=[job_id]))
 
     response_data = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri,
-        traceback_uri=traceback_uri)
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
 
     job_owner_email = request.user.email
     if not job_owner_email:
@@ -635,11 +641,11 @@ def aelo_run(request):
             ' the job completes, you can access its outputs at the following'
             ' link: %s. If the job fails, the error traceback will be'
             ' accessible at the following link: %s'
-            % (outputs_uri, traceback_uri))
+            % (outputs_uri_api, traceback_uri))
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, job_owner_email, outputs_uri, jobctx,
+        lon, lat, vs30, siteid, job_owner_email, outputs_uri_web, jobctx,
         aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
