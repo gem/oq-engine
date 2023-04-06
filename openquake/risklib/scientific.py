@@ -1129,7 +1129,9 @@ def insured_losses(losses, deductible, insurance_limit):
         deductible = numpy.full_like(losses, deductible)
     if not isinstance(insurance_limit, numpy.ndarray):
         insurance_limit = numpy.full_like(losses, insurance_limit)
-    assert (deductible < insurance_limit).all()
+    assert (deductible < insurance_limit).all(), (
+        "Please check deductible values. Values larger than the"
+        " insurance limit were found.")
     small = losses < deductible
     big = losses > insurance_limit
     out = losses - deductible
@@ -1186,7 +1188,7 @@ def total_losses(asset_df, losses_by_lt, kind, ideduc=False):
         ideductible = asset_df.ideductible[df.aid].to_numpy()
         df = df.copy()
         df['loss'] = numpy.maximum(loss - ideductible, 0)
-        losses_by_lt['claim'] = df 
+        losses_by_lt['claim'] = df
 
 
 def insurance_loss_curve(curve, deductible, insurance_limit):
