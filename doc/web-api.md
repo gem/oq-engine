@@ -156,6 +156,12 @@ Response:
      'type': 'events',
      'url': 'http://127.0.0.1:8800/v1/calc/result/31'}]
 ```
+
+#### GET /v1/calc/:calc_id/result/list
+
+Same as GET /v1/calc/:calc_id/results
+
+
 #### GET /v1/calc/result/:result_id
 
 Get the full content of a calculation result for the given `result_id`.
@@ -197,6 +203,11 @@ Response:
 The number of lines of log
 
 
+#### GET v1/calc/:calc_id/datastore
+
+Get the HDF5 datastore for the calculation identified by the parameter `calc_id`.
+
+
 #### POST /v1/calc/:calc_id/remove
 
 Remove the calculation specified by the parameter `calc_id`.
@@ -217,6 +228,39 @@ Parameters:
     * hazard_result: the hazard results ID upon which to run the risk calculation; specify this or hazard_job_id (only for risk calculations)
 
 Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `calc_id` is the ID of the newly created calculation.
+
+
+#### POST /v1/calc/aelo_run
+
+Run a new aelo calculation for a site with the specified parameters.
+
+Parameters:
+    * lon: the longitude of the site (a float in the interval [-180, +180])
+    * lat: the latitude of the site (a float in the interval [-90.0, +90.0])
+    * vs30: the time-averaged shear-wave velocity from the surface to a depth of 30 meters (a positive float)
+    * siteid: an ID to assign to the site (the only accepted chars are a-zA-Z0-9_-:)
+
+Response:
+    The input values are validated and a `400 Bad Request` response is returned
+    in case any invalid input is found, specifying the reason of the failure.
+    If inputs are valid, the engine will first attempt to identify a Mosaic
+    model that covers the given site, returning a `400 Bad Request` response in
+    case the site does not belong to any of the Mosaic models. Otherwise, a new
+    job is created and a `200 OK` response is returned, like:
+
+    {"status": "created",
+     "job_id": 1,
+     "outputs_uri": "http://localhost:8800/v1/calc/1/results",
+     "log_uri": "http://localhost:8800/v1/calc/1/log/0:",
+     "traceback_uri": "http://localhost:8800/v1/calc/1/traceback"}
+
+    `outputs_uri` can be used later to retrieve calculation results, after the job is complete.
+    `log_uri` can be called to get the log of the calculation, either while it is still running or after its completion.
+    `traceback_uri` can be called in case of job failure (and only after it occurs), to retrieve a full traceback of the error.
+
+    As soon as the job is complete, a notification is automatically sent via email to the user
+    who launched it. In case of success, the message will contain a link to the web page showing
+    the outputs of the calculation; otherwise, it will describe the error that occurred.
 
 
 #### POST /v1/calc/validate_zip
@@ -302,6 +346,14 @@ Attempt to login, given the parameters `username` and `password`
 #### POST /accounts/ajax_logout/
 
 Logout
+
+
+#### GET /reset_password/
+
+The user is asked to submit a web form with the email address associated to
+his/her Django account. Then a "Reset Password" email is sent to the user. By
+clicking on the link received via email, the user is redirected to a web form
+to specify a new password.
 
 
 #### GET /v1/engine_version
