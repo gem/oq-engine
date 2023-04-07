@@ -835,6 +835,30 @@ rur_Ant_1,10000,100,.1,.2''')
         self.assertIn('(row 3): a negative deductible was found',
                       str(ctx.exception))
 
+    def test_empty_liability(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,,100,.1,.2
+VA_region_2,10000,100,.1,.2
+rur_Ant_1,,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn('(rows [2, 4]): empty liability values were found',
+                      str(ctx.exception))
+
+    def test_empty_deductible(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,10000,,.1,.2
+VA_region_2,10000,100,.1,.2
+rur_Ant_1,10000,,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn('(rows [2, 4]): empty deductible values were found',
+                      str(ctx.exception))
+
     def test_nonprop_treaty_non_boolean(self):
         CSV = '''\
 Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg

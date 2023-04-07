@@ -56,6 +56,16 @@ def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
     :param treaty_types: treaty types
     """
     key = fields[0]
+    indices = dframe[dframe['deductible'] == ''].index
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (rows %s): empty deductible values were found' % (
+                policyfname, [idx + 2 for idx in indices]))
+    indices = dframe[dframe['liability'] == ''].index
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (rows %s): empty liability values were found' % (
+                policyfname, [idx + 2 for idx in indices]))
     [indices] = np.where(dframe.duplicated(subset=[key]).to_numpy())
     if len(indices) > 0:
         # NOTE: reporting only the first row found
