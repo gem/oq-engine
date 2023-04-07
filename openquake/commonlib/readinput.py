@@ -228,6 +228,20 @@ def _update(params, items, base_path):
             params[key] = value
 
 
+def _warn_about_duplicates(cp):
+    sections = cp.sections()
+    prev_sections = []
+    for curr_sect in sections:
+        prev_sections.append(curr_sect)
+        other_sects = [sect for sect in sections if sect not in prev_sections]
+        for key in dict(cp.items(curr_sect)).keys():
+            for other_sect in other_sects:
+                if key in dict(cp.items(other_sect)).keys():
+                    logging.warning(
+                        f'Parameter "{key}" is defined both in sections'
+                        f' "{curr_sect}" and "{other_sect}"')
+
+
 # NB: this function must NOT log, since it is called when the logging
 # is not configured yet
 def get_params(job_ini, kw={}):
@@ -267,6 +281,7 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser()
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
+    _warn_about_duplicates(cp)
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
