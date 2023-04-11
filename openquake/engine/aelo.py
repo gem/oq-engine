@@ -45,13 +45,15 @@ def get_params_from(inputs):
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
         params['description'] += ' (%(lon)s, %(lat)s)' % inputs
+    # FIXME: is it correct to always override these parameters?
     params['ps_grid_spacing'] = '0.'
     params['pointsource_distance'] = '40.'
     params['disagg_by_src'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
-    if 'vs30' in inputs:
+    if 'vs30' in inputs:  # FIXME: always trye (to be removed)
         params['override_vs30'] = '%(vs30)s' % inputs
+    # FIXME: we should calculate z1pt0 and z2pt5 here
     params['postproc_func'] = 'disagg_by_rel_sources'
     # params['cachedir'] = datastore.get_datadir()
     return params
