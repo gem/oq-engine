@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "test_volc",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { }, "geometry": { "type": "Polygon", "coordinates": [ [ [ 102.615605897313912, 43.718889957715987 ], [ 102.615605897313912, 38.62970957228702 ], [ 112.907903542472496, 37.946088326483128 ], [ 112.300240212869042, 43.41505829291426 ], [ 102.615605897313912, 43.718889957715987 ] ] ] } }
+]
+}
