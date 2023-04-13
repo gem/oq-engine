@@ -1198,8 +1198,7 @@ and five parameters:
 2. imt: the IMT, like PGA, SA(1.0), etc
 3. site_id: the site ordinal number, like 0, 1, etc
 4. poe_id: the ordinal of the PoE, like 0, 1, etc
-5. spec: the specifier string, one of "rlzs", "stats",
-         "rlzs-traditional", "stats-traditional"
+5. spec: the specifier string, one of "rlzs", "stats", "rlzs-traditional", "stats-traditional"
 
 Here is an example::
 
