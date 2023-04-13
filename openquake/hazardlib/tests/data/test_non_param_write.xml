@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="test"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="TRT.SUBDUCTION_INTERFACE"
+        >
+            <nonParametricSeismicSource
+            id="0"
+            name="0"
+            >
+                <singlePlaneRupture
+                probs_occur="0.9 0.1"
+                >
+                    <magnitude>
+                        7.0
+                    </magnitude>
+                    <rake>
+                        90.0
+                    </rake>
+                    <hypocenter depth="10.0" lat="0.0" lon="0.0"/>
+                    <planarSurface>
+                        <topLeft depth="0.0" lat="-0.07497192854404107" lon="0.1731411912736907"/>
+                        <topRight depth="0.0" lat="-0.07497192854404107" lon="-0.1731411912736907"/>
+                        <bottomLeft depth="9.626202790436865" lat="0.0749719285440411" lon="0.1731411912736907"/>
+                        <bottomRight depth="9.626202790436865" lat="0.0749719285440411" lon="-0.1731411912736907"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+            </nonParametricSeismicSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
