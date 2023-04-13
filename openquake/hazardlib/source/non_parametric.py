@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -255,6 +255,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
         serial = self.serial(ses_seed)
         for i, rup in enumerate(self.iter_ruptures()):
             if i == idx:
-                rup.rup_id = serial + i
+                rup.seed = serial + i
                 rup.idx = idx
                 return rup

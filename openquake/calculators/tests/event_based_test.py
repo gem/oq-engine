@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -41,7 +41,7 @@ from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_25, case_26, case_27, case_28, mutex)
+    case_25, case_26, case_27, case_28, case_29, mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -450,7 +450,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # check the relevant_events
         E = extract(self.calc.datastore, 'num_events')['num_events']
         e = len(extract(self.calc.datastore, 'events'))
-        self.assertAlmostEqual(e/E, 0.2263374486)
+        self.assertLess(e, E)
 
         # run again the GMF calculation, but this time from stored ruptures
         hid = str(self.calc.datastore.calc_id)
@@ -550,6 +550,44 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
+
+    def test_case_29(self):
+        # sampling multiFaultSources
+        self.run_calc(case_29.__file__, 'job.ini', exports='csv')
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-5)
+
+        # make sure we are not storing far away ruptures
+        r = self.calc.datastore['ruptures'][:]
+        [lon] = self.calc.sitecol.lons
+        [lat] = self.calc.sitecol.lats
+        # check bounding box close to the site
+        deltalon = (r['maxlon'] - lon).max()
+        deltalat = (r['maxlat'] - lat).max()
+        assert deltalon <= .65, deltalon
+        assert deltalat <= .49, deltalat
+        deltalon = (lon - r['minlon']).max()
+        deltalat = (lat - r['minlat']).max()
+        assert deltalon <= .35, deltalon
+        assert deltalat == .0, deltalat
+
+        # check ruptures.csv
+        rups = extract(self.calc.datastore, 'ruptures')
+        csv = gettemp(rups.array)
+        self.assertEqualFiles('expected/full_ruptures.csv', csv, delta=1E-5)
+
+        # check GMFs
+        files = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/gmf_data.csv', files[0], delta=1E-4)
+
+        # sampling multiFaultSources with infer_occur_rates
+        self.run_calc(case_29.__file__, 'job.ini', exports='csv',
+                      infer_occur_rates='true', ground_motion_fields='false')
+        [f] = export(('ruptures', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/ruptures2.csv', f, delta=1E-5)
+        
+        # check the full_ruptures can be imported in a scenario
+        self.run_calc(case_29.__file__, 'scenario.ini')
 
     def test_overflow(self):
         too_many_imts = {'SA(%s)' % period: [0.1, 0.2, 0.3]

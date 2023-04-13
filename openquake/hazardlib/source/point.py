@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,6 +21,7 @@ import copy
 import numpy
 from openquake.baselib.general import AccumDict, groupby_grid
 from openquake.baselib.performance import Monitor
+from openquake.hazardlib import valid
 from openquake.hazardlib.geo import Point, geodetic
 from openquake.hazardlib.geo.nodalplane import NodalPlane
 from openquake.hazardlib.geo.surface.planar import (
@@ -429,7 +430,7 @@ class CollapsedPointSource(PointSource):
         return sum(src.count_ruptures() for src in self.pointsources)
 
 
-def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
+def grid_point_sources(sources, ps_grid_spacing, msr, cnt=0, monitor=Monitor()):
     """
     :param sources:
         a list of sources with the same grp_id (point sources and not)
@@ -437,6 +438,8 @@ def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
         value of the point source grid spacing in km; if None, do nothing
     :param msr:
          magnitude scaling relationship as a string
+    :param cnt:
+         a counter starting from 0 used to produce distinct source IDs
     :returns:
         a dict grp_id -> list of non-point sources and collapsed point sources
     """
@@ -444,11 +447,11 @@ def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
     for src in sources[1:]:
         assert src.grp_id == grp_id, (src.grp_id, grp_id)
     if not ps_grid_spacing:
-        return {grp_id: sources}
+        return {grp_id: sources, 'cnt': cnt}
     out = [src for src in sources if not hasattr(src, 'location')]
     ps = numpy.array([src for src in sources if hasattr(src, 'location')])
     if len(ps) < 2:  # nothing to collapse
-        return {grp_id: out + list(ps)}
+        return {grp_id: out + list(ps), 'cnt': cnt}
     coords = numpy.zeros((len(ps), 3))
     for p, psource in enumerate(ps):
         coords[p, 0] = psource.location.x
@@ -457,14 +460,15 @@ def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
     if (len(numpy.unique(coords[:, 0])) == 1 or
             len(numpy.unique(coords[:, 1])) == 1):
         # degenerated rectangle, there is no grid, do not collapse
-        return {grp_id: out + list(ps)}
+        return {grp_id: out + list(ps), 'cnt': cnt}
     deltax = angular_distance(ps_grid_spacing, lat=coords[:, 1].mean())
     deltay = angular_distance(ps_grid_spacing)
     grid = groupby_grid(coords[:, 0], coords[:, 1], deltax, deltay)
     task_no = getattr(monitor, 'task_no', 0)
-    for i, idxs in enumerate(grid.values()):
+    for idxs in grid.values():
         if len(idxs) > 1:
-            name = 'cps-%s-%d-%d' % (msr, task_no, i)
+            cnt += 1
+            name = 'cps-%03d-%04d' % (task_no, cnt)
             cps = CollapsedPointSource(name, ps[idxs])
             cps.grp_id = ps[0].grp_id
             cps.trt_smr = ps[0].trt_smr
@@ -472,4 +476,4 @@ def grid_point_sources(sources, ps_grid_spacing, msr, monitor=Monitor()):
             out.append(cps)
         else:  # there is a single source
             out.append(ps[idxs[0]])
-    return {grp_id: out}
+    return {grp_id: out, 'cnt': cnt}

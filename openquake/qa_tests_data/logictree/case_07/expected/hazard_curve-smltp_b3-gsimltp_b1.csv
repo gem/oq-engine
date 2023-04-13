@@ -1,0 +1,3 @@
+#,,,"generated_by='OpenQuake engine 3.17.0-gitd590474ee1', start_date='2023-02-27T09:01:44', checksum=4028875146, kind='rlz-002', investigation_time=1.0, imt='PGA'"
+lon,lat,depth,poe-0.1200000
+0.00000,0.00000,0.00000,1.222277E-01

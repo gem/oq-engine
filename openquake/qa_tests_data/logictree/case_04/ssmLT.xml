@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="lt"
+    >
+        <logicTreeBranchSet
+        branchSetID="bs00"
+        uncertaintyType="sourceModel"
+        >
+            <logicTreeBranch
+            branchID="b_0"
+            >
+                <uncertaintyModel>
+                    ssm/areas/KOR_c1_M1_1/KOR_c1_M1_1.xml
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                   .1
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="b_1"
+            >
+                <uncertaintyModel>
+                    ssm/areas/KOR_c1_M1_2/KOR_c1_M1_2.xml
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    .3
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="b_2"
+            >
+                <uncertaintyModel>
+                    ssm/areas/KOR_c1_M1_3/KOR_c1_M1_3.xml
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    .6
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+        <logicTreeBranchSet
+        branchSetID="bs01"
+        uncertaintyType="extendModel"
+        >
+            <logicTreeBranch
+            branchID="k1_b1_s1"
+            >
+                <uncertaintyModel>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    .5
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="k1_b1_s2"
+            >
+                <uncertaintyModel>
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    .5
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>

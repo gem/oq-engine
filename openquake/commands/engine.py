@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -108,7 +108,7 @@ def main(
         config.read(os.path.abspath(os.path.expanduser(config_file)),
                     limit=int, soft_mem_limit=int, hard_mem_limit=int,
                     port=int, serialize_jobs=valid.boolean,
-                    strict=valid.boolean, code=exec)
+                    strict=valid.boolean, code=exec, slowdown_rate=float)
 
     if no_distribute:
         os.environ['OQ_DISTRIBUTE'] = 'no'
@@ -239,7 +239,7 @@ main.list_risk_calculations = dict(
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
 main.multi = 'Run multiple job.inis in parallel'
-main.reuse_input = 'Read the sources|exposures from the cache (if any)'
+main.reuse_input = 'Read the CompositeSourceModel from the cache (if any)'
 
 # options
 main.log_file = dict(

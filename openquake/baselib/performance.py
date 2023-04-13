@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -184,6 +184,7 @@ class Monitor(object):
     address = None
     authkey = None
     calc_id = None
+    inject = None
 
     def __init__(self, operation='', measuremem=False, inner_loop=False,
                  h5=None, version=None):

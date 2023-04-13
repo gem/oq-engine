@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -250,8 +250,13 @@ class SourceGroup(collections.abc.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-        src.min_mag = max(src.min_mag, self.min_mag.get(self.trt)
-                          or self.min_mag['default'])
+        min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
+        src.min_mag = max(src.min_mag, min_mag)
+        if src.min_mag and hasattr(src, 'mags'):
+            # honor minimum_magnitude for multifault sources
+            ok = src.mags >= src.min_mag
+            for attr in 'mags rupture_idxs probs_occur rakes'.split():
+                setattr(src, attr, numpy.array(getattr(src, attr))[ok])
         if src.min_mag and not src.get_mags():  # filtered out
             return
         # checking mutex ruptures
@@ -266,6 +271,12 @@ class SourceGroup(collections.abc.Sequence):
         prev_max_mag = self.max_mag
         if prev_max_mag is None or max_mag > prev_max_mag:
             self.max_mag = max_mag
+
+    def get_trt_smr(self):
+        """
+        :returns: the .trt_smr attribute of the underlying sources
+        """
+        return self.sources[0].trt_smr
 
     def count_ruptures(self):
         """
@@ -687,7 +698,8 @@ class SourceConverter(RuptureConverter):
                  minimum_magnitude={'default': 0},
                  source_id=None, discard_trts=(),
                  floating_x_step=0, floating_y_step=0,
-                 source_nodes=()):
+                 source_nodes=(),
+                 infer_occur_rates=False):
         self.investigation_time = investigation_time
         self.area_source_discretization = area_source_discretization
         self.minimum_magnitude = minimum_magnitude
@@ -700,6 +712,7 @@ class SourceConverter(RuptureConverter):
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
         self.source_nodes = source_nodes
+        self.infer_occur_rates = infer_occur_rates
 
     def convert_node(self, node):
         """
@@ -1129,8 +1142,11 @@ class SourceConverter(RuptureConverter):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
             # NB: the sections will be fixed later on, in source_reader
-            mfs = MultiFaultSource(sid, name, trt, idxs, dic['probs_occur'],
-                                   dic['mag'], dic['rake'])
+            mfs = MultiFaultSource(sid, name, trt, idxs,
+                                   dic['probs_occur'],
+                                   dic['mag'], dic['rake'],
+                                   self.investigation_time,
+                                   self.infer_occur_rates)
             return mfs
         probs = []
         mags = []
@@ -1158,7 +1174,9 @@ class SourceConverter(RuptureConverter):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes)
+        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes,
+                               self.investigation_time,
+                               self.infer_occur_rates)
         return mfs
 
     def convert_sourceModel(self, node):
@@ -1219,7 +1237,9 @@ class SourceConverter(RuptureConverter):
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
             sg.update(src)
-        if sg.src_interdep == 'mutex':
+        if sg and sg.src_interdep == 'mutex':
+            # sg can be empty if source_id is specified and it is different
+            # from any source in sg
             if len(node) and len(srcs_weights) != len(node):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'
@@ -1230,7 +1250,7 @@ class SourceConverter(RuptureConverter):
                 tot += sw
             with context(self.fname, node):
                 numpy.testing.assert_allclose(
-                    tot, 1., err_msg='sum(srcs_weights)', rtol=1e-04)
+                    tot, 1., err_msg='sum(srcs_weights)', atol=5E-6)
 
         # check that, when the cluster option is set, the group has a temporal
         # occurrence model properly defined

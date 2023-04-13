@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
-    case_14, case_15)
+    case_14, case_15, case_16)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -262,6 +262,12 @@ class ScenarioDamageTestCase(CalculatorTestCase):
                     'D3': 38, 'D4': 38, 'D5': 39, 'D6': 39, 'D7': 25,
                     'D8': 24, 'D9': 25}
         self.assertEqual(got, expected)
+
+    def test_case_16(self):
+        # inconsistent IDs between fragility and consequence in set_tmap
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_16.__file__, 'job.ini')
+        self.assertIn("Missing 'UNM/C_LR/GOV2' in", str(ctx.exception))
 
 
 def losses(aid, alt):

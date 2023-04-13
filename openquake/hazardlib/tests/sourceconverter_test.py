@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2022 GEM Foundation
+# Copyright (C) 2017-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -363,7 +363,7 @@ class PointToMultiPointTestCase(unittest.TestCase):
 
     def test_complex(self):
         testfile = os.path.normpath(os.path.join(
-            testdir, '../../../qa_tests_data/classical/case_30/ssm/shallow/'
+            testdir, '../../../qa_tests_data/logictree/case_30/ssm/shallow/'
             'gridded_seismicity_source_4.xml'))
         sm = nrml.read(testfile).sourceModel
         update_source_model(sm, testfile)

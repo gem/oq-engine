@@ -15,6 +15,7 @@ xmlns:gml="http://www.opengis.net/gml"
             <complexFaultSource
             id="1"
             name="Cascadia Megathrust"
+            tectonicRegion="Subduction Interface"
             >
                 <complexFaultGeometry>
                     <faultTopEdge>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -24,7 +24,6 @@ import logging
 import os
 import tempfile
 import subprocess
-import multiprocessing
 import traceback
 import signal
 import zlib
@@ -37,12 +36,14 @@ from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
     HttpResponseForbidden)
+from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
+import numpy
 
 from openquake.baselib import hdf5, config
-from openquake.baselib.general import groupby, gettemp, zipfiles
+from openquake.baselib.general import groupby, gettemp, zipfiles, mp
 from openquake.hazardlib import nrml, gsim, valid
 from openquake.commonlib import readinput, oqvalidation, logs, datastore, dbapi
 from openquake.calculators import base
@@ -51,18 +52,18 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
-from openquake.engine import engine
+from openquake.engine import engine, aelo
+from openquake.engine.aelo import get_params_from
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
 from django.conf import settings
 from django.http import FileResponse
+from django.urls import reverse
 from wsgiref.util import FileWrapper
 
 if settings.LOCKDOWN:
     from django.contrib.auth import authenticate, login, logout
-
-Process = multiprocessing.get_context('spawn').Process
 
 CWD = os.path.dirname(__file__)
 METHOD_NOT_ALLOWED = 405
@@ -235,7 +236,10 @@ def get_ini_defaults(request):
         obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
-            ini_defs[name] = obj.default
+            if isinstance(obj.default, float) and numpy.isnan(obj.default):
+                pass
+            else:
+                ini_defs[name] = obj.default
     return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
 
 
@@ -547,17 +551,104 @@ def calc_run(request):
     user = utils.get_user(request)
     try:
         job_id = submit_job(request.FILES, ini, user, hazard_job_id)
-    except Exception as exc:  # no job created, for instance missing .xml file
+    except Exception as exc:  # job failed, for instance missing .xml file
         # get the exception message
         exc_msg = traceback.format_exc() + str(exc)
         logging.error(exc_msg)
-        response_data = exc_msg.splitlines()
+        response_data = dict(traceback=exc_msg.splitlines(), job_id=exc.job_id)
         status = 500
     else:
         response_data = dict(status='created', job_id=job_id)
         status = 200
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=status)
+
+
+def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
+    if not job_owner_email:
+        return
+    from_email = 'aelonoreply@openquake.org'
+    to = [job_owner_email]
+    reply_to = 'aelosupport@openquake.org'
+    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
+            f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
+    if exc:
+        subject = f'Job {job_id} failed'
+        body += f'There was an error running job {job_id}:\n{exc}'
+    else:
+        subject = f'Job {job_id} finished correctly'
+        body += (f'Please find the results here:\n{outputs_uri}')
+    EmailMessage(subject, body, from_email, to, reply_to=[reply_to]).send()
+
+
+@csrf_exempt
+@cross_domain_ajax
+@require_http_methods(['POST'])
+def aelo_run(request):
+    """
+    Run an AELO calculation.
+
+    :param request:
+        a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
+    """
+    try:
+        lon = valid.longitude(request.POST.get('lon'))
+        lat = valid.latitude(request.POST.get('lat'))
+        vs30 = valid.positivefloat(request.POST.get('vs30'))
+        siteid = valid.simple_id(request.POST.get('siteid'))
+    except Exception as exc:
+        # failed even before creating a job
+        exc_msg = str(exc)
+        logging.error(exc_msg)
+        response_data = exc_msg.splitlines()
+        return HttpResponse(content=json.dumps(response_data),
+                            content_type=JSON, status=400)
+
+    # build a LogContext object associated to a database job
+    try:
+        params = get_params_from(
+            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+    except ValueError as exc:
+        response_data = {'status': 'failed', 'error_msg': str(exc)}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
+    [jobctx] = engine.create_jobs(
+        [params],
+        config.distribution.log_level, None, utils.get_user(request), None)
+    job_id = jobctx.calc_id
+
+    outputs_uri_web = request.build_absolute_uri(
+        reverse('outputs', args=[job_id]))
+
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
+
+    traceback_uri = request.build_absolute_uri(
+        reverse('traceback', args=[job_id]))
+
+    response_data = dict(
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
+
+    job_owner_email = request.user.email
+    if not job_owner_email:
+        response_data['WARNING'] = (
+            'No email address is speficied for your user account,'
+            ' therefore email notifications will be disabled. As soon as'
+            ' the job completes, you can access its outputs at the following'
+            ' link: %s. If the job fails, the error traceback will be'
+            ' accessible at the following link: %s'
+            % (outputs_uri_api, traceback_uri))
+
+    # spawn the AELO main process
+    mp.Process(target=aelo.main, args=(
+        lon, lat, vs30, siteid, job_owner_email, outputs_uri_web, jobctx,
+        aelo_callback)).start()
+    return HttpResponse(content=json.dumps(response_data), content_type=JSON,
+                        status=200)
 
 
 def submit_job(request_files, ini, username, hc_id):
@@ -568,7 +659,7 @@ def submit_job(request_files, ini, username, hc_id):
     """
     # build a LogContext object associated to a database job
     [job] = engine.create_jobs(
-        [dict(calculation_mode='preclassical',
+        [dict(calculation_mode='custom',
               description='Calculation waiting to start')],
         config.distribution.log_level, None, username, hc_id)
 
@@ -586,33 +677,34 @@ def submit_job(request_files, ini, username, hc_id):
                        description=oq.description, hazard_calculation_id=hc_id)
             logs.dbcmd('update_job', job.calc_id, dic)
             jobs = [job]
-    except Exception:
+    except Exception as exc:
         tb = traceback.format_exc()
         logs.dbcmd('log', job.calc_id, datetime.utcnow(), 'CRITICAL',
                    'before starting', tb)
         logs.dbcmd('finish', job.calc_id, 'failed')
-        raise
+        exc.job_id = job.calc_id
+        raise exc
 
     custom_tmp = os.path.dirname(job_ini)
     submit_cmd = config.distribution.submit_cmd.split()
     big_job = oq.get_input_size() > int(config.distribution.min_input_size)
     if submit_cmd == ENGINE:  # used for debugging
         for job in jobs:
-            subprocess.Popen(submit_cmd + [save(job, custom_tmp)])
+            subprocess.Popen(submit_cmd + [save_pik(job, custom_tmp)])
     elif submit_cmd == KUBECTL and big_job:
         for job in jobs:
             with open(os.path.join(CWD, 'job.yaml')) as f:
                 yaml = string.Template(f.read()).substitute(
                     DATABASE='%(host)s:%(port)d' % config.dbserver,
-                    CALC_PIK=save(job, custom_tmp),
+                    CALC_PIK=save_pik(job, custom_tmp),
                     CALC_NAME='calc%d' % job.calc_id)
             subprocess.run(submit_cmd, input=yaml.encode('ascii'))
     else:
-        Process(target=engine.run_jobs, args=(jobs,)).start()
+        mp.Process(target=engine.run_jobs, args=(jobs,)).start()
     return job.calc_id
 
 
-def save(job, dirname):
+def save_pik(job, dirname):
     """
     Save a LogContext object in pickled format; returns the path to it
     """
@@ -825,7 +917,9 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    return render(request, "engine/index.html", {})
+    return render(
+        request, "engine/index.html", {
+            'aelo_mode': settings.APPLICATION_MODE.upper() == 'AELO'})
 
 
 @cross_domain_ajax

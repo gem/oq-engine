@@ -20,7 +20,7 @@
 # Plotting trees with ete: see http://etetoolkit.org/
 from ete3 import Tree, TreeStyle, TextFace, add_face_to_node
 from openquake.baselib import sap
-from openquake.commonlib.logictree import SourceModelLogicTree
+from openquake.hazardlib.logictree import SourceModelLogicTree
 
 
 def extend(tree, branchset):

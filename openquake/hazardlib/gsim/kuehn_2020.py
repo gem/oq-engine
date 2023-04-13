@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -314,9 +314,13 @@ def _log_hinge(x, x0, a, b0, b1, delta):
     Returns the logistic hinge function for the magnitude and source-depth
     terms, as described in Equation 4.3
     """
-    xdiff = x - x0
-    return a + b0 * xdiff + (b1 - b0) * delta * np.log(1 + np.exp(xdiff /
-                                                                  delta))
+    xdiff = (x - x0).astype('float64')
+    # this is tested in oq-risk-tests disaggregation/NZ2
+    # the cast is needed since one has xdiff =~ 100, delta=1 and
+    # np.exp(100) overflows at 32 bits
+    # NB: in disaggregation the contexts are saved at 32 bit!
+    return a + b0 * xdiff + (b1 - b0) * delta * np.log(
+        1 + np.exp(xdiff / delta))
 
 
 def get_magnitude_scaling_term(C, trt, mbreak, mag):
@@ -348,6 +352,7 @@ def get_depth_term(C, trt, ztor):
         z_b, zref = CONSTS["z_b_slab"], CONSTS["z_ref_slab"]
     z_break = z_b + dz_b
     ref_z = z_break - zref
+
     return _log_hinge(ztor, z_break, c_9 * ref_z, c_9,
                       CONSTS["c_10"], CONSTS["delta_z"])
 

@@ -1,9 +1,6 @@
 # Universal installation script
 
-Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have Python 3.7, Python 3.8, or Python 3.9 installed (Python 3.10 is not supported yet).
-
-You can install Python via [python.org](https://www.python.org/downloads/). 
-
+Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed.
 The script allows the user to select between different kinds of installations:
 
 1. [`user` installation](#user-installation) (Windows, macOS, and Linux)
@@ -26,10 +23,19 @@ Alternatively, use Python from one of the OS X package managers (Homebrew, MacPo
 > <br />
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
 
+After installing, you can get the location of the engine virtual enviroment with the command
+```
+$ oq info venv
+```
 
 ## `user` installation
 
-If you do not need to modify the engine codebase or develop new features with the engine, but intend to use it as an application, you should perform a `user` installation (on Windows / macOS) or a `server` installation (on Linux). The `user` installation is also the recommended option for Linux, in the case where you do not have root permissions on the machine. 
+If you do not need to modify the engine codebase or develop new
+features with the engine, but intend to use it as an application, you
+should perform a `user` installation (on Windows / macOS) or a
+`server` installation (on Linux). The `user` installation is also the
+recommended option for Linux, in the case where you do not have root
+permissions on the machine.
 
 You just need to download the installation script as:
 

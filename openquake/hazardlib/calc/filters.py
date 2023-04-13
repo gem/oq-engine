@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -207,6 +207,13 @@ def magdepdist(pairs):
     return interp1d(mags, dists, bounds_error=False, fill_value=0.)
 
 
+def upper_maxdist(idist):
+    """
+    :returns: the maximum distance in a dictionary trt->dists
+    """
+    return max(idist[trt][-1][1] for trt in idist)
+
+
 class IntegrationDistance(dict):
     """
     A dictionary trt -> [(mag, dist), ...]
@@ -220,8 +227,6 @@ class IntegrationDistance(dict):
         >>> md = IntegrationDistance.new('50')
         >>> md
         {'default': [(2.5, 50), (10.2, 50)]}
-        >>> md.max()
-        {'default': 50}
         """
         items_by_trt = floatdict(value)
         self = cls()
@@ -243,12 +248,6 @@ class IntegrationDistance(dict):
     def __missing__(self, trt):
         assert 'default' in self
         return self['default']
-
-    def max(self):
-        """
-        :returns: a dictionary trt -> maxdist
-        """
-        return {trt: self[trt][-1][1] for trt in self}
 
     def get_bounding_box(self, lon, lat, trt=None):
         """

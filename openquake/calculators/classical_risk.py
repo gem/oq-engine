@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -64,15 +64,14 @@ def classical_risk(riskinputs, oqparam, monitor):
 
         # compute statistics
         for li, loss_type in enumerate(crmodel.loss_types):
+            avg_stats = compute_stats(avg_losses[:, li], stats, weights)
             for i, asset in enumerate(ri.asset_df.to_records()):
-                avg_stats = compute_stats(
-                    avg_losses[:, li, i], stats, weights)
                 losses = loss_curves[0, li, i]['loss']
                 all_poes = numpy.array(
                     [loss_curves[r, li, i]['poe'] for r in range(R)])
                 poes_stats = compute_stats(all_poes, stats, weights)
                 result['stat_curves'].append(
-                    (li, asset['ordinal'], losses, poes_stats, avg_stats))
+                    (li, asset['ordinal'], losses, poes_stats, avg_stats[:, i]))
     if R == 1:  # the realization is the same as the mean
         del result['loss_curves']
     return result

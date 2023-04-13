@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -123,6 +123,7 @@ site_param_dt = {
     'lat': numpy.float64,
     'depth': numpy.float64,
     'vs30': numpy.float64,
+    'kappa0': numpy.float64,
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
@@ -205,6 +206,7 @@ class SiteCollection(object):
     """ % '\n'.join('    - %s: %s' % item
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
+    req_site_params = ()
 
     @classmethod
     def from_usgs_shakemap(cls, shakemap_array):
@@ -248,6 +250,7 @@ class SiteCollection(object):
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
+        self.req_site_params = req_site_params
         req = ['sids', 'lon', 'lat', 'depth'] + sorted(
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
@@ -375,13 +378,13 @@ class SiteCollection(object):
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
         self.complete = self
-        for i in range(len(arr)):
-            arr['sids'][i] = i
-            arr['lon'][i] = sites[i].location.longitude
-            arr['lat'][i] = sites[i].location.latitude
-            arr['depth'][i] = sites[i].location.depth
+        for i, site in enumerate(sites):
+            arr['sids'][i] = getattr(site, 'id', i)
+            arr['lon'][i] = site.location.longitude
+            arr['lat'][i] = site.location.latitude
+            arr['depth'][i] = site.location.depth
             for p, dt in extra:
-                arr[p][i] = getattr(sites[i], p)
+                arr[p][i] = getattr(site, p)
 
         # NB: in test_correlation.py we define a SiteCollection with
         # non-unique sites, so we cannot do an
@@ -430,6 +433,7 @@ class SiteCollection(object):
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
+        # if ntiles > nsites produce N tiles with a single site each
         ntiles = min(int(numpy.ceil(ntiles)), len(self))
         if ntiles <= 1:
             return [self]
@@ -442,16 +446,16 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def split_in_tiles(self, max_sites):
+    def split_in_tiles(self, hint):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
-        hint = int(numpy.ceil(len(self) / max_sites))
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
+            assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.array[sids]
-            sc.complete = self
+            sc.array = self.complete.array[sids]
+            sc.complete = self.complete
             tiles.append(sc)
         return tiles
 
@@ -522,6 +526,15 @@ class SiteCollection(object):
                 self._set(name, 0)  # default
                 # NB: by default reference_vs30_type == 'measured' is 1
                 # but vs30measured is 0 (the opposite!!)
+
+        # sanity check
+        for param in self.req_site_params:
+            if param in ignore:
+                continue
+            dt = site_param_dt[param]
+            if dt is numpy.float64 and (self.array[param] == 0.).all():
+                raise ValueError('The site parameter %s is always zero: please '
+                                 'check the site model' % param)
         return site_model
 
     def within(self, region):

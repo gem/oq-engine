@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,8 +37,9 @@ urlpatterns = [
 # are also not required anymore for an API-only usage
 if settings.WEBUI:
     urlpatterns += [
-        re_path(r'^$', RedirectView.as_view(url='%s/engine/' % settings.WEBUI_PATHPREFIX,
-                permanent=True)),
+        re_path(r'^$', RedirectView.as_view(
+            url='%s/engine/' % settings.WEBUI_PATHPREFIX,
+            permanent=True)),
         re_path(r'^engine/?$', views.web_engine, name="index"),
         re_path(r'^engine/(\d+)/outputs$',
                 views.web_engine_get_outputs, name="outputs"),
@@ -52,7 +53,9 @@ if settings.WEBUI:
 
 if settings.LOCKDOWN:
     from django.contrib import admin
-    from django.contrib.auth.views import LoginView, LogoutView
+    from django.contrib.auth.views import (
+        LoginView, LogoutView, PasswordResetView, PasswordResetDoneView,
+        PasswordResetConfirmView, PasswordResetCompleteView)
 
     admin.autodiscover()
     admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
@@ -64,6 +67,21 @@ if settings.LOCKDOWN:
             template_name='account/logout.html'), name="logout"),
         re_path(r'^accounts/ajax_login/$', views.ajax_login),
         re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
+        path('reset_password/',
+             PasswordResetView.as_view(template_name='reset_password.html'),
+             name='reset_password'),
+        path('reset_password_sent/',
+             PasswordResetDoneView.as_view(
+                 template_name='password_reset_sent.html'),
+             name='password_reset_done'),
+        path('reset/<uidb64>/<token>',
+             PasswordResetConfirmView.as_view(
+                 template_name='password_reset_form.html'),
+             name='password_reset_confirm'),
+        path('reset_password_complete/',
+             PasswordResetCompleteView.as_view(
+                 template_name='password_reset_done.html'),
+             name='password_reset_complete'),
     ]
 
 if settings.WEBUI_PATHPREFIX != "":

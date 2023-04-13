@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -25,20 +25,21 @@ import pandas
 
 from openquake.baselib import hdf5, parallel
 from openquake.baselib.general import AccumDict, copyobj, humansize
-from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
 from openquake.hazardlib.calc.gmf import GmfComputer
+from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import (
     calc, util, logs, readinput, logictree, datastore)
 from openquake.risklib.riskinput import str2rsi, rsi2str
-from openquake.commonlib.calc import get_mean_curve
 from openquake.calculators import base, views
 from openquake.calculators.getters import (
     get_rupture_getters, sig_eps_dt, time_dt)
@@ -50,6 +51,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 
 
@@ -81,14 +83,15 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     trt_smr = proxies[0]['trt_smr']
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
+    full_lt.init()
     with dstore:
-        trt = full_lt.trts[trt_smr // len(full_lt.sm_rlzs)]
+        trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
         extra = sitecol.array.dtype.names
         srcfilter = SourceFilter(
             sitecol, oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
-        rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         for proxy in proxies:
@@ -101,13 +104,47 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
-                try:
-                    computer = GmfComputer(
-                        ebr, srcfilter.sitecol.filtered(sids), cmaker,
-                        oqparam.correl_model, oqparam.cross_correl,
-                        oqparam._amplifier, oqparam._sec_perils)
-                except FarAwayRupture:
-                    continue
+                if "station_data" in oqparam.inputs:
+                    station_sites = dstore.read_df('station_sites')
+                    station_data = dstore.read_df('station_data')
+                    station_sites = SiteCollection.from_points(
+                        lons=station_sites.lon.values,
+                        lats=station_sites.lat.values)
+                    station_sitemodel = station_sites.assoc(
+                        sitecol, assoc_dist=None)
+                    station_sitecol = SiteCollection.from_points(
+                        lons=station_sites.lon,
+                        lats=station_sites.lat,
+                        sitemodel=station_sitemodel)
+                    stnfilter = SourceFilter(
+                        station_sitecol, oqparam.maximum_distance(trt))
+                    stnids = stnfilter.close_sids(proxy, trt)
+                    if len(stnids) < len(station_sites):
+                        logging.warning('%d stations filtered away',
+                                        len(station_sites) - len(stnids))
+                    if len(stnids) == 0:  # all stations filtered away
+                        continue
+                    try:
+                        computer = ConditionedGmfComputer(
+                            ebr, srcfilter.sitecol.filtered(sids), 
+                            stnfilter.sitecol.filtered(stnids), 
+                            station_data.loc[stnids], oqparam.observed_imts,
+                            cmaker, oqparam.correl_model, oqparam.cross_correl,
+                            oqparam.ground_motion_correlation_params,
+                            oqparam.number_of_ground_motion_fields,
+                            oqparam._amplifier, oqparam._sec_perils)
+                    except FarAwayRupture:
+                        # skip this rupture
+                        continue
+                else:
+                    try:
+                        computer = GmfComputer(
+                            ebr, srcfilter.sitecol.filtered(sids), cmaker,
+                            oqparam.correl_model, oqparam.cross_correl,
+                            oqparam._amplifier, oqparam._sec_perils)
+                    except FarAwayRupture:
+                        # skip this rupture
+                        continue
             with cmon:
                 data = computer.compute_all(sig_eps)
             dt = time.time() - t0
@@ -183,22 +220,14 @@ class EventBasedCalculator(base.HazardCalculator):
             self.datastore.create_dset('ruptures', rupture_dt)
             self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
 
-    def acc0(self):
-        """
-        Initial accumulator, a dictionary rlz -> ProbabilityMap
-        """
-        self.L = self.oqparam.imtls.size
-        return {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
-                for r in range(self.R)}
-
     def build_events_from_sources(self):
         """
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        gsims_by_trt = self.csm.full_lt.get_gsims_by_trt()
         sources = self.csm.get_sources()
         # weighting the heavy sources
+        self.datastore.swmr_on()
         nrups = parallel.Starmap(
             count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
             progress=logging.debug
@@ -220,7 +249,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if not sg.sources:
                 continue
             logging.info('Sending %s', sg)
-            cmaker = ContextMaker(sg.trt, gsims_by_trt[sg.trt], oq)
+            rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
+            cmaker = ContextMaker(sg.trt, rgb, oq)
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
         self.datastore.swmr_on()
@@ -320,11 +350,11 @@ class EventBasedCalculator(base.HazardCalculator):
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
-                ebrs = [EBRupture(copyobj(rup, rup_id=rup.rup_id + i),
+                ebrs = [EBRupture(copyobj(rup, seed=rup.seed + i),
                                   'NA', 0, G, e0=i * G, scenario=True)
                         for i in range(ngmfs)]
             else:  # keep a single rupture with a big occupation number
-                ebrs = [EBRupture(rup, 'NA', 0, G * ngmfs, rup.rup_id,
+                ebrs = [EBRupture(rup, 'NA', 0, G * ngmfs, rup.seed,
                                   scenario=True)]
             srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
             aw = get_rup_array(ebrs, srcfilter)
@@ -371,6 +401,7 @@ class EventBasedCalculator(base.HazardCalculator):
         self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
+            self.full_lt = dstore.parent['full_lt']
         elif hasattr(self, 'csm'):  # from sources
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
@@ -406,17 +437,31 @@ class EventBasedCalculator(base.HazardCalculator):
         scenario = 'scenario' in oq.calculation_mode
         proxies = [RuptureProxy(rec, scenario)
                    for rec in dstore['ruptures'][:]]
-        full_lt = self.datastore['full_lt']
+        if "station_data" in oq.inputs:
+            # this is meant to be used in conditioned scenario calculations with
+            # a single rupture; we are taking the first copy of the rupture
+            # (remember: _read_scenario_ruptures makes num_gmfs copies to 
+            # parallelize, but the conditioning process is computationally 
+            # expensive, so we want to avoid repeating it num_gmfs times)
+            # TODO: this is ugly and must be improved upon!
+            proxies = proxies[0:1]
         dstore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap.apply_split(
-            self.core_task.__func__, (proxies, full_lt, oq, self.datastore),
+            self.core_task.__func__,
+            (proxies, self.full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
             weight=operator.itemgetter('n_occ'),
             h5=dstore.hdf5,
             concurrent_tasks=oq.concurrent_tasks or 1,
             duration=oq.time_per_task,
             outs_per_task=oq.outs_per_task)
-        acc = smap.reduce(self.agg_dicts, self.acc0())
+        if oq.hazard_curves_from_gmfs:
+            self.L = oq.imtls.size
+            acc0 = {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
+                    for r in range(self.R)}
+        else:
+            acc0 = {}
+        acc = smap.reduce(self.agg_dicts, acc0)
         if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:
@@ -477,7 +522,7 @@ class EventBasedCalculator(base.HazardCalculator):
             msg = views.view('extreme_gmvs', self.datastore)
             logging.warning(msg)
         if oq.hazard_curves_from_gmfs:
-            rlzs = self.datastore['full_lt'].get_realizations()
+            rlzs = self.full_lt.get_realizations()
             # compute and save statistics; this is done in process and can
             # be very slow if there are thousands of realizations
             weights = [rlz.weight['weight'] for rlz in rlzs]
@@ -523,7 +568,7 @@ class EventBasedCalculator(base.HazardCalculator):
                         'hmaps-stats', site_id=N, stat=list(hstats),
                         imt=list(oq.imtls), poes=oq.poes)
                 for s, stat in enumerate(hstats):
-                    smap = ProbabilityMap(self.sitecol.sids, L1, M)  # statistical map
+                    smap = ProbabilityMap(self.sitecol.sids, L1, M)
                     [smap.array] = compute_stats(
                         numpy.array([p.array for p in pmaps]),
                         [hstats[stat]], weights)

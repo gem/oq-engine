@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2022, GEM Foundation
+# Copyright (C) 2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -47,6 +47,17 @@ def assert_ok(got, exp):
             aac(got[col], exp[col], err_msg=col)
         except ValueError:
             sys.exit(f'Wrong column {col} in {got}')
+
+
+def by_policy_event(agglosses_df, policy_df, treaty_df):
+    #returns (risk_by_policy_df, risk_by_event_df)
+    dfs = []
+    for _, policy in policy_df.iterrows():
+        df = reinsurance.by_policy(agglosses_df, dict(policy), treaty_df)
+        dfs.append(df)
+    rbp = pandas.concat(dfs)
+    rbe = reinsurance.by_event(rbp, treaty_df)
+    return rbp, rbe
 
 
 policy_idx = {'?': 0, 'VA_region_1': 1, 'VA_region_2': 2, 'rur_Ant_1': 3}
@@ -128,7 +139,7 @@ event_id,policy_id,retention,claim,prop1,prop2,policy_grp
 1,       2,        1500, 5000, 2000.0,1500.0,AB
 1,       3,         600, 3000, 1500.0, 900.0,AB
 1,       4,        1800, 6000, 2400.0,1800.0,AB''')
-        byevent = reinsurance._by_event(bypolicy, treaty_df)
+        byevent = reinsurance.by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
 event_id,retention,claim,prop1,prop2,over_A
        1,13200.0,26000,5000.0,7800.0,6900'''))
@@ -159,7 +170,7 @@ event_id,agg_id,loss
 event_id,retention,claim,prop1,prop2,over_A
        1,15600.0  ,26000,5000.0,5400.0,3000.0
 ''')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
 
@@ -189,6 +200,7 @@ event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
  5,1, 661.1264, 661.1264,0.0,0.0''')
         pol = dict(self.policy_df.loc[0])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        del out['policy_grp']
         assert_ok(out, expected)
 
     def test_policy2(self):
@@ -208,6 +220,7 @@ event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
 9, 5,2 ,200, 561.1264,  61.1264,300.0''')
         pol = dict(self.policy_df.loc[1])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        del out['policy_grp']
         assert_ok(out, expected)
 
     def test_policy3(self):
@@ -217,13 +230,14 @@ event_id,policy_id,retention,claim,WXLR_metro,WXLR_rural
 25,      3,        700,8500, 3000,4800''')
         pol = dict(self.policy_df.loc[2])
         out = reinsurance.by_policy(risk_by_event, pol, self.treaty_df)
+        del out['policy_grp']
         assert_ok(out, expected)
 
     def test_by_cat_no_apply(self):
         expected = _df('''\
 event_id,retention,claim,WXLR_metro,WXLR_rural,CatXL_reg
 25,      700.0,   8500.0,  3000.0,  4800.0,   0.0''', index_col='event_id')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, self.policy_df, self.treaty_df)
         # the catxl does not apply on event 25
         byevent = byevent[byevent.event_id == 25].set_index('event_id')
@@ -251,7 +265,7 @@ event_id,agg_id,loss
         expected = _df('''\
 event_id,claim,retention,prop1,nonprop1,overspill1,nonprop2
        1,20000,    500.0,5000.0, 7600.0,    4800.0,6900.0''')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, pol_df, treaty_df)
 
     def test_many_levels(self):
@@ -289,7 +303,7 @@ event_id,agg_id,loss
         expected = _df('''\
 event_id,retention,claim,prop1,prop2,wxl1,wxl2,cat1,cat2,cat3,cat4,cat5,over_E,over_G
        1,   1000.0,40000.,17000.,4100,1600,1500,3800.,4200.,3800.,2500,500,2300,800''')
-        bypolicy, byevent = reinsurance.by_policy_event(
+        bypolicy, byevent = by_policy_event(
             risk_by_event, pol_df, treaty_df)
         assert_ok(byevent, expected)
 

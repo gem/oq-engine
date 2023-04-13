@@ -423,7 +423,7 @@ def sample(weighted_objects, probabilities, sampling_method):
     :return:
         A list of S objects extracted randomly
     """
-    if sampling_method.startswith('early'):  # consider the weights
+    if sampling_method.startswith('early'):  # consider the weights different
         idxs = numpy.searchsorted(_cdf(weighted_objects), probabilities)
     elif sampling_method.startswith('late'):
         n = len(weighted_objects)  # consider all weights equal
@@ -568,7 +568,7 @@ class BranchSet(object):
             Stable Shallow Crust, etc.) the uncertainty applies to. This
             filter is required for all branchsets in GMPE logic tree.
     """
-    applied = None  # to be replaced by a string in commonlib.logictree
+    applied = None  # to be replaced by a string in hazardlib.logictree
 
     def __init__(self, uncertainty_type, ordinal=0, filters=None,
                  collapsed=False):
@@ -627,6 +627,7 @@ class BranchSet(object):
         """
         if self.collapsed:
             b0 = copy.copy(self.branches[0])
+            # b0.branch_id = '.'
             b0.weight = 1.0
             branches = [b0]
         else:
@@ -686,6 +687,16 @@ class BranchSet(object):
                 bset = br.bset
         return pairs
 
+    def collapse(self):
+        """
+        Collapse to the first branch (with side effects)
+        """
+        self.collapsed = True
+        b0 = self.branches[0]
+        b0.branch_id = '.'
+        b0.weight = 1.
+        self.branches = [b0]
+
     def to_list(self):
         """
         :returns: a literal list describing the branchset
@@ -703,7 +714,10 @@ class BranchSet(object):
         return repr(self.branches)
 
     def __repr__(self):
-        return '<%s(%d)>' % (self.uncertainty_type, len(self))
+        kvs = ', '.join('%s=%s' % item for item in self.filters.items())
+        if kvs:
+            kvs = ', ' + kvs
+        return '<%s(%d%s)>' % (self.uncertainty_type, len(self), kvs)
 
 
 # NB: this function cannot be used with monster logic trees like the one for

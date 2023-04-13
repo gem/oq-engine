@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,13 +27,13 @@ import json
 import toml
 import socket
 import logging
+from functools import partial
 import numpy
 
-from openquake.baselib.general import distinct
+from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
-from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.calc.filters import IntegrationDistance, floatdict  # needed
 
 PRECISION = pmf.PRECISION
@@ -41,6 +41,43 @@ PRECISION = pmf.PRECISION
 SCALEREL = scalerel.get_available_magnitude_scalerel()
 
 GSIM = gsim.get_available_gsims()
+
+MAG, DIS, LON, LAT, EPS = 0, 1, 2, 3, 4
+
+mag_pmf = partial(pprod, axis=(DIS, LON, LAT, EPS))
+dist_pmf = partial(pprod, axis=(MAG, LON, LAT, EPS))
+mag_dist_pmf = partial(pprod, axis=(LON, LAT, EPS))
+mag_dist_eps_pmf = partial(pprod, axis=(LON, LAT))
+lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
+mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
+# applied on matrix MAG DIS LON LAT EPS
+
+def trt_pmf(matrices):
+    """
+    From T matrices of shape (Ma, D, Lo, La, E, ...) into one matrix of
+    shape (T, ...)
+    """
+    return numpy.array([pprod(mat, axis=(MAG, DIS, LON, LAT, EPS))
+                        for mat in matrices])
+
+# this dictionary is useful to extract a fixed set of
+# submatrices from the full disaggregation matrix
+# NB: the TRT keys have extractor None, since the extractor
+# without TRT can be used; we still need to populate the pmf_map
+# since it is used to validate the keys accepted by the job.ini file
+pmf_map = dict([
+    ('Mag', mag_pmf),
+    ('Dist', dist_pmf),
+    ('Mag_Dist', mag_dist_pmf),
+    ('Mag_Dist_Eps', mag_dist_eps_pmf),
+    ('Lon_Lat', lon_lat_pmf),
+    ('Mag_Lon_Lat', mag_lon_lat_pmf),
+    ('TRT', trt_pmf),
+    ('TRT_Mag', None),
+    ('TRT_Lon_Lat', None),
+    ('TRT_Mag_Dist', None),
+    ('TRT_Mag_Dist_Eps', None),
+])
 
 
 def disagg_outputs(value):
@@ -54,7 +91,7 @@ def disagg_outputs(value):
     """
     values = value.replace(',', ' ').split()
     for val in values:
-        if val not in disagg.pmf_map:
+        if val not in pmf_map:
             raise ValueError('Invalid disagg output: %s' % val)
     return values
 
@@ -308,7 +345,7 @@ ASSET_ID_LENGTH = 50  # length that makes Murray happy
 simple_id = SimpleId(MAX_ID_LENGTH)
 branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
-source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
+source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\-_:]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
 

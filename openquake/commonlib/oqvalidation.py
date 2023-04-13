@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -49,6 +49,11 @@ Some parameters have a default that it is used when the parameter is
 not specified in the job.ini file. Some other parameters have no default,
 which means that not specifying them will raise an error when running
 a calculation for which they are required.
+
+override_vs30:
+  Optional Vs30 parameter to override the site model Vs30
+  Example: *override_vs30 = 800*
+  Default: None
 
 aggregate_by:
   Used to compute aggregate losses and aggregate loss curves in risk
@@ -176,7 +181,7 @@ continuous_fragility_discretization:
 coordinate_bin_width:
   Used in disaggregation calculations.
   Example: *coordinate_bin_width = 1.0*.
-  Default: no default
+  Default: 100 degrees, meaning don't disaggregate by lon, lat
 
 cross_correlation:
   When used in Conditional Spectrum calculation is the name of a cross
@@ -192,7 +197,7 @@ description:
   Default: "no description"
 
 disagg_bin_edges:
-  A dictionary where the keys can be: mag, eps, dist, lon, lat and the
+  A dictionary where the keys can be: mag, dist, lon, lat, eps and the
   values are lists of floats indicating the edges of the bins used to
   perform the disaggregation.
   Example: *disagg_bin_edges = {'mag': [5.0, 5.5, 6.0, 6.5]}*.
@@ -253,7 +258,8 @@ floating_x_step:
 
 floating_y_step:
   Float, used in rupture generation for kite faults. indicates the fraction
-  of fault width used to float ruptures down dip. (i.e. "0.5" floats that half the rupture length). Uniform distribution of the ruptures
+  of fault width used to float ruptures down dip. (i.e. "0.5" floats that
+  half the rupture length). Uniform distribution of the ruptures
   is maintained, such that if the mesh spacing and rupture dimensions
   prohibit the defined overlap fraction, the fraction is increased until
   uniform distribution is achieved. The minimum possible value depends on
@@ -366,6 +372,12 @@ individual_curves:
   Example: *individual_curves = true*.
   Default: False
 
+infer_occur_rates:
+   If set infer the occurrence rates from the first probs_occur in nonparametric
+   sources.
+   Example: *infer_occur_rates = true*
+   Default: False
+
 inputs:
   INTERNAL. Dictionary with the input files paths.
 
@@ -403,7 +415,7 @@ lrem_steps_per_interval:
 mag_bin_width:
   Width of the magnitude bin used in disaggregation calculations.
   Example: *mag_bin_width = 0.5*.
-  Default: no default
+  Default: 1.
 
 master_seed:
   Seed used to control the generation of the epsilons, relevant for risk
@@ -448,11 +460,12 @@ max_sites_disagg:
   Default: 10
 
 pmap_max_gb:
-   Maximum size of the ProbabilityMaps in classical calculations, should be
-   less than 4 GB to avoid pickling errors. This is also used to split the
-   calculation in tiles.
-   Example: *max_size_db = 2*
-   Default: 1
+   Control the memory used in large classical calculations. The default is .4
+   (meant for people with 2 GB per core or less) but you increase it if you
+   have plenty of memory, thus producing less tiles and making the calculation
+   more efficient. For small calculations it has no effect.
+   Example: *pmap_max_gb = 2*
+   Default: .4
 
 max_weight:
   INTERNAL
@@ -503,9 +516,10 @@ num_epsilon_bins:
 
 num_rlzs_disagg:
   Used in disaggregation calculation to specify how many outputs will be
-  generated. `0` means all realizations.
-  Example: *num_rlzs_disagg=0*.
-  Default: 1
+  generated. `0` means all realizations, `n` means the n closest to the mean
+  hazard curve.
+  Example: *num_rlzs_disagg=1*.
+  Default: 0
 
 number_of_ground_motion_fields:
   Used in scenario calculations to specify how many random ground motion
@@ -518,6 +532,14 @@ number_of_logic_tree_samples:
   sampling. If zero, full enumeration is performed.
   Example: *number_of_logic_tree_samples = 0*.
   Default: 0
+
+oversampling:
+  When equal to "forbid" raise an error if tot_samples > num_paths in classical
+  calculations; when equal to "tolerate" do not raise the error (the default);
+  when equal to "reduce_rlzs" reduce the realizations to the unique paths with
+  weights num_samples/tot_samples
+  Example: *oversampling = reduce_rlzs*
+  Default: tolerate
 
 poes:
   Probabilities of Exceedance used to specify the hazard maps or hazard spectra
@@ -533,6 +555,16 @@ pointsource_distance:
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
   Default: {'default': 1000}
+
+postproc_func:
+  Specify a postprocessing function in calculators/postproc.
+  Example: *postproc_func = compute_mrd*
+  Default: '' (no postprocessing)
+
+postproc_args:
+  Specify the arguments to be passed to the postprocessing function
+  Example: *postproc_args = {'imt': 'PGA'}*
+  Default: {} (no arguments)
 
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
@@ -593,6 +625,12 @@ return_periods:
   Used in the computation of the loss curves.
   Example: *return_periods = 200 500 1000*.
   Default: empty list.
+
+reqv_ignore_sources:
+  Used when some sources in a TRT that uses the equivalent distance term
+  should not be collapsed.
+  Example: *reqv_ignore_sources = src1 src2 src3*
+  Default: empty list
 
 risk_imtls:
   INTERNAL. Automatically set by the engine.
@@ -720,7 +758,7 @@ time_event:
   Default: None
 
 time_per_task:
-  Used in calculatins with task splitting. If a task slice takes longer
+  Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
   Default: 2000
@@ -741,6 +779,11 @@ truncation_level:
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
   Example: *uniform_hazard_spectra = true*.
+  Default: False
+
+use_rates:
+  When set, convert to rates before computing the statistical hazard curves
+  Example: *use_rates = true*.
   Default: False
 
 vs30_tolerance:
@@ -818,7 +861,8 @@ class OqParam(valid.ParamSet):
                     'insurance', 'reinsurance', 'ins_loss',
                     'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
-                    'amplification',
+                    'reqv_ignore_sources',
+                    'amplification', 'station_data',
                     'nonstructural_vulnerability',
                     'nonstructural_fragility',
                     'nonstructural_consequence',
@@ -840,6 +884,7 @@ class OqParam(valid.ParamSet):
                'max_hazard_curves': 'max'}
 
     hazard_imtls = {}
+    override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
@@ -856,7 +901,7 @@ class OqParam(valid.ParamSet):
     collapse_gsim_logic_tree = valid.Param(valid.namelist, [])
     collapse_level = valid.Param(int, -1)
     collect_rlzs = valid.Param(valid.boolean, None)
-    coordinate_bin_width = valid.Param(valid.positivefloat)
+    coordinate_bin_width = valid.Param(valid.positivefloat, 100.)
     compare_with_classical = valid.Param(valid.boolean, False)
     concurrent_tasks = valid.Param(
         valid.positiveint, multiprocessing.cpu_count() * 2)  # by M. Simionato
@@ -868,14 +913,13 @@ class OqParam(valid.ParamSet):
     cache_distances = valid.Param(valid.boolean, False)
     description = valid.Param(valid.utf8_not_empty, "no description")
     disagg_by_src = valid.Param(valid.boolean, False)
-    disagg_outputs = valid.Param(valid.disagg_outputs,
-                                 list(calc.disagg.pmf_map))
+    disagg_outputs = valid.Param(valid.disagg_outputs, list(valid.pmf_map))
     disagg_bin_edges = valid.Param(valid.dictionary, {})
     discard_assets = valid.Param(valid.boolean, False)
     discard_trts = valid.Param(str, '')  # tested in the cariboo example
     discrete_damage_distribution = valid.Param(valid.boolean, False)
     distance_bin_width = valid.Param(valid.positivefloat)
-    mag_bin_width = valid.Param(valid.positivefloat)
+    mag_bin_width = valid.Param(valid.positivefloat, 1.)
     floating_x_step = valid.Param(valid.positivefloat, 0)
     floating_y_step = valid.Param(valid.positivefloat, 0)
     ignore_encoding_errors = valid.Param(valid.boolean, False)
@@ -901,6 +945,7 @@ class OqParam(valid.ParamSet):
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
+    infer_occur_rates = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -919,7 +964,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_gb = valid.Param(valid.positivefloat, 1.)
+    pmap_max_gb = valid.Param(valid.positivefloat, .4)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -929,10 +974,14 @@ class OqParam(valid.ParamSet):
     number_of_ground_motion_fields = valid.Param(valid.positiveint)
     number_of_logic_tree_samples = valid.Param(valid.positiveint, 0)
     num_epsilon_bins = valid.Param(valid.positiveint, 1)
-    num_rlzs_disagg = valid.Param(valid.positiveint, 1)
+    num_rlzs_disagg = valid.Param(valid.positiveint, 0)
+    oversampling = valid.Param(
+        valid.Choice('forbid', 'tolerate', 'reduce-rlzs'), 'tolerate')
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
+    postproc_func = valid.Param(valid.simple_id, '')
+    postproc_args = valid.Param(valid.dictionary, {})
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -947,6 +996,7 @@ class OqParam(valid.ParamSet):
     reference_backarc = valid.Param(valid.boolean, False)
     region = valid.Param(valid.wkt_polygon, None)
     region_grid_spacing = valid.Param(valid.positivefloat, None)
+    reqv_ignore_sources = valid.Param(valid.namelist, [])
     risk_imtls = valid.Param(valid.intensity_measure_types_and_levels, {})
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
@@ -988,6 +1038,7 @@ class OqParam(valid.ParamSet):
     truncation_level = valid.Param(
         lambda s: valid.positivefloat(s) or 1E-9, 99.)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
+    use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
     width_of_mfd_bin = valid.Param(valid.positivefloat, None)
 
@@ -1021,7 +1072,10 @@ class OqParam(valid.ParamSet):
         should be called only before starting the calculation.
         The same information is stored in the datastore.
         """
-        return sum(os.path.getsize(f) for f in self._input_files)
+        # NB: when the OqParam object is instantiated from a dictionary and
+        # not from a job.ini file the key 'job_ini ' has value '<in-memory>'
+        return sum(os.path.getsize(f) for f in self._input_files
+                   if f != '<in-memory>')
 
     def get_reqv(self):
         """
@@ -1039,6 +1093,10 @@ class OqParam(valid.ParamSet):
         # support legacy names
         for name in list(names_vals):
             if name in self.ALIASES:
+                if self.ALIASES[name] in names_vals:
+                    # passed both the new (self.ALIASES[name]) and the old name
+                    raise NameError('Please remove %s, you should use only %s'
+                                    % (name, self.ALIASES[name]))
                 # use the new name instead of the old one
                 names_vals[self.ALIASES[name]] = names_vals.pop(name)
         super().__init__(**names_vals)
@@ -1082,10 +1140,19 @@ class OqParam(valid.ParamSet):
             self.hazard_imtls = dict.fromkeys(
                 self.intensity_measure_types, [0])
             delattr(self, 'intensity_measure_types')
+        if 'minimum_intensity' in names_vals:
+            dic = {}
+            for imt, iml in self.minimum_intensity.items():
+                if imt == 'default':
+                    dic[imt] = iml
+                else:
+                    # normalize IMT, for instance SA(1.) => SA(1.0)
+                    dic[from_string(imt).string] = iml
+            self.minimum_intensity = dic
         if ('ps_grid_spacing' in names_vals and
                 float(names_vals['ps_grid_spacing']) and
                 'pointsource_distance' not in names_vals):
-            self.pointsource_distance = dict(default=10.)
+            self.pointsource_distance = dict(default=40.)
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
@@ -1166,12 +1233,11 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile(
                     '%s: iml_disagg and poes_disagg cannot be set '
                     'at the same time' % job_ini)
-            bins = ['mag', 'dist', 'lon', 'eps']
-            for i, k in enumerate(['mag_bin_width', 'distance_bin_width',
-                                   'coordinate_bin_width', 'num_epsilon_bins']):
-                if (k not in vars(self) and
-                    bins[i] not in self.disagg_bin_edges):
-                    raise InvalidFile('%s must be set in %s' % (k, job_ini))
+            if not self.disagg_bin_edges:
+                for k in ('mag_bin_width', 'distance_bin_width',
+                          'coordinate_bin_width', 'num_epsilon_bins'):
+                    if k not in vars(self):
+                        raise InvalidFile('%s must be set in %s' % (k, job_ini))
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1
@@ -1828,10 +1894,10 @@ class OqParam(valid.ParamSet):
         sampling_method must be early_weights, only the mean is available,
         and number_of_logic_tree_samples must be greater than 1.
         """
-        if self.job_type == 'hazard':
-            return True
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
+        if self.job_type == 'hazard':
+            return True
         if self.calculation_mode == 'event_based_damage':
             ini = self.inputs['job_ini']
             if not self.investigation_time:

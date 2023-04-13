@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,8 +24,9 @@ from typing import Union
 from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
-    NonParametricProbabilisticRupture)
+    NonParametricProbabilisticRupture, ParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
@@ -71,13 +72,19 @@ class MultiFaultSource(BaseSeismicSource):
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
-                 magnitudes: list, rakes: list):
+                 magnitudes: list, rakes: list, investigation_time=0,
+                 infer_occur_rates=False):
         nrups = len(rupture_idxs)
         assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
         self.probs_occur = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
+        self.infer_occur_rates = infer_occur_rates
+        if infer_occur_rates:
+            self.occur_rates = -np.log([p[0] for p in occurrence_probs])
+            self.occur_rates[self.occur_rates <= 0] = 1E-30
+            self.temporal_occurrence_model = PoissonTOM(investigation_time)
         super().__init__(source_id, name, tectonic_region_type)
 
     def is_gridded(self):
@@ -140,9 +147,55 @@ class MultiFaultSource(BaseSeismicSource):
             rake = self.rakes[i]
             hypo = s[idxs[0]].get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
-            yield NonParametricProbabilisticRupture(
-                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
-                PMF(data))
+            if self.infer_occur_rates:
+                yield ParametricProbabilisticRupture(
+                    self.mags[i], rake, self.tectonic_region_type,
+                    hypo, sfc, self.occur_rates[i],
+                    self.temporal_occurrence_model)
+            else:
+                yield NonParametricProbabilisticRupture(
+                    self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                    PMF(data))
+
+    def _sample_ruptures(self, eff_num_ses):
+        # yields (rup, num_occur)
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                geoms = f['multi_fault_sections'][:]
+            s = [geom_to_kite(geom) for geom in geoms]
+            for idx, sec in enumerate(s):
+                sec.suid = idx
+        else:
+            s = self.sections
+        # NB: np.random.random(eff_num_ses) called inside to save memory
+        # the seed is set before
+        for i, probs in enumerate(self.probs_occur):
+            if self.infer_occur_rates:
+                num_occ = np.random.poisson(
+                    self.occur_rates[i] *
+                    self.temporal_occurrence_model.time_span * eff_num_ses)
+                if num_occ == 0:  # skip
+                    continue
+            idxs = self.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = s[idxs[0]]
+            else:
+                sfc = MultiSurface([s[idx] for idx in idxs])
+            hypo = s[idxs[0]].get_middle_point()
+            if self.infer_occur_rates:                
+                yield (ParametricProbabilisticRupture(
+                    self.mags[i], self.rakes[i], self.tectonic_region_type,
+                    hypo, sfc, self.occur_rates[i],
+                    self.temporal_occurrence_model), num_occ)
+                continue
+            cdf = np.cumsum(probs)
+            num_occ = np.digitize(np.random.random(eff_num_ses), cdf).sum()
+            if num_occ == 0:  # ignore non-occurring ruptures
+                continue
+            data = [(p, o) for o, p in enumerate(probs)]
+            yield (NonParametricProbabilisticRupture(
+                self.mags[i], self.rakes[i], self.tectonic_region_type, hypo,
+                sfc, PMF(data)), num_occ)
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
@@ -177,7 +230,8 @@ class MultiFaultSource(BaseSeismicSource):
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
         for i, rup in enumerate(self.iter_ruptures()):
-            yield rup, self.probs_occur[i]
+            if rup.mag >= self.min_mag:
+                yield rup, self.probs_occur[i]
 
     polygon = NP.polygon
     wkt = NP.wkt

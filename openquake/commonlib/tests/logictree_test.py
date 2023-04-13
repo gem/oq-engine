@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -28,9 +28,9 @@ import numpy
 from openquake.baselib import parallel, hdf5
 from openquake.baselib.general import gettemp
 import openquake.hazardlib
-from openquake.hazardlib import geo, lt, gsim_lt
-from openquake.commonlib import logictree, readinput, tests
-from openquake.commonlib.source_reader import get_csm
+from openquake.hazardlib import geo, lt, gsim_lt, logictree
+from openquake.commonlib import readinput, tests
+from openquake.hazardlib.source_reader import get_csm
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
@@ -67,7 +67,7 @@ class _TestableSourceModelLogicTree(logictree.SourceModelLogicTree):
 def _make_nrml(content):
     return ("""<?xml version="1.0" encoding="UTF-8"?>
     <nrml xmlns:gml="http://www.opengis.net/gml"\
-          xmlns="http://openquake.org/xmlns/nrml/0.5">\
+          xmlns="http://openquake.org/xmlns/nrml/0.4">\
         %s
     </nrml>""" % content)
 

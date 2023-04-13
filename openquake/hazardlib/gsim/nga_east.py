@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2013-2022 GEM Foundation
+# Copyright (C) 2013-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -647,6 +647,7 @@ class NGAEastGMPE(GMPETable):
         in the site amplification model
     """
     PATH = os.path.join(os.path.dirname(__file__), "nga_east_tables")
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
         const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
     # Requires Vs30 only - common to all models

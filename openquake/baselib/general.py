@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -1274,6 +1274,16 @@ def detach_process():
     fork_then_exit_parent()
     os.setsid()
     fork_then_exit_parent()
+
+
+def shortlist(lst):
+    """
+    >>> shortlist([1, 2, 3, 4, 5, 6, 7, 8])
+    '[1, 2, 3, ..., 6, 7, 8]'
+    """
+    if len(lst) <= 7:
+        return str(lst)
+    return str(lst[:3] + ['...'] + lst[-3:]).replace("'", "")
 
 
 def println(msg):

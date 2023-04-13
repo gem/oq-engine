@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -195,23 +195,17 @@ from unittest import mock
 import multiprocessing.dummy
 import multiprocessing.shared_memory as shmem
 from multiprocessing.connection import wait
-import subprocess
 import psutil
 import numpy
-try:
-    from setproctitle import setproctitle
-except ImportError:
-    def setproctitle(title):
-        "Do nothing"
 
-from openquake.baselib import config, hdf5, workerpool
+from openquake.baselib import config, hdf5
 from openquake.baselib.python3compat import decode
-from openquake.baselib.zeromq import zmq, Socket, TimeoutError
+from openquake.baselib.zeromq import zmq, Socket
 from openquake.baselib.performance import (
     Monitor, memory_rss, init_performance)
 from openquake.baselib.general import (
     split_in_blocks, block_splitter, AccumDict, humansize, CallableDict,
-    gettemp, engine_version, mp as mp_context)
+    gettemp, engine_version, shortlist, mp as mp_context)
 
 sys.setrecursionlimit(2000)  # raised to make pickle happier
 # see https://github.com/gem/oq-engine/issues/5230
@@ -220,45 +214,35 @@ GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
 
-def debug(msg, mon):
-    """
-    Trivial task useful for debugging
-    """
-    print(msg)
-
-
 @submit.add('no')
 def no_submit(self, func, args, monitor):
-    return safely_call(func, args, self.task_no, monitor)
+    safely_call(func, args, self.task_no, monitor)
 
 
 @submit.add('processpool')
 def processpool_submit(self, func, args, monitor):
-    return self.pool.apply_async(
-        safely_call, (func, args, self.task_no, monitor))
+    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('threadpool')
 def threadpool_submit(self, func, args, monitor):
-    return self.pool.apply_async(
-        safely_call, (func, args, self.task_no, monitor))
+    self.pool.apply_async(safely_call, (func, args, self.task_no, monitor))
 
 
 @submit.add('zmq')
 def zmq_submit(self, func, args, monitor):
     idx = self.task_no % len(host_cores)
-    if not hasattr(self, 'senders'):  # the first time
-        port = int(config.zworkers.ctrl_port)
-        urls = ['tcp://%s:%d' % (hc.split()[0], port) for hc in host_cores]
-        self.senders = [Socket(url, zmq.REQ, 'connect').__enter__()
-                        for url in urls]
-    return self.senders[idx].send((func, args, self.task_no, monitor))
+    host = host_cores[idx].split()[0]
+    port = int(config.zworkers.ctrl_port)
+    dest = 'tcp://%s:%d' % (host, port)
+    with Socket(dest, zmq.REQ, 'connect', timeout=300) as sock:
+        sub = sock.send((func, args, self.task_no, monitor))
+        assert sub == 'submitted', sub
 
 
 @submit.add('ipp')
 def ipp_submit(self, func, args, monitor):
-    return self.executor.submit(
-        safely_call, func, args, self.task_no, monitor)
+    self.executor.submit(safely_call, func, args, self.task_no, monitor)
 
 
 def oq_distribute(task=None):
@@ -269,6 +253,16 @@ def oq_distribute(task=None):
     if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
+
+
+def init_workers():
+    """Used to initialize the process pool"""
+    try:
+        from setproctitle import setproctitle
+    except ImportError:
+        pass
+    else:
+        setproctitle('oq-worker')
 
 
 class Pickled(object):
@@ -450,6 +444,36 @@ def check_mem_usage(soft_percent=None, hard_percent=None):
 dummy_mon = Monitor()
 dummy_mon.config = config
 dummy_mon.backurl = None
+DEBUG = False
+
+
+def sendback(res, zsocket, sentbytes):
+    """
+    Send back to the master node the result by using the zsocket.
+
+    :returns: the accumulated number of bytes sent
+    """
+    calc_id = res.mon.calc_id
+    task_no = res.mon.task_no
+    nbytes = len(res.pik)
+    # avoid output congestion by waiting a bit
+    wait = config.performance.slowdown_rate * nbytes
+    time.sleep(wait)
+    try:
+        zsocket.send(res)
+        if DEBUG:
+            from openquake.commonlib.logs import dblog
+            if calc_id:  # None when building the png maps
+                msg = 'sent back %s after %.1f s' % (humansize(nbytes), wait)
+                dblog('DEBUG', calc_id, task_no, msg)
+    except Exception:  # like OverflowError
+        _etype, exc, tb = sys.exc_info()
+        tb_str = ''.join(traceback.format_tb(tb))
+        if DEBUG and calc_id:
+            dblog('ERROR', calc_id, task_no, tb_str)
+        res = Result(exc, res.mon, tb_str)
+        zsocket.send(res)
+    return sentbytes + nbytes
 
 
 def safely_call(func, args, task_no=0, mon=dummy_mon):
@@ -472,6 +496,7 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon is dummy_mon:  # in the DbServer
         assert not isgenfunc, func
         return Result.new(func, args, mon)
+    # debug(f'{mon.backurl=}, {task_no=}')
     if mon.operation.endswith('_'):
         name = mon.operation[:-1]
     elif func is split_task:
@@ -484,28 +509,25 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
     if mon.inject:
         args += (mon,)
     sentbytes = 0
-    with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
-        msg = check_mem_usage()  # warn if too much memory is used
-        if msg:
-            zsocket.send(Result(None, mon, msg=msg))
-        if inspect.isgeneratorfunction(func):
+    if isgenfunc:
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
             it = func(*args)
-        else:
-            def gen(*args):
-                yield func(*args)
-            it = gen(*args)
-        while True:
-            # StopIteration -> TASK_ENDED
-            res = Result.new(next, (it,), mon, sentbytes)
-            try:
-                zsocket.send(res)
-            except Exception:  # like OverflowError
-                _etype, exc, tb = sys.exc_info()
-                err = Result(exc, mon, ''.join(traceback.format_tb(tb)))
-                zsocket.send(err)
-            sentbytes += len(res.pik)
-            if res.msg == 'TASK_ENDED':
-                break
+            while True:
+                res = Result.new(next, (it,), mon, sentbytes)
+                # StopIteration -> TASK_ENDED
+                if res.msg == 'TASK_ENDED':
+                    zsocket.send(res)
+                    break
+                sentbytes = sendback(res, zsocket, sentbytes)
+    else:
+        res = Result.new(func, args, mon)
+        # send back a single result and a TASK_ENDED
+        with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
+            sentbytes = sendback(res, zsocket, sentbytes)
+            end = Result(None, mon, msg='TASK_ENDED')
+            end.pik = FakePickle(sentbytes)
+            zsocket.send(end)
+
 
 if oq_distribute() == 'ipp':
     from ipyparallel import Cluster
@@ -541,33 +563,8 @@ class IterResult(object):
             if msg and first_time:
                 logging.warning(msg)
                 first_time = False  # warn only once
-            if isinstance(result, BaseException):
-                # this happens with WorkerLostError with celery
-                raise result
-            elif isinstance(result, Result):
-                val = result.get()
-                self.nbytes += result.nbytes
-            else:  # this should never happen
-                raise ValueError(result)
-            if sys.platform != 'darwin':
-                # it normally works on macOS, but not in notebooks calling
-                # notebooks, which is the case relevant for Marco Pagani
-                mem_gb = (memory_rss(os.getpid()) + sum(
-                    memory_rss(pid) for pid in Starmap.pids)) / GB
-            else:
-                # measure only the memory used by the main process
-                mem_gb = memory_rss(os.getpid()) / GB
-            if result.msg == 'TASK_ENDED':
-                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
-                task_sent.update(self.sent)
-                del self.h5['task_sent']
-                self.h5['task_sent'] = str(task_sent)
-                name = result.mon.operation[6:]  # strip 'total '
-                n = self.name + ':' + name if name == 'split_task' else name
-                result.mon.save_task_info(self.h5, result, n, mem_gb)
-                result.mon.flush(self.h5)
-            elif not result.func:  # real output
-                yield val
+            self.nbytes += result.nbytes
+            yield result.get()
 
     def __iter__(self):
         if self.iresults == ():
@@ -606,11 +603,6 @@ class IterResult(object):
             else:
                 res.name = iresult.name.split('#')[0]
         return res
-
-
-def init_workers():
-    """Waiting function, used to wake up the process pool"""
-    setproctitle('oq-worker')
 
 
 def getargnames(task_func):
@@ -791,27 +783,20 @@ class Starmap(object):
         self.tasks = []  # populated by .submit
         self.task_no = 0
         self.t0 = time.time()
-        if self.distribute == 'zmq':  # add a check
-            errors = ['The workerpool on %s is down' % host
-                      for host, run, tot in workers_status(config.zworkers)
-                      if tot == 0]
-            if errors:
-                raise RuntimeError('\n'.join(errors))
 
     def log_percent(self):
         """
         Log the progress of the computation in percentage
         """
-        submitted = len(self.tasks)
         queued = len(self.task_queue)
-        total = submitted + queued
-        done = submitted - self.todo
+        total = self.task_no
+        done = total - len(self.tasks)
         percent = int(float(done) / total * 100)
         if not hasattr(self, 'prev_percent'):  # first time
             self.prev_percent = 0
         elif percent > self.prev_percent:
             self.progress('%s %3d%% [%d submitted, %d queued]',
-                          self.name, percent, submitted, queued)
+                          self.name, percent, self.task_no, queued)
             self.prev_percent = percent
         return done
 
@@ -820,7 +805,7 @@ class Starmap(object):
         Submit the given arguments to the underlying task
         """
         func = func or self.task_func
-        if not hasattr(self, 'socket'):  # first time
+        if not hasattr(self, 'socket'):  # setup the PULL socket the first time
             self.t0 = time.time()
             self.__class__.running_tasks = self.tasks
             self.socket = Socket(self.receiver, zmq.PULL, 'bind').__enter__()
@@ -844,9 +829,9 @@ class Starmap(object):
                 fname = func.__name__
                 argnames = getargnames(func)[:-1]
             self.sent[fname] += {a: len(p) for a, p in zip(argnames, args)}
-        res = submit[dist](self, func, args, self.monitor)
+        submit[dist](self, func, args, self.monitor)
+        self.tasks.append(self.task_no)
         self.task_no += 1
-        self.tasks.append(res)
 
     def submit_split(self, args,  duration, outs_per_task):
         """
@@ -892,38 +877,54 @@ class Starmap(object):
                 func, args = self.task_queue[0]
                 del self.task_queue[0]
                 self.submit(args, func=func)
-                self.todo += 1
 
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
         if self.task_queue:
-            first_args = self.task_queue[:self.num_cores]
-            self.task_queue[:] = self.task_queue[self.num_cores:]
+            first_args = self.task_queue[:self.CT]
+            self.task_queue[:] = self.task_queue[self.CT:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
         nbytes = sum(self.sent[self.task_func.__name__].values())
-        if nbytes > 1E6:
+        if nbytes > 1E5:
             logging.info('Sent %d %s tasks, %s in %d seconds', len(self.tasks),
                          self.name, humansize(nbytes), time.time() - self.t0)
 
-        isocket = iter(self.socket)
-        self.todo = len(self.tasks)
-        while self.todo:
+        isocket = iter(self.socket)  # read from the PULL socket
+        finished = set()
+        while self.tasks:
             self.log_percent()
             res = next(isocket)
             if self.calc_id != res.mon.calc_id:
                 logging.warning('Discarding a result from job %s, since this '
                                 'is job %s', res.mon.calc_id, self.calc_id)
             elif res.msg == 'TASK_ENDED':
+                finished.add(res.mon.task_no)
                 self.busytime += {res.workerid: res.mon.duration}
-                self.todo -= 1
+                self.tasks.remove(res.mon.task_no)
                 self._submit_many(1)
-                logging.debug('%d tasks running, %d in queue',
-                              self.todo, len(self.task_queue))
-                yield res
+                todo = set(range(self.task_no)) - finished
+                logging.debug('%d tasks todo %s', len(todo),
+                              shortlist(sorted(todo)))
+                task_sent = ast.literal_eval(decode(self.h5['task_sent'][()]))
+                task_sent.update(self.sent)
+                del self.h5['task_sent']
+                self.h5['task_sent'] = str(task_sent)
+                name = res.mon.operation[6:]  # strip 'total '
+                n = self.name + ':' + name if name == 'split_task' else name
+                if sys.platform != 'darwin':
+                    # it normally works on macOS, but not in notebooks calling
+                    # notebooks, which is the case relevant for Marco Pagani
+                    mem_gb = (memory_rss(os.getpid()) + sum(
+                        memory_rss(pid) for pid in Starmap.pids)) / GB
+                else:
+                    # measure only the memory used by the main process
+                    mem_gb = memory_rss(os.getpid()) / GB
+                res.mon.save_task_info(self.h5, res, n, mem_gb)
+                res.mon.flush(self.h5)
             elif res.func:  # add subtask
                 self.task_queue.append((res.func, res.pik))
                 self._submit_many(1)
@@ -1006,7 +1007,7 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
             break
 
 
-def multispawn(func, allargs, num_cores=Starmap.num_cores):
+def multispawn(func, allargs, chunksize=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
@@ -1017,65 +1018,11 @@ def multispawn(func, allargs, num_cores=Starmap.num_cores):
         proc = mp_context.Process(target=func, args=args)
         proc.start()
         procs[proc.sentinel] = proc
-        while len(procs) >= num_cores:  # wait for something to finish
+        while len(procs) >= chunksize:  # wait for something to finish
             for finished in wait(procs):
+                procs[finished].join()
                 del procs[finished]
     while procs:
         for finished in wait(procs):
+            procs[finished].join()
             del procs[finished]
-
-
-#                             start/stop workers                             #
-
-
-OQDIST = oq_distribute()
-
-
-def workers_start(zworkers):
-    """
-    Start the remote workers with ssh
-    """
-    for host, cores, args in workerpool.ssh_args(zworkers):
-        url = 'tcp://0.0.0.0:%s' % zworkers.ctrl_port
-        args += ['-m', 'openquake.baselib.workerpool', url, '-n', cores]
-        subprocess.Popen(args, start_new_session=True)
-        logging.info(args)
-
-
-def workers_stop(zworkers):
-    """
-    Stop all the workers with a shutdown
-    """
-    workerpool.WorkerMaster(zworkers).stop()
-    return 'stopped'
-
-
-def workers_kill(zworkers):
-    """
-    Kill all the workers
-    """
-    workerpool.WorkerMaster(zworkers).kill()
-    return 'killed'
-
-
-def workers_status(zworkers):
-    """
-    :returns: a list [(host name, running, total), ...]
-    """
-    return workerpool.WorkerMaster(zworkers).status()
-
-
-def workers_wait(zworkers, seconds=30):
-    """
-    Wait until all workers are active
-    """
-    num_hosts = len(zworkers.host_cores.split(','))
-    for _ in range(seconds):
-        time.sleep(1)
-        status = workers_status(zworkers)
-        if len(status) == num_hosts and all(
-                total for host, running, total in status):
-            break
-    else:
-        raise TimeoutError(status)
-    return status

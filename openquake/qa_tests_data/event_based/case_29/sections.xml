@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <geometryModel name="fault_sections">
+    <section name="central" id="0">
+      <kiteSurface>
+	<profile>
+	  <gml:LineString><gml:posList>
+	    10.5 45.0 0.0 10.5 45.5 10.0
+	  </gml:posList></gml:LineString>
+	</profile>
+	<profile>
+	  <gml:LineString><gml:posList>
+	    10.0 45.0 0.0 10.0 45.5 10.0
+	  </gml:posList></gml:LineString>
+	</profile>
+      </kiteSurface>
+    </section>
+    <section name="west" id="1">
+      <kiteSurface>
+	<profile>
+	  <gml:LineString><gml:posList>
+	    10.0 45.0 0.0 9.5 45.5 10.0
+	  </gml:posList></gml:LineString>
+	</profile>
+	<profile>
+	  <gml:LineString><gml:posList>
+	    9.5 45.0 0.0 9.5 45.5 10.0
+	  </gml:posList></gml:LineString>
+	</profile>
+      </kiteSurface>
+    </section>    
+</geometryModel>
+</nrml>

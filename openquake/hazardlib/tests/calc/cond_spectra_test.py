@@ -25,13 +25,14 @@ from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, cond_spectra
 
+PLOT = False
 OVERWRITE_EXPECTED = False
 
 CWD = os.path.dirname(__file__)
 SOURCES_XML = os.path.join(CWD, 'data', 'sm01.xml')
 GSIM_XML = os.path.join(CWD, 'data', 'lt02.xml')
-PARAM = dict(source_model_file=SOURCES_XML,
-             gsim_logic_tree_file=GSIM_XML,
+PARAM = dict(inputs=dict(source_model=SOURCES_XML,
+                         gsim_logic_tree=GSIM_XML),
              sites=[(0, -0.8)],
              reference_vs30_value=600,
              reference_depth_to_2pt5km_per_sec=5,
@@ -99,26 +100,27 @@ class CondSpectraTestCase(unittest.TestCase):
 
     def test_1_rlz(self):
         # test with one GMPE, 1 TRT, checking additivity
-        inp = read_input(
-            PARAM, gsim_logic_tree_file=os.path.join(CWD, 'data', 'lt01.xml'))
-        [cmaker] = inp.cmakerdict.values()
-        [src_group] = inp.groups
-        [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+        inp = read_input(PARAM, inputs={
+            'source_model': SOURCES_XML,
+            'gsim_logic_tree': os.path.join(CWD, 'data', 'lt01.xml')})
+
+        [ctx] = inp.cmaker.from_srcs(inp.group, inp.sitecol)
+        tom = inp.group.temporal_occurrence_model
         assert len(ctx) == 100
         ctx1 = ctx[:50]
         ctx2 = ctx[50:]
 
         # The hazard for the target IMT and poe
-        cmaker.poes = [0.000404]
-        imls = [0.394359437]
+        inp.cmaker.poes = [0.000404]
+        imls = np.array([[0.394359437]])
 
-        mom1 = get_cs_out(cmaker, ctx1, imti, imls)[0]
-        mom2 = get_cs_out(cmaker, ctx2, imti, imls)[0]
-        mom = get_cs_out(cmaker, ctx, imti, imls)[0]
+        mom1 = get_cs_out(inp.cmaker, ctx1, imti, imls, tom)[0]
+        mom2 = get_cs_out(inp.cmaker, ctx2, imti, imls, tom)[0]
+        mom = get_cs_out(inp.cmaker, ctx, imti, imls, tom)[0]
         aac(mom1 + mom2, mom)
 
         spectra, s_sigma = cond_spectra(
-            cmaker, src_group, inp.sitecol, 'SA(0.2)', imls)
+            inp.cmaker, inp.group, inp.sitecol, 'SA(0.2)', imls)
         aac(spectra.flatten(), [0.19236242, 0.23961989, 0.27838065, 0.35216192,
                                 0.39435944, 0.36501786, 0.34676928, 0.23458421,
                                 0.15669297, 0.11154595, 0.0409729], atol=2E-5)
@@ -129,25 +131,27 @@ class CondSpectraTestCase(unittest.TestCase):
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
         inp = read_input(PARAM)
-        [cmaker] = inp.cmakerdict.values()
-        [src_group] = inp.groups
+        cmaker = inp.cmaker
+        src_group = inp.group
         [ctx] = cmaker.from_srcs(src_group, inp.sitecol)
+        tom = src_group.temporal_occurrence_model
 
         # The hazard for the target IMT and poe=0.002105
         cmaker.poes = [0.002105]
-        imls = [0.238531932]
+        imls = np.array([[0.0483352]])
 
         # Compute mean CS
-        outdic = get_cs_out(cmaker, ctx, imti, imls)
+        outdic = get_cs_out(cmaker, ctx, imti, imls, tom)
         # 0, 1 -> array (M, N, O, P) = (11, 1, 3, 1)
 
         # Compute mean across rlzs
-        w1 = inp.gsim_lt.branches[0].weight['weight']
-        w2 = inp.gsim_lt.branches[1].weight['weight']
+        gsim_lt = inp.full_lt.gsim_lt
+        w1 = gsim_lt.branches[0].weight['weight']
+        w2 = gsim_lt.branches[1].weight['weight']
         _c = outdic[0] * w1 + outdic[1] * w2
 
         # Compute std
-        outdic = get_cs_out(cmaker, ctx, imti, imls, _c)
+        outdic = get_cs_out(cmaker, ctx, imti, imls, tom, _c)
 
         # Create DF for test
         df = outdic_to_dframe(outdic, cmaker.imts, 0, 0)
@@ -159,5 +163,6 @@ class CondSpectraTestCase(unittest.TestCase):
                       float_format='%.6f')
         expdf = pandas.read_csv(expected)
         pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)
-        # to plot the spectra uncomment the following line
-        # plot(df, cmaker.imts)
+        # Plot the spectra for the two sites
+        if PLOT:
+            plot(df, cmaker.imts)

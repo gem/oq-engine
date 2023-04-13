@@ -125,4 +125,4 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         dic = vars(extract(self.calc.datastore, 'damages-rlzs'))
         self.assertEqual(
             list(dic),
-            ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', '_extra'])
+            ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', 'extra'])

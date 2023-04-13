@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+  <singlePlaneRupture probs_occur="0.9 0.1">
+    <magnitude>7.1</magnitude>
+    <rake>-98.0</rake>
+    <hypocenter lon="-98.488700" lat="18.549900" depth="48.0"/>
+    <planarSurface strike="299" dip="44">
+      # 18.67 -98.51 46.1 4
+      <topLeft lon="-98.51" lat="18.67" depth="46.1"/>
+      # 18.60 -98.30 46.1 1
+      <topRight lon="-98.30" lat="18.60" depth="46.1"/>
+      # 18.58 -98.54 56.9 3
+      <bottomLeft lon="-98.54" lat="18.58" depth="56.9"/>
+      # 18.50 -98.34 56.9 2
+      <bottomRight lon="-98.34" lat="18.50" depth="56.9"/>
+    </planarSurface>
+  </singlePlaneRupture>
+</nrml>

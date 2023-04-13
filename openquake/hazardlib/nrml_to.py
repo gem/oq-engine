@@ -183,8 +183,16 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                             srcnode['groupname'] = srcgroup.attrib['name']
                         except KeyError:
                             srcnode['groupname'] = ''
-                        if (not srcnode['groupname'] and
-                                grp_trt and not srcnode.get('tectonicRegion')):
+
+                        # NOTE: the following condition would avoid duplicating
+                        # tectonicRegion into each source of a group for which
+                        # the tectonicRegion is already specified. We are
+                        # intentionally keeping the duplication in order to
+                        # make it possible to read the information directly
+                        # from the source section via old scripts.
+                        # if (not srcnode['groupname'] and
+                        #     grp_trt and not srcnode.get('tectonicRegion')):
+                        if grp_trt and not srcnode.get('tectonicRegion'):
                             srcnode['tectonicRegion'] = grp_trt
                         row = converter.convert_node(srcnode)
                         appendrow(row, srcs, chatty, sections, s2i)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2022, GEM Foundation
+# Copyright (C) 2017-2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,18 +17,27 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import sys
+import time
 import shutil
+import socket
 import getpass
 import tempfile
+import functools
 import subprocess
+from datetime import datetime
 import psutil
 from openquake.baselib import (
-    zeromq as z, general, parallel, config, sap, InvalidFile)
+    zeromq as z, general, performance, parallel, config, sap, InvalidFile)
 try:
     from setproctitle import setproctitle
 except ImportError:
     def setproctitle(title):
         "Do nothing"
+
+
+def init_workers():
+    """Used to initialize the process pool"""
+    setproctitle('oq-zworker')
 
 
 def ssh_args(zworkers):
@@ -70,8 +79,8 @@ class WorkerMaster(object):
 
     def start(self):
         """
-        Start multiple workerpools, possibly on remote servers via ssh,
-        assuming there is an active streamer.
+        Start multiple workerpools on remote servers via ssh and/or a single
+        workerpool on localhost.
         """
         starting = []
         for host, cores, args in ssh_args(self.zworkers):
@@ -116,7 +125,7 @@ class WorkerMaster(object):
         """
         killed = []
         for host, cores, args in ssh_args(self.zworkers):
-            args = args[:-1] + ['killall', '-r', 'oq-zworker']
+            args = args[:-1] + ['killall', '-r', 'oq-zworker|multiprocessing']
             print(' '.join(args))
             subprocess.run(args)
             killed.append(host)
@@ -137,23 +146,98 @@ class WorkerMaster(object):
                 executing.append((host, running, total))
         return executing
 
+    def wait(self, seconds=120):
+        """
+        Wait until all workers are active
+        """
+        num_hosts = len(self.zworkers.host_cores.split(','))
+        for _ in range(seconds):
+            time.sleep(1)
+            status = self.status()
+            if len(status) == num_hosts and all(
+                    total for host, running, total in status):
+                break
+        else:
+            raise TimeoutError(status)
+        return status
+
     def restart(self):
         """
         Stop and start again
         """
-        self.stop()
-        self.start()
+        for host, _ in self.host_cores:
+            if not general.socket_ready((host, self.ctrl_port)):
+                continue
+            ctrl_url = 'tcp://%s:%s' % (host, self.ctrl_port)
+            with z.Socket(ctrl_url, z.zmq.REQ, 'connect', timeout=120) as sock:
+                sock.send('restart')
         return 'restarted'
+
+    def debug(self):
+        """
+        Start the workers, run a debug job, print some info and stop
+        """
+        self.start()
+        try:
+            mon = performance.Monitor('zmq-debug')
+            mon.inject = True
+            mon.config = config  # forget this and it will hang silently
+            rec_host = config.dbserver.receiver_host or '127.0.0.1'
+            receiver = 'tcp://%s:%s' % (
+                rec_host, config.dbserver.receiver_ports)
+            ntasks = len(self.host_cores) * 2
+            task_no = 0
+            with z.Socket(receiver, z.zmq.PULL, 'bind') as pull:
+                mon.backurl = 'tcp://%s:%s' % (rec_host, pull.port)
+                for host, _ in self.host_cores:
+                    url = 'tcp://%s:%d' % (host, self.ctrl_port)
+                    print('Sending to', url)
+                    with z.Socket(url, z.zmq.REQ, 'connect') as sock:
+                        for i in range(2):
+                            msg = 'executing task #%d' % task_no
+                            sock.send((debug_task, (msg,), task_no, mon))
+                            task_no += 1
+                results = list(get_results(pull, ntasks))
+                print(f'{results=}')
+        finally:
+            self.stop()
+        return 'debugged'
+
+
+def get_results(socket, n):
+    for res in socket:
+        if n == 0:
+            return
+        elif res.msg != 'TASK_ENDED':
+            yield res.get()
+            n -= 1
+
+
+def debug_task(msg, mon):
+    """
+    Trivial task useful for debugging
+    """
+    print(socket.gethostname(), msg)
+    # while True: pass
+    return mon.task_no
 
 
 def call(func, args, taskno, mon, executing):
-    setproctitle('oq-zworker')
     fname = os.path.join(executing, '%s-%s' % (mon.calc_id, taskno))
     # NB: very hackish way of keeping track of the running tasks,
     # used in get_executing, could litter the file system
     open(fname, 'w').close()
     parallel.safely_call(func, args, taskno, mon)
     os.remove(fname)
+
+
+def errback(job_id, task_no, exc):
+    from openquake.commonlib.logs import dbcmd
+    dbcmd('log', job_id, datetime.utcnow(), 'ERROR',
+          '%s/%s' % (job_id, task_no), str(exc))
+    raise exc
+    e = exc.__class__('in job %d, task %d' % (job_id, task_no))
+    raise e.with_traceback(exc.__traceback__)
 
 
 class WorkerPool(object):
@@ -182,25 +266,35 @@ class WorkerPool(object):
         title = 'oq-zworkerpool %s' % self.ctrl_url[6:]  # strip tcp://
         print('Starting ' + title, file=sys.stderr)
         setproctitle(title)
-        self.pool = general.mp.Pool(self.num_workers)
+        self.pool = general.mp.Pool(self.num_workers, init_workers)
         # start control loop accepting the commands stop and kill
-        with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
-            for cmd in ctrlsock:
-                if cmd == 'stop':
-                    ctrlsock.send(self.stop())
-                    break
-                elif cmd == 'getpid':
-                    ctrlsock.send(self.proc.pid)
-                elif cmd == 'get_num_workers':
-                    ctrlsock.send(self.num_workers)
-                elif cmd == 'get_executing':
-                    ctrlsock.send(' '.join(sorted(os.listdir(self.executing))))
-                elif isinstance(cmd, tuple):
-                    self.pool.apply_async(call, cmd + (self.executing,))
-                    ctrlsock.send('submitted')
-                else:
-                    ctrlsock.send('unknown command')
-        shutil.rmtree(self.executing)
+        try:
+            with z.Socket(self.ctrl_url, z.zmq.REP, 'bind') as ctrlsock:
+                for cmd in ctrlsock:
+                    if cmd == 'stop':
+                        ctrlsock.send(self.stop())
+                        break
+                    elif cmd == 'restart':
+                        self.stop()
+                        self.pool = general.mp.Pool(self.num_workers)
+                        ctrlsock.send('restarted')
+                    elif cmd == 'getpid':
+                        ctrlsock.send(self.proc.pid)
+                    elif cmd == 'get_num_workers':
+                        ctrlsock.send(self.num_workers)
+                    elif cmd == 'get_executing':
+                        executing = sorted(os.listdir(self.executing))
+                        ctrlsock.send(' '.join(executing))
+                    elif isinstance(cmd, tuple):
+                        func, args, taskno, mon = cmd
+                        eback = functools.partial(errback, mon.calc_id, taskno)
+                        self.pool.apply_async(call, cmd + (self.executing,),
+                                              error_callback=eback)
+                        ctrlsock.send('submitted')
+                    else:
+                        ctrlsock.send('unknown command')
+        finally:
+            shutil.rmtree(self.executing)
 
     def stop(self):
         """
@@ -216,7 +310,12 @@ def workerpool(worker_url='tcp://0.0.0.0:1909', *, num_workers: int = -1):
     """
     Start a workerpool on the given URL with the given number of workers.
     """
-    WorkerPool(worker_url, num_workers).start()
+    # NB: unexpected errors will appear in the DbServer log
+    wpool = WorkerPool(worker_url, num_workers)
+    try:
+        wpool.start()
+    finally:
+        wpool.stop()
 
 
 workerpool.worker_url = dict(

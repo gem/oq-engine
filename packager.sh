@@ -778,7 +778,6 @@ _builddoc_innervm_run () {
 #                     - adds repositories to apt sources on lxc
 #                     - performs package tests (install, remove, reinstall ..)
 #                     - set up db
-#                     - runs celeryd
 #                     - executes demos
 #
 #      <lxc_ip>    the IP address of lxc instance
@@ -798,8 +797,7 @@ _pkgtest_innervm_run () {
 
     # create a remote "local repo" where place $GEM_DEB_PACKAGE package
     ssh "$lxc_ip" mkdir -p "repo/${GEM_DEB_PACKAGE}"
-    scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.deb "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_"*.deb \
-        "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_"*.deb \
+    scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.deb \
         "${GEM_BUILD_ROOT}/Packages"* "${GEM_BUILD_ROOT}/Sources"*  "${GEM_BUILD_ROOT}/Release"* "$lxc_ip:repo/${GEM_DEB_PACKAGE}"
     scp "${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_"*.buildinfo "$lxc_ip:repo/${GEM_DEB_PACKAGE}" || true
     ssh "$lxc_ip" sudo apt-add-repository \"deb file:/home/ubuntu/repo/${GEM_DEB_PACKAGE} ./\"
@@ -838,8 +836,6 @@ _pkgtest_innervm_run () {
     ssh "$lxc_ip" sudo apt-get install -y ${GEM_DEB_PACKAGE}
     ssh "$lxc_ip" sudo apt-get install --reinstall -y ${GEM_DEB_PACKAGE}
 
-    celery_bin=/opt/openquake/bin/celery
-
     # configure the machine to run tests
     if [ -z "$GEM_PKGTEST_SKIP_DEMOS" ]; then
         # run one risk demo (event based risk)
@@ -866,48 +862,13 @@ _pkgtest_innervm_run () {
         cd /usr/share/openquake/engine/demos
         oq engine --run risk/EventBasedRisk/job.ini
 
-        sudo apt-get install -y python3-oq-engine-master python3-oq-engine-worker
-        # Switch to celery mode
-        # sudo sed -i 's/oq_distribute = processpool/oq_distribute = celery/;' /etc/openquake/openquake.cfg
-
-export PYTHONPATH=\"$OPT_LIBS_PATH\"
-celery_wait() {
-    local cw_nloop=\"\$1\" cw_ret cw_i
-
-    if [ ! -f $celery_bin ]; then
-        echo \"ERROR: no Celery available\"
-        return 1
-    fi
-
-    for cw_i in \$(seq 1 \$cw_nloop); do
-        cw_ret=\"\$($celery_bin status --config openquake.engine.celeryconfig)\" || true
-        if echo \"\$cw_ret\" | grep -iq '^error:'; then
-            if echo \"\$cw_ret\" | grep -ivq '^error: no nodes replied'; then
-                return 1
-            fi
-        else
-            return 0
-        fi
-        sleep 1
-    done
-
-    return 1
-}
-
 # Start the DbServer
 # openquake-webui and openquake-dbserver have been stopped by python3-oq-engine-worker
 sudo systemctl start openquake-dbserver
 sleep 10
-# Restart openquake-celery after the changes made to openquake.cfg
-# sudo systemctl start openquake-celery
-sleep 10
-# sudo systemctl status openquake-dbserver openquake-celery
 sudo systemctl status openquake-dbserver
 
-# celery_wait $GEM_MAXLOOP
-
-        # oq celery status
-        oq engine --run risk/EventBasedRisk/job.ini || echo \"distribution with celery not supported without master and/or worker packages\"
+        oq engine --run risk/EventBasedRisk/job.ini
 
         # Try to export a set of results AFTER the calculation
         # automatically creates a directory called out
@@ -1008,8 +969,6 @@ deps_list() {
     IFS="$old_ifs"
 
     echo "$out_list" | \
-        sed "s/\b${GEM_DEB_PACKAGE}-master\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g" | \
-        sed "s/\b${GEM_DEB_PACKAGE}-worker\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g" | \
         sed "s/\b${GEM_DEB_PACKAGE}\b/ /g;s/ \+/ /g;s/^ \+//g;s/ \+\$//g"
 
     return 0
@@ -1619,10 +1578,9 @@ GEM_BUILD_PKG="${GEM_SRC_PKG}/pkg"
 mksafedir "$GEM_BUILD_PKG"
 GEM_BUILD_EXTR="${GEM_SRC_PKG}/extr"
 mksafedir "$GEM_BUILD_EXTR"
-cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-master_*.deb \
-    ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}-worker_*.deb "$GEM_BUILD_PKG"
+cp  ${GEM_BUILD_ROOT}/${GEM_DEB_PACKAGE}_*.deb "$GEM_BUILD_PKG"
 cd "$GEM_BUILD_EXTR"
-for pkg in python3-oq-engine python3-oq-engine-master python3-oq-engine-worker; do
+for pkg in python3-oq-engine; do
     mksafedir "$pkg"
     pushd "$pkg"
     dpkg -x "$GEM_BUILD_PKG/${GEM_DEB_PACKAGE}_"*.deb .

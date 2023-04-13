@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2022 GEM Foundation
+# Copyright (C) 2017-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -106,9 +106,11 @@ def read(*paths, **validators):
                 raise ValueError('%s for %s in %s' % (err, k, found[-1]))
 
 
+# NB: duplicated in commands/engine.py!!
 config.read = read
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            serialize_jobs=positiveint, strict=positiveint, code=exec)
+            serialize_jobs=positiveint, strict=positiveint, code=exec,
+            slowdown_rate=float)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
@@ -129,4 +131,4 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.16.0'
+__version__ = '3.17.0'

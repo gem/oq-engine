@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -21,7 +21,6 @@ import ast
 import csv
 import copy
 import zlib
-import pickle
 import shutil
 import zipfile
 import pathlib
@@ -37,21 +36,20 @@ import requests
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp)
+    random_filter, countby, group_array, get_duplicates, gettemp, shortlist)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
-    source, geo, site, imt, valid, sourceconverter, nrml, pmf, gsim_lt)
+    source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
+    pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib.source_reader import get_csm
-from openquake.commonlib import logictree
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -246,13 +244,7 @@ def get_params(job_ini, kw={}):
     if isinstance(job_ini, pathlib.Path):
         job_ini = str(job_ini)
     if job_ini.startswith(('http://', 'https://')):
-        if '://gitlab' in job_ini:
-            # TODO: this is not working even if curl works
-            token = os.environ['GITLAB_TOKEN']
-            auth = {'Authorization': 'PRIVATE-TOKEN ' + token}
-            resp = requests.get(job_ini, headers=auth)
-        else:
-            resp = requests.get(job_ini)
+        resp = requests.get(job_ini)
         job_ini = gettemp(suffix='.zip')
         with open(job_ini, 'wb') as f:
             f.write(resp.content)
@@ -543,6 +535,7 @@ def get_site_collection(oqparam, h5=None):
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
+
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -564,6 +557,8 @@ def get_site_collection(oqparam, h5=None):
               'exposure' not in oqparam.inputs):
             # tested in test_with_site_model
             sm = get_site_model(oqparam)
+            if len(sm) > len(mesh):  # the association will happen in base.py
+                sm = oqparam
         else:
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
@@ -575,6 +570,7 @@ def get_site_collection(oqparam, h5=None):
             sitecol.add_col('custom_site_id', 'S6', gh)
         mask = (sitecol.sids >= ss[0]) & (sitecol.sids < ss[1])
         sitecol = sitecol.filter(mask)
+        assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
@@ -589,13 +585,6 @@ def get_site_collection(oqparam, h5=None):
     if ('vs30' in sitecol.array.dtype.names and
             not numpy.isnan(sitecol.vs30).any()):
         assert sitecol.vs30.max() < 32767, sitecol.vs30.max()
-
-    # sanity check on the site parameters
-    for param in req_site_params:
-        dt = site.site_param_dt[param]
-        if dt is F64 and (sitecol.array[param] == 0.).all():
-            raise ValueError('The site parameter %s is always zero: please '
-                             'check the site model' % param)
     return sitecol
 
 
@@ -638,7 +627,7 @@ def get_gsim_lt(oqparam, trts=('*',)):
         for branch in gsim_lt.branches:
             for k, w in sorted(branch.weight.dic.items()):
                 if k != 'weight':
-                    logging.warning(
+                    logging.debug(
                         'Using weight=%s instead of %s for %s %s',
                         branch.weight.dic['weight'], w, branch.gsim, k)
                     del branch.weight.dic[k]
@@ -666,37 +655,37 @@ def get_rupture(oqparam):
     conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.rup_id = oqparam.ses_seed
+    rup.seed = oqparam.ses_seed
     return rup
 
 
-def get_source_model_lt(oqparam, branchID=None):
+def get_source_model_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
-        a :class:`openquake.commonlib.logictree.SourceModelLogicTree`
+        a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    fname = oqparam.inputs['source_model_logic_tree']
-    args = (fname, oqparam.random_seed, oqparam.number_of_logic_tree_samples,
-            oqparam.sampling_method, False, branchID)
-    smlt = logictree.SourceModelLogicTree(*args)
-    discard_trts = set(s.strip() for s in oqparam.discard_trts.split(','))
-    if discard_trts:
-        # smlt.tectonic_region_types comes from applyToTectonicRegionType
-        smlt.tectonic_region_types = smlt.tectonic_region_types - discard_trts
+    smlt = get_smlt(vars(oqparam), branchID)
+    srcids = set(smlt.source_data['source'])
+    for src in oqparam.reqv_ignore_sources:
+        if src not in srcids:
+            raise NameError('The source %r in reqv_ignore_sources does '
+                            'not exist in the source model(s)' % src)
+    if len(oqparam.source_id) == 1:  # reduce to a single source
+        return smlt.reduce(oqparam.source_id[0])
     return smlt
 
 
-def get_full_lt(oqparam, branchID=None):
+def get_full_lt(oqparam, branchID=''):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param branchID:
         used to read a single sourceModel branch (if given)
     :returns:
-        a :class:`openquake.commonlib.logictree.FullLogicTree`
+        a :class:`openquake.hazardlib.logictree.FullLogicTree`
         instance
     """
     source_model_lt = get_source_model_lt(oqparam, branchID)
@@ -710,12 +699,24 @@ def get_full_lt(oqparam, branchID=None):
             raise ValueError('Unknown TRT=%s in %s [reqv]' %
                              (trt, oqparam.inputs['job_ini']))
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
-    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt)
+    if len(oqparam.source_id) == 1:
+        oversampling = 'reduce-rlzs'
+    else:
+        oversampling = oqparam.oversampling
+    full_lt = logictree.FullLogicTree(source_model_lt, gsim_lt, oversampling)
     p = full_lt.source_model_lt.num_paths * gsim_lt.get_num_paths()
     if oqparam.number_of_logic_tree_samples:
-        logging.info('Considering {:_d} logic tree paths out of {:_d}'.format(
-            oqparam.number_of_logic_tree_samples, p))
+        if (oqparam.oversampling == 'forbid' and
+                oqparam.number_of_logic_tree_samples >= p
+                and 'event' not in oqparam.calculation_mode):
+            raise ValueError('Use full enumeration since there are only '
+                             '{:_d} realizations'.format(p))
+        unique = numpy.unique(full_lt.rlzs['branch_path'])
+        logging.info('Considering {:_d} logic tree paths out of {:_d}, unique'
+                     ' {:_d}'.format(oqparam.number_of_logic_tree_samples, p,
+                                     len(unique)))
     else:  # full enumeration
+        logging.info('There are {:_d} logic tree paths(s)'.format(p))
         if oqparam.hazard_curves and p > oqparam.max_potential_paths:
             raise ValueError(
                 'There are too many potential logic tree paths (%d):'
@@ -727,15 +728,8 @@ def get_full_lt(oqparam, branchID=None):
             logging.warning(
                 'There are many potential logic tree paths (%d): '
                 'try to use sampling or reduce the source model' % p)
-        logging.info('Total number of logic tree paths = {:_d}'.format(p))
     if source_model_lt.is_source_specific:
         logging.info('There is a source specific logic tree')
-    dupl = []
-    for src_id, branchIDs in source_model_lt.source_ids.items():
-        if len(branchIDs) > 1:
-            dupl.append(src_id)
-    if dupl:
-        logging.info('There are %d non-unique source IDs', len(dupl))
     return full_lt
 
 
@@ -766,7 +760,7 @@ def _check_csm(csm, oqparam, h5):
     if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
     srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
-    logging.info('Checking the sources bounding box')
+    logging.info('Checking sources bounding box using %s', csm.sitecol)
     lons = []
     lats = []
     for src in srcs:
@@ -794,44 +788,37 @@ def _check_csm(csm, oqparam, h5):
             'the globe: %d degrees' % (bbox[2] - bbox[0]))
 
 
-def get_composite_source_model(oqparam, h5=None, branchID=None):
+# tested in test_mosaic
+def get_cache_path(oqparam, h5=None):
+    """
+    :returns: cache path of the form OQ_DATA/csm_<checksum>.hdf5
+    """
+    if oqparam.cachedir:
+        checksum = get_checksum32(oqparam, h5)
+        return os.path.join(oqparam.cachedir, 'csm_%d.hdf5' % checksum)
+    return ''
+
+
+def get_composite_source_model(oqparam, dstore=None, branchID=''):
     """
     Parse the XML and build a complete composite source model in memory.
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param h5:
-         an open hdf5.File where to store the source info
+    :param dstore:
+         an open datastore where to save the source info
     """
-    # first read the logic tree
+    logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
     full_lt = get_full_lt(oqparam, branchID)
-
-    # then read the composite source model from the cache if possible
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    if oqparam.cachedir:
-        # for UCERF pickling the csm is slower
-        checksum = get_checksum32(oqparam, h5)
-        fname = os.path.join(oqparam.cachedir, 'csm_%s.pik' % checksum)
-        if os.path.exists(fname):
-            logging.info('Reading %s', fname)
-            with open(fname, 'rb') as f:
-                csm = pickle.load(f)
-                csm.full_lt = full_lt
-            _check_csm(csm, oqparam, h5)
-            return csm
-
-    # read and process the composite source model from the input files
-    csm = get_csm(oqparam, full_lt, h5)
-    rlzs_by_gsim_list = full_lt.get_rlzs_by_gsim_list(csm.get_trt_smrs())
-    ngsims = sum(len(rbg) for rbg in rlzs_by_gsim_list)
-    logging.info('There are %d gsims in the CompositeSourceModel', ngsims)
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(csm, f)
-
-    _check_csm(csm, oqparam, h5)
+    path = get_cache_path(oqparam, dstore.hdf5 if dstore else None)
+    if os.path.exists(path):
+        from openquake.commonlib import datastore  # avoid circular import
+        with datastore.read(os.path.realpath(path)) as ds:
+            csm = ds['_csm']
+            csm.init(full_lt)
+    else:
+        csm = source_reader.get_csm(oqparam, full_lt, dstore)
+        _check_csm(csm, oqparam, dstore)
     return csm
 
 
@@ -912,25 +899,51 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    if oqparam.cachedir and not os.path.exists(oqparam.cachedir):
-        os.makedirs(oqparam.cachedir)
-    checksum = _checksum(oqparam.inputs['exposure'])
-    fname = os.path.join(oqparam.cachedir, 'exp_%s.pik' % checksum)
-    if os.path.exists(fname):
-        logging.info('Reading %s', fname)
-        with open(fname, 'rb') as f:
-            return pickle.load(f)
     exposure = Global.exposure = asset.Exposure.read(
         oqparam.inputs['exposure'], oqparam.calculation_mode,
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
     exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
-    if oqparam.cachedir:
-        logging.info('Saving %s', fname)
-        with open(fname, 'wb') as f:
-            pickle.dump(exposure, f)
     return exposure
+
+
+def get_station_data(oqparam):
+    """
+    Read the station data input file and build a list of
+    ground motion stations and recorded ground motion values
+    along with their uncertainty estimates
+
+    :param oqparam:
+        an :class:`openquake.commonlib.oqvalidation.OqParam` instance
+    :returns sd:
+        a Pandas dataframe with station ids and coordinates as the index and 
+        IMT names as the first level of column headers and
+        mean, std as the second level of column headers
+    :returns imts:
+        a list of observed intensity measure types
+    """
+    if 'station_data' in oqparam.inputs:
+        fname = oqparam.inputs['station_data']
+        sdata = pandas.read_csv(fname)
+
+        # Identify the columns with IM values
+        # Replace replace() with removesuffix() for pandas ≥ 1.4
+        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace(
+            "_VALUE", "")
+        imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
+        im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
+        station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
+        cols = []
+        for im in imts:
+            stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
+            cols.append(im + '_VALUE')
+            cols.append(im + '_' + stddev_str)
+        station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
+        station_sites = pandas.DataFrame(
+            sdata[station_cols].values, columns=["station_id", "lon", "lat"]
+        ).astype({"station_id": str, "lon": F64, "lat": F64})
+    return station_data, station_sites, imts
 
 
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
@@ -1069,6 +1082,7 @@ def get_pmap_from_csv(oqparam, fnames):
         dic[wrapper.imt] = wrapper.array
         imtls[wrapper.imt] = levels_from(wrapper.dtype.names)
     oqparam.hazard_imtls = imtls
+    oqparam.investigation_time = wrapper.investigation_time
     oqparam.set_risk_imts(get_risk_functions(oqparam))
     array = wrapper.array
     mesh = geo.Mesh(array['lon'], array['lat'])
@@ -1214,7 +1228,18 @@ def get_reinsurance(oqparam, assetcol=None):
         raise InvalidFile('%s: aggregate_by=%s' %
                           (fname, oqparam.aggregate_by))
     [(key, fname)] = oqparam.inputs['reinsurance'].items()
-    return reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+    p, t, f = reinsurance.parse(fname, assetcol.tagcol.policy_idx)
+    
+    # check ideductible
+    arr = assetcol.array
+    for pol_no, deduc in zip(p.policy, p.deductible):
+        if deduc:
+            ideduc = arr[arr['policy'] == pol_no]['ideductible']
+            if ideduc.any():
+                pol = assetcol.tagcol.policy[pol_no]
+                raise InvalidFile('%s: for policy %s there is a deductible '
+                                  'also in the exposure!' % (fname, pol))
+    return p, t, f
 
 
 def get_input_files(oqparam):
@@ -1283,7 +1308,9 @@ def _checksum(fnames, checksum=0):
     :returns: the 32 bit checksum of a list of files
     """
     for fname in fnames:
-        if not os.path.exists(fname):
+        if fname == '<in-memory>':
+            pass
+        elif not os.path.exists(fname):
             zpath = os.path.splitext(fname)[0] + '.zip'
             if not os.path.exists(zpath):
                 raise OSError('No such file: %s or %s' % (fname, zpath))
@@ -1308,7 +1335,7 @@ def get_checksum32(oqparam, h5=None):
         if key in ('rupture_mesh_spacing', 'complex_fault_mesh_spacing',
                    'width_of_mfd_bin', 'area_source_discretization',
                    'random_seed', 'number_of_logic_tree_samples',
-                   'minimum_magnitude', 'source_id',
+                   'minimum_magnitude', 'source_id', 'sites',
                    'floating_x_step', 'floating_y_step'):
             hazard_params.append('%s = %s' % (key, val))
     data = '\n'.join(hazard_params).encode('utf8')
