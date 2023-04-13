@@ -310,6 +310,7 @@ def make_figure_disagg(extractors, what):
         # stacked_bar(ax, x, y.T, width)
         # ys = ['%.1f' % y for y in getattr(disagg, kind[1])]
         # ax.legend(ys)
+    fig.tight_layout()
     fig.colorbar(im, ax=axes)
     return plt
 
