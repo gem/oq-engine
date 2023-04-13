@@ -99,7 +99,7 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_4(self):
         # a case with number of lon/lat bins different for site 0/site 1
-        # this exercise sampling and empty CSV files not being saved
+        # this exercises sampling and empty CSV files not being saved
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 11)
