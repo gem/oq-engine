@@ -218,6 +218,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     rup_counter = {}
     rup_data = {}
     for rlz_num in range(grp_num_occ):
+
         if sources.cluster:
             for src, _ in srcfilter.filter(sources):
                 # Track calculation time
@@ -257,8 +258,6 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                     aa = rup.idx
                 except:
                     breakpoint()
-                """
-                """
 
                 src_id = src.source_id
                 # Create a vector with the probabilities of occurrence of 0, 1,
