@@ -881,8 +881,8 @@ class Starmap(object):
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
         if self.task_queue:
-            first_args = self.task_queue[:self.num_cores]
-            self.task_queue[:] = self.task_queue[self.num_cores:]
+            first_args = self.task_queue[:self.CT]
+            self.task_queue[:] = self.task_queue[self.CT:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made

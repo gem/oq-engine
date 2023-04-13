@@ -133,11 +133,11 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
 
-
 def classical(srcs, sitecol, cmaker, monitor):
     """
     Call the classical calculator in hazardlib
     """
+    # NB: removing the yield would case terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     for sites in sitecol.split_in_tiles(cmaker.ntiles):
@@ -570,10 +570,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Global pmap size %s', humansize(totsize))
 
         self.datastore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap(classical, h5=self.datastore.hdf5)
-        # using submit avoids the .task_queue and thus core starvation
-        for args in allargs:
-            smap.submit(args)
+        smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         return smap.reduce(self.agg_dicts, acc)
 
     def store_info(self):
