@@ -197,6 +197,8 @@ def sample_cluster(sources, srcfilter, num_ses, param):
         cs = numpy.cumsum(srcs_weights)
         vals = numpy.random.rand(grp_num_occ)
         sidx = []
+        # This provides for each realisation the index of the source sampled
+        # according to the weights assigned
         for i_rlz in range(grp_num_occ):
             sidx.append(numpy.max(numpy.where((cs-vals[i_rlz]) < 0)))
     else:
@@ -218,7 +220,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
     rup_counter = {}
     rup_data = {}
     for rlz_num in range(grp_num_occ):
-
+        # In case of a cluster
         if sources.cluster:
             for src, _ in srcfilter.filter(sources):
                 # Track calculation time
@@ -244,14 +246,14 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                 source_data['weight'].append(src.weight)
                 source_data['taskno'].append(param['task_no'])
 
+        # In case of a set of mutually exclusive sources
         elif getattr(sources, 'src_interdep') == 'mutex':
+            # Select the source
             src = sources[sidx[rlz_num]]
-
-            nrup = src.count_ruptures()
-            print(src.source_id, nrup)
-            if nrup == 0:
+            # No ruptures, no party
+            if src.count_ruptures() == 0:
                 continue
-
+            # Process the ruptures
             for i_rup, rup in enumerate(src.iter_ruptures()):
 
                 try:
@@ -327,14 +329,12 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
 #            getattr(sources, 'cluster', False)):
         eb_ruptures, source_data = sample_cluster(
             sources, srcfilter, num_ses, vars(cmaker))
-
         # Yield ruptures
         er = sum(src.num_ruptures for src, _ in srcfilter.filter(sources))
         dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
                    source_data=source_data, eff_ruptures={grp_id: er})
         yield AccumDict(dic)
     else:
-        breakpoint()
         eb_ruptures = []
         eff_ruptures = 0
         source_data = AccumDict(accum=[])
