@@ -19,6 +19,7 @@
 import os
 import copy
 import toml
+import difflib
 import filecmp
 import pathlib
 import unittest
@@ -199,5 +200,17 @@ class NonParametricSourceTest(unittest.TestCase):
             write_source_model(expected, [grp], name='test')
 
         # Testing file created
-        msg = f'The two files do not match:\n{expected}\n{computed}'
+        msg = f'The two files do not match:\n{expected}\n{computed}\n'
+        with open(expected, 'r') as hosts0:
+            with open(computed, 'r') as hosts1:
+                diff = difflib.unified_diff(
+                    hosts0.readlines(),
+                    hosts1.readlines(),
+                    fromfile='expected',
+                    tofile='computed',
+                )
+                for line in diff:
+                    msg += line
+                    msg += '\n'
+
         self.assertTrue(filecmp.cmp(expected, computed, shallow=True), msg)
