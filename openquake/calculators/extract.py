@@ -1110,12 +1110,22 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output as an ArrayWrapper.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&site_id=1&spec=stats
+    disagg?kind=Mag_Dist&imt=%s&site_id=1&poe_id=%d&spec=stats
     """
     qdict = parse(what)
     spec = qdict['spec'][0]
     label = qdict['kind'][0]
     sid = int(qdict['site_id'][0])
+    oq = dstore['oqparam']
+    imts = list(oq.imtls)
+    if 'imt' in qdict:
+        imti = [imts.index(imt) for imt in qdict['imt']]
+    else:
+        imti = slice(None)
+    if 'poe_id' in qdict:
+        poei = [int(x) for x in qdict['poe_id']]
+    else:
+        poei = slice(None)
     if 'traditional' in spec:
         spec = spec[:4]  # rlzs or stats
         traditional = True
@@ -1127,12 +1137,12 @@ def extract_disagg(dstore, what):
             return dset[sid]
         return dset[:]  # regular bin edges
 
-    oq = dstore['oqparam']
     bins = {k: bin_edges(v, sid) for k, v in dstore['disagg-bins'].items()}
     matrix = dstore['disagg-%s/%s' % (spec, label)][sid]
     # matrix has shape (..., M, P, Z)
+    matrix = matrix[..., imti, poei, :]
     if traditional:
-        poe_agg = dstore['poe4'][sid]
+        poe_agg = dstore['poe4'][sid, imti, poei]  # shape (N, M, P, Z)
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
@@ -1145,11 +1155,21 @@ def extract_disagg(dstore, what):
     attrs = qdict.copy()
     for k, ax in zip(disag_tup, axis):
         attrs[k.lower()] = ax
-    attrs['imt'] = list(oq.imtls)
-    attrs['poe'] = list(oq.poes) or [numpy.nan]
+    attrs['imt'] = qdict['imt'] if 'imt' in qdict else imts
+    if len(oq.poes) == 0:
+        attrs['poe'] = [numpy.nan]
+    elif 'poe_id' in qdict:
+        attrs['poe'] = [oq.poes[p] for p in poei]
+    else:
+        attrs['poe'] = oq.poes
     attrs['traditional'] = traditional
     attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
     rlzs = dstore['best_rlzs'][sid]
+    if spec == 'rlzs':
+        weight = dstore['full_lt'].init().rlzs['weight']
+        weights = weight[rlzs]
+        weights /= weights.sum()  # normalize to 1
+        attrs['weights'] = weights.tolist()
     extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
     return ArrayWrapper(matrix, attrs, extra)
 
