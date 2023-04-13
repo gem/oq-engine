@@ -1208,17 +1208,13 @@ Here is an example::
 
 The dictionary here contains the following keys::
 
- >> dic["Mag"] # lenght 4
+ >> dic["mag"] # lenght 4
  array([5., 6., 7., 8.])
- >> dic["Dist"] # lenght 21
+ >> dic["dist"] # lenght 21
  array([  0.,  10.,  20.,  30.,  40.,  50.,  60.,  70.,  80.,  90., 100.,
         110., 120., 130., 140., 150., 160., 170., 180., 190., 200.])
  >> dic["array"].shape
- (60, 4)
-
-Notice that the first dimension of the array has size 60 = 20 x 3 i.e. is
-the product of the number of magnitude bins times the number of distance
-bins (with number of bins = number of edges - 1).
+ (4, 21, 1, 1)
 
 Extracting ruptures
 -------------------
