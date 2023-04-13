@@ -62,5 +62,3 @@ class TestZhao2016PErg(unittest.TestCase):
 
         path = HERE.parent / 'data' / 'ZHAO16PERG' / 'test_volc.geojson'
         gmm = ZhaoEtAl2016SSlabPErg(path)
-        breakpoint()
-
