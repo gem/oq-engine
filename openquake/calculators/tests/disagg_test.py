@@ -192,6 +192,15 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
+        # extract API
+        aw = extract(self.calc.datastore, 'disagg?kind=Mag&site_id=0&'
+                     'imt=SA(0.1)&poe_id=0&spec=rlzs')
+        self.assertEqual(aw.shape, (8, 1, 1))
+
+        aw = extract(self.calc.datastore, 'disagg?kind=Mag_Dist_Eps&site_id=0&'
+                     'imt=SA(0.1)&poe_id=0&spec=rlzs')
+        self.assertEqual(aw.shape, (8, 60, 12, 1, 1))
+
     def test_case_10(self):
         # test single magnitude
         self.run_calc(case_10.__file__, 'job.ini')
