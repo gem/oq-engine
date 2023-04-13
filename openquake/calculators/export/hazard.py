@@ -562,10 +562,9 @@ def export_disagg_csv(ekey, dstore):
     rlzs = dstore['full_lt'].get_realizations()
     best_rlzs = dstore['best_rlzs'][:]
     N, M, P, Z = hmap4.shape
-    imts = list(oq.imtls)
     fnames = []
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
-    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&spec=%s'
+    ex = 'disagg?kind=%s&site_id=%s&spec=%s'
     trad = '-traditional' if 'traditional' in name else ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     metadata = dstore.metadata
@@ -575,6 +574,7 @@ def export_disagg_csv(ekey, dstore):
             poes_disagg[p] = str(oq.poes_disagg[p])
         except IndexError:
             pass
+    writer = writers.CsvWriter(fmt='%.5E')
     for s in range(N):
         lon, lat = sitecol.lons[s], sitecol.lats[s]
         md = dict(investigation_time=oq.investigation_time,
@@ -585,10 +585,7 @@ def export_disagg_csv(ekey, dstore):
                   eps_bin_edges=bins['Eps'].tolist(),
                   tectonic_region_types=decode(bins['TRT'].tolist()),
                   lon=lon, lat=lat)
-        if name == 'disagg-stats':
-            rlzcols = list(oq.hazard_stats())
-        else:
-            rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
+        if spec.startswith('rlzs'):
             weights = numpy.array([rlzs[r].weight['weight']
                                    for r in best_rlzs[s]])
             weights /= weights.sum()  # normalize to 1
@@ -596,30 +593,24 @@ def export_disagg_csv(ekey, dstore):
             md['rlz_ids'] = best_rlzs[s].tolist()
         metadata.update(md)
         for k in oq.disagg_outputs:
-            splits = k.lower().split('_')
-            header = ['imt', 'poe'] + splits + rlzcols
-            values = []
-            nonzeros = []
-            for m, p in iproduct(M, P):
-                imt = imts[m]
-                aw = extract(dstore, ex % (k, imt, s, p, spec))
-                # for instance for Mag_Dist [(mag, dist, poe0, poe1), ...]
-                poes = aw[:, len(splits):]
-                if 'trt' in header:
-                    nonzeros.append(True)
-                else:
-                    nonzeros.append(poes.any())  # nonzero poes
-                for row in aw:
-                    values.append([imt, poes_disagg[p]] + list(row))
-            if any(nonzeros):
+            aw = extract(dstore, ex % (k, s, spec))
+            if aw.array.sum() == 0:
+                continue
+            df = aw.to_dframe(skip_zeros=False).sort_values(['imt', 'poe'])
+            # move the columns imt and poe at the beginning for backward compat
+            cols = [col for col in df.columns if col not in ('imt', 'poe')]
+            cols = ['imt', 'poe'] + cols
+            df = pandas.DataFrame({col: df[col] for col in cols})
+            if len(df):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
                 stat = '-mean' if name == 'disagg-stats' else ''
                 fname = dstore.export_path('%s%s%s-%d.csv' % (k, stat, trad, s))
-                writers.write_csv(fname, values, header=header,
-                                  comment=com, fmt='%.5E')
+                writer.save(df, fname, comment=com)
                 fnames.append(fname)
+            else:
+                print('Empty file %s not saved', fname)
     return sorted(fnames)
 
 
