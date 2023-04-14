@@ -556,14 +556,6 @@ def export_mean_disagg_bysrc(ekey, dstore):
     return [fname]
 
 
-def _add_iml2(df, iml2, imts, poes):
-    imt2idx = {imt: m for m, imt in enumerate(imts)}
-    poe2idx = {poe: p for p, poe in enumerate(poes)}
-    imt_idx = [imt2idx[imt] for imt in df.imt]
-    poe_idx = [poe2idx[poe] for poe in df.poe]
-    df['iml'] = iml2[imt_idx, poe_idx]
-
-
 @export.add(('disagg-rlzs', 'csv'),
             ('disagg-stats', 'csv'),
             ('disagg-rlzs-traditional', 'csv'),
@@ -614,14 +606,13 @@ def export_disagg_csv(ekey, dstore):
             aw = extract(dstore, ex % (k, s, spec))
             if aw.array.sum() == 0:
                 continue
-            df = aw.to_dframe(skip_zeros=False).sort_values(['imt', 'poe'])
+            df = aw.to_dframe(skip_zeros=False)
             # move the columns imt and poe at the beginning for backward compat
             cols = [col for col in df.columns if col not in ('imt', 'poe')]
             if oq.iml_disagg:
                 cols = ['imt', 'iml', 'poe'] + cols
                 out = []
                 for imt, [iml] in oq.iml_disagg.items():
-                    assert not numpy.isnan(iml).any()
                     dfr = df[df.imt == imt]
                     dfr['iml'] = iml
                     out.append(dfr)
@@ -632,8 +623,13 @@ def export_disagg_csv(ekey, dstore):
             else:
                 # add the IMLs corresponding to the mean hazard maps
                 cols = ['imt', 'iml', 'poe'] + cols
-                _add_iml2(df, iml2, oq.imtls, oq.poes)
-            df = pandas.DataFrame({col: df[col] for col in cols})
+                imt2idx = {imt: m for m, imt in enumerate(oq.imtls)}
+                poe2idx = {poe: p for p, poe in enumerate(oq.poes)}
+                imt_idx = [imt2idx[imt] for imt in df.imt]
+                poe_idx = [poe2idx[poe] for poe in df.poe]
+                df['iml'] = iml2[imt_idx, poe_idx]
+
+            df = pandas.DataFrame({col: df[col] for col in cols}).sort_values(['imt', 'poe'])
             if len(df):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
