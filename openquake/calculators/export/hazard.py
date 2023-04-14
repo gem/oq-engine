@@ -511,27 +511,32 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
+def _add_iml(df, imtls):
+    # add field iml and remove field lvl in a dataframe with fields imt, lvl
+    out = []
+    for imt in imtls:
+        imls = imtls[imt]
+        dframe = df[df.imt == imt]
+        dframe['iml'] = imls[dframe.lvl]
+        del dframe['lvl']
+        out.append(dframe)
+    return pandas.concat(out)
+
+
 @export.add(('rates_by_src', 'csv'))
 def export_rates_by_src(ekey, dstore):
     oq = dstore['oqparam']
-    if len(oq.poes) == 0:
-        raise ValueError('rates_by_src cannot be exported, poes are missing')
     sitecol = dstore['sitecol']
+    rates_df = _add_iml(dstore['rates_by_src'].to_dframe(), oq.imtls)
     fnames = []
-    header=['imt', 'poe_id', 'src_id', 'value']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    header = ['src_id', 'imt', 'iml', 'value']
     for site in sitecol:
-        sid = site.id
-        com = dict(lon=round(site.location.x, 3), lat=round(site.location.y, 3),
-                   poes=list(oq.poes))
-        out = []
-        for imt in oq.imtls:
-            for poe_id, poe in enumerate(oq.poes):
-                aw = extract(dstore, 'rates_by_src?site_id=%d&imt=%s&poe=%s'%
-                             (sid, imt, poe))
-                for src_id, val in aw.array:
-                    out.append((imt, poe_id, src_id, val))
-        fname = dstore.export_path('rates_by_src-%d.csv' % sid)
-        writers.write_csv(fname, out, header=header, comment=com, fmt='%.5E')
+        df = rates_df[rates_df.site_id == site.id]
+        del df['site_id']
+        com = dict(lon=round(site.location.x, 5), lat=round(site.location.y, 5))
+        fname = dstore.export_path('rates_by_src-%d.csv' % site.id)
+        writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
     return fnames
 
