@@ -1,6 +1,6 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-gite9f4f35a3c', start_date='2023-02-14T13:59:33', checksum=359402150, investigation_time=50.0, mag_bin_edges=[5.0, 6.0, 7.0, 8.0], dist_bin_edges=[0.0, 25.0, 50.0, 75.0, 100.0], lon_bin_edges=[9.512148752197332, 10.687851247802657], lat_bin_edges=[39.65034, 40.54966], eps_bin_edges=[-3.0, 3.0], tectonic_region_types=['Active Shallow Crust'], rlz_ids=[0], weights=[1.0], lon=10.099999999999994, lat=40.1"
+#,,,,"generated_by='OpenQuake engine 3.17.0-git4ad6096bca', start_date='2023-04-04T08:18:53', checksum=1869487337, investigation_time=50.0, mag_bin_edges=[5.0, 6.0, 7.0, 8.0], dist_bin_edges=[0.0, 25.0, 50.0, 75.0, 100.0], lon_bin_edges=[8.92429750439467, 11.27570249560532], lat_bin_edges=[39.20068, 40.999320000000004], eps_bin_edges=[-3.0, 3.0], tectonic_region_types=['Active Shallow Crust'], lon=10.099999999999994, lat=40.1, weights=[1.0], rlz_ids=[0]"
 imt,poe,lon,lat,rlz0
-PGA,0.02,1.01000E+01,4.01000E+01,2.01957E-02
-PGA,0.1,1.01000E+01,4.01000E+01,1.00568E-01
-SA(0.025),0.02,1.01000E+01,4.01000E+01,2.01575E-02
-SA(0.025),0.1,1.01000E+01,4.01000E+01,1.01345E-01
+PGA,2.00000E-02,1.01000E+01,4.01000E+01,2.01957E-02
+PGA,1.00000E-01,1.01000E+01,4.01000E+01,1.00568E-01
+SA(0.025),2.00000E-02,1.01000E+01,4.01000E+01,2.01575E-02
+SA(0.025),1.00000E-01,1.01000E+01,4.01000E+01,1.01345E-01

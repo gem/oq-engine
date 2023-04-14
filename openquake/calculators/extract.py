@@ -1107,64 +1107,71 @@ def get_ruptures_within(dstore, bbox):
 @extract.add('disagg')
 def extract_disagg(dstore, what):
     """
-    Extract a disaggregation output as a 2D array.
+    Extract a disaggregation output as an ArrayWrapper.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&spec=stats
+    disagg?kind=Mag_Dist&imt=%s&site_id=1&poe_id=%d&spec=stats
     """
     qdict = parse(what)
     spec = qdict['spec'][0]
     label = qdict['kind'][0]
-    imt = qdict['imt'][0]
-    poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
+    oq = dstore['oqparam']
+    imts = list(oq.imtls)
+    if 'imt' in qdict:
+        imti = [imts.index(imt) for imt in qdict['imt']]
+    else:
+        imti = slice(None)
+    if 'poe_id' in qdict:
+        poei = [int(x) for x in qdict['poe_id']]
+    else:
+        poei = slice(None)
     if 'traditional' in spec:
         spec = spec[:4]  # rlzs or stats
         traditional = True
     else:
         traditional = False
 
-    def get(v, sid):
-        if len(v.shape) == 2:
-            return v[sid]
-        return v[:]
-    oq = dstore['oqparam']
-    imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
-    bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    m = imt2m[imt]
-    matrix = dstore['disagg-%s/%s' % (spec, label)][sid, ..., m, poe_id, :]
-    Z = matrix.shape[-1]
-    poe_agg = dstore['poe4'][sid, m, poe_id]
+    def bin_edges(dset, sid):
+        if len(dset.shape) == 2:  # (lon, lat) bins
+            return dset[sid]
+        return dset[:]  # regular bin edges
+
+    bins = {k: bin_edges(v, sid) for k, v in dstore['disagg-bins'].items()}
+    matrix = dstore['disagg-%s/%s' % (spec, label)][sid]
+    # matrix has shape (..., M, P, Z)
+    matrix = matrix[..., imti, poei, :]
     if traditional:
+        poe_agg = dstore['poe4'][sid, imti, poei]  # shape (N, M, P, Z)
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
-    # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
 
     # compute axis mid points, except for string axis (i.e. TRT)
     axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype.char != 'S'
             else ax for ax in axis]
-    if len(axis) == 1:  # i.e. Mag or Dist
-        values = numpy.array([axis[0]] + list(matrix.T))  # i.e. shape (2, 3)
-    else:  # i.e. Mag_Dist
-        # axis = [[5.5, 6.5, 7.5], [12.5, 37.5, 62.5, 87.5]]
-        grids = numpy.meshgrid(*axis, indexing='ij')
-        # with the 2 axis above there are 2 grids of shape (3, 4) each
-        values = [g.flatten() for g in grids] + [matrix[..., z].flatten()
-                                                 for z in range(Z)]
-        # list of arrays of lenghts [12, 12, 12]
-        values = numpy.array(values)  # shape (3, 12)
     attrs = qdict.copy()
-    for k in disag_tup:
-        attrs[k] = bins[k]
-    attrs['kind'] = disag_tup
-    attrs['rlzs'] = dstore['best_rlzs'][sid]
-    weights = numpy.array([dstore['weights'][r] for r in attrs['rlzs']])
-    weights /= weights.sum()
-    attrs['weights'] = weights
-    return ArrayWrapper(values.T, attrs)
+    for k, ax in zip(disag_tup, axis):
+        attrs[k.lower()] = ax
+    attrs['imt'] = qdict['imt'] if 'imt' in qdict else imts
+    if len(oq.poes) == 0:
+        attrs['poe'] = [numpy.nan]
+    elif 'poe_id' in qdict:
+        attrs['poe'] = [oq.poes[p] for p in poei]
+    else:
+        attrs['poe'] = oq.poes
+    attrs['traditional'] = traditional
+    attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
+    rlzs = dstore['best_rlzs'][sid]
+    if spec == 'rlzs':
+        weight = dstore['full_lt'].init().rlzs['weight']
+        weights = weight[rlzs]
+        weights /= weights.sum()  # normalize to 1
+        attrs['weights'] = weights.tolist()
+    extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
+    return ArrayWrapper(matrix, attrs, extra)
 
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):

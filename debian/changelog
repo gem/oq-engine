@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Fixed a bug in the source writer when writing NonParametricSources
+
   [Michele Simionato]
   * Changed the conditional spectrum storage and fixed the exporter to export
     all PoEs
