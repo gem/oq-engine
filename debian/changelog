@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Fixed a bug in the source writer when writing NonParametricSources
+
   [Michele Simionato]
   * Now we log only when the DB schema is really upgraded
   * Fixed KeyError in calculations using the EasternCan15Mid with PGA
