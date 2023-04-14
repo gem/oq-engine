@@ -234,7 +234,7 @@ def _warn_about_duplicates(cp):
     for curr_sect in sections:
         prev_sections.append(curr_sect)
         other_sects = [sect for sect in sections if sect not in prev_sections]
-        for key in dict(cp.items(curr_sect)):
+        for key, _ in cp.items(curr_sect):
             for other_sect in other_sects:
                 if key in dict(cp.items(other_sect)):
                     logging.warning(
