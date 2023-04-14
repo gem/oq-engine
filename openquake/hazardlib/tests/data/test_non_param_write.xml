@@ -26,10 +26,10 @@ xmlns:gml="http://www.opengis.net/gml"
                     </rake>
                     <hypocenter depth="10.0" lat="0.0" lon="0.0"/>
                     <planarSurface>
-                        <topLeft depth="0.0" lat="-0.07497192854404107" lon="0.1731411912736907"/>
-                        <topRight depth="0.0" lat="-0.07497192854404107" lon="-0.1731411912736907"/>
-                        <bottomLeft depth="9.626202790436865" lat="0.0749719285440411" lon="0.1731411912736907"/>
-                        <bottomRight depth="9.626202790436865" lat="0.0749719285440411" lon="-0.1731411912736907"/>
+                        <topLeft depth="0.0" lat="-0.07497" lon="0.17314"/>
+                        <topRight depth="0.0" lat="-0.07497" lon="-0.17314"/>
+                        <bottomLeft depth="9.6262" lat="0.07497" lon="0.17314"/>
+                        <bottomRight depth="9.6262" lat="0.07497" lon="-0.17314"/>
                     </planarSurface>
                 </singlePlaneRupture>
             </nonParametricSeismicSource>

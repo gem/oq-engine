@@ -74,7 +74,7 @@ TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
 conv = SourceConverter(50., 1., 20, 0.1, 10.)
 
 HERE = pathlib.Path(__file__)
-OVERWRITE = 0
+OVERWRITE = False
 
 
 class SourceWriterTestCase(unittest.TestCase):
@@ -191,7 +191,7 @@ class NonParametricSourceTest(unittest.TestCase):
         grp = SourceGroup(sources=[src], trt=trt)
 
         # Write file
-        _, computed = tempfile.mkstemp(suffix='.xml')
+        computed = general.gettemp(suffix='.xml')
         write_source_model(computed, [grp], name='test')
 
         # Reference

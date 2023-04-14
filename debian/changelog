@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Fixed a bug in the source writer when writing NonParametricSources
+
   [Michele Simionato]
   * Added output `rates_by_src`
   * Fixed method '/v1/ini_defaults' returning NaNs for the site parameters
