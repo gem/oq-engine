@@ -388,6 +388,9 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     :param string dir: directory where the file should be created
     :param string prefix: file name prefix
     :param string suffix: file name suffix
+    :param bool remove:
+        True by default, meaning the file will be automatically removed
+        at the exit of the program
     :returns: a string with the path to the temporary file
     """
     if dir is not None:
