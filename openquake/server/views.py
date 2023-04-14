@@ -608,6 +608,7 @@ def aelo_run(request):
     try:
         params = get_params_from(
             dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+        logging.root.handlers = []  # avoid breaking the logs
     except ValueError as exc:
         response_data = {'status': 'failed', 'error_msg': str(exc)}
         return HttpResponse(
