@@ -444,10 +444,12 @@ def get_source_attributes(source):
     """
     attrs = {"id": source.source_id, "name": source.name}
     if isinstance(source, NonParametricSeismicSource):
-        if source.data[0][0].weight is not None:
-            weights = []
-            for data in source.data:
-                weights.append(data[0].weight)
+        rup = source.data[0][0]  # from [(rup, pmf), ...] pairs
+        if not hasattr(rup, 'weight'):
+            # happens in test_non_parametric_src
+            return attrs
+        elif rup.weight is not None:
+            weights = [rup.weight for rup, pmf in source.data]
             attrs['rup_weights'] = numpy.array(weights)
     elif isinstance(source, PointSource):
         tom = source.temporal_occurrence_model

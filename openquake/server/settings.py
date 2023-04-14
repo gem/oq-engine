@@ -291,5 +291,19 @@ if LOCKDOWN:
 
     LOGIN_REDIRECT_URL = '%s/engine/' % WEBUI_PATHPREFIX
     LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
-    LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % WEBUI_PATHPREFIX, )
+    LOGIN_EXEMPT_URLS = (
+        '%s/accounts/ajax_login/' % WEBUI_PATHPREFIX,
+        'reset_password', 'reset/',
+    )
     LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
+
+    AUTH_PASSWORD_VALIDATORS = [
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'UserAttributeSimilarityValidator', },
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'MinimumLengthValidator', },
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'CommonPasswordValidator', },
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'NumericPasswordValidator', },
+    ]

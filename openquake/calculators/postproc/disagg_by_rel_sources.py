@@ -44,7 +44,7 @@ def middle(arr):
     """
     :returns: middle values of an array (length N -> N-1)
     """
-    return [(m1 + m2) / 2 for m1, m2 in zip(arr, arr[1:])]
+    return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
 def main(dstore, csm):

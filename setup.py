@@ -73,10 +73,6 @@ install_requires = [
 ]
 
 extras_require = {
-    'cluster': ["python-pam",
-                "django-pam",
-                "gunicorn >20.0",
-                "setproctitle"],
     'osgeo':  [
         'GDAL >= 2.4',
     ],
