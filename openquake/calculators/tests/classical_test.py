@@ -261,6 +261,12 @@ class ClassicalTestCase(CalculatorTestCase):
                                "hazard_uhs-mean.csv"],
                               case_38.__file__)
 
+        # check override_vs30
+        sitecol = self.calc.datastore['sitecol']
+        aac(sitecol.vs30, [800, 800])
+        aac(sitecol.z1pt0, [31.070149, 31.070149], atol=1e-6)
+        aac(sitecol.z2pt5, [0.572241, 0.572241], atol=1e-6)
+
     def test_case_40(self):
         # NGA East
         self.assert_curves_ok([
