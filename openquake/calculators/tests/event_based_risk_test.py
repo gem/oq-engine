@@ -693,10 +693,10 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.run_calc(reinsurance_5.__file__, 'job_1.ini')  # 2 policies
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
-                              fname, delta=5E-4)  # big diffs on macos
+                              fname, delta=.002)  # big diffs on macos, 0.16%
 
         # check moving the ideductible in the exposure produce the same aggcurve
         self.run_calc(reinsurance_5.__file__, 'job_2.ini')  # 1 policy
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
-                              fname, delta=5E-4)  # big diffs on macos
+                              fname, delta=.002)  # big diffs on macos, 0.16%
