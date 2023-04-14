@@ -36,7 +36,7 @@ import requests
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
-    random_filter, countby, group_array, get_duplicates, gettemp, shortlist)
+    random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
@@ -74,7 +74,7 @@ class Global:
     exposure = None
     # set as side effect when the user reads the site mesh; this hack is
     # necessary, otherwise we would have to parse the exposure twice
-    
+
     gsim_lt_cache = {}  # fname, trt1, ..., trtN -> GsimLogicTree instance
     # populated when reading the gsim_logic_tree file; otherwise we would
     # have to parse the file multiple times
@@ -932,7 +932,7 @@ def get_station_data(oqparam):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns sd:
-        a Pandas dataframe with station ids and coordinates as the index and 
+        a Pandas dataframe with station ids and coordinates as the index and
         IMT names as the first level of column headers and
         mean, std as the second level of column headers
     :returns imts:
@@ -947,7 +947,8 @@ def get_station_data(oqparam):
         imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace(
             "_VALUE", "")
         imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
-        im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
+        im_cols = [imt + '_' + stat
+                   for imt in imts for stat in ["mean", "std"]]
         station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
         cols = []
         for im in imts:
@@ -985,7 +986,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     if haz_sitecol.mesh != Global.exposure.mesh:
         # associate the assets to the hazard sites
         sitecol, assets_by, discarded = geo.utils.assoc(
-            Global.exposure.assets_by_site, haz_sitecol, haz_distance, 'filter')
+            Global.exposure.assets_by_site, haz_sitecol, haz_distance,
+            'filter')
         assets_by_site = [[] for _ in sitecol.complete.sids]
         num_assets = 0
         for sid, assets in zip(sitecol.sids, assets_by):
@@ -1244,7 +1246,7 @@ def get_reinsurance(oqparam, assetcol=None):
                           (fname, oqparam.aggregate_by))
     [(key, fname)] = oqparam.inputs['reinsurance'].items()
     p, t, f = reinsurance.parse(fname, assetcol.tagcol.policy_idx)
-    
+
     # check ideductible
     arr = assetcol.array
     for pol_no, deduc in zip(p.policy, p.deductible):
