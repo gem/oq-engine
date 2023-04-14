@@ -534,7 +534,9 @@ def export_rates_by_src(ekey, dstore):
     for site in sitecol:
         df = rates_df[rates_df.site_id == site.id]
         del df['site_id']
-        com = dict(lon=round(site.location.x, 5), lat=round(site.location.y, 5))
+        com = dstore.metadata.copy()
+        com['lon'] = round(site.location.x, 5)
+        com['lat'] = round(site.location.y, 5)
         fname = dstore.export_path('rates_by_src-%d.csv' % site.id)
         writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
