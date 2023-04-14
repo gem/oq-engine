@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Changed the disaggregation exporter to add a column with the IML
+    associated to the PoE for the mean disaggregation outputs
+
   [Marco Pagani, Michele Simionato]
   * Fixed a bug in the source writer when writing NonParametricSources
 
