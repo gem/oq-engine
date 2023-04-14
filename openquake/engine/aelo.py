@@ -47,7 +47,7 @@ def get_params_from(inputs):
     else:
         params['description'] += ' (%(lon)s, %(lat)s)' % inputs
     params['ps_grid_spacing'] = '0.'
-    params['pointsource_distance'] = '40.'
+    params['pointsource_distance'] = '100.'
     params['disagg_by_src'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
