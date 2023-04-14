@@ -84,23 +84,23 @@ def main(lon: valid.longitude,
         dic = dict(calculation_mode='custom', description='AELO')
         [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
                                       None, getpass.getuser(), None)
-    with jobctx:
-        if not config.directory.mosaic_dir:
-            sys.exit('mosaic_dir is not specified in openquake.cfg')
-        try:
-            jobctx.params.update(get_params_from(inputs))
-        except Exception as exc:
-            # This can happen for instance:
-            # - if no model covers the given coordinates.
-            # - if no ini file was found
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
-            raise exc
-        try:
-            engine.run_jobs([jobctx])
-        except Exception as exc:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
-        else:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs)
+
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    try:
+        jobctx.params.update(get_params_from(inputs))
+    except Exception as exc:
+        # This can happen for instance:
+        # - if no model covers the given coordinates.
+        # - if no ini file was found
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
+        raise exc
+    try:
+        engine.run_jobs([jobctx])
+    except Exception as exc:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
+    else:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs)
 
 
 if __name__ == '__main__':
