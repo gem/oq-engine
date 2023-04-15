@@ -358,6 +358,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         min_mag, max_mag = self.mfd.get_min_max_mag()
         return max(self.min_mag, min_mag), max_mag
 
+    # NB: overridden in NonParametricSeismicSource
     def get_one_rupture(self, ses_seed, rupture_mutex=False):
         """
         Yields one random rupture from a source. IMPORTANT: this method
@@ -365,9 +366,8 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         ruptures
         """
         # The Mutex case is admitted only for non-parametric ruptures
-        msg = 'Mutually exclusive ruptures are admitted only in case of'
-        msg += ' non-parametric sources'
-        assert (not rupture_mutex), msg
+        assert not rupture_mutex, ('Mutually exclusive ruptures are admitted '
+                                   'only in case of non-parametric sources')
         # Set random seed and get the number of ruptures
         num_ruptures = self.count_ruptures()
         seed = self.serial(ses_seed)
