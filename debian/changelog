@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Changed the disaggregation exporter to add a column with the IML
     associated to the PoE for the mean disaggregation outputs
+  * Internal: added a parameter `override_vs30` in the job.ini
 
   [Marco Pagani, Michele Simionato]
   * Fixed a bug in the source writer when writing NonParametricSources
