@@ -416,7 +416,7 @@ def sample(weighted_objects, probabilities, sampling_method):
     Take random samples of a sequence of weighted objects
 
     :param weighted_objects:
-        A finite sequence of N objects with a `.weight` attribute.
+        A finite sequence of N objects with a ``.weight`` attribute.
         The weights must sum up to 1.
     :param probabilities:
         An array of S random numbers in the range 0..1
