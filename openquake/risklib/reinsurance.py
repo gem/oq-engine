@@ -229,7 +229,7 @@ def parse(fname, policy_idx):
     df.columns = df.columns.str.strip()
     all_policies = df.policy.to_numpy()  # ex ['A', 'B']
     exp_policies = np.array(list(policy_idx))  # ex ['?', 'B', 'A']
-    if len(all_policies) !=  len(exp_policies[1:]):
+    if len(all_policies) != len(exp_policies[1:]):
         # reduce the policy dataframe to the policies actually in the exposure
         df = df[np.isin(all_policies, exp_policies[1:])]
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
