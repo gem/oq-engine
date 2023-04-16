@@ -147,6 +147,21 @@ maximum_distance=[(200, 8)]
         self.assertIn('Invalid magnitude 200: could not convert to new',
                       str(ctx.exception))
 
+    def test_duplicated_parameter(self):
+        job_config = general.gettemp("""
+[general]
+aggregate_by = policy
+[foo]
+bar = baz
+aggregate_by = taxonomy, policy
+""")
+        with self.assertLogs() as captured:
+            readinput.get_params(job_config, {})
+        warning = ('Parameter "aggregate_by" is defined both in sections'
+                   ' "general" and "foo"')
+        self.assertEqual(captured.records[0].levelname, 'WARNING')
+        self.assertEqual(captured.records[0].getMessage(), warning)
+
 
 def sitemodel():
     return [BytesIO(b'''\
