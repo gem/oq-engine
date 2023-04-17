@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed a bug in scenario calculations causing a mysterious IndexError in the
+    line rctx.clon = c.lons[rctx.sids]
+
   [Marco Pagani, Michele Simionato]
   * Fixed a bug in the source writer when writing NonParametricSources
 
