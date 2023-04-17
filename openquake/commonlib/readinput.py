@@ -233,7 +233,7 @@ def _warn_about_duplicates(cp):
     params_sets = [
         set(cp.options(section)) for section in cp.sections()]
     for pair in itertools.combinations(params_sets, 2):
-        params_intersection = set.intersection(*pair)
+        params_intersection = sorted(set.intersection(*pair))
         if params_intersection:
             logging.warning(
                 f'Parameter(s) {params_intersection} is(are) defined in'

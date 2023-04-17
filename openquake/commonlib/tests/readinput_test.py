@@ -162,9 +162,9 @@ aggregate_by = taxonomy, policy
         with self.assertLogs() as captured:
             readinput.get_params(job_config, {})
         warning_general_bar = (
-            "Parameter(s) {'aggregate_by', 'foo'} is(are) defined in"
+            "Parameter(s) ['aggregate_by', 'foo'] is(are) defined in"
             " multiple sections")
-        warning_foo_bar = ("Parameter(s) {'bar'} is(are) defined in"
+        warning_foo_bar = ("Parameter(s) ['bar'] is(are) defined in"
                            " multiple sections")
         self.assertEqual(captured.records[0].levelname, 'WARNING')
         self.assertEqual(
