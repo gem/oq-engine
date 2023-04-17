@@ -22,10 +22,7 @@
 """
 import sys
 import time
-import operator
-import itertools
 import numpy
-import pandas
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
