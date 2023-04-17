@@ -900,7 +900,14 @@ class HazardCalculator(BaseCalculator):
                 sm = readinput.get_site_model(oq)
                 self.sitecol.assoc(sm, assoc_dist)
                 if oq.override_vs30:
+                    # override vs30, z1pt0 and z2pt5
+                    names = self.sitecol.array.dtype.names
                     self.sitecol.array['vs30'] = oq.override_vs30
+                    if 'z1pt0' in names:
+                        self.sitecol.calculate_z1pt0()
+                    if 'z2pt5' in names:
+                        self.sitecol.calculate_z2pt5()
+
                 self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any

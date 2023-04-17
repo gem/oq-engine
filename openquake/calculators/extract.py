@@ -1110,7 +1110,7 @@ def extract_disagg(dstore, what):
     Extract a disaggregation output as an ArrayWrapper.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=%s&site_id=1&poe_id=%d&spec=stats
+    disagg?kind=Mag_Dist&imt=PGA&site_id=1&poe_id=0&spec=stats
     """
     qdict = parse(what)
     spec = qdict['spec'][0]

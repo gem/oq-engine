@@ -595,7 +595,7 @@ long effective investigation time. After running the calculation, inside
 the datastore, in the ``ruptures`` dataset you will find the two
 ruptures, their occurrence rates and their integer number of
 occurrences (``n_occ``). If the effective investigation time is large
-enough the relation
+enough then the relation
 
 ``n_occ ~ occurrence_rate * eff_investigation_time``
 

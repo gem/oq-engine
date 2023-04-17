@@ -780,11 +780,12 @@ class PlanarSurface(BaseSurface):
         bot_right = point_at(mid_bot[0], mid_bot[1], strike, length/2)
         bot_left = point_at(mid_bot[0], mid_bot[1], strike + 180, length / 2)
 
-        # compute corner points in 3D
-        pbl = Point(bot_left[0], bot_left[1], depth + height / 2)
-        pbr = Point(bot_right[0], bot_right[1], depth + height / 2)
-        ptl = Point(top_left[0], top_left[1], depth - height / 2)
-        ptr = Point(top_right[0], top_right[1], depth - height / 2)
+        # compute corner points in 3D; rounded to 5 digits to avoid having
+        # slightly different surfaces between macos and linux
+        pbl = Point(bot_left[0], bot_left[1], depth + height / 2).round()
+        pbr = Point(bot_right[0], bot_right[1], depth + height / 2).round()
+        ptl = Point(top_left[0], top_left[1], depth - height / 2).round()
+        ptr = Point(top_right[0], top_right[1], depth - height / 2).round()
 
         return cls(strike, dip, ptl, ptr, pbr, pbl)
 

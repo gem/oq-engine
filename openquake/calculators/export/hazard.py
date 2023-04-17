@@ -511,27 +511,34 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
+def _add_iml(df, imtls):
+    # add field iml and remove field lvl in a dataframe with fields imt, lvl
+    out = []
+    for imt in imtls:
+        imls = imtls[imt]
+        dframe = df[df.imt == imt]
+        dframe['iml'] = imls[dframe.lvl]
+        del dframe['lvl']
+        out.append(dframe)
+    return pandas.concat(out)
+
+
 @export.add(('rates_by_src', 'csv'))
 def export_rates_by_src(ekey, dstore):
     oq = dstore['oqparam']
-    if len(oq.poes) == 0:
-        raise ValueError('rates_by_src cannot be exported, poes are missing')
     sitecol = dstore['sitecol']
+    rates_df = _add_iml(dstore['rates_by_src'].to_dframe(), oq.imtls)
     fnames = []
-    header=['imt', 'poe_id', 'src_id', 'value']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    header = ['src_id', 'imt', 'iml', 'value']
     for site in sitecol:
-        sid = site.id
-        com = dict(lon=round(site.location.x, 3), lat=round(site.location.y, 3),
-                   poes=list(oq.poes))
-        out = []
-        for imt in oq.imtls:
-            for poe_id, poe in enumerate(oq.poes):
-                aw = extract(dstore, 'rates_by_src?site_id=%d&imt=%s&poe=%s'%
-                             (sid, imt, poe))
-                for src_id, val in aw.array:
-                    out.append((imt, poe_id, src_id, val))
-        fname = dstore.export_path('rates_by_src-%d.csv' % sid)
-        writers.write_csv(fname, out, header=header, comment=com, fmt='%.5E')
+        df = rates_df[rates_df.site_id == site.id]
+        del df['site_id']
+        com = dstore.metadata.copy()
+        com['lon'] = round(site.location.x, 5)
+        com['lat'] = round(site.location.y, 5)
+        fname = dstore.export_path('rates_by_src-%d.csv' % site.id)
+        writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
     return fnames
 
@@ -558,10 +565,10 @@ def export_disagg_csv(ekey, dstore):
     spec = name[7:]  # rlzs, stats, rlzs-traditional, stats-traditional
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    hmap4 = dstore['hmap4']
     rlzs = dstore['full_lt'].get_realizations()
     best_rlzs = dstore['best_rlzs'][:]
-    N, M, P, Z = hmap4.shape
+    N = len(best_rlzs)
+    P = len(oq.poes) or 1
     fnames = []
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
     ex = 'disagg?kind=%s&site_id=%s&spec=%s'
@@ -585,22 +592,45 @@ def export_disagg_csv(ekey, dstore):
                   eps_bin_edges=bins['Eps'].tolist(),
                   tectonic_region_types=decode(bins['TRT'].tolist()),
                   lon=lon, lat=lat)
-        if spec.startswith('rlzs'):
+        if spec.startswith('rlzs') or oq.iml_disagg:
             weights = numpy.array([rlzs[r].weight['weight']
                                    for r in best_rlzs[s]])
             weights /= weights.sum()  # normalize to 1
             md['weights'] = weights.tolist()
             md['rlz_ids'] = best_rlzs[s].tolist()
+            iml2 = None
+        else:  # for mean disaggregation
+            iml2 = dstore['hmaps-stats'][s, 0]  # shape (M, P)
         metadata.update(md)
         for k in oq.disagg_outputs:
             aw = extract(dstore, ex % (k, s, spec))
             if aw.array.sum() == 0:
                 continue
-            df = aw.to_dframe(skip_zeros=False).sort_values(['imt', 'poe'])
+            df = aw.to_dframe(skip_zeros=False)
             # move the columns imt and poe at the beginning for backward compat
             cols = [col for col in df.columns if col not in ('imt', 'poe')]
-            cols = ['imt', 'poe'] + cols
-            df = pandas.DataFrame({col: df[col] for col in cols})
+            if oq.iml_disagg:
+                cols = ['imt', 'iml', 'poe'] + cols
+                out = []
+                for imt, [iml] in oq.iml_disagg.items():
+                    dfr = df[df.imt == imt]
+                    dfr['iml'] = iml
+                    out.append(dfr)
+                df = pandas.concat(out)
+            elif iml2 is None or len(oq.poes) == 0:
+                # rlzs, don't add the IMLs
+                cols = ['imt', 'poe'] + cols
+            else:
+                # add the IMLs corresponding to the mean hazard maps
+                cols = ['imt', 'iml', 'poe'] + cols
+                imt2idx = {imt: m for m, imt in enumerate(oq.imtls)}
+                poe2idx = {poe: p for p, poe in enumerate(oq.poes)}
+                imt_idx = [imt2idx[imt] for imt in df.imt]
+                poe_idx = [poe2idx[poe] for poe in df.poe]
+                df['iml'] = iml2[imt_idx, poe_idx]
+
+            df = pandas.DataFrame(
+                {col: df[col] for col in cols}).sort_values(['imt', 'poe'])
             if len(df):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}

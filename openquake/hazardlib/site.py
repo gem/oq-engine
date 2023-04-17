@@ -37,6 +37,36 @@ param = dict(
     backarc='reference_backarc')
 
 
+# TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
+# are inside some GSIM implementations, we should avoid duplication
+def calculate_z1pt0(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 1.0 km/s velocity horizon (in m)
+    Ref: Chiou & Youngs (2014) California model
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30m
+    '''
+    c1 = 571 ** 4.
+    c2 = 1360.0 ** 4.
+    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
+
+
+def calculate_z2pt5(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 2.5 km/s velocity horizon (in km)
+    Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
+    'NGA-West2 ground motion model for the average horizontal components of
+    PGA, PGV, and 5pct damped linear acceleration response spectra.'
+    Earthquake Spectra, 30(3), pp.1087–1114.
+
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
+    '''
+    c1 = 7.089
+    c2 = -1.144
+    return numpy.exp(c1 + numpy.log(vs30) * c2)
+
+
 class Site(object):
     """
     Site object represents a geographical location defined by its position
@@ -578,6 +608,18 @@ class SiteCollection(object):
         :returns: number of distinct geohashes in the site collection
         """
         return len(numpy.unique(self.geohash(length)))
+
+    def calculate_z1pt0(self):
+        """
+        Compute the column z1pt0 from the vs30
+        """
+        self.array['z1pt0'] = calculate_z1pt0(self.vs30)
+
+    def calculate_z2pt5(self):
+        """
+        Compute the column z2pt5 from the vs30 using a formula for NGA-West2
+        """
+        self.array['z2pt5'] = calculate_z2pt5(self.vs30)
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

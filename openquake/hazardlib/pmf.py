@@ -85,4 +85,4 @@ class PMF(object):
 
         :param bin: the bin to keep (default the first)
         """
-        self.data = [(1, self.data[0][1])]
+        self.data = [(1, self.data[bin][1])]

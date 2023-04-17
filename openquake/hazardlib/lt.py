@@ -411,15 +411,17 @@ def _cdf(weighted_objects):
     return numpy.cumsum(weights)
 
 
-def sample(weighted_objects, probabilities, sampling_method):
+def sample(weighted_objects, probabilities, sampling_method='early_weights'):
     """
     Take random samples of a sequence of weighted objects
 
     :param weighted_objects:
-        A finite sequence of N objects with a `.weight` attribute.
+        A finite sequence of N objects with a ``.weight`` attribute.
         The weights must sum up to 1.
     :param probabilities:
         An array of S random numbers in the range 0..1
+    :param sampling_method:
+        Default early_weights, i.e. use the CDF of the weights
     :return:
         A list of S objects extracted randomly
     """
