@@ -880,7 +880,7 @@ class ContextMaker(object):
                     r_sites = sites.filter(mask)
                     rctx = self.get_rctx(rup, r_sites, dist[mask])
                     rctx.src_id = src_id
-                    if src_id:  # not event based
+                    if src_id >=0 :  # not event based
                         rctx.rup_id = rup.rup_id
                         if self.fewsites:
                             c = rup.surface.get_closest_points(sites.complete)
@@ -921,7 +921,7 @@ class ContextMaker(object):
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
-            src_id = 0
+            src_id = -1
         rctxs = self.gen_contexts(rups_sites, src_id)
         blocks = block_splitter(rctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
