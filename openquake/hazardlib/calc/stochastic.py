@@ -256,12 +256,7 @@ def sample_cluster(sources, srcfilter, num_ses, param):
                 continue
             # Process the ruptures
             for i_rup, rup in enumerate(src.iter_ruptures()):
-
-                try:
-                    aa = rup.idx
-                except:
-                    breakpoint()
-
+                rup.idx  # NB: NOT WORKING!
                 src_id = src.source_id
                 # Create a vector with the probabilities of occurrence of 0, 1,
                 # ... n occurrences

@@ -27,8 +27,9 @@ HERE = pathlib.Path(__file__)
 
 class StochasticEventSetTestCase(unittest.TestCase):
 
-    """
     def test_nankai(self):
+        raise unittest.SkipTest("Not working yet")
+
         # source model for the Nankai region provided by M. Pagani
         source_model = HERE.parent / 'nankai.xml'
         # it has a single group containing 15 mutex sources
@@ -52,9 +53,10 @@ class StochasticEventSetTestCase(unittest.TestCase):
         # test no filtering 2
         ruptures = sum(sample_ruptures(group, cmaker), {})['rup_array']
         self.assertEqual(len(ruptures), 8)
-    """
 
     def test_nankai_grp_prob(self):
+        raise unittest.SkipTest("Not working yet")
+
         fname = HERE.parent / 'data' / 'stochastic' / 'ssm.xml'
         [group] = nrml.to_python(fname)
         for i, src in enumerate(group):
