@@ -157,8 +157,8 @@ aggregate_by = taxonomy, policy
 """)
         with self.assertLogs() as captured:
             readinput.get_params(job_config, {})
-        warning = ('Parameter "aggregate_by" is defined both in sections'
-                   ' "general" and "foo"')
+        warning = ("Parameter(s) {'aggregate_by'} is(are) defined in"
+                   " multiple sections")
         self.assertEqual(captured.records[0].levelname, 'WARNING')
         self.assertEqual(captured.records[0].getMessage(), warning)
 

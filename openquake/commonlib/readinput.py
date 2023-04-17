@@ -229,17 +229,13 @@ def _update(params, items, base_path):
 
 
 def _warn_about_duplicates(cp):
-    sections = cp.sections()
-    prev_sections = []
-    for curr_sect in sections:
-        prev_sections.append(curr_sect)
-        other_sects = [sect for sect in sections if sect not in prev_sections]
-        for key, _ in cp.items(curr_sect):
-            for other_sect in other_sects:
-                if key in dict(cp.items(other_sect)):
-                    logging.warning(
-                        f'Parameter "{key}" is defined both in sections'
-                        f' "{curr_sect}" and "{other_sect}"')
+    params_sets = [
+        set(cp.options(section)) for section in cp.sections()]
+    params_intersections = set.intersection(*params_sets)
+    if params_intersections:
+        logging.warning(
+            f'Parameter(s) {params_intersections} is(are) defined in'
+            f' multiple sections')
 
 
 # NB: this function must NOT log, since it is called when the logging
