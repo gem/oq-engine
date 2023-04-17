@@ -260,9 +260,9 @@ Response:
     `log_uri` can be called to get the log of the calculation, either while it is still running or after its completion.
     `traceback_uri` can be called in case of job failure (and only after it occurs), to retrieve a full traceback of the error.
 
-    As soon as the job is complete, a notification is automatically sent via email to the user
-    who launched it. In case of success, the message will contain a link to the web page showing
-    the outputs of the calculation; otherwise, it will describe the error that occurred.
+As soon as the job is complete, a notification is automatically sent via email to the user
+who launched it. In case of success, the message will contain a link to the web page showing
+the outputs of the calculation; otherwise, it will describe the error that occurred.
 
 #### POST /v1/calc/validate_zip
 
