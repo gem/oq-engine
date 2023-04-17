@@ -1129,6 +1129,7 @@ def insured_losses(losses, deductible, insurance_limit):
         deductible = numpy.full_like(losses, deductible)
     if not isinstance(insurance_limit, numpy.ndarray):
         insurance_limit = numpy.full_like(losses, insurance_limit)
+    assert (deductible < insurance_limit).all()
     small = losses < deductible
     big = losses > insurance_limit
     out = losses - deductible
