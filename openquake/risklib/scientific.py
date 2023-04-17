@@ -1129,9 +1129,6 @@ def insured_losses(losses, deductible, insurance_limit):
         deductible = numpy.full_like(losses, deductible)
     if not isinstance(insurance_limit, numpy.ndarray):
         insurance_limit = numpy.full_like(losses, insurance_limit)
-    assert (deductible < insurance_limit).all(), (
-        "Please check deductible values. Values larger than the"
-        " insurance limit were found.")
     small = losses < deductible
     big = losses > insurance_limit
     out = losses - deductible
@@ -1166,9 +1163,17 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
             values = numpy.sum(lst, axis=0)  # shape num_values
         else:
             values = j['value-' + lt].to_numpy()
+        aids = j.aid.to_numpy()
         losses = j.loss.to_numpy()
         deds = j.deductible.to_numpy() * values
         lims = j.insurance_limit.to_numpy() * values
+        ids_of_invalid_assets = aids[deds > lims]
+        if len(ids_of_invalid_assets):
+            invalid_assets = set(asset_df['id'][aid].decode('utf8')
+                                 for aid in ids_of_invalid_assets)
+            raise ValueError(
+                f"Please check deductible values. Values larger than the"
+                f" insurance limit were found for asset(s) {invalid_assets}.")
         new['loss'] = insured_losses(losses, deds, lims)
         losses_by_lt[lt + '_ins'] = new
 
