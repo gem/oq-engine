@@ -29,6 +29,7 @@ import tempfile
 import functools
 import configparser
 import collections
+import itertools
 
 import numpy
 import pandas
@@ -231,11 +232,12 @@ def _update(params, items, base_path):
 def _warn_about_duplicates(cp):
     params_sets = [
         set(cp.options(section)) for section in cp.sections()]
-    params_intersections = set.intersection(*params_sets)
-    if params_intersections:
-        logging.warning(
-            f'Parameter(s) {params_intersections} is(are) defined in'
-            f' multiple sections')
+    for pair in itertools.combinations(params_sets, 2):
+        params_intersection = set.intersection(*pair)
+        if params_intersection:
+            logging.warning(
+                f'Parameter(s) {params_intersection} is(are) defined in'
+                f' multiple sections')
 
 
 # NB: this function must NOT log, since it is called when the logging
