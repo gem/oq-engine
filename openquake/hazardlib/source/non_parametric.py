@@ -60,10 +60,13 @@ class NonParametricSeismicSource(BaseSeismicSource):
         super().__init__(source_id, name, tectonic_region_type)
         self.data = data
         if weights is not None:
-            assert len(weights) == len(data)
-            self.mutex_weights = weights
+            assert len(weights) == len(data), (len(weights), len(data))
             for (rup, pmf), weight in zip(data, weights):
                 rup.weight = weight
+
+    @property
+    def rup_weights(self):
+        return [rup.weight for rup, pmf in self.data]
 
     def iter_ruptures(self, **kwargs):
         """

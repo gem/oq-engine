@@ -172,6 +172,8 @@ def sample_cluster(src_group, num_ses, param):
     if src_group.src_interdep == 'mutex':
         raise NotImplementedError('src_interdep == mutex')
 
+    assert src_group.rup_interdep == 'mutex'
+    
     eb_ruptures = []
     seed = src_group[0].serial(param['ses_seed'])
     rng = numpy.random.default_rng(seed)
@@ -187,7 +189,7 @@ def sample_cluster(src_group, num_ses, param):
     # Note that using a single time interval corresponding to the product
     # of the investigation time and the number of realizations as we do
     # here is admitted only in the case of a time-independent model
-    tot_num_occ = numpy.random.poisson(rate * time_span * samples * num_ses)
+    tot_num_occ = rng.poisson(rate * time_span * samples * num_ses)
     # Now we process the sources included in the group. Possible cases:
     # * The group contains nonparametric sources with mutex ruptures, while
     #   the sources are indepedent
@@ -199,7 +201,7 @@ def sample_cluster(src_group, num_ses, param):
     t0 = time.time()
     for src in src_group:
         n = src.num_ruptures
-        weights.extend(src.mutex_weights)
+        weights.extend(src.rup_weights)
         src_seed = src.serial(param['ses_seed'])
         for i, rup in enumerate(src.iter_ruptures()):
             rup.source_id = src.source_id
