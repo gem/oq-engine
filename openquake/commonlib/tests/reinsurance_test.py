@@ -945,7 +945,7 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert deductible->positivefloat: "
-                      "float -200.0 < 0, line 11, line 11", str(ctx.exception))
+                      "float -200.0 < 0, line 11", str(ctx.exception))
 
     def test_deductible_is_empty(self):
         csvfname = general.gettemp(CSV_NP)
@@ -955,7 +955,7 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert deductible->positivefloat: "
-                      "Got an empty string, line 11, line 11",
+                      "Got an empty string, line 11",
                       str(ctx.exception))
 
     def test_deductible_is_not_float(self):
@@ -967,7 +967,7 @@ rur_Ant_1,10000,100,.1,.2''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert deductible->positivefloat: "
                       "could not convert string to float: 'XXX', "
-                      "line 11, line 11", str(ctx.exception))
+                      "line 11", str(ctx.exception))
 
     def test_limit_is_negative(self):
         csvfname = general.gettemp(CSV_NP)
@@ -977,7 +977,7 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert limit->positivefloat: "
-                      "float -5000.0 < 0, line 11, line 11",
+                      "float -5000.0 < 0, line 11",
                       str(ctx.exception))
 
     def test_limit_is_empty(self):
@@ -988,7 +988,7 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert limit->positivefloat: "
-                      "Got an empty string, line 11, line 11",
+                      "Got an empty string, line 11",
                       str(ctx.exception))
 
     def test_limit_is_not_float(self):
@@ -1000,7 +1000,7 @@ rur_Ant_1,10000,100,.1,.2''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert limit->positivefloat: "
                       "could not convert string to float: 'XXX', "
-                      "line 11, line 11", str(ctx.exception))
+                      "line 11", str(ctx.exception))
 
     def test_max_cession_event_is_negative(self):
         csvfname = general.gettemp(CSV_NP)
@@ -1010,7 +1010,7 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert max_cession_event->positivefloat: "
-                      "float -200.0 < 0, line 11, line 11", str(ctx.exception))
+                      "float -200.0 < 0, line 11", str(ctx.exception))
 
     def test_max_cession_event_is_not_float(self):
         csvfname = general.gettemp(CSV_NP)
@@ -1021,7 +1021,7 @@ rur_Ant_1,10000,100,.1,.2''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert max_cession_event->positivefloat: "
                       "could not convert string to float: 'XXX', "
-                      "line 11, line 11", str(ctx.exception))
+                      "line 11", str(ctx.exception))
 
     def test_missing_aggregate_by_policy(self):
         with open(self.jobfname, 'w') as job:

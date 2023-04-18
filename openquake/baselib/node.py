@@ -140,6 +140,7 @@ subnodes, since the generator will be exhausted. Notice that even
 accessing a subnode with the dot notation will avance the
 generator. Finally, nodes containing lazy nodes will not be pickleable.
 """
+import re
 import io
 import sys
 import copy
@@ -836,8 +837,10 @@ def context(fname, node):
         yield node
     except Exception:
         etype, exc, tb = sys.exc_info()
-        msg = 'node %s: %s, line %s of %s' % (
-            striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)
+        msg = 'node %s: %s, ' % (striptag(node.tag), exc)
+        if not re.search(" line [0-9]+$", str(exc)):
+            msg += 'line %s, ' % getattr(node, 'lineno', '?')
+        msg += 'of %s' % fname
         raise_(etype, msg, tb)
 
 
