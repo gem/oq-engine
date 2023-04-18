@@ -839,7 +839,7 @@ def context(fname, node):
         etype, exc, tb = sys.exc_info()
         msg = 'node %s: %s, ' % (striptag(node.tag), exc)
         if not re.search(" line [0-9]+$", str(exc)):
-            msg += 'line %s, ' % getattr(node, 'lineno', '?')
+            msg += 'line %s ' % getattr(node, 'lineno', '?')
         msg += 'of %s' % fname
         raise_(etype, msg, tb)
 
