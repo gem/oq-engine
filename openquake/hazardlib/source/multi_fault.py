@@ -165,6 +165,38 @@ class MultiFaultSource(BaseSeismicSource):
                     self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                     PMF(data))
 
+    def _sample_ruptures(self, eff_num_ses):
+        s = self.get_sections()
+        # NB: np.random.random(eff_num_ses) called inside to save memory
+        # the seed is set before
+        for i, probs in enumerate(self.probs_occur):
+            if self.infer_occur_rates:
+                num_occ = np.random.poisson(
+                    self.occur_rates[i] *
+                    self.temporal_occurrence_model.time_span * eff_num_ses)
+                if num_occ == 0:  # skip
+                    continue
+            idxs = self.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = s[idxs[0]]
+            else:
+                sfc = MultiSurface([s[idx] for idx in idxs])
+            hypo = s[idxs[0]].get_middle_point()
+            if self.infer_occur_rates:                
+                yield (ParametricProbabilisticRupture(
+                    self.mags[i], self.rakes[i], self.tectonic_region_type,
+                    hypo, sfc, self.occur_rates[i],
+                    self.temporal_occurrence_model), num_occ)
+                continue
+            cdf = np.cumsum(probs)
+            num_occ = np.digitize(np.random.random(eff_num_ses), cdf).sum()
+            if num_occ == 0:  # ignore non-occurring ruptures
+                continue
+            data = [(p, o) for o, p in enumerate(probs)]
+            yield (NonParametricProbabilisticRupture(
+                self.mags[i], self.rakes[i], self.tectonic_region_type, hypo,
+                sfc, PMF(data)), num_occ)
+
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
             yield self
