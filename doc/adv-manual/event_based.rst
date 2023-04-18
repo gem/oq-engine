@@ -685,9 +685,9 @@ Rupture sampling: how to get it wrong
 =====================================
 
 Rupture samplings is *much more complex than one could expect* and in
-many respect *surprising*. In the many years of existance of the
+many respects *surprising*. In the many years of existence of the
 engine, multiple approached were tried and you can expect some
-detail of the rupture sampling mechanism do be different nearly at each
+detail of the rupture sampling mechanism to be different nearly at every
 version of the engine.
 
 Here we will discuss some tricky points that may help you understand
