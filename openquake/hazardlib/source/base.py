@@ -62,9 +62,10 @@ def poisson_sample(src, eff_num_ses):
     """
     tom = src.temporal_occurrence_model
     if not hasattr(src, 'nodal_plane_distribution'):
-        if hasattr(src, 'occur_rates'):  # multifault
+        if src.code == b'F':  # multifault
             s = src.get_sections()
             for i, rate in enumerate(src.occur_rates):
+                # NB: random.poisson called inside to save memory
                 num_occ = numpy.random.poisson(
                     rate * tom.time_span * eff_num_ses)
                 if num_occ == 0:  # skip
@@ -87,34 +88,34 @@ def poisson_sample(src, eff_num_ses):
                 if num_occ:
                     yield rup, num_occ
         return
+
     # else (multi)point sources and area sources
     usd = src.upper_seismogenic_depth
     lsd = src.lower_seismogenic_depth
     rup_args = []
     rates = []
-    for src in src:
-        lon, lat = src.location.x, src.location.y
-        for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-            if mag < src.min_mag:
+    for ps in src:
+        lon, lat = ps.location.x, ps.location.y
+        for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
+            if mag < ps.min_mag:
                 continue
-            for np_prob, np in src.nodal_plane_distribution.data:
-                for hc_prob, hc_depth in src.hypocenter_distribution.data:
+            for np_prob, np in ps.nodal_plane_distribution.data:
+                for hc_prob, hc_depth in ps.hypocenter_distribution.data:
                     args = (mag_occ_rate, np_prob, hc_prob,
-                            mag, np, lon, lat, hc_depth, src)
+                            mag, np, lon, lat, hc_depth, ps)
                     rup_args.append(args)
                     rates.append(mag_occ_rate * np_prob * hc_prob)
     eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
     occurs = numpy.random.poisson(eff_rates)
     for num_occ, args, rate in zip(occurs, rup_args, rates):
         if num_occ:
-            _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
+            _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, ps = args
             hc = Point(lon, lat, hc_depth)
             hdd = numpy.array([(1., hc.depth)])
             [[[planar]]] = build_planar(
-                src.get_planin([(1., mag)], [(1., np)]),
-                hdd, lon, lat, usd, lsd)
+                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat, usd, lsd)
             rup = ParametricProbabilisticRupture(
-                mag, np.rake, src.tectonic_region_type, hc,
+                mag, np.rake, ps.tectonic_region_type, hc,
                 PlanarSurface.from_(planar), rate, tom)
             yield rup, num_occ
 
@@ -127,8 +128,6 @@ def timedep_sample(src, eff_num_ses):
     """
     if src.code == b'F':  # time-dependent multifault
         s = src.get_sections()
-        # NB: np.random.random(eff_num_ses) called inside to save memory
-        # the seed is set before
         for i, probs in enumerate(src.probs_occur):
             idxs = src.rupture_idxs[i]
             if len(idxs) == 1:
