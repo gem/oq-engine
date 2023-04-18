@@ -24,7 +24,8 @@ import sys
 import time
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import AccumDict, random_distribute
+from openquake.baselib.general import (
+    AccumDict, random_distribute, random_histogram)
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
@@ -169,10 +170,10 @@ def sample_cluster(src_group, num_ses, param):
     :yields:
         dictionaries with keys rup_array, source_data, eff_ruptures
     """
-    if src_group.src_interdep == 'mutex':
-        raise NotImplementedError('src_interdep == mutex')
-
-    assert src_group.rup_interdep == 'mutex'
+    src_mutex = (src_group.src_interdep == 'mutex' and
+                 src_group.rup_interdep == 'indep')
+    rup_mutex = (src_group.rup_interdep == 'mutex' and
+                 src_group.src_interdep == 'indep')
     
     eb_ruptures = []
     seed = src_group[0].serial(param['ses_seed'])
@@ -183,38 +184,62 @@ def sample_cluster(src_group, num_ses, param):
     # Set the parameters required to compute the number of occurrences
     # of the group of src_group
     samples = getattr(src_group[0], 'samples', 1)
-    tom = getattr(src_group, 'temporal_occurrence_model')
-    rate = tom.occurrence_rate
-    time_span = tom.time_span
-    # Note that using a single time interval corresponding to the product
-    # of the investigation time and the number of realizations as we do
-    # here is admitted only in the case of a time-independent model
-    tot_num_occ = rng.poisson(rate * time_span * samples * num_ses)
+    tom = src_group.temporal_occurrence_model
+    rate = getattr(tom, 'occurrence_rate', None)
+    if rate is None:  # time dependent sources
+        tot_num_occ = samples * num_ses
+    else:  # poissonian sources with ClusterPoissonTOM
+        tot_num_occ = rng.poisson(rate * tom.time_span * samples * num_ses)
+
     # Now we process the sources included in the group. Possible cases:
     # * The group contains nonparametric sources with mutex ruptures, while
-    #   the sources are indepedent
+    #   the sources are indepedent.
     # * The group contains mutually exclusive sources. In this case we
     #   choose the source first and then some ruptures from the source.
-    allrups = []
-    weights = []
-    tot = 0
     t0 = time.time()
-    for src in src_group:
-        n = src.num_ruptures
-        weights.extend(src.rup_weights)
-        src_seed = src.serial(param['ses_seed'])
-        for i, rup in enumerate(src.iter_ruptures()):
-            rup.source_id = src.source_id
-            rup.seed = src_seed + i
-            allrups.append(rup)
-        tot += n
-    n_occs = random_distribute(tot_num_occ, weights, rng)
-    for rup, n_occ in zip(allrups, n_occs):
-        if n_occ:
-            eb_ruptures.append(EBRupture(rup, rup.source_id, trt_smr, n_occ))
+    if rup_mutex:
+        allrups = []
+        weights = []
+        for src in src_group:
+            n = src.num_ruptures
+            weights.extend(src.rup_weights)
+            src_seed = src.serial(param['ses_seed'])
+            for i, rup in enumerate(src.iter_ruptures()):
+                rup.source_id = src.source_id
+                rup.seed = src_seed + i
+                allrups.append(rup)
+        # random distribute in bins according to the rup_weights
+        n_occs = random_distribute(tot_num_occ, weights, rng)
+        for rup, n_occ in zip(allrups, n_occs):
+            if n_occ:
+                ebr = EBRupture(rup, rup.source_id, trt_smr, n_occ)
+                eb_ruptures.append(ebr)
+    elif src_mutex:
+        # TODO: manage grp_probability
+        # random distribute in bins according to the srcs_weights
+        weights = [src.mutex_weight for src in src_group]
+        src_occs = random_distribute(tot_num_occ, weights, rng)
+        # NB: in event_based/src_mutex num_ses=2000, samples=1
+        # and there are 10 sources with weights
+        # 0.368, 0.061, 0.299, 0.049, 0.028, 0.011, 0.011, 0.018, 0.113, 0.042
+        # => src_occs = [758, 120, 600,  84,  58,  16,  24,  28, 230,  82]
+        for src, src_occ in zip(src_group, src_occs):
+            src_seed = src.serial(param['ses_seed'])
+            # random distribute in bins equally
+            n_occs = random_histogram(src_occ, src.num_ruptures, src_seed)
+            rseeds = src_seed + numpy.arange(src.num_ruptures)
+            for rup, n_occ, rseed in zip(src.iter_ruptures(), n_occs, rseeds):
+                if n_occ:
+                    rup.seed = rseed
+                    ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
+                    eb_ruptures.append(ebr)
+    else:
+        raise NotImplementedError(f'{src_group.src_interdep=}, '
+                                  '{src_group.rup_interdep=}')
     dt = time.time() - t0
 
     # populate source_data
+    tot = sum(src.num_ruptures for src in src_group)
     for src in src_group:
         source_data['src_id'].append(src.source_id)
         source_data['nsites'].append(src.nsites)
@@ -248,8 +273,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
     grp_id = sources[0].grp_id
     # Compute the number of occurrences of the source group. This is used
     # for cluster groups or groups with mutually exclusive sources.
-    if (getattr(sources, 'atomic', False) and
-            getattr(sources, 'cluster', False)):
+    if getattr(sources, 'atomic', False):
         eb_ruptures, source_data = sample_cluster(
             sources, num_ses, vars(cmaker))
 
