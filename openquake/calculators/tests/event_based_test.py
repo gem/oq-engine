@@ -552,7 +552,7 @@ class EventBasedTestCase(CalculatorTestCase):
                               delta=1E-6)
 
     def test_case_29(self):
-        # sampling multiFaultSources
+        # sampling nonpoissonian multiFaultSources
         self.run_calc(case_29.__file__, 'job.ini', exports='csv')
         [f] = export(('ruptures', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/ruptures.csv', f, delta=1E-5)
