@@ -21,7 +21,7 @@
 | case_18             | Test with oversampling                                                                                                                                                                           |
 | case_19             | Test the NRCan15SiteTerm                                                                                                                                                                         |
 | case_20             | Test the NRCan15SiteTerm with --hc                                                                                                                                                               |
-| case_21             | Test the use of a source model containing a cluster                                                                                                                                              |
+| case_21             | Test rup_mutex                                                                                                                                                                                   |
 | case_22             | Test the use of the [SplitSigmaGMPE](https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/split_sigma_gmpe.py) modifiable GMPE                                            |
 | case_23             | Test gridding from the exposure model + site model                                                                                                                                               |
 | case_24             | Test the use of the `shift_hypo` option in the `job.ini`                                                                                                                                         |

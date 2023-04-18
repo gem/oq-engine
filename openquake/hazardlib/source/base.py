@@ -271,12 +271,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                     self.get_annual_occurrence_rates()}
         return sorted(mags)
 
-    @abc.abstractmethod
-    def get_one_rupture(self, ses_seed, rupture_mutex=False):
-        """
-        Yields one random rupture from a source
-        """
-
     def __iter__(self):
         """
         Override to implement source splitting
@@ -414,30 +408,6 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         min_mag, max_mag = self.mfd.get_min_max_mag()
         return max(self.min_mag, min_mag), max_mag
-
-    def get_one_rupture(self, ses_seed, rupture_mutex=False):
-        """
-        Yields one random rupture from a source. IMPORTANT: this method
-        does not take into account the frequency of occurrence of the
-        ruptures
-        """
-        # The Mutex case is admitted only for non-parametric ruptures
-        msg = 'Mutually exclusive ruptures are admitted only in case of'
-        msg += ' non-parametric sources'
-        assert (not rupture_mutex), msg
-        # Set random seed and get the number of ruptures
-        num_ruptures = self.count_ruptures()
-        seed = self.serial(ses_seed)
-        numpy.random.seed(seed)
-        idx = numpy.random.choice(num_ruptures)
-        # NOTE Would be nice to have a method generating a rupture given two
-        # indexes, one for magnitude and one setting the position
-        for i, rup in enumerate(self.iter_ruptures()):
-            if i == idx:
-                if hasattr(self, 'rup_id'):
-                    rup.seed = self.seed
-                rup.idx = idx
-                return rup
 
     def modify_set_msr(self, new_msr):
         """

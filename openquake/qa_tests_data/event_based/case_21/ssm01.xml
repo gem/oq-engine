@@ -11,7 +11,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <sourceGroup
             name="group 1"
             src_interdep="indep"
-            rup_interdep="indep"
+            rup_interdep="mutex"
             tectonicRegion="Active Shallow Crust"
             cluster="true" 
             tom="PoissonTOM" 
