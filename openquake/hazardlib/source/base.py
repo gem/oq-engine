@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib.calc.filters import magstr
+from openquake.hazardlib.calc.filters import magstr, split_source
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
@@ -94,7 +94,7 @@ def poisson_sample(src, eff_num_ses):
     lsd = src.lower_seismogenic_depth
     rup_args = []
     rates = []
-    for ps in src:
+    for ps in split_source(src):
         lon, lat = ps.location.x, ps.location.y
         for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
             if mag < ps.min_mag:
