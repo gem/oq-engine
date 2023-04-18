@@ -1290,7 +1290,7 @@ class RuptureData(object):
 
     def to_array(self, proxies):
         """
-        Convert a list of rupture proxies into an array of dtype RuptureRata.dt
+        Convert a list of rupture proxies into an array of dtype RuptureData.dt
         """
         data = []
         for proxy in proxies:

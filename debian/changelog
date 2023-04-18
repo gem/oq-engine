@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in scenario calculations causing a mysterious IndexError in the
+    line rctx.clon = c.lons[rctx.sids]
   * Changed the disaggregation exporter to add a column with the IML
     associated to the PoE for the mean disaggregation outputs
   * Internal: added a parameter `override_vs30` in the job.ini

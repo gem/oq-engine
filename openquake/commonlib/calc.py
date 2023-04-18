@@ -198,15 +198,15 @@ class RuptureImporter(object):
         """
         oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
-        # order the ruptures by seed
-        rup_array.sort(order='seed')
+        geom_id = numpy.argsort(rup_array['seed'])
+        rup_array = rup_array[geom_id]
         nr = len(rup_array)
         seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
         if len(seeds) != nr:
             dupl = seeds[counts > 1]
             logging.debug('The following %d rupture seeds are duplicated: %s',
                           len(dupl), dupl)
-        rup_array['geom_id'] = rup_array['id']
+        rup_array['geom_id'] = geom_id
         rup_array['id'] = numpy.arange(nr)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))

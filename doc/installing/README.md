@@ -22,7 +22,7 @@ large range of use cases it can be installed in several different ways.
 
 The minimum required to install the engine and run the demos is
 
-- 8 GB of RAM
+- 8 GB of RAM (16 GB on macOS Ventura)
 - 4 GB of free disk space
 
 To run any serious calculation (i.e. a model in GEM mosaic) you need
@@ -37,7 +37,7 @@ Check more advanced [hardware suggestions here](./hardware-suggestions.md).
 
 **On Windows**
 
-  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.1-1.exe .
+  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.1-2.exe .
   Then follow the wizard on screen.
   > **Warning**:
   > Administrator level access may be required.

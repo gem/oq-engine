@@ -235,12 +235,14 @@ Response: Redirects to [/v1/calc/:calc_id](#get-v1calchazardcalc_id), where `cal
 Run a new aelo calculation for a site with the specified parameters.
 
 Parameters:
+
     * lon: the longitude of the site (a float in the interval [-180, +180])
     * lat: the latitude of the site (a float in the interval [-90.0, +90.0])
     * vs30: the time-averaged shear-wave velocity from the surface to a depth of 30 meters (a positive float)
     * siteid: an ID to assign to the site (the only accepted chars are a-zA-Z0-9_-:)
 
 Response:
+
     The input values are validated and a `400 Bad Request` response is returned
     in case any invalid input is found, specifying the reason of the failure.
     If inputs are valid, the engine will first attempt to identify a Mosaic
@@ -258,10 +260,9 @@ Response:
     `log_uri` can be called to get the log of the calculation, either while it is still running or after its completion.
     `traceback_uri` can be called in case of job failure (and only after it occurs), to retrieve a full traceback of the error.
 
-    As soon as the job is complete, a notification is automatically sent via email to the user
-    who launched it. In case of success, the message will contain a link to the web page showing
-    the outputs of the calculation; otherwise, it will describe the error that occurred.
-
+As soon as the job is complete, a notification is automatically sent via email to the user
+who launched it. In case of success, the message will contain a link to the web page showing
+the outputs of the calculation; otherwise, it will describe the error that occurred.
 
 #### POST /v1/calc/validate_zip
 
