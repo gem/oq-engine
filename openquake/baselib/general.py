@@ -1177,7 +1177,7 @@ def random_filter(objects, reduction_factor, seed=42):
 
 def random_histogram(counts, nbins, seed):
     """
-    Distribute a total number of counts on a set of bins homogenously.
+    Distribute a total number of counts over a set of bins homogenously.
 
     >>> random_histogram(1, 2, seed=42)
     array([1, 0])
@@ -1190,6 +1190,19 @@ def random_histogram(counts, nbins, seed):
         return numpy.array([counts])
     numpy.random.seed(seed)
     return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
+
+
+def random_distribute(num_samples, binweights, rng):
+    """
+    Distribute num_samples over the bins depending on the binweights
+
+    >>> random_distribute(1000, [.3, .3, .4], numpy.random.default_rng(42))
+    array([308, 295, 397])
+    """
+    weights = numpy.array(binweights)
+    weights /= weights.sum()  # normalize to 1
+    bins = numpy.searchsorted(weights.cumsum(), rng.random(num_samples))
+    return numpy.bincount(bins, minlength=len(weights))
 
 
 def safeprint(*args, **kwargs):
