@@ -637,6 +637,14 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-mean-PGA.csv', f1)
 
+        # test sampling
+        self.run_calc(case_80.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      ground_motion_fields='false')
+        rups = self.calc.datastore['ruptures'][()]
+        tbl = text_table(rups[['source_id', 'n_occ', 'mag']], ext='org')
+        self.assertEqualFiles('expected/rups.org', general.gettemp(tbl))
+
     def test_case_81(self):
         # collapse_level=2
         self.run_calc(case_81.__file__, 'job.ini')
