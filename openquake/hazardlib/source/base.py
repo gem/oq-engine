@@ -50,8 +50,8 @@ def is_poissonian(src):
     if src.code == b'F':  # multiFault
         return hasattr(src, 'occur_rates')
     elif src.code == b'N':  # nonParametric
-        return True
-    return False
+        return False
+    return True
 
     
 def poisson_sample(src, eff_num_ses):
