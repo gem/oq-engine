@@ -61,6 +61,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         self.data = data
         if weights is not None:
             assert len(weights) == len(data)
+            self.mutex_weights = weights
             for (rup, pmf), weight in zip(data, weights):
                 rup.weight = weight
 
@@ -237,20 +238,3 @@ class NonParametricSeismicSource(BaseSeismicSource):
         :returns: the geometry as a WKT string
         """
         return self.polygon.wkt
-
-    def get_one_rupture(self, ses_seed, rupture_mutex=False):
-        """
-        Yields one random rupture from a source
-        """
-        num_ruptures = self.count_ruptures()
-        if rupture_mutex:
-            weights = numpy.array([rup.weight for rup in self.iter_ruptures()])
-        else:
-            weights = numpy.ones((num_ruptures)) / num_ruptures
-        idx = numpy.random.choice(range(num_ruptures), p=weights)
-        serial = self.serial(ses_seed)
-        for i, rup in enumerate(self.iter_ruptures()):
-            if i == idx:
-                rup.seed = serial + i
-                rup.idx = idx
-                return rup

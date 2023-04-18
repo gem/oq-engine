@@ -192,9 +192,6 @@ class MultiFaultSource(BaseSeismicSource):
     def get_min_max_mag(self):
         return np.min(self.mags), np.max(self.mags)
 
-    def get_one_rupture(self, ses_seed, rupture_mutex):
-        raise NotImplementedError
-
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
         for i, rup in enumerate(self.iter_ruptures()):
