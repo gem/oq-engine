@@ -28,7 +28,7 @@ around a `h5py.File` object. You can read it as you would do
 with a `h5py.File`, but it has some additional features.
 There is not much documentation available yet, but you can
 always read the source code and the [automatically generated
-documentation](https://docs.openquake.org/oq-engine/master/reference/openquake.baselib.html#module-openquake.commonlib.datastore).
+documentation](https://docs.openquake.org/oq-engine/master/reference/openquake.commonlib.html#module-openquake.commonlib.datastore).
 
 If you are confortable with Python and with [h5py](
 http://docs.h5py.org/en/latest/quick.html#quick) reading the
