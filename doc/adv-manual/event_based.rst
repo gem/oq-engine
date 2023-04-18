@@ -700,7 +700,7 @@ sampling and filtering*. The short version is that you should *first
 sample and then filter*. Here is the long version. Consider the
 following code emulating rupture sampling for poissonian ruptures:
 
-.. code-block:
+.. code-block::
   
   import numpy
   
@@ -722,7 +722,7 @@ following code emulating rupture sampling for poissonian ruptures:
 Running this code will give you the following numbers of occurrence for the
 8 ruptures considered:
 
-.. code-block:
+.. code-block::
 
    >> calc_n_occ(fake_ruptures, eff_time, seed)
    [ 8  9  6 13  7  6  6 10]
@@ -734,7 +734,7 @@ applications, would be to first discard the low magnitudes and then perform
 the sampling. However, that would have effects that would be surprising
 for many users. Consider the following two alternative:
 
-.. code-block:
+.. code-block::
   
   def calc_n_occ_after_filtering(ruptures, eff_time, seed, min_mag):
       mags = numpy.array([rup.mag for rup in ruptures])
@@ -754,7 +754,7 @@ the first rupture is removed from the total 8 ruptures, we would expect
 a minor change. However, if we follow the filter-early approach the user
 would get completely different occupation numbers:
 
-.. code-block:
+.. code-block::
 
    >> calc_n_occ_after_filtering(fake_ruptures, eff_time, seed, min_mag)
    [13  6  9  6 13  7  6]
@@ -762,7 +762,7 @@ would get completely different occupation numbers:
 It is only by using the filter-late approach that the occupation numbers
 are consistent with the no-filtering case:
 
-.. code-block:
+.. code-block::
 
     >> calc_n_occ_before_filtering(fake_ruptures, eff_time, seed, min_mag)
     [ 9  6 13  7  6  6 10]
