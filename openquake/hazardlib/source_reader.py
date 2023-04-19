@@ -536,17 +536,19 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
+        offset = 0
         for srcs in general.groupby(self.get_sources(), basename).values():
-            offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
             for src in srcs:
+                if not src.num_ruptures:
+                    src.num_ruptures = src.count_ruptures()
                 src.offset = offset
                 offset += src.num_ruptures
+                # print(src, src.offset, offset)
                 if src.num_ruptures >= TWO32:
                     raise ValueError(
                         '%s contains more than 2**32 ruptures' % src)
-                # print(src, src.offset, offset)
 
     def get_max_weight(self, oq):  # used in preclassical
         """

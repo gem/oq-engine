@@ -311,7 +311,9 @@ def split_source(src):
     has_scaling_rate = hasattr(src, 'scaling_rate')
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
     if len(splits) > 1:
+        offset = src.offset
         for i, split in enumerate(splits):
+            split.offset = offset
             split.source_id = '%s.%s' % (src.source_id, i)
             split.trt_smr = src.trt_smr
             split.grp_id = grp_id
@@ -320,6 +322,7 @@ def split_source(src):
                 split.samples = src.samples
             if has_scaling_rate:
                 split.scaling_rate = src.scaling_rate
+            offset += split.num_ruptures
     elif splits:  # single source
         [s] = splits
         s.source_id = src.source_id

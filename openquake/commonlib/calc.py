@@ -201,11 +201,8 @@ class RuptureImporter(object):
         geom_id = numpy.argsort(rup_array['seed'])
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
-        seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
-        if len(seeds) != nr:
-            dupl = seeds[counts > 1]
-            logging.debug('The following %d rupture seeds are duplicated: %s',
-                          len(dupl), dupl)
+        rupids = numpy.unique(rup_array['id'])
+        # assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
         rup_array['id'] = numpy.arange(nr)
         if len(self.datastore['ruptures']):

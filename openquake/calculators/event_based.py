@@ -225,7 +225,9 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
+        self.csm.fix_src_offset()  # NB: essential
         sources = self.csm.get_sources()
+
         # weighting the heavy sources
         self.datastore.swmr_on()
         nrups = parallel.Starmap(

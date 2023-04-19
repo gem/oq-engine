@@ -161,7 +161,8 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
     dic = dict(geom=numpy.array(geoms, object))
     # NB: PMFs for nonparametric ruptures are not saved since they
     # are useless for the GMF computation
-    return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
+    arr = numpy.array(rups, rupture_dt)
+    return hdf5.ArrayWrapper(arr, dic)
 
 
 def sample_cluster(group, num_ses, ses_seed):
@@ -308,5 +309,6 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
         rup_array = get_rup_array(eb_ruptures, srcfilter)
-        yield AccumDict(dict(rup_array=rup_array, source_data=source_data,
-                             eff_ruptures={grp_id: eff_ruptures}))
+        if len(rup_array):
+            yield AccumDict(dict(rup_array=rup_array, source_data=source_data,
+                                 eff_ruptures={grp_id: eff_ruptures}))
