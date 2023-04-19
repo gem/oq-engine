@@ -202,7 +202,7 @@ class RuptureImporter(object):
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
-        # assert len(rupids) == nr, 'rup_id not unique!'
+        assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
         rup_array['id'] = numpy.arange(nr)
         if len(self.datastore['ruptures']):
