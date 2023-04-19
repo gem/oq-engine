@@ -307,7 +307,7 @@ def split_source(src):
             if has_samples:
                 split.samples = src.samples
             if has_scaling_rate:
-                s.scaling_rate = src.scaling_rate
+                split.scaling_rate = src.scaling_rate
     elif splits:  # single source
         [s] = splits
         s.source_id = src.source_id
