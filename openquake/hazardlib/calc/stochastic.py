@@ -128,9 +128,16 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         rec['maxlat'] = maxlat = numpy.nanmax(lats)
         rec['mag'] = rup.mag
         rec['hypo'] = hypo
+
+        # apply magnitude filtering
+        if srcfilter.integration_distance(rup.mag) == 0:
+            continue
+
+        # apply distance filtering
         if srcfilter.sitecol is not None and len(
                 srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
             continue
+
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (0, ebrupture.seed, ebrupture.source_id, ebrupture.trt_smr,
                rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,

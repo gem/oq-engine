@@ -301,18 +301,7 @@ def split_source(src):
     if not splittable(src):
         return [src]
     mag_a, mag_b = src.get_min_max_mag()
-    min_mag = src.min_mag
-    if mag_b < min_mag:  # discard the source completely
-        return [src]
-    if min_mag:
-        splits = []
-        for s in src:
-            s.min_mag = min_mag
-            mag_a, mag_b = s.get_min_max_mag()
-            if mag_b >= min_mag:
-                splits.append(s)
-    else:
-        splits = list(src)
+    splits = list(src)
     has_samples = hasattr(src, 'samples')
     has_scaling_rate = hasattr(src, 'scaling_rate')
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
@@ -325,7 +314,7 @@ def split_source(src):
             if has_samples:
                 split.samples = src.samples
             if has_scaling_rate:
-                s.scaling_rate = src.scaling_rate
+                split.scaling_rate = src.scaling_rate
     elif splits:  # single source
         [s] = splits
         s.source_id = src.source_id

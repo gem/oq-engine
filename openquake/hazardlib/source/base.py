@@ -171,7 +171,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     id = -1  # to be set
     trt_smr = 0  # set by the engine
     nsites = 1  # set when filtering the source
-    min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
     weight = 0.001  # set in contexts
@@ -204,7 +203,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.trt_smr = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
-        self.min_mag = 0  # set by the SourceConverter
 
     def is_gridded(self):
         """
@@ -253,8 +251,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             mags.update(mag for mag in self.mags if mag >= self.min_mag)
         else:  # nonparametric
             for rup, pmf in self.data:
-                if rup.mag >= self.min_mag:
-                    mags.add(rup.mag)
+                mags.add(rup.mag)
         return sorted(mags)
 
     def get_magstrs(self):
@@ -404,8 +401,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         Get the minimum and maximum magnitudes of the ruptures generated
         by the source from the underlying MFD.
         """
-        min_mag, max_mag = self.mfd.get_min_max_mag()
-        return max(self.min_mag, min_mag), max_mag
+        return self.mfd.get_min_max_mag()
 
     def modify_set_msr(self, new_msr):
         """

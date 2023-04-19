@@ -92,7 +92,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_01.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertIn('All sources were discarded!?', str(ctx.exception))
+        self.assertIn('All sources were discarded', str(ctx.exception))
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
