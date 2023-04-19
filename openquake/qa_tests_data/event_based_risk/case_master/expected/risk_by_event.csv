@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-gitfbd9affd73', start_date='2023-03-23T09:20:54', checksum=3727381189, investigation_time=1.0, risk_investigation_time=50.0"
+#,,,,"generated_by='OpenQuake engine 3.17.0-git99ce0442b2', start_date='2023-04-19T04:40:25', checksum=3727381189, investigation_time=1.0, risk_investigation_time=50.0"
 event_id,loss,loss_type,rup_id,year
 0,1.77648E+02,business_interruption,0,1
 0,1.28915E+03,contents,0,1
@@ -182,21 +182,15 @@ event_id,loss,loss_type,rup_id,year
 32,1.08506E+03,nonstructural,3,1
 32,1.54135E-03,occupants,3,1
 32,1.82637E+03,structural+nonstructural+contents,3,1
-33,2.97141E+02,business_interruption,4,1
-33,3.46151E+03,contents,4,1
-33,3.37214E+03,nonstructural,4,1
-33,5.74737E-03,occupants,4,1
-33,5.41573E+02,structural,4,1
-33,7.37523E+03,structural+nonstructural+contents,4,1
-34,2.96623E+02,business_interruption,5,1
-34,2.88217E+03,contents,5,1
-34,3.33643E+03,nonstructural,5,1
-34,5.86168E-03,occupants,5,1
-34,6.14264E+02,structural,5,1
-34,6.83286E+03,structural+nonstructural+contents,5,1
-35,1.50348E+03,business_interruption,6,1
-35,1.02016E+04,contents,6,1
-35,1.81180E+04,nonstructural,6,1
-35,2.09993E-02,occupants,6,1
-35,5.22662E+03,structural,6,1
-35,3.35463E+04,structural+nonstructural+contents,6,1
+33,3.01245E+02,business_interruption,4,1
+33,3.73595E+03,contents,4,1
+33,3.34599E+03,nonstructural,4,1
+33,5.88803E-03,occupants,4,1
+33,6.77859E+02,structural,4,1
+33,7.75979E+03,structural+nonstructural+contents,4,1
+34,6.18814E+02,business_interruption,5,1
+34,8.30479E+03,contents,5,1
+34,8.32292E+03,nonstructural,5,1
+34,1.22728E-02,occupants,5,1
+34,1.95164E+03,structural,5,1
+34,1.85793E+04,structural+nonstructural+contents,5,1

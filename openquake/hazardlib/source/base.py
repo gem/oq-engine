@@ -233,16 +233,15 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         seed = self.serial(ses_seed)
         numpy.random.seed(seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        for trt_smr in self.trt_smrs:
-            for rup, num_occ in sample(self, eff_num_ses):
-                rup.seed = seed
-                if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
-                    # defined only for poissonian sources
-                    # needed to get convergency of the frequency to the rate
-                    # tested only in oq-risk-tests etna0
-                    rup.occurrence_rate *= self.smweight
-                seed += 1
-                yield rup, trt_smr, num_occ
+        for rup, num_occ in sample(self, eff_num_ses):
+            rup.seed = seed
+            if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
+                # defined only for poissonian sources
+                # needed to get convergency of the frequency to the rate
+                # tested only in oq-risk-tests etna0
+                rup.occurrence_rate *= self.smweight
+            seed += 1
+            yield rup, self.trt_smr, num_occ
 
     def get_mags(self):
         """
