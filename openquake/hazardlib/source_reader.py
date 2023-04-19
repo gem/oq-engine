@@ -396,6 +396,7 @@ def _get_csm(full_lt, groups, event_based):
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
+            # NB: not reducing the sources in event based
             if len(srcs) > 1 and not event_based:
                 srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
