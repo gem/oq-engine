@@ -252,6 +252,8 @@ class IntegrationDistance(dict):
         {'default': [(5.0, 87.5), (8.0, 200.0)]}
         """
         for trt, min_mag in min_mag_by_trt.items():
+            if not min_mag:
+                continue
             first = (min_mag, float(self(trt)(min_mag)))
             magdists = [(mag, dist) for (mag, dist) in self[trt]
                         if mag >= min_mag]
