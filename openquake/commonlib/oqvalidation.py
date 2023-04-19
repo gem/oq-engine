@@ -1156,6 +1156,11 @@ class OqParam(valid.ParamSet):
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
+        # cut maximum_distance with minimum_magnitude
+        if hasattr(self, 'maximum_distance'):
+            # can be missing in post-calculations
+            self.maximum_distance.cut(self.minimum_magnitude)
+
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:

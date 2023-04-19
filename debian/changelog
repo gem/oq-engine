@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Moved the minimum magnitude filtering after the rupture sampling
   * Changed the internals of rupture sampling again (trt_smr)
   * Fixed a bug in scenario calculations causing a mysterious IndexError in the
     line rctx.clon = c.lons[rctx.sids]

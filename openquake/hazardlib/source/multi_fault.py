@@ -195,8 +195,7 @@ class MultiFaultSource(BaseSeismicSource):
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
         for i, rup in enumerate(self.iter_ruptures()):
-            if rup.mag >= self.min_mag:
-                yield rup, self.probs_occur[i]
+            yield rup, self.probs_occur[i]
 
     polygon = NP.polygon
     wkt = NP.wkt

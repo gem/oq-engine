@@ -79,11 +79,10 @@ class NonParametricSeismicSource(BaseSeismicSource):
         """
         step = kwargs.get('step', 1)
         for rup, pmf in self.data[::step**2]:
-            if rup.mag >= self.min_mag:
-                yield NonParametricProbabilisticRupture(
-                    rup.mag, rup.rake, self.tectonic_region_type,
-                    rup.hypocenter, rup.surface, pmf,
-                    weight=getattr(rup, 'weight', 0.))
+            yield NonParametricProbabilisticRupture(
+                rup.mag, rup.rake, self.tectonic_region_type,
+                rup.hypocenter, rup.surface, pmf,
+                weight=getattr(rup, 'weight', 0.))
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split

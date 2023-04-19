@@ -41,7 +41,7 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import SourceFilter
+from openquake.hazardlib.calc.filters import SourceFilter, getdefault
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
@@ -754,13 +754,26 @@ def get_logic_tree(oqparam):
     return logictree.compose(flt.source_model_lt, flt.gsim_lt)
 
 
+def check_min_mag(sources, minimum_magnitude):
+    """
+    Raise an error if all sources are below the minimum_magnitude
+    """
+    ok = 0
+    for src in sources:
+        min_mag = getdefault(minimum_magnitude, src.tectonic_region_type)
+        maxmag = src.get_min_max_mag()[1]
+        if min_mag < maxmag:
+            ok += 1
+    if not ok:
+        raise RuntimeError('All sources were discarded by minimum_magnitude')
+
+
 def _check_csm(csm, oqparam, h5):
     # checks
     csm.gsim_lt.check_imts(oqparam.imtls)
 
     srcs = csm.get_sources()
-    if not srcs:
-        raise RuntimeError('All sources were discarded!?')
+    check_min_mag(srcs, oqparam.minimum_magnitude)
 
     if os.environ.get('OQ_CHECK_INPUT'):
         source.check_complex_faults(srcs)

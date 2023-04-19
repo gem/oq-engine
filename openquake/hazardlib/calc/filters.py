@@ -242,6 +242,29 @@ class IntegrationDistance(dict):
                 self[trt] = [(MINMAG, items), (MAXMAG, items)]
         return self
 
+    # tested in case_miriam
+    def cut(self, min_mag_by_trt):
+        """
+        Cut the lower magnitudes. For instance
+
+        >>> maxdist = IntegrationDistance.new('[(4., 50), (8., 200.)]')
+        >>> maxdist.cut({'default': 5.})
+        >>> maxdist
+        {'default': [(5.0, 87.5), (8.0, 200.0)]}
+        """
+        all_trts = set(self) | set(min_mag_by_trt)
+        for trt in all_trts:
+            min_mag = getdefault(min_mag_by_trt, trt)
+            if not min_mag:
+                continue
+            first = (min_mag, float(self(trt)(min_mag)))
+            magdists = [(mag, dist) for (mag, dist) in self[trt]
+                        if mag >= min_mag]
+            if min_mag < magdists[0][0]:
+                self[trt] = [first] + magdists
+            else:
+                self[trt] = magdists
+
     def __call__(self, trt):
         return magdepdist(self[trt])
 
@@ -283,18 +306,7 @@ def split_source(src):
     if not splittable(src):
         return [src]
     mag_a, mag_b = src.get_min_max_mag()
-    min_mag = src.min_mag
-    if mag_b < min_mag:  # discard the source completely
-        return [src]
-    if min_mag:
-        splits = []
-        for s in src:
-            s.min_mag = min_mag
-            mag_a, mag_b = s.get_min_max_mag()
-            if mag_b >= min_mag:
-                splits.append(s)
-    else:
-        splits = list(src)
+    splits = list(src)
     has_samples = hasattr(src, 'samples')
     has_scaling_rate = hasattr(src, 'scaling_rate')
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib

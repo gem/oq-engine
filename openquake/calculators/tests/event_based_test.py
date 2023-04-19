@@ -305,12 +305,14 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
-        expected = [
-            'hazard_curve-mean.csv',
-            'quantile_curve-0.1.csv',
-        ]
         out = self.run_calc(case_6.__file__, 'job.ini', exports='csv')
+
+        # first check the number of generated ruptures
+        num_rups = len(self.calc.datastore['ruptures'])
+        self.assertEqual(num_rups, 1942)
+
         fnames = out['hcurves', 'csv']
+        expected = ['hazard_curve-mean.csv', 'quantile_curve-0.1.csv']
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
