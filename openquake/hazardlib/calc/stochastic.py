@@ -274,7 +274,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['taskno'].append(monitor.task_no)
 
         # Yield ruptures
-        er = sum(src.num_ruptures for src, _ in srcfilter.filter(sources))
+        er = sum(src.num_ruptures for src in sources)
         dic = dict(rup_array=get_rup_array(eb_ruptures, srcfilter),
                    source_data=source_data, eff_ruptures={grp_id: er})
         yield AccumDict(dic)
@@ -282,7 +282,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
         eb_ruptures = []
         eff_ruptures = 0
         source_data = AccumDict(accum=[])
-        for src, _ in srcfilter.filter(sources):
+        for src in sources:
             nr = src.num_ruptures
             eff_ruptures += nr
             t0 = time.time()
