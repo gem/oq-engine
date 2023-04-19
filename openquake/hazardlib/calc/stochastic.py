@@ -121,6 +121,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
+        rec['id'] = ebrupture.id
         rec['seed'] = rup.seed
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
@@ -139,9 +140,9 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             continue
 
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (0, ebrupture.seed, ebrupture.source_id, ebrupture.trt_smr,
-               rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat, hypo, 0, 0)
+        tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
+               ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are

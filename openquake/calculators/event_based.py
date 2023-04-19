@@ -271,10 +271,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if dic['eff_ruptures']:
                 eff_ruptures += dic['eff_ruptures']
             with mon:
-                n = len(rup_array)
-                rup_array['id'] = numpy.arange(
-                    self.nruptures, self.nruptures + n)
-                self.nruptures += n
+                self.nruptures += len(rup_array)
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         if len(self.datastore['ruptures']) == 0:
