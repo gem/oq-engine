@@ -257,6 +257,8 @@ class SourceGroup(collections.abc.Sequence):
             ok = src.mags >= src.min_mag
             for attr in 'mags rupture_idxs probs_occur rakes'.split():
                 setattr(src, attr, numpy.array(getattr(src, attr))[ok])
+            if hasattr(src, 'occur_rates'):  # infer_occur_rates was given
+                src.occur_rates = src.occur_rates[ok]
         if src.min_mag and not src.get_mags():  # filtered out
             return
         # checking mutex ruptures
