@@ -121,6 +121,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         shapes = U32(shapes)
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
+        rec['id'] = ebrupture.id
         rec['seed'] = rup.seed
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
@@ -139,9 +140,9 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             continue
 
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
-        tup = (0, ebrupture.seed, ebrupture.source_id, ebrupture.trt_smr,
-               rup.code, ebrupture.n_occ, rup.mag, rup.rake, rate,
-               minlon, minlat, maxlon, maxlat, hypo, 0, 0)
+        tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
+               ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, 0)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are
@@ -198,7 +199,9 @@ def sample_cluster(group, num_ses, ses_seed):
     if group.rup_interdep == 'mutex' and group.src_interdep == 'indep':
         allrups = []
         weights = []
+        rupids = []
         for src in group:
+            rupids.extend(src.offset + numpy.arange(src.num_ruptures))
             weights.extend(src.rup_weights)
             src_seed = src.serial(ses_seed)
             for i, rup in enumerate(src.iter_ruptures()):
@@ -207,9 +210,9 @@ def sample_cluster(group, num_ses, ses_seed):
                 allrups.append(rup)
         # random distribute in bins according to the rup_weights
         n_occs = random_distribute(tot_num_occ, weights, rng)
-        for rup, n_occ in zip(allrups, n_occs):
+        for rup, rupid, n_occ in zip(allrups, rupids, n_occs):
             if n_occ:
-                ebr = EBRupture(rup, rup.source_id, trt_smr, n_occ)
+                ebr = EBRupture(rup, rup.source_id, trt_smr, n_occ, rupid)
                 eb_ruptures.append(ebr)
     elif group.src_interdep == 'mutex' and group.rup_interdep == 'indep':
         # TODO: manage grp_probability
@@ -225,10 +228,12 @@ def sample_cluster(group, num_ses, ses_seed):
             # random distribute in bins equally
             n_occs = random_histogram(src_occ, src.num_ruptures, src_seed)
             rseeds = src_seed + numpy.arange(src.num_ruptures)
-            for rup, n_occ, rseed in zip(src.iter_ruptures(), n_occs, rseeds):
+            rupids = src.offset + numpy.arange(src.num_ruptures)
+            for rup, rupid, n_occ, rseed in zip(
+                    src.iter_ruptures(), rupids, n_occs, rseeds):
                 if n_occ:
                     rup.seed = rseed
-                    ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
+                    ebr = EBRupture(rup, src.source_id, trt_smr, n_occ, rupid)
                     eb_ruptures.append(ebr)
     else:
         raise NotImplementedError(
@@ -293,10 +298,8 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                                      source_data={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
-            for rup, trt_smr, n_occ in src.sample_ruptures(
-                    samples * num_ses, cmaker.ses_seed):
-                ebr = EBRupture(rup, src.source_id, trt_smr, n_occ)
-                eb_ruptures.append(ebr)
+            eb_ruptures.extend(
+                src.sample_ruptures(samples * num_ses, cmaker.ses_seed))
             dt = time.time() - t0
             source_data['src_id'].append(src.source_id)
             source_data['nsites'].append(src.nsites)

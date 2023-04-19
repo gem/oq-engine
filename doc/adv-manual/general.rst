@@ -878,8 +878,7 @@ is coded more or less like this:
    def sample_ruptures(sources, num_samples, monitor):  # simplified code
        ebruptures = []
        for src in sources:
-           for rup, n_occ in src.sample_ruptures(num_samples):
-               ebr = EBRupture(rup, src.id, grp_id, n_occ)
+           for ebr in src.sample_ruptures(num_samples):
                eb_ruptures.append(ebr)
            if len(eb_ruptures) > MAX_RUPTURES:
                # yield partial result to avoid running out of memory
