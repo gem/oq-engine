@@ -97,8 +97,6 @@ def poisson_sample(src, eff_num_ses):
     for ps in split_source(src):
         lon, lat = ps.location.x, ps.location.y
         for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
-            if mag < ps.min_mag:
-                continue
             for np_prob, np in ps.nodal_plane_distribution.data:
                 for hc_prob, hc_depth in ps.hypocenter_distribution.data:
                     args = (mag_occ_rate, np_prob, hc_prob,
@@ -399,8 +397,7 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         scaling_rate = getattr(self, 'scaling_rate', 1)
         return [(mag, occ_rate * scaling_rate)
                 for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates()
-                if (min_rate is None or occ_rate > min_rate) and
-                mag >= self.min_mag]
+                if (min_rate is None or occ_rate > min_rate)]
 
     def get_min_max_mag(self):
         """

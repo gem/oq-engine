@@ -242,6 +242,24 @@ class IntegrationDistance(dict):
                 self[trt] = [(MINMAG, items), (MAXMAG, items)]
         return self
 
+    def cut(self, min_mag_by_trt):
+        """
+        Cut the lower magnitudes. For instance
+
+        >>> maxdist = IntegrationDistance.new('[(4., 50), (8., 200.)]')
+        >>> maxdist.cut({'default': 5.})
+        >>> maxdist
+        {'default': [(5.0, 87.5), (8.0, 200.0)]}
+        """
+        for trt, min_mag in min_mag_by_trt.items():
+            first = (min_mag, float(self(trt)(min_mag)))
+            magdists = [(mag, dist) for (mag, dist) in self[trt]
+                        if mag >= min_mag]
+            if min_mag < magdists[0][0]:
+                self[trt] = [first] + magdists
+            else:
+                self[trt] = magdists
+
     def __call__(self, trt):
         return magdepdist(self[trt])
 
