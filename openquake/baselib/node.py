@@ -140,7 +140,6 @@ subnodes, since the generator will be exhausted. Notice that even
 accessing a subnode with the dot notation will avance the
 generator. Finally, nodes containing lazy nodes will not be pickleable.
 """
-import re
 import io
 import sys
 import copy
@@ -837,10 +836,8 @@ def context(fname, node):
         yield node
     except Exception:
         etype, exc, tb = sys.exc_info()
-        msg = 'node %s: %s, ' % (striptag(node.tag), exc)
-        if not re.search(" line [0-9]+$", str(exc)):
-            msg += 'line %s ' % getattr(node, 'lineno', '?')
-        msg += 'of %s' % fname
+        msg = 'node %s: %s, line %s of %s' % (
+            striptag(node.tag), exc, getattr(node, 'lineno', '?'), fname)
         raise_(etype, msg, tb)
 
 
@@ -961,9 +958,11 @@ class ValidatingXmlParser(object):
         try:
             node.attrib[n] = val(decode(v))
         except Exception as exc:
+            # NOTE: the line number and the file name are added by the
+            # 'context' contextmanager
             raise ValueError(
-                'Could not convert %s->%s: %s, line %s' %
-                (tn, val.__name__, exc, node.lineno))
+                'Could not convert %s->%s: %s' %
+                (tn, val.__name__, exc))
 
     def _literalnode(self, node):
         tag = striptag(node.tag)
