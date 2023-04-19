@@ -373,8 +373,8 @@ individual_curves:
   Default: False
 
 infer_occur_rates:
-   If set infer the occurrence rates from the first probs_occur in nonparametric
-   sources.
+   If set infer the occurrence rates from the first probs_occur in
+   nonparametric sources.
    Example: *infer_occur_rates = true*
    Default: False
 
@@ -1242,7 +1242,8 @@ class OqParam(valid.ParamSet):
                 for k in ('mag_bin_width', 'distance_bin_width',
                           'coordinate_bin_width', 'num_epsilon_bins'):
                     if k not in vars(self):
-                        raise InvalidFile('%s must be set in %s' % (k, job_ini))
+                        raise InvalidFile(
+                            '%s must be set in %s' % (k, job_ini))
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1
@@ -1925,12 +1926,17 @@ class OqParam(valid.ParamSet):
         if 'id' in tagset and len(tagset) > 1:
             raise ValueError('aggregate_by = id must contain a single tag')
         elif 'site_id' in tagset and len(tagset) > 1:
-            raise ValueError('aggregate_by = site_id must contain a single tag')
+            raise ValueError(
+                'aggregate_by = site_id must contain a single tag')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
-                raise InvalidFile(
-                    '%s: expected aggregate_by=policy; got %s' % (
-                        self.inputs['job_ini'], self.aggregate_by))
+                err_msg = ('The field `aggregate_by = policy` in the %s file'
+                           ' is required for reinsurance calculations.'
+                           % self.inputs['job_ini'])
+                if self.aggregate_by:
+                    err_msg += (' Got `aggregate_by = %s` instead.'
+                                % self.aggregate_by)
+                raise InvalidFile(err_msg)
         return True
 
     def check_reinsurance(self):

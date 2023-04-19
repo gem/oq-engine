@@ -155,6 +155,15 @@ agg_id
         loss0 = view('portfolio_losses', self.calc.datastore)
         self.assertEqual(loss0, loss4)
 
+    def test_case_1_deductible_gt_ins_limit(self):
+        with self.assertRaises(ValueError) as ctx:
+            self.run_calc(case_1.__file__, 'job2.ini',
+                          insurance_csv="{'structural': 'policy_ins_ko.csv'}")
+        self.assertIn(
+            "Please check deductible values. Values larger than the insurance"
+            " limit were found for asset(s) {'a3'}.",
+            str(ctx.exception))
+
     def test_case_1f(self):
         # vulnerability function with BT
         self.run_calc(case_1f.__file__, 'job_h.ini,job_r.ini')
@@ -682,7 +691,7 @@ class ReinsuranceTestCase(CalculatorTestCase):
         f1, f2 = export(('aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggcurves.csv', f1, delta=2E-4)
         self.assertEqualFiles('expected/aggcurves-policy.csv', f2, delta=2E-4)
-        
+
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
                               fname, delta=2E-4)
@@ -701,7 +710,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',
                               fname, delta=.002)  # big diffs on macos, 0.16%
 
-        # check moving the ideductible in the exposure produce the same aggcurve
+        # check moving the ideductible in the exposure produce the same
+        # aggcurve
         self.run_calc(reinsurance_5.__file__, 'job_2.ini')  # 1 policy
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv',

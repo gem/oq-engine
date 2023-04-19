@@ -958,9 +958,11 @@ class ValidatingXmlParser(object):
         try:
             node.attrib[n] = val(decode(v))
         except Exception as exc:
+            # NOTE: the line number and the file name are added by the
+            # 'context' contextmanager
             raise ValueError(
-                'Could not convert %s->%s: %s, line %s' %
-                (tn, val.__name__, exc, node.lineno))
+                'Could not convert %s->%s: %s' %
+                (tn, val.__name__, exc))
 
     def _literalnode(self, node):
         tag = striptag(node.tag)
