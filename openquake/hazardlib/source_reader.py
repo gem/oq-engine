@@ -204,7 +204,8 @@ def get_csm(oq, full_lt, dstore=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-    return _get_csm(full_lt, groups)
+    is_event_based = oq.calculation_mode.startswith('event_based')
+    return _get_csm(full_lt, groups, is_event_based)
 
 
 def add_checksums(srcs):
@@ -379,7 +380,7 @@ def reduce_sources(sources_with_same_id, full_lt):
     return out
 
 
-def _get_csm(full_lt, groups):
+def _get_csm(full_lt, groups, event_based):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
     # 3. reorder the sources by source_id
@@ -395,7 +396,8 @@ def _get_csm(full_lt, groups):
     for trt in acc:
         lst = []
         for srcs in general.groupby(acc[trt], key).values():
-            if len(srcs) > 1:
+            # NB: not reducing the sources in event based
+            if len(srcs) > 1 and not event_based:
                 srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():

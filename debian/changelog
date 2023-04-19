@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the internals of rupture sampling again (trt_smr)
   * Fixed a bug in scenario calculations causing a mysterious IndexError in the
     line rctx.clon = c.lons[rctx.sids]
   * Changed the disaggregation exporter to add a column with the IML
