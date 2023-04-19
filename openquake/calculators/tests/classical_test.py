@@ -494,6 +494,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_65(self):
         # multiFaultSource with infer_occur_rates=true
         self.run_calc(case_65.__file__, 'job.ini')
+        rates = self.calc.datastore['rup/occurrence_rate'][:]
+        aac(rates, [0.22314355, 0.35667494])
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
