@@ -251,12 +251,6 @@ class SourceGroup(collections.abc.Sequence):
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
         min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
-        if min_mag and hasattr(src, 'mags'):
-            # honor minimum_magnitude for multifault sources
-            # FIXME: why it is needed for case_65??
-            ok = src.mags >= min_mag
-            for attr in 'mags rupture_idxs probs_occur rakes'.split():
-                setattr(src, attr, numpy.array(getattr(src, attr))[ok])
 
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
