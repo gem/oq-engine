@@ -235,12 +235,12 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         sample = poisson_sample if is_poissonian(self) else timedep_sample
         for rup, num_occ in sample(self, eff_num_ses):
             rup.seed = seed
+            seed += 1
             if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
                 # defined only for poissonian sources
                 # needed to get convergency of the frequency to the rate
                 # tested only in oq-risk-tests etna0
                 rup.occurrence_rate *= self.smweight
-            seed += 1
             yield rup, self.trt_smr, num_occ
 
     def get_mags(self):
