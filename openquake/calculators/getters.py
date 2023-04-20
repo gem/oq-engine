@@ -336,6 +336,10 @@ class RuptureGetter(object):
     def num_ruptures(self):
         return len(self.proxies)
 
+    @property
+    def seeds(self):
+        return [p['seed'] for p in self.proxies]
+
     def get_rupdict(self):  # used in extract_event_info and show rupture
         """
         :returns: a dictionary with the parameters of the rupture
