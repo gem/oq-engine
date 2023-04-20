@@ -117,9 +117,6 @@ def create_source_info(csm, h5):
                src.weight, mutex, trti]
         wkts.append(getattr(src, '_wkt', ''))
         data[srcid] = row
-        srcid = len(data) - 1
-        for src in srcs:
-            src.id = srcid
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), len(data), numpy.mean(lens))
@@ -513,7 +510,7 @@ class CompositeSourceModel:
         """
         Update (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        assert len(source_data) < TWO32, len(source_data)
+        assert len(source_data) < TWO24, len(source_data)
         for src_id, nsites, weight, ctimes in python3compat.zip(
                 source_data['src_id'], source_data['nsites'],
                 source_data['weight'], source_data['ctimes']):
@@ -536,17 +533,22 @@ class CompositeSourceModel:
         """
         Set the src.offset field for each source
         """
+        src_id = 0
         for srcs in general.groupby(self.get_sources(), basename).values():
             offset = 0
             if len(srcs) > 1:  # order by split number
                 srcs.sort(key=fragmentno)
             for src in srcs:
+                src.id = src_id
                 src.offset = offset
+                if not src.num_ruptures:
+                    src.num_ruptures = src.count_ruptures()
                 offset += src.num_ruptures
-                if src.num_ruptures >= TWO32:
+                if src.num_ruptures >= TWO24:
                     raise ValueError(
-                        '%s contains more than 2**32 ruptures' % src)
+                        '%s contains more than 2**24 ruptures' % src)
                 # print(src, src.offset, offset)
+            src_id += 1
 
     def get_max_weight(self, oq):  # used in preclassical
         """

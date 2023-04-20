@@ -39,9 +39,11 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 
 pmf_dt = numpy.dtype([
@@ -67,7 +69,7 @@ rup_dt = numpy.dtype([
     ('extra', hdf5.vstr)])
 
 rupture_dt = numpy.dtype([
-    ('id', U32),
+    ('id', I64),
     ('seed', U32),
     ('source_id', '<S16'),
     ('trt_smr', U32),
@@ -775,7 +777,7 @@ class EBRupture(object):
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
-            self.__class__.__name__, self.seed, self.n_occ)
+            self.__class__.__name__, self.id, self.n_occ)
 
 
 class RuptureProxy(object):
