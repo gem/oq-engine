@@ -1124,8 +1124,8 @@ def view_gsim_for_event(token, dstore):
     eid = int(token.split(':')[1])
     full_lt = dstore['full_lt']
     rup_id, rlz_id = dstore['events'][eid][['rup_id', 'rlz_id']]
-    trt_smr = dstore['ruptures'][rup_id]['trt_smr']
-    trti = trt_smr // 2**24
+    trt_smr = dict(dstore['ruptures'][:][['id', 'trt_smr']])
+    trti = trt_smr[rup_id] // 2**24
     gsim = full_lt.get_realizations()[rlz_id].gsim_rlz.value[trti]
     return gsim
 

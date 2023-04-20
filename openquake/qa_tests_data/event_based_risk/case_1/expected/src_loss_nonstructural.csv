@@ -1,5 +1,5 @@
-#,"generated_by='OpenQuake engine 3.17.0-git4db4016d05', start_date='2023-04-20T06:13:22', checksum=2453527097, investigation_time=50.0, risk_investigation_time=50.0"
+#,"generated_by='OpenQuake engine 3.17.0-git069480c15e', start_date='2023-04-20T08:31:59', checksum=2453527097, investigation_time=50.0, risk_investigation_time=50.0"
 source,value
 1,9.14390E+02
-2,3.99737E+02
-3,3.40663E+03
+2,1.85748E+03
+3,1.94889E+03

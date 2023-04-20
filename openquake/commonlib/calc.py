@@ -198,15 +198,14 @@ class RuptureImporter(object):
         Import an array of ruptures and store the associated events.
         :returns: (number of imported ruptures, number of imported events)
         """
-        oq = self.oqparam
+        # first of all, sanity check on uniquess
+        rupids = numpy.unique(rup_array['id'])
+        assert len(rupids) == len(rup_array), 'rup_id not unique!'
+
         logging.info('Reordering the ruptures and storing the events')
         geom_id = numpy.argsort(rup_array['seed'])
         rup_array = rup_array[geom_id]
-        nr = len(rup_array)
-        rupids = numpy.unique(rup_array['id'])
-        assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        rup_array['id'] = numpy.arange(nr)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
@@ -214,6 +213,7 @@ class RuptureImporter(object):
             self.datastore, self.oqparam.concurrent_tasks)
         self._save_events(rup_array, rgetters)
         nr, ne = len(rup_array), rup_array['n_occ'].sum()
+        oq = self.oqparam
         if oq.investigation_time:
             eff_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
                         len(self.datastore['weights']))
