@@ -117,9 +117,6 @@ def create_source_info(csm, h5):
                src.weight, mutex, trti]
         wkts.append(getattr(src, '_wkt', ''))
         data[srcid] = row
-        src_id = len(data) - 1
-        for src in srcs:
-            src.id = src_id  # TODO: see if we can remove this
 
     logging.info('There are %d groups and %d sources with len(trt_smrs)=%.2f',
                  len(csm.src_groups), len(data), numpy.mean(lens))

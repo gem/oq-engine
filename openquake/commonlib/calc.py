@@ -252,6 +252,8 @@ class RuptureImporter(object):
         # set event year and event ses starting from 1
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
+
+        # TODO: use default_rng here
         numpy.random.seed(self.oqparam.ses_seed)
         if self.oqparam.investigation_time:
             itime = int(self.oqparam.investigation_time)
