@@ -226,6 +226,9 @@ class RuptureImporter(object):
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
         events = numpy.zeros(E, rupture.events_dt)
+        # DRAMATIC! the event IDs will be overridden a few lines below,
+        # see the line events['id'] = numpy.arange(len(events))
+
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
@@ -234,7 +237,7 @@ class RuptureImporter(object):
         for i, rg in enumerate(rgetters):
             iterargs.append((rg.proxies, rg.rlzs_by_gsim, i))
         if len(events) < 1E5:
-            acc = general.AccumDict()  # task_no -> 
+            acc = general.AccumDict()  # ordinal -> eid_rlz
             for args in iterargs:
                 acc += self.get_eid_rlz(*args)
         else:
