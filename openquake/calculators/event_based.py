@@ -167,7 +167,6 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                 for m, imt in enumerate(oqparam.imtls):
                     hcurves[rsi2str(rlz, sid, imt)] = poes[m]
     times = numpy.array([tup + (monitor.task_no,) for tup in times], time_dt)
-    times.sort(order='rup_id')
     if not oqparam.ground_motion_fields:
         gmfdata = ()
     return dict(gmfdata=gmfdata, hcurves=hcurves, times=times,

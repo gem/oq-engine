@@ -805,9 +805,9 @@ class RuptureProxy(object):
         return ebr
 
     def __repr__(self):
-        src = self['source_id'].decode('ascii')
-        return '<%s#%d[%s], w=%d>' % (self.__class__.__name__,
-                                      self['id'], src, self['n_occ'])
+        return '<%s#%d[%s], w=%d>' % (
+            self.__class__.__name__, self['id'],
+            self['source_id'], self['n_occ'])
 
 
 def get_ruptures(fname_csv):
