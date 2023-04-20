@@ -205,7 +205,7 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        rup_array['id'] = numpy.arange(nr)
+        #rup_array['id'] = numpy.arange(nr)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
