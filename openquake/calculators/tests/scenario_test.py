@@ -162,7 +162,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # choosing invalid GMPE
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_15.__file__, 'job.ini')
-        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='NA')"
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id=0)"
                       " CorrelationButNoInterIntraStdDevs", str(ctx.exception))
 
     def test_case_16(self):

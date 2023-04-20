@@ -221,7 +221,7 @@ class GmfComputer(object):
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, decode(self.source_id),
+                    (gsim, imt, self.source_id,
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:

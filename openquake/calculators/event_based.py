@@ -305,8 +305,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
                 [task_no] = numpy.unique(times['task_no'])
-                #rupids = list(times['rup_id'])
-                #self.datastore['gmf_data/time_by_rup'][rupids] = times
+                # TODO: store the times in gmf_data/time_by_rup
                 if self.N >= calc.SLICE_BY_EVENT_NSITES:
                     sbe = calc.build_slice_by_event(
                         df.eid.to_numpy(), self.offset)
