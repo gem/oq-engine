@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 def log_user_login(sender, request, user, **kwargs):
     logger.info(
         f'User "{user.username}" (IP: {request.META.get("REMOTE_ADDR")})'
-        f' logged in through {request.META.get("HTTP_REFERER")}')
+        f' logged in through page {request.META.get("HTTP_REFERER")}')
 
 
 @receiver(user_login_failed)
@@ -38,7 +38,7 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
     msg = (
         f'User "{username}"'
         f' (IP: {request.META.get("REMOTE_ADDR")}) failed to log in'
-        f' through {request.META.get("HTTP_REFERER")}')
+        f' through page {request.META.get("HTTP_REFERER")}')
     if not User.objects.filter(username=username).exists():
         msg += ' (no user with such a username exists)'
     logger.warning(msg)
@@ -48,4 +48,4 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
 def log_user_logout(sender, request, user, **kwargs):
     logger.info(
         f'User "{user.username}" (IP: {request.META.get("REMOTE_ADDR")})'
-        f' logged out through {request.META.get("HTTP_REFERER")}')
+        f' logged out through page {request.META.get("HTTP_REFERER")}')
