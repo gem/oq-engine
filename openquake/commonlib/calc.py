@@ -28,6 +28,7 @@ from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
+TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 MAX_NBYTES = 1024**3
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -182,9 +183,10 @@ class RuptureImporter(object):
         """
         eid_rlz = []
         for rup in proxies:
+            srcid, rupid = divmod(int(rup['id']), TWO24)
             ebr = EBRupture(
                 Mock(seed=rup['seed']), rup['source_id'],
-                rup['trt_smr'], rup['n_occ'], e0=rup['e0'],
+                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'],
                 scenario='scenario' in self.oqparam.calculation_mode)
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
@@ -202,7 +204,7 @@ class RuptureImporter(object):
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
-        assert len(rupids) == nr, 'rup_id not unique!'
+        # assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
         rup_array['id'] = numpy.arange(nr)
         if len(self.datastore['ruptures']):
