@@ -402,8 +402,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                   % oq.inputs['job_ini'])
             srcfilter = self.src_filter()
             scenario = 'scenario' in oq.calculation_mode
-            proxies = [RuptureProxy(rec, scenario)
-                       for rec in self.datastore['ruptures'][:]]
+            proxies = [RuptureProxy(i, rec, scenario)
+                       for i, rec in enumerate(self.datastore['ruptures'][:])]
             full_lt = self.datastore['full_lt']
             self.datastore.swmr_on()  # must come before the Starmap
             smap = parallel.Starmap.apply_split(

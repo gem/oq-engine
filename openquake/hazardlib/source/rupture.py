@@ -786,7 +786,8 @@ class RuptureProxy(object):
 
     :param rec: a record with the rupture parameters
     """
-    def __init__(self, rec, scenario=False):
+    def __init__(self, ordinal, rec, scenario=False):
+        self.ordinal = ordinal
         self.rec = rec
         self.scenario = scenario
 

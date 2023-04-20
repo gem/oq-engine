@@ -431,8 +431,8 @@ class EventBasedCalculator(base.HazardCalculator):
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
         scenario = 'scenario' in oq.calculation_mode
-        proxies = [RuptureProxy(rec, scenario)
-                   for rec in dstore['ruptures'][:]]
+        proxies = [RuptureProxy(i, rec, scenario)
+                   for i, rec in enumerate(dstore['ruptures'][:])]
         if "station_data" in oq.inputs:
             # this is meant to be used in conditioned scenario calculations with
             # a single rupture; we are taking the first copy of the rupture
