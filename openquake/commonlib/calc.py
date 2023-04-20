@@ -16,12 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import itertools
 import logging
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import performance, parallel, hdf5
+from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
@@ -177,7 +176,7 @@ class RuptureImporter(object):
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, rlzs_by_gsim):
+    def get_eid_rlz(self, proxies, rlzs_by_gsim, monitor):
         """
         :returns: a composite array with the associations eid->rlz
         """
@@ -191,7 +190,7 @@ class RuptureImporter(object):
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rup['id'], rlz_id))
-        return numpy.array(eid_rlz, events_dt)
+        return {monitor.task_no: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
@@ -231,20 +230,26 @@ class RuptureImporter(object):
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
+        iterargs = []
+        for i, rg in enumerate(rgetters):
+            mon = performance.Monitor()
+            mon.task_no = i
+            iterargs.append((rg.proxies, rg.rlzs_by_gsim, mon))
         if len(events) < 1E5:
-            it = itertools.starmap(self.get_eid_rlz, iterargs)
+            acc = general.AccumDict()  # task_no -> 
+            for args in iterargs:
+                acc += self.get_eid_rlz(*args)
         else:
-            it = parallel.Starmap(
-                self.get_eid_rlz, iterargs, progress=logging.debug)
+            acc = parallel.Starmap(
+                self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
         i = 0
-        for eid_rlz in it:
+        for task_no, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:
                 events[i] = er
                 i += 1
                 if i >= TWO32:
                     raise ValueError('There are more than %d events!' % i)
-        events.sort(order='rup_id')  # fast too
+
         # sanity check
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
