@@ -71,7 +71,7 @@ rup_dt = numpy.dtype([
 rupture_dt = numpy.dtype([
     ('id', I64),
     ('seed', U32),
-    ('source_id', '<S16'),
+    ('source_id', U32),
     ('trt_smr', U32),
     ('code', U8),
     ('n_occ', U32),
@@ -729,7 +729,7 @@ class EBRupture(object):
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = id  # id of the rupture on the DataStore
+        self.id = source_id * TWO24 + id
         self.e0 = e0
         self.scenario = scenario
 
@@ -850,8 +850,8 @@ def get_ruptures(fname_csv):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        trt_smr = aw.trts.index(row['trt']) * 2**24
-        tup = (u, row['seed'], 'no-source', trt_smr,
+        trt_smr = aw.trts.index(row['trt']) * TWO24
+        tup = (u, row['seed'], 0, trt_smr,
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)

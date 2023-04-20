@@ -241,7 +241,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 # needed to get convergency of the frequency to the rate
                 # tested only in oq-risk-tests etna0
                 rup.occurrence_rate *= self.smweight
-            yield EBRupture(rup, self.source_id, self.trt_smr, num_occ, rupid)
+            yield EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
 
     def get_mags(self):
         """
