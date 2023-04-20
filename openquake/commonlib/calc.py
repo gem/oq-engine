@@ -176,7 +176,7 @@ class RuptureImporter(object):
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, rlzs_by_gsim, monitor):
+    def get_eid_rlz(self, proxies, rlzs_by_gsim, ordinal):
         """
         :returns: a composite array with the associations eid->rlz
         """
@@ -190,7 +190,7 @@ class RuptureImporter(object):
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rup['id'], rlz_id))
-        return {monitor.task_no: numpy.array(eid_rlz, events_dt)}
+        return {ordinal: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
@@ -232,9 +232,7 @@ class RuptureImporter(object):
         # this is very fast: I saw 30 million events associated in 1 minute!
         iterargs = []
         for i, rg in enumerate(rgetters):
-            mon = performance.Monitor()
-            mon.task_no = i
-            iterargs.append((rg.proxies, rg.rlzs_by_gsim, mon))
+            iterargs.append((rg.proxies, rg.rlzs_by_gsim, i))
         if len(events) < 1E5:
             acc = general.AccumDict()  # task_no -> 
             for args in iterargs:
@@ -243,7 +241,7 @@ class RuptureImporter(object):
             acc = parallel.Starmap(
                 self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
         i = 0
-        for task_no, eid_rlz in sorted(acc.items()):
+        for ordinal, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:
                 events[i] = er
                 i += 1
