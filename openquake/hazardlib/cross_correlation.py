@@ -237,7 +237,6 @@ class Bradley2012(CrossCorrelationBetween):
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        breakpoint()
         return np.random.multivariate_normal(
             np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
 
