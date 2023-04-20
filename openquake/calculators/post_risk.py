@@ -160,17 +160,17 @@ def get_src_loss_table(dstore, loss_id):
         return [], ()
 
     ws = dstore['weights'][:]
-    srcs = dstore['source_info']['source_id']
     events = dstore['events'][:]
     ruptures = dstore['ruptures'][:]
+    source_id = dstore['source_info']['source_id']
     eids = alt.event_id.to_numpy()
     evs = events[eids]
     rlz_ids = evs['rlz_id']
     srcidx = dict(ruptures[['id', 'source_id']])
     srcids = [srcidx[rup_id] for rup_id in evs['rup_id']]
-    source_id = python3compat.decode(srcs[srcids])
+    srcs = python3compat.decode(source_id[srcids])
     acc = general.AccumDict(accum=0)
-    for src, rlz_id, loss in zip(source_id, rlz_ids, alt.loss.to_numpy()):
+    for src, rlz_id, loss in zip(srcs, rlz_ids, alt.loss.to_numpy()):
         acc[src] += loss * ws[rlz_id]
     return zip(*sorted(acc.items()))
 
