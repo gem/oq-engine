@@ -1080,7 +1080,8 @@ Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
  (10000, 1, 20)
  >> extractor.close()
 
-If in the calculation you specified the flag ``individual_rlzs=true``, then it is also￼possible to retrieve a specific realization
+If in the calculation you specified the flag ``individual\_rlzs=true``,
+then it is also￼possible to retrieve a specific realization
 
 .. code-block::
 
