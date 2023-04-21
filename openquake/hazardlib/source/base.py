@@ -240,7 +240,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
                 # tested only in oq-risk-tests etna0
                 rup.occurrence_rate *= self.smweight
             ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
-            ebr.seed = rupid + ses_seed
+            ebr.seed = ebr.id + ses_seed
             yield ebr
 
     def get_mags(self):

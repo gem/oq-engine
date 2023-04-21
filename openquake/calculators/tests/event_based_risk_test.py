@@ -110,7 +110,7 @@ agg_id
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [729.5719], atol=.001)
+        numpy.testing.assert_allclose(aw.array, [650.2784], atol=.001)
 
         fnames = export(('aggrisk', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -395,7 +395,7 @@ agg_id
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_dframe()), 0)
+        self.assertEqual(len(arr.to_dframe()), 3)
 
         # aggregate by all loss types
         fnames = export(
