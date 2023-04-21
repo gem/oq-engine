@@ -52,7 +52,7 @@ pmf_dt = numpy.dtype([
 
 events_dt = numpy.dtype([
     ('id', U32),
-    ('rup_id', U32),
+    ('rup_id', I64),
     ('rlz_id', U16)])
 
 rup_dt = numpy.dtype([
