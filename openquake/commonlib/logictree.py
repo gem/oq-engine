@@ -155,12 +155,13 @@ def collect_info(smltpath, branchID=None):
                     if branchID and branchID != br['branchID']:
                         continue
                     with context(smltpath, br):
-                        fnames = unique(br.uncertaintyModel.text.split())
-                        smpaths.update(abs_paths(smltpath, fnames))
+                        fnames = abs_paths(
+                            smltpath, unique(br.uncertaintyModel.text.split()))
+                        smpaths.update(fnames)
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
-                                h5paths.add(os.path.abspath(hdf5file))
+                                h5paths.add(hdf5file)
                     if os.environ.get('OQ_REDUCE'):  # only take first branch
                         break
     return Info(sorted(smpaths), sorted(h5paths), applytosources)

@@ -1076,9 +1076,22 @@ Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
  >> calc_id = 42  # for example
  >> extractor = Extractor(calc_id)
  >> obj = extractor.get('hcurves?kind=mean&imt=PGA')  # returns an ArrayWrapper
- >> obj.array.shape  # an example with 10,000 sites and 20 levels per PGA
- (10000, 20)
+ >> obj.mean.shape  # an example with 10,000 sites and 20 levels per PGA
+ (10000, 1, 20)
  >> extractor.close()
+
+If in the calculation you specified the flag ``individual_rlzs=true``, then it is also￼possible to retrieve a specific realization
+
+.. code-block::
+
+￼ >> dic = vars(extractor.get('hcurves?kind=rlz-0'))
+￼ >> dic['rlz-000']  # array of shape (num_sites, num_imts, num_levels)
+
+or even all realizations:
+￼
+.. code-block::
+
+￼ >> dic = vars(extractor.get('hcurves?kind=rlzs'))
 
 Here is an example of using the `WebExtractor` to retrieve hazard maps.
 Here we assumes that there is available in a remote machine where there is
