@@ -348,11 +348,14 @@ class EventBasedCalculator(base.HazardCalculator):
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
-                ebrs = [EBRupture(copyobj(rup, seed=rup.seed + i),
-                                  0, 0, G, i, e0=i * G, scenario=True)
-                        for i in range(ngmfs)]
+                ebrs = []
+                for i in range(ngmfs):
+                    ebr = EBRupture(rup, 0, 0, G, i, e0=i * G, scenario=True)
+                    ebr.seed = oq.ses_seed + i
+                    ebrs.append(ebr)
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0, scenario=True)]
+                ebrs[0].seed = oq.ses_seed
             srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
             aw = get_rup_array(ebrs, srcfilter)
             if len(aw) == 0:

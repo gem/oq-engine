@@ -668,7 +668,6 @@ def get_rupture(oqparam):
     conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
     rup = conv.convert_node(rup_node)
     rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
-    rup.seed = oqparam.ses_seed
     return rup
 
 

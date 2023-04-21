@@ -252,7 +252,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
-    seed = 0  # set to a value > 0 by the engine
     _code = {}
 
     @classmethod
@@ -722,9 +721,10 @@ class EBRupture(object):
     :param int e0: initial event ID (default 0)
     :param bool scenario: True for scenario ruptures, default False
     """
+    seed = None  # set by the engine
+
     def __init__(self, rupture, source_id, trt_smr, n_occ=1,
                  id=None, e0=0, scenario=False):
-        assert rupture.seed > 0  # sanity check
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
@@ -741,13 +741,6 @@ class EBRupture(object):
     @property
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
-
-    @property
-    def seed(self):
-        """
-        Seed of the rupture
-        """
-        return self.rupture.seed
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """

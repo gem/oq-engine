@@ -121,7 +121,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['id'] = ebrupture.id
-        rec['seed'] = rup.seed
+        rec['seed'] = ebrupture.seed
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
         rec['maxlon'] = maxlon = numpy.nanmax(lons)
