@@ -40,7 +40,7 @@ from openquake.baselib import hdf5
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context
 from openquake.baselib.general import groupby, AccumDict
-from openquake.hazardlib import nrml, InvalidFile, pmf
+from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths)
@@ -680,6 +680,11 @@ class SourceModelLogicTree(object):
             xml = sm.read()
         self.tectonic_region_types.update(TRT_REGEX.findall(xml))
         for src_id in ID_REGEX.findall(xml):
+            try:
+                valid.source_id(src_id)
+            except ValueError:
+                raise InvalidFile(
+                    '%s: contain invalid ID %s' % (sm.name, src_id))
             self.source_ids[src_id].append(branch_id)
 
     def collapse(self, branchset_ids):

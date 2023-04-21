@@ -314,7 +314,7 @@ def _log_hinge(x, x0, a, b0, b1, delta):
     Returns the logistic hinge function for the magnitude and source-depth
     terms, as described in Equation 4.3
     """
-    xdiff = x - x0
+    xdiff = (x - x0).astype('float64')
     return a + b0 * xdiff + (b1 - b0) * delta * np.log(1 + np.exp(xdiff /
                                                                   delta))
 

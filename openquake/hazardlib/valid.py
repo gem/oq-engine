@@ -308,7 +308,7 @@ ASSET_ID_LENGTH = 50  # length that makes Murray happy
 simple_id = SimpleId(MAX_ID_LENGTH)
 branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
-source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\.\-_]+$')
+source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\-_:]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
 
