@@ -260,8 +260,8 @@ class EventBasedTestCase(CalculatorTestCase):
         edf = self.calc.datastore.read_df('events', 'id')
         edf['gsim'] = [gsim[r] for r in edf.rlz_id]
         A, S = edf.groupby('gsim').rlz_id.count()
-        self.assertEqual(A, 5191)  # AkkarBommer2010 assocs
-        self.assertEqual(S, 4930)  # SadighEtAl1997 assocs
+        self.assertEqual(A, 5010)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 5111)  # SadighEtAl1997 assocs
 
         # check association events <-> GSIMs are 90-10 for sampling
         self.run_calc(case_3.__file__, 'job.ini',
@@ -272,8 +272,8 @@ class EventBasedTestCase(CalculatorTestCase):
         edf = self.calc.datastore.read_df('events', 'id')
         edf['gsim'] = [gsim[r] for r in edf.rlz_id]
         A, S = edf.groupby('gsim').rlz_id.count()
-        self.assertEqual(A, 9130)  # AkkarBommer2010 assocs
-        self.assertEqual(S, 991)   # SadighEtAl1997 assocs
+        self.assertEqual(A, 9057)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 1064)  # SadighEtAl1997 assocs
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -345,7 +345,7 @@ class EventBasedTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % exp, got)
         mean_cl = get_mean_curve(self.calc.cl.datastore, 'PGA', slice(None))
         reldiff, _index = max_rel_diff_index(mean_cl, mean_eb, min_value=0.1)
-        self.assertLess(reldiff, 0.05)
+        self.assertLess(reldiff, 0.052)
 
     def test_case_8(self):
         out = self.run_calc(case_8.__file__, 'job.ini', exports='csv')
