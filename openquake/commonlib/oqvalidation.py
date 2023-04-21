@@ -1834,7 +1834,10 @@ class OqParam(valid.ParamSet):
         and number_of_logic_tree_samples must be greater than 1.
         """
         if self.collect_rlzs is None:
-            self.collect_rlzs = self.number_of_logic_tree_samples > 1
+            if self.individual_rlzs:
+                self.collect_rlzs = False
+            else:
+                self.collect_rlzs = self.number_of_logic_tree_samples > 1
         if self.job_type == 'hazard':
             return True
         if self.calculation_mode == 'event_based_damage':

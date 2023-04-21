@@ -752,7 +752,12 @@ def extract_agg_curves(dstore, what):
         df = dstore.read_df('aggcurves', sel=dict(agg_id=agg_id, loss_id=li))
         rps = list(df.return_period.unique())
         P = len(rps)
-        R = len(qdic['kind'])
+        oq = dstore['oqparam']
+        if oq.collect_rlzs:
+            R = 1
+            qdic['kind'] = ['rlz-000']  # TODO: try to change that
+        else:
+            R = len(qdic['kind'])
         arr = numpy.zeros((P, R))
         for rlz in df.rlz_id.unique():
             # NB: df may contains zeros but there are no missing periods
