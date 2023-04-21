@@ -755,7 +755,7 @@ def extract_agg_curves(dstore, what):
         oq = dstore['oqparam']
         if oq.collect_rlzs:
             R = 1
-            qdic['kind'] = ['Collected rlzs']
+            qdic['kind'] = ['collected_rlzs']
         else:
             R = len(qdic['kind'])
         arr = numpy.zeros((P, R))
