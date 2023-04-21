@@ -91,6 +91,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
     :param ses_seed: used for XML ruptures
     :returns: a list of one or more EBRuptures
     """
+    1/0
     if fname.endswith('.xml'):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)

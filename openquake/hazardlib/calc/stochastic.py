@@ -206,13 +206,13 @@ def sample_cluster(group, num_ses, ses_seed):
             src_seed = src.serial(ses_seed)
             for i, rup in enumerate(src.iter_ruptures()):
                 rup.src_id = src.id
-                rup.seed = src_seed + i
                 allrups.append(rup)
         # random distribute in bins according to the rup_weights
         n_occs = random_histogram(tot_num_occ, weights, seed)
         for rup, rupid, n_occ in zip(allrups, rupids, n_occs):
             if n_occ:
                 ebr = EBRupture(rup, rup.src_id, trt_smr, n_occ, rupid)
+                ebr.seed = rupid + ses_seed
                 eb_ruptures.append(ebr)
     elif group.src_interdep == 'mutex' and group.rup_interdep == 'indep':
         # TODO: manage grp_probability
@@ -232,8 +232,8 @@ def sample_cluster(group, num_ses, ses_seed):
             for rup, rupid, n_occ, rseed in zip(
                     src.iter_ruptures(), rupids, n_occs, rseeds):
                 if n_occ:
-                    rup.seed = rseed
                     ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
+                    ebr.seed = rupid + ses_seed
                     eb_ruptures.append(ebr)
     else:
         raise NotImplementedError(

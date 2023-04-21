@@ -91,7 +91,7 @@ code2cls = {}
 
 def to_csv_array(ruptures):
     """
-    :param ruptures: a list of ruptures
+    :param ruptures: a list of ruptures with a seed, built with _get_rupture
     :returns: an array of ruptures suitable for serialization in CSV
     """
     if not code2cls:
