@@ -252,6 +252,11 @@ class SourceGroup(collections.abc.Sequence):
             src.tectonic_region_type, self.trt)
         src.min_mag = max(src.min_mag, self.min_mag.get(self.trt)
                           or self.min_mag['default'])
+        if hasattr(src, 'mags'):
+            # honor minimum_magnitude for multifault sources
+            ok = src.mags >= src.min_mag
+            for attr in 'mags rupture_idxs probs_occur rakes'.split():
+                setattr(src, attr, numpy.array(getattr(src, attr))[ok])
         if src.min_mag and not src.get_mags():  # filtered out
             return
         # checking mutex ruptures
