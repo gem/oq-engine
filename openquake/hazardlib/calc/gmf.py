@@ -139,6 +139,7 @@ class GmfComputer(object):
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
         min_iml = self.cmaker.min_iml
+        max_iml = self.cmaker.max_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.ctx.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
@@ -158,6 +159,9 @@ class GmfComputer(object):
                 for e in range(E):
                     if (array[:, n, e] < min_iml).all():
                         array[:, n, e] = 0
+                for m in range(M):
+                    extreme = array[m, n] > max_iml[m]
+                    array[m, n, extreme] = mean_stds[0, g, m, n]
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:

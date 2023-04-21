@@ -401,6 +401,7 @@ class ContextMaker(object):
             self.min_iml = param['min_iml']
         except KeyError:
             self.min_iml = [0. for imt in self.imtls]
+        self.max_iml = oq.get_max_iml()
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
