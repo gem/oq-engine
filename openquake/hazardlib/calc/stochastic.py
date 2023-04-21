@@ -24,8 +24,7 @@ import sys
 import time
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import (
-    AccumDict, random_distribute, random_histogram)
+from openquake.baselib.general import AccumDict, random_histogram
 from openquake.baselib.performance import Monitor
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
@@ -210,7 +209,7 @@ def sample_cluster(group, num_ses, ses_seed):
                 rup.seed = src_seed + i
                 allrups.append(rup)
         # random distribute in bins according to the rup_weights
-        n_occs = random_distribute(tot_num_occ, weights, rng)
+        n_occs = random_histogram(tot_num_occ, weights, seed)
         for rup, rupid, n_occ in zip(allrups, rupids, n_occs):
             if n_occ:
                 ebr = EBRupture(rup, rup.src_id, trt_smr, n_occ, rupid)
@@ -219,7 +218,7 @@ def sample_cluster(group, num_ses, ses_seed):
         # TODO: manage grp_probability
         # random distribute in bins according to the srcs_weights
         ws = [src.mutex_weight for src in group]
-        src_occs = random_distribute(tot_num_occ, ws, rng)
+        src_occs = random_histogram(tot_num_occ, ws, seed)
         # NB: in event_based/src_mutex num_ses=2000, samples=1
         # and there are 10 sources with weights
         # 0.368, 0.061, 0.299, 0.049, 0.028, 0.011, 0.011, 0.018, 0.113, 0.042
