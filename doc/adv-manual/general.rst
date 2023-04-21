@@ -1084,18 +1084,18 @@ Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
  >> extractor.close()
 
 If in the calculation you specified the flag ``individual\_rlzs=true``,
-then it is also￼possible to retrieve a specific realization
+then it is also possible to retrieve a specific realization
 
 .. code-block::
 
-￼ >> dic = vars(extractor.get('hcurves?kind=rlz-0'))
-￼ >> dic['rlz-000']  # array of shape (num_sites, num_imts, num_levels)
+ >> dic = vars(extractor.get('hcurves?kind=rlz-0'))
+ >> dic['rlz-000']  # array of shape (num_sites, num_imts, num_levels)
 
 or even all realizations:
-￼
+
 .. code-block::
 
-￼ >> dic = vars(extractor.get('hcurves?kind=rlzs'))
+ >> dic = vars(extractor.get('hcurves?kind=rlzs'))
 
 Here is an example of using the `WebExtractor` to retrieve hazard maps.
 Here we assumes that there is available in a remote machine where there is
