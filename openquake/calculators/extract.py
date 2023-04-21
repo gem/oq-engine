@@ -736,7 +736,7 @@ def extract_agg_curves(dstore, what):
     k = qdic['k']  # rlz or stat index
     lts = tagdict.pop('lt')  # loss type string
     [l] = qdic['loss_type']  # loss type index
-    tagnames = sorted(tagdict)
+    tagnames = list(tagdict)
     if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
