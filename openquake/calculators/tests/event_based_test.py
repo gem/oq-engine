@@ -309,7 +309,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # first check the number of generated ruptures
         num_rups = len(self.calc.datastore['ruptures'])
-        self.assertEqual(num_rups, 1942)
+        self.assertEqual(num_rups, 1906)
 
         fnames = out['hcurves', 'csv']
         expected = ['hazard_curve-mean.csv', 'quantile_curve-0.1.csv']

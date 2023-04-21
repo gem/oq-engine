@@ -206,7 +206,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.trt_smr = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
-        self.min_mag = 0  # FIXME: why this has effect on event_based/case_6??
 
     def is_gridded(self):
         """
