@@ -5,12 +5,20 @@
 
   [Marco Pagani, Michele Simionato]
   * Fixed a bug in the source writer when writing NonParametricSources
+  * Removed the conditional spectrum calculator (it was experimental and
+    not working properly in many cases)
 
   [Michele Simionato]
   * Now we log only when the DB schema is really upgraded
+  * Fixed the documentation about extracting hazard curves and maps
   * Fixed KeyError in calculations using the EasternCan15Mid with PGA
+  * The `minimum_magnitude` parameter was ignored for multiFault sources
   * Replaced hard-coded limit to 25 levels in the MRD postprocessor
     with a simple warning
+  * Fixed bug in `oq zip`: when starting from a directory different from the
+    job.ini directory, .hdf5 files for nonparametric ruptures were not included
+  * Fixed a 32 bit / 64 bit bug in the hinge function of Kuehn et al. (2020)
+  * Forbidden source IDs with dots (".")
 
 python3-oq-engine (3.16.1-1~xenial01) xenial; urgency=low
 
