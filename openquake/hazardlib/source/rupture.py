@@ -721,7 +721,7 @@ class EBRupture(object):
     :param int e0: initial event ID (default 0)
     :param bool scenario: True for scenario ruptures, default False
     """
-    seed = None  # set by the engine
+    seed = 'NA'  # set by the engine
 
     def __init__(self, rupture, source_id, trt_smr, n_occ=1,
                  id=None, e0=0, scenario=False):
@@ -795,6 +795,7 @@ class RuptureProxy(object):
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self['source_id'], self['trt_smr'],
                         self['n_occ'], self['id'], self['e0'], self.scenario)
+        ebr.seed = self['seed']
         return ebr
 
     def __repr__(self):
