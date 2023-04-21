@@ -1,3 +1,5 @@
+python3-oq-engine (3.16.2-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed a bug in extract_agg_curves affecting the QGIS plugin
   * Fixed a bug in scenario calculations causing a mysterious IndexError in the
@@ -19,6 +21,8 @@
     job.ini directory, .hdf5 files for nonparametric ruptures were not included
   * Fixed a 32 bit / 64 bit bug in the hinge function of Kuehn et al. (2020)
   * Forbidden source IDs with dots (".")
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 21 Apr 2023 12:22:53 +0000
 
 python3-oq-engine (3.16.1-1~xenial01) xenial; urgency=low
 
