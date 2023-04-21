@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict, copyobj, humansize
+from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -348,11 +348,14 @@ class EventBasedCalculator(base.HazardCalculator):
             oq.mags_by_trt = {trt: ['%.2f' % rup.mag]}
             self.cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
-                ebrs = [EBRupture(copyobj(rup, seed=rup.seed + i),
-                                  0, 0, G, i, e0=i * G, scenario=True)
-                        for i in range(ngmfs)]
+                ebrs = []
+                for i in range(ngmfs):
+                    ebr = EBRupture(rup, 0, 0, G, i, e0=i * G, scenario=True)
+                    ebr.seed = oq.ses_seed + i
+                    ebrs.append(ebr)
             else:  # keep a single rupture with a big occupation number
                 ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0, scenario=True)]
+                ebrs[0].seed = oq.ses_seed
             srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
             aw = get_rup_array(ebrs, srcfilter)
             if len(aw) == 0:

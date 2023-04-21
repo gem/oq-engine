@@ -23,7 +23,6 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -121,10 +120,11 @@ class GmfComputer(object):
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
             self.source_id = rupture.source_id  # the underlying source
+            self.seed = rupture.seed
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-        self.seed = rupture.seed
+            self.seed = rupture.seed
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
         if not ctxs:
             raise FarAwayRupture

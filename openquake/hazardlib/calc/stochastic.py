@@ -121,7 +121,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['id'] = ebrupture.id
-        rec['seed'] = rup.seed
+        rec['seed'] = ebrupture.seed
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
         rec['maxlon'] = maxlon = numpy.nanmax(lons)
@@ -206,14 +206,15 @@ def sample_cluster(group, num_ses, ses_seed):
             src_seed = src.serial(ses_seed)
             for i, rup in enumerate(src.iter_ruptures()):
                 rup.src_id = src.id
-                rup.seed = src_seed + i
                 allrups.append(rup)
         # random distribute in bins according to the rup_weights
         n_occs = random_histogram(tot_num_occ, weights, seed)
         for rup, rupid, n_occ in zip(allrups, rupids, n_occs):
             if n_occ:
                 ebr = EBRupture(rup, rup.src_id, trt_smr, n_occ, rupid)
+                ebr.seed = ebr.id + ses_seed
                 eb_ruptures.append(ebr)
+
     elif group.src_interdep == 'mutex' and group.rup_interdep == 'indep':
         # TODO: manage grp_probability
         # random distribute in bins according to the srcs_weights
@@ -232,8 +233,8 @@ def sample_cluster(group, num_ses, ses_seed):
             for rup, rupid, n_occ, rseed in zip(
                     src.iter_ruptures(), rupids, n_occs, rseeds):
                 if n_occ:
-                    rup.seed = rseed
                     ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
+                    ebr.seed = ebr.id + ses_seed
                     eb_ruptures.append(ebr)
     else:
         raise NotImplementedError(

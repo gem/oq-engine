@@ -184,9 +184,10 @@ class RuptureImporter(object):
         for rup in proxies:
             srcid, rupid = divmod(int(rup['id']), TWO24)
             ebr = EBRupture(
-                Mock(seed=rup['seed']), rup['source_id'],
+                Mock(), rup['source_id'],
                 rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'],
                 scenario='scenario' in self.oqparam.calculation_mode)
+            ebr.seed = rup['seed']
             for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
                 for eid in eids:
                     eid_rlz.append((eid, rup['id'], rlz_id))
@@ -205,7 +206,6 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
-        #rup_array['id'] = numpy.arange(nr)
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)

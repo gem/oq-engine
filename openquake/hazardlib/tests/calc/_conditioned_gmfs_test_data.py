@@ -25,7 +25,7 @@ https://usgs.github.io/shakemap/manual4_0/tg_verification.html`.
 import numpy
 import pandas
 
-from openquake.hazardlib import const, valid
+from openquake.hazardlib import const
 from openquake.hazardlib.correlation import BaseCorrelationModel
 from openquake.hazardlib.cross_correlation import CrossCorrelation, CrossCorrelationBetween
 from openquake.hazardlib.geo import Point
@@ -54,6 +54,7 @@ RUP = PointRupture(
     temporal_occurrence_model=PoissonTOM(1.0),
     zbot=DEP,
 )
+RUP.seed = 0
 
 CASE01_STATION_SITECOL = CASE02_STATION_SITECOL = SiteCollection(
     [
