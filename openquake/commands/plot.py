@@ -23,6 +23,7 @@ import shapely
 import numpy
 import pandas
 from scipy.stats import linregress
+from openquake.hazardlib import valid
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
@@ -312,6 +313,27 @@ def make_figure_disagg(extractors, what):
         # ax.legend(ys)
     fig.tight_layout()
     fig.colorbar(im, ax=axes)
+    return plt
+
+
+def make_figure_event_based_mfd(extractors, what):
+    """
+    $ oq plot "event_based_mfd?" -1 -2
+    """
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel("magnitude")
+    ax.set_ylabel("annual frequency")
+    ax.set_yscale('log')
+    for ex in extractors:
+        aw = ex.get(what)
+        edges = list(aw.mag - .05) + [aw.mag[-1] + .05]
+        ax.stairs(aw.freq, edges, label='calc_%d' % ex.calc_id)
+        ax.set_xticks(edges)
+        #yticks = valid.logscale(aw.freq[-1], aw.freq[0], 5)
+        #ax.set_yticks(yticks)
+    ax.legend()
     return plt
 
 
