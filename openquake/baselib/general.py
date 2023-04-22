@@ -1178,12 +1178,13 @@ def random_filter(objects, reduction_factor, seed=42):
 def random_choice(array, num_samples, offset=0, seed=42):
     """
     Extract num_samples from an array. It has the fundamental property
-    of splittability, if the seed is the same and `||` means concatenation:
+    of splittability, i.e. if the seed is the same and `||` means
+    array concatenation:
 
-    choice(a, N) = choice(a, n) || choice(a, N-n, n) or
+    choice(a, N) = choice(a, n, 0) || choice(a, N-n, n)
 
-    That property makes random_choice suitable to be parallelized,
-    while random.choice is not.
+    This property makes `random_choice` suitable to be parallelized,
+    while `random.choice` is not. It as also absurdly fast.
     """
     rng = numpy.random.default_rng(seed)
     rng.bit_generator.advance(offset)

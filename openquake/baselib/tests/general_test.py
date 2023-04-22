@@ -217,11 +217,14 @@ class RmsDiffTestCase(unittest.TestCase):
 
 
 class RandomChoiceTestCase(unittest.TestCase):
+    def test_speed(self):
+        chars = numpy.array(list('ABCDEFGHIJK'))
+        print(random_choice(chars, 10_000_000).size)
+
     def test_advance(self):
         chars = numpy.array(list('ABCDEFGHIJK'))
-        seed = 42
-        ch3 = random_choice(chars, 3, 0, seed)
-        ch2 = random_choice(chars, 2, 3, seed)
+        ch3 = random_choice(chars, 3, 0)
+        ch2 = random_choice(chars, 2, 3)
         ch_tot = numpy.concatenate([ch3, ch2])
-        ch5 = random_choice(chars, 5, 0, seed)
+        ch5 = random_choice(chars, 5, 0)
         numpy.testing.assert_equal(ch_tot, ch5)
