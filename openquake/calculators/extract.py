@@ -1008,10 +1008,11 @@ def extract_mfd(dstore, what):
     oq = dstore['oqparam']
     R = len(dstore['weights'])
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
-    rup_df = dstore.read_df('ruptures', 'id')
+    rup_df = dstore.read_df('ruptures', 'id')[
+        ['mag', 'n_occ', 'occurrence_rate']]
     dic = dict(mag=[], freq=[], occ_rate=[])
     for mag, df in rup_df.groupby('mag'):
-        dic['mag'].append(round(mag, 2))
+        dic['mag'].append(round(mag, 1))
         dic['freq'].append(df.n_occ.sum() / eff_time)
         dic['occ_rate'].append(df.occurrence_rate.sum())
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
