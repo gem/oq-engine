@@ -1,8 +1,8 @@
 python3-oq-engine (3.16.2-1~xenial01) xenial; urgency=low
 
-  [Michele Simionato]
+  [Michele Simionato, Paolo Tormene]
   * Fixed a bug in extract_agg_curves affecting the QGIS plugin
-  * Fixed a bug in scenario calculations causing a mysterious IndexError in the
+  * Fixed a bug in rare scenario calculations causing an IndexError in the
     line rctx.clon = c.lons[rctx.sids]
 
   [Marco Pagani, Michele Simionato]
