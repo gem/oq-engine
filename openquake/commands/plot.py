@@ -315,6 +315,32 @@ def make_figure_disagg(extractors, what):
     return plt
 
 
+def make_figure_event_based_mfd(extractors, what):
+    """
+    $ oq plot "event_based_mfd?" -1 -2
+    """
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel("magnitude")
+    ax.set_ylabel("annual frequency")
+    ax.set_yscale('log')
+    magdics = []
+    for ex in extractors:
+        aw = ex.get(what)
+        magdics.append(dict(zip(numpy.round(aw.mag, 1), aw.freq)))
+    min_mag = min(min(magdic) for magdic in magdics)
+    max_mag = max(max(magdic) for magdic in magdics)
+    mags = numpy.round(numpy.arange(min_mag, max_mag + .1, .1), 1)
+    for ex, magdic in zip(extractors, magdics):
+        edges = [min_mag - .05] + list(mags + .05)
+        freqs = [magdic.get(mag, 0) for mag in mags]
+        ax.stairs(freqs, edges, label='calc_%d' % ex.calc_id)
+    ax.set_xticks(mags[::2])
+    ax.legend()
+    return plt
+
+
 def make_figure_task_info(extractors, what):
     """
     $ oq plot "task_info?kind=classical"
