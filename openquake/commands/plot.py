@@ -335,7 +335,6 @@ def make_figure_event_based_mfd(extractors, what):
     for ex, magdic in zip(extractors, magdics):
         edges = [min_mag - .05] + list(mags + .05)
         freqs = [magdic.get(mag, 0) for mag in mags]
-        print(freqs)
         ax.stairs(freqs, edges, label='calc_%d' % ex.calc_id)
     ax.set_xticks(mags[::2])
     ax.legend()
