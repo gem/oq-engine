@@ -23,7 +23,6 @@ import shapely
 import numpy
 import pandas
 from scipy.stats import linregress
-from openquake.hazardlib import valid
 from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
@@ -326,13 +325,19 @@ def make_figure_event_based_mfd(extractors, what):
     ax.set_xlabel("magnitude")
     ax.set_ylabel("annual frequency")
     ax.set_yscale('log')
+    magdics = []
     for ex in extractors:
         aw = ex.get(what)
-        edges = list(aw.mag - .05) + [aw.mag[-1] + .05]
-        ax.stairs(aw.freq, edges, label='calc_%d' % ex.calc_id)
-        ax.set_xticks(edges)
-        #yticks = valid.logscale(aw.freq[-1], aw.freq[0], 5)
-        #ax.set_yticks(yticks)
+        magdics.append(dict(zip(numpy.round(aw.mag, 1), aw.freq)))
+    min_mag = min(min(magdic) for magdic in magdics)
+    max_mag = max(max(magdic) for magdic in magdics)
+    mags = numpy.round(numpy.arange(min_mag, max_mag + .1, .1), 1)
+    for ex, magdic in zip(extractors, magdics):
+        edges = [min_mag - .05] + list(mags + .05)
+        freqs = [magdic.get(mag, 0) for mag in mags]
+        print(freqs)
+        ax.stairs(freqs, edges, label='calc_%d' % ex.calc_id)
+    ax.set_xticks(mags[::2])
     ax.legend()
     return plt
 
