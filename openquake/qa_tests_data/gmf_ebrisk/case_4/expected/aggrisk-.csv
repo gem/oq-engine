@@ -1,3 +1,3 @@
-#,,"generated_by='OpenQuake engine 3.17.0-gitbe44ff3a96', start_date='2023-04-23T10:32:53', checksum=2174348292, investigation_time=1.0, risk_investigation_time=50.0"
+#,,"generated_by='OpenQuake engine 3.17.0-git928ef897d9', start_date='2023-04-24T11:54:44', checksum=2174348292, investigation_time=1.0, risk_investigation_time=50.0"
 loss_type,loss_value,loss_ratio
-structural,4.15481E+03,1.03870E-01
+structural,5.39402E+03,1.34850E-01
