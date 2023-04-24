@@ -200,7 +200,7 @@ class RuptureImporter(object):
         """
         oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
-        geom_id = numpy.argsort(rup_array['seed'])
+        geom_id = numpy.argsort(rup_array['id'])
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
