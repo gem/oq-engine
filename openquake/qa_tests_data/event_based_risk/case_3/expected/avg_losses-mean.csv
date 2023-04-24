@@ -1,3 +1,3 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-gitbdaadb2b25', start_date='2023-04-24T08:24:45', checksum=91486865, investigation_time=5.0, risk_investigation_time=5.0"
+#,,,,"generated_by='OpenQuake engine 3.17.0-gitfb2ee31615', start_date='2023-04-24T10:01:30', checksum=91486865, investigation_time=5.0, risk_investigation_time=5.0"
 asset_id,taxonomy,lon,lat,structural
-a2371,M1_2_PC,-9.46228,38.79563,6.24398E+04
+a2371,M1_2_PC,-9.46228,38.79563,4.42433E+05
