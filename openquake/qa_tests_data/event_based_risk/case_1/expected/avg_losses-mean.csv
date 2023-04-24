@@ -1,6 +1,6 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.17.0-gitc4d3047c05', start_date='2023-04-21T07:34:53', checksum=192223081, investigation_time=50.0, risk_investigation_time=50.0"
+#,,,,,,,"generated_by='OpenQuake engine 3.17.0-git1868deb89d', start_date='2023-04-24T09:42:33', checksum=192223081, investigation_time=50.0, risk_investigation_time=50.0"
 asset_id,policy,taxonomy,lon,lat,nonstructural,structural,structural+nonstructural_ins
-a0,A,RM,81.29850,29.10980,3.49370E+01,1.33367E+02,3.27155E+01
-a1,A,RC,83.08230,27.90060,2.90607E+01,6.95286E+01,3.03762E+01
-a2,B,W,85.74770,27.90150,2.27533E+01,1.67307E+02,1.61935E+02
-a3,B,RM,85.74770,27.90150,9.89467E+01,2.80075E+02,2.40439E+02
+a0,A,RM,81.29850,29.10980,2.10364E+01,1.67878E+02,4.64895E+01
+a1,A,RC,83.08230,27.90060,2.45868E+01,7.58432E+01,2.09582E+01
+a2,B,W,85.74770,27.90150,2.10283E+01,2.29104E+02,2.22007E+02
+a3,B,RM,85.74770,27.90150,8.68013E+01,2.61096E+02,2.08174E+02

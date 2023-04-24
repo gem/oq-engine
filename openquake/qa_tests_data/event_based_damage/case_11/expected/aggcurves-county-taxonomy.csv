@@ -1,11 +1,11 @@
-#,,,,,"generated_by='OpenQuake engine 3.17.0-gitc4d3047c05', start_date='2023-04-21T07:34:09', checksum=572001388, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
+#,,,,,"generated_by='OpenQuake engine 3.17.0-git1868deb89d', start_date='2023-04-24T09:42:11', checksum=572001388, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
 county,taxonomy,return_period,loss_type,losses_value,losses_ratio
 Solano,tax1,50,structural,8.78371E+02,6.27408E-03
 Solano,tax1,100,structural,8.78371E+02,6.27408E-03
-Solano,tax1,200,structural,8.49707E+03,6.06933E-02
+Solano,tax1,200,structural,3.49047E+03,2.49319E-02
 Solano,tax2,50,structural,1.77647E+03,7.40194E-03
 Solano,tax2,100,structural,1.77647E+03,7.40194E-03
-Solano,tax2,200,structural,6.67329E+03,2.78054E-02
+Solano,tax2,200,structural,1.77647E+03,7.40194E-03
 Marin,tax1,50,structural,9.41111E+02,6.27408E-03
 Marin,tax1,100,structural,9.41111E+02,6.27408E-03
 Marin,tax1,200,structural,9.41111E+02,6.27408E-03
@@ -13,5 +13,5 @@ Contra Costa,tax1,50,structural,9.41111E+02,6.27408E-03
 Contra Costa,tax1,100,structural,9.41111E+02,6.27408E-03
 Contra Costa,tax1,200,structural,9.41111E+02,6.27408E-03
 Contra Costa,tax3,50,structural,6.07736E+02,3.79835E-03
-Contra Costa,tax3,100,structural,6.92179E+03,4.32612E-02
-Contra Costa,tax3,200,structural,2.34163E+04,1.46352E-01
+Contra Costa,tax3,100,structural,6.51650E+02,4.07281E-03
+Contra Costa,tax3,200,structural,7.72608E+03,4.82880E-02

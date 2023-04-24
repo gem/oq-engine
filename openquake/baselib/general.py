@@ -1175,6 +1175,25 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
+def random_choice(array, num_samples, offset=0, seed=42):
+    """
+    Extract num_samples from an array. It has the fundamental property
+    of splittability, i.e. if the seed is the same and `||` means
+    array concatenation:
+
+    choice(a, N) = choice(a, n, 0) || choice(a, N-n, n)
+
+    This property makes `random_choice` suitable to be parallelized,
+    while `random.choice` is not. It as also absurdly fast.
+    """
+    rng = numpy.random.default_rng(seed)
+    rng.bit_generator.advance(offset)
+    N = len(array)
+    cumsum = numpy.repeat(1./N, N).cumsum()
+    choices = numpy.searchsorted(cumsum, rng.random(num_samples))
+    return array[choices]
+
+
 def random_histogram(counts, nbins_or_binweights, seed):
     """
     Distribute a total number of counts over a set of bins. If the

@@ -116,7 +116,7 @@ class CrossCorrelationBetween(ABC):
         :return: a scalar
         """
     @abstractmethod
-    def get_inter_eps(self, imts, num_events):
+    def get_inter_eps(self, imts, num_events, rng):
         pass
 
 
@@ -151,16 +151,17 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         delta = 1 + np.cos(-1.5 * np.log10(Tmax / Tmin))
         return (1. - np.cos(angle) + delta) / 3.
 
-    def get_inter_eps(self, imts, num_events):
+    def get_inter_eps(self, imts, num_events, rng):
         """
         :param imts: a list of M intensity measure types
         :param num_events: the number of events to consider (E)
+        :param rng: random number generator
         :returns: a correlated matrix of epsilons of shape (M, E)
 
         NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return np.random.multivariate_normal(
+        return rng.multivariate_normal(
             np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
 
     def _get_correlation_matrix(self, imts):
@@ -183,15 +184,17 @@ class NoCrossCorrelation(CrossCorrelationBetween):
     def get_correlation(self, from_imt, to_imt):
         return from_imt == to_imt
 
-    def get_inter_eps(self, imts, num_events):
+    def get_inter_eps(self, imts, num_events, rng):
         """
         :param imts: a list of M intensity measure types
         :param num_events: the number of events to consider (E)
+        :param rng: random number generator
         :returns: an uncorrelated matrix of epsilons of shape (M, E)
 
         NB: the user must specify the random seed first
         """
-        return np.array([self.distribution.rvs(num_events) for imt in imts])
+        return np.array([
+            self.distribution.rvs(num_events, rng) for imt in imts])
 
 
 class FullCrossCorrelation(CrossCorrelationBetween):
@@ -201,15 +204,16 @@ class FullCrossCorrelation(CrossCorrelationBetween):
     def get_correlation(self, from_imt, to_imt):
         return 1.
 
-    def get_inter_eps(self, imts, num_events):
+    def get_inter_eps(self, imts, num_events, rng):
         """
         :param imts: a list of M intensity measure types
         :param num_events: the number of events to consider (E)
+        :param rng: random number generator
         :returns:
             a matrix of epsilons of shape (M, E) with the same epsilons
             for each IMT
 
         NB: the user must specify the random seed first
         """
-        eps = self.distribution.rvs(num_events)
+        eps = self.distribution.rvs(num_events, rng)
         return np.array([eps for imt in imts])

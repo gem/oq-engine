@@ -1,5 +1,6 @@
-#,,"generated_by='OpenQuake engine 3.17.0-gitc4d3047c05', start_date='2023-04-21T07:38:58', checksum=3536950222"
+#,,"generated_by='OpenQuake engine 3.17.0-git1868deb89d', start_date='2023-04-24T09:44:41', checksum=3536950222"
 site_id,event_id,gmv_SA(0.3)
-0,0,7.30002E-02
-1,0,4.13429E-02
-1,1,1.02770E-02
+0,0,4.42267E-02
+1,0,3.36235E-02
+0,1,1.43264E-02
+1,1,1.09845E-02

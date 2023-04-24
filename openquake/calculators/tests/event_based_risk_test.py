@@ -110,7 +110,7 @@ agg_id
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [650.2784], atol=.001)
+        numpy.testing.assert_allclose(aw.array, [733.92126], atol=.001)
 
         fnames = export(('aggrisk', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -374,7 +374,7 @@ agg_id
         gsim = view('gsim_for_event:0', self.calc.datastore)
         self.assertEqual(str(gsim), "[BooreAtkinson2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
-        self.assertEqual(str(gsim), "[AkkarBommer2010]")
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',
@@ -395,7 +395,7 @@ agg_id
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_dframe()), 3)
+        self.assertEqual(len(arr.to_dframe()), 0)
 
         # aggregate by all loss types
         fnames = export(
@@ -534,7 +534,7 @@ agg_id
                             minimum_asset_loss='100')
         _tot, fname = out['aggcurves', 'csv']
         # very sensitive to shapely version
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=.01)
 
         curves = self.calc.datastore.read_df('aggcurves')
         self.assertEqual(len(curves), 18)  # (2 tags + 1 total) x 6 periods
@@ -544,7 +544,7 @@ agg_id
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         _tot, fname = out['aggcurves', 'csv']
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=.02)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk

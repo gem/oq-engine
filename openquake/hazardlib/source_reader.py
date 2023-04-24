@@ -34,6 +34,7 @@ from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
+TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
 
@@ -544,9 +545,9 @@ class CompositeSourceModel:
                 if not src.num_ruptures:
                     src.num_ruptures = src.count_ruptures()
                 offset += src.num_ruptures
-                if src.num_ruptures >= TWO24:
+                if src.num_ruptures >= TWO30:
                     raise ValueError(
-                        '%s contains more than 2**24 ruptures' % src)
+                        '%s contains more than 2**30 ruptures' % src)
                 # print(src, src.offset, offset)
             src_id += 1
 

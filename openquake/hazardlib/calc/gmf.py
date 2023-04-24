@@ -207,14 +207,15 @@ class GmfComputer(object):
             (len(self.imts), len(self.ctx.sids), num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
-        numpy.random.seed(self.seed)
+        rng = numpy.random.default_rng(self.seed)
         num_sids = len(self.ctx.sids)
-        if self.cross_correl.distribution:
+        ccdist = self.cross_correl.distribution
+        if ccdist:
             # build arrays of random numbers of shape (M, N, E) and (M, E)
             intra_eps = [
-                rvs(self.cross_correl.distribution, num_sids, num_events)
-                for _ in range(M)]
-            inter_eps = self.cross_correl.get_inter_eps(self.imts, num_events)
+                ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
+            inter_eps = self.cross_correl.get_inter_eps(
+                self.imts, num_events, rng)
         else:
             intra_eps = [None] * M
             inter_eps = [numpy.zeros(num_events)] * M
