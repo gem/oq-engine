@@ -28,6 +28,7 @@ from openquake.commonlib import util
 
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
+TWO30 = 2 ** 30
 TWO32 = numpy.float64(2 ** 32)
 MAX_NBYTES = 1024**3
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -182,7 +183,7 @@ class RuptureImporter(object):
         """
         eid_rlz = []
         for rup in proxies:
-            srcid, rupid = divmod(int(rup['id']), TWO24)
+            srcid, rupid = divmod(int(rup['id']), TWO30)
             ebr = EBRupture(
                 Mock(), rup['source_id'],
                 rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'],
@@ -200,7 +201,7 @@ class RuptureImporter(object):
         """
         oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
-        geom_id = numpy.argsort(rup_array['seed'])
+        geom_id = numpy.argsort(rup_array['id'])
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])

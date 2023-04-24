@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-gitc4d3047c05', start_date='2023-04-21T07:39:57', checksum=2174348292, investigation_time=1.0, risk_investigation_time=50.0"
+#,,,,"generated_by='OpenQuake engine 3.17.0-gitbe44ff3a96', start_date='2023-04-23T10:32:53', checksum=2174348292, investigation_time=1.0, risk_investigation_time=50.0"
 event_id,loss,loss_type,rup_id,year
-0,1.48710E+03,structural,33554433,1
-1,1.18719E+02,structural,33554434,1
+1,7.77544E+02,structural,2147483650,1
+2,8.84380E+02,structural,2147483651,1

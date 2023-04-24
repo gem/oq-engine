@@ -44,6 +44,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
+TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 
 pmf_dt = numpy.dtype([
@@ -729,7 +730,7 @@ class EBRupture(object):
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = source_id * TWO24 + id
+        self.id = source_id * TWO30 + id
         self.e0 = e0
         self.scenario = scenario
 
