@@ -249,7 +249,7 @@ extreme_gmv:
   A scalar on an IMT-keyed dictionary specifying when a ground motion value is
   extreme and the engine has to treat is specially.
   Example: *extreme_gmv = 5.0*
-  Default: empty dictionary, meaning no values are extreme
+  Default: {'default': numpy.inf} i.e. no values are extreme
 
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
@@ -935,7 +935,7 @@ class OqParam(valid.ParamSet):
     epsilon_star = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
-    extreme_gmv = valid.Param(valid.floatdict, {'default': 1E10})
+    extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
     gmf_max_gb = valid.Param(valid.positivefloat, .1)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
