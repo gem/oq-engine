@@ -176,7 +176,7 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imt_strs = observed_imt_strs
         self.num_events = number_of_ground_motion_fields
 
-    def compute_all(self, sig_eps=None):
+    def compute_all(self, sig_eps=None, max_iml=None):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
@@ -205,6 +205,16 @@ class ConditionedGmfComputer(GmfComputer):
 
             array, sig, eps = self.compute(gmm, num_events, mean_covs, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
+
+            # manage max_iml
+            if max_iml is not None:
+                for m, im in enumerate(self.cmaker.imtls):
+                    if (array[m] > max_iml[m]).any():
+                        for n in range(N):
+                            bad = array[m, n] > max_iml[m]  # shape E
+                            array[m, n, bad] = exp(mean_covs[0, g, m, n], im)
+
+            # manage min_iml
             for n in range(N):
                 for e in range(E):
                     if (array[:, n, e] < min_iml).all():

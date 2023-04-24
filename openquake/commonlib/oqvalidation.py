@@ -935,7 +935,7 @@ class OqParam(valid.ParamSet):
     epsilon_star = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
-    extreme_gmv = valid.Param(valid.floatdict, {})
+    extreme_gmv = valid.Param(valid.floatdict, {'default': 1E10})
     gmf_max_gb = valid.Param(valid.positivefloat, .1)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
@@ -1434,7 +1434,7 @@ class OqParam(valid.ParamSet):
     @property
     def min_iml(self):
         """
-        :returns: a dictionary of intensities, one per IMT
+        :returns: a vector of minimum intensities, one per IMT
         """
         mini = self.minimum_intensity
         if mini:
@@ -1447,6 +1447,15 @@ class OqParam(valid.ParamSet):
             del mini['default']
         min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
         return min_iml
+
+    def get_max_iml(self):
+        """
+        :returns: a vector of extreme intensities, one per IMT
+        """
+        max_iml = numpy.zeros(len(self.imtls))
+        for m, imt in enumerate(self.imtls):
+            max_iml[m] = calc.filters.getdefault(self.extreme_gmv, imt)
+        return max_iml
 
     def levels_per_imt(self):
         """
