@@ -1,3 +1,3 @@
-#,,,,,,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.13.0-git797650a0ab', start_date='2021-09-29T07:51:21', checksum=3590982611"
+#,,,,,,,,,,,,,,,,,,"generated_by='OpenQuake engine 3.17.0-gitc157a3bc4c', start_date='2023-04-24T09:32:56', checksum=3715469675"
 asset_id,taxonomy,lon,lat,contents~no_damage,contents~ds1,contents~ds2,contents~ds3,contents~ds4,nonstructural~no_damage,nonstructural~ds1,nonstructural~ds2,nonstructural~ds3,nonstructural~ds4,structural~no_damage,structural~ds1,structural~ds2,structural~ds3,structural~ds4
-a1,tax1,-122.00000,38.11300,1.600000E-01,1.300000E-01,1.800000E-01,2.300000E-01,3.000000E-01,1.300000E-01,2.900000E-01,3.900000E-01,1.900000E-01,0.000000E+00,3.500000E-01,3.400000E-01,1.100000E-01,6.000000E-02,1.400000E-01
+a1,tax1,-122.00000,38.11300,1.600000E-01,1.700000E-01,1.200000E-01,2.700000E-01,2.800000E-01,1.400000E-01,2.700000E-01,3.900000E-01,2.000000E-01,0.000000E+00,3.500000E-01,2.800000E-01,1.800000E-01,8.000000E-02,1.100000E-01

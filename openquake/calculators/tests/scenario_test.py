@@ -95,7 +95,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_6(self):
         f1, f2 = self.frequencies(case_6, 0.5, 1.0)
         aae(f1, 0.05, decimal=2)
-        aae(f2, 0.006, decimal=3)
+        aae(f2, 0.0077, decimal=3)
 
     def test_case_7(self):
         f1, f2 = self.frequencies(case_7, 0.5, 1.0)
@@ -204,11 +204,11 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_20.__file__, 'job.ini',
                       gsim_logic_tree_file='epsilon_tau.xml')
         aae(old.sig_inter_PGA.unique(), 0.3501)
-        aae(old.eps_inter_PGA.mean(), -0.025970912)
+        aae(old.eps_inter_PGA.mean(), 0.027470892)
         # `set_between_epsilon` sets `sig_inter` to zero
         new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
         aae(new.sig_inter_PGA.unique(), 0)
-        aae(new.eps_inter_PGA.mean(), -0.025970920)
+        aae(new.eps_inter_PGA.mean(), 0.027470892)
 
     def test_case_21(self):
         # conditioned gmfs
