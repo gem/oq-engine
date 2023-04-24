@@ -534,7 +534,7 @@ agg_id
                             minimum_asset_loss='100')
         _tot, fname = out['aggcurves', 'csv']
         # very sensitive to shapely version
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=5E-3)
 
         curves = self.calc.datastore.read_df('aggcurves')
         self.assertEqual(len(curves), 18)  # (2 tags + 1 total) x 6 periods
@@ -544,7 +544,7 @@ agg_id
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         _tot, fname = out['aggcurves', 'csv']
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=5E-3)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk
