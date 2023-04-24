@@ -5,20 +5,23 @@ on:
     inputs:
       lts-ver:
         description: Engine Release (0 for nightly)
-        default: 1
+        default: 0
         required: true
       pkg-num:
-        description: Engine PKG number
-        default: 1.0
+        description: Engine PKG number (for LTS Release)
+        default: 1
         required: true
       git-ref:
         description: Git Ref Branch
         default: master
         required: true
       copr:
-        description: COPR Repository Staging for default
-        default: openquake-staging
+        description: COPR Repository development for default
+        default: openquake
         required: true
+  schedule:
+    - cron: "0 19 * * *"
+
 
 jobs:
 
@@ -41,10 +44,10 @@ jobs:
       options: --privileged
     steps:
       - name: Clone Repository (Latest)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event.inputs.git-ref == ''
       - name: Clone Repository (Custom Ref)
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         if: github.event.inputs.git-ref != ''
         with:
           ref: ${{ github.event.inputs.git-ref }}
@@ -54,7 +57,7 @@ jobs:
 
       - name: Install tooling for source RPM build
         run: |
-          dnf -y install @development-tools @rpm-development-tools \
+          dnf --refresh -y install @development-tools @rpm-development-tools \
           copr-cli mock make gcc openssl-devel bzip2-devel libffi-devel
 
       - name: Deploy SPEC file from template
@@ -121,7 +124,7 @@ jobs:
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM
           else
-           COPR_REPO=openquake-staging
+           COPR_REPO=openquake
            echo "COPR REPO: $COPR_REPO"
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM

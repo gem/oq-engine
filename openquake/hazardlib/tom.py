@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -197,18 +197,19 @@ class ClusterPoissonTOM(PoissonTOM):
         self.occurrence_rate = occurrence_rate
 
 
-@compile(["(float64, float64[:], float64[:,:], float64)",
-          "(float64, float64[:], float64[:,:,:,:], float64)"])
+@compile(["(float64, float64[:], float64[:], float64)",
+          "(float64, float64[:], float64[:,:,:], float64)"])
 def get_pnes(rate, probs, poes, time_span):
     """
     :param rate: occurrence rate in case of a poissonian rupture
     :param probs: probabilities of occurrence in the nonpoissonian case
-    :param poes: array of PoEs of shape 2D or 4D
+    :param poes: array of PoEs of shape 1D or 3D
     :param time_span: time span in the poissonian case (0. for FatedTOM)
 
     Fast way to return probabilities of no exceedence given an array
     of PoEs and some parameter.
     """
+    # NB: the NegativeBinomialTOM creates probs_occur with a rate not NaN
     if time_span == 0.:  # FatedTOM
         return 1. - poes
     elif len(probs) == 0:  # poissonian
@@ -239,10 +240,7 @@ class NegativeBinomialTOM(BaseTOM):
         """
         :param time_span:
             The time interval of interest, in years.
-        :param occurrence_rate:
-            To initialize super_class (usually overriden by method
-            get_probability_no_exceedance())
-        :param parameters:
+        :param mu, alpha:
             (list/np.ndarray) Parameters of the negbinom temporal model, in
             form of mean rate/dispersion (μ / α)  Kagan and Jackson, (2010)
 
@@ -253,7 +251,6 @@ class NegativeBinomialTOM(BaseTOM):
                               (μ + τ)    (1 + μ/τ)
 
             where τ=1/α
-
         """
 
         super().__init__(time_span)

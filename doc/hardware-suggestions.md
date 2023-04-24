@@ -4,11 +4,13 @@ A general rule is the more GB of RAM and the more GHz you have, the better it is
 
 ### Single node configuration
 
-Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4  physical cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve the overall performance. It is very important to disable hyperthreading to save memory and have a better performance.
+Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4  physical cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve the overall performance.
 
-More serious calculations would be better handled by a single server: our "hope" server is a Dell® PowerEdge™ R420 with 12 cores (2 x Intel® Xeon™ E5-2430) 64GB of RAM and 4x2TB disks in a RAID 10 configuration and a hardware RAID controller (Dell® PERC H710).  It is used now primarily to host databases but for a little while it was the best machine we had in Pavia and was used to run calculations too.
+Recent processor have a large number of threads but often not enough
+memory, i.e. less than 2 GB per thread. In that case it is recommended to
+disable hyperthreading to save memory.
 
-More recently (sprint 2022) we bought a single server "cole" with 128 AMD Epyc Rome CPUs and 512 GB of RAM. This is the best machine we have.
+More serious calculations would be better handled by a powerful server. In spring 2022 we bought a single server with 128 AMD Epyc Rome CPUs and 512 GB of RAM. This is the best machine we have. Even half of such specs are enough for running most hazard models.
 
 ### Multi-node configuration
 
@@ -31,11 +33,15 @@ Deployment can considered stateless (an "always-on" configuration isn't required
 
 Our users reported to have successfully deployed the OpenQuake Engine on [Amazon AWS](https://aws.amazon.com/), [Google GCE](https://cloud.google.com/compute/), [Microsoft Azure](https://azure.microsoft.com/), [OpenStack IaaS](https://www.openstack.org/) and many other providers or internal platforms.
 
+Here a couple of links you may find useful:
+
+https://aws.amazon.com/blogs/compute/disabling-intel-hyper-threading-technology-on-amazon-linux/
+
+https://learn.microsoft.com/en-us/azure/virtual-machines/acu
+
 ***
 
 **All product and company names are trademarks™ or registered trademarks© of their respective holders.**
 
 ## Getting help
-If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
-  * Contact us on IRC: irc.freenode.net, channel #openquake
+If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users

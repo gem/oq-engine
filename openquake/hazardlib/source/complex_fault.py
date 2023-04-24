@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -189,9 +189,6 @@ class ComplexFaultSource(ParametricSeismicSource):
         cell_center, cell_length, cell_width, cell_area = (
             whole_fault_mesh.get_cell_dimensions())
         for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
-            # min_mag is inside get_annual_occurrence_rates
-            if mag_occ_rate == 0:
-                continue
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake)
             rupture_length = numpy.sqrt(

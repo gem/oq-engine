@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Model %s"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <simpleFaultSource
+            id="sf_c_m65_101"
+            name="Cofradia Fault"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -86.08015095 12.40632317 -86.08408024 12.38569442 -86.09390345 12.35033086 -86.1007797 12.29532088 -86.10004296 12.27420097 -86.10053412 12.25087085 -86.10790152 12.23490813 -86.11035733 12.20985894 -86.11354987 12.1767056 -86.11600567 12.15656802 -86.11895264 12.12636164 -86.12091728 12.11580169 -86.12533773 12.09689201 -86.13196839 12.07847348 -86.13786232 12.0607917 -86.14228276 12.04507457
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        80.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        16.741731801207536
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    Leonard2014_Interplate
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="6.55"
+                >
+                    <occurRates>
+                        0.000221207256722737 0.00018402233850238839 0.0001530882013980827 0.00012735408971555686
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    -45.0
+                </rake>
+            </simpleFaultSource>
+            <simpleFaultSource
+            id="sf_c_m65_102"
+            name="Ometepe Fault"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -86.15873664 11.98466182 -85.9288735 11.79998544 -85.82867674 11.73613457 -85.63024787 11.54458194 -85.48486434 11.42670341 -85.23633709 11.22729221
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        90.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        17.0
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    Leonard2014_Interplate
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="6.55"
+                >
+                    <occurRates>
+                        0.0016271739825242512 0.0013536461952044958 0.0011260984021813458 0.0009368013709105108 0.0007793251520824842 0.0006483206702377893 0.0005393380289785525 0.0004486753590561623 0.0003732530750806361
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    180.0
+                </rake>
+            </simpleFaultSource>
+            <simpleFaultSource
+            id="sf_c_m65_108"
+            name="Siquirres-Matina Fault"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -83.51832823 10.09400238 -83.51316183 10.09198074 -83.50642305 10.08726359 -83.49901038 10.0890606 -83.49451786 10.08950985 -83.48980071 10.08838672 -83.48485894 10.09535013 -83.48036641 10.09916878 -83.47317837 10.10163967 -83.46329482 10.10231355 -83.45273739 10.10163967 -83.44195534 10.09871953 -83.43566581 10.09939341 -83.43094866 10.0975964 -83.42308674 10.09624864 -83.41792034 10.09310387 -83.41387707 10.08344495 -83.40084875 10.07648154 -83.39118982 10.07535841 -83.37883539 10.07288752 -83.36648095 10.06480098 -83.35794515 10.05267116 -83.34648922 10.03559958 -83.34087356 10.02661453 -83.33705492 10.02212201 -83.32178034 10.01156458 -83.31818632 10.00437654 -83.31504155 9.99943476 -83.30156398 9.99539149 -83.28763716 9.99763775 -83.26787006 10.00257953 -83.25933427 10.00392729 -83.25079847 9.99898551 -83.23777015 9.99629 -83.22743735 10.00213028 -83.22294483 10.00482579 -83.21351053 10.00707205 -83.19733744 10.00707205 -83.18430913 10.00168102 -83.17577333 9.99943476 -83.16768679 9.99449299 -83.15510773 9.98955121 -83.14297791 9.98640645 -83.13489137 9.9783199
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        45.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        16.667349829364657
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    Leonard2014_Interplate
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="6.55"
+                >
+                    <occurRates>
+                        0.0001560725553022459 0.00012149180457319257 9.457305642152368e-05 7.361865298099554e-05 5.7307083770031776e-05 4.460964330701955e-05
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    90.0
+                </rake>
+            </simpleFaultSource>
+            <simpleFaultSource
+            id="sf_c_m65_1111"
+            name="unnamed"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -88.13973112 13.23065508 -88.05741718 13.20232275 -88.01118174 13.18513639 -87.963155 13.1687748 -87.8979208 13.15249216
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        70.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        12.875966367454085
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    Leonard2014_Interplate
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="6.55"
+                >
+                    <occurRates>
+                        0.00017739863387693916
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    0.0
+                </rake>
+            </simpleFaultSource>
+            <simpleFaultSource
+            id="sf_c_m65_111111"
+            name="Tuxtla Fault_01"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -92.46024001 16.46368735 -92.43503834 16.44595285 -92.42757118 16.43381871 -92.424771 16.41235063 -92.40703649 16.37221465 -92.38930199 16.34701298 -92.37156748 16.306877 -92.35663316 16.28260873 -92.34356563 16.25460688 -92.3304981 16.23687237 -92.26329367 16.19766978 -92.22502447 16.15566701 -92.18488849 16.12486498 -92.1260846 16.09032936 -92.0710143 16.06046072 -92.02154437 16.0464598 -91.91980431 16.05112677 -91.86193382 16.0464598 -91.81713087 16.03619245 -91.78166186 16.02125813 -91.71259063 16.02032474 -91.68645557 16.01939134
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        75.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        16.42073904691416
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    Leonard2014_Interplate
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="0.1"
+                minMag="6.55"
+                >
+                    <occurRates>
+                        0.0009313279919133917 0.0007419422677621889 0.0005910681666092259 0.000470874342598812 0.000375121955543328 0.00029884083459298243 0.00023807149408484922 0.00018965961051804308
+                    </occurRates>
+                </incrementalMFD>
+                <rake>
+                    0.0
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

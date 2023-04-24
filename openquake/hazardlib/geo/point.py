@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -90,6 +90,15 @@ class Point(object):
         (ignoring depth).
         """
         return 'POINT(%s %s)' % (self.longitude, self.latitude)
+
+    def round(self, digits=5):
+        """
+        :returns: a new Point with lon, lat, depth rounded to 5 digits
+        """
+        lon = round(self.longitude, digits)
+        lat = round(self.latitude, digits)
+        dep = round(self.depth, digits)
+        return Point(lon, lat, dep)
 
     def point_at(self, horizontal_distance, vertical_increment, azimuth):
         """

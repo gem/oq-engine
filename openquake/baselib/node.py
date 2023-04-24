@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -958,9 +958,11 @@ class ValidatingXmlParser(object):
         try:
             node.attrib[n] = val(decode(v))
         except Exception as exc:
+            # NOTE: the line number and the file name are added by the
+            # 'context' contextmanager
             raise ValueError(
-                'Could not convert %s->%s: %s, line %s' %
-                (tn, val.__name__, exc, node.lineno))
+                'Could not convert %s->%s: %s' %
+                (tn, val.__name__, exc))
 
     def _literalnode(self, node):
         tag = striptag(node.tag)

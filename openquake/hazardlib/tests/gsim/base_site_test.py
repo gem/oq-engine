@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -76,7 +76,7 @@ class GetPoesSiteTestCase(unittest.TestCase):
         imls_soil = numpy.log(numpy.logspace(-2, 0, num=20))
         self.cmaker.loglevels = ll = DictArray(
             {'PGA': imls_soil, 'SA(1.0)': imls_soil})
-        self.cmaker.af = AmplFunction.from_dframe(df)
+        self.cmaker.oq.af = AmplFunction.from_dframe(df)
         self.cmaker.truncation_level = tl = 3.
 
         # The output in this case will be (1, x, 2) i.e. 1 site, number

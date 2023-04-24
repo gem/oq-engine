@@ -125,8 +125,11 @@ You can also have a magnitude-dependent maximum distance::
 
 In this case, given a site, the engine will completely discard
 ruptures with magnitude below 5, keep ruptures up to 100 km for
-magnitudes between 5 and 6, keep ruptures up to 200 km for magnitudes
-between 6 and 7, keep ruptures up to 300 km for magnitudes over 7.
+magnitudes between 5 and 6 (the maximum distance in this magnitude
+range will vary linearly between 0 and 100), keep ruptures up to 200
+km for magnitudes between 6 and 7 (with `maximum_distance` increasing
+linearly from 100 to 200 km from magnitude 6 to magnitude 7), keep
+ruptures up to 300 km for magnitudes over 7.
 
 You can have both trt-dependent and mag-dependent maximum distance::
 
@@ -875,8 +878,7 @@ is coded more or less like this:
    def sample_ruptures(sources, num_samples, monitor):  # simplified code
        ebruptures = []
        for src in sources:
-           for rup, n_occ in src.sample_ruptures(num_samples):
-               ebr = EBRupture(rup, src.id, grp_id, n_occ)
+           for ebr in src.sample_ruptures(num_samples):
                eb_ruptures.append(ebr)
            if len(eb_ruptures) > MAX_RUPTURES:
                # yield partial result to avoid running out of memory
@@ -1076,9 +1078,19 @@ Here is an example of usage of the ``Extractor`` to retrieve mean hazard curves:
  >> calc_id = 42  # for example
  >> extractor = Extractor(calc_id)
  >> obj = extractor.get('hcurves?kind=mean&imt=PGA')  # returns an ArrayWrapper
- >> obj.array.shape  # an example with 10,000 sites and 20 levels per PGA
- (10000, 20)
+ >> obj.mean.shape  # an example with 10,000 sites, 20 levels per PGA
+ (10000, 1, 20)
  >> extractor.close()
+
+If in the calculation you specified the flag ``individual_rlzs=true``,
+then it is also possible to retrieve a specific realization
+
+ >> dic = vars(extractor.get('hcurves?kind=rlz-0'))
+ >> dic['rlz-000']  # array of shape (num_sites, num_imts, num_levels)
+
+or even all realizations:
+
+ >> dic = vars(extractor.get('hcurves?kind=rlzs'))
 
 Here is an example of using the `WebExtractor` to retrieve hazard maps.
 Here we assumes that there is available in a remote machine where there is
@@ -1111,8 +1123,8 @@ The usage then is the same as the regular extractor:
  >> from openquake.calculators.extract import WebExtractor
  >> extractor = WebExtractor(calc_id)
  >> obj = extractor.get('hmaps?kind=mean&imt=PGA')  # returns an ArrayWrapper
- >> obj.array.shape  # an example with 10,000 sites and 4 PoEs
- (10000, 4)
+ >> obj.mean.shape  # an example with 10,000 sites and 4 PoEs
+ (10000, 1, 4)
  >> extractor.close()
 
 If you do not want to put your credentials in the ``openquake.cfg`` file,
@@ -1158,6 +1170,49 @@ say so::
 
 You can combine as many kinds of curves as you want. Clearly if your are
 specifying a kind that is not available you will get an error.
+
+Extracting disaggregation outputs
+---------------------------------
+
+Disaggregation outputs are particularly complex and they are stored in
+datastore in different ways depending on the engine version. Here we will
+give a few examples for the Disaggregation Demo, which has the flag
+``individual_rlzs`` set. If you run the demos with a recent enough version
+of the engine (>=3.17) you will see two disaggregation outputs:
+
+1. Disaggregation Outputs Per Realization
+2. Statistical Disaggregation Outputs
+
+Such outputs can be exported as usual in CSV format and will generate
+several files. Users can be interested in extracting a subset of the
+outputs programmatically, thus avoiding the overhead of exporting more
+data than needed and having to read the CSV. The way to go is to
+define an extractor::
+
+ >> extractor = Extractor(calc_id)
+
+and five parameters:
+
+1. kind: the kind of outputs, like Mag, Mag_Dist, Mag_Dist_Eps, etc
+2. imt: the IMT, like PGA, SA(1.0), etc
+3. site_id: the site ordinal number, like 0, 1, etc
+4. poe_id: the ordinal of the PoE, like 0, 1, etc
+5. spec: the specifier string, one of "rlzs", "stats", "rlzs-traditional", "stats-traditional"
+
+Here is an example::
+
+ >> ex = 'disagg?kind=Mag_Dist&imt=PGA&site_id=0&poe_id=0&spec=rlzs-traditional'
+ >> dic = extractor.get(ex)
+
+The dictionary here contains the following keys::
+
+ >> dic["mag"] # lenght 4
+ array([5., 6., 7., 8.])
+ >> dic["dist"] # lenght 21
+ array([  0.,  10.,  20.,  30.,  40.,  50.,  60.,  70.,  80.,  90., 100.,
+        110., 120., 130., 140., 150., 160., 170., 180., 190., 200.])
+ >> dic["array"].shape
+ (4, 21, 1, 1)
 
 Extracting ruptures
 -------------------

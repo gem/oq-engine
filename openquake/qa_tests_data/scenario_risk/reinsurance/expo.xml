@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <exposureModel
+    category="buildings"
+    id="Expo_Col"
+    taxonomySource="GEM taxonomy"
+    >
+        <description />
+        <conversions>
+            <costTypes>
+                <costType name="structural" type="per_asset" unit="COP"/>
+            </costTypes>
+        </conversions>
+        <tagNames>
+            policy
+        </tagNames>
+        <assets>
+            expo.csv
+        </assets>
+    </exposureModel>
+</nrml>

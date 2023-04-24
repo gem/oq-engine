@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -26,12 +26,13 @@ import abc
 import inspect
 import warnings
 import functools
+import toml
 import numpy
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.stats import _truncnorm_sf
+from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
     KNOWN_DISTANCES, full_context, ContextMaker)
@@ -57,8 +58,7 @@ def add_alias(name, cls, **kw):
     """
     Add a GSIM alias to both gsim_aliases and the registry.
     """
-    text = '\n'.join('%s = %r' % it for it in kw.items())
-    gsim_aliases[name] = '[%s]\n%s' % (cls.__name__, text)
+    gsim_aliases[name] = toml.dumps({cls.__name__: kw})
     registry[name] = cls
 
 
@@ -86,27 +86,26 @@ class AdaptedWarning(UserWarning):
 # the performance is dominated by the CPU cache, i.e. large arrays are slow
 # the only way to speedup is to reduce the maximum_distance, then the array
 # will become shorter in the N dimension (number of affected sites), or to
-# collapse the ruptures, then _compute_delta will be called less times
-@compile("float64[:, :](float64[:,:,:], float64[:,:], float64)")
-def _get_poes(mean_std, loglevels, truncation_level):
-    # returns a matrix of shape (N, L)
-    N = mean_std.shape[2]  # shape (2, M, N)
+# collapse the ruptures, then truncnorm_sf will be called less times
+@compile("(float64[:,:,:], float64[:,:], float64, float64[:,:])")
+def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
-    out = numpy.zeros((loglevels.size, N))  # shape (L, N)
     for m, levels in enumerate(loglevels):
         mL1 = m * L1
-        iml = numpy.zeros((L1, 1))  # trick to vectorize better
-        iml[:, 0] = levels  # numba is not happy with reshape
-        mea, sig = mean_std[:, m]  # shape N
-        if truncation_level == 0.:
-            out[mL1:mL1 + L1] = (iml <= mea)  # shape (L1, N)
-        else:
-            out[mL1:mL1 + L1] = _truncnorm_sf(  # shape (L1, N)
-                truncation_level, (iml - mea) / sig)
+        mea, std = mean_std[:, m]  # shape N
+        for lvl, iml in enumerate(levels):
+            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
+
+
+def _get_poes(mean_std, loglevels, phi_b):
+    # returns a matrix of shape (N, L)
+    N = mean_std.shape[2]  # shape (2, M, N)
+    out = numpy.zeros((loglevels.size, N))  # shape (L, N)
+    _set_poes(mean_std, loglevels, phi_b, out)
     return out.T
 
 
-OK_METHODS = ('compute', 'get_mean_and_stddevs', 'get_poes',
+OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
               'set_parameters', 'set_tables')
 
 
@@ -270,6 +269,15 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
                 if not attr.startswith('COEFFS'):
                     raise NameError('%s does not start with COEFFS' % attr)
         registry[cls.__name__] = cls
+
+    def requires(self):
+        """
+        :returns: ordered tuple with the required parameters except the mag
+        """
+        tot = set(self.REQUIRES_DISTANCES |
+                  self.REQUIRES_RUPTURE_PARAMETERS |
+                  self.REQUIRES_SITES_PARAMETERS)
+        return tuple(sorted(tot))
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -448,7 +456,7 @@ class GMPE(GroundShakingIntensityModel):
         """
         raise NotImplementedError
 
-    def get_poes(self, mean_std, cmaker, ctx):
+    def set_poes(self, mean_std, cmaker, ctx, out):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -461,43 +469,38 @@ class GMPE(GroundShakingIntensityModel):
             A ContextMaker instance, used only in nhsm_2014
         :param ctx:
             A recarray used only in  avg_poe_gmpe
-        :returns:
-            array of PoEs of shape (N, L)
+        :param out:
+            An array of PoEs of shape (N, L) to be filled
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
             float number, and if ``imts`` dictionary contain wrong or
             unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         loglevels = cmaker.loglevels.array
-        truncation_level = cmaker.truncation_level
-        N = mean_std.shape[2]  # 2, M, N
+        phi_b = cmaker.phi_b
         M, L1 = loglevels.shape
-        arr = numpy.zeros((N, M*L1))
-        if truncation_level is not None and truncation_level < 0:
-            raise ValueError('truncation level must be zero, positive number '
-                             'or None')
         if hasattr(self, 'weights_signs'):  # for nshmp_2014, case_72
+            adj = cmaker.adj[self][cmaker.slc]
             outs = []
             weights, signs = zip(*self.weights_signs)
             for s in signs:
                 ms = numpy.array(mean_std)  # make a copy
                 for m in range(len(loglevels)):
-                    ms[0, m] += s * cmaker.adj[self][cmaker.slc]
-                outs.append(_get_poes(ms, loglevels, truncation_level))
-            arr[:] = numpy.average(outs, weights=weights, axis=0)
+                    ms[0, m] += s * adj
+                outs.append(_get_poes(ms, loglevels, phi_b))
+            out[:] = numpy.average(outs, weights=weights, axis=0)
         elif hasattr(self, "mixture_model"):
             for f, w in zip(self.mixture_model["factors"],
                             self.mixture_model["weights"]):
                 mean_stdi = numpy.array(mean_std)  # a copy
                 mean_stdi[1] *= f  # multiply stddev by factor
-                arr[:] += w * _get_poes(mean_stdi, loglevels, truncation_level)
+                out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
         else:  # regular case
-            arr[:] = _get_poes(mean_std, loglevels, truncation_level)
+            _set_poes(mean_std, loglevels, phi_b, out.T)
         imtweight = getattr(self, 'weight', None)  # ImtWeight or None
         for m, imt in enumerate(cmaker.imtls):
             mL1 = m * L1
             if imtweight and imtweight.dic.get(imt) == 0:
                 # set by the engine when parsing the gsim logictree
-                # when 0 ignore the contribution: see _build_trts_branches
-                arr[:, mL1:mL1 + L1] = 0
-        return arr
+                # when 0 ignore the contribution: see _build_branches
+                out[:, mL1:mL1 + L1] = 0

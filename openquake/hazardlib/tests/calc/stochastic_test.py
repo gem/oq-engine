@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -34,13 +34,14 @@ class StochasticEventSetTestCase(unittest.TestCase):
         for i, src in enumerate(group):
             src.id = i
             src.grp_id = 0
+            src.num_ruptures = src.count_ruptures()
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
         param = dict(ses_per_logic_tree_path=10, ses_seed=42, imtls={})
         cmaker = contexts.ContextMaker('*', [SiMidorikawa1999SInter()], param)
         dic = sum(sample_ruptures(group, cmaker), {})
-        self.assertEqual(len(dic['rup_array']), 8)
+        self.assertEqual(len(dic['rup_array']), 5)
         self.assertEqual(len(dic['source_data']), 6)  # mutex sources
 
         # test no filtering 1
@@ -49,4 +50,4 @@ class StochasticEventSetTestCase(unittest.TestCase):
 
         # test no filtering 2
         ruptures = sum(sample_ruptures(group, cmaker), {})['rup_array']
-        self.assertEqual(len(ruptures), 8)
+        self.assertEqual(len(ruptures), 5)

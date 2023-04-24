@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -85,4 +85,4 @@ class PMF(object):
 
         :param bin: the bin to keep (default the first)
         """
-        self.data = [(1, self.data[0][1])]
+        self.data = [(1, self.data[bin][1])]

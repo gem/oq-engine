@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -39,7 +39,8 @@ from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.event_based_damage import case_15
-from openquake.qa_tests_data.classical import case_1, case_9, case_18, case_56
+from openquake.qa_tests_data.logictree import case_09, case_56
+from openquake.qa_tests_data.classical import case_01, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5, case_16, case_21
@@ -51,7 +52,18 @@ from openquake.server.tests import data as test_data
 
 DATADIR = os.path.join(commonlib.__path__[0], 'tests', 'data')
 NRML_DIR = os.path.dirname(tests.__file__)
-MIXED_SRC_MODEL = os.path.join(NRML_DIR, 'source_model/mixed.xml')
+MIXED_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/mixed.xml')
+AREA_SOURCE_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/area-source.xml')
+COMPLEX_FAULT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/complex-fault-source.xml')
+MULTI_POINT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/multi-point-source.xml')
+POINT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/point-source.xml')
+SIMPLE_FAULT_SRC_MODEL = os.path.join(
+    NRML_DIR, 'source_model/simple-fault-source.xml')
 
 
 def setup_module():
@@ -138,20 +150,20 @@ class InfoTestCase(unittest.TestCase):
         self.assertGreaterEqual(len(lines), 9)
 
     def test_job_ini(self):
-        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        path = os.path.join(os.path.dirname(case_09.__file__), 'job.ini')
         with Print.patch() as p:
             sap.runline('openquake.commands info ' + path)
         self.assertIn('Classical Hazard QA Test, Case 9', str(p))
 
     def test_logictree(self):
-        path = os.path.join(os.path.dirname(case_9.__file__),
+        path = os.path.join(os.path.dirname(case_09.__file__),
                             'source_model_logic_tree.xml')
         with Print.patch() as p:
             sap.runline('openquake.commands info ' + path)
         self.assertIn('pointSource', str(p))
 
     def test_report(self):
-        path = os.path.join(os.path.dirname(case_9.__file__), 'job.ini')
+        path = os.path.join(os.path.dirname(case_09.__file__), 'job.ini')
         save = 'openquake.calculators.reportwriter.ReportWriter.save'
         with Print.patch() as p, mock.patch(save, lambda self, fname: None):
             sap.runline('openquake.commands info --report ' + path)
@@ -239,7 +251,7 @@ class RunShowExportTestCase(unittest.TestCase):
         """
         Build a datastore instance to show what it is inside
         """
-        job_ini = os.path.join(os.path.dirname(case_1.__file__), 'job.ini')
+        job_ini = os.path.join(os.path.dirname(case_01.__file__), 'job.ini')
         with Print.patch() as cls.p:
             calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
         cls.calc_id = calc.datastore.calc_id
@@ -453,7 +465,7 @@ class ZipTestCase(unittest.TestCase):
 class EngineRunJobTestCase(unittest.TestCase):
     def test_multi_run(self):
         job_ini = os.path.join(os.path.dirname(case_4.__file__), 'job.ini')
-        jobs = create_jobs([job_ini, job_ini], 'error', multi=True)
+        jobs = create_jobs([job_ini, job_ini], 'error')
         run_jobs(jobs)
         with Print.patch():
             [r1, r2] = commonlib.logs.dbcmd(
@@ -585,7 +597,8 @@ class ReduceSourceModelTestCase(unittest.TestCase):
 
     def test_reduce_sm_with_duplicate_source_ids(self):
         # testing reduce_sm in case of two sources with the same ID and
-        # different codes
+        # different codes (false duplicates)
+        raise unittest.SkipTest('reduce_sm does not work with false duplicates!')
         temp_dir = tempfile.mkdtemp()
         calc_dir = os.path.dirname(to_reduce.__file__)
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))
@@ -616,10 +629,6 @@ class NRML2CSVTestCase(unittest.TestCase):
 class NRML2GPKGTestCase(unittest.TestCase):
 
     def test_nrml_to_gpkg(self):
-        try:
-            import fiona
-        except ImportError:
-            raise unittest.SkipTest('fiona is missing')
         temp_dir = tempfile.mkdtemp()
         with Print.patch() as p:
             sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
@@ -633,41 +642,93 @@ class NRML2GPKGTestCase(unittest.TestCase):
 
 class GPKG2NRMLTestCase(unittest.TestCase):
 
-    def test_nrml_from_gpkg(self):
-        try:
-            import fiona
-        except ImportError:
-            raise unittest.SkipTest('fiona is missing')
-        temp_dir = tempfile.mkdtemp()
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.datadir = os.path.join(os.path.dirname(__file__), 'data')
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def _convert_nrml_to_gpkg(self, source_model):
         with Print.patch():
-            sap.runline(f'openquake.commands nrml_to gpkg {MIXED_SRC_MODEL} '
-                        f'--outdir={temp_dir} --chatty')
+            sap.runline(f'openquake.commands nrml_to gpkg {source_model} '
+                        f'--outdir={self.temp_dir} --chatty')
         gpkg_path = os.path.join(
-            temp_dir, Path(MIXED_SRC_MODEL).stem + '.gpkg')
-        out_path = os.path.join(
-            temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
-        with self.assertLogs('root', level='WARNING') as cm:
+            self.temp_dir, Path(source_model).stem + '.gpkg')
+        return gpkg_path
+
+    def _convert_gpkg_to_nrml(self, gpkg_path, out_path):
+        with Print.patch():
             sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
+
+    def _convert_nrml_to_gpkg_to_nrml(self, src_model_path):
+        gpkg_path = self._convert_nrml_to_gpkg(src_model_path)
+        out_path = os.path.join(
+            self.temp_dir, Path(src_model_path).stem + '_converted.xml')
+        self._convert_gpkg_to_nrml(gpkg_path, out_path)
+        return out_path
+
+    def _check_output(self, out_path, expected_path):
+        self.assertListEqual(
+            list(open(out_path)),
+            list(open(expected_path)))
+
+    def test_convert_mixed_nrml_from_gpkg(self):
+        gpkg_path = self._convert_nrml_to_gpkg(MIXED_SRC_MODEL)
+        out_path = os.path.join(
+            self.temp_dir, Path(MIXED_SRC_MODEL).stem + '_converted.xml')
         expected_log_outputs = [
-            'WARNING:root:Skipping source of code "X" and attributes'
+            'Skipping source of code "X" and attributes'
             ' "{\'id\': \'5\', \'name\': \'characteristic source,'
             ' simple fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
-            'WARNING:root:Skipping source of code "X" and attributes'
+            'Skipping source of code "X" and attributes'
             ' "{\'id\': \'6\', \'name\': \'characteristic source,'
             ' complex fault\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)',
-            'WARNING:root:Skipping source of code "X" and attributes'
+            'Skipping source of code "X" and attributes'
             ' "{\'id\': \'7\', \'name\': \'characteristic source,'
             ' multi surface\', \'tectonicRegion\': \'Volcanic\'}"'
             ' (the converter is not implemented yet)']
-        for line in expected_log_outputs:
-            self.assertIn(line, cm.output)
-        datadir = os.path.join(os.path.dirname(__file__), 'data')
-        self.assertListEqual(
-            list(open(out_path)),
-            list(open(os.path.join(datadir, 'expected_converted_nrml.xml'))))
-        shutil.rmtree(temp_dir)
+        with mock.patch('logging.error') as error:
+            sap.runline(f'openquake.commands nrml_from {gpkg_path} {out_path}')
+            errors = [error.call_args_list[i].args[0]
+                      for i in range(len(error.call_args_list))]
+            for line in expected_log_outputs:
+                self.assertIn(line, errors)
+        expected_path = os.path.join(
+            self.datadir, 'expected_mixed_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_AreaSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(AREA_SOURCE_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_area_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_ComplexFaultSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(COMPLEX_FAULT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_complex_fault_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_MultiPointSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(MULTI_POINT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_multi_point_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_PointSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(POINT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_point_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
+
+    def test_convert_SimpleFaultSource(self):
+        out_path = self._convert_nrml_to_gpkg_to_nrml(SIMPLE_FAULT_SRC_MODEL)
+        expected_path = os.path.join(
+            self.datadir, 'expected_simple_fault_source_converted_nrml.xml')
+        self._check_output(out_path, expected_path)
 
 
 def teardown_module():

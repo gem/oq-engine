@@ -1,10 +1,189 @@
   [Michele Simionato]
-    * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
+  * Internal: added command `oq plot event_based_mfd?`
+  * Moved the minimum magnitude filtering after the rupture sampling
+  * Changed the internals of rupture sampling again (trt_smr)
+  * Fixed a bug in scenario calculations causing a mysterious IndexError in the
+    line rctx.clon = c.lons[rctx.sids]
+  * Changed the disaggregation exporter to add a column with the IML
+    associated to the PoE for the mean disaggregation outputs
+  * Internal: added a parameter `override_vs30` in the job.ini
+
+  [Marco Pagani, Michele Simionato]
+  * Fixed a bug in the source writer when writing NonParametricSources
+
+  [Michele Simionato]
+  * Changed the conditional spectrum storage and fixed the exporter to export
+    all PoEs
+
+  [Marco Pagani]
+  * Fixed conditional spectrum with investigation time different from 1 year
+
+  [Michele Simionato]
+  * Fixed documentation of the Extractor for hazard curves and maps
+  * Fixed bug in `oq zip`: when starting from a directory different from the
+    job.ini directory, .hdf5 files for nonparametric ruptures were not included
+  * Honored `minimum_magnitude` for MultiFaultSources
+  * Overhauled the experimental postprocessing framework and fixed many
+    bugs in the `compute_mrd` postprocessor
+
+  [Anirudh Rao]
+  * Added a verification test suite for the Conditioned GMFs calculator
+
+  [Michele Simionato]
+  * Added output `rates_by_src`
+  * Fixed method '/v1/ini_defaults' returning NaNs for the site parameters
+  * Added output `mean_disagg_bysrc` for single site calculations with use_rates
+  * Added command `oq reduce_smlt`
+  * Fixed reinsurance calculations when there is a single loss type
+  * Changed the source seed generation to not depend on the source ID suffix
+  * Tracebacks were printed 3 times in the console: this is finally fixed
+  * Forbidden duplicate sources in atomic groups
+  * Forbidden duplicate mutually exclusive sources
+  * Fixed conditional spectrum calculator with multiple sites and implemented
+    parallelization
+  * Fixed the source ID generation for CollapsedPointSources
+  * Fixed the error message for wrong weights in the gsim logic tree file
+  * Fixed KeyError in calculations using the EasternCan15Mid with PGA
+  * Replaced hard-coded limit to 25 levels in the MRD postprocessor
+    with a simple warning
+
+  [Kendra Johnson]
+  * Added a job parameter 'reqv_ignore_sources', which indicates which
+    sources - specified as a list of thier source ids - should not be collapsed
+    using the equivalent distance
+
+  [Michele Simionato]
+  * Extended (re)insurance calculations to manage insurance deductibles at asset
+    level
+  * Internal: added a parameter `use_rates` to compute statistical hazard curves
+    in terms of rates, not probabilities
+  * Internal: changed `disagg_by_src` to work in terms of rates
+  * Added command `oq runsite <lon>,<lat>` for mosaic PSHA calculations
+  * Enhanced --reuse-input to reuse preclassical calculations if possible
+  * Normalized IMTs in the `minimum_intensity` dictionary (i.e. SA(1.)=>SA(1.0))
+  * Fixed event based calculations running out of memory due to hazard curve
+    arrays being instantiated without need
+
+  [Julián Santiago Montejo Espitia]
+  * Contributed the GMPE Arteta et al. (2023) for crustal events on northern
+    South America
+
+  [Michele Simionato]
+  * Setting both `sites` and `site_model_file` now works also for models
+    with nonstandard site parameters, like EUR
+
+  [Paolo Tormene]
+  * Added AELO mode for the engine webui, providing a web form to insert input
+    values and launch a calculation. Input values are validated and the
+    progress of the calculation can be monitored through the webui. On
+    completion, the server sends an email to the job owner, providing feedback
+    about failure or completion, with a link to retrieve a traceback or to
+    browse the calculation outputs. Corresponding tests were added and the
+    existing tests for the webui were improved, cleaning up calculations after
+    they have been checked.
+
+  [Michele Simionato]
+  * Changed the default: now all realizations are consider in disaggregation
+    calculations, not only the one closest to the mean hazard curve
+  * Added feature `infer_occur_rates` for multiFault sources
+  * Sampling the ruptures was raising a BlockingIOError sometimes
+
+  [Kendra Johnson]
+  * Made it possible to use extendModel for multiple branchSets in the
+    source model logic tree
+
+  [Michele Simionato]
+  * Added an exporter for disagg_by_src
+  * Implemented mean disaggregation outputs, with the means computed in terms
+    of rates, not probabilities
+
+  [Kendra Johnson]
+  * Corrected a bug when using the `reqv` feature: all sources were
+    collapsed instead of the ones with the specified tectonic region types
+
+  [Michele Simionato]
+  * Changed the lon-lat binning algorithm to produce 4 times less bins
+  * Fixed install.py: it must not set the shared_dir
+  * Optimized disaggregation in performance, memory consumption and data
+    transfer; also changed the task distribution algorithm
+
+python3-oq-engine (3.16.0-2~xenial01) xenial; urgency=low
+
+  [Matteo Nastasi]
+  * Bumped oq-libs to version 3.8.0
+
+  [Michele Simionato, Paolo Tormene]
+  * Fixed the `agg_curves` extractor to also extract individual curves, thus
+    fixing the QGIS plugin visualization
+
+  [Michele Simionato]
+  * Optimized the rupture sampling for MultiFaultSources
+  * Supported `collect_rlzs` together with `disagg_by_src` to avoid running
+    out of memory in models with many realizations and many sources
+
+  [Marco Pagani]
+  * Implemented the correction of Lanzano et al. (2019) as described in
+    Lanzano et al. (2022)
+
+  [Michele Simionato]
+  * Fixed disaggregation calculations when too few tasks were generated
+
+  [Anirudh Rao, Michele Simionato]
+  * Changed the algorithm used in classical_risk and classical_bcr
+    calculations to take into account the risk_investigation_time
+
+  [Michele Simionato]
+  * Added a warning for pointlike sources with magnitudes >= 8
+  * Optimized the disaggregation by using our own truncnorm_sf function and
+    not scipy
+
+  [Anirudh Rao]
+  * Implemented Conditioned GMFs as defined in Engler et al. (2022)
+
+  [Matteo Nastasi]
+  * Removed python3-engine-master and python3-engine-worker ubuntu packages
+
+  [Michele Simionato]
+  * Internal: renamed rup_id -> seed in event based calculations to avoid
+    confusion
+  * Parallelized the reinsurance calculation
+
+  [Marco Pagani]
+  * Completed implementation of `grp_probability` for SourceGroups with mutex
+    ruptures
+
+  [Michele Simionato]
+  * Huge improvement of the task distribution when using zmq; also, used
+    less memory on the master node
+  * Fixed context collapsing in the multi-site case
+  * Optimised postclassical, both in terms of memory in the master node
+    and reading performance in the workers
+  * Added `parallel.multispawn` facility in `oq engine --multi --run`
+  * Improved `oq engine --multi` to run at most 5 jobs at the time
+  * Fixed bug introduced in engine 3.9 producing wrong numbers in the case of
+    mutex ruptures (i.e. the New Madrid cluster in the USA model)
+  * Added `--venv` option to the universal installer to install in custom places
+  * Bug fix: the `avg_losses-rlzs` output in classical risk was stored
+    incorrectly
+  * Speed up preclassical calculations in presence of complex fault sources and
+    similar; for instance there is a 3x speedup for the SAM model
+
+  [Trevor Allen]
+  * Added class Allen2012_SS14 to Allen (2012) GMM to incorporate Vs30 scaling
+    based on Seyhan & Stewart (2014) amplification factors
+  * Added classes SomervilleEtAl2009NonCratonic_SS14 and
+    SomervilleEtAl2009YilgarnCraton_SS14 to Somerville et al (2009) GMM to
+    incorporate Vs30 scaling based on Seyhan & Stewart (2014) amplification
+    factors
+  * Added Allen (2022) GMM for Banda Sea earthquakes observed in the North
+    Australian Craton
+
+  [Michele Simionato]
+  * Moved the `horiz_comp_to_geom_mean` functionality from the gsim logic tree
     to the job.ini
   * Optimized the parsing of XML files (35x for the Alaska model)
   * Bug fix: ModifiableGMPEs with underlying tables were not receiving a
     single magnitude when calling the `compute` method
-  * Introduced `keep_source_groups` mode in classical calculations
   * Rewritten ModifiableGMPE to avoid a subtle memory leak
 
   [Matteo Nastasi]
@@ -12,14 +191,12 @@
 
   [Michele Simionato]
   * Fixed the exporter of `avg_losses-stats` when using `collect_rlzs=true`
-  * Changed the distribution of multiFaultSources to send one fragment per task
   * Mitigate the issue of ultra-long planar ruptures affecting many models
   * Forced the usage of `collect_rlzs` for large exposures when computing
     avg_losses with many realizations
   * Bug fix: min_mag and max_mag were not honored when using a
     magnitude-dependent maximum distance
   * Reduced the memory consumption when using the ps_grid_spacing approximation
-  * Added `spawn` distribution mechanism for testing purposes
 
   [Marco Pagani]
   * Added a method to compute the mean rate density of two IMTs
@@ -92,6 +269,8 @@
     in insurance calculations (before we supported only fractions)
   * Reduced precision in the header of the UHS csv files
   * Managed the case with CoVs = 0 for the beta distribution
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 09 Feb 2023 15:26:59 +0000
 
 python3-oq-engine (3.15.0-1~xenial01) xenial; urgency=low
 

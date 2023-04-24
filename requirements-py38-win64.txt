@@ -14,6 +14,8 @@ https://wheelhouse.openquake.org/v3/windows/py38/GDAL-3.4.3-cp38-cp38-win_amd64.
 https://wheelhouse.openquake.org/v3/windows/py38/pyproj-3.4.0-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/scipy-1.8.1-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/Pillow-9.2.0-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/numba-0.56.2-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/llvmlite-0.39.1-cp38-cp38-win_amd64.whl
 #
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
@@ -29,7 +31,7 @@ https://wheelhouse.openquake.org/v3/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/Django-3.2.16-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/Django-3.2.18-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_pam-1.8.4-py2.py3-none-any.whl

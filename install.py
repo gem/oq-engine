@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020-2022 GEM Foundation
+# Copyright (C) 2020-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -83,7 +83,6 @@ class server:
     port = %d
     file = %s
     [directory]
-    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
 
     @classmethod
@@ -111,7 +110,6 @@ class devel_server:
     port = %d
     file = %s
     [directory]
-    shared_dir = /opt/openquake
     ''' % (DBPORT, DBPATH)
     exit = server.exit
 
@@ -242,10 +240,12 @@ def install_standalone(venv):
             print('%s: could not install %s' % (exc, app))
 
 
-def before_checks(inst, port, remove, usage):
+def before_checks(inst, venv, port, remove, usage):
     """
     Checks to perform before the installation
     """
+    if venv:
+        inst.VENV = os.path.abspath(os.path.expanduser(venv))
     if port:
         inst.DBPORT = int(port)
 
@@ -417,6 +417,8 @@ def install(inst, version):
         oqreal = '%s\\Scripts\\oq' % inst.VENV
     else:
         oqreal = '%s/bin/oq' % inst.VENV
+    print('Compiling python/numba modules')
+    subprocess.run([oqreal, '--version'])  # compile numba
 
     if inst in (user, devel):  # create/upgrade the db in the default location
         # do not stop if `oq dbserver upgrade` is missing (versions < 3.15)
@@ -511,6 +513,7 @@ if __name__ == '__main__':
                         choices=['server', 'user', 'devel', 'devel_server'],
                         nargs='?',
                         help='the kind of installation you want')
+    parser.add_argument("--venv", help="venv directory")
     parser.add_argument("--remove",  action="store_true",
                         help="disinstall the engine")
     parser.add_argument("--version",
@@ -520,7 +523,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
-        before_checks(inst, args.dbport, args.remove, parser.format_usage())
+        before_checks(inst, args.venv, args.dbport, args.remove,
+                      parser.format_usage())
         if args.remove:
             remove(inst)
         else:

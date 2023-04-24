@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (c) 2016-2022 GEM Foundation
+# Copyright (c) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,7 +15,9 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+import math
 import copy
+import warnings
 import numpy
 import pandas
 from openquake.baselib.general import cached_property
@@ -42,6 +44,27 @@ else:
     def combine_probs(array, other, rlzs):
         for r in rlzs:
             array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
+
+
+def get_mean_curve(dstore, imt, site_id=0):
+    """
+    Extract the mean hazard curve from the datastore for the first site.
+    """
+    if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+        arr = dstore.sel('hcurves-stats', stat='mean', imt=imt)
+    else:  # there is only 1 realization
+        arr = dstore.sel('hcurves-rlzs', rlz_id=0, imt=imt)
+    return arr[site_id, 0, 0]
+
+
+def get_poe_from_mean_curve(dstore, imt, iml, site_id=0):
+    """
+    Extract the poe corresponding to the given iml by looking at the mean
+    curve for the given imt. `iml` can also be an array.
+    """
+    imls = dstore['oqparam'].imtls[imt]
+    mean_curve = get_mean_curve(dstore, imt, site_id)
+    return numpy.interp(imls, mean_curve)[iml]
 
 
 class ProbabilityCurve(object):
@@ -114,15 +137,6 @@ class ProbabilityCurve(object):
         array = self.array[:, inner_idx].reshape(-1, 1)
         return self.__class__(array)
 
-    def combine(self, other, rlz_groups):
-        """
-        Update a ProbabilityCurve with shape (L, R) with a pcurve with shape
-        (L, G), being G the number of realization groups, which are list
-        of integers in the range 0..R-1.
-        """
-        for g, rlz_group in enumerate(rlz_groups):
-            combine_probs(self.array, other.array[:, g], rlz_group)
-
     # used when exporting to HDF5
     def convert(self, imtls, idx=0):
         """
@@ -136,48 +150,132 @@ class ProbabilityCurve(object):
             curve[imt] = self.array[imtls(imt), idx]
         return curve[0]
 
+
+
+# ######################### hazard maps ################################### #
+
+# cutoff value for the poe
+EPSILON = 1E-30
+
+
+def compute_hazard_maps(curves, imls, poes):
+    """
+    Given a set of hazard curve poes, interpolate hazard maps at the specified
+    ``poes``.
+
+    :param curves:
+        Array of floats of shape N x L. Each row represents a curve, where the
+        values in the row are the PoEs (Probabilities of Exceedance)
+        corresponding to the ``imls``.
+        Each curve corresponds to a geographical location.
+    :param imls:
+        Intensity Measure Levels associated with these hazard ``curves``. Type
+        should be an array-like of floats.
+    :param poes:
+        Value(s) on which to interpolate a hazard map from the input
+        ``curves``. Can be an array-like or scalar value (for a single PoE).
+    :returns:
+        An array of shape N x P, where N is the number of curves and P the
+        number of poes.
+    """
+    log_poes = numpy.log(poes)
+    if len(log_poes.shape) == 0:
+        # `poes` was passed in as a scalar;
+        # convert it to 1D array of 1 element
+        log_poes = log_poes.reshape(1)
+    P = len(log_poes)
+
+    if len(curves.shape) == 1:
+        # `curves` was passed as 1 dimensional array, there is a single site
+        curves = curves.reshape((1,) + curves.shape)  # 1 x L
+
+    N, L = curves.shape  # number of levels
+    if L != len(imls):
+        raise ValueError('The curves have %d levels, %d were passed' %
+                         (L, len(imls)))
+
+    hmap = numpy.zeros((N, P))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # avoid RuntimeWarning: divide by zero for zero levels
+        imls = numpy.log(numpy.array(imls[::-1]))
+    for n, curve in enumerate(curves):
+        # the hazard curve, having replaced the too small poes with EPSILON
+        log_curve = numpy.log([max(poe, EPSILON) for poe in curve[::-1]])
+        for p, log_poe in enumerate(log_poes):
+            if log_poe > log_curve[-1]:
+                # special case when the interpolation poe is bigger than the
+                # maximum, i.e the iml must be smaller than the minimum;
+                # extrapolate the iml to zero as per
+                # https://bugs.launchpad.net/oq-engine/+bug/1292093;
+                # then the hmap goes automatically to zero
+                pass
+            else:
+                # exp-log interpolation, to reduce numerical errors
+                # see https://bugs.launchpad.net/oq-engine/+bug/1252770
+                hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
+    return hmap
+
+    
+def get_lvl(hcurve, imls, poe):
+    """
+    :param hcurve: a hazard curve, i.e. array of L1 PoEs
+    :param imls: L1 intensity measure levels
+    :returns: index of the intensity measure level associated to the poe
+
+    >>> imls = numpy.array([.1, .2, .3, .4])
+    >>> hcurve = numpy.array([1., .99, .90, .8])
+    >>> get_lvl(hcurve, imls, 1)
+    0
+    >>> get_lvl(hcurve, imls, .99)
+    1
+    >>> get_lvl(hcurve, imls, .91)
+    2
+    >>> get_lvl(hcurve, imls, .8)
+    3
+    """
+    [[iml]] = compute_hazard_maps(hcurve, imls, poe)
+    iml -= 1E-10  # small buffer
+    return numpy.searchsorted(imls, iml)
+
+
+############################## probability maps ###############################
+
 # numbified below
-def update_pmap_i(arr, poes, rates, probs_occur, sids, itime):
-    for poe, rate, probs, sid in zip(poes, rates, probs_occur, sids):
-        arr[sid] *= get_pnes(rate, probs, poe, itime)
+def update_pmap_i(arr, poes, inv, rates, probs_occur, idxs, itime):
+    levels = range(arr.shape[1])
+    for i, rate, probs, idx in zip(inv, rates, probs_occur, idxs):
+        if itime == 0:  # FatedTOM
+            arr[idx] *= 1. - poes[i]
+        elif len(probs) == 0 and numba is not None:
+            # looping is faster than building arrays
+            for lvl in levels:
+                arr[idx, lvl] *= math.exp(-rate * poes[i, lvl] * itime)
+        else:
+            arr[idx] *= get_pnes(rate, probs, poes[i], itime)  # shape L
 
 
 # numbified below
-def update_pmap_m(arr, poes, rates, probs_occur, weights, sids, itime):
-    for poe, rate, probs, wei, sid in zip(
-            poes, rates, probs_occur, weights, sids):
-        pne = get_pnes(rate, probs, poe, itime)
-        arr[sid] += (1. - pne) * wei
-
-
-# numbified below
-def update_pmap_c(arr, poes, rates, probs_occur, allsids, sizes, itime):
-    start = 0
-    for poe, rate, probs, size in zip(poes, rates, probs_occur, sizes):
-        pne = get_pnes(rate, probs, poe, itime)
-        for sid in allsids[start:start + size]:
-            arr[sid] *= pne
-        start += size
-
-
-# numbified below
-def update_pnes(arr, idxs, pnes):
-    for idx, pne in zip(idxs, pnes):
-        arr[idx] *= pne
+def update_pmap_m(arr, poes, inv, rates, probs_occur, weights, idxs, itime):
+    for i, rate, probs, w, idx in zip(inv, rates, probs_occur, weights, idxs):
+        pne = get_pnes(rate, probs, poes[i], itime)  # shape L
+        arr[idx] += (1. - pne) * w
 
 
 if numba:
     t = numba.types
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
+                 t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.uint32[:],                            # sids
                  t.float64)                              # itime
     update_pmap_i = compile(sig)(update_pmap_i)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
+    sig = t.void(t.float64[:, :],                        # pmap
+                 t.float64[:, :],                        # poes
+                 t.uint32[:],                            # invs
                  t.float64[:],                           # rates
                  t.float64[:, :],                        # probs_occur
                  t.float64[:],                           # weights
@@ -185,19 +283,19 @@ if numba:
                  t.float64)                              # itime
     update_pmap_m = compile(sig)(update_pmap_m)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.float64[:, :, :],                     # poes
-                 t.float64[:],                           # rates
-                 t.float64[:, :],                        # probs_occur
-                 t.uint32[:],                            # allsids
-                 t.uint32[:],                            # sizes
-                 t.float64)                              # itime
-    update_pmap_c = compile(sig)(update_pmap_c)
 
-    sig = t.void(t.float64[:, :, :],                     # pmap
-                 t.uint32[:]       ,                     # idxs
-                 t.float64[:, :, :])                     # pnes
-    update_pnes = compile(sig)(update_pnes)
+def fix_probs_occur(probs_occur):
+    """
+    Try to convert object arrays into regular arrays
+    """
+    if probs_occur.dtype.name == 'object':
+        n = len(probs_occur)
+        p = len(probs_occur[0])
+        po = numpy.zeros((n, p))
+        for p, probs in enumerate(probs_occur):
+            po[p] = probs_occur[p]
+        return po
+    return probs_occur
 
 
 class ProbabilityMap(object):
@@ -223,6 +321,14 @@ class ProbabilityMap(object):
         new.array = array
         return new
 
+    def split(self):
+        """
+        :yields: G ProbabilityMaps of shape (N, L, 1)
+        """
+        N, L, G = self.array.shape
+        for g in range(G):
+            yield self.__class__(self.sids, L, 1).new(self.array[:, :, [g]])
+
     def fill(self, value):
         """
         :param value: a scalar probability
@@ -241,6 +347,24 @@ class ProbabilityMap(object):
         """
         return self.new(self.array.reshape(N, M, P))
 
+    # used in calc/disagg_test.py
+    def expand(self, full_lt):
+        """
+        Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
+        with shape (N, L, R): works only for rates
+        """
+        N, L, G = self.array.shape
+        assert G == full_lt.Gt, (G, full_lt.Gt)
+        R = full_lt.get_num_paths()
+        out = ProbabilityMap(range(N), L, R).fill(0.)
+        for g, rlzs in full_lt.rlzs_by_g.items():
+            for sid in range(N):
+                for rlz in rlzs:
+                    out.array[sid, :, rlz] += self.array[sid, :, g]
+                # NB: for probabilities use
+                # combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
+        return out
+
     # used in calc_hazard_curves
     def convert(self, imtls, nsites, idx=0):
         """
@@ -258,6 +382,25 @@ class ProbabilityMap(object):
         for imt in curves.dtype.names:
             curves[imt][self.sids] = self.array[:, imtls(imt), idx]
         return curves
+
+    def interp4D(self, imtls, poes):
+        """
+        :param imtls: a dictionary imt->imls with M items
+        :param poes: a list of P PoEs
+        :returns: an array of shape (N, M, P, Z)
+        """
+        poes3 = self.array
+        N, L, Z = poes3.shape
+        M = len(imtls)
+        P = len(poes)
+        L1 = len(imtls[next(iter(imtls))])
+        hmap4 = numpy.zeros((N, M, P, Z))
+        for m, imt in enumerate(imtls):
+            slc = slice(m*L1, m*L1 + L1)
+            for z in range(Z):
+                hmap4[:, m, :, z] = compute_hazard_maps(
+                    poes3[:, slc, z], imtls[imt], poes)
+        return hmap4
 
     def remove_zeros(self):
         ok = self.array.sum(axis=(1, 2)) > 0
@@ -284,39 +427,30 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def update(self, other):
+    def multiply_pnes(self, other, i):
         """
         Multiply by the probabilities of no exceedence
         """
-        if other.shape[1:] != self.shape[1:]:
-            raise ValueError('%s has inconsistent shape with %s' %
-                             (other, self))
         # assume other.sids are a subset of self.sids
-        update_pnes(self.array, self.sidx[other.sids], other.array)
-        return self
+        self.array[self.sidx[other.sids], :, 0] *= other.array[:, :, i]
 
-    def update_i(self, poes, rates, probs_occur, sids, itime):
+    def update(self, poes, invs, ctxt, itime, mutex_weight):
         """
-        Updating independent probabilities
+        Update probabilities
         """
-        idxs = self.sidx[sids]
-        update_pmap_i(self.array, poes, rates, probs_occur, idxs, itime)
-
-    def update_m(self, poes, rates, probs_occur, weights, sids, itime):
-        """
-        Updating mutex probabilities
-        """
-        idxs = self.sidx[sids]
-        update_pmap_m(self.array, poes, rates, probs_occur, weights, idxs,
-                      itime)
-
-    def update_c(self, poes, rates, probs_occur, allsids, sizes, itime):
-        """
-        Updating collapsed probabilities
-        """
-        allidxs = self.sidx[allsids]
-        update_pmap_c(self.array, poes, rates, probs_occur, allidxs, sizes,
-                      itime)
+        rates = ctxt.occurrence_rate
+        probs_occur = fix_probs_occur(ctxt.probs_occur)
+        idxs = self.sidx[ctxt.sids]
+        for i in range(self.shape[-1]):  # G indices
+            if len(mutex_weight) == 0:  # indep
+                update_pmap_i(self.array[:, :, i], poes[:, :, i], invs, rates,
+                              probs_occur, idxs, itime)
+            else:  # mutex
+                weights = [mutex_weight[src_id, rup_id]
+                           for src_id, rup_id in zip(ctxt.src_id, ctxt.rup_id)]
+                update_pmap_m(self.array[:, :, i], poes[:, :, i],
+                              invs, rates, probs_occur,
+                              numpy.array(weights), idxs, itime)
 
     def __invert__(self):
         return self.new(1. - self.array)

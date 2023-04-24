@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="1.0"
+    name="test hazardmodel"
+    >
+        <sourceGroup
+        name="group1"
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <multiFaultSource id="1" name="Test1"/>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

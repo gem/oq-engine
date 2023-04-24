@@ -10,7 +10,7 @@ on:
   schedule:
     - cron: "00 22 * * *"
   push:
-    branches: [ test_os ]
+    branches: [ ae-win_numba ]
 
 jobs:
   install_and_test:
@@ -78,6 +78,7 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           #
+          python -c 'import fiona'
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           python -m pip install pytest

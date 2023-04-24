@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2022 GEM Foundation
+# Copyright (C) 2017-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 from urllib.parse import parse_qs
-from unittest.mock import Mock
 from functools import lru_cache
 import operator
 import logging
@@ -36,11 +35,13 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib.gsim.base import ContextMaker, read_cmakers
+from openquake.hazardlib.gsim.base import (
+    ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
-from openquake.risklib.scientific import LOSSTYPE
+from openquake.hazardlib.probability_map import get_lvl
+from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
 from openquake.calculators import getters
@@ -119,11 +120,10 @@ def parse(query_string, info={}):
     {'kind': ['rlz-3'], 'imt': ['PGA'], 'site_id': [0], 'k': [3], 'rlzs': True}
     """
     qdic = parse_qs(query_string)
-    loss_types = info.get('loss_types', [])
     for key, val in sorted(qdic.items()):
         # convert site_id to an int, loss_type to an int, etc
         if key == 'loss_type':
-            qdic[key] = [loss_types[k] for k in val]
+            qdic[key] = [LOSSID[k] for k in val]
             qdic['lt'] = val
         else:
             qdic[key] = [lit_eval(v) for v in val]
@@ -240,7 +240,8 @@ def extract_realizations(dstore, dummy):
         gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
-        arr['branch_path'] = ['"%s"' % repr(gsim)[1:-1].replace('"', '""')
+        # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
+        arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
     else:
         arr['branch_path'] = encode(rlzs['branch_path'])
@@ -541,11 +542,13 @@ def extract_mean_by_rup(dstore, what):
     N = len(dstore['sitecol'])
     assert N == 1
     out = []
-    for cmaker in read_cmakers(dstore):
-        for ctx in cmaker.read_ctxs(dstore):
-            # shape (4, G, M, U) => U
-            means = cmaker.get_mean_stds([ctx])[0].mean(axis=(0, 1))
-            out.extend(zip(ctx.src_id, ctx.rup_id, means))
+    ctx_by_grp = read_ctx_by_grp(dstore)
+    cmakers = read_cmakers(dstore)
+    for gid, ctx in ctx_by_grp.items():
+        # shape (4, G, M, U) => U
+        means = cmakers[gid].get_mean_stds([ctx], split_by_mag=True)[0].mean(
+            axis=(0, 1))
+        out.extend(zip(ctx.src_id, ctx.rup_id, means))
     out.sort(key=operator.itemgetter(0, 1))
     return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
 
@@ -609,7 +612,7 @@ def extract_sources(dstore, what):
     wkt_gz = gzip.compress(';'.join(wkt).encode('utf8'))
     src_gz = gzip.compress(';'.join(decode(info['source_id'])).encode('utf8'))
     oknames = [name for name in info.dtype.names  # avoid pickle issues
-               if name not in ('source_id', 'trt_smrs')]
+               if name != 'source_id']
     arr = numpy.zeros(len(info), [(n, info.dtype[n]) for n in oknames])
     for n in oknames:
         arr[n] = info[n]
@@ -717,14 +720,16 @@ def extract_csq_curves(dstore, what):
                              consequences=cols))
 
 
+# NB: used by QGIS but not by the exporters
+# tested in test_case_1_ins
 @extract.add('agg_curves')
 def extract_agg_curves(dstore, what):
     """
     Aggregate loss curves from the ebrisk calculator:
 
-    /extract/agg_curves?kind=stats,absolute=1&loss_type=occupants&occupancy=RES
+    /extract/agg_curves?kind=stats&absolute=1&loss_type=occupants&occupancy=RES
 
-    Returns an array of shape (P, S, ...)
+    Returns an array of shape (#periods, #stats) or (#periods, #rlzs)
     """
     info = get_info(dstore)
     qdic = parse(what, info)
@@ -739,17 +744,29 @@ def extract_agg_curves(dstore, what):
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
     tagvalues = [tagdict[t][0] for t in tagnames]
-    agg_id = -1
     if tagnames:
         lst = decode(dstore['agg_keys'][:])
         agg_id = lst.index(','.join(tagvalues))
-    kinds = list(info['stats'])
-    name = 'agg_curves-stats/' + lts[0]
-    units = dstore.get_attr(name, 'units')
-    shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
-    units = dstore.get_attr(name, 'units')
-    rps = shape_descr['return_period']
-    arr = dstore[name][agg_id, k].T  # shape P, R
+    else:
+        agg_id = 0  # total aggregation
+    if qdic['rlzs']:
+        [li] = qdic['loss_type']  # loss type index
+        units = dstore.get_attr('aggcurves', 'units').split()
+        df = dstore.read_df('aggcurves', sel=dict(agg_id=agg_id, loss_id=li))
+        rps = list(df.return_period.unique())
+        P = len(rps)
+        R = len(qdic['kind'])
+        arr = numpy.zeros((P, R))
+        for rlz in df.rlz_id.unique():
+            # NB: df may contains zeros but there are no missing periods
+            # by construction (see build_aggcurves)
+            arr[:, rlz] = df[df.rlz_id == rlz].loss
+    else:
+        name = 'agg_curves-stats/' + lts[0]
+        shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
+        rps = list(shape_descr['return_period'])
+        units = dstore.get_attr(name, 'units').split()
+        arr = dstore[name][agg_id, k].T  # shape P, R
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -758,9 +775,9 @@ def extract_agg_curves(dstore, what):
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
     attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
-    attrs['return_period'] = list(rps)
-    attrs['kind'] = kinds
-    attrs['units'] = list(units)  # used by the QGIS plugin
+    attrs['return_period'] = rps
+    attrs['kind'] = qdic['kind']
+    attrs['units'] = units  # used by the QGIS plugin
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
@@ -810,7 +827,7 @@ def extract_agg_damages(dstore, what):
         oq = dstore['oqparam']
         lti = oq.lti[loss_type]
         D = len(oq.limit_states) + 1
-        damages = dstore['damages-rlzs'][:, :, lti, :D]
+        damages = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)
     return _filter_agg(dstore['assetcol'], damages, tags)
@@ -832,10 +849,9 @@ def extract_aggregate(dstore, what):
     ridx = qdic['k'][0]
     lis = qdic.get('loss_type', [])  # list of indices
     if lis:
-        li = lis[0]
-        lts = [lt for lt, i in loss_types.items() if i == li]
-        array = dstore['avg_losses%s/%s' % (suffix, lts[0])][:, ridx]
-        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, lts)
+        lt = LOSSTYPE[lis[0]]
+        array = dstore['avg_losses%s/%s' % (suffix, lt)][:, ridx]
+        aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {}, [lt])
     else:
         array = avglosses(dstore, loss_types, suffix[1:])[:, ridx]
         aw = ArrayWrapper(assetcol.aggregateby(tagnames, array), {},
@@ -850,16 +866,16 @@ def extract_aggregate(dstore, what):
 def extract_losses_by_asset(dstore, what):
     oq = dstore['oqparam']
     loss_dt = oq.loss_dt(F32)
-    rlzs = dstore['full_lt'].get_realizations()
+    R = dstore['full_lt'].get_num_paths()
     stats = oq.hazard_stats()  # statname -> statfunc
     assets = util.get_assets(dstore)
     if 'losses_by_asset' in dstore:
         losses_by_asset = dstore['losses_by_asset'][()]
-        for rlz in rlzs:
+        for r in range(R):
             # I am exporting the 'mean' and ignoring the 'stddev'
-            losses = cast(losses_by_asset[:, rlz.ordinal]['mean'], loss_dt)
+            losses = cast(losses_by_asset[:, r]['mean'], loss_dt)
             data = util.compose_arrays(assets, losses)
-            yield 'rlz-%03d' % rlz.ordinal, data
+            yield 'rlz-%03d' % r, data
     elif 'avg_losses-stats' in dstore:
         # only QGIS is testing this
         avg_losses = avglosses(dstore, loss_dt.names, 'stats')  # shape ASL
@@ -972,15 +988,14 @@ def build_damage_array(data, damage_dt):
 def extract_damages_npz(dstore, what):
     oq = dstore['oqparam']
     damage_dt = build_damage_dt(dstore)
-    rlzs = dstore['full_lt'].get_realizations()
+    R = dstore['full_lt'].get_num_paths()
     if oq.collect_rlzs:
-        rlzs = [Mock(ordinal=0)]
+        R = 1
     data = dstore['damages-rlzs']
     assets = util.get_assets(dstore)
-    for rlz in rlzs:
-        damages = build_damage_array(data[:, rlz.ordinal], damage_dt)
-        yield 'rlz-%03d' % rlz.ordinal, util.compose_arrays(
-            assets, damages)
+    for r in range(R):
+        damages = build_damage_array(data[:, r], damage_dt)
+        yield 'rlz-%03d' % r, util.compose_arrays(assets, damages)
 
 
 # tested on oq-risk-tests event_based/etna
@@ -993,27 +1008,15 @@ def extract_mfd(dstore, what):
     oq = dstore['oqparam']
     R = len(dstore['weights'])
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
-    rup_df = dstore.read_df('ruptures', 'id')
+    rup_df = dstore.read_df('ruptures', 'id')[
+        ['mag', 'n_occ', 'occurrence_rate']]
+    rup_df.mag = numpy.round(rup_df.mag, 1)
     dic = dict(mag=[], freq=[], occ_rate=[])
     for mag, df in rup_df.groupby('mag'):
-        dic['mag'].append(round(mag, 2))
+        dic['mag'].append(mag)
         dic['freq'].append(df.n_occ.sum() / eff_time)
         dic['occ_rate'].append(df.occurrence_rate.sum())
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
-
-
-@extract.add('mean_std_curves')
-def extract_mean_std_curves(dstore, what):
-    """
-    Yield imls/IMT and poes/IMT containg mean and stddev for all sites
-    """
-    rlzs = dstore['full_lt'].get_realizations()
-    w = [rlz.weight for rlz in rlzs]
-    getter = getters.PmapGetter(dstore, w)
-    arr = getter.get_mean().array
-    for imt in getter.imtls:
-        yield 'imls/' + imt, getter.imtls[imt]
-        yield 'poes/' + imt, arr[:, getter.imtls(imt)]
 
 
 @extract.add('composite_risk_model.attrs')
@@ -1106,59 +1109,71 @@ def get_ruptures_within(dstore, bbox):
 @extract.add('disagg')
 def extract_disagg(dstore, what):
     """
-    Extract a disaggregation output as a 2D array.
+    Extract a disaggregation output as an ArrayWrapper.
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/
-    disagg?kind=Mag_Dist&imt=PGA&poe_id=0&site_id=1&traditional=1
+    disagg?kind=Mag_Dist&imt=PGA&site_id=1&poe_id=0&spec=stats
     """
     qdict = parse(what)
+    spec = qdict['spec'][0]
     label = qdict['kind'][0]
-    imt = qdict['imt'][0]
-    poe_id = int(qdict['poe_id'][0])
     sid = int(qdict['site_id'][0])
-    traditional = qdict.get('traditional')
-
-    def get(v, sid):
-        if len(v.shape) == 2:
-            return v[sid]
-        return v[:]
     oq = dstore['oqparam']
-    imt2m = {imt: m for m, imt in enumerate(oq.imtls)}
-    bins = {k: get(v, sid) for k, v in dstore['disagg-bins'].items()}
-    m = imt2m[imt]
-    matrix = dstore['disagg/' + label][sid, m, poe_id]  # shape (..., Z)
-    poe_agg = dstore['poe4'][sid, m, poe_id]
-    Z = len(poe_agg)
-    if traditional and traditional != '0':
+    imts = list(oq.imtls)
+    if 'imt' in qdict:
+        imti = [imts.index(imt) for imt in qdict['imt']]
+    else:
+        imti = slice(None)
+    if 'poe_id' in qdict:
+        poei = [int(x) for x in qdict['poe_id']]
+    else:
+        poei = slice(None)
+    if 'traditional' in spec:
+        spec = spec[:4]  # rlzs or stats
+        traditional = True
+    else:
+        traditional = False
+
+    def bin_edges(dset, sid):
+        if len(dset.shape) == 2:  # (lon, lat) bins
+            return dset[sid]
+        return dset[:]  # regular bin edges
+
+    bins = {k: bin_edges(v, sid) for k, v in dstore['disagg-bins'].items()}
+    matrix = dstore['disagg-%s/%s' % (spec, label)][sid]
+    # matrix has shape (..., M, P, Z)
+    matrix = matrix[..., imti, poei, :]
+    if traditional:
+        poe_agg = dstore['poe4'][sid, imti, poei]  # shape (N, M, P, Z)
         if matrix.any():  # nonzero
             matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
-    # adapted from the nrml_converters
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
 
-    # compute axis mid points, except for the TRT axis
-    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype != object
+    # compute axis mid points, except for string axis (i.e. TRT)
+    axis = [(ax[: -1] + ax[1:]) / 2. if ax.dtype.char != 'S'
             else ax for ax in axis]
-    if len(axis) == 1:  # i.e. Mag or Dist
-        values = numpy.array([axis[0]] + list(matrix.T))  # i.e. shape (2, 3)
-    else:  # i.e. Mag_Dist
-        # axis = [[5.5, 6.5, 7.5], [12.5, 37.5, 62.5, 87.5]]
-        grids = numpy.meshgrid(*axis, indexing='ij')
-        # with the 2 axis above there are 2 grids of shape (3, 4) each
-        values = [g.flatten() for g in grids] + [matrix[..., z].flatten()
-                                                 for z in range(Z)]
-        # list of arrays of lenghts [12, 12, 12]
-        values = numpy.array(values)  # shape (3, 12)
     attrs = qdict.copy()
-    for k in disag_tup:
-        attrs[k] = bins[k]
-    attrs['kind'] = disag_tup
-    attrs['rlzs'] = dstore['best_rlzs'][sid]
-    weights = numpy.array([dstore['weights'][r] for r in attrs['rlzs']])
-    weights /= weights.sum()
-    attrs['weights'] = weights
-    return ArrayWrapper(values.T, attrs)
+    for k, ax in zip(disag_tup, axis):
+        attrs[k.lower()] = ax
+    attrs['imt'] = qdict['imt'] if 'imt' in qdict else imts
+    if len(oq.poes) == 0:
+        attrs['poe'] = [numpy.nan]
+    elif 'poe_id' in qdict:
+        attrs['poe'] = [oq.poes[p] for p in poei]
+    else:
+        attrs['poe'] = oq.poes
+    attrs['traditional'] = traditional
+    attrs['shape_descr'] = [k.lower() for k in disag_tup] + ['imt', 'poe']
+    rlzs = dstore['best_rlzs'][sid]
+    if spec == 'rlzs':
+        weight = dstore['full_lt'].init().rlzs['weight']
+        weights = weight[rlzs]
+        weights /= weights.sum()  # normalize to 1
+        attrs['weights'] = weights.tolist()
+    extra = ['rlz%d' % rlz for rlz in rlzs] if spec == 'rlzs' else ['mean']
+    return ArrayWrapper(matrix, attrs, extra)
 
 
 def _disagg_output_dt(shapedic, disagg_outputs, imts, poes_disagg):
@@ -1184,25 +1199,33 @@ def norm(qdict, params):
     return dic
 
 
-@extract.add('disagg_by_src')
-def extract_disagg_by_src(dstore, what):
+@extract.add('rates_by_src')
+def extract_rates_by_src(dstore, what):
     """
-    Extract the disagg_by_src information Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/disagg_by_src?site_id=0&imt_id=0&rlz_id=0&lvl_id=-1
+    Extract the rates_by_src information.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/rates_by_src?site_id=0&imt=PGA&poe=.001
     """
     qdict = parse(what)
-    dic = hdf5.get_shape_descr(dstore['disagg_by_src'].attrs['json'])
-    src_id = dic['src_id']
-    f = norm(qdict, 'site_id rlz_id lvl_id imt_id'.split())
-    poe = dstore['disagg_by_src'][
-        f['site_id'], f['rlz_id'], f['imt_id'], f['lvl_id']]
-    arr = numpy.zeros(len(src_id), [('src_id', '<S16'), ('poe', '<f8')])
+    dset = dstore['rates_by_src/array']
+    oq = dstore['oqparam']
+    src_id = dstore['rates_by_src/src_id'][:]
+    [imt] = qdict['imt']
+    [poe] = qdict['poe']
+    [site_id] = qdict.get('site_id', ['0'])
+    site_id = int(site_id)
+    mean = dstore.sel(
+        'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
+    lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
+    imt_id = list(oq.imtls).index(imt)
+    rates = dset[site_id, imt_id, lvl_id]  # shape Ns
+    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('poe', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = poe[:len(src_id)]
+    arr['poe'] = rates
     arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(json=hdf5.dumps(f)))
+    return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
 
 
+# TODO: extract from disagg-stats, avoid computing means on the fly
 @extract.add('disagg_layer')
 def extract_disagg_layer(dstore, what):
     """
@@ -1219,14 +1242,14 @@ def extract_disagg_layer(dstore, what):
         kinds = oq.disagg_outputs
     sitecol = dstore['sitecol']
     poes_disagg = oq.poes_disagg or (None,)
-    edges, shapedic = disagg.get_edges_shapedic(
-        oq, sitecol, dstore['source_mags'])
+    realizations = numpy.array(dstore['full_lt'].get_realizations())
+    oq.mags_by_trt = dstore['source_mags']
+    edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    realizations = numpy.array(dstore['full_lt'].get_realizations())
     hmap4 = dstore['hmap4'][:]
     best_rlzs = dstore['best_rlzs'][:]
-    arr = {kind: dstore['disagg/' + kind][:] for kind in kinds}
+    arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
             sitecol.sids, sitecol.lons, sitecol.lats, out):
         rlzs = realizations[best_rlzs[sid]]
@@ -1241,7 +1264,7 @@ def extract_disagg_layer(dstore, what):
             for p, poe in enumerate(poes_disagg):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
-                    rec[key] = arr[kind][sid, m, p] @ ws
+                    rec[key] = arr[kind][sid, ..., m, p, :] @ ws
                 rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
@@ -1269,7 +1292,7 @@ class RuptureData(object):
 
     def to_array(self, proxies):
         """
-        Convert a list of rupture proxies into an array of dtype RuptureRata.dt
+        Convert a list of rupture proxies into an array of dtype RuptureData.dt
         """
         data = []
         for proxy in proxies:
@@ -1377,9 +1400,9 @@ def extract_eids_by_gsim(dstore, what):
 @extract.add('risk_stats')
 def extract_risk_stats(dstore, what):
     """
-    Extract the risk statistics from a DataFrame.
+    Compute the risk statistics from a DataFrame with individual realizations
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/risk_stats/aggcurves
+    http://127.0.0.1:8800/v1/calc/30/extract/risk_stats/aggrisk
     """
     oq = dstore['oqparam']
     stats = oq.hazard_stats()

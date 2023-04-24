@@ -1,5 +1,5 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.15.0-gitf23da9e225', start_date='2022-06-28T09:33:41', checksum=26068303, investigation_time=1.0, mag_bin_edges=[7.4, 7.5], dist_bin_edges=[0.0, 20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0], lon_bin_edges=[171.18903363165364, 174.77876000000003, 178.36848636834642], lat_bin_edges=[-43.970690000000005, -41.27273, -38.57477], eps_bin_edges=[-3.0, 3.0], tectonic_region_types=['Active Shallow Crust'], rlz_ids=[3, 4, 0, 1, 2], weights=[0.15, 0.1, 0.25, 0.25, 0.25], lon=174.77876000000003, lat=-41.27273"
-imt,poe,mag,rlz3,rlz4,rlz0,rlz1,rlz2
-PGA,nan,7.45000E+00,9.76697E-05,1.18079E-04,9.27313E-05,8.47011E-05,1.40303E-04
-SA(0.2),nan,7.45000E+00,3.10467E-05,3.97863E-05,2.47634E-05,1.86412E-05,2.55538E-05
-SA(1.0),nan,7.45000E+00,6.48053E-05,7.98103E-05,3.57817E-05,5.78976E-05,6.72459E-05
+#,,,,"generated_by='OpenQuake engine 3.17.0-git2c716b5c3f', start_date='2023-04-14T11:25:29', checksum=2393570326, investigation_time=1.0, mag_bin_edges=[7.4, 7.5], dist_bin_edges=[0.0, 20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0], lon_bin_edges=[171.18903363165364, 178.36848636834642], lat_bin_edges=[-43.970690000000005, -38.57477], eps_bin_edges=[-3.0, 3.0], tectonic_region_types=['Active Shallow Crust'], lon=174.77876000000003, lat=-41.27273, weights=[0.6, 0.4], rlz_ids=[3, 4]"
+imt,iml,poe,mag,mean
+PGA,6.39252E-01,nan,7.45000E+00,2.64595E-05
+SA(0.2),2.45761E+00,nan,7.45000E+00,8.63575E-06
+SA(1.0),6.34604E-01,nan,7.45000E+00,1.77023E-05

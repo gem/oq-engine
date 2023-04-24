@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2018-2022 GEM Foundation
+# Copyright (C) 2018-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -27,37 +27,6 @@ from openquake.commonlib import datastore
 
 SQRT2 = 1.414
 vs30_dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
-
-
-# TODO: equivalents of calculate_z1pt0 and calculate_z2pt5_ngaw2
-# are inside some GSIM implementations, we should avoid duplication
-def calculate_z1pt0(vs30):
-    '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 1.0 km/s velocity horizon (in m)
-    Ref: Chiou & Youngs (2014) California model
-    :param vs30: the shear wave velocity (in m/s) at a depth of 30m
-    '''
-    c1 = 571 ** 4.
-    c2 = 1360.0 ** 4.
-    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
-
-
-def calculate_z2pt5_ngaw2(vs30):
-    '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 2.5 km/s velocity horizon (in km)
-    Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
-    'NGA-West2 ground motion model for the average horizontal components of
-    PGA, PGV, and 5pct damped linear acceleration response spectra.'
-    Earthquake Spectra, 30(3), pp.1087–1114.
-
-    :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
-    '''
-    c1 = 7.089
-    c2 = -1.144
-    z2pt5 = numpy.exp(c1 + numpy.log(vs30) * c2)
-    return z2pt5
 
 
 def read(fname):
@@ -196,11 +165,11 @@ def main(
                     grid.lons, grid.lats, req_site_params=req_site_params)
         else:
             raise RuntimeError('Missing exposures or missing sites')
-        vs30 = associate(haz_sitecol, vs30_csv, assoc_distance)
+        associate(haz_sitecol, vs30_csv, assoc_distance)
         if z1pt0:
-            haz_sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
+            haz_sitecol.calculate_z1pt0()
         if z2pt5:
-            haz_sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
+            haz_sitecol.calculate_z2pt5()
         hdf5['sitecol'] = haz_sitecol
         if output:
             writers.write_csv(output, haz_sitecol.array[fields])

@@ -78,6 +78,4 @@ For an interactive use of `oq` we suggest to install [byobu](http://byobu.co/) o
 More info about `byobu`: [http://byobu.co/](http://byobu.co/).
 
 ## Getting help
-If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
-  * Contact us on IRC: irc.freenode.net, channel #openquake
+If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users

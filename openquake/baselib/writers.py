@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2010-2022 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -188,12 +188,13 @@ class CsvWriter(object):
         if isinstance(data, pandas.DataFrame):
             if comment is None:
                 data.to_csv(fname, index=False, float_format=self.fmt,
-                            line_terminator='\r\n')
+                            line_terminator='\r\n', na_rep='nan')
             else:
                 write_csv(fname, [], self.sep, self.fmt, list(data.columns),
                           comment=comment)
                 data.to_csv(fname, index=False, float_format=self.fmt,
-                            line_terminator='\r\n', header=False, mode='a')
+                            line_terminator='\r\n', na_rep='nan',
+                            header=False, mode='a')
         else:
             write_csv(fname, data, self.sep, self.fmt, header, comment,
                       renamedict)

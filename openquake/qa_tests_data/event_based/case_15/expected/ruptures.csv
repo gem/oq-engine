@@ -1,4 +1,4 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.16.0-git66d2ce3b4c', start_date='2022-09-20T18:12:33', checksum=4229873597, investigation_time=50.0, ses_per_logic_tree_path=1"
+#,,,,,,,,,"generated_by='OpenQuake engine 3.17.0-gitbe44ff3a96', start_date='2023-04-23T10:24:42', checksum=4229873597, investigation_time=50.0, ses_per_logic_tree_path=1"
 rup_id,multiplicity,mag,centroid_lon,centroid_lat,centroid_depth,trt,strike,dip,rake
-0,1,5.400000E+00,1.459040E+02,4.339700E+01,5.200000E+01,Subduction Interface - North East Correction,2.394670E+02,3.566093E+01,9.000000E+01
-1,1,7.900000E+00,1.460250E+02,4.289000E+01,2.580000E+01,Subduction Interface - North East Correction,2.455154E+02,1.753973E+01,9.000000E+01
+0,1,7.900000E+00,1.460250E+02,4.289000E+01,2.580000E+01,Subduction Interface - North East Correction,2.455154E+02,1.753973E+01,9.000000E+01
+2147483652,1,5.400000E+00,1.459040E+02,4.339700E+01,5.200000E+01,Subduction Interface - North East Correction,2.394670E+02,3.566093E+01,9.000000E+01

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -53,14 +53,14 @@ def purge_all(user=None):
                 purge_one(calc_id, user, force=True)
 
 
-def purge_failed(force):
+def purge(status, days, force):
     """
-    Remove all failed calculations older than 1 day
+    Remove calculations of the given status older than days
     """
     rows = logs.dbcmd(
-        'SELECT id, ds_calc_dir || ".hdf5" FROM job '
-        'WHERE status NOT IN ("complete", "running")'
-        "AND start_time < datetime('now', '-1 days')")
+        f'SELECT id, ds_calc_dir || ".hdf5" FROM job '
+        f'WHERE status IN (?X)'
+        f"AND start_time < datetime('now', '-{days}')", status)
     todelete = []
     totsize = 0
     for calc_id, fname in rows:
@@ -78,14 +78,17 @@ def purge_failed(force):
             os.remove(fname)
     print('Processed %d HDF5 files, %s' % (len(todelete), size))
 
-    
+
 def main(what, force=False):
     """
     Remove calculations from the file system.
     If you want to remove everything,  use oq reset.
     """
     if what == 'failed':
-        purge_failed(force)
+        purge(['failed'], '1 days', force)
+        return
+    elif what == 'old':
+        purge('complete failed'.split(), '30 days', force)
         return
     calc_id = int(what)
     if calc_id < 0:

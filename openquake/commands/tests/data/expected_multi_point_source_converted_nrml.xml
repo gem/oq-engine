@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Test Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Stable Continental Crust"
+        >
+            <multiPointSource
+            id="mp1"
+            name="multi point source"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+                        0.0 1.0 0.5 1.0
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        1.000000000E+01
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.000000000E+01
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.000000000E+00
+                </ruptAspectRatio>
+                <multiMFD
+                kind="incrementalMFD"
+                size="2"
+                >
+                    <bin_width>
+                        1.000000000E-01
+                    </bin_width>
+                    <min_mag>
+                        4.500000000E+00
+                    </min_mag>
+                    <occurRates>
+                        1.000000015E-01 5.000000075E-02 4.000000060E-01 2.000000030E-01 1.000000015E-01
+                    </occurRates>
+                    <lengths>
+                        2 3
+                    </lengths>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="20.0" probability="0.5" rake="3.0" strike="1.0"/>
+                    <nodalPlane dip="2.0" probability="0.5" rake="4.0" strike="2.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="14.0" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
+            <multiPointSource
+            id="mp2"
+            name="mps-with-GR"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+                        0.1 1.1
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        5.000000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.000000000E+01
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.000000000E+00
+                </ruptAspectRatio>
+                <multiMFD
+                kind="truncGutenbergRichterMFD"
+                size="1"
+                >
+                    <a_val>
+                        -5.481000000E+00
+                    </a_val>
+                    <b_val>
+                        9.000000000E-01
+                    </b_val>
+                    <bin_width>
+                        1.000000000E-01
+                    </bin_width>
+                    <max_mag>
+                        7.500000000E+00
+                    </max_mag>
+                    <min_mag>
+                        5.000000000E+00
+                    </min_mag>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.5" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="90.0" probability="0.5" rake="0.0" strike="90.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="6.3" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

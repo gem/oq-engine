@@ -18,12 +18,13 @@
 import ast
 import json
 import logging
+import time
 try:
     import fiona
     from fiona import crs
 except ImportError:
     fiona = None
-from openquake.baselib.node import Node
+from openquake.baselib.node import Node, scientificformat
 from openquake.hazardlib import nrml
 
 
@@ -41,6 +42,14 @@ def geodict(row):
             'properties': prop}
 
 
+def nogeomdict(row):
+    prop = {}
+    for k, v in row.items():
+        prop[k] = json.dumps(v) if isinstance(v, list) else v
+    return {'geometry': None,
+            'properties': prop}
+
+
 def fiona_type(value):
     if isinstance(value, int):
         return 'int'
@@ -49,22 +58,57 @@ def fiona_type(value):
     return 'str'
 
 
+def build_sfg_geom_nodes(geomprops, coords):
+    geom_nodes = []
+    geom_nodes.append(
+        Node('{%s}LineString' % nrml.GML_NAMESPACE,
+             nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords)]))
+    other_nodes = [Node(k, {}, text=scientificformat(v))
+                   for (k, v) in geomprops.items()
+                   if not k.startswith('_')]
+    geom_nodes.extend(other_nodes)
+    return geom_nodes
+
+
+def build_mpg_geom_nodes(geomprops, coords):
+    geom_nodes = []
+    # NOTE: posList could also be taken from geomprops, but losing the
+    #       namespace
+    # FIXME: we can have a mismatch in number of digits in coords and geomprops
+    geom_nodes.append(
+        Node('{%s}posList' % nrml.GML_NAMESPACE, text=coords))
+    other_nodes = [Node(k, {}, text=scientificformat(v))
+                   for (k, v) in geomprops.items()
+                   if not k.startswith('_')]
+    geom_nodes.extend(other_nodes)
+    return geom_nodes
+
+
 def build_nodes(props):
     [(mfd, dic)] = ast.literal_eval(props['mfd']).items()
-    mfd_dic = {k.replace('_', ''): v for k, v in dic.items()}
+    mfd_attrs = {k[1:]: scientificformat(v)
+                 for k, v in dic.items() if k.startswith('_')}
+    mfd_subnodes = [Node(tag, {}, scientificformat(dic[tag]))
+                    for tag in dic.keys() if not tag.startswith('_')]
     msr = Node('magScaleRel', text=props['magscalerel'])
-    rar = Node('ruptAspectRatio', text=props['ruptaspectratio'])
-    mfd = Node(mfd, mfd_dic)
+    rar = Node('ruptAspectRatio',
+               text=scientificformat(props['ruptaspectratio']))
+    mfd = Node(mfd, mfd_attrs, nodes=mfd_subnodes)
+    nodes = [msr, rar, mfd]
     npd = ast.literal_eval(props['nodalplanedist'])
-    npd = Node('nodalPlaneDist', nodes=[Node('nodalPlane', dic)
-                                        for dic in npd])
+    if npd:
+        nodes.append(
+            Node('nodalPlaneDist', nodes=[Node('nodalPlane', dic)
+                                          for dic in npd]))
     hdd = ast.literal_eval(props['hypodepthdist'])
-    hdd = Node('hypoDepthDist', nodes=[Node('hypoDepth', dic)
-                                       for dic in hdd])
+    if hdd:
+        nodes.append(
+            Node('hypoDepthDist', nodes=[Node('hypoDepth', dic)
+                                         for dic in hdd]))
     hyl = ast.literal_eval(props['hypoList'])
-    nodes = [msr, rar, mfd, npd, hdd]
     if hyl:
-        nodes.append(Node('hypoList', nodes=[Node('hypo', dic) for dic in hyl]))
+        nodes.append(
+            Node('hypoList', nodes=[Node('hypo', dic) for dic in hyl]))
     sll = ast.literal_eval(props['slipList'])
     if sll:
         sll_nodes = [
@@ -72,6 +116,9 @@ def build_nodes(props):
                  {k.replace('_', ''): v for k, v in sl.items() if k != 'text'},
                  text=sl['text']) for sl in sll]
         nodes.append(Node('slipList', nodes=sll_nodes))
+    if 'rake' in props and props['rake']:
+        nodes.append(Node('rake',
+                     text=scientificformat(props['rake'])))
     return tuple(nodes)
 
 
@@ -95,18 +142,25 @@ def geodic2node(geodic):
     coords = geodic['geometry']['coordinates']
     props = geodic['properties']
     code = props['code']
-    attr = dict(id=props['id'], name=props['name'],
-                tectonicRegion=props['tectonicregion'])
+    attr = dict(id=props['id'], name=props['name'])
+    if props['tectonicregion']:
+        attr['tectonicRegion'] = props['tectonicregion']
+    geomprops = ast.literal_eval(props['geomprops'])
+    geomattrs = {k[1:]: scientificformat(v) for (k, v) in geomprops.items()
+                 if k.startswith('_')}
     if code == 'P':
         point = Node('{%s}Point' % nrml.GML_NAMESPACE,
                      nodes=[Node('{%s}pos' % nrml.GML_NAMESPACE, text=coords)])
-        usd = Node('upperSeismoDepth', text=props['upperseismodepth'])
-        lsd = Node('lowerSeismoDepth', text=props['lowerseismodepth'])
-        nodes = [Node('pointGeometry', nodes=[point, usd, lsd])]
+        usd = Node('upperSeismoDepth',
+                   text=scientificformat(props['upperseismodepth']))
+        lsd = Node('lowerSeismoDepth',
+                   text=scientificformat(props['lowerseismodepth']))
+        nodes = [Node('pointGeometry', geomattrs, nodes=[point, usd, lsd])]
         nodes.extend(build_nodes(props))
         return Node('pointSource', attr, nodes=nodes)
     elif code == 'C':
-        cplx = Node('complexFaultGeometry', nodes=build_edges(coords))
+        cplx = Node(
+            'complexFaultGeometry', geomattrs, nodes=build_edges(coords))
         nodes = (cplx,) + build_nodes(props)
         return Node('complexFaultSource', attr, nodes=nodes)
     elif code == 'A':
@@ -115,21 +169,26 @@ def geodic2node(geodic):
                 Node('{%s}LinearRing' % nrml.GML_NAMESPACE,
                      nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
                             text=coords)])])])
-        usd = Node('upperSeismoDepth', text=props['upperseismodepth'])
-        lsd = Node('lowerSeismoDepth', text=props['lowerseismodepth'])
-        area = Node('areaGeometry', nodes=[pol, usd, lsd])
+        usd = Node('upperSeismoDepth',
+                   text=scientificformat(props['upperseismodepth']))
+        lsd = Node('lowerSeismoDepth',
+                   text=scientificformat(props['lowerseismodepth']))
+        area = Node('areaGeometry', geomattrs, nodes=[pol, usd, lsd])
         nodes = (area,) + build_nodes(props)
         return Node('areaSource', attr, nodes=nodes)
     elif code == 'S':
-        splx = Node('simpleFaultGeometry', nodes=[
-            Node('{%s}LineString' % nrml.GML_NAMESPACE,
-                 nodes=[Node('{%s}posList' % nrml.GML_NAMESPACE,
-                        text=coords)])])
+        geom_nodes = build_sfg_geom_nodes(geomprops, coords)
+        splx = Node('simpleFaultGeometry', geomattrs, nodes=geom_nodes)
         nodes = (splx,) + build_nodes(props)
         return Node('simpleFaultSource', attr, nodes=nodes)
+    elif code == 'M':
+        geom_nodes = build_mpg_geom_nodes(geomprops, coords)
+        mpg = Node('multiPointGeometry', geomattrs, nodes=geom_nodes)
+        nodes = (mpg,) + build_nodes(props)
+        return Node('multiPointSource', attr, nodes=nodes)
     else:
-        logging.warning(f'Skipping source of code "{code}" and attributes '
-                        f'"{attr}" (the converter is not implemented yet)')
+        logging.error(f'Skipping source of code "{code}" and attributes '
+                      f'"{attr}" (the converter is not implemented yet)')
         return None
 
 
@@ -161,6 +220,21 @@ class GeoPackager(object):
             recs = [geodict(row) for row in rows]
             f.writerecords(recs)
 
+    def save_table(self, name, dicts):
+        """
+        :param name: table name
+        :param dicts: a non-empty list of dicts
+        """
+        row = dicts[0]
+        properties = [(k, fiona_type(v))
+                      for k, v in row.items()]
+        schema = {'geometry': None,
+                  'properties': properties}
+        with fiona.open(self.fname, 'w', 'GPKG', schema,
+                        self.crs, 'utf8', layer=name) as f:
+            recs = [nogeomdict(dic) for dic in dicts]
+            f.writerecords(recs)
+
     def read_all(self):
         """
         :returns: a list of geojson dictionaries
@@ -173,12 +247,52 @@ class GeoPackager(object):
         return data
 
     def to_nrml(self, out=None):
+        t0 = time.time()
         out = out or self.fname.replace('.gpkg', '.xml')
-        nodes = [geodic2node(dic) for dic in self.read_all()]
-        nodes = [node for node in nodes if node is not None]
-        smodel = Node("sourceModel", {}, nodes=nodes)
+        all = self.read_all()
+        src_groups_attrs = {}
+        srcs_by_grp = {}
+        smodel_attrs = {}
+        for dic in all:
+            if dic['geometry'] is None:
+                kind = dic['properties']['kind']
+                if kind == 'sourceModel':
+                    smodel_attrs = dic['properties']
+                    smodel_attrs.pop('kind', None)
+                elif kind == 'sourceGroup':
+                    try:
+                        groupname = dic['properties']['name']
+                    except KeyError:
+                        groupname = ''
+                    src_group_attrs = dic['properties']
+                    src_group_attrs.pop('kind', None)
+                    src_groups_attrs[groupname] = src_group_attrs
+            else:
+                try:
+                    groupname = dic['properties']['groupname']
+                except KeyError:
+                    groupname = ''
+                node = geodic2node(dic)
+                if node is not None:
+                    try:
+                        srcs_by_grp[groupname].append(node)
+                    except KeyError:
+                        srcs_by_grp[groupname] = [node]
+        all_sgroups = []
+        for src_group_name in srcs_by_grp:
+            src_group_nodes = srcs_by_grp[src_group_name]
+            if src_group_name:
+                src_group_attrs = src_groups_attrs[src_group_name]
+                sgroup = Node(
+                    'sourceGroup', src_group_attrs, nodes=src_group_nodes)
+                all_sgroups.append(sgroup)
+            else:
+                all_sgroups.extend(src_group_nodes)
+        smodel = Node("sourceModel", smodel_attrs, nodes=all_sgroups)
         with open(out, 'wb') as f:
             nrml.write([smodel], f, '%s')
+        logging.info('%s was created' % out)
+        logging.info('Finished in %d seconds', time.time() - t0)
 
     def _save(self, name, dic):
         # Useful for debugging. Example:

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2016-2022 GEM Foundation
+# Copyright (C) 2016-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -350,8 +350,8 @@ def upgrade_db(conn, pkg_name='openquake.server.db.schema.upgrades',
         raise
     else:
         conn.commit()
-    dt = time.time() - t0
-    logging.info('Upgrade completed in %s seconds', dt)
+    if versions_applied:
+        logging.info('Upgrade completed in %s seconds', time.time() - t0)
     return versions_applied
 
 

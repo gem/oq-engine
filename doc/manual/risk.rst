@@ -256,9 +256,9 @@ risk calculation and the resulting output files are depicted in
 
    Classical PSHA-based Risk Calculator input/output structure.
 
-Stochastic Event Based Probabilistic Seismic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Damage Analysis This calculator employs an event-based Monte Carlo
+Stochastic Event Based Probabilistic Seismic Damage Analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This calculator employs an event-based Monte Carlo
 simulation approach to probabilistic damage assessment in order to
 estimate the damage distribution for individual assets and aggregated
 damage distribution for a spatially distributed portfolio of assets
@@ -340,9 +340,9 @@ which a *Fragility Model* file is provided. Whereas providing a
 an Event-Based Damage calculation, providing corresponding
 *Consequence Model* files is optional.
 
-Stochastic Event Based Probabilistic Seismic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Risk Analysis This calculator employs an event-based Monte Carlo
+Stochastic Event Based Probabilistic Seismic Risk Analysis
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This calculator employs an event-based Monte Carlo
 simulation approach to probabilistic risk assessment in order to
 estimate the loss distribution for individual assets and aggregated loss
 distribution for a spatially distributed portfolio of assets within a
@@ -2247,7 +2247,7 @@ damage and risk analysis using the OpenQuake engine are organised into:
 -  Hazard inputs. These include hazard curves for the classical
    probabilistic damage and risk calculators, ground motion fields for
    the scenario damage and risk calculators, or stochastic event sets
-   for the probabilistic event based calculators. As of OpenQuake engine21, in
+   for the probabilistic event based calculators. As of OpenQuake engine v2.1, in
    general, there are five different ways in which hazard calculation
    parameters or results can be provided to the OpenQuake engine in order to run
    the subsequent risk calculations:
@@ -2712,7 +2712,7 @@ This example illustrates a the hazard job configuration file for a
 scenario damage calculation which uses two Ground Motion Prediction Equations instead of only
 one. Currently, the set of Ground Motion Prediction Equations to be used for a scenario
 calculation can be specified using a logic tree file, as demonstrated in
-:ref:`gmlt`. As of OpenQuake engine18, the weights in the
+:ref:`gmlt`. As of OpenQuake engine v1.8, the weights in the
 logic tree are ignored, and a set of Ground Motion Fields will be generated for each
 Ground Motion Prediction Equation in the logic tree file. Correspondingly, damage distribution
 statistics will be generated for each set of Ground Motion Field.
@@ -2973,7 +2973,7 @@ following:
    loss ratio residuals will be perfectly correlated. On the other hand,
    if this parameter is set to zero, the loss ratios will be sampled
    independently. If this parameter is not defined, the OpenQuake engine will
-   assume zero correlation in the vulnerability. As of OpenQuake engine18,
+   assume zero correlation in the vulnerability. As of OpenQuake engine v1.8,
    ``asset_correlation`` applies only to continuous
    vulnerabilityfunctions using the lognormal or Beta distribution; it
    does not apply to vulnerabilityfunctions defined using the PMF
@@ -3778,7 +3778,7 @@ are listed below:
    loss ratio residuals will be perfectly correlated. On the other hand,
    if this parameter is set to zero, the loss ratios will be sampled
    independently. If this parameter is not defined, the OpenQuake engine will
-   assume zero correlation in the vulnerability. As of OpenQuake engine18,
+   assume zero correlation in the vulnerability. As of OpenQuake engine v1.8,
    ``asset_correlation`` applies only to continuous
    vulnerabilityfunctions using the lognormal or Beta distribution; it
    does not apply to vulnerabilityfunctions defined using the PMF
@@ -5194,14 +5194,14 @@ Bibliography
    rounded to a precision of 5 digits after the decimal point.
 
 .. [3]
-   Note that as of OpenQuake engine18, the uncertainty in the consequence ratios
+   Note that as of OpenQuake engine v1.8, the uncertainty in the consequence ratios
    is ignored, and only the mean consequence ratios for the set of limit
    states is considered when computing the consequences from the damage
    distribution. Consideration of the uncertainty in the consequence
    ratios is planned for future releases of the OpenQuake engine.
 
 .. [4]
-   As of OpenQuake engine18, the “PM” option for defining vulnerabilityfunctions
+   As of OpenQuake engine v1.8, the “PM” option for defining vulnerabilityfunctions
    is supported by the Scenario Risk and the Stochastic Event-Based
    Probabilistic Risk Calculators, but not by the Classical
    Probabilistic Risk Calculator.

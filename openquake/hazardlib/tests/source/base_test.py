@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -80,19 +80,6 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
     def test_positive_filtering(self):
         rates = self.source.get_annual_occurrence_rates(min_rate=5)
         self.assertEqual(rates, [(5, 7)])
-
-
-class GenerateOneRuptureTestCase(unittest.TestCase):
-
-    def test_simple_fault_source(self):
-        d = os.path.dirname(os.path.dirname(__file__))
-        tmps = 'simple-fault-source.xml'
-        source_model = os.path.join(d, 'source_model', tmps)
-        groups = nrml.to_python(source_model, SourceConverter(
-            investigation_time=50., rupture_mesh_spacing=2.))
-        src = groups[0].sources[0]
-        rup = src.get_one_rupture(ses_seed=0)
-        self.assertEqual(rup.mag, 5.2)
 
 
 class RecomputeMmaxTestCase(unittest.TestCase):

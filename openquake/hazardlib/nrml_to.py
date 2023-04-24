@@ -150,23 +150,52 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
         name, _ext = os.path.splitext(os.path.basename(fname))
         root = nrml.read(fname)
         srcs = collections.defaultdict(list)  # geom_index -> rows
+        srcgroups_attribs = []
+        srcmodel_attrib = {}
         if fname == geometry:
             for srcnode in root.geometryModel:
                 sec = converter.convert_node(srcnode)
                 sections.append(sec)
                 s2i[srcnode['id']] = i
                 i += 1
-        elif 'nrml/0.4' in root['xmlns']:
-            for srcnode in root.sourceModel:
-                row = converter.convert_node(srcnode)
-                appendrow(row, srcs, chatty, sections, s2i)
-        else:  # nrml/0.5
-            for srcgroup in root.sourceModel:
-                trt = srcgroup['tectonicRegion']
-                for srcnode in srcgroup:
-                    srcnode['tectonicRegion'] = trt
+        else:
+            srcmodel_attrib = root.sourceModel.attrib
+            srcmodel_attrib['kind'] = 'sourceModel'
+            if 'nrml/0.4' in root['xmlns']:
+                for srcnode in root.sourceModel:
                     row = converter.convert_node(srcnode)
                     appendrow(row, srcs, chatty, sections, s2i)
+            else:  # nrml/0.5
+                for idx, srcgroup in enumerate(root.sourceModel):
+                    attrib = srcgroup.attrib
+                    attrib['kind'] = 'sourceGroup'
+                    # NOTE: in some cases the source group has no name, so we
+                    #       need to assign it a unique name
+                    if 'name' not in attrib:
+                        attrib['name'] = str(idx)  # let name always be a str
+                    srcgroups_attribs.append(attrib)
+                    try:
+                        grp_trt = attrib['tectonicRegion']
+                    except KeyError:
+                        grp_trt = None
+                    for srcnode in srcgroup:
+                        try:
+                            srcnode['groupname'] = srcgroup.attrib['name']
+                        except KeyError:
+                            srcnode['groupname'] = ''
+
+                        # NOTE: the following condition would avoid duplicating
+                        # tectonicRegion into each source of a group for which
+                        # the tectonicRegion is already specified. We are
+                        # intentionally keeping the duplication in order to
+                        # make it possible to read the information directly
+                        # from the source section via old scripts.
+                        # if (not srcnode['groupname'] and
+                        #     grp_trt and not srcnode.get('tectonicRegion')):
+                        if grp_trt and not srcnode.get('tectonicRegion'):
+                            srcnode['tectonicRegion'] = grp_trt
+                        row = converter.convert_node(srcnode)
+                        appendrow(row, srcs, chatty, sections, s2i)
         if fmt == 'csv':
             for kind, rows in srcs.items():
                 dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
@@ -174,9 +203,40 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                 header = [a for a in rows[0].__class__.__annotations__
                           if a not in 'geom coords']
                 write_csv(dest, map(to_tuple, rows), header=header)
+                logging.info('%s was created' % dest)
+            if srcmodel_attrib:
+                dest = os.path.join(outdir, 'source_model.csv')
+                header = [k for k in srcmodel_attrib.keys()
+                          if k != 'kind']
+                logging.info('Saving source model information')
+                srcmodel_rows = [(srcmodel_attrib[k] for k in header)]
+                write_csv(dest, srcmodel_rows, header=header)
+                logging.info('%s was created' % dest)
+            if srcgroups_attribs:
+                dest = os.path.join(outdir, 'source_groups.csv')
+                header = [k for k in srcgroups_attribs[0].keys()
+                          if k != 'kind']
+                logging.info('Saving source groups information')
+                srcgroups_attribs_no_kind = [
+                    {k: v for (k, v) in srcgroups_attribs[i].items()
+                     if k != 'kind'}
+                    for i in range(len(srcgroups_attribs))]
+                srcgroups_rows = [
+                    tuple(srcgroups_attribs_no_kind[i].values())
+                    for i in range(len(srcgroups_attribs_no_kind))]
+                write_csv(dest, srcgroups_rows, header=header)
+                logging.info('%s was created' % dest)
         else:  # gpkg
-            gpkg = GeoPackager(os.path.join(outdir, name + '.gpkg'))
+            dest = os.path.join(outdir, name + '.gpkg')
+            gpkg = GeoPackager(dest)
             for kind, rows in srcs.items():
                 logging.info('Saving %d sources on layer %s', len(rows), kind)
                 gpkg.save_layer(kind, rows)
+            if srcmodel_attrib:
+                logging.info('Saving source model information')
+                gpkg.save_table('source_model', [srcmodel_attrib])
+            if srcgroups_attribs:
+                logging.info('Saving source groups information')
+                gpkg.save_table('source_groups', srcgroups_attribs)
+            logging.info('%s was created' % dest)
     logging.info('Finished in %d seconds', time.time() - t0)

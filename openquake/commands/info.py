@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -32,7 +32,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
-from openquake.hazardlib.calc.disagg import pmf_map
+from openquake.hazardlib.valid import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.risklib import scientific

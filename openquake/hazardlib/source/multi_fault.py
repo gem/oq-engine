@@ -1,5 +1,5 @@
 # The Hazard Library
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,8 +24,9 @@ from typing import Union
 from openquake.baselib import hdf5
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.rupture import (
-    NonParametricProbabilisticRupture)
+    NonParametricProbabilisticRupture, ParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
@@ -71,13 +72,19 @@ class MultiFaultSource(BaseSeismicSource):
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
                  rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
-                 magnitudes: list, rakes: list):
+                 magnitudes: list, rakes: list, investigation_time=0,
+                 infer_occur_rates=False):
         nrups = len(rupture_idxs)
         assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
         self.rupture_idxs = rupture_idxs
         self.probs_occur = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
+        self.infer_occur_rates = infer_occur_rates
+        if infer_occur_rates:
+            self.occur_rates = -np.log([p[0] for p in occurrence_probs])
+            self.occur_rates[self.occur_rates <= 0] = 1E-30
+            self.temporal_occurrence_model = PoissonTOM(investigation_time)
         super().__init__(source_id, name, tectonic_region_type)
 
     def is_gridded(self):
@@ -94,6 +101,21 @@ class MultiFaultSource(BaseSeismicSource):
         return dict(mag=self.mags, rake=self.rakes,
                     probs_occur=self.probs_occur, rupture_idxs=ridxs)
 
+    def get_sections(self):
+        """
+        :returns: the underlying sections as KiteSurfaces
+        """
+        if self.hdf5path == '':  # in the tests
+            return self.sections
+        with hdf5.File(self.hdf5path, 'r') as f:
+            geoms = f['multi_fault_sections'][:]
+        sections = [geom_to_kite(geom) for geom in geoms]
+        for idx, sec in enumerate(sections):
+            sec.suid = idx
+        return sections
+
+    # used in the tests, where the sections are manually given and not
+    # read from the HDF5 file
     def set_sections(self, sections):
         """
         :param sections: a list of N surfaces
@@ -123,14 +145,7 @@ class MultiFaultSource(BaseSeismicSource):
         # iter on the ruptures
         step = kwargs.get('step', 1)
         n = len(self.mags)
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][:]
-            s = [geom_to_kite(geom) for geom in geoms]
-            for idx, sec in enumerate(s):
-                sec.suid = idx
-        else:
-            s = self.sections
+        s = self.get_sections()
         for i in range(0, n, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
@@ -140,9 +155,15 @@ class MultiFaultSource(BaseSeismicSource):
             rake = self.rakes[i]
             hypo = s[idxs[0]].get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
-            yield NonParametricProbabilisticRupture(
-                self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
-                PMF(data))
+            if self.infer_occur_rates:
+                yield ParametricProbabilisticRupture(
+                    self.mags[i], rake, self.tectonic_region_type,
+                    hypo, sfc, self.occur_rates[i],
+                    self.temporal_occurrence_model)
+            else:
+                yield NonParametricProbabilisticRupture(
+                    self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                    PMF(data))
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
@@ -171,9 +192,6 @@ class MultiFaultSource(BaseSeismicSource):
     def get_min_max_mag(self):
         return np.min(self.mags), np.max(self.mags)
 
-    def get_one_rupture(self, ses_seed, rupture_mutex):
-        raise NotImplementedError
-
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
         for i, rup in enumerate(self.iter_ruptures()):
@@ -187,14 +205,8 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][:]
-            s = [geom_to_kite(geom) for geom in geoms]
-        else:
-            s = self.sections
         surfaces = []
-        for sec in s:
+        for sec in self.get_sections():
             if isinstance(sec, MultiSurface):
                 surfaces.extend(sec.surfaces)
             else:

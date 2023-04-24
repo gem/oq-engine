@@ -18,10 +18,10 @@
     <asset id="a1" number="1" area="100" taxonomy="tax1">
       <location lon="-122.000" lat="38.113" />
       <costs>
-        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="structural" value="10000" />
+        <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
       </costs>
       <occupancies>
         <occupancy occupants="2" period="day" />
@@ -34,10 +34,10 @@
     <asset id="a2" number="1" area="100" taxonomy="tax2">
       <location lon="-122.114" lat="38.113" />
       <costs>
-        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="structural" value="10000" />
+        <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
       </costs>
       <occupancies>
         <occupancy occupants="2" period="day" />
@@ -50,10 +50,10 @@
     <asset id="a3" number="1" area="100" taxonomy="tax1">
       <location lon="-122.570" lat="38.113" />
       <costs>
-        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="structural" value="10000" />
+        <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
       </costs>
       <occupancies>
         <occupancy occupants="2" period="day" />
@@ -66,10 +66,10 @@
     <asset id="a4" number="1" area="100" taxonomy="tax3">
       <location lon="-122.000" lat="38.000" />
       <costs>
-        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="structural" value="10000" />
+        <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
       </costs>
       <occupancies>
         <occupancy occupants="2" period="day" />
@@ -82,10 +82,10 @@
     <asset id="a5" number="1" area="100" taxonomy="tax1">
       <location lon="-122.000" lat="37.910" />
       <costs>
-        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="structural" value="10000" />
+        <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
       </costs>
       <occupancies>
         <occupancy occupants="2" period="day" />
@@ -98,10 +98,10 @@
     <asset id="a6" number="1" area="100" taxonomy="tax2">
       <location lon="-122.000" lat="38.225" />
       <costs>
-        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="structural" value="10000" />
+        <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
       </costs>
       <occupancies>
         <occupancy occupants="2" period="day" />
@@ -114,10 +114,10 @@
     <asset id="a7" number="1" area="100" taxonomy="tax1">
       <location lon="-121.886" lat="38.113" />
       <costs>
-        <cost type="structural" value="10000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="nonstructural" value="15000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="contents" value="5000" deductible="0.1" insuranceLimit="0.8" />
-        <cost type="business_interruption" value="2000" deductible="0.1" insuranceLimit="0.8" />
+        <cost type="structural" value="10000" />
+        <cost type="nonstructural" value="15000" />
+        <cost type="contents" value="5000" />
+        <cost type="business_interruption" value="2000" />
       </costs>
       <occupancies>
         <occupancy occupants="2" period="day" />

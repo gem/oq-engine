@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -35,6 +35,36 @@ param = dict(
     z1pt0='reference_depth_to_1pt0km_per_sec',
     z2pt5='reference_depth_to_2pt5km_per_sec',
     backarc='reference_backarc')
+
+
+# TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
+# are inside some GSIM implementations, we should avoid duplication
+def calculate_z1pt0(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 1.0 km/s velocity horizon (in m)
+    Ref: Chiou & Youngs (2014) California model
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30m
+    '''
+    c1 = 571 ** 4.
+    c2 = 1360.0 ** 4.
+    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
+
+
+def calculate_z2pt5(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 2.5 km/s velocity horizon (in km)
+    Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
+    'NGA-West2 ground motion model for the average horizontal components of
+    PGA, PGV, and 5pct damped linear acceleration response spectra.'
+    Earthquake Spectra, 30(3), pp.1087–1114.
+
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
+    '''
+    c1 = 7.089
+    c2 = -1.144
+    return numpy.exp(c1 + numpy.log(vs30) * c2)
 
 
 class Site(object):
@@ -123,6 +153,7 @@ site_param_dt = {
     'lat': numpy.float64,
     'depth': numpy.float64,
     'vs30': numpy.float64,
+    'kappa0': numpy.float64,
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
@@ -205,6 +236,7 @@ class SiteCollection(object):
     """ % '\n'.join('    - %s: %s' % item
                     for item in sorted(site_param_dt.items())
                     if item[0] not in ('lon', 'lat'))
+    req_site_params = ()
 
     @classmethod
     def from_usgs_shakemap(cls, shakemap_array):
@@ -248,6 +280,7 @@ class SiteCollection(object):
                                                        len(depths))
         self = object.__new__(cls)
         self.complete = self
+        self.req_site_params = req_site_params
         req = ['sids', 'lon', 'lat', 'depth'] + sorted(
             par for par in req_site_params if par not in ('lon', 'lat'))
         if 'vs30' in req and 'vs30measured' not in req:
@@ -375,13 +408,13 @@ class SiteCollection(object):
                   for p in ('sids', 'lon', 'lat', 'depth')] + extra
         self.array = arr = numpy.zeros(len(sites), dtlist)
         self.complete = self
-        for i in range(len(arr)):
-            arr['sids'][i] = i
-            arr['lon'][i] = sites[i].location.longitude
-            arr['lat'][i] = sites[i].location.latitude
-            arr['depth'][i] = sites[i].location.depth
+        for i, site in enumerate(sites):
+            arr['sids'][i] = getattr(site, 'id', i)
+            arr['lon'][i] = site.location.longitude
+            arr['lat'][i] = site.location.latitude
+            arr['depth'][i] = site.location.depth
             for p, dt in extra:
-                arr[p][i] = getattr(sites[i], p)
+                arr[p][i] = getattr(site, p)
 
         # NB: in test_correlation.py we define a SiteCollection with
         # non-unique sites, so we cannot do an
@@ -430,6 +463,7 @@ class SiteCollection(object):
         :param ntiles: number of tiles to generate (rounded if float)
         :returns: self if there are <=1 tiles, otherwise the tiles
         """
+        # if ntiles > nsites produce N tiles with a single site each
         ntiles = min(int(numpy.ceil(ntiles)), len(self))
         if ntiles <= 1:
             return [self]
@@ -442,16 +476,16 @@ class SiteCollection(object):
             tiles.append(sc)
         return tiles
 
-    def split_in_tiles(self, max_sites):
+    def split_in_tiles(self, hint):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
-        hint = int(numpy.ceil(len(self) / max_sites))
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
+            assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
             sc = SiteCollection.__new__(SiteCollection)
-            sc.array = self.array[sids]
-            sc.complete = self
+            sc.array = self.complete.array[sids]
+            sc.complete = self.complete
             tiles.append(sc)
         return tiles
 
@@ -522,6 +556,15 @@ class SiteCollection(object):
                 self._set(name, 0)  # default
                 # NB: by default reference_vs30_type == 'measured' is 1
                 # but vs30measured is 0 (the opposite!!)
+
+        # sanity check
+        for param in self.req_site_params:
+            if param in ignore:
+                continue
+            dt = site_param_dt[param]
+            if dt is numpy.float64 and (self.array[param] == 0.).all():
+                raise ValueError('The site parameter %s is always zero: please '
+                                 'check the site model' % param)
         return site_model
 
     def within(self, region):
@@ -565,6 +608,18 @@ class SiteCollection(object):
         :returns: number of distinct geohashes in the site collection
         """
         return len(numpy.unique(self.geohash(length)))
+
+    def calculate_z1pt0(self):
+        """
+        Compute the column z1pt0 from the vs30
+        """
+        self.array['z1pt0'] = calculate_z1pt0(self.vs30)
+
+    def calculate_z2pt5(self):
+        """
+        Compute the column z2pt5 from the vs30 using a formula for NGA-West2
+        """
+        self.array['z2pt5'] = calculate_z2pt5(self.vs30)
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

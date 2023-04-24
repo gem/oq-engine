@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -388,6 +388,9 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     :param string dir: directory where the file should be created
     :param string prefix: file name prefix
     :param string suffix: file name suffix
+    :param bool remove:
+        True by default, meaning the file will be automatically removed
+        at the exit of the program
     :returns: a string with the path to the temporary file
     """
     if dir is not None:
@@ -1042,36 +1045,6 @@ def fast_agg3(structured_array, kfield, vfields=None, factor=None):
     return res
 
 
-# this is fast
-def kmean(structured_array, kfield, uniq_indices_counts=()):
-    """
-    Given a structured array of N elements with a discrete kfield with
-    K <= N unique values, returns a structured array of K elements
-    obtained by averaging the values associated to the kfield.
-    """
-    allnames = structured_array.dtype.names
-    assert kfield in allnames, kfield
-    if uniq_indices_counts:
-        uniq, indices, counts = uniq_indices_counts
-    else:
-        uniq, indices, counts = numpy.unique(
-            structured_array[kfield], return_inverse=True, return_counts=True)
-    dic = {}
-    dtlist = []
-    for name in allnames:
-        if name == kfield:
-            dic[kfield] = uniq
-        else:
-            values = structured_array[name]
-            dic[name] = fast_agg(indices, values) / (
-                counts if len(values.shape) == 1 else counts.reshape(-1, 1))
-        dtlist.append((name, structured_array.dtype[name]))
-    res = numpy.zeros(len(uniq), dtlist)
-    for name in dic:
-        res[name] = dic[name]
-    return res
-
-
 def count(groupiter):
     return sum(1 for row in groupiter)
 
@@ -1202,21 +1175,33 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
-def random_histogram(counts, nbins, seed):
+def random_histogram(counts, nbins_or_binweights, seed):
     """
-    Distribute a total number of counts on a set of bins homogenously.
+    Distribute a total number of counts over a set of bins. If the
+    weights of the bins are equal you can just pass the number of the
+    bins and a faster algorithm will be used. Otherwise pass the weights.
+    Here are a few examples:
 
     >>> random_histogram(1, 2, seed=42)
-    array([1, 0])
+    array([0, 1])
     >>> random_histogram(100, 5, seed=42)
-    array([28, 18, 17, 19, 18])
+    array([22, 17, 21, 26, 14])
     >>> random_histogram(10000, 5, seed=42)
-    array([2043, 2015, 2050, 1930, 1962])
+    array([2034, 2000, 2014, 1998, 1954])
+    >>> random_histogram(1000, [.3, .3, .4], seed=42)
+    array([308, 295, 397])
     """
-    if nbins == 1:
-        return numpy.array([counts])
-    numpy.random.seed(seed)
-    return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
+    rng = numpy.random.default_rng(seed)
+    try:
+        nbins = len(nbins_or_binweights)
+    except TypeError:  # 'int' has no len()
+        nbins = nbins_or_binweights
+        weights = numpy.repeat(1./nbins, nbins)
+    else:
+        weights = numpy.array(nbins_or_binweights)
+        weights /= weights.sum()  # normalize to 1
+    bins = numpy.searchsorted(weights.cumsum(), rng.random(counts))
+    return numpy.bincount(bins, minlength=len(weights))
 
 
 def safeprint(*args, **kwargs):
@@ -1304,6 +1289,16 @@ def detach_process():
     fork_then_exit_parent()
     os.setsid()
     fork_then_exit_parent()
+
+
+def shortlist(lst):
+    """
+    >>> shortlist([1, 2, 3, 4, 5, 6, 7, 8])
+    '[1, 2, 3, ..., 6, 7, 8]'
+    """
+    if len(lst) <= 7:
+        return str(lst)
+    return str(lst[:3] + ['...'] + lst[-3:]).replace("'", "")
 
 
 def println(msg):
@@ -1520,6 +1515,24 @@ def rmsdiff(a, b):
     axis = tuple(range(1, len(a.shape)))
     rms = numpy.sqrt(((a - b)**2).mean(axis=axis))
     return rms
+
+
+def sqrscale(x_min, x_max, n):
+    """
+    :param x_min: minumum value
+    :param x_max: maximum value
+    :param n: number of steps
+    :returns: an array of n values from x_min to x_max in a quadratic scale
+    """
+    if not (isinstance(n, int) and n > 0):
+        raise ValueError('n must be a positive integer, got %s' % n)
+    if x_min < 0:
+        raise ValueError('x_min must be positive, got %s' % x_min)
+    if x_max <= x_min:
+        raise ValueError('x_max (%s) must be bigger than x_min (%s)' %
+                         (x_max, x_min))
+    delta = numpy.sqrt(x_max - x_min) / (n - 1)
+    return x_min + (delta * numpy.arange(n))**2
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 

@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.12.0-gitee2f8747a6', start_date='2021-03-10T04:48:34', checksum=3590982611, investigation_time=1.0, risk_investigation_time=1.0"
+#,,,,"generated_by='OpenQuake engine 3.17.0-git20437d33fd', start_date='2023-04-21T06:12:05', checksum=3367592975, investigation_time=1.0, risk_investigation_time=1.0"
 asset_id,taxonomy,lon,lat,structural
-a1,tax1,-122.00000,38.11300,8.50000E-01
-a2,tax1,-122.00000,38.11300,1.70000E+00
+a1,tax1,-122.00000,38.11300,2.20000E+00
+a2,tax1,-122.00000,38.11300,4.40000E+00

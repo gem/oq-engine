@@ -35,6 +35,4 @@ Some tests in specific packages do require the DbServer to be started first (`oq
 ***
 
 ## Getting help
-If you need help or have questions/comments/feedback for us, you can:
-  * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users
-  * Contact us on IRC: irc.freenode.net, channel #openquake
+If you need help or have questions/comments/feedback for us, you can subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users

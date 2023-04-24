@@ -245,10 +245,12 @@ class CoeffsTable(object):
                 if unscaled_imt.damping != getattr(imt, 'damping', None):
                     pass
                 elif unscaled_imt.period > imt.period:
-                    if min_above is None or unscaled_imt.period < min_above.period:
+                    if (min_above is None or
+                           unscaled_imt.period < min_above.period):
                         min_above = unscaled_imt
                 elif unscaled_imt.period < imt.period:
-                    if max_below is None or unscaled_imt.period > max_below.period:
+                    if (max_below is None or
+                           unscaled_imt.period > max_below.period):
                         max_below = unscaled_imt
             if max_below is None or min_above is None:
                 raise KeyError(imt)
@@ -257,13 +259,15 @@ class CoeffsTable(object):
                 # known period above and to 0 if target period is close
                 # to maximum period below.
                 ratio = ((math.log(imt.period) - math.log(max_below.period)) /
-                         (math.log(min_above.period) - math.log(max_below.period)))
+                         (math.log(min_above.period) -
+                          math.log(max_below.period)))
             else:  # in the ACME project
                 ratio = ((imt.period - max_below.period) /
                          (min_above.period - max_below.period))
             below = self.sa_coeffs[max_below]
             above = self.sa_coeffs[min_above]
-            lst = [(above[n] - below[n]) * ratio + below[n] for n in self.rb.names]
+            lst = [(above[n] - below[n]) * ratio + below[n]
+                   for n in self.rb.names]
             self._coeffs[imt] = c = self.rb(*lst)
 
         elif self.opt == 1:

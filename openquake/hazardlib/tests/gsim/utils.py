@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -218,7 +218,7 @@ class BaseGSIMTestCase(unittest.TestCase):
             cmaker.truncation_level = truncation_level
         for ctx in gen_ctxs(df):
             ctx.occurrence_rate = 0
-            out = cmaker.get_mean_stds([ctx])[:, 0]
+            out = cmaker.get_mean_stds([ctx], split_by_mag=False)[:, 0]
             for o, out_type in enumerate(out_types):
                 if not hasattr(ctx, out_type):
                     # for instance MEAN is missing in zhao_2016_test

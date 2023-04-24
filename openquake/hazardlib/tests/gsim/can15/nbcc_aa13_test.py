@@ -20,7 +20,7 @@ import os
 import unittest
 import numpy
 import pandas
-from openquake.hazardlib import read_input, IntegrationDistance
+from openquake.hazardlib import read_input, IntegrationDistance, contexts
 from openquake.hazardlib.calc import gmf
 
 OVERWRITE = False
@@ -35,8 +35,8 @@ GLT_XML = os.path.join(CWD, 'data', 'CAN15', 'gmmLT.xml')
 # combinations used in the Canada model 2015
 class NBCC2015_AA13TestCase(unittest.TestCase):
     def test_gmf(self):
-        param = dict(rupture_model_file=RUP_XML,
-                     gsim_logic_tree_file=GLT_XML,
+        param = dict(inputs=dict(rupture_model=RUP_XML,
+                                 gsim_logic_tree=GLT_XML),
                      number_of_ground_motion_fields=1,
                      ses_seed=42,
                      sites=[(-123, 48), (-123, 48.5)],
@@ -45,17 +45,16 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
                      imtls={'PGA': [0], 'SA(0.1)': [0], 'SA(0.2)': [0]})
         inp = read_input(param)
         [[ebr]] = inp.groups
-        for trt, cmaker in inp.cmakerdict.items():
-            rlzs_by_gsim = {}
-            for g, gsim in enumerate(inp.gsim_lt.values[trt]):
-                gsim.set_tables(['%.2f' % ebr.rupture.mag], cmaker.imtls)
-                rlzs_by_gsim[gsim] = [g]
-            cmaker.gsims = rlzs_by_gsim
+        param['mags'] = ['%.2f' % ebr.rupture.mag]
+        gsim_lt = inp.full_lt.gsim_lt
+        for trt in gsim_lt.values:
+            rbg = {gsim: [g] for g, gsim in enumerate(gsim_lt.values[trt])}
+            cmaker = contexts.ContextMaker(trt, rbg, param)
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
             gmfdata = pandas.DataFrame(gc.compute_all())
             del gmfdata['rlz']  # the info is encoded in the eid
-            fname = 'NBCC2015_AA13_%s.csv' % trt.replace(' ', '')
+            fname = 'NBCC2015_AA13_%s.csv' % cmaker.trt.replace(' ', '')
             path = os.path.join(CWD, 'data', 'CAN15', fname)
             if OVERWRITE:
                 gmfdata.to_csv(path, index=False, line_terminator='\r\n')

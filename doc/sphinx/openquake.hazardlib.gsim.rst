@@ -116,6 +116,14 @@ allen_2012_ipe
     :undoc-members:
     :show-inheritance:
 
+allen_2022
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.allen_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ameri_2017
 ---------------------------------------------------
 
@@ -144,6 +152,14 @@ arteta_2021
 ---------------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.arteta_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+arteta_2023_nosam
+---------------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.arteta_2023_nosam
     :members:
     :undoc-members:
     :show-inheritance:

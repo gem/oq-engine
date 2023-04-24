@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -444,10 +444,12 @@ def get_source_attributes(source):
     """
     attrs = {"id": source.source_id, "name": source.name}
     if isinstance(source, NonParametricSeismicSource):
-        if source.data[0][0].weight is not None:
-            weights = []
-            for data in source.data:
-                weights.append(data[0].weight)
+        rup = source.data[0][0]  # from [(rup, pmf), ...] pairs
+        if not hasattr(rup, 'weight'):
+            # happens in test_non_parametric_src
+            return attrs
+        elif rup.weight is not None:
+            weights = [rup.weight for rup, pmf in source.data]
             attrs['rup_weights'] = numpy.array(weights)
     elif isinstance(source, PointSource):
         tom = source.temporal_occurrence_model
@@ -687,7 +689,7 @@ def build_source_group(source_group):
         attrs['src_interdep'] = source_group.src_interdep
     if source_group.rup_interdep:
         attrs['rup_interdep'] = source_group.rup_interdep
-    if source_group.grp_probability is not None:
+    if source_group.grp_probability != 1.0:
         attrs['grp_probability'] = source_group.grp_probability
     if source_group.cluster:
         attrs['cluster'] = 'true'

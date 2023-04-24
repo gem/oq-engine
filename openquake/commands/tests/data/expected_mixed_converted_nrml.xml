@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Test Source Model"
+    >
+        <sourceGroup
+        name="0"
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Stable Continental Crust"
+        >
+            <pointSource
+            id="2"
+            name="point"
+            tectonicRegion="Stable Continental Crust"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            -122.0 38.0
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.000000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.000000000E+01
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    5.000000000E-01
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.500000000E+00" bValue="1.000000000E+00" maxMag="6.500000000E+00" minMag="5.000000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.3" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="45.0" probability="0.7" rake="90.0" strike="90.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0" probability="0.5"/>
+                    <hypoDepth depth="8.0" probability="0.5"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+        <sourceGroup
+        name="1"
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Subduction Interface"
+        >
+            <complexFaultSource
+            id="4"
+            name="Cascadia Megathrust"
+            tectonicRegion="Subduction Interface"
+            >
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.493 -124.977 41.214 4.989 -125.14 42.096 4.897
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.593 -124.977 41.214 5.089 -125.14 42.096 4.997
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.693 -124.977 41.214 5.189 -125.14 42.096 5.097
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -123.829 40.347 20.385 -124.137 41.218 17.414 -124.252 42.115 17.527
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.000000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.500000000E+00" bValue="1.000000000E+00" maxMag="6.500000000E+00" minMag="5.000000000E+00"/>
+                <rake>
+                    3.000000000E+01
+                </rake>
+            </complexFaultSource>
+        </sourceGroup>
+        <sourceGroup
+        name="2"
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaSource
+            id="1"
+            name="Quito"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    -122.5 37.5 -121.5 37.5 -121.5 38.5 -122.5 38.5 -122.5 37.5
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.000000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        1.000000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    PeerMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.500000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.000000000E-01"
+                minMag="6.550000000E+00"
+                >
+                    <occurRates>
+                        1.061498900E-03 8.829162700E-04 7.343777700E-04 6.108288000E-04 5.080653000E-04
+                    </occurRates>
+                </incrementalMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.3" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="45.0" probability="0.7" rake="90.0" strike="90.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="4.0" probability="0.5"/>
+                    <hypoDepth depth="8.0" probability="0.5"/>
+                </hypoDepthDist>
+            </areaSource>
+            <simpleFaultSource
+            id="3"
+            name="Mount Diablo Thrust"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -121.823 37.73 -122.039 37.877
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        4.500000000E+01
+                    </dip>
+                    <upperSeismoDepth>
+                        1.000000000E+01
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.000000000E+01
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.500000000E+00
+                </ruptAspectRatio>
+                <incrementalMFD
+                binWidth="1.000000000E-01"
+                minMag="5.000000000E+00"
+                >
+                    <occurRates>
+                        1.061498900E-03 8.829162700E-04 7.343777700E-04 6.108288000E-04 5.080653000E-04
+                    </occurRates>
+                </incrementalMFD>
+                <hypoList>
+                    <hypo alongStrike="0.25" downDip="0.25" weight="0.3"/>
+                    <hypo alongStrike="0.75" downDip="0.75" weight="0.7"/>
+                </hypoList>
+                <slipList>
+                    <slip
+                    weight="0.7"
+                    >
+                        90.0
+                    </slip>
+                    <slip
+                    weight="0.3"
+                    >
+                        135.0
+                    </slip>
+                </slipList>
+                <rake>
+                    3.000000000E+01
+                </rake>
+            </simpleFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

@@ -4,7 +4,7 @@
 #
 # LICENSE
 #
-# Copyright (C) 2010-2022 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
+# Copyright (C) 2010-2023 GEM Foundation, G. Weatherill, M. Pagani, D. Monelli
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is free software: you can
 # redistribute

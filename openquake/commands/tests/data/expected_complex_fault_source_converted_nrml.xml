@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Some Source Model"
+    >
+        <sourceGroup
+        name="group 1"
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Subduction Interface"
+        >
+            <complexFaultSource
+            id="1"
+            name="Cascadia Megathrust"
+            tectonicRegion="Subduction Interface"
+            >
+                <complexFaultGeometry>
+                    <faultTopEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.493 -124.977 41.214 4.989 -125.14 42.096 4.897
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.593 -124.977 41.214 5.089 -125.14 42.096 4.997
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <intermediateEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -124.704 40.363 5.693 -124.977 41.214 5.189 -125.14 42.096 5.097
+                            </gml:posList>
+                        </gml:LineString>
+                    </intermediateEdge>
+                    <faultBottomEdge>
+                        <gml:LineString>
+                            <gml:posList>
+                                -123.829 40.347 20.385 -124.137 41.218 17.414 -124.252 42.115 17.527
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </complexFaultGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.000000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD bValue="1.000000000E+00" maxMag="6.500000000E+00" minMag="5.000000000E+00" rigidity="3.200000000E+01" slipRate="5.400000000E+00"/>
+                <rake>
+                    3.000000000E+01
+                </rake>
+            </complexFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

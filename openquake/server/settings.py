@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import os
 import socket
 import getpass
@@ -28,6 +29,8 @@ try:
 except ImportError:
     STANDALONE = False
     STANDALONE_APPS = ()
+
+TEST = 'test' in sys.argv
 
 INSTALLED_APPS = ('openquake.server.db',)
 
@@ -173,6 +176,11 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
+APPLICATION_MODES = ['PUBLIC', 'RESTRICTED', 'AELO']
+
+# case insensitive
+APPLICATION_MODE = 'public'
+
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
 
@@ -194,21 +202,52 @@ try:
     # Try to load a local_settings.py from the current folder; this is useful
     # when packages are used. A custom local_settings.py can be placed in
     # /usr/share/openquake/engine, avoiding changes inside the python package
-    from local_settings import *
+    from local_settings import *  # noqa
 except ImportError:
     # If no local_settings.py is availble in the current folder let's try to
     # load it from openquake/server/local_settings.py
     try:
-        from openquake.server.local_settings import *
+        from openquake.server.local_settings import *  # noqa
     except ImportError:
         # If a local_setting.py does not exist
         # settings in this file only will be used
         pass
 
+if TEST:
+    APPLICATION_MODE = 'aelo'
+    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
+    #        We should redefine it to a different directory for each test,
+    #        in order to avoid concurrency issues in case tests run in parallel
+    EMAIL_FILE_PATH = '/tmp/app-messages'
+
+if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
+    LOCKDOWN = True
+
 STATIC_URL = '%s/static/' % WEBUI_PATHPREFIX
 
-if LOCKDOWN:
+if LOCKDOWN and APPLICATION_MODE == 'AELO':
+    # check essential constants are defined
+    try:
+        EMAIL_BACKEND  # noqa
+    except NameError:
+        raise NameError(
+            f'If APPLICATION_MODE is {APPLICATION_MODE} an email'
+            f' backend must be defined')
+    if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':  # noqa
+        try:
+            EMAIL_HOST           # noqa
+            EMAIL_PORT           # noqa
+            EMAIL_USE_TLS        # noqa
+            EMAIL_HOST_USER      # noqa
+            EMAIL_HOST_PASSWORD  # noqa
+        except NameError:
+            raise NameError(
+                f'If APPLICATION_MODE is {APPLICATION_MODE}'
+                f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
+                f' must all be defined')
 
+if LOCKDOWN:
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
         # 'dpam.backends.PAMBackend',
@@ -252,6 +291,19 @@ if LOCKDOWN:
 
     LOGIN_REDIRECT_URL = '%s/engine/' % WEBUI_PATHPREFIX
     LOGOUT_REDIRECT_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
-    LOGIN_EXEMPT_URLS = ('%s/accounts/ajax_login/' % WEBUI_PATHPREFIX, )
+    LOGIN_EXEMPT_URLS = (
+        '%s/accounts/ajax_login/' % WEBUI_PATHPREFIX,
+        'reset_password', 'reset/',
+    )
     LOGIN_URL = '%s/accounts/login/' % WEBUI_PATHPREFIX
 
+    AUTH_PASSWORD_VALIDATORS = [
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'UserAttributeSimilarityValidator', },
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'MinimumLengthValidator', },
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'CommonPasswordValidator', },
+        {'NAME': 'django.contrib.auth.password_validation.'
+                 'NumericPasswordValidator', },
+    ]

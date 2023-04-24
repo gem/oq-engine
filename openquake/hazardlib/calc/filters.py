@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -59,8 +59,8 @@ def _distances_from_dcache(rup, sites, param, dcache):
     :param dcache:
         A dictionary with the distances. The first key is the
         surface ID and the second one is the type of distance. In a traditional
-        calculation dcache is instatianted by in the `get_ctx_iter` method of the
-        :class:`openquake.hazardlib.contexts.ContextMaker`
+        calculation dcache is instatianted by in the `get_ctx_iter` method of
+        the :class:`openquake.hazardlib.contexts.ContextMaker`
     :returns:
         The computed distances for the rupture in input
     """
@@ -207,6 +207,13 @@ def magdepdist(pairs):
     return interp1d(mags, dists, bounds_error=False, fill_value=0.)
 
 
+def upper_maxdist(idist):
+    """
+    :returns: the maximum distance in a dictionary trt->dists
+    """
+    return max(idist[trt][-1][1] for trt in idist)
+
+
 class IntegrationDistance(dict):
     """
     A dictionary trt -> [(mag, dist), ...]
@@ -220,8 +227,6 @@ class IntegrationDistance(dict):
         >>> md = IntegrationDistance.new('50')
         >>> md
         {'default': [(2.5, 50), (10.2, 50)]}
-        >>> md.max()
-        {'default': 50}
         """
         items_by_trt = floatdict(value)
         self = cls()
@@ -237,18 +242,35 @@ class IntegrationDistance(dict):
                 self[trt] = [(MINMAG, items), (MAXMAG, items)]
         return self
 
+    # tested in case_miriam
+    def cut(self, min_mag_by_trt):
+        """
+        Cut the lower magnitudes. For instance
+
+        >>> maxdist = IntegrationDistance.new('[(4., 50), (8., 200.)]')
+        >>> maxdist.cut({'default': 5.})
+        >>> maxdist
+        {'default': [(5.0, 87.5), (8.0, 200.0)]}
+        """
+        all_trts = set(self) | set(min_mag_by_trt)
+        for trt in all_trts:
+            min_mag = getdefault(min_mag_by_trt, trt)
+            if not min_mag:
+                continue
+            first = (min_mag, float(self(trt)(min_mag)))
+            magdists = [(mag, dist) for (mag, dist) in self[trt]
+                        if mag >= min_mag]
+            if min_mag < magdists[0][0]:
+                self[trt] = [first] + magdists
+            else:
+                self[trt] = magdists
+
     def __call__(self, trt):
         return magdepdist(self[trt])
 
     def __missing__(self, trt):
         assert 'default' in self
         return self['default']
-
-    def max(self):
-        """
-        :returns: a dictionary trt -> maxdist
-        """
-        return {trt: self[trt][-1][1] for trt in self}
 
     def get_bounding_box(self, lon, lat, trt=None):
         """
@@ -284,23 +306,14 @@ def split_source(src):
     if not splittable(src):
         return [src]
     mag_a, mag_b = src.get_min_max_mag()
-    min_mag = src.min_mag
-    if mag_b < min_mag:  # discard the source completely
-        return [src]
-    if min_mag:
-        splits = []
-        for s in src:
-            s.min_mag = min_mag
-            mag_a, mag_b = s.get_min_max_mag()
-            if mag_b >= min_mag:
-                splits.append(s)
-    else:
-        splits = list(src)
+    splits = list(src)
     has_samples = hasattr(src, 'samples')
     has_scaling_rate = hasattr(src, 'scaling_rate')
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
     if len(splits) > 1:
+        offset = src.offset
         for i, split in enumerate(splits):
+            split.offset = offset
             split.source_id = '%s.%s' % (src.source_id, i)
             split.trt_smr = src.trt_smr
             split.grp_id = grp_id
@@ -308,7 +321,8 @@ def split_source(src):
             if has_samples:
                 split.samples = src.samples
             if has_scaling_rate:
-                s.scaling_rate = src.scaling_rate
+                split.scaling_rate = src.scaling_rate
+            offset += split.num_ruptures
     elif splits:  # single source
         [s] = splits
         s.source_id = src.source_id
@@ -340,6 +354,7 @@ class SourceFilter(object):
             self.integration_distance = default
         else:
             self.integration_distance = integration_distance
+            assert len(sitecol), sitecol
         self.slc = slice(None)
 
     def reduce(self, multiplier=5):

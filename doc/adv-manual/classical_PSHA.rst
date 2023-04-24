@@ -848,33 +848,6 @@ change at every release: you should not expect to get the same numbers and
 performance across releases even if the model is the same and the parameters
 are the same.
 
-The tiling calculator
-=======================================
-
-Most versions of the engine include an experimental version of the so-called
-*classical tiling calculator*. Such calculator works by splitting the hazard
-sites in subsets (tiles) so that large calculations can be performed
-without running out of memory. Since engine 3.15 the tiling calculator
-has become reliable, in the sense that you can estimate the total runtime
-by multiplying the time spent to perform the first tile by the number of tiles.
-This calculator works sequentially, running a tile at
-the time. Since engine 3.16 the calculator also resets the memory at each
-tile and so it can be used also in large calculations featuring memory leaks.
-
-Unfortunately, the tiling has a performance penalty which
-increases with the number of tiles, so you should use it with as
-little tiles as possible.  For instance, a test for a reduced
-calculation with 250,000 sites showed a 15% slowdown with tiles of
-50,000 sites and a 500% slowdown with tiles of 5,000 sites. Of course
-your mileage may vary, but you get an idea.
-
-To enable tiling you must set the parameter ``max_sites_per_tile`` in the
-job.ini to a value inferior to the total number of sites in your calculation.
-In some versions of the engine the parameter can be automatically set if
-the engine figures out that the calculation would run out of memory.
-
-NB: the tiling calculator is still experimental and subject to changes.
-
 disagg_by_src
 =======================================
 
@@ -910,8 +883,8 @@ curve. The ``lvl`` field is an integer corresponding to the intensity
 measure level in the hazard curve.
 
 There is a consistency check comparing the mean hazard curves
-with the value obtained by composing the probab `disagg_by_src` array,
-for the heighest level of each intensity measure type.
+with the value obtained by composing the probabilities in the
+disagg_by_src` array, for the heighest level of each intensity measure type.
 
 It should be noticed that many hazard models contain thousands of
 sources and as a consequence the ``disagg_by_src`` matrix can be
@@ -1052,7 +1025,7 @@ the following::
 
 The number of columns will depend from the number of sites. The
 conditional spectrum calculator, like the disaggregation calculator,
-is mean to be run on a very small number of sites, normally one.
+is meant to be run on a very small number of sites, normally one.
 In this example there are two sites 0 and 1 and the columns ``val0``
 and ``val`` give the value of the conditional spectrum on such sites
 respectively, while the columns ``std0`` and ``std1`` give the corresponding

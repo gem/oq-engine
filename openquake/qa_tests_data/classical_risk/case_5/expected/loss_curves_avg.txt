@@ -1,4 +1,0 @@
-#,,,,"generated_by='OpenQuake engine 3.8.0-git4c93a33098', start_date='2019-11-21T14:28:18', checksum=3287977777, investigation_time=15.0, risk_investigation_time=None"
-asset_id,taxonomy,lon,lat,structural
-"a6","MC-RLSB-2",-78.16800,15.59329,1.53454E+01
-"a7","MS-SLSB-1",-78.16812,15.59329,1.01697E-01

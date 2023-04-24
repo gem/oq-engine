@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -250,65 +250,94 @@ def stacked_bar(ax, x, ys, width):
             ax.bar(x, y, width)
 
 
+# plot a single rlz or the mean
 def make_figure_disagg(extractors, what):
     """
-    $ oq plot "disagg?kind=Mag&imt=PGA&poe_id=0"
+    $ oq plot "disagg?kind=Mag&imt=PGA&poe_id=0&spec=rlzs"
     """
     plt = import_plt()
     from matplotlib import cm
     fig = plt.figure()
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
-    kind = disagg.kind  # ex. ('Mag', 'Dist')
-    ndims = len(kind)
+    kind = [k.lower() for k in disagg.kind[0].split('_')]  # ex. ('mag', 'dist')
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
-    poes = disagg.array[:, ndims:]  # from the right columns
-    y = numpy.average(poes, weights=disagg.weights, axis=-1)
+    y = disagg.array[..., 0, 0]  # shape (..., M, P)
+    ndims = len(kind)  # number of dimensions of the array
+    assert ndims == len(y.shape), (ndims, len(y.shape))
     print(y)
-    bins = getattr(disagg, kind[0])
+    x = getattr(disagg, kind[0])
     ncalcs = len(extractors)
-    width = (bins[1] - bins[0]) * 0.5
-    x = middle(bins) if ncalcs == 1 else middle(bins) - width
+    width = (x[1] - x[0]) * 0.5
+    if ncalcs == 1:
+        x -= width
     if ndims == 1:  # simple bar chart
         ax = fig.add_subplot(1, 1, 1)
         ax.set_xlabel('Disagg%s on site %s, imt=%s, poe_id=%d, inv_time=%dy' %
                       (disagg.kind, sid, imt, poe_id, oq.investigation_time))
         ax.set_xlabel(kind[0])
-        ax.set_xticks(bins)
+        ax.set_xticks(x)
         ax.bar(x, y, width)
         for ex in extractors[1:]:
             ax.bar(x + width, ex.get(what).array, width)
         return plt
     if ncalcs > 1:
         raise NotImplementedError('Comparison for %s' % disagg.kind)
-    shape = [len(getattr(disagg, ax)) - 1 for ax in kind]
-    # 2D images
-    if ndims == 2:
-        y = y.reshape(shape + [1])
-        zbins = ['']
-    else:  # ndims == 3
-        y = y.reshape(shape)
-        zbins = getattr(disagg, kind[2])
-    Z = y.shape[-1]
+    if ndims == 3:
+        Zs = range(y.shape[-1])
+        zbin = getattr(disagg, kind[2])
+    else:
+        Zs = [None]
     axes = []
-    for z in range(Z):
+    for z in Zs:
         arr = y[:, :, z]
-        ax = fig.add_subplot(Z, 1, z + 1)
+        ax = fig.add_subplot(len(Zs), 1, z or 0 + 1)
         axes.append(ax)
-        ax.set_xlabel('%s' % kind[0])
         ax.set_ylabel(kind[1])
+        if ndims == 2: # 2D
+            ax.set_xlabel(kind[0])
+        else:  # 3D
+            ax.set_xlabel('%s [%s=%s]' % (kind[0], kind[2], zbin[z]))
         vbins = getattr(disagg, kind[1])  # vertical bins
         cmap = cm.get_cmap('jet', 100)
-        extent = bins[0], bins[-1], vbins[0], vbins[-1]
+        extent = (x[0] - width, x[-1] + width,
+                  vbins[0], vbins[-1])
         im = ax.imshow(arr, cmap=cmap, extent=extent,
                        aspect='auto', vmin=y.min(), vmax=y.max())
         # stacked bar chart
         # stacked_bar(ax, x, y.T, width)
         # ys = ['%.1f' % y for y in getattr(disagg, kind[1])]
         # ax.legend(ys)
+    fig.tight_layout()
     fig.colorbar(im, ax=axes)
+    return plt
+
+
+def make_figure_event_based_mfd(extractors, what):
+    """
+    $ oq plot "event_based_mfd?" -1 -2
+    """
+    plt = import_plt()
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel("magnitude")
+    ax.set_ylabel("annual frequency")
+    ax.set_yscale('log')
+    magdics = []
+    for ex in extractors:
+        aw = ex.get(what)
+        magdics.append(dict(zip(numpy.round(aw.mag, 1), aw.freq)))
+    min_mag = min(min(magdic) for magdic in magdics)
+    max_mag = max(max(magdic) for magdic in magdics)
+    mags = numpy.round(numpy.arange(min_mag, max_mag + .1, .1), 1)
+    for ex, magdic in zip(extractors, magdics):
+        edges = [min_mag - .05] + list(mags + .05)
+        freqs = [magdic.get(mag, 0) for mag in mags]
+        ax.stairs(freqs, edges, label='calc_%d' % ex.calc_id)
+    ax.set_xticks(mags[::2])
+    ax.legend()
     return plt
 
 
@@ -317,18 +346,17 @@ def make_figure_task_info(extractors, what):
     $ oq plot "task_info?kind=classical"
     """
     plt = import_plt()
+    [ex] = extractors
+    dic = ex.get(what).to_dict()
+    del dic['extra']
+    [(task_name, task_info)] = dic.items()
+    x = task_info['duration']
     if plt.__name__ == 'plotext':
-        [ex] = extractors
-        [(task_name, task_info)] = ex.get(what).to_dict().items()
-        x = task_info['duration']
         mean, std, med = x.mean(), x.std(ddof=1), numpy.median(x)
         plt.hist(x, bins=50)
         plt.title("mean=%d+-%d seconds, median=%d" % (mean, std, med))
         return plt
     fig = plt.figure()
-    [ex] = extractors
-    [(task_name, task_info)] = ex.get(what).to_dict().items()
-    x = task_info['duration']
     ax = fig.add_subplot(2, 1, 1)
     mean, std = x.mean(), x.std(ddof=1)
     ax.hist(x, bins=50, rwidth=0.9)
@@ -372,6 +400,7 @@ def make_figure_memory(extractors, what):
 
     [ex] = extractors
     task_info = ex.get('task_info').to_dict()
+    del task_info['extra']
     fig, ax = plt.subplots()
     ax.grid(True)
     ax.set_xlabel('tasks')

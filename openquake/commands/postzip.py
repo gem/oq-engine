@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2017-2022 GEM Foundation
+# Copyright (C) 2017-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -45,7 +45,10 @@ def main(zipfile):
             fname = archive
         resp = sess.post("%s/v1/calc/run" % config.webapi.server, {},
                          files=dict(archive=open(fname, 'rb')))
-        print(json.loads(resp.text))
+        if 'Log in to an existing account' in resp.text:
+            raise SystemExit('Wrong credentials %s' % str(config.webapi))
+        else:
+            print(json.loads(resp.text))
 
 
 main.zipfile = dict(help='archive with the files of the computation',

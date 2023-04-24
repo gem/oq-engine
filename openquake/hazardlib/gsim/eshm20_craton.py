@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,7 @@ Module exports :class:`ESHM20Craton`
 """
 
 import numpy as np
-from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.nga_east import (
@@ -28,6 +28,7 @@ from openquake.hazardlib.gsim.nga_east import (
     PHI_SETUP, get_phi_ss, NGAEastGMPE, _get_f760, get_nonlinear_stddev,
     get_linear_stddev, _get_fv, get_fnl)
 from openquake.hazardlib.gsim.usgs_ceus_2019 import get_stewart_2019_phis2s
+from openquake.hazardlib.gsim.kotha_2020 import KothaEtAl2020ESHM20
 
 CONSTANTS = {"Mref": 4.5, "Rref": 1., "Mh": 6.2, "h": 5.0}
 
@@ -182,7 +183,6 @@ class ESHM20Craton(GMPE):
         Number of standard deviations above or below median for the uncertainty
         in the site amplification model
     """
-    experimental = True
 
     #: Supported tectonic region type is 'active shallow crust'
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.STABLE_CONTINENTAL
@@ -292,3 +292,42 @@ class ESHM20Craton(GMPE):
     7.500  -4.876430881706430  2.373219226144200   -0.0645988540118558   1.529692859278580   -1.10750011821578    0.131643152520841   -0.0000488890402107   0.531853282981450
     10.00  -5.489149076214530  2.381480607871230   -0.0633541563175792   1.620019767639500   -1.12740443208222    0.141291747206530    0.0059559626930461   0.560198970449326
     """)
+
+
+# Add aliases for the ESHM20 adjustments to the Craton Model
+# Define the adjustment factors for the 3- and 5-pnt Gaussian approximation
+# according to Miller & Rice (1983)
+MILLER_RICE_GAUSS_3PNT = [-1.732051, 0.0, 1.732051]
+MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, -2.856970]
+STRESS_BRANCHES = ["VLow", "Low", "Mid", "High", "VHigh"]
+SITE_BRANCHES = ["Low", "Mid", "High"]
+# Get the 15 branch set of aliases
+for stress, eps1 in zip(STRESS_BRANCHES, MILLER_RICE_GAUSS_5PNT):
+    for site, eps2 in zip(SITE_BRANCHES, MILLER_RICE_GAUSS_3PNT):
+        alias = "ESHM20Craton{:s}Stress{:s}Site".format(stress, site)
+        add_alias(alias, ESHM20Craton, epsilon=eps1, site_epsilon=eps2)
+
+# Add on the four branches of the KothaEtAl2020ESHM20 adjustments
+add_alias(
+    "ESHM20CratonShallowHighStressMidAtten",
+    KothaEtAl2020ESHM20,
+    sigma_mu_epsilon=1.732051
+    )
+
+add_alias(
+    "ESHM20CratonShallowHighStressSlowAtten",
+    KothaEtAl2020ESHM20,
+    sigma_mu_epsilon=1.732051,
+    c3_epsilon=1.732051
+    )
+
+add_alias(
+    "ESHM20CratonShallowMidStressMidAtten",
+    KothaEtAl2020ESHM20,
+    )
+
+add_alias(
+    "ESHM20CratonShallowMidStressSlowAtten",
+    KothaEtAl2020ESHM20,
+    c3_epsilon=1.732051
+    )

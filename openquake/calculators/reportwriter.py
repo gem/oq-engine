@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -22,6 +22,7 @@ Utilities to build a report writer generating a .rst report for a calculation
 """
 import os
 import sys
+import getpass
 import logging
 import numpy
 import pandas
@@ -49,7 +50,6 @@ class ReportWriter(object):
         'biggest_ebr_gmf': 'Maximum memory allocated for the GMFs',
         'avglosses_data_transfer': 'Estimated data transfer for the avglosses',
         'exposure_info': 'Exposure model',
-        'disagg_by_grp': 'Disaggregation by source group',
         'slow_sources': 'Slowest sources',
         'task:start_classical:0': 'Fastest task',
         'task:start_classical:-1': 'Slowest task',
@@ -63,7 +63,7 @@ class ReportWriter(object):
         self.oq = oq = dstore['oqparam']
         self.text = (decode(oq.description) + '\n' + '=' * len(oq.description))
         try:
-            num_rlzs = dstore['full_lt'].get_num_rlzs()
+            num_rlzs = dstore['full_lt'].get_num_paths()
         except KeyError:
             num_rlzs = '?'
         versions = sorted(dstore['/'].attrs.items())
@@ -86,11 +86,12 @@ class ReportWriter(object):
             line = '-' * len(title)
             self.text += '\n'.join(['\n\n' + title, line, text])
 
-    def make_report(self):
+    def make_report(self, show_inputs=True):
         """Build the report and return a restructed text string"""
         oq, ds = self.oq, self.dstore
-        for name in ('params', 'inputs'):
-            self.add(name)
+        if show_inputs:
+            for name in ('params', 'inputs'):
+                self.add(name)
         if 'full_lt' in ds:
             self.add('required_params_per_trt')
         if 'rup_data' in ds:
@@ -99,8 +100,6 @@ class ReportWriter(object):
             self.add('avglosses_data_transfer')
         if 'exposure' in oq.inputs:
             self.add('exposure_info')
-        if 'disagg_by_grp' in ds:
-            self.add('disagg_by_grp')
         if 'source_info' in ds:
             self.add('slow_sources')
             self.add('weight_by_src')
@@ -131,7 +130,7 @@ def build_report(job_ini, output_dir=None):
     :param output_dir:
         the directory where the report is written (default the input directory)
     """
-    with logs.init('job', job_ini) as log:
+    with logs.init('job', job_ini, user_name=getpass.getuser()) as log:
         oq = log.get_oqparam()
         if 'source_model_logic_tree' in oq.inputs:
             oq.calculation_mode = 'preclassical'

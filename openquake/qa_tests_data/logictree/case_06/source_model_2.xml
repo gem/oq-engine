@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4"
+      xmlns:gml="http://www.opengis.net/gml">
+    <sourceModel name="source two">
+        <simpleFaultSource id="src2" name="fault3" tectonicRegion="active shallow crust">
+            <simpleFaultGeometry>
+                <gml:LineString>
+                    <gml:posList>
+                        -0.1449660802959 0
+                        0.449660802959 0
+                    </gml:posList>
+                </gml:LineString>
+
+                <dip>60.0</dip>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>1.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+
+            <magScaleRel>PeerMSR</magScaleRel>
+
+            <ruptAspectRatio>1.0</ruptAspectRatio>
+
+            <incrementalMFD minMag="4.0" binWidth="1.0">
+                <occurRates>1.0</occurRates>
+            </incrementalMFD>
+
+            <rake>0.0</rake>
+        </simpleFaultSource>
+    </sourceModel>
+</nrml>

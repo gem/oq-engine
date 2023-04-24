@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2012-2022 GEM Foundation
+# Copyright (C) 2012-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,7 +23,6 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 import numpy
 
 from openquake.baselib.general import AccumDict
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -91,7 +90,7 @@ class GmfComputer(object):
         None or an instance of Amplifier
 
     :param sec_perils:
-        Tuple of secondary perils. See 
+        Tuple of secondary perils. See
         :mod:`openquake.hazardlib.sep`. Can be ``None``, in which
         case no secondary perils need to be evaluated.
     """
@@ -121,10 +120,11 @@ class GmfComputer(object):
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
             self.source_id = rupture.source_id  # the underlying source
+            self.seed = rupture.seed
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-        self.seed = rupture.rup_id
+            self.seed = rupture.seed
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
         if not ctxs:
             raise FarAwayRupture
@@ -221,7 +221,7 @@ class GmfComputer(object):
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, decode(self.source_id),
+                    (gsim, imt, self.source_id,
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
@@ -230,7 +230,7 @@ class GmfComputer(object):
         return result, sig, eps
 
     def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
-        if self.cmaker.truncation_level == 0:
+        if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
@@ -320,7 +320,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
                           dict(truncation_level=truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
-    rupture.rup_id = seed
+    rupture.seed = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
     res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)

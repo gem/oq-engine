@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2022, GEM Foundation
+# Copyright (C) 2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,7 +20,8 @@ import os
 import logging
 import pandas as pd
 import numpy as np
-from openquake.baselib.general import BASE183, fast_agg2
+from openquake.baselib import hdf5
+from openquake.baselib.general import BASE183, fast_agg2, gen_slices
 from openquake.baselib.performance import compile, Monitor
 from openquake.baselib.writers import scientificformat
 from openquake.hazardlib import nrml, InvalidFile
@@ -42,12 +43,12 @@ DEBUG = False
 VALID_TREATY_TYPES = 'prop', 'wxlr', 'catxl'
 
 
-def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
+def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
                  treaty_linenos, treaty_types):
     """
     :param fields: fields to check (the first field is the primary key)
     :param dframe: DataFrame with the contents of fname
-    :param idxdict: dictionary key -> index (starting from 1)
+    :param policyidx: dictionary key -> index (starting from 1)
     :param fname: file xml containing the fields to check
     :param policyfname: file csv containing the fields to check
     :param treaties: treaty names
@@ -55,6 +56,16 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
     :param treaty_types: treaty types
     """
     key = fields[0]
+    [indices] = np.where(dframe.deductible.to_numpy() == '')
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (rows %s): empty deductible values were found' % (
+                policyfname, [idx + 2 for idx in indices]))
+    [indices] = np.where(dframe.liability.to_numpy() == '')
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (rows %s): empty liability values were found' % (
+                policyfname, [idx + 2 for idx in indices]))
     [indices] = np.where(dframe.duplicated(subset=[key]).to_numpy())
     if len(indices) > 0:
         # NOTE: reporting only the first row found
@@ -81,7 +92,7 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
             raise InvalidFile(
                 f'{fname} (line {lineno}): {treaty} is missing'
                 ' in {policyfname}')
-    policies_from_exposure = list(idxdict)[1:]  # discard '?'
+    policies_from_exposure = list(policyidx)[1:]  # discard '?'
     policies_from_csv = list(dframe.policy)
     [indices] = np.where(~np.isin(policies_from_exposure, policies_from_csv))
     if len(indices) > 0:
@@ -130,8 +141,8 @@ def check_fields(fields, dframe, idxdict, fname, policyfname, treaties,
                 '%s (row %d): the sum of proportional fractions is %s.'
                 ' It must be >= 0 and <= 1' % (
                     policyfname, i+2, np.round(treaty_sum, 5)))
-    idx = [idxdict[name] for name in dframe[key]]  # indices starting from 1
-    dframe[key] = idx
+    # replace policy names with policy indices starting from 1
+    dframe[key] = [policyidx[pol] for pol in dframe[key]]
     for no, field in enumerate(fields):
         if field not in dframe.columns:
             raise InvalidFile(f'{fname}: {field} is missing in the header')
@@ -226,6 +237,11 @@ def parse(fname, policy_idx):
     df = pd.read_csv(policyfname, keep_default_na=False).rename(
         columns=fieldmap)
     df.columns = df.columns.str.strip()
+    all_policies = df.policy.to_numpy()  # ex ['A', 'B']
+    exp_policies = np.array(list(policy_idx))  # ex ['?', 'B', 'A']
+    if len(all_policies) != len(exp_policies[1:]):
+        # reduce the policy dataframe to the policies actually in the exposure
+        df = df[np.isin(all_policies, exp_policies[1:])]
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
                  policyfname, treaty['id'], treaty_linenos, treaty['type'])
 
@@ -287,7 +303,7 @@ def claim_to_cessions(claim, policy, treaty_df):
 
 def build_policy_grp(policy, treaty_df):
     """
-    :param policy: policy dictionary or record
+    :param policy: policy dictionary
     :param treaty_df: treaty DataFrame
     :returns: the policy_grp for the given policy
     """
@@ -357,11 +373,11 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict, eids):
     return clever_agg(keys, sums, treaty_df, idx, overdict, eids)
 
 
-# tested in test_reinsurance.py
-def by_policy(agglosses_df, pol_dict, treaty_df):
+# tested in reinsurance_test.py
+def by_policy(rbe, pol_dict, treaty_df):
     '''
-    :param DataFrame agglosses_df:
-        losses aggregated by policy (keys agg_id, event_id)
+    :param DataFrame rbe:
+        losses aggregated by policy (agg_id) and event_id
     :param dict pol_dict:
         Policy parameters, with pol_dict['policy'] being an integer >= 1
     :param DataFrame treaty_df:
@@ -370,7 +386,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
         DataFrame of reinsurance losses by event ID and policy ID
     '''
     out = {}
-    df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
+    df = rbe[rbe.agg_id == pol_dict['policy'] - 1]
     losses = df.loss.to_numpy()
     ded, lim = pol_dict['deductible'], pol_dict['liability']
     claim = scientific.insured_losses(losses, ded, lim)
@@ -378,12 +394,16 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     out['policy_id'] = np.array([pol_dict['policy']] * len(df), int)
     out.update(claim_to_cessions(claim, pol_dict, treaty_df))
     nonzero = out['claim'] > 0  # discard zero claims
-    out_df = pd.DataFrame({k: out[k][nonzero] for k in out})
-    return out_df
+    rbp = pd.DataFrame({k: out[k][nonzero] for k in out})
+    # ex: event_id, policy_id, retention, claim, surplus, quota_shared, wxlr
+    rbp['policy_grp'] = build_policy_grp(pol_dict, treaty_df)
+    return rbp
 
 
-def _by_event(rbp, treaty_df, mon=Monitor()):
-    with mon('processing policy_loss_table', measuremem=True):
+# called by post_risk
+def by_event(rbp, treaty_df, mon=Monitor()):
+    with mon('processing reinsurance by policy', measuremem=True):
+        # this is very fast
         tdf = treaty_df.set_index('code')
         inpcols = ['eid', 'claim'] + [t.id for _, t in tdf.iterrows()
                                       if t.type != 'catxl']
@@ -407,8 +427,10 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
                 data[:, 0] -= data[:, c]
             keys.append(key)
             datalist.append(data)
-        del rbp['eid']
+        del rbp['eid'], rbp['policy_grp']
+
     with mon('reinsurance by event', measuremem=True):
+        # this is fast
         overspill = {}
         res = clever_agg(keys, datalist, tdf, idx, overspill, eids)
 
@@ -425,26 +447,20 @@ def _by_event(rbp, treaty_df, mon=Monitor()):
     return df
 
 
-def by_policy_event(agglosses_df, policy_df, treaty_df, mon=Monitor()):
+def reins_by_policy(dstore, policy_df, treaty_df, loss_id, monitor):
     """
-    :param DataFrame agglosses_df: losses aggregated by (agg_id, event_id)
-    :param DataFrame policy_df: policies
-    :param DataFrame treaty_df: treaties
-    :returns: (risk_by_policy_df, risk_by_event_df)
+    Task function called by post_risk
     """
+    rbe_mon = monitor('reading risk_by_event')
+    policies = [dict(policy) for _, policy in policy_df.iterrows()]
     dfs = []
-    i = 1
-    logging.info("Processing %d policies", len(policy_df))
-    for _, policy in policy_df.iterrows():
-        if i % 100 == 0:
-            logging.info("Processed %d policies", i)
-        df = by_policy(agglosses_df, dict(policy), treaty_df)
-        df['policy_grp'] = build_policy_grp(policy, treaty_df)
-        dfs.append(df)
-        i += 1
-    rbp = pd.concat(dfs)
-    if DEBUG:
-        print(rbp.sort_values('event_id'))
-    rbe = _by_event(rbp, treaty_df, mon)
-    del rbp['policy_grp']
-    return rbp, rbe
+    with dstore:
+        nrows = len(dstore['risk_by_event/agg_id'])
+        for slc in gen_slices(0, nrows, hdf5.MAX_ROWS):
+            with rbe_mon:
+                rbe_df = dstore.read_df(
+                    'risk_by_event', sel={'loss_id': loss_id}, slc=slc)
+            for policy in policies:
+                dfs.append(by_policy(rbe_df, policy, treaty_df))
+    if dfs:
+        yield pd.concat(dfs)

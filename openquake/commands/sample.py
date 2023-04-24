@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -19,10 +19,12 @@
 import csv
 import shutil
 import numpy
-from openquake.hazardlib import valid, nrml
+from openquake.hazardlib import valid, nrml, sourceconverter, sourcewriter
 from openquake.baselib.python3compat import encode
 from openquake.baselib import general
 from openquake.commonlib import logictree
+
+conv = sourceconverter.SourceConverter(area_source_discretization=20.)
 
 
 def _save_csv(fname, lines, header):
@@ -42,18 +44,27 @@ def save_bak(fname, node, num_nodes, total):
 
 
 def reduce_source_model(fname, reduction_factor):
-    node = nrml.read(fname)
-    if node['xmlns'] == 'http://openquake.org/xmlns/nrml/0.5':
-        total = sum(len(sg) for sg in node[0])
-        num_nodes = 0
-        for sg in node[0]:
-            sg.nodes = general.random_filter(sg, reduction_factor)
-            num_nodes += len(sg)
-    else:  # nrml/0.4
-        total = len(node[0].nodes)
-        node[0].nodes = general.random_filter(node[0], reduction_factor)
-        num_nodes = len(node[0].nodes)
-    save_bak(fname, node, num_nodes, total)
+    """
+    Reduce the source model by sampling the sources; as a special case,
+    multiPointSources are split in pointSources and then sampled.
+    """
+    [smodel] = nrml.read_source_models([fname], conv)
+    grp = smodel.src_groups[0]
+    if any(src.code == b'M' for src in grp):  # multiPoint
+        for src in grp:
+            if src.code == b'M':
+                grp.sources = general.random_filter(src, reduction_factor)
+                print('Extracted %d point sources out of %d' %
+                      (len(grp), len(src)))
+                break
+    else:
+        total = len(grp)
+        grp.sources = general.random_filter(grp, reduction_factor)
+        print('Extracted %d nodes out of %d' % (len(grp), total))
+    smodel.src_groups = [grp]
+    shutil.copy(fname, fname + '.bak')
+    print('Copied the original file in %s.bak' % fname)
+    sourcewriter.write_source_model(fname, smodel)
 
 
 def main(fname, reduction_factor: valid.probability):
