@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="RDN" lossCategory="structural">
+		<description>Road Network
+</description>
+		<limitStates>minor major</limitStates>
+		<fragilityFunction id="connection" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="minor">0 0 0 0</poes>
+			<poes ls="major">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="bridge1" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="minor" mean="0.9" stddev="0.6"/>
+			<params ls="major" mean="1.6" stddev="0.50"/>
+		</fragilityFunction>
+		<fragilityFunction id="bridge2" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="minor" mean="0.42" stddev="0.6"/>
+			<params ls="major" mean="0.74" stddev="0.60"/>
+		</fragilityFunction>
+		<fragilityFunction id="bridge3" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="minor" mean="0.79" stddev="0.6"/>
+			<params ls="major" mean="1.38" stddev="0.60"/>
+		</fragilityFunction>
+		<fragilityFunction id="bridge4" format="continuous" shape="logncdf">
+			<imls imt="PGA" noDamageLimit="0" minIML="0" maxIML="3"/>
+			<params ls="minor" mean="0.42" stddev="0.6"/>
+			<params ls="major" mean="0.74" stddev="0.60"/>
+		</fragilityFunction>
+		<fragilityFunction id="TAZ" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="minor">0 0 0 0</poes>
+			<poes ls="major">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="Road" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="minor">0 0 0 0</poes>
+			<poes ls="major">0 0 0 0</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

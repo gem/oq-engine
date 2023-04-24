@@ -1,0 +1,8 @@
+﻿taxonomy,consequence,loss_type,minor,major
+bridge1,collapsed,structural,0,1
+bridge2,collapsed,structural,0,1
+bridge3,collapsed,structural,0,1
+bridge4,collapsed,structural,0,1
+Road,collapsed,structural,0,1
+connection,collapsed,structural,0,1
+TAZ,collapsed,structural,0,1
