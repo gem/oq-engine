@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Implemented sampling for mutex sources
   * Internal: added command `oq plot event_based_mfd?`
   * Moved the minimum magnitude filtering after the rupture sampling
   * Changed the internals of rupture sampling again (trt_smr)

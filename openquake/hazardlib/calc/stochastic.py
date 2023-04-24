@@ -184,10 +184,11 @@ def sample_cluster(group, num_ses, ses_seed):
     # Set the parameters required to compute the number of occurrences
     # of the group of group
     samples = getattr(group[0], 'samples', 1)
+    grp_probability = getattr(group, 'grp_probability', 1.)
     tom = group.temporal_occurrence_model
     rate = getattr(tom, 'occurrence_rate', None)
     if rate is None:  # time dependent sources
-        tot_num_occ = samples * num_ses
+        tot_num_occ = rng.poisson(grp_probability * samples * num_ses)
     else:  # poissonian sources with ClusterPoissonTOM
         tot_num_occ = rng.poisson(rate * tom.time_span * samples * num_ses)
 
@@ -216,7 +217,6 @@ def sample_cluster(group, num_ses, ses_seed):
                 eb_ruptures.append(ebr)
 
     elif group.src_interdep == 'mutex' and group.rup_interdep == 'indep':
-        # TODO: manage grp_probability
         # random distribute in bins according to the srcs_weights
         ws = [src.mutex_weight for src in group]
         src_occs = random_histogram(tot_num_occ, ws, seed)
