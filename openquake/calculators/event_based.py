@@ -84,6 +84,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     full_lt.init()
+    max_iml = oqparam.get_max_iml()
     with dstore:
         trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
@@ -146,7 +147,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                         # skip this rupture
                         continue
             with cmon:
-                data = computer.compute_all(sig_eps)
+                data = computer.compute_all(sig_eps, max_iml)
             dt = time.time() - t0
             times.append(
                 (computer.ebrupture.id, len(computer.ctx.sids), dt))
