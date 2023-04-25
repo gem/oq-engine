@@ -46,11 +46,6 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
-def rvs(distribution, *size):
-    array = distribution.rvs(size)
-    return array
-
-
 def exp(vals, imt):
     """
     Exponentiate the values unless the IMT is MMI
@@ -134,7 +129,7 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
 
-    def compute_all(self, sig_eps=None):
+    def compute_all(self, sig_eps=None, max_iml=None):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
@@ -154,10 +149,21 @@ class GmfComputer(object):
             # it is better to have few calls producing big arrays
             array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
+
+            # manage max_iml
+            if max_iml is not None:
+                for m, im in enumerate(self.cmaker.imtls):
+                    if (array[m] > max_iml[m]).any():
+                        for n in range(N):
+                            bad = array[m, n] > max_iml[m]  # shape E
+                            array[m, n, bad] = exp(mean_stds[0, g, m, n], im)
+
+            # manage min_iml
             for n in range(N):
                 for e in range(E):
                     if (array[:, n, e] < min_iml).all():
                         array[:, n, e] = 0
+    
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:

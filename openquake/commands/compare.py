@@ -148,7 +148,7 @@ class Comparator(object):
         if len(diff_idxs) == 0:
             print('There are no differences within the tolerances '
                   'atol=%s, rtol=%d%%, sids=%s' % (atol, rtol * 100, sids))
-            return []
+            return arrays
         arr = arrays.transpose(1, 0, 2)  # shape (N, C, L)
         for sid, array in sorted(zip(sids[diff_idxs], arr[diff_idxs])):
             # each array has shape (C, L)
