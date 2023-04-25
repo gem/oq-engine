@@ -110,7 +110,7 @@ agg_id
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [733.92126], atol=.001)
+        numpy.testing.assert_allclose(aw.array, [870.48254], atol=.001)
 
         fnames = export(('aggrisk', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -210,7 +210,7 @@ agg_id
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        self.assertEqual(len(self.calc.datastore['events']), 22)
+        self.assertEqual(len(self.calc.datastore['events']), 21)
 
         losses0 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
         losses1 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
@@ -372,7 +372,7 @@ agg_id
 
         # test the view gsim_for_event
         gsim = view('gsim_for_event:0', self.calc.datastore)
-        self.assertEqual(str(gsim), "[BooreAtkinson2008]")
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
         self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
@@ -395,7 +395,7 @@ agg_id
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_dframe()), 0)
+        self.assertEqual(len(arr.to_dframe()), 4)
 
         # aggregate by all loss types
         fnames = export(
@@ -461,7 +461,7 @@ agg_id
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 3)
+        self.assertEqual(len(self.calc.datastore['events']), 5)
 
     def test_case_6c(self):
         # case with asset_correlation=1

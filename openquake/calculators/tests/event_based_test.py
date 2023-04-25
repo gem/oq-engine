@@ -196,14 +196,14 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqual(einfo['rupture_class'],
                          'ParametricProbabilisticRupture')
         self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['seed'], 1067)
+        self.assertEqual(einfo['seed'], 1066)
         self.assertEqual(str(einfo['gsim']),
                          '[MultiGMPE."PGA".AkkarBommer2010]\n'
                          '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
         self.assertEqual(einfo['rlzi'], 0)
         self.assertEqual(einfo['trt_smr'], 0)
-        aac(einfo['occurrence_rate'], 0.4)
-        aac(einfo['hypo'], [0., 0., 5.])
+        aac(einfo['occurrence_rate'], 0.6)
+        aac(einfo['hypo'], [0., 0., 4.])
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)
@@ -260,8 +260,8 @@ class EventBasedTestCase(CalculatorTestCase):
         edf = self.calc.datastore.read_df('events', 'id')
         edf['gsim'] = [gsim[r] for r in edf.rlz_id]
         A, S = edf.groupby('gsim').rlz_id.count()
-        self.assertEqual(A, 5007)  # AkkarBommer2010 assocs
-        self.assertEqual(S, 5114)  # SadighEtAl1997 assocs
+        self.assertEqual(A, 4850)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 4952)  # SadighEtAl1997 assocs
 
         # check association events <-> GSIMs are 90-10 for sampling
         self.run_calc(case_3.__file__, 'job.ini',
@@ -272,8 +272,8 @@ class EventBasedTestCase(CalculatorTestCase):
         edf = self.calc.datastore.read_df('events', 'id')
         edf['gsim'] = [gsim[r] for r in edf.rlz_id]
         A, S = edf.groupby('gsim').rlz_id.count()
-        self.assertEqual(A, 9051)  # AkkarBommer2010 assocs
-        self.assertEqual(S, 1070)  # SadighEtAl1997 assocs
+        self.assertEqual(A, 8764)  # AkkarBommer2010 assocs
+        self.assertEqual(S, 1038)  # SadighEtAl1997 assocs
 
     def test_case_4(self):
         out = self.run_calc(case_4.__file__, 'job.ini', exports='csv')
@@ -299,9 +299,8 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # check MFD
         aw = extract(self.calc.datastore, 'event_based_mfd?')
-        aac(aw.mag, [4.6, 4.7, 4.9, 5.1, 5.3, 5.7], atol=1E-6)
-        aac(aw.freq, [0.004444, 0.004444, 0.006667, 0.002222,
-                      0.002222, 0.002222], atol=1E-4)
+        aac(aw.mag, [4.7, 4.9, 5.1, 5.5], atol=1E-6)
+        aac(aw.freq, [0.017778, 0.004444, 0.002222, 0.002222], atol=1E-4)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights
@@ -309,7 +308,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # first check the number of generated ruptures
         num_rups = len(self.calc.datastore['ruptures'])
-        self.assertEqual(num_rups, 1906)
+        self.assertEqual(num_rups, 1897)
 
         fnames = out['hcurves', 'csv']
         expected = ['hazard_curve-mean.csv', 'quantile_curve-0.1.csv']
@@ -356,7 +355,7 @@ class EventBasedTestCase(CalculatorTestCase):
         # example with correlation: the site collection must not be filtered
         self.run_calc(case_9.__file__, 'job.ini', exports='csv')
         # this is a case where there are 2 ruptures and 1 gmv per site
-        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 14)
+        self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 29)
 
     def test_case_10(self):
         # this is a case with multiple files in the smlt uncertaintyModel
@@ -433,7 +432,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # a test with grid and site model
         self.run_calc(case_19.__file__, 'job_grid.ini')
-        self.assertEqual(len(self.calc.datastore['ruptures']), 2)
+        self.assertEqual(len(self.calc.datastore['ruptures']), 3)
 
         # error for missing intensity_measure_types
         with self.assertRaises(InvalidFile) as ctx:
