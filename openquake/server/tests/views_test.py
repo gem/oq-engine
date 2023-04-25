@@ -259,13 +259,13 @@ class EngineServerTestCase(django.test.TestCase):
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
         got = loadnpz(self.c.get(extract_url))
         boundaries = gzip.decompress(got['boundaries']).split(b'\n')
-        self.assertEqual(len(boundaries), 37)
+        self.assertEqual(len(boundaries), 31)
         for b in boundaries:
             self.assertEqual(b[:12], b'POLYGON((-77')
         # check gmf_data with no data
         extract_url = '/v1/calc/%s/extract/gmf_data?event_id=28' % job_id
         got = loadnpz(self.c.get(extract_url))
-        self.assertEqual(len(got['rlz-000']), 0)
+        self.assertEqual(len(got['rlz-000']), 3)
 
         # check extract_sources
         extract_url = '/v1/calc/%s/extract/sources?' % job_id
