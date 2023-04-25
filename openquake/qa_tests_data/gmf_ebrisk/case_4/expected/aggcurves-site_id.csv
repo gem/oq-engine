@@ -1,6 +1,6 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-git928ef897d9', start_date='2023-04-24T11:54:44', checksum=2174348292, risk_investigation_time=50.0, num_events=3, effective_time=20.0, limit_states=''"
+#,,,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:57:30', checksum=2174348292, risk_investigation_time=50.0, num_events=3, effective_time=20.0, limit_states=''"
 site_id,return_period,loss_type,loss_value,loss_ratio
 0,10,structural,4.77807E+02,1.59269E-02
-0,20,structural,6.29094E+02,2.09698E-02
-1,10,structural,2.07165E+02,2.07165E-02
-1,20,structural,2.38576E+02,2.38576E-02
+0,20,structural,8.74362E+02,2.91454E-02
+1,10,structural,2.38576E+02,2.38576E-02
+1,20,structural,2.71750E+02,2.71750E-02
