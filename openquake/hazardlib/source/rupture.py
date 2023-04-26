@@ -305,7 +305,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         return 1
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         Randomly sample number of occurrences from temporal occurrence model
         probability distribution.
@@ -359,7 +359,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         if weight is not None:
             self.weight = weight
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         See :meth:`superclass method
         <.rupture.BaseRupture.sample_number_of_occurrences>`
@@ -369,7 +369,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         """
         # compute cdf from pmf
         cdf = numpy.cumsum(self.probs_occur)
-        n_occ = numpy.digitize(numpy.random.random(n), cdf)
+        n_occ = numpy.digitize(rng.random(n), cdf)
         return n_occ
 
 
@@ -422,7 +422,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         rate = self.occurrence_rate
         return tom.get_probability_n_occurrences(rate, 1)
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         Draw a random sample from the distribution and return a number
         of events to occur as an array of integers of size n.
@@ -432,7 +432,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         of an assigned temporal occurrence model.
         """
         r = self.occurrence_rate * self.temporal_occurrence_model.time_span
-        return numpy.random.poisson(r, n)
+        return rng.poisson(r, n)
 
     def get_dppvalue(self, site):
         """

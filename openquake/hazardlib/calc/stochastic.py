@@ -20,13 +20,11 @@
 :mod:`openquake.hazardlib.calc.stochastic` contains
 :func:`stochastic_event_set`.
 """
-import sys
 import time
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import AccumDict, random_histogram
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
@@ -41,47 +39,6 @@ U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
 MAX_RUPTURES = 2000
-
-
-# this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
-    """
-    Generates a 'Stochastic Event Set' (that is a collection of earthquake
-    ruptures) representing a possible *realization* of the seismicity as
-    described by a source model.
-
-    The calculator loops over sources. For each source, it loops over ruptures.
-    For each rupture, the number of occurrence is randomly sampled by
-    calling
-    :meth:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture.sample_number_of_occurrences`
-
-    .. note::
-        This calculator is using random numbers. In order to reproduce the
-        same results numpy random numbers generator needs to be seeded, see
-        http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
-
-    :param sources:
-        An iterator of seismic sources objects (instances of subclasses
-        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param source_site_filter:
-        The source filter to use (default noop filter)
-    :returns:
-        Generator of :class:`~openquake.hazardlib.source.rupture.Rupture`
-        objects that are contained in an event set. Some ruptures can be
-        missing from it, others can appear one or more times in a row.
-    """
-    shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
-    for source, _ in source_site_filter.filter(sources):
-        try:
-            for rupture in source.iter_ruptures(shift_hypo=shift_hypo):
-                [n_occ] = rupture.sample_number_of_occurrences()
-                for _ in range(n_occ):
-                    yield rupture
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, str(err))
-            raise_(etype, msg, tb)
 
 # ######################## rupture calculator ############################ #
 
