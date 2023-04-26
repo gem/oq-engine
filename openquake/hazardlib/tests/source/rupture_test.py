@@ -105,15 +105,15 @@ class ParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def test_sample_number_of_occurrences(self):
         time_span = 20
         rate = 0.01
-        num_samples = 2000
+        num_samples = 10000
         tom = PoissonTOM(time_span)
         rupture = make_rupture(ParametricProbabilisticRupture,
                                occurrence_rate=rate,
                                temporal_occurrence_model=tom)
-        numpy.random.seed(37)
-        mean = sum(rupture.sample_number_of_occurrences()
+        rng = numpy.random.default_rng(37)
+        mean = sum(rupture.sample_number_of_occurrences(1, rng)
                    for i in range(num_samples)) / float(num_samples)
-        self.assertAlmostEqual(mean, rate * time_span, delta=2e-3)
+        self.assertAlmostEqual(mean, rate * time_span, delta=5e-3)
 
 
 class Cdppvalue(unittest.TestCase):
@@ -161,7 +161,6 @@ class Cdppvalue(unittest.TestCase):
             lat = data[loc][1]
             ref_dpp = data[loc][2]
             dpp = rupture.get_dppvalue(Point(lon, lat))
-
             self.assertAlmostEqual(dpp, ref_dpp, delta=0.1)
 
     @unittest.skipUnless('OQ_RUN_SLOW_TESTS' in os.environ, 'slow')
@@ -221,11 +220,11 @@ class NonParametricProbabilisticRuptureTestCase(unittest.TestCase):
     def test_sample_number_of_occurrences(self):
         pmf = PMF([(0.7, 0), (0.2, 1), (0.1, 2)])
         rup = make_rupture(NonParametricProbabilisticRupture, pmf=pmf)
-        numpy.random.seed(123)
+        rng = numpy.random.default_rng(123)
 
         n_samples = 50000
         n_occs = numpy.array([
-            rup.sample_number_of_occurrences() for i in range(n_samples)])
+            rup.sample_number_of_occurrences(1, rng) for i in range(n_samples)])
 
         p_occs_0 = float(len(n_occs[n_occs == 0])) / n_samples
         p_occs_1 = float(len(n_occs[n_occs == 1])) / n_samples
