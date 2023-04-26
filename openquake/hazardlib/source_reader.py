@@ -27,7 +27,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
@@ -482,7 +482,7 @@ class CompositeSourceModel:
             sources.add(basename(src, '!;:.'))
         return sorted(sources)
 
-    def get_mags_by_trt(self):
+    def get_mags_by_trt(self, minimum_magnitude):
         """
         :returns: a dictionary trt -> magnitudes in the sources as strings
         """
@@ -490,7 +490,11 @@ class CompositeSourceModel:
         for sg in self.src_groups:
             for src in sg:
                 mags[sg.trt].update(src.get_magstrs())
-        return {trt: sorted(mags[trt]) for trt in mags}
+        out = {}
+        for trt in mags:
+            minmag = calc.filters.getdefault(minimum_magnitude, trt)
+            out[trt] = sorted(m for m in mags[trt] if float(m) >= minmag)
+        return out
 
     def get_floating_spinning_factors(self):
         """

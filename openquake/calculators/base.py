@@ -507,7 +507,8 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
-                oq.mags_by_trt = csm.get_mags_by_trt()
+                oq.mags_by_trt = csm.get_mags_by_trt(oq.minimum_magnitude)
+                assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:
                     mags = oq.mags_by_trt[trt]
                     min_mag, max_mag = float(mags[0]), float(mags[-1])
