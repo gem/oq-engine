@@ -158,6 +158,7 @@
   <script>
     $(document).ready(function () {
       $("#aelo_run_form").submit(function (event) {
+        $('#submit_aelo_calc').prop('disabled', true);
         var formData = {
           lon: $("#lon").val(),
           lat: $("#lat").val(),
@@ -175,6 +176,8 @@
         }).error(function (data) {
           // TODO: replace with a better looking modal dialog with title
           window.alert(data.responseText);
+        }).always(function () {
+          $('#submit_aelo_calc').prop('disabled', false);
         });
         event.preventDefault();
       });
