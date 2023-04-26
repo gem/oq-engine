@@ -71,7 +71,7 @@ rup_dt = numpy.dtype([
 
 rupture_dt = numpy.dtype([
     ('id', I64),
-    ('seed', U32),
+    ('seed', I64),
     ('source_id', U32),
     ('trt_smr', U32),
     ('code', U8),

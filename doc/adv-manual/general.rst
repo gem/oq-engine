@@ -1237,7 +1237,7 @@ Here is an example for the event based demo::
          (1508, 2, 6.15, 0.26448786, -0.7442877 , 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
          (1509, 1, 6.15, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 2.2499924e+02, 50.000004, 0.),
          (1510, 1, 6.85, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 4.9094699e-04, 50.000046, 0.)],
-        dtype=[('rup_id', '<u4'), ('multiplicity', '<u2'), ('mag', '<f4'), ('centroid_lon', '<f4'),
+        dtype=[('rup_id', '<i8'), ('multiplicity', '<u2'), ('mag', '<f4'), ('centroid_lon', '<f4'),
                ('centroid_lat', '<f4'), ('centroid_depth', '<f4'), ('trt', 'S50'), ('strike', '<f4'),
                ('dip', '<f4'), ('rake', '<f4')])
   In [6]: extractor.close()
