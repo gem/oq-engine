@@ -602,9 +602,11 @@ class EventBasedTestCase(CalculatorTestCase):
                          'to 256 imts, got 900')
 
     def test_src_mutex(self):
-        out = self.run_calc(src_mutex.__file__, 'job.ini', exports='csv,xml')
+        out = self.run_calc(src_mutex.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+        [fname] = out['event_based_mfd', 'csv']
+        self.assertEqualFiles('expected/event_based_mfd.csv', fname, delta=1E-6)
 
     def test_gmpe_tables(self):
         out = self.run_calc(
