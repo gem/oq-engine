@@ -321,6 +321,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                        'hcurves-rlzs' in self.datastore)
         if has_hcurves:
             keys.add('hcurves')
+        if 'ruptures' in self.datastore:
+            keys.add('event_based_mfd')
         for fmt in fmts:
             if not fmt:
                 continue
