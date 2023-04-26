@@ -70,11 +70,12 @@ def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
         objects that are contained in an event set. Some ruptures can be
         missing from it, others can appear one or more times in a row.
     """
+    rng = numpy.random.default_rng(kwargs['seed'])
     shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
-    for source, _ in source_site_filter.filter(sources):
+    for source in sources:
         try:
             for rupture in source.iter_ruptures(shift_hypo=shift_hypo):
-                [n_occ] = rupture.sample_number_of_occurrences()
+                [n_occ] = rupture.sample_number_of_occurrences(1, rng)
                 for _ in range(n_occ):
                     yield rupture
         except Exception as err:
