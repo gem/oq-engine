@@ -87,7 +87,7 @@ def build_rup_mutex(src_groups):
     """
     lst = []
     dtlist = [('grp_id', numpy.uint16), ('src_id', numpy.uint32),
-              ('rup_id', numpy.uint32), ('weight', numpy.float64)]
+              ('rup_id', numpy.int64), ('weight', numpy.float64)]
     for sg in src_groups:
         if sg.rup_interdep == 'mutex':
             for src in sg:

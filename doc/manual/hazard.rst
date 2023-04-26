@@ -2887,7 +2887,7 @@ latitude and longitude coordinates.
 
 The ``Events`` output produces a csv file with fields ``event_id``,
 ``rup_id`` and ``rlz_id``. The ``event_id`` is a 32 bit integer that
-identifies uniquely the event; the ``rup_id`` is a 32 bit integer that
+identifies uniquely the event; the ``rup_id`` is a 64 bit integer that
 identifies uniquely the rupture; the ``rlz_id`` is a 16 bit integer that
 identifies uniquely the realization. The association between the
 ``event_id`` and the ``rup_id`` is stored inside the ``Events`` output.
