@@ -1,11 +1,11 @@
-#,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:54:05', checksum=629049177"
+#,,"generated_by='OpenQuake engine 3.17.0-git09efc1e422', start_date='2023-04-26T10:15:48', checksum=629049177"
 loss_type,loss,stat
-contents,206258.6953125,mean
-contents,203741.796875,quantile-0.15
-contents,203741.796875,quantile-0.85
-structural,401911.934375,mean
-structural,395253.25,quantile-0.15
-structural,395253.25,quantile-0.85
-structural+contents,608170.7000000001,mean
-structural+contents,598995.125,quantile-0.15
-structural+contents,598995.125,quantile-0.85
+contents,184663.1890625,mean
+contents,177839.6875,quantile-0.15
+contents,177839.6875,quantile-0.85
+structural,421835.23125,mean
+structural,417204.4375,quantile-0.15
+structural,417204.4375,quantile-0.85
+structural+contents,606498.4187500001,mean
+structural+contents,595044.125,quantile-0.15
+structural+contents,595044.125,quantile-0.85
