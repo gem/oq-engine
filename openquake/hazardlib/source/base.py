@@ -152,7 +152,7 @@ def timedep_sample(src, eff_num_ses, seed):
     else:  # time-dependent nonparametric
         mutex_weight = getattr(src, 'mutex_weight', 1)
         for rup, rupid in zip(src.iter_ruptures(), rupids):
-            occurs = rup.sample_number_of_occurrences(eff_num_ses)
+            occurs = rup.sample_number_of_occurrences(eff_num_ses, rng)
             if mutex_weight < 1:
                 # consider only the occurrencies below the mutex_weight
                 occurs *= (rng.random(eff_num_ses) < mutex_weight)
