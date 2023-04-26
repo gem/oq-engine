@@ -140,10 +140,11 @@ def expose_outputs(dstore, owner=USER, status='complete'):
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
     if 'ruptures' in dskeys:
-        dskeys.add('event_based_mfd')
         if  'scenario' in calcmode:
             # do not export, as requested by Vitor
             exportable.remove('ruptures')
+        else:
+            dskeys.add('event_based_mfd')
     if 'hmaps' in dskeys and not oq.hazard_maps:
         dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
