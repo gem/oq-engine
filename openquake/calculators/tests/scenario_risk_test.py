@@ -177,7 +177,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
         # sensitive to shapely version
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-4)
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-3)
 
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',
