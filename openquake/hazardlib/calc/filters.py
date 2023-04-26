@@ -269,7 +269,7 @@ class IntegrationDistance(dict):
         return magdepdist(self[trt])
 
     def __missing__(self, trt):
-        assert 'default' in self
+        assert 'default' in self, 'missing "default" key in maximum_distance'
         return self['default']
 
     def get_bounding_box(self, lon, lat, trt=None):
