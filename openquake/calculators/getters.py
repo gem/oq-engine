@@ -28,6 +28,7 @@ from openquake.commonlib import datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
@@ -253,7 +254,7 @@ class PmapGetter(object):
 
 
 time_dt = numpy.dtype(
-    [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
+    [('rup_id', I64), ('nsites', U16), ('time', F32), ('task_no', U16)])
 
 
 def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
