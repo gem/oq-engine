@@ -23,7 +23,7 @@ import logging
 import getpass
 import cProfile
 from openquake.baselib import config, performance
-from openquake.commonlib.logs import dbcmd
+from openquake.commonlib import readinput, logs
 from openquake.calculators import views
 from openquake.server import dbserver
 from openquake.engine import engine
@@ -86,8 +86,8 @@ def from_file(fname, concurrent_jobs=8):
     out = []
     count_errors = 0
     for logctx in logctxs:
-        job = dbcmd('get_job', logctx.calc_id)
-        tb = dbcmd('get_traceback', logctx.calc_id)
+        job = logs.dbcmd('get_job', logctx.calc_id)
+        tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:
             count_errors += 1
@@ -100,8 +100,8 @@ def from_file(fname, concurrent_jobs=8):
         sys.exit(f'{count_errors} error(s) occurred')
 
 
-def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
-         concurrent_jobs: int = 8):
+def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
+             concurrent_jobs: int = 8):
     """
     Run a PSHA analysis on the given lon, lat
     """
@@ -123,8 +123,46 @@ def main(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     else:
         engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
 
+run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
+run_site.hc = 'previous calculation ID'
+run_site.slowest = 'profile and show the slowest operations'
+run_site.concurrent_jobs = 'maximum number of concurrent jobs'
 
-main.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
-main.hc = 'previous calculation ID'
-main.slowest = 'profile and show the slowest operations'
-main.concurrent_jobs = 'maximum number of concurrent jobs'
+
+def build_ses(model, *, slowest: int = None):
+    """
+    Generate the stochastic event set of the given model in the mosaic
+    with an effective investigation time of 100,000 years
+    """
+    dbserver.ensure_on()
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+
+    ini = os.path.join(
+        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    params = readinput.get_params(ini)
+
+    # change the parameters to produce an eff_time of 100,000 years
+    itime = int(round(float(params['investigation_time'])))
+    params['number_of_logic_tree_samples'] = 1000
+    params['ses_per_logic_tree_path'] = str(100 // itime)
+    params['calculation_mode'] = 'event_based'
+    params['ground_motion_fields'] = 'false'
+    params['minimum_magnitude'] = '5.0'
+    del params['inputs']['site_model']
+
+    logging.root.handlers = []  # avoid breaking the logs
+    [jobctx] = engine.create_jobs([params], config.distribution.log_level,
+                                  None, getpass.getuser(), None)
+    if slowest:
+        engine_profile(jobctx, slowest or 40)
+    else:
+        engine.run_jobs([jobctx])
+
+build_ses.model = '3-letter name of the model'
+build_ses.slowest = 'profile and show the slowest operations'
+
+
+# ################################## main ################################## #
+
+main = dict(run_site=run_site, build_ses=build_ses)
