@@ -1139,7 +1139,6 @@ def import_gmfs_csv(dstore, oqparam, sids):
 
     n = len(numpy.unique(arr[['sid', 'eid']]))
     if n != len(array):
-        import pdb; pdb.set_trace()
         raise ValueError('Duplicated site_id, event_id in %s' % fname)
     # store the events
     eids = numpy.unique(array['eid'])
