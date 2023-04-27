@@ -242,7 +242,7 @@ class IntegrationDistance(dict):
                 self[trt] = [(MINMAG, items), (MAXMAG, items)]
         return self
 
-    # tested in case_miriam
+    # tested in case_miriam and case_75
     def cut(self, min_mag_by_trt):
         """
         Cut the lower magnitudes. For instance
@@ -253,6 +253,10 @@ class IntegrationDistance(dict):
         {'default': [(5.0, 87.5), (8.0, 200.0)]}
         """
         all_trts = set(self) | set(min_mag_by_trt)
+        if 'default' not in self:
+            maxval = max(self.values(),
+                         key=lambda val: max(dist for mag, dist in val))
+            self['default'] = maxval
         for trt in all_trts:
             min_mag = getdefault(min_mag_by_trt, trt)
             if not min_mag:
@@ -269,7 +273,7 @@ class IntegrationDistance(dict):
         return magdepdist(self[trt])
 
     def __missing__(self, trt):
-        assert 'default' in self
+        assert 'default' in self, 'missing "default" key in maximum_distance'
         return self['default']
 
     def get_bounding_box(self, lon, lat, trt=None):
@@ -350,12 +354,8 @@ class SourceFilter(object):
     """
     def __init__(self, sitecol, integration_distance=default):
         self.sitecol = sitecol
-        if sitecol is None:
-            self.integration_distance = default
-        else:
-            self.integration_distance = integration_distance
-            assert len(sitecol), sitecol
-        self.slc = slice(None)
+        self.integration_distance = integration_distance
+        self.slc = slice(None)  # TODO: check if we can remove this
 
     def reduce(self, multiplier=5):
         """

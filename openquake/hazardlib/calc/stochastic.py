@@ -20,14 +20,11 @@
 :mod:`openquake.hazardlib.calc.stochastic` contains
 :func:`stochastic_event_set`.
 """
-import sys
 import time
 import numpy
 from openquake.baselib import hdf5
-from openquake.baselib.general import (
-    AccumDict, random_distribute, random_histogram)
+from openquake.baselib.general import AccumDict, random_histogram
 from openquake.baselib.performance import Monitor
-from openquake.baselib.python3compat import raise_
 from openquake.hazardlib.calc.filters import nofilter, SourceFilter
 from openquake.hazardlib.source.rupture import (
     BaseRupture, EBRupture, rupture_dt)
@@ -42,47 +39,6 @@ U8 = numpy.uint8
 I32 = numpy.int32
 F32 = numpy.float32
 MAX_RUPTURES = 2000
-
-
-# this is used in acceptance/stochastic_test.py, not in the engine
-def stochastic_event_set(sources, source_site_filter=nofilter, **kwargs):
-    """
-    Generates a 'Stochastic Event Set' (that is a collection of earthquake
-    ruptures) representing a possible *realization* of the seismicity as
-    described by a source model.
-
-    The calculator loops over sources. For each source, it loops over ruptures.
-    For each rupture, the number of occurrence is randomly sampled by
-    calling
-    :meth:`openquake.hazardlib.source.rupture.BaseProbabilisticRupture.sample_number_of_occurrences`
-
-    .. note::
-        This calculator is using random numbers. In order to reproduce the
-        same results numpy random numbers generator needs to be seeded, see
-        http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
-
-    :param sources:
-        An iterator of seismic sources objects (instances of subclasses
-        of :class:`~openquake.hazardlib.source.base.BaseSeismicSource`).
-    :param source_site_filter:
-        The source filter to use (default noop filter)
-    :returns:
-        Generator of :class:`~openquake.hazardlib.source.rupture.Rupture`
-        objects that are contained in an event set. Some ruptures can be
-        missing from it, others can appear one or more times in a row.
-    """
-    shift_hypo = kwargs['shift_hypo'] if 'shift_hypo' in kwargs else False
-    for source, _ in source_site_filter.filter(sources):
-        try:
-            for rupture in source.iter_ruptures(shift_hypo=shift_hypo):
-                [n_occ] = rupture.sample_number_of_occurrences()
-                for _ in range(n_occ):
-                    yield rupture
-        except Exception as err:
-            etype, err, tb = sys.exc_info()
-            msg = 'An error occurred with source id=%s. Error: %s'
-            msg %= (source.source_id, str(err))
-            raise_(etype, msg, tb)
 
 # ######################## rupture calculator ############################ #
 
@@ -122,7 +78,7 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
         hypo = rup.hypocenter.x, rup.hypocenter.y, rup.hypocenter.z
         rec = numpy.zeros(1, rupture_dt)[0]
         rec['id'] = ebrupture.id
-        rec['seed'] = rup.seed
+        rec['seed'] = ebrupture.seed
         rec['minlon'] = minlon = numpy.nanmin(lons)  # NaNs are in KiteSurfaces
         rec['minlat'] = minlat = numpy.nanmin(lats)
         rec['maxlon'] = maxlon = numpy.nanmax(lons)
@@ -185,10 +141,11 @@ def sample_cluster(group, num_ses, ses_seed):
     # Set the parameters required to compute the number of occurrences
     # of the group of group
     samples = getattr(group[0], 'samples', 1)
+    grp_probability = getattr(group, 'grp_probability', 1.)
     tom = group.temporal_occurrence_model
     rate = getattr(tom, 'occurrence_rate', None)
     if rate is None:  # time dependent sources
-        tot_num_occ = samples * num_ses
+        tot_num_occ = rng.poisson(grp_probability * samples * num_ses)
     else:  # poissonian sources with ClusterPoissonTOM
         tot_num_occ = rng.poisson(rate * tom.time_span * samples * num_ses)
 
@@ -207,19 +164,19 @@ def sample_cluster(group, num_ses, ses_seed):
             src_seed = src.serial(ses_seed)
             for i, rup in enumerate(src.iter_ruptures()):
                 rup.src_id = src.id
-                rup.seed = src_seed + i
                 allrups.append(rup)
         # random distribute in bins according to the rup_weights
-        n_occs = random_distribute(tot_num_occ, weights, rng)
+        n_occs = random_histogram(tot_num_occ, weights, seed)
         for rup, rupid, n_occ in zip(allrups, rupids, n_occs):
             if n_occ:
                 ebr = EBRupture(rup, rup.src_id, trt_smr, n_occ, rupid)
+                ebr.seed = ebr.id + ses_seed
                 eb_ruptures.append(ebr)
+
     elif group.src_interdep == 'mutex' and group.rup_interdep == 'indep':
-        # TODO: manage grp_probability
         # random distribute in bins according to the srcs_weights
         ws = [src.mutex_weight for src in group]
-        src_occs = random_distribute(tot_num_occ, ws, rng)
+        src_occs = random_histogram(tot_num_occ, ws, seed)
         # NB: in event_based/src_mutex num_ses=2000, samples=1
         # and there are 10 sources with weights
         # 0.368, 0.061, 0.299, 0.049, 0.028, 0.011, 0.011, 0.018, 0.113, 0.042
@@ -233,8 +190,8 @@ def sample_cluster(group, num_ses, ses_seed):
             for rup, rupid, n_occ, rseed in zip(
                     src.iter_ruptures(), rupids, n_occs, rseeds):
                 if n_occ:
-                    rup.seed = rseed
                     ebr = EBRupture(rup, src.id, trt_smr, n_occ, rupid)
+                    ebr.seed = ebr.id + ses_seed
                     eb_ruptures.append(ebr)
     else:
         raise NotImplementedError(

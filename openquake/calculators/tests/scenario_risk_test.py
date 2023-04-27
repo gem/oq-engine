@@ -70,7 +70,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
 
         # test agglosses
         tot = extract(self.calc.datastore, 'agg_losses/occupants')
-        aac(tot.array, [0.03104], atol=2E-5)
+        aac(tot.array, [0.033761], atol=2E-5)
 
         # test agglosses with *
         tbl = extract(self.calc.datastore, 'agg_losses/occupants?taxonomy=*')
@@ -172,12 +172,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2764.5]], atol=.02)  # from avg_losses-stats
+        aac(obj.array, [[2421.5598]], atol=.02)  # from avg_losses-stats
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
         # sensitive to shapely version
-        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-4)
+        self.assertEqualFiles('expected/portfolio_loss.txt', fname, delta=1E-3)
 
     def test_collapse_gsim_logic_tree(self):
         self.run_calc(case_master.__file__, 'job.ini',

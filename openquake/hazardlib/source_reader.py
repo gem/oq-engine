@@ -34,6 +34,7 @@ from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
+TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
 by_id = operator.attrgetter('source_id')
 
@@ -86,7 +87,7 @@ def build_rup_mutex(src_groups):
     """
     lst = []
     dtlist = [('grp_id', numpy.uint16), ('src_id', numpy.uint32),
-              ('rup_id', numpy.uint32), ('weight', numpy.float64)]
+              ('rup_id', numpy.int64), ('weight', numpy.float64)]
     for sg in src_groups:
         if sg.rup_interdep == 'mutex':
             for src in sg:
@@ -201,7 +202,7 @@ def get_csm(oq, full_lt, dstore=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-    is_event_based = oq.calculation_mode.startswith('event_based')
+    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     return _get_csm(full_lt, groups, is_event_based)
 
 
@@ -481,15 +482,20 @@ class CompositeSourceModel:
             sources.add(basename(src, '!;:.'))
         return sorted(sources)
 
-    def get_mags_by_trt(self):
+    def get_mags_by_trt(self, maximum_distance):
         """
+        :param maximum_distance: dictionary trt -> magdist interpolator
         :returns: a dictionary trt -> magnitudes in the sources as strings
         """
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
                 mags[sg.trt].update(src.get_magstrs())
-        return {trt: sorted(mags[trt]) for trt in mags}
+        out = {}
+        for trt in mags:
+            minmag = maximum_distance(trt).x[0]
+            out[trt] = sorted(m for m in mags[trt] if float(m) >= minmag)
+        return out
 
     def get_floating_spinning_factors(self):
         """
@@ -544,9 +550,9 @@ class CompositeSourceModel:
                 if not src.num_ruptures:
                     src.num_ruptures = src.count_ruptures()
                 offset += src.num_ruptures
-                if src.num_ruptures >= TWO24:
+                if src.num_ruptures >= TWO30:
                     raise ValueError(
-                        '%s contains more than 2**24 ruptures' % src)
+                        '%s contains more than 2**30 ruptures' % src)
                 # print(src, src.offset, offset)
             src_id += 1
 

@@ -321,6 +321,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                        'hcurves-rlzs' in self.datastore)
         if has_hcurves:
             keys.add('hcurves')
+        if 'ruptures' in self.datastore:
+            keys.add('event_based_mfd')
         for fmt in fmts:
             if not fmt:
                 continue
@@ -505,18 +507,12 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
-                oq.mags_by_trt = csm.get_mags_by_trt()
+                oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
+                assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:
-                    mags = oq.mags_by_trt[trt]
-                    min_mag, max_mag = float(mags[0]), float(mags[-1])
-                    self.datastore['source_mags/' + trt] = numpy.array(mags)
+                    mags = numpy.array(oq.mags_by_trt[trt])
+                    self.datastore['source_mags/' + trt] = mags
                     interp = oq.maximum_distance(trt)
-                    if min_mag < interp.x[0]:
-                        logging.warning(
-                            '%s: discarding mags < %.2f', trt, interp.x[0])
-                    if max_mag > interp.x[-1]:
-                        logging.warning(
-                            '%s: discarding mags > %.2f', trt, interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -1095,12 +1091,18 @@ def import_gmfs_csv(dstore, oqparam, sids):
     :returns: event_ids
     """
     fname = oqparam.inputs['gmfs']
-    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32},
-                          renamedict=dict(site_id='sid', event_id='eid',
-                                          rlz_id='rlzi')).array
+    dtdict = {'sid': U32,
+              'eid': U32,
+              'custom_site_id': (numpy.string_, 8),
+              None: F32}
+    array = hdf5.read_csv(
+        fname, dtdict,
+        renamedict=dict(site_id='sid', event_id='eid', rlz_id='rlzi')
+    ).array
     names = array.dtype.names  # rlz_id, sid, ...
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
+    names = [n for n in names if n != 'custom_site_id']
     imts = [name.lstrip('gmv_') for name in names[2:]]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
@@ -1120,7 +1122,15 @@ def import_gmfs_csv(dstore, oqparam, sids):
         else:
             arr[name] = array[name]
 
-    n = len(numpy.unique(array[['sid', 'eid']]))
+    if 'sid' not in names:
+        # there is a custom_site_id instead
+        customs = dstore['sitecol/custom_site_id'][:]
+        to_sid = {csi: sid for sid, csi in enumerate(customs)}
+        for csi in numpy.unique(array['custom_site_id']):
+            ok = array['custom_site_id'] == csi
+            arr['sid'][ok] = to_sid[csi]
+
+    n = len(numpy.unique(arr[['sid', 'eid']]))
     if n != len(array):
         raise ValueError('Duplicated site_id, event_id in %s' % fname)
     # store the events

@@ -55,21 +55,22 @@ def is_poissonian(src):
     return True
 
     
-def poisson_sample(src, eff_num_ses):
+def poisson_sample(src, eff_num_ses, seed):
     """
     :param src: a poissonian source
     :param eff_num_ses: number of stochastic event sets * number of samples
+    :param seed: stochastic seed
     :yields: triples (rupture, rup_id, num_occurrences)
     """
+    rng = numpy.random.default_rng(seed)
     tom = src.temporal_occurrence_model
     rupids = src.offset + numpy.arange(src.num_ruptures)
     if not hasattr(src, 'nodal_plane_distribution'):
         if src.code == b'F':  # multifault
             s = src.get_sections()
             for i, rate in enumerate(src.occur_rates):
-                # NB: random.poisson called inside to save memory
-                num_occ = numpy.random.poisson(
-                    rate * tom.time_span * eff_num_ses)
+                # NB: rng.poisson called inside to save memory
+                num_occ = rng.poisson(rate * tom.time_span * eff_num_ses)
                 if num_occ == 0:  # skip
                     continue
                 idxs = src.rupture_idxs[i]
@@ -85,7 +86,7 @@ def poisson_sample(src, eff_num_ses):
         else:  # simple or complex fault
             ruptures = list(src.iter_ruptures())
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
-            occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
+            occurs = rng.poisson(rates * tom.time_span * eff_num_ses)
             for rup, rupid, num_occ in zip(ruptures, rupids, occurs):
                 if num_occ:
                     yield rup, rupid, num_occ
@@ -106,7 +107,7 @@ def poisson_sample(src, eff_num_ses):
                     rup_args.append(args)
                     rates.append(mag_occ_rate * np_prob * hc_prob)
     eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-    occurs = numpy.random.poisson(eff_rates)
+    occurs = rng.poisson(eff_rates)
     for num_occ, args, rupid, rate in zip(occurs, rup_args, rupids, rates):
         if num_occ:
             _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, ps = args
@@ -120,12 +121,14 @@ def poisson_sample(src, eff_num_ses):
             yield rup, rupid, num_occ
 
 
-def timedep_sample(src, eff_num_ses):
+def timedep_sample(src, eff_num_ses, seed):
     """
     :param src: a time-dependent source
     :param eff_num_ses: number of stochastic event sets * number of samples
+    :param seed: stochastic seed
     :yields: triples (rupture, rup_id, num_occurrences)
     """
+    rng = numpy.random.default_rng(seed)
     rupids = src.offset + numpy.arange(src.num_ruptures)
     if src.code == b'F':  # time-dependent multifault
         s = src.get_sections()
@@ -138,7 +141,7 @@ def timedep_sample(src, eff_num_ses):
             hypo = s[idxs[0]].get_middle_point()
             cdf = numpy.cumsum(probs)
             num_occ = numpy.digitize(
-                numpy.random.random(eff_num_ses), cdf).sum()
+                rng.random(eff_num_ses), cdf).sum()
             if num_occ == 0:  # ignore non-occurring ruptures
                 continue
             data = [(p, o) for o, p in enumerate(probs)]
@@ -149,10 +152,10 @@ def timedep_sample(src, eff_num_ses):
     else:  # time-dependent nonparametric
         mutex_weight = getattr(src, 'mutex_weight', 1)
         for rup, rupid in zip(src.iter_ruptures(), rupids):
-            occurs = rup.sample_number_of_occurrences(eff_num_ses)
+            occurs = rup.sample_number_of_occurrences(eff_num_ses, rng)
             if mutex_weight < 1:
                 # consider only the occurrencies below the mutex_weight
-                occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
+                occurs *= (rng.random(eff_num_ses) < mutex_weight)
             num_occ = occurs.sum()
             if num_occ:
                 yield rup, rupid, num_occ
@@ -206,7 +209,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.trt_smr = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
-        self.min_mag = 0  # FIXME: why this has effect on event_based/case_6??
 
     def is_gridded(self):
         """
@@ -231,17 +233,16 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :yields: triples (rupture, trt_smr, num_occurrences)
         """
         seed = self.serial(ses_seed)
-        numpy.random.seed(seed)
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        for rup, rupid, num_occ in sample(self, eff_num_ses):
-            rup.seed = seed
-            seed += 1
+        for rup, rupid, num_occ in sample(self, eff_num_ses, seed):
             if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
                 # defined only for poissonian sources
                 # needed to get convergency of the frequency to the rate
                 # tested only in oq-risk-tests etna0
                 rup.occurrence_rate *= self.smweight
-            yield EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
+            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
+            ebr.seed = ebr.id + ses_seed
+            yield ebr
 
     def get_mags(self):
         """

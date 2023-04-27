@@ -84,8 +84,8 @@ def fix_dupl(dist, fname=None, lineno=None):
         if fname is None:  # when called from the sourcewriter
             raise ValueError('There are repeated values in %s' % got)
         else:
-            logging.warning('There were repeated values %s in %s:%s',
-                            extract_dupl(got), fname, lineno)
+            logging.info('There were repeated values %s in %s:%s',
+                         extract_dupl(got), fname, lineno)
             assert abs(sum(values.values()) - 1) < EPSILON  # sanity check
             newdist = sorted([(p, v) for v, p in values.items()])
             if isinstance(newdist[0][1], tuple):  # nodal planes

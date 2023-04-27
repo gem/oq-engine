@@ -44,7 +44,7 @@ def get_rup_data(ebruptures):
     dic = {}
     for ebr in ebruptures:
         point = ebr.rupture.surface.get_middle_point()
-        dic[ebr.rup_id] = (ebr.rupture.mag, point.x, point.y, point.z)
+        dic[ebr.id] = (ebr.rupture.mag, point.x, point.y, point.z)
     return dic
 
 # ############################### exporters ############################## #

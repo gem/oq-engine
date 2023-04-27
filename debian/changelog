@@ -1,4 +1,9 @@
   [Michele Simionato]
+  * Fixed the GMFs CSV importer so that it can import exported GMFs even in
+    the presence of a `custom_site_id`
+  * Implemented sampling for mutex sources with grp_probability
+  * Introduced `extreme_gmv` parameter in the job.ini
+  * Internal: added command `oq plot event_based_mfd?`
   * Moved the minimum magnitude filtering after the rupture sampling
   * Changed the internals of rupture sampling again (trt_smr)
   * Fixed a bug in scenario calculations causing a mysterious IndexError in the

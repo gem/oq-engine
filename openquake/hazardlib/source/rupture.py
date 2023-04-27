@@ -44,6 +44,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
 TWO24 = 2 ** 24
+TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 
 pmf_dt = numpy.dtype([
@@ -52,7 +53,7 @@ pmf_dt = numpy.dtype([
 
 events_dt = numpy.dtype([
     ('id', U32),
-    ('rup_id', U32),
+    ('rup_id', I64),
     ('rlz_id', U16)])
 
 rup_dt = numpy.dtype([
@@ -70,7 +71,7 @@ rup_dt = numpy.dtype([
 
 rupture_dt = numpy.dtype([
     ('id', I64),
-    ('seed', U32),
+    ('seed', I64),
     ('source_id', U32),
     ('trt_smr', U32),
     ('code', U8),
@@ -91,7 +92,7 @@ code2cls = {}
 
 def to_csv_array(ruptures):
     """
-    :param ruptures: a list of ruptures
+    :param ruptures: a list of ruptures with a seed, built with _get_rupture
     :returns: an array of ruptures suitable for serialization in CSV
     """
     if not code2cls:
@@ -252,7 +253,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
-    seed = 0  # set to a value > 0 by the engine
     _code = {}
 
     @classmethod
@@ -305,7 +305,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         return 1
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         Randomly sample number of occurrences from temporal occurrence model
         probability distribution.
@@ -359,7 +359,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         if weight is not None:
             self.weight = weight
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         See :meth:`superclass method
         <.rupture.BaseRupture.sample_number_of_occurrences>`
@@ -369,7 +369,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         """
         # compute cdf from pmf
         cdf = numpy.cumsum(self.probs_occur)
-        n_occ = numpy.digitize(numpy.random.random(n), cdf)
+        n_occ = numpy.digitize(rng.random(n), cdf)
         return n_occ
 
 
@@ -422,7 +422,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         rate = self.occurrence_rate
         return tom.get_probability_n_occurrences(rate, 1)
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         Draw a random sample from the distribution and return a number
         of events to occur as an array of integers of size n.
@@ -432,7 +432,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         of an assigned temporal occurrence model.
         """
         r = self.occurrence_rate * self.temporal_occurrence_model.time_span
-        return numpy.random.poisson(r, n)
+        return rng.poisson(r, n)
 
     def get_dppvalue(self, site):
         """
@@ -722,14 +722,15 @@ class EBRupture(object):
     :param int e0: initial event ID (default 0)
     :param bool scenario: True for scenario ruptures, default False
     """
+    seed = 'NA'  # set by the engine
+
     def __init__(self, rupture, source_id, trt_smr, n_occ=1,
                  id=None, e0=0, scenario=False):
-        assert rupture.seed > 0  # sanity check
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = source_id * TWO24 + id
+        self.id = source_id * TWO30 + id
         self.e0 = e0
         self.scenario = scenario
 
@@ -741,13 +742,6 @@ class EBRupture(object):
     @property
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
-
-    @property
-    def seed(self):
-        """
-        Seed of the rupture
-        """
-        return self.rupture.seed
 
     def get_eids_by_rlz(self, rlzs_by_gsim):
         """
@@ -802,12 +796,13 @@ class RuptureProxy(object):
         rupture = _get_rupture(self.rec, self.geom, trt)
         ebr = EBRupture(rupture, self['source_id'], self['trt_smr'],
                         self['n_occ'], self['id'], self['e0'], self.scenario)
+        ebr.seed = self['seed']
         return ebr
 
     def __repr__(self):
-        src = self['source_id'].decode('ascii')
-        return '<%s#%d[%s], w=%d>' % (self.__class__.__name__,
-                                      self['id'], src, self['n_occ'])
+        return '<%s#%d[%s], w=%d>' % (
+            self.__class__.__name__, self['id'],
+            self['source_id'], self['n_occ'])
 
 
 def get_ruptures(fname_csv):

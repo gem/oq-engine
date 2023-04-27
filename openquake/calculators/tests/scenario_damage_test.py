@@ -89,7 +89,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
-        aac(total, [[37312.8, 30846.1, 4869.6, 1271.5, 5700.7]], atol=.1)
+        
+        aac(total, [[27652.219, 28132.8, 9511.933, 2870.9312, 11832.913]],
+            atol=.1)
 
         # check extract gmf_data works with a filtered site collection
         gmf_data = dict(extract(self.calc.datastore, 'gmf_data'))
@@ -139,7 +141,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
         aac(dmg.array[0].sum(axis=0),
-            [0.72431, 0.599795, 0.292081, 0.15108, 0.232734], atol=1E-5)
+            [0.68279, 0.632278, 0.309294, 0.155964, 0.219674], atol=1E-5)
 
     def test_case_6(self):
         # this is a case with 5 assets on the same point
@@ -163,7 +165,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             'risk_by_event', ['event_id', 'loss_id', 'agg_id'],
             dict(agg_id=K))
         self.assertEqual(len(df), 300)
-        self.assertEqual(len(df[df.dmg_1 > 0]), 76)  # only 76/300 are nonzero
+        self.assertEqual(len(df[df.dmg_1 > 0]), 72)  # only 72/300 are nonzero
 
     def test_case_8(self):
         # case with a shakemap
@@ -185,10 +187,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df('risk_by_event', 'event_id',
                                          {'agg_id': K})
         dmg = df.loc[1937]  # damage caused by the event 1937
-        self.assertEqual(dmg.dmg_1.sum(), 49)
-        self.assertEqual(dmg.dmg_2.sum(), 62)
-        self.assertEqual(dmg.dmg_3.sum(), 42)
-        self.assertEqual(dmg.dmg_4.sum(), 25)
+        self.assertEqual(dmg.dmg_1.sum(), 135)
+        self.assertEqual(dmg.dmg_2.sum(), 10)
+        self.assertEqual(dmg.dmg_3.sum(), 0)
+        self.assertEqual(dmg.dmg_4.sum(), 0)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-4)
@@ -258,9 +260,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_15.__file__, 'job.ini')
         nodes = self.calc.datastore.read_df('functional_demand_nodes')
         got = dict(zip(nodes.id, nodes.number))
-        expected = {'D1': 38, 'D10': 24, 'D11': 24, 'D12': 22, 'D2': 38,
-                    'D3': 38, 'D4': 38, 'D5': 39, 'D6': 39, 'D7': 25,
-                    'D8': 24, 'D9': 25}
+        expected = {'D1': 36, 'D10': 26, 'D11': 26, 'D12': 25, 'D2': 36,
+                    'D3': 36, 'D4': 36, 'D5': 36, 'D6': 36, 'D7': 25,
+                    'D8': 25, 'D9': 25}
         self.assertEqual(got, expected)
 
     def test_case_16(self):

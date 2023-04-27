@@ -84,6 +84,7 @@ def _rupture_groups(ebruptures):
     return rup_groups
 
 
+# used in hazardlib/tests/gsim/can15/nbcc_aa13_test.py
 def _get_ebruptures(fname, conv=None, ses_seed=None):
     """
     :param fname: path to a rupture file (XML or CSV)
@@ -95,8 +96,8 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # no TRT for scenario ruptures
-        rup.seed = ses_seed
-        ebrs = [EBRupture(rup, 0, 0, id=rup.seed, scenario=True)]
+        ebrs = [EBRupture(rup, 0, 0, id=0, scenario=True)]
+        ebrs[0].seed = ses_seed
         return ebrs
 
     assert fname.endswith('.csv'), fname
@@ -106,6 +107,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         rupture = _get_rupture(rec, aw.geoms[i], aw.trts[rec['trt_smr']])
         ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
                         rec['n_occ'], rec['id'], rec['e0'])
+        ebr.seed = ebr.id + ses_seed
         ebrs.append(ebr)
     return ebrs
 

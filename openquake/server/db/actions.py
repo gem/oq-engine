@@ -294,6 +294,7 @@ DISPLAY_NAME = {
     'mean_disagg_bysrc': 'Mean Disaggregation Rates By Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
+    'event_based_mfd': 'Annual Frequency of Events',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',

@@ -48,6 +48,7 @@ from openquake.calculators import getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
@@ -524,7 +525,7 @@ def extract_rup_ids(dstore, what):
     http://127.0.0.1:8800/v1/calc/30/extract/rup_ids
     """
     n = len(dstore['rup/grp_id'])
-    data = numpy.zeros(n, [('src_id', U32), ('rup_id', U32)])
+    data = numpy.zeros(n, [('src_id', U32), ('rup_id', I64)])
     data['src_id'] = dstore['rup/src_id'][:]
     data['rup_id'] = dstore['rup/rup_id'][:]
     data = numpy.unique(data)
@@ -550,7 +551,7 @@ def extract_mean_by_rup(dstore, what):
             axis=(0, 1))
         out.extend(zip(ctx.src_id, ctx.rup_id, means))
     out.sort(key=operator.itemgetter(0, 1))
-    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
+    return numpy.array(out, [('src_id', U32), ('rup_id', I64), ('mean', F64)])
 
 
 @extract.add('source_data')
@@ -1008,10 +1009,12 @@ def extract_mfd(dstore, what):
     oq = dstore['oqparam']
     R = len(dstore['weights'])
     eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
-    rup_df = dstore.read_df('ruptures', 'id')
+    rup_df = dstore.read_df('ruptures', 'id')[
+        ['mag', 'n_occ', 'occurrence_rate']]
+    rup_df.mag = numpy.round(rup_df.mag, 1)
     dic = dict(mag=[], freq=[], occ_rate=[])
     for mag, df in rup_df.groupby('mag'):
-        dic['mag'].append(round(mag, 2))
+        dic['mag'].append(mag)
         dic['freq'].append(df.n_occ.sum() / eff_time)
         dic['occ_rate'].append(df.occurrence_rate.sum())
     return ArrayWrapper((), {k: numpy.array(v) for k, v in dic.items()})
@@ -1281,7 +1284,7 @@ class RuptureData(object):
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U32),
+            ('rup_id', I64), ('source_id', SOURCE_ID), ('multiplicity', U32),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1324,7 +1327,7 @@ def extract_rupture_info(dstore, what):
     else:
         min_mag = 0
     oq = dstore['oqparam']
-    dtlist = [('rup_id', U32), ('multiplicity', U32), ('mag', F32),
+    dtlist = [('rup_id', I64), ('multiplicity', U32), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]

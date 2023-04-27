@@ -281,6 +281,7 @@ def get_num_distances(gsims):
     return len(dists)
 
 
+# NB: minimum_magnitude is ignored
 def _interp(param, name, trt):
     try:
         mdd = param[name]
@@ -289,7 +290,11 @@ def _interp(param, name, trt):
     if isinstance(mdd, IntegrationDistance):
         return mdd(trt)
     elif isinstance(mdd, dict):
-        return magdepdist(getdefault(mdd, trt))
+        if mdd:
+            magdist = getdefault(mdd, trt)
+        else:
+            magdist = [(MINMAG, 1000), (MAXMAG, 1000)]
+        return magdepdist(magdist)
     return mdd
 
 

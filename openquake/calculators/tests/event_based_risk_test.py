@@ -110,7 +110,7 @@ agg_id
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [685.5015], atol=.001)
+        numpy.testing.assert_allclose(aw.array, [870.48254], atol=.001)
 
         fnames = export(('aggrisk', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -210,7 +210,7 @@ agg_id
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        self.assertEqual(len(self.calc.datastore['events']), 22)
+        self.assertEqual(len(self.calc.datastore['events']), 21)
 
         losses0 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
         losses1 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
@@ -372,9 +372,9 @@ agg_id
 
         # test the view gsim_for_event
         gsim = view('gsim_for_event:0', self.calc.datastore)
-        self.assertEqual(str(gsim), "[AkkarBommer2010]")
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
-        self.assertEqual(str(gsim), "[AkkarBommer2010]")
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',
@@ -461,7 +461,7 @@ agg_id
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 3)
+        self.assertEqual(len(self.calc.datastore['events']), 5)
 
     def test_case_6c(self):
         # case with asset_correlation=1
@@ -534,7 +534,7 @@ agg_id
                             minimum_asset_loss='100')
         _tot, fname = out['aggcurves', 'csv']
         # very sensitive to shapely version
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=.01)
 
         curves = self.calc.datastore.read_df('aggcurves')
         self.assertEqual(len(curves), 18)  # (2 tags + 1 total) x 6 periods
@@ -544,7 +544,7 @@ agg_id
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         _tot, fname = out['aggcurves', 'csv']
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=.02)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk

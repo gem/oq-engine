@@ -28,6 +28,7 @@ from openquake.commonlib import datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
@@ -253,7 +254,7 @@ class PmapGetter(object):
 
 
 time_dt = numpy.dtype(
-    [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
+    [('rup_id', I64), ('nsites', U16), ('time', F32), ('task_no', U16)])
 
 
 def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
@@ -266,7 +267,7 @@ def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
     rup_array = dstore['ruptures'][slc]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    rup_array.sort(order=['trt_smr', 'n_occ'])
+    rup_array.sort(order=['trt_smr', 'n_occ', 'seed'])
     scenario = 'scenario' in dstore['oqparam'].calculation_mode
     proxies = [RuptureProxy(rec, scenario) for rec in rup_array]
     maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
@@ -335,6 +336,10 @@ class RuptureGetter(object):
     @property
     def num_ruptures(self):
         return len(self.proxies)
+
+    @property
+    def seeds(self):
+        return [p['seed'] for p in self.proxies]
 
     def get_rupdict(self):  # used in extract_event_info and show rupture
         """
