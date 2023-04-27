@@ -15,8 +15,8 @@
             <magScaleRel>PeerMSR</magScaleRel>
             <ruptAspectRatio>1.0</ruptAspectRatio>
 
-            <incrementalMFD minMag="4.0" binWidth="1.0">
-                <occurRates>1.0</occurRates>
+            <incrementalMFD minMag="4.0" binWidth="0.1">
+                <occurRates>1.0 1.5</occurRates>
             </incrementalMFD>
 
             <nodalPlaneDist>
