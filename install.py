@@ -73,6 +73,7 @@ class server:
     Parameters for a server installation (with root permissions)
     """
     VENV = '/opt/openquake/venv'
+    LOGDIR = '/var/log/oq-engine'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
@@ -100,6 +101,7 @@ class devel_server:
     Parameters for a development on server installation (with root permissions)
     """
     VENV = '/opt/openquake/venv'
+    LOGDIR = '/var/log/oq-engine'
     CFG = os.path.join(VENV, 'openquake.cfg')
     OQ = '/usr/bin/oq'
     OQL = ['sudo', '-H', '-u', 'openquake', OQ]
