@@ -1098,12 +1098,18 @@ def import_gmfs_csv(dstore, oqparam, sids):
     :returns: event_ids
     """
     fname = oqparam.inputs['gmfs']
-    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32},
-                          renamedict=dict(site_id='sid', event_id='eid',
-                                          rlz_id='rlzi')).array
+    dtdict = {'sid': U32,
+              'eid': U32,
+              'custom_site_id': (numpy.string_, 8),
+              None: F32}
+    array = hdf5.read_csv(
+        fname, dtdict,
+        renamedict=dict(site_id='sid', event_id='eid', rlz_id='rlzi')
+    ).array
     names = array.dtype.names  # rlz_id, sid, ...
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
+    names = [n for n in names if n != 'custom_site_id']
     imts = [name.lstrip('gmv_') for name in names[2:]]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
@@ -1123,7 +1129,15 @@ def import_gmfs_csv(dstore, oqparam, sids):
         else:
             arr[name] = array[name]
 
-    n = len(numpy.unique(array[['sid', 'eid']]))
+    if 'sid' not in names:
+        # there is a custom_site_id instead
+        customs = dstore['sitecol/custom_site_id'][:]
+        to_sid = {csi: sid for sid, csi in enumerate(customs)}
+        for csi in numpy.unique(array['custom_site_id']):
+            ok = array['custom_site_id'] == csi
+            arr['sid'][ok] = to_sid[csi]
+
+    n = len(numpy.unique(arr[['sid', 'eid']]))
     if n != len(array):
         raise ValueError('Duplicated site_id, event_id in %s' % fname)
     # store the events
