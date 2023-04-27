@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.dispatch import receiver
 from django.contrib.auth.signals import (
     user_logged_in, user_logged_out, user_login_failed)
@@ -39,6 +39,8 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
         f'User "{username}"'
         f' (IP: {request.META.get("REMOTE_ADDR")}) failed to log in'
         f' through page {request.META.get("HTTP_REFERER")}')
+
+    User = get_user_model()
     if User.objects.filter(username=username).exists():
         msg += ' (incorrect password)'
     else:
