@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the CSV importer so that it can import exported GMFs even in
+￼   the presence of a `custom_site_id`
+
 python3-oq-engine (3.16.2-1~xenial01) xenial; urgency=low
 
   [Michele Simionato, Paolo Tormene]
