@@ -1342,6 +1342,11 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
+        has_sites = (self.sites is not None or 'sites' in self.inputs
+                     or 'site_model' in self.inputs)
+        if not has_sites:
+            return
+
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
