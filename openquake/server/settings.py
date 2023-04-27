@@ -138,9 +138,6 @@ LOGGING = {
         'simple': {
             'format': '%(levelname)s %(message)s'
         },
-        'timestamp': {
-            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        },
     },
     'handlers': {
         'mail_admins': {
@@ -151,13 +148,6 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
-        },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'formatter': 'timestamp',
-            'filename': '/var/log/oq-engine/openquake-webui.log',
-            'mode': 'a'
         },
     },
     'loggers': {
@@ -175,11 +165,6 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
-        },
-        'openquake.server.signals': {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': False,
         },
     },
 }
@@ -263,6 +248,27 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
                 f' must all be defined')
 
 if LOCKDOWN:
+
+    # NOTE: the folder '/var/log/oq-engine' must be created and the webui must
+    # run as root in order to have access to the 'webui-access.log' file.
+    # In a standard machine you can run the webui as follows:
+    # $ sudo -E env PATH=$PATH oq webui -s start 0.0.0.0:8800
+    LOGGING['formatters']['timestamp'] = {
+        'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    }
+    LOGGING['handlers']['file'] = {
+        'level': 'DEBUG',
+        'class': 'logging.FileHandler',
+        'formatter': 'timestamp',
+        'filename': '/var/log/oq-engine/webui-access.log',
+        'mode': 'a'
+    }
+    LOGGING['loggers']['openquake.server.signals'] = {
+        'handlers': ['file'],
+        'level': 'DEBUG',
+        'propagate': False,
+    }
+
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
         # 'dpam.backends.PAMBackend',
