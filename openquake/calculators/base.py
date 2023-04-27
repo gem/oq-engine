@@ -1103,7 +1103,7 @@ def import_gmfs_csv(dstore, oqparam, sids):
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
     names = [n for n in names if n != 'custom_site_id']
-    imts = [name.lstrip('gmv_') for name in names[2:]]
+    imts = [name.lstrip('gmv_') for name in names if name.startswith('gmv_')]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:

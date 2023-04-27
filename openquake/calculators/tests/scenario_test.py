@@ -218,12 +218,18 @@ class ScenarioTestCase(CalculatorTestCase):
 
     def test_case_22(self):
         # check that exported GMFs are importable
-        self.run_calc(case_22.__file__, 'job.ini') 
+        self.run_calc(case_22.__file__, 'job.ini')
+        df0 = self.calc.datastore.read_df('gmf_data')
         gmfs, _, sites = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', gmfs)
         self.assertEqualFiles('sitemesh.csv', sites)
         self.run_calc(case_22.__file__, 'job_from_csv.ini')
         ds = self.calc.datastore
-        # check 4 sites and 4x10 GMVs were imported
+
+        # check the 4 sites and 4x10 GMVs were imported correctly
         self.assertEqual(len(ds['sitecol']), 4)
         self.assertEqual(len(ds['gmf_data/sid']), 40)
+        df1 = self.calc.datastore.read_df('gmf_data')
+        for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
+            for g1, g2 in zip(df0[gmv], df1[gmv]):
+                assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
