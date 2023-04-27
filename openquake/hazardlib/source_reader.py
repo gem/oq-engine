@@ -482,8 +482,9 @@ class CompositeSourceModel:
             sources.add(basename(src, '!;:.'))
         return sorted(sources)
 
-    def get_mags_by_trt(self, minimum_magnitude):
+    def get_mags_by_trt(self, maximum_distance):
         """
+        :param maximum_distance: dictionary trt -> magdist interpolator
         :returns: a dictionary trt -> magnitudes in the sources as strings
         """
         mags = general.AccumDict(accum=set())  # trt -> mags
@@ -492,7 +493,7 @@ class CompositeSourceModel:
                 mags[sg.trt].update(src.get_magstrs())
         out = {}
         for trt in mags:
-            minmag = calc.filters.getdefault(minimum_magnitude, trt)
+            minmag = maximum_distance(trt).x[0]
             out[trt] = sorted(m for m in mags[trt] if float(m) >= minmag)
         return out
 

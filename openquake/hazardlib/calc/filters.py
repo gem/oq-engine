@@ -242,7 +242,7 @@ class IntegrationDistance(dict):
                 self[trt] = [(MINMAG, items), (MAXMAG, items)]
         return self
 
-    # tested in case_miriam
+    # tested in case_miriam and case_75
     def cut(self, min_mag_by_trt):
         """
         Cut the lower magnitudes. For instance
@@ -253,6 +253,10 @@ class IntegrationDistance(dict):
         {'default': [(5.0, 87.5), (8.0, 200.0)]}
         """
         all_trts = set(self) | set(min_mag_by_trt)
+        if 'default' not in self:
+            maxval = max(self.values(),
+                         key=lambda val: max(dist for mag, dist in val))
+            self['default'] = maxval
         for trt in all_trts:
             min_mag = getdefault(min_mag_by_trt, trt)
             if not min_mag:
