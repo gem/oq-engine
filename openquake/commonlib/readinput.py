@@ -764,7 +764,7 @@ def check_min_mag(sources, minimum_magnitude):
     for src in sources:
         min_mag = getdefault(minimum_magnitude, src.tectonic_region_type)
         maxmag = src.get_min_max_mag()[1]
-        if min_mag < maxmag:
+        if min_mag <= maxmag:
             ok += 1
     if not ok:
         raise RuntimeError('All sources were discarded by minimum_magnitude')

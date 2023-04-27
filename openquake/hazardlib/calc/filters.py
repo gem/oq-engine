@@ -354,12 +354,8 @@ class SourceFilter(object):
     """
     def __init__(self, sitecol, integration_distance=default):
         self.sitecol = sitecol
-        if sitecol is None:
-            self.integration_distance = default
-        else:
-            self.integration_distance = integration_distance
-            assert len(sitecol), sitecol
-        self.slc = slice(None)
+        self.integration_distance = integration_distance
+        self.slc = slice(None)  # TODO: check if we can remove this
 
     def reduce(self, multiplier=5):
         """
