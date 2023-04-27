@@ -350,10 +350,13 @@ def get_csv_header(fname, sep=','):
     """
     :param fname: a CSV file
     :param sep: the separator (default comma)
-    :returns: the first line of fname
+    :returns: the first non-commented line of fname and the file object
     """
-    with open(fname, encoding='utf-8-sig') as f:
-        return next(f).split(sep)
+    f = open(fname, encoding='utf-8-sig')
+    first = next(f).strip().split(sep)
+    while first[0].startswith('#'):
+        first = next(f).strip().split(sep)
+    return first, f
 
 
 def get_mesh(oqparam, h5=None):
@@ -371,15 +374,15 @@ def get_mesh(oqparam, h5=None):
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'sites' in oqparam.inputs:
         fname = oqparam.inputs['sites']
-        header = get_csv_header(fname)
+        header, f = get_csv_header(fname)
         if 'lon' in header:
             data = []
-            for i, row in enumerate(
-                    csv.DictReader(open(fname, encoding='utf-8-sig'))):
+            for i, row in enumerate(csv.DictReader(f, header)):
                 if header[0] == 'site_id' and row['site_id'] != str(i):
                     raise InvalidFile('%s: expected site_id=%d, got %s' % (
                         fname, i, row['site_id']))
                 data.append(' '.join([row['lon'], row['lat']]))
+            f.close()
         elif 'gmfs' in oqparam.inputs:
             raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
         else:
@@ -388,7 +391,7 @@ def get_mesh(oqparam, h5=None):
         coords = valid.coordinates(','.join(data))
         # sorting the coordinates so that event_based results do not
         # depend on the order in the sites.csv file
-        c = coords if header[0] == 'site_id' else sorted(coords)
+        c = coords if 'site_id' in header[0] else sorted(coords)
         # NB: Notice the sort=False below
         # Calculations starting from predefined ground motion fields
         # require at least two input files related to the gmf data:

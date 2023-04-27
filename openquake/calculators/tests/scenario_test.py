@@ -21,7 +21,7 @@ from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15,
-    case_16, case_17, case_18, case_19, case_20, case_21)
+    case_16, case_17, case_18, case_19, case_20, case_21, case_22)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
@@ -154,7 +154,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/branches.org', gettemp(tbl))
 
     def test_case_14(self):
-        # new Swiss GMPEs
+        # Swiss GMPEs with amplfactor
         self.run_calc(case_14.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 1000)
 
@@ -215,3 +215,15 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
+
+    def test_case_22(self):
+        # check that exported GMFs are importable
+        self.run_calc(case_22.__file__, 'job.ini') 
+        gmfs, _, sites = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('gmf-data.csv', gmfs)
+        self.assertEqualFiles('sitemesh.csv', sites)
+        self.run_calc(case_22.__file__, 'job_from_csv.ini')
+        ds = self.calc.datastore
+        # check 4 sites and 4x10 GMVs were imported
+        self.assertEqual(len(ds['sitecol']), 4)
+        self.assertEqual(len(ds['gmf_data/sid']), 40)
