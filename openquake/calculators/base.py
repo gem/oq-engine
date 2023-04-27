@@ -507,19 +507,12 @@ class HazardCalculator(BaseCalculator):
                 self.csm = csm = readinput.get_composite_source_model(
                     oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
-                oq.mags_by_trt = csm.get_mags_by_trt(oq.minimum_magnitude)
+                oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
                 assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:
-                    mags = oq.mags_by_trt[trt]
-                    min_mag, max_mag = float(mags[0]), float(mags[-1])
-                    self.datastore['source_mags/' + trt] = numpy.array(mags)
+                    mags = numpy.array(oq.mags_by_trt[trt])
+                    self.datastore['source_mags/' + trt] = mags
                     interp = oq.maximum_distance(trt)
-                    if min_mag < interp.x[0]:
-                        logging.warning(
-                            '%s: discarding mags < %.2f', trt, interp.x[0])
-                    if max_mag > interp.x[-1]:
-                        logging.warning(
-                            '%s: discarding mags > %.2f', trt, interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
