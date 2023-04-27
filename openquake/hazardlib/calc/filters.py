@@ -257,6 +257,8 @@ class IntegrationDistance(dict):
             maxval = max(self.values(),
                          key=lambda val: max(dist for mag, dist in val))
             self['default'] = maxval
+        if 'default' not in min_mag_by_trt:
+            min_mag_by_trt['default'] = max(min_mag_by_trt.values())
         for trt in all_trts:
             min_mag = getdefault(min_mag_by_trt, trt)
             if not min_mag:
