@@ -27,7 +27,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
@@ -202,7 +202,7 @@ def get_csm(oq, full_lt, dstore=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-    is_event_based = oq.calculation_mode.startswith('event_based')
+    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     return _get_csm(full_lt, groups, is_event_based)
 
 
