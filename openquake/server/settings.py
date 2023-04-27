@@ -138,6 +138,9 @@ LOGGING = {
         'simple': {
             'format': '%(levelname)s %(message)s'
         },
+        'timestamp': {
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        },
     },
     'handlers': {
         'mail_admins': {
@@ -148,6 +151,13 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'formatter': 'timestamp',
+            'filename': '/var/log/oq-engine/openquake-webui.log',
+            'mode': 'a'
         },
     },
     'loggers': {
@@ -165,6 +175,11 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
+        },
+        'openquake.server.signals': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
     },
 }

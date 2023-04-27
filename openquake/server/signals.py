@@ -39,8 +39,10 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
         f'User "{username}"'
         f' (IP: {request.META.get("REMOTE_ADDR")}) failed to log in'
         f' through page {request.META.get("HTTP_REFERER")}')
-    if not User.objects.filter(username=username).exists():
-        msg += ' (no user with such a username exists)'
+    if User.objects.filter(username=username).exists():
+        msg += ' (incorrect password)'
+    else:
+        msg += ' (the username does not exist)'
     logger.warning(msg)
 
 
