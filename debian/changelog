@@ -5,7 +5,8 @@
   * Introduced `extreme_gmv` parameter in the job.ini
   * Internal: added command `oq plot event_based_mfd?`
   * Moved the minimum magnitude filtering after the rupture sampling
-  * Changed the internals of rupture sampling again (trt_smr)
+  * Changed the internals of rupture sampling and fixed the generated MFD
+    in the case of a same source appearing in multiple logic tree branches
   * Fixed a bug in scenario calculations causing a mysterious IndexError in the
     line rctx.clon = c.lons[rctx.sids]
   * Changed the disaggregation exporter to add a column with the IML
