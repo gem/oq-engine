@@ -3,7 +3,8 @@
     the presence of a `custom_site_id`
   * Implemented sampling for mutex sources with grp_probability
   * Introduced `extreme_gmv` parameter in the job.ini
-  * Internal: added command `oq plot event_based_mfd?`
+  * Introduced a new output "Annual Frequency of Events" and refined the command
+    `oq plot event_based_mfd?`
   * Moved the minimum magnitude filtering after the rupture sampling
   * Changed the internals of rupture sampling and fixed the generated MFD
     in the case of a same source appearing in multiple logic tree branches
