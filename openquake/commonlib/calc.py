@@ -189,9 +189,8 @@ class RuptureImporter(object):
                 rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'],
                 scenario='scenario' in self.oqparam.calculation_mode)
             ebr.seed = rup['seed']
-            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-                for eid in eids:
-                    eid_rlz.append((eid, rup['id'], rlz_id))
+            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim):
+                eid_rlz.append((eid, rup['id'], rlz))
         return {ordinal: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
