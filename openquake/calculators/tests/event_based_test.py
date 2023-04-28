@@ -298,9 +298,8 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/ruptures_full.csv', tmp, delta=1E-6)
 
         # check MFD
-        aw = extract(self.calc.datastore, 'event_based_mfd?')
-        aac(aw.mag, [4.7, 4.9, 5.1, 5.5], atol=1E-6)
-        aac(aw.freq, [0.017778, 0.004444, 0.002222, 0.002222], atol=1E-4)
+        [f] = export(('event_based_mfd', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mfd.csv', f, delta=1E-6)
 
     def test_case_6(self):
         # 2 models x 3 GMPEs, different weights

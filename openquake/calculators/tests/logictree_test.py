@@ -79,6 +79,11 @@ class LogicTreeTestCase(CalculatorTestCase):
         # same source in two source models, use_rates
         self.assert_curves_ok(['curve-mean.csv'], case_01.__file__)
 
+        # check event_based_mfd
+        self.run_calc(case_01.__file__, 'rup.ini')
+        [f] = export(('event_based_mfd', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mfd.csv', f, delta=1E-6)
+
     def test_case_02(self):
         self.run_calc(case_02.__file__, 'job.ini')
 
