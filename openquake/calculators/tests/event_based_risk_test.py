@@ -110,7 +110,7 @@ agg_id
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [870.48254], atol=.001)
+        numpy.testing.assert_allclose(aw.array, [870.47925], atol=.001)
 
         fnames = export(('aggrisk', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -374,7 +374,7 @@ agg_id
         gsim = view('gsim_for_event:0', self.calc.datastore)
         self.assertEqual(str(gsim), "[ChiouYoungs2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
-        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
+        self.assertEqual(str(gsim), "[AkkarBommer2010]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',

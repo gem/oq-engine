@@ -748,22 +748,15 @@ class EBRupture(object):
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
         :returns: an array with fields (eid, rlz)
         """
-        out = []
+        out = numpy.zeros(self.n_occ, [('eid', U32), ('rlz', U32)])
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        out['eid'] = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
         if self.scenario:
-            all_eids = numpy.arange(self.n_occ, dtype=U32) + self.e0
-            splits = numpy.array_split(all_eids, len(rlzs))
-            for rlz, eids in zip(rlzs, splits):
-                for eid in eids:
-                    out.append((eid, rlz))
+            div = self.n_occ // len(rlzs)
+            out['rlz'] = rlzs[numpy.arange(self.n_occ) // div]
         else:  # event_based
-            e0 = self.e0
-            histo = general.random_histogram(self.n_occ, len(rlzs), self.seed)
-            for rlz, n in zip(rlzs, histo):
-                for eid in range(e0, e0 + n):
-                    out.append((eid, rlz))
-                e0 += n
-        return numpy.array(out, [('eid', U32), ('rlz', U32)])
+            out['rlz'] = general.random_choice(rlzs, self.n_occ, 0, self.seed)
+        return out
 
     def get_eids(self):
         """
