@@ -144,8 +144,8 @@ def read_source_model(fname, converter, monitor):
     [sm] = nrml.read_source_models([fname], converter)
     return {fname: sm}
 
-
-# NB: called after the .checksum has been stored in reduce_sources
+# NB: in classical this is called after reduce_sources, so ";" is not
+# added if the same source appears multiple times, len(srcs) == 1
 def _fix_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
@@ -153,7 +153,6 @@ def _fix_dupl_ids(src_groups):
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
-            # # logic tree variations of the same source
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
