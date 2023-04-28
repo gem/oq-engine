@@ -154,7 +154,9 @@ def build_ses(model, *, slowest: int = None):
     params['ground_motion_fields'] = 'false'
     params['minimum_magnitude'] = '5.0'
     del params['inputs']['site_model']
-    print('ses_per_logic_tree_path = ' + params['ses_per_logic_tree_path'])
+    for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
+              'investigation_time'):
+        print('%s = %s' % (p, params[p]))
 
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
