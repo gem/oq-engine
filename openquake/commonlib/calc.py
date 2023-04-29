@@ -259,12 +259,11 @@ class RuptureImporter(object):
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
 
-        # TODO: use default_rng here
-        numpy.random.seed(self.oqparam.ses_seed)
+        rng = numpy.random.default_rng(self.oqparam.ses_seed)
         if self.oqparam.investigation_time:
             itime = int(self.oqparam.investigation_time)
-            extra['year'] = numpy.random.choice(itime, len(events)) + 1
-        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
+            extra['year'] = rng.choice(itime, len(events)) + 1
+        extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
         cumsum = self.datastore['ruptures']['n_occ'].cumsum()
         rup_array['e0'][1:] = cumsum[:-1]
