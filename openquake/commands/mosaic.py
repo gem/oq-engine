@@ -131,13 +131,10 @@ run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
 
 
-# ########################## build_ses ############################## #
+# ######################### sample rups and gmfs ######################### #
 
-def build_ses(model, *, slowest: int = None):
-    """
-    Generate the stochastic event set of the given model in the mosaic
-    with an effective investigation time of 100,000 years
-    """
+
+def _sample(model, slowest, gmf):
     dbserver.ensure_on()
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
@@ -145,19 +142,21 @@ def build_ses(model, *, slowest: int = None):
     ini = os.path.join(
         config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-
     # change the parameters to produce an eff_time of 100,000 years
     itime = int(round(float(params['investigation_time'])))
     params['number_of_logic_tree_samples'] = 1000
     params['ses_per_logic_tree_path'] = str(100 // itime)
     params['calculation_mode'] = 'event_based'
-    params['ground_motion_fields'] = 'false'
-    params['minimum_magnitude'] = '5.0'
-    del params['inputs']['site_model']
+    if gmf:
+        params['minimum_magnitude'] = '7.0'
+        os.environ['OQ_SAMPLE_SITES'] = '.01'
+    else:  # rups only
+        params['minimum_magnitude'] = '5.0'
+        params['ground_motion_fields'] = 'false'
+        del params['inputs']['site_model']
     for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
               'investigation_time'):
         print('%s = %s' % (p, params[p]))
-
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), None)
@@ -166,10 +165,27 @@ def build_ses(model, *, slowest: int = None):
     else:
         engine.run_jobs([jobctx])
 
-build_ses.model = '3-letter name of the model'
-build_ses.slowest = 'profile and show the slowest operations'
+
+def sample_rups(model, *, slowest: int=None):
+    """
+    Sample the ruptures of the given model in the mosaic
+    with an effective investigation time of 100,000 years
+    """
+    _sample(model, slowest, gmf=False)
+sample_rups.model = '3-letter name of the model'
+sample_rups.slowest = 'profile and show the slowest operations'
+
+
+def sample_gmfs(model, *, slowest: int=None):
+    """
+    Sample the gmfs of the given model in the mosaic
+    with an effective investigation time of 100,000 years
+    """
+    _sample(model, slowest, gmf=True)
+sample_gmfs.model = '3-letter name of the model'
+sample_gmfs.slowest = 'profile and show the slowest operations'
 
 
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, build_ses=build_ses)
+main = dict(run_site=run_site, sample_rups=sample_rups, sample_gmfs=sample_gmfs)

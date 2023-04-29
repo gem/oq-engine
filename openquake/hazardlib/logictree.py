@@ -457,8 +457,8 @@ class SourceModelLogicTree(object):
         self.source_data = numpy.array(self.source_data, source_dt)
         unique = numpy.unique(self.source_data['fname'])
         dt = time.time() - t0
-        logging.info('Validated source model logic tree with %d underlying '
-                     'files in %.2f seconds', len(unique), dt)
+        logging.debug('Validated source model logic tree with %d underlying '
+                      'files in %.2f seconds', len(unique), dt)
 
     def parse_branchset(self, branchset_node, bsno):
         """
