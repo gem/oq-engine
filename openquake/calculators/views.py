@@ -893,7 +893,7 @@ def view_extreme_gmvs(token, dstore):
     if ':' in token:
         maxgmv = float(token.split(':')[1])
     else:
-        maxgmv = 10  # 10g is default value defining extreme GMVs
+        maxgmv = 5  # PGA=5g is default value defining extreme GMVs
     imt0 = list(dstore['oqparam'].imtls)[0]
 
     eids = dstore['gmf_data/eid'][:]
@@ -904,12 +904,14 @@ def view_extreme_gmvs(token, dstore):
     if err > .05:
         msg += ('Your results are expected to have a large dependency '
                 'from the rupture seed: %d%%' % (err * 100))
-    if imt0.startswith(('PGA', 'SA(')):
+    if imt0 == 'PGA':
         rups = dstore['ruptures'][:]
         rupdict = dict(zip(rups['id'], rups))
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
         extreme_df = df[df.gmv_0 > maxgmv].rename(columns={'gmv_0': imt0})
+        if len(extreme_df) == 0:
+            return 'No PGAs over %s g found' % maxgmv
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
