@@ -157,7 +157,7 @@ def _sample(model, slowest, hc, gmf):
         params['ground_motion_fields'] = 'false'
         del params['inputs']['site_model']
     for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
-              'investigation_time'):
+              'investigation_time', 'minimum_magnitude', 'truncation_level'):
         print('%s = %s' % (p, params[p]))
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
