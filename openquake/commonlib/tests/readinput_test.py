@@ -97,7 +97,7 @@ export_dir = %s
                 'random_seed': 5,
                 'maximum_distance': {'default': [(MINMAG, 1), (MAXMAG, 1)]},
                 'inputs': {'job_ini': source,
-                           'sites': sites_csv},
+                           'site_model': [sites_csv]},
                 'reference_depth_to_1pt0km_per_sec': 100.0,
                 'reference_depth_to_2pt5km_per_sec': 5.0,
                 'reference_vs30_type': 'measured',
@@ -112,13 +112,14 @@ export_dir = %s
             os.unlink(sites_csv)
 
     def test_wrong_sites_csv(self):
+        # site_id not starting from 0
         sites_csv = general.gettemp(
             'site_id,lon,lat\n1,1.0,2.1\n2,3.0,4.1\n3,5.0,6.1')
         source = general.gettemp("""
 [general]
 calculation_mode = scenario
 [geometry]
-sites_csv = %s
+site_model_file = %s
 [misc]
 maximum_distance=1
 truncation_level=3
@@ -134,7 +135,7 @@ export_dir = %s
         oq = readinput.get_oqparam(source)
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_mesh(oq)
-        self.assertIn('expected site_id=0, got 1', str(ctx.exception))
+        self.assertIn('site_id not sequential from zero', str(ctx.exception))
         os.unlink(sites_csv)
 
     def test_invalid_magnitude_distance_filter(self):
