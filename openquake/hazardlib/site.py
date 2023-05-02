@@ -149,6 +149,7 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
+    'site_id': numpy.uint32,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,

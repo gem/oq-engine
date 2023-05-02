@@ -461,9 +461,6 @@ def get_site_model(oqparam):
             if dupl:
                 raise InvalidFile(
                     'Found duplicate sites %s in %s' % (dupl, fname))
-            if 'site_id' in sm.dtype.names:
-                raise InvalidFile('%s: you passed a sites.csv file instead of '
-                                  'a site_model.csv file!' % fname)
             params = sorted(set(sm.dtype.names) | req_site_params)
             z = numpy.zeros(
                 len(sm), [(p, site.site_param_dt[p]) for p in params])

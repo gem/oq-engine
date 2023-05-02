@@ -1105,8 +1105,13 @@ class OqParam(valid.ParamSet):
                 # use the new name instead of the old one
                 dic[self.ALIASES[name]] = dic.pop(name)
 
-        if 'sites' in dic['inputs']:
-            dic['inputs']['site_model'] = [dic['inputs'].pop('sites')]
+        inp = dic['inputs']
+        if 'sites' in inp:
+            if 'site_model' in inp:
+                raise NameError('Please remove sites, you should use '
+                                'only site_model')
+                
+            inp['site_model'] = [inp.pop('sites')]
 
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
@@ -1302,12 +1307,6 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples >= TWO16:
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
-
-        # check grid + sites
-        if self.region_grid_spacing and (
-                'site_model' in self.inputs or self.sites):
-            raise ValueError('You are specifying grid and sites at the same '
-                             'time: which one do you want?')
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
