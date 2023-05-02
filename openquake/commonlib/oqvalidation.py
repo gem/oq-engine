@@ -1110,7 +1110,6 @@ class OqParam(valid.ParamSet):
             if 'site_model' in inp:
                 raise NameError('Please remove sites, you should use '
                                 'only site_model')
-                
             inp['site_model'] = [inp.pop('sites')]
 
     def __init__(self, **names_vals):
