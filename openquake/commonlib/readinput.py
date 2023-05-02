@@ -485,6 +485,10 @@ def get_site_model(oqparam):
                 except ValueError:  # missing, use the global parameter
                     # exercised in the test classical/case_28
                     value = getattr(oqparam, site.param[name])
+                    if isinstance(value, float) and numpy.isnan(value):
+                        raise InvalidFile(
+                            f"{oqparam.inputs['job_ini']}: "
+                            f"{site.param[name]} not specified")
                     if name == 'vs30measured':  # special case
                         value = value == 'measured'
                     z[name] = value
