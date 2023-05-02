@@ -41,6 +41,8 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 
+# ########################## run_site ############################## #
+
 def from_file(fname, concurrent_jobs=8):
     """
     Run a PSHA analysis on the given sites
@@ -129,6 +131,8 @@ run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
 
 
+# ########################## build_ses ############################## #
+
 def build_ses(model, *, slowest: int = None):
     """
     Generate the stochastic event set of the given model in the mosaic
@@ -150,6 +154,9 @@ def build_ses(model, *, slowest: int = None):
     params['ground_motion_fields'] = 'false'
     params['minimum_magnitude'] = '5.0'
     del params['inputs']['site_model']
+    for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
+              'investigation_time'):
+        print('%s = %s' % (p, params[p]))
 
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,

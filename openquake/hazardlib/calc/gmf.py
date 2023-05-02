@@ -136,12 +136,12 @@ class GmfComputer(object):
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.ctx.sids
-        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
-            num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
+            num_events = numpy.isin(eid_rlz['rlz'], rlzs).sum()
             if num_events == 0:  # it may happen
                 continue
             # NB: the trick for performance is to keep the call to
@@ -167,7 +167,7 @@ class GmfComputer(object):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eids_by_rlz[rlz]
+                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:

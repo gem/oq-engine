@@ -183,7 +183,7 @@ class ConditionedGmfComputer(GmfComputer):
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.target_sitecol.sids
-        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
@@ -222,7 +222,7 @@ class ConditionedGmfComputer(GmfComputer):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eids_by_rlz[rlz][0] + offsets
+                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid'][0] + offsets
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:

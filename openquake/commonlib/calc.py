@@ -189,9 +189,8 @@ class RuptureImporter(object):
                 rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'],
                 scenario='scenario' in self.oqparam.calculation_mode)
             ebr.seed = rup['seed']
-            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-                for eid in eids:
-                    eid_rlz.append((eid, rup['id'], rlz_id))
+            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim):
+                eid_rlz.append((eid, rup['id'], rlz))
         return {ordinal: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
@@ -260,12 +259,11 @@ class RuptureImporter(object):
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
 
-        # TODO: use default_rng here
-        numpy.random.seed(self.oqparam.ses_seed)
+        rng = numpy.random.default_rng(self.oqparam.ses_seed)
         if self.oqparam.investigation_time:
             itime = int(self.oqparam.investigation_time)
-            extra['year'] = numpy.random.choice(itime, len(events)) + 1
-        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
+            extra['year'] = rng.choice(itime, len(events)) + 1
+        extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
         cumsum = self.datastore['ruptures']['n_occ'].cumsum()
         rup_array['e0'][1:] = cumsum[:-1]

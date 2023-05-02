@@ -743,25 +743,20 @@ class EBRupture(object):
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
-    def get_eids_by_rlz(self, rlzs_by_gsim):
+    def get_eid_rlz(self, rlzs_by_gsim):
         """
         :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :returns: a dictionary rlz index -> eids array
+        :returns: an array with fields (eid, rlz)
         """
-        dic = {}
+        out = numpy.zeros(self.n_occ, [('eid', U32), ('rlz', U32)])
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        out['eid'] = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
         if self.scenario:
-            all_eids = numpy.arange(self.n_occ, dtype=U32) + self.e0
-            splits = numpy.array_split(all_eids, len(rlzs))
-            for rlz_id, eids in zip(rlzs, splits):
-                dic[rlz_id] = eids
+            div = self.n_occ // len(rlzs)
+            out['rlz'] = rlzs[numpy.arange(self.n_occ) // div]
         else:  # event_based
-            j = 0
-            histo = general.random_histogram(self.n_occ, len(rlzs), self.seed)
-            for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
-                j += n
-        return dic
+            out['rlz'] = general.random_choice(rlzs, self.n_occ, 0, self.seed)
+        return out
 
     def get_eids(self):
         """
