@@ -442,7 +442,7 @@ def get_site_model(oqparam):
         req_site_params.add('ampcode')
     arrays = []
     for fname in oqparam.inputs['site_model']:
-        if isinstance(fname, str) and fname.endswith('.csv'):
+        if isinstance(fname, str) and not fname.endswith('.xml'):
 
             # check if the file is a list of lon,lat without header
             with open(fname, encoding='utf-8-sig') as f:
@@ -454,6 +454,12 @@ def get_site_model(oqparam):
                 else:
                     sm = get_poor_site_model(fname)
 
+            # make sure site_id starts from 0, if given
+            if 'site_id' in sm.dtype.names:
+                if (sm['site_id'] != numpy.arange(len(sm))).any():
+                    raise InvalidFile('%s: site_id not sequential from zero'
+                                      % fname)
+
             # round coordinates and check for duplicate points
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
@@ -461,6 +467,8 @@ def get_site_model(oqparam):
             if dupl:
                 raise InvalidFile(
                     'Found duplicate sites %s in %s' % (dupl, fname))
+
+            # used global parameters is local ones are missing
             params = sorted(set(sm.dtype.names) | req_site_params)
             z = numpy.zeros(
                 len(sm), [(p, site.site_param_dt[p]) for p in params])
@@ -479,6 +487,7 @@ def get_site_model(oqparam):
                     z[name] = value
             arrays.append(z)
             continue
+
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
         missing = req_site_params - set(params[0])

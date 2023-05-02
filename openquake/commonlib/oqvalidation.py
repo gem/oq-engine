@@ -1105,7 +1105,7 @@ class OqParam(valid.ParamSet):
                 # use the new name instead of the old one
                 dic[self.ALIASES[name]] = dic.pop(name)
 
-        inp = dic['inputs']
+        inp = dic.get('inputs', {})
         if 'sites' in inp:
             if 'site_model' in inp:
                 raise NameError('Please remove sites, you should use '
