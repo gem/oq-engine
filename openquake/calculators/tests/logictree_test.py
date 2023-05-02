@@ -20,7 +20,7 @@ import unittest
 import numpy
 from openquake.baselib import general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import contexts
+from openquake.hazardlib import contexts, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates)
 from openquake.calculators.views import view, text_table
@@ -434,6 +434,14 @@ hazard_uhs-std.csv
         aw = extract(self.calc.datastore, 'realizations')
         tbl = general.gettemp(text_table(aw.array, ext='org'))
         self.assertEqualFiles('expected/realizations.org', tbl)
+
+
+    def test_case_28_bis(self):
+        # missing z1pt0
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_28.__file__, 'job_wrong.ini')
+        self.assertIn('reference_depth_to_1pt0km_per_sec not specified',
+                      str(ctx.exception))
 
     def test_case_30(self):
         # point on the international data line
