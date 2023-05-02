@@ -46,11 +46,10 @@ jobs:
         python install.py devel
     - name: hazardlib tests
       run: |
-        sudo mkdir /var/log/oq-engine
         source ~/openquake/bin/activate
         pip install pyshp pytest
         oq dbserver start
         cd openquake
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
         cd ..
-        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg sudo -E env PATH=$PATH ./openquake/server/manage.py test tests.views_test
+        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.views_test

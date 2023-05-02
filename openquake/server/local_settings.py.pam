@@ -29,3 +29,5 @@ STATIC_ROOT = ''
 
 # enable WEBUI_PATHPREFIX to place webui pages below a specific path
 # WEBUI_PATHPREFIX='/path/prefix'
+
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'

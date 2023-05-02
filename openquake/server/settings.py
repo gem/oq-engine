@@ -39,6 +39,11 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 DEBUG = True
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+# NOTE: this can be overridden from local_settings.py. Please note that
+# in case of using a restricted directory like '/var/log/oq-engine',
+# it must be created as root.
+WEBUI_ACCESS_LOG_DIR = os.path.join(BASE_DIR, 'log')
+
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
 USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', False)
 
@@ -249,10 +254,6 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
 
 if LOCKDOWN:
 
-    # NOTE: the folder '/var/log/oq-engine' must be created and the webui must
-    # run as root in order to have access to the 'webui-access.log' file.
-    # In a standard machine you can run the webui as follows:
-    # $ sudo -E env PATH=$PATH oq webui -s start 0.0.0.0:8800
     LOGGING['formatters']['timestamp'] = {
         'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     }
@@ -260,7 +261,7 @@ if LOCKDOWN:
         'level': 'DEBUG',
         'class': 'logging.FileHandler',
         'formatter': 'timestamp',
-        'filename': '/var/log/oq-engine/webui-access.log',
+        'filename': os.path.join(WEBUI_ACCESS_LOG_DIR, 'webui-access.log'),
         'mode': 'a'
     }
     LOGGING['loggers']['openquake.server.signals'] = {

@@ -11,11 +11,6 @@ Create a `/usr/share/openquake/engine/local_settings.py` and add:
 LOCKDOWN = True
 ```
 
-Create the directory where the server user access log (`webui-access.log`) will be written:
-```bash
-$ sudo mkdir /var/log/oq-engine
-```
-
 Upgrade the database to host users and sessions:
 ```bash
 $ cd /usr/share/openquake/engine
@@ -91,6 +86,18 @@ Mapping of unix groups isn't supported at the moment.
 
 To add a web path prefix to the usual webui web path set ``WEBUI_PATHPREFIX`` variable into ``openquake/server/local_settings.py`` to a prefix path starting with ``/`` and ending without it (e.g. ``'/path/prefix'``); the same variable should be set as environment variable.
 
+#### Configure the directory to store the server user access log
+
+By default, the server user access log file `webui-access.log` is created inside the folder `openquake/server/log`.
+The directory can be customized adding to local_settings.py a line like:
+```python
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+```
+Please note that the above directory must be created if it does not exist yet, e.g.:
+```bash
+$ sudo mkdir /var/log/oq-engine
+```
+Furthermore, the user `openquake` must own that directory.
 
 ## Running in production
 
