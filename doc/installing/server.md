@@ -11,6 +11,11 @@ Create a `/usr/share/openquake/engine/local_settings.py` and add:
 LOCKDOWN = True
 ```
 
+Create the directory where the server access log (`webui-access.log`) will be written:
+```bash
+$ sudo mkdir /var/log/oq-engine
+```
+
 Upgrade the database to host users and sessions:
 ```bash
 $ cd /usr/share/openquake/engine
