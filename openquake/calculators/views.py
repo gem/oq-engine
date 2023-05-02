@@ -893,7 +893,7 @@ def view_extreme_gmvs(token, dstore):
     if ':' in token:
         maxgmv = float(token.split(':')[1])
     else:
-        maxgmv = 10  # 10g is default value defining extreme GMVs
+        maxgmv = 5  # PGA=5g is default value defining extreme GMVs
     imt0 = list(dstore['oqparam'].imtls)[0]
 
     eids = dstore['gmf_data/eid'][:]
@@ -904,22 +904,29 @@ def view_extreme_gmvs(token, dstore):
     if err > .05:
         msg += ('Your results are expected to have a large dependency '
                 'from the rupture seed: %d%%' % (err * 100))
-    if imt0.startswith(('PGA', 'SA(')):
+    if imt0 == 'PGA':
+        rups = dstore['ruptures'][:]
+        rupdict = dict(zip(rups['id'], rups))
         gmpe = GmpeExtractor(dstore)
         df = pandas.DataFrame({'gmv_0': gmvs, 'sid': sids}, eids)
-        extreme_df = df[df.gmv_0 > maxgmv].rename(
-            columns={'gmv_0': imt0})
+        extreme_df = df[df.gmv_0 > maxgmv].rename(columns={'gmv_0': imt0})
+        if len(extreme_df) == 0:
+            return 'No PGAs over %s g found' % maxgmv
         ev = dstore['events'][()][extreme_df.index]
         extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
-        trt_smrs = dstore['ruptures']['trt_smr'][extreme_df.rup]
+        hypos = numpy.array([rupdict[rupid]['hypo'] for rupid in ev['rup_id']])
+        extreme_df['lon'] = numpy.round(hypos[:, 0])
+        extreme_df['lat'] = numpy.round(hypos[:, 1])
+        extreme_df['dep'] = numpy.round(hypos[:, 2])
+        trt_smrs = [rupdict[rupid]['trt_smr'] for rupid in ev['rup_id']]
         extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
         exdf = extreme_df.sort_values(imt0).groupby('sid').head(1)
         if len(exdf):
             msg += ('\nThere are extreme GMVs, run `oq show extreme_gmvs:%s`'
                     'to see them' % maxgmv)
             if ':' in token:
-                msg += '\n%s' % exdf.set_index('rup')
+                msg = str(exdf.set_index('rup'))
         return msg
     return msg + '\nCould not extract extreme GMVs for ' + imt0
 
