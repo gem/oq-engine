@@ -46,6 +46,7 @@ jobs:
         python install.py devel
     - name: hazardlib tests
       run: |
+        mkdir /var/log/oq-engine
         source ~/openquake/bin/activate
         pip install pyshp pytest
         oq dbserver start
