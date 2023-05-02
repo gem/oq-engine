@@ -867,7 +867,7 @@ class OqParam(valid.ParamSet):
                     'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
                     'source_model_logic_tree', 'hazard_curves',
                     'insurance', 'reinsurance', 'ins_loss',
-                    'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
+                    'job_ini', 'multi_peril', 'taxonomy_mapping',
                     'fragility', 'consequence', 'reqv', 'input_zip',
                     'reqv_ignore_sources',
                     'amplification', 'station_data',
@@ -1095,19 +1095,24 @@ class OqParam(valid.ParamSet):
         return {key: valid.RjbEquivalent(value)
                 for key, value in self.inputs['reqv'].items()}
 
-    def __init__(self, **names_vals):
-        if '_log' in names_vals:  # called from engine
-            del names_vals['_log']
-
-        # support legacy names
-        for name in list(names_vals):
+    def fix_legacy_names(self, dic):
+        for name in list(dic):
             if name in self.ALIASES:
-                if self.ALIASES[name] in names_vals:
+                if self.ALIASES[name] in dic:
                     # passed both the new (self.ALIASES[name]) and the old name
                     raise NameError('Please remove %s, you should use only %s'
                                     % (name, self.ALIASES[name]))
                 # use the new name instead of the old one
-                names_vals[self.ALIASES[name]] = names_vals.pop(name)
+                dic[self.ALIASES[name]] = dic.pop(name)
+
+        if 'sites' in dic['inputs']:
+            dic['inputs']['site_model'] = [dic['inputs'].pop('sites')]
+
+    def __init__(self, **names_vals):
+        if '_log' in names_vals:  # called from engine
+            del names_vals['_log']
+
+        self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
@@ -1278,8 +1283,8 @@ class OqParam(valid.ParamSet):
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
-                and 'sites' not in self.inputs and self.sites is None):
-            raise InvalidFile('%s: You forgot sites|sites_csv'
+                and 'site_model' not in self.inputs and self.sites is None):
+            raise InvalidFile('%s: You forgot to specify a site_model'
                               % job_ini)
         elif self.inputs.get('gmfs', '').endswith('.xml'):
             raise InvalidFile('%s: GMFs in XML are not supported anymore'
@@ -1299,7 +1304,8 @@ class OqParam(valid.ParamSet):
                                  self.number_of_logic_tree_samples)
 
         # check grid + sites
-        if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
+        if self.region_grid_spacing and (
+                'site_model' in self.inputs or self.sites):
             raise ValueError('You are specifying grid and sites at the same '
                              'time: which one do you want?')
 
@@ -1342,8 +1348,7 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
-        has_sites = (self.sites is not None or 'sites' in self.inputs
-                     or 'site_model' in self.inputs)
+        has_sites = self.sites is not None or 'site_model' in self.inputs
         if not has_sites:
             return
 
@@ -1776,11 +1781,9 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode in ('preclassical', 'aftershock'):
             return True  # disable the check
         if 'hazard_curves' in self.inputs and (
-                self.sites is not None or 'sites' in self.inputs
-                or 'site_model' in self.inputs):
+                self.sites is not None or 'site_model' in self.inputs):
             return False
-        has_sites = (self.sites is not None or 'sites' in self.inputs
-                     or 'site_model' in self.inputs)
+        has_sites = self.sites is not None or 'site_model' in self.inputs
         if not has_sites and not self.ground_motion_fields:
             # when generating only the ruptures you do not need the sites
             return True
@@ -1790,7 +1793,7 @@ class OqParam(valid.ParamSet):
             return True  # no check on the sites for risk
         flags = dict(
             sites=bool(self.sites),
-            sites_csv=self.inputs.get('sites', 0),
+            site_model_csv=self.inputs.get('site_model', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
             gmfs_csv=self.inputs.get('gmfs', 0),
             region=bool(self.region and self.region_grid_spacing))
