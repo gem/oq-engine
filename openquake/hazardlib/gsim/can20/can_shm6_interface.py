@@ -264,7 +264,7 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     """
 
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
+    REQUIRES_SITES_PARAMETERS = set(('vs30'))
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
