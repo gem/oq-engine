@@ -11,7 +11,7 @@ Create a `/usr/share/openquake/engine/local_settings.py` and add:
 LOCKDOWN = True
 ```
 
-Create the directory where the server access log (`webui-access.log`) will be written:
+Create the directory where the server user access log (`webui-access.log`) will be written:
 ```bash
 $ sudo mkdir /var/log/oq-engine
 ```
