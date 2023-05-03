@@ -105,7 +105,16 @@ On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicor
 
 #### gunicorn
 
-*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). When using `python-oq-libs` for RedHat or Debian *gunicorn* is already provided.
+*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). For example:
+
+```bash
+$ sudo su -
+# source /opt/openquake/venv/bin/activate
+# pip install gunicorn
+# deactivate
+```
+
+When using `python-oq-libs` for Debian *gunicorn* is already provided.
 
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
