@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in classical_damage causing a ValueError: could not broadcast
+    input array from shape (X,Y) into shape (X,)
   * Fixed the CSV importer so that it can import exported GMFs even in
 ￼   the presence of a `custom_site_id`
 
