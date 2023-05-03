@@ -549,9 +549,10 @@ class HazardCalculator(BaseCalculator):
                 self.read_inputs()
             if 'gmfs' in oq.inputs:
                 self.datastore['full_lt'] = logictree.FullLogicTree.fake()
-                if (oq.inputs['gmfs'].endswith('.csv') or
-                        oq.inputs['gmfs'].endswith('.hdf5')):
+                if oq.inputs['gmfs'].endswith('.csv'):
                     eids = import_gmfs_csv(self.datastore, oq, self.sitecol)
+                elif oq.inputs['gmfs'].endswith('.hdf5'):
+                    eids = import_gmfs_hdf5(self.datastore, oq)
                 else:
                     raise NotImplementedError(
                         'Importer for %s' % oq.inputs['gmfs'])
