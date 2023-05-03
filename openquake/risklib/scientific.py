@@ -967,7 +967,7 @@ def classical_damage(
     :param steps_per_interval:
         steps per interval
     :returns:
-        an array of M probabilities of occurrence where M is the numbers
+        an array of D probabilities of occurrence where D is the numbers
         of damage states.
     """
     if steps_per_interval > 1:  # interpolate
