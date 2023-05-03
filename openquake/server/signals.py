@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
     logger.info(
-        f'User "{user.username}" (IP: {request.META.get("REMOTE_ADDR")})'
+        f'User "{user.username}" (IP: {request.META.get("HTTP_X_REAL_IP")})'
         f' logged in through page {request.META.get("HTTP_REFERER")}')
 
 
@@ -37,7 +37,7 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
     username = credentials.get("username")
     msg = (
         f'User "{username}"'
-        f' (IP: {request.META.get("REMOTE_ADDR")}) failed to log in'
+        f' (IP: {request.META.get("HTTP_X_REAL_IP")}) failed to log in'
         f' through page {request.META.get("HTTP_REFERER")}')
 
     User = get_user_model()
@@ -51,5 +51,5 @@ def log_user_login_failed(sender, credentials, request, **kwargs):
 @receiver(user_logged_out)
 def log_user_logout(sender, request, user, **kwargs):
     logger.info(
-        f'User "{user.username}" (IP: {request.META.get("REMOTE_ADDR")})'
+        f'User "{user.username}" (IP: {request.META.get("HTTP_X_REAL_IP")})'
         f' logged out through page {request.META.get("HTTP_REFERER")}')
