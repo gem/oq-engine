@@ -18,7 +18,6 @@
 import os
 import re
 import ast
-import csv
 import copy
 import zlib
 import shutil
@@ -199,7 +198,9 @@ def normalize(key, fnames, base_path):
 
 def _update(params, items, base_path):
     for key, value in items:
-        if key in ('hazard_curves_csv', 'site_model_file', 'exposure_file'):
+        if key in ('hazard_curves_csv', 'hazard_curves_file',
+                   'site_model_csv', 'site_model_file',
+                   'exposure_csv', 'exposure_file'):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
