@@ -913,11 +913,12 @@ def view_extreme_gmvs(token, dstore):
         if len(extreme_df) == 0:
             return 'No PGAs over %s g found' % maxgmv
         ev = dstore['events'][()][extreme_df.index]
-        extreme_df['rlz'] = ev['rlz_id']
+        # extreme_df['rlz'] = ev['rlz_id']
         extreme_df['rup'] = ev['rup_id']
+        extreme_df['mag'] = [rupdict[rupid]['mag'] for rupid in ev['rup_id']]
         hypos = numpy.array([rupdict[rupid]['hypo'] for rupid in ev['rup_id']])
-        extreme_df['lon'] = numpy.round(hypos[:, 0])
-        extreme_df['lat'] = numpy.round(hypos[:, 1])
+        # extreme_df['lon'] = numpy.round(hypos[:, 0])
+        # extreme_df['lat'] = numpy.round(hypos[:, 1])
         extreme_df['dep'] = numpy.round(hypos[:, 2])
         trt_smrs = [rupdict[rupid]['trt_smr'] for rupid in ev['rup_id']]
         extreme_df['gmpe'] = gmpe.extract(trt_smrs, ev['rlz_id'])
