@@ -134,7 +134,7 @@ run_site.concurrent_jobs = 'maximum number of concurrent jobs'
 # ######################### sample rups and gmfs ######################### #
 
 
-def _sample(model, slowest, hc, gmf):
+def _sample(model, trunclevel, mindist, slowest, hc, gmf):
     dbserver.ensure_on()
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
@@ -149,7 +149,10 @@ def _sample(model, slowest, hc, gmf):
     params['calculation_mode'] = 'event_based'
     if gmf:
         params['minimum_magnitude'] = '7.0'
-        # params['minimum_distance'] = '20.0'
+        if trunclevel != -1:
+            params['truncation_level'] = str(trunclevel)
+        if mindist != -1:
+            params['minimum_distance'] = str(mindist)
         # params['minimum_intensity'] = '1.0'
         os.environ['OQ_SAMPLE_SITES'] = '.01'
     else:  # rups only
@@ -157,7 +160,8 @@ def _sample(model, slowest, hc, gmf):
         params['ground_motion_fields'] = 'false'
         del params['inputs']['site_model']
     for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
-              'investigation_time', 'minimum_magnitude', 'truncation_level'):
+              'investigation_time', 'minimum_magnitude', 'truncation_level',
+              'minimum_distance'):
         print('%s = %s' % (p, params[p]))
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
@@ -173,17 +177,18 @@ def sample_rups(model, *, slowest: int=None):
     Sample the ruptures of the given model in the mosaic
     with an effective investigation time of 100,000 years
     """
-    _sample(model, slowest, hc=None, gmf=False)
+    _sample(model, -1, -1, slowest, hc=None, gmf=False)
 sample_rups.model = '3-letter name of the model'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
-def sample_gmfs(model, *, hc: int = None, slowest: int=None):
+def sample_gmfs(model, *, trunclevel: float=-.1, mindist=-1,
+                hc: int = None, slowest: int=None):
     """
     Sample the gmfs of the given model in the mosaic
     with an effective investigation time of 100,000 years
     """
-    _sample(model, slowest, hc, gmf=True)
+    _sample(model, trunclevel, mindist, slowest, hc, gmf=True)
 sample_gmfs.model = '3-letter name of the model'
 sample_gmfs.hc = 'previous hazard calculation'
 sample_gmfs.slowest = 'profile and show the slowest operations'
