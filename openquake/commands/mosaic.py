@@ -190,7 +190,9 @@ sample_rups.model = '3-letter name of the model'
 sample_rups.slowest = 'profile and show the slowest operations'
 
 
-def sample_gmfs(model, *, trunclevel: float=-.1, mindist=MIN_DIST,
+def sample_gmfs(model, *,
+                trunclevel: float = TRUNC_LEVEL,
+                mindist: float = MIN_DIST,
                 extreme_gmv: float = EXTREME_GMV,
                 hc: int = None, slowest: int=None):
     """
