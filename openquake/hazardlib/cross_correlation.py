@@ -98,7 +98,6 @@ class BakerJayaram2008(CrossCorrelation):
 
 class CrossCorrelationBetween(ABC):
     def __init__(self, truncation_level=99.):
-        assert truncation_level # sanity check
         self.truncation_level = truncation_level
         self.distribution = stats.truncnorm(-truncation_level, truncation_level)
 
