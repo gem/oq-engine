@@ -39,11 +39,6 @@ OQSERVER_ROOT = os.path.dirname(__file__)
 DEBUG = True
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-# NOTE: this can be overridden from local_settings.py. Please note that
-# in case of using a restricted directory like '/var/log/oq-engine',
-# it must be created as root.
-WEBUI_ACCESS_LOG_DIR = os.path.join(BASE_DIR, 'log')
-
 WEBUI_PATHPREFIX = os.getenv('WEBUI_PATHPREFIX', '')
 USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', False)
 
@@ -254,21 +249,30 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
 
 if LOCKDOWN:
 
-    LOGGING['formatters']['timestamp'] = {
-        'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    }
-    LOGGING['handlers']['file'] = {
-        'level': 'DEBUG',
-        'class': 'logging.FileHandler',
-        'formatter': 'timestamp',
-        'filename': os.path.join(WEBUI_ACCESS_LOG_DIR, 'webui-access.log'),
-        'mode': 'a'
-    }
-    LOGGING['loggers']['openquake.server.signals'] = {
-        'handlers': ['file'],
-        'level': 'DEBUG',
-        'propagate': False,
-    }
+    try:
+        log_filename = os.path.join(WEBUI_ACCESS_LOG_DIR,  # NOQA
+                                    'webui-access.log')
+    except NameError:
+        # WEBUI_ACCESS_LOG_DIR is not defined, so we use the standard handler
+        pass
+    else:
+        LOGGING['formatters']['timestamp'] = {
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        }
+
+        LOGGING['handlers']['file'] = {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'formatter': 'timestamp',
+            'filename': log_filename,
+            'mode': 'a'
+        }
+
+        LOGGING['loggers']['openquake.server.signals'] = {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        }
 
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
