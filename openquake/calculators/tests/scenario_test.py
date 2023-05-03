@@ -15,6 +15,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import numpy
 from numpy.testing import assert_almost_equal as aae
 
@@ -227,6 +229,27 @@ class ScenarioTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         # check the 4 sites and 4x10 GMVs were imported correctly
+        self.assertEqual(len(ds['sitecol']), 4)
+        self.assertEqual(len(ds['gmf_data/sid']), 40)
+        df1 = self.calc.datastore.read_df('gmf_data')
+        for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
+            for g1, g2 in zip(df0[gmv], df1[gmv]):
+                assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
+
+    def test_case_22_bis(self):
+        # check that exported GMFs are importable, with custom_site_id
+        # and a filtered site collection
+        self.run_calc(case_22.__file__, 'job_bis.ini')
+        df0 = self.calc.datastore.read_df('gmf_data')
+        gmfs, _, sites = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('gmfdata.csv', gmfs)
+        self.assertEqualFiles('sitemodel.csv', sites)
+        self.run_calc(case_22.__file__, 'job_from_csv.ini',
+                      gmfs_file='gmfdata.csv',sites_csv='sitemodel.csv')
+        self.assertEqual(str(self.calc.sitecol),
+                         '<SiteCollection with 4/5 sites>')
+        ds = self.calc.datastore
+        # check the 4 of 5 sites and 4x10 GMVs were imported correctly
         self.assertEqual(len(ds['sitecol']), 4)
         self.assertEqual(len(ds['gmf_data/sid']), 40)
         df1 = self.calc.datastore.read_df('gmf_data')
