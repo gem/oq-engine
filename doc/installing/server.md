@@ -2,7 +2,7 @@
 
 ## Advanced configurations and Authentication support
 
-### Installation from packages
+### Installation from Debian packages
 
 The OpenQuake Engine server supports authentication provided by [Django](https://docs.djangoproject.com/en/stable/topics/auth/) and its backends.
 
