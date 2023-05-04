@@ -1056,42 +1056,6 @@ def extract_relevant_events(dstore, dummy=None):
     return events
 
 
-@extract.add('event_info')
-def extract_event_info(dstore, eidx):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
-    """
-    event = dstore['events'][int(eidx)]
-    ridx = event['rup_id']
-    [getter] = getters.get_rupture_getters(dstore, slc=slice(ridx, ridx + 1))
-    rupdict = getter.get_rupdict()
-    rlzi = event['rlz_id']
-    full_lt = dstore['full_lt']
-    rlz = full_lt.get_realizations()[rlzi]
-    gsim = full_lt.gsim_by_trt(rlz)[rupdict['trt']]
-    for key, val in rupdict.items():
-        yield key, val
-    yield 'rlzi', rlzi
-    yield 'gsim', repr(gsim)
-
-
-@extract.add('extreme_event')
-def extract_extreme_event(dstore, eidx):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/extreme_event
-    """
-    arr = dstore['gmf_data/gmv_0'][()]
-    idx = arr.argmax()
-    eid = dstore['gmf_data/eid'][idx]
-    dic = dict(extract_event_info(dstore, eid))
-    dic['gmv'] = arr[idx]
-    return dic
-
-
 @extract.add('ruptures_within')
 def get_ruptures_within(dstore, bbox):
     """
@@ -1335,8 +1299,8 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r in rup_data.to_array(proxies):
+        arr = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim).to_array(proxies)
+        for r in arr:
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
             if len(coordset) < 4:   # degenerate to line

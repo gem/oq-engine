@@ -23,13 +23,14 @@ from openquake.baselib import general, hdf5
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, to_arrays)
+    BaseRupture, RuptureProxy, EBRupture, _get_rupture)
 from openquake.commonlib import datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
+TWO24 = 2 ** 24
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
@@ -310,6 +311,28 @@ def multiline(array3RC):
     return lines
 
 
+def get_ebrupture(dstore, rup_id):  # used in show rupture
+    """
+    This is EXTREMELY inefficient, so it must be used only when you are
+    interested in a single rupture.
+    """
+    rups = dstore['ruptures'][:]  # read everything in memory
+    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
+    idx = numpy.searchsorted(rups['id'], rup_id)
+    if idx == len(rups):
+        raise ValueError(f"Missing {rup_id=}")
+    rec = rups[idx]
+    assert rec['id'] == rup_id, f"Missing {rup_id=}"
+    trts = dstore['full_lt'].init().trts
+    trt = trts[rec['trt_smr'] // TWO24]
+    geom = rupgeoms[rec['geom_id']]
+    rupture = _get_rupture(rec, geom, trt)
+    ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
+                    rec['n_occ'], rec['id'], rec['e0'])
+    ebr.seed = rec['seed']
+    return ebr
+
+
 # this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
@@ -340,31 +363,6 @@ class RuptureGetter(object):
     @property
     def seeds(self):
         return [p['seed'] for p in self.proxies]
-
-    def get_rupdict(self):  # used in extract_event_info and show rupture
-        """
-        :returns: a dictionary with the parameters of the rupture
-        """
-        assert len(self.proxies) == 1, 'Please specify a slice of length 1'
-        dic = {'trt': self.trt}
-        with datastore.read(self.filename) as dstore:
-            rupgeoms = dstore['rupgeoms']
-            rec = self.proxies[0].rec
-            geom = rupgeoms[rec['id']]
-            arrays = to_arrays(geom)  # one array per surface
-            for a, array in enumerate(arrays):
-                dic['surface_%d' % a] = multiline(array)
-            rupclass, surclass = code2cls[rec['code']]
-            dic['rupture_class'] = rupclass.__name__
-            dic['surface_class'] = surclass.__name__
-            dic['hypo'] = rec['hypo']
-            dic['occurrence_rate'] = rec['occurrence_rate']
-            dic['trt_smr'] = rec['trt_smr']
-            dic['n_occ'] = rec['n_occ']
-            dic['seed'] = rec['seed']
-            dic['mag'] = rec['mag']
-            dic['srcid'] = rec['source_id']
-        return dic
 
     def get_proxies(self, min_mag=0):
         """
