@@ -458,6 +458,11 @@ agg_id
         [fname, _sigeps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname, delta=5E-5)
 
+        # check rup_ids are consistent
+        rup_ids = self.calc.datastore['ruptures']['id']
+        aw = extract(self.calc.datastore, 'rupture_info')
+        numpy.testing.assert_equal(aw.array['rup_id'], rup_ids)
+
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')

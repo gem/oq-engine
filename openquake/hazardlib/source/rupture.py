@@ -197,7 +197,7 @@ def get_ebr(rec, geom, trt, scenario=False):
 
     # build EBRupture
     ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                    rec['n_occ'], rec['id'], rec['e0'], scenario)
+                    rec['n_occ'], rec['id'] % TWO30, rec['e0'], scenario)
     ebr.seed = rec['seed']
     return ebr
 
