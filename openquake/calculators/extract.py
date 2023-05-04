@@ -1322,7 +1322,7 @@ def extract_ruptures(dstore, what):
     """
     Extract the ruptures with their geometry as a big CSV string
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?rup_id=6
     """
     oq = dstore['oqparam']
     qdict = parse(what)
@@ -1330,21 +1330,19 @@ def extract_ruptures(dstore, what):
         [min_mag] = qdict['min_mag']
     else:
         min_mag = 0
+    if 'rup_id' in qdict:
+        rup_id = int(qdict['rup_id'][0])
+        ebrups = [getters.get_ebrupture(dstore, rup_id)]
+    else:
+        ebrups = []
+        for rgetter in getters.get_rupture_getters(dstore):
+            ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
+                          for proxy in rgetter.get_proxies(min_mag))
     bio = io.StringIO()
-    first = True
     trts = list(dstore.getitem('full_lt').attrs['trts'])
-    for rgetter in getters.get_rupture_getters(dstore):
-        ebrups = [rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
-                for proxy in rgetter.get_proxies(min_mag)]
-        arr = rupture.to_csv_array(ebrups)
-        if first:
-            header = None
-            comment = dict(trts=trts, ses_seed=oq.ses_seed)
-            first = False
-        else:
-            header = 'no-header'
-            comment = None
-        writers.write_csv(bio, arr, header=header, comment=comment)
+    arr = rupture.to_csv_array(ebrups)
+    comment = dict(trts=trts, ses_seed=oq.ses_seed)
+    writers.write_csv(bio, arr, comment=comment)
     return bio.getvalue()
 
 
