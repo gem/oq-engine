@@ -51,6 +51,7 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO30 = 2 ** 32
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
@@ -1325,6 +1326,8 @@ def extract_ruptures(dstore, what):
     http://127.0.0.1:8800/v1/calc/30/extract/ruptures?rup_id=6
     """
     oq = dstore['oqparam']
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
+    comment = dict(trts=trts, ses_seed=oq.ses_seed)
     qdict = parse(what)
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
@@ -1333,15 +1336,15 @@ def extract_ruptures(dstore, what):
     if 'rup_id' in qdict:
         rup_id = int(qdict['rup_id'][0])
         ebrups = [getters.get_ebrupture(dstore, rup_id)]
+        info = dstore['source_info'][rup_id // TWO30]
+        comment['source_id'] = info['source_id'].decode('utf8')
     else:
         ebrups = []
         for rgetter in getters.get_rupture_getters(dstore):
             ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
                           for proxy in rgetter.get_proxies(min_mag))
     bio = io.StringIO()
-    trts = list(dstore.getitem('full_lt').attrs['trts'])
     arr = rupture.to_csv_array(ebrups)
-    comment = dict(trts=trts, ses_seed=oq.ses_seed)
     writers.write_csv(bio, arr, comment=comment)
     return bio.getvalue()
 
