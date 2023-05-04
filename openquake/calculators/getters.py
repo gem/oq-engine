@@ -23,7 +23,7 @@ from openquake.baselib import general, hdf5
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, EBRupture, _get_rupture)
+    BaseRupture, RuptureProxy, EBRupture, get_ebr)
 from openquake.commonlib import datastore
 
 U16 = numpy.uint16
@@ -322,15 +322,12 @@ def get_ebrupture(dstore, rup_id):  # used in show rupture
     if idx == len(rups):
         raise ValueError(f"Missing {rup_id=}")
     rec = rups[idx]
-    assert rec['id'] == rup_id, f"Missing {rup_id=}"
+    if rec['id'] != rup_id:
+        raise ValueError(f"Missing {rup_id=}")
     trts = dstore['full_lt'].init().trts
     trt = trts[rec['trt_smr'] // TWO24]
     geom = rupgeoms[rec['geom_id']]
-    rupture = _get_rupture(rec, geom, trt)
-    ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                    rec['n_occ'], rec['id'], rec['e0'])
-    ebr.seed = rec['seed']
-    return ebr
+    return get_ebr(rec, geom, trt)
 
 
 # this is never called directly; get_rupture_getters is used instead

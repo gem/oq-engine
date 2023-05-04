@@ -161,7 +161,7 @@ class EventBasedTestCase(CalculatorTestCase):
         imts = self.calc.datastore.get_attr('gmf_data', 'imts')
         self.assertEqual(imts, 'PGA')
         self.check_avg_gmf()
-
+        
         # make sure ses_id >= 65536 is valid
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
         self.assertGreater(high_ses, 1000)

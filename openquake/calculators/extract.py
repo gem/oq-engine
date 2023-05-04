@@ -1334,9 +1334,9 @@ def extract_ruptures(dstore, what):
     first = True
     trts = list(dstore.getitem('full_lt').attrs['trts'])
     for rgetter in getters.get_rupture_getters(dstore):
-        rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
+        ebrups = [rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
                 for proxy in rgetter.get_proxies(min_mag)]
-        arr = rupture.to_csv_array(rups)
+        arr = rupture.to_csv_array(ebrups)
         if first:
             header = None
             comment = dict(trts=trts, ses_seed=oq.ses_seed)
