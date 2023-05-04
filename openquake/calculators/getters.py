@@ -258,14 +258,14 @@ time_dt = numpy.dtype(
     [('rup_id', I64), ('nsites', U16), ('time', F32), ('task_no', U16)])
 
 
-def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
+def get_rupture_getters(dstore, ct=0, srcfilter=None):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
     :returns: a list of RuptureGetters
     """
     full_lt = dstore['full_lt']
-    rup_array = dstore['ruptures'][slc]
+    rup_array = dstore['ruptures'][:]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
     rup_array.sort(order=['trt_smr', 'n_occ', 'seed'])

@@ -143,7 +143,7 @@ def to_arrays(geom):
     return arrays
 
 
-def get_ebr(rec, geom=None, trt=None, scenario=False):
+def get_ebr(rec, geom, trt, scenario=False):
     """
     Convert a rupture record plus geometry into an EBRupture instance
     """
@@ -152,10 +152,6 @@ def get_ebr(rec, geom=None, trt=None, scenario=False):
     # NB: not implemented: rupture_slip_direction
     if not code2cls:
         code2cls.update(BaseRupture.init())
-    if geom is None:
-        1/0
-        points = F32([rec['lons'], rec['lats'], rec['depths']]).flat
-        geom = numpy.concatenate([[1], [len(rec['lons']), 1], points])
 
     # build surface
     arrays = to_arrays(geom)
