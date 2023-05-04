@@ -186,13 +186,8 @@ class MultiSurface(BaseSurface):
 
         # the centroid info for the sites must be evaluated and populated
         # one site at a time
-        for j,jdx in enumerate(idx.T):
-            #for ii, srf in enumerate(self.surfaces):
-                # tested in hazardlib.geo.surface.multi.test_get_closest_point
-            #    if not jdx[ii]:
-            #        continue
-            #    else:
-            #        surf, i = srf, ii
+        for jdx in idx.T:
+        #for j,jdx in enumerate(idx.T):
             i = int(np.where(jdx)[0])
             surf = self.surfaces[i]
 
