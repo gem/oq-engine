@@ -87,7 +87,7 @@ class HcurvesGetter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.imtls = dstore['oqparam'].imtls
-        self.full_lt = dstore['full_lt']
+        self.full_lt = dstore['full_lt'].init()
         self.sslt = self.full_lt.source_model_lt.decompose()
         self.source_info = dstore['source_info'][:]
 
@@ -264,7 +264,7 @@ def get_rupture_getters(dstore, ct=0, srcfilter=None):
     :param ct: number of concurrent tasks
     :returns: a list of RuptureGetters
     """
-    full_lt = dstore['full_lt']
+    full_lt = dstore['full_lt'].init()
     rup_array = dstore['ruptures'][:]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
@@ -324,7 +324,7 @@ def get_ebrupture(dstore, rup_id):  # used in show rupture
     rec = rups[idx]
     if rec['id'] != rup_id:
         raise ValueError(f"Missing {rup_id=}")
-    trts = dstore['full_lt'].init().trts
+    trts = dstore.getitem('full_lt').attrs['trts']
     trt = trts[rec['trt_smr'] // TWO24]
     geom = rupgeoms[rec['geom_id']]
     return get_ebr(rec, geom, trt)
