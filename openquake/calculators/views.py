@@ -43,7 +43,7 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
-from openquake.calculators.getters import get_rupture_getters
+from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
@@ -1292,11 +1292,7 @@ def view_rupture(token, dstore):
     Show a rupture with its geometry
     """
     rup_id = int(token.split(':')[1])
-    slc = slice(rup_id, rup_id + 1)
-    dicts = []
-    for rgetter in get_rupture_getters(dstore, slc=slc):
-        dicts.append(rgetter.get_rupdict())
-    return str(dicts)
+    return get_ebrupture(dstore, rup_id)
 
 
 @view.add('event_rates')

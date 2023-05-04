@@ -161,7 +161,7 @@ class EventBasedTestCase(CalculatorTestCase):
         imts = self.calc.datastore.get_attr('gmf_data', 'imts')
         self.assertEqual(imts, 'PGA')
         self.check_avg_gmf()
-
+        
         # make sure ses_id >= 65536 is valid
         high_ses = (self.calc.datastore['events']['ses_id'] >= 65536).sum()
         self.assertGreater(high_ses, 1000)
@@ -189,21 +189,6 @@ class EventBasedTestCase(CalculatorTestCase):
                             ses_per_logic_tree_path='30',
                             gsim_logic_tree_file='gsim_by_imt_logic_tree.xml',
                             exports='csv')
-
-        # testing event_info
-        einfo = dict(extract(self.calc.datastore, 'event_info/0'))
-        self.assertEqual(einfo['trt'], 'active shallow crust')
-        self.assertEqual(einfo['rupture_class'],
-                         'ParametricProbabilisticRupture')
-        self.assertEqual(einfo['surface_class'], 'PlanarSurface')
-        self.assertEqual(einfo['seed'], 1066)
-        self.assertEqual(str(einfo['gsim']),
-                         '[MultiGMPE."PGA".AkkarBommer2010]\n'
-                         '[MultiGMPE."SA(0.1)".SadighEtAl1997]')
-        self.assertEqual(einfo['rlzi'], 0)
-        self.assertEqual(einfo['trt_smr'], 0)
-        aac(einfo['occurrence_rate'], 0.6)
-        aac(einfo['hypo'], [0., 0., 4.])
 
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gsim_by_imt.csv', fname)

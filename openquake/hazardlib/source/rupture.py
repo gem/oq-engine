@@ -90,18 +90,19 @@ rupture_dt = numpy.dtype([
 code2cls = {}
 
 
-def to_csv_array(ruptures):
+def to_csv_array(ebruptures):
     """
-    :param ruptures: a list of ruptures with a seed, built with _get_rupture
-    :returns: an array of ruptures suitable for serialization in CSV
+    :param ebruptures: a list of EBRuptures
+    :returns: an array suitable for serialization in CSV
     """
     if not code2cls:
         code2cls.update(BaseRupture.init())
-    arr = numpy.zeros(len(ruptures), rup_dt)
-    for rec, rup in zip(arr, ruptures):
+    arr = numpy.zeros(len(ebruptures), rup_dt)
+    for rec, ebr in zip(arr, ebruptures):
+        rup = ebr.rupture
         # s0=number of multi surfaces, s1=number of rows, s2=number of columns
         arrays = surface_to_arrays(rup.surface)  # shape (s0, 3, s1, s2)
-        rec['seed'] = rup.seed
+        rec['seed'] = ebr.seed
         rec['mag'] = rup.mag
         rec['rake'] = rup.rake
         rec['lon'] = rup.hypocenter.x
@@ -142,14 +143,15 @@ def to_arrays(geom):
     return arrays
 
 
-def _get_rupture(rec, geom=None, trt=None):
+def get_ebr(rec, geom, trt, scenario=False):
+    """
+    Convert a rupture record plus geometry into an EBRupture instance
+    """
     # rec: a dictionary or a record
     # geom: if any, an array of floats32 convertible into a mesh
+    # NB: not implemented: rupture_slip_direction
     if not code2cls:
         code2cls.update(BaseRupture.init())
-    if geom is None:
-        points = F32([rec['lons'], rec['lats'], rec['depths']]).flat
-        geom = numpy.concatenate([[1], [len(rec['lons']), 1], points])
 
     # build surface
     arrays = to_arrays(geom)
@@ -190,9 +192,14 @@ def _get_rupture(rec, geom=None, trt=None):
         rupture.probs_occur = rec['probs_occur']
     except (KeyError, ValueError):  # rec can be a numpy record
         pass
-    rupture.tectonic_region_type = trt or rec['trt']
+    rupture.tectonic_region_type = trt
     rupture.multiplicity = rec['n_occ']
-    return rupture
+
+    # build EBRupture
+    ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
+                    rec['n_occ'], rec['id'], rec['e0'], scenario)
+    ebr.seed = rec['seed']
+    return ebr
 
 
 def float5(x):
@@ -787,12 +794,7 @@ class RuptureProxy(object):
         """
         :returns: EBRupture instance associated to the underlying rupture
         """
-        # not implemented: rupture_slip_direction
-        rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self['source_id'], self['trt_smr'],
-                        self['n_occ'], self['id'], self['e0'], self.scenario)
-        ebr.seed = self['seed']
-        return ebr
+        return get_ebr(self.rec, self.geom, trt, self.scenario)
 
     def __repr__(self):
         return '<%s#%d[%s], w=%d>' % (
