@@ -187,7 +187,6 @@ class MultiSurface(BaseSurface):
         # the centroid info for the sites must be evaluated and populated
         # one site at a time
         for jdx in idx.T:
-        #for j,jdx in enumerate(idx.T):
             i = int(np.where(jdx)[0])
             surf = self.surfaces[i]
 
