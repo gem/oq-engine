@@ -18,7 +18,6 @@
 import os
 import re
 import ast
-import csv
 import copy
 import zlib
 import shutil
@@ -199,7 +198,9 @@ def normalize(key, fnames, base_path):
 
 def _update(params, items, base_path):
     for key, value in items:
-        if key in ('hazard_curves_csv', 'site_model_file', 'exposure_file'):
+        if key in ('hazard_curves_csv', 'hazard_curves_file',
+                   'site_model_csv', 'site_model_file',
+                   'exposure_csv', 'exposure_file'):
             input_type, fnames = normalize(key, value.split(), base_path)
             params['inputs'][input_type] = fnames
         elif key.endswith(('_file', '_csv', '_hdf5')):
@@ -372,40 +373,6 @@ def get_mesh(oqparam, h5=None):
         Global.exposure = get_exposure(oqparam)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
-    elif 'sites' in oqparam.inputs:
-        fname = oqparam.inputs['sites']
-        header, f = get_csv_header(fname)
-        if 'lon' in header:
-            data = []
-            for i, row in enumerate(csv.DictReader(f, header)):
-                if header[0] == 'site_id' and row['site_id'] != str(i):
-                    raise InvalidFile('%s: expected site_id=%d, got %s' % (
-                        fname, i, row['site_id']))
-                data.append(' '.join([row['lon'], row['lat']]))
-            f.close()
-        elif 'gmfs' in oqparam.inputs:
-            raise InvalidFile('Missing header in %(sites)s' % oqparam.inputs)
-        else:
-            data = [line.replace(',', ' ')
-                    for line in open(fname, encoding='utf-8-sig')]
-        coords = valid.coordinates(','.join(data))
-        # sorting the coordinates so that event_based results do not
-        # depend on the order in the sites.csv file
-        c = coords if 'site_id' in header[0] else sorted(coords)
-        # NB: Notice the sort=False below
-        # Calculations starting from predefined ground motion fields
-        # require at least two input files related to the gmf data:
-        #   1. A sites.csv file, listing {site_id, lon, lat} tuples
-        #   2. A gmfs.csv file, listing {event_id, site_id, gmv[IMT1],
-        #      gmv[IMT2], ...} tuples
-        # The site coordinates defined in the sites file do not need to be in
-        # sorted order.
-        # We must only ensure uniqueness of the provided site_ids and
-        # coordinates.
-        # When creating the site mesh from the site coordinates read from
-        # the csv file, the sort=False flag maintains the user-specified
-        # site_ids instead of reassigning them after sorting.
-        return geo.Mesh.from_coords(c, sort=False)
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
@@ -451,6 +418,17 @@ def get_mesh(oqparam, h5=None):
         return Global.exposure.mesh
 
 
+def get_poor_site_model(fname):
+    """
+    :returns: a poor site model with only lon, lat fields
+    """
+    data = [ln.replace(',', ' ') for ln in open(fname, encoding='utf-8-sig')]
+    coords = sorted(valid.coordinates(','.join(data)))
+    # sorting the coordinates so that event_based do not depend on the order
+    dt = [('lon', float), ('lat', float), ('depth', float)]
+    return numpy.array(coords, dt)
+
+
 def get_site_model(oqparam):
     """
     Convert the NRML file into an array of site parameters.
@@ -465,17 +443,33 @@ def get_site_model(oqparam):
         req_site_params.add('ampcode')
     arrays = []
     for fname in oqparam.inputs['site_model']:
-        if isinstance(fname, str) and fname.endswith('.csv'):
-            sm = hdf5.read_csv(fname, site.site_param_dt).array
+        if isinstance(fname, str) and not fname.endswith('.xml'):
+
+            # check if the file is a list of lon,lat without header
+            with open(fname, encoding='utf-8-sig') as f:
+                lon, *rest = next(f).split(',')
+                try:
+                    valid.longitude(lon)
+                except ValueError:  # has a header
+                    sm = hdf5.read_csv(fname, site.site_param_dt).array
+                else:
+                    sm = get_poor_site_model(fname)
+
+            # make sure site_id starts from 0, if given
+            if 'site_id' in sm.dtype.names:
+                if (sm['site_id'] != numpy.arange(len(sm))).any():
+                    raise InvalidFile('%s: site_id not sequential from zero'
+                                      % fname)
+
+            # round coordinates and check for duplicate points
             sm['lon'] = numpy.round(sm['lon'], 5)
             sm['lat'] = numpy.round(sm['lat'], 5)
             dupl = get_duplicates(sm, 'lon', 'lat')
             if dupl:
                 raise InvalidFile(
                     'Found duplicate sites %s in %s' % (dupl, fname))
-            if 'site_id' in sm.dtype.names:
-                raise InvalidFile('%s: you passed a sites.csv file instead of '
-                                  'a site_model.csv file!' % fname)
+
+            # used global parameters is local ones are missing
             params = sorted(set(sm.dtype.names) | req_site_params)
             z = numpy.zeros(
                 len(sm), [(p, site.site_param_dt[p]) for p in params])
@@ -485,11 +479,16 @@ def get_site_model(oqparam):
                 except ValueError:  # missing, use the global parameter
                     # exercised in the test classical/case_28
                     value = getattr(oqparam, site.param[name])
+                    if isinstance(value, float) and numpy.isnan(value):
+                        raise InvalidFile(
+                            f"{oqparam.inputs['job_ini']}: "
+                            f"{site.param[name]} not specified")
                     if name == 'vs30measured':  # special case
                         value = value == 'measured'
                     z[name] = value
             arrays.append(z)
             continue
+
         nodes = nrml.read(fname).siteModel
         params = [valid.site_param(node.attrib) for node in nodes]
         missing = req_site_params - set(params[0])

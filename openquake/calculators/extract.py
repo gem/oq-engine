@@ -1360,6 +1360,7 @@ def extract_ruptures(dstore, what):
     Example:
     http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
     """
+    oq = dstore['oqparam']
     qdict = parse(what)
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
@@ -1374,7 +1375,7 @@ def extract_ruptures(dstore, what):
         arr = rupture.to_csv_array(rups)
         if first:
             header = None
-            comment = dict(trts=trts)
+            comment = dict(trts=trts, ses_seed=oq.ses_seed)
             first = False
         else:
             header = 'no-header'

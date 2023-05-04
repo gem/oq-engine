@@ -131,13 +131,14 @@ run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
 
 
-# ########################## build_ses ############################## #
+# ######################### sample rups and gmfs ######################### #
 
-def build_ses(model, *, slowest: int = None):
-    """
-    Generate the stochastic event set of the given model in the mosaic
-    with an effective investigation time of 100,000 years
-    """
+EXTREME_GMV = 1000.
+TRUNC_LEVEL = -1  # do not change it
+MIN_DIST = 0.
+
+
+def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
     dbserver.ensure_on()
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
@@ -145,31 +146,68 @@ def build_ses(model, *, slowest: int = None):
     ini = os.path.join(
         config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-
     # change the parameters to produce an eff_time of 100,000 years
     itime = int(round(float(params['investigation_time'])))
     params['number_of_logic_tree_samples'] = 1000
     params['ses_per_logic_tree_path'] = str(100 // itime)
     params['calculation_mode'] = 'event_based'
-    params['ground_motion_fields'] = 'false'
-    params['minimum_magnitude'] = '5.0'
-    del params['inputs']['site_model']
+    params.pop('ps_grid_spacing', None)  # ignored in event based
+    if 'minimum_distance' not in params:
+        params['minimum_distance'] = str(mindist)
+    if 'extreme_gmv' not in params:
+        params['extreme_gmv'] = str(extreme_gmv)
+    if gmf:
+        params['minimum_magnitude'] = '7.0'
+        if trunclevel != TRUNC_LEVEL:
+            params['truncation_level'] = str(trunclevel)
+        # params['minimum_intensity'] = '1.0'
+        os.environ['OQ_SAMPLE_SITES'] = '.01'
+    else:  # rups only
+        params['minimum_magnitude'] = '5.0'
+        params['ground_motion_fields'] = 'false'
+        del params['inputs']['site_model']
     for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
-              'investigation_time'):
-        print('%s = %s' % (p, params[p]))
-
+              'investigation_time', 'minimum_magnitude', 'truncation_level',
+              'minimum_distance', 'extreme_gmv'):
+        logging.info('%s = %s' % (p, params[p]))
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
-                                  None, getpass.getuser(), None)
+                                  None, getpass.getuser(), hc)
     if slowest:
         engine_profile(jobctx, slowest or 40)
     else:
         engine.run_jobs([jobctx])
 
-build_ses.model = '3-letter name of the model'
-build_ses.slowest = 'profile and show the slowest operations'
+
+def sample_rups(model, *, slowest: int=None):
+    """
+    Sample the ruptures of the given model in the mosaic
+    with an effective investigation time of 100,000 years
+    """
+    _sample(model, TRUNC_LEVEL, MIN_DIST, EXTREME_GMV, slowest,
+            hc=None, gmf=False)
+sample_rups.model = '3-letter name of the model'
+sample_rups.slowest = 'profile and show the slowest operations'
+
+
+def sample_gmfs(model, *,
+                trunclevel: float = TRUNC_LEVEL,
+                mindist: float = MIN_DIST,
+                extreme_gmv: float = EXTREME_GMV,
+                hc: int = None, slowest: int=None):
+    """
+    Sample the gmfs of the given model in the mosaic
+    with an effective investigation time of 100,000 years
+    """
+    _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf=True)
+sample_gmfs.model = '3-letter name of the model'
+sample_gmfs.trunclevel = 'truncation level (default: the one in job_vs30.ini)'
+sample_gmfs.mindist = 'minimum_distance (default: 0)'
+sample_gmfs.extreme_gmv = 'threshold above which a GMV is extreme'
+sample_gmfs.hc = 'previous hazard calculation'
+sample_gmfs.slowest = 'profile and show the slowest operations'
 
 
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, build_ses=build_ses)
+main = dict(run_site=run_site, sample_rups=sample_rups, sample_gmfs=sample_gmfs)

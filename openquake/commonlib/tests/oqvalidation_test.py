@@ -83,19 +83,6 @@ class OqParamTestCase(unittest.TestCase):
                 '-78.182 15.565', inputs=dict(site_model='')
             ).validate()
 
-    def test_geometry(self):
-        # you cannot have both region and sites
-        with self.assertRaises(ValueError):
-            OqParam(
-                calculation_mode='classical_risk',
-                hazard_calculation_id=None, hazard_output_id=None,
-                maximum_distance='10',
-                inputs=fakeinputs,
-                region_grid_spacing='5',
-                region='-78.182 15.615, -78.152 15.615, -78.152 15.565, '
-                '-78.182 15.565', sites='0.1 0.2',
-            ).validate()
-
     def test_poes(self):
         # if hazard_maps or uniform_hazard_spectra are set, poes
         # cannot be empty
@@ -319,7 +306,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='scenario_damage',
                 inputs=inputs,
                 maximum_distance='400')
-        self.assertIn('You forgot sites|sites_csv', str(ctx.exception))
+        self.assertIn('You forgot to specify a site_model', str(ctx.exception))
 
     def test_disaggregation(self):
         with self.assertRaises(InvalidFile) as ctx:
