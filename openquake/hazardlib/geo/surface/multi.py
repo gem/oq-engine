@@ -191,10 +191,11 @@ class MultiSurface(BaseSurface):
             surf = self.surfaces[i]
 
             cps = surf.get_closest_points(mesh)
-            lons[idx[i, :]] = cps.lons.flatten()[idx[i, :]]
-            lats[idx[i, :]] = cps.lats.flatten()[idx[i, :]]
+            idx_i = idx[i, :]
+            lons[idx_i] = cps.lons[idx_i]
+            lats[idx_i] = cps.lats[idx_i]
             if depths is not None:
-                depths[idx[i, :]] = cps.depths.flatten()[idx[i, :]]
+                depths[idx_i] = cps.depths[idx_i]
         lons = lons.reshape(mesh.lons.shape)
         lats = lats.reshape(mesh.lats.shape)
         if depths is not None:
