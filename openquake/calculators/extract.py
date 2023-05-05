@@ -1124,8 +1124,12 @@ def extract_disagg(dstore, what):
     for k, ax in zip(disag_tup, axis):
         attrs[k.lower()] = ax
     attrs['imt'] = qdict['imt'] if 'imt' in qdict else imts
+    imt = attrs['imt'][0]
     if len(oq.poes) == 0:
-        attrs['poe'] = [numpy.nan]
+        mean_curve = dstore.sel(
+            'hcurves-stats', imt=imt, stat='mean')[sid, 0, 0]
+        attrs['poe'] = numpy.interp(
+            oq.iml_disagg[imt], oq.imtls[imt], mean_curve.reshape(-1))
     elif 'poe_id' in qdict:
         attrs['poe'] = [oq.poes[p] for p in poei]
     else:

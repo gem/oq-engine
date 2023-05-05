@@ -598,9 +598,7 @@ def export_disagg_csv(ekey, dstore):
             weights /= weights.sum()  # normalize to 1
             md['weights'] = weights.tolist()
             md['rlz_ids'] = best_rlzs[s].tolist()
-            iml2 = None
-        else:  # for mean disaggregation
-            iml2 = dstore['hmaps-stats'][s, 0]  # shape (M, P)
+        iml2 = dstore['hmap3'][s]  # shape (M, P)
         metadata.update(md)
         for k in oq.disagg_outputs:
             aw = extract(dstore, ex % (k, s, spec))
@@ -609,25 +607,13 @@ def export_disagg_csv(ekey, dstore):
             df = aw.to_dframe(skip_zeros=False)
             # move the columns imt and poe at the beginning for backward compat
             cols = [col for col in df.columns if col not in ('imt', 'poe')]
-            if oq.iml_disagg:
-                cols = ['imt', 'iml', 'poe'] + cols
-                out = []
-                for imt, [iml] in oq.iml_disagg.items():
-                    dfr = df[df.imt == imt]
-                    dfr['iml'] = iml
-                    out.append(dfr)
-                df = pandas.concat(out)
-            elif iml2 is None or len(oq.poes) == 0:
-                # rlzs, don't add the IMLs
-                cols = ['imt', 'poe'] + cols
-            else:
-                # add the IMLs corresponding to the mean hazard maps
-                cols = ['imt', 'iml', 'poe'] + cols
-                imt2idx = {imt: m for m, imt in enumerate(oq.imtls)}
-                poe2idx = {poe: p for p, poe in enumerate(oq.poes)}
-                imt_idx = [imt2idx[imt] for imt in df.imt]
-                poe_idx = [poe2idx[poe] for poe in df.poe]
-                df['iml'] = iml2[imt_idx, poe_idx]
+            # add the IMLs corresponding to the mean hazard maps
+            cols = ['imt', 'iml', 'poe'] + cols
+            imt2idx = {imt: m for m, imt in enumerate(oq.imtls)}
+            poe2idx = {poe: p for p, poe in enumerate(df.poe.unique())}
+            imt_idx = [imt2idx[imt] for imt in df.imt]
+            poe_idx = [poe2idx[poe] for poe in df.poe]
+            df['iml'] = iml2[imt_idx, poe_idx]
 
             df = pandas.DataFrame(
                 {col: df[col] for col in cols}).sort_values(['imt', 'poe'])
