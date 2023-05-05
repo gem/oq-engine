@@ -401,8 +401,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             srcfilter = self.src_filter()
-            scenario = 'scenario' in oq.calculation_mode
-            proxies = [RuptureProxy(rec, scenario)
+            proxies = [RuptureProxy(rec)
                        for rec in self.datastore['ruptures'][:]]
             full_lt = self.datastore['full_lt']
             self.datastore.swmr_on()  # must come before the Starmap

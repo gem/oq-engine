@@ -176,14 +176,14 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imt_strs = observed_imt_strs
         self.num_events = number_of_ground_motion_fields
 
-    def compute_all(self, sig_eps=None, max_iml=None):
+    def compute_all(self, scenario, sig_eps=None, max_iml=None):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.target_sitecol.sids
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim)
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)

@@ -143,7 +143,7 @@ def to_arrays(geom):
     return arrays
 
 
-def get_ebr(rec, geom, trt, scenario=False):
+def get_ebr(rec, geom, trt):
     """
     Convert a rupture record plus geometry into an EBRupture instance
     """
@@ -197,7 +197,7 @@ def get_ebr(rec, geom, trt, scenario=False):
 
     # build EBRupture
     ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                    rec['n_occ'], rec['id'] % TWO30, rec['e0'], scenario)
+                    rec['n_occ'], rec['id'] % TWO30, rec['e0'])
     ebr.seed = rec['seed']
     return ebr
 
@@ -731,15 +731,13 @@ class EBRupture(object):
     """
     seed = 'NA'  # set by the engine
 
-    def __init__(self, rupture, source_id, trt_smr, n_occ=1,
-                 id=None, e0=0, scenario=False):
+    def __init__(self, rupture, source_id, trt_smr, n_occ=1, id=None, e0=0):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
         self.id = source_id * TWO30 + id
         self.e0 = e0
-        self.scenario = scenario
 
     @property
     def trt_smrs(self):
@@ -750,18 +748,21 @@ class EBRupture(object):
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
-    def get_eid_rlz(self, rlzs_by_gsim):
+    def get_eid_rlz(self, rlzs_by_gsim, scenario):
         """
-        :params rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :param rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :param scenario: if true distribute the rlzs evenly else randomly
         :returns: an array with fields (eid, rlz)
         """
         out = numpy.zeros(self.n_occ, [('eid', U32), ('rlz', U32)])
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         out['eid'] = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
-        if self.scenario:
+        if scenario:
+            # the rlzs are distributed evenly
             div = self.n_occ // len(rlzs)
             out['rlz'] = rlzs[numpy.arange(self.n_occ) // div]
-        else:  # event_based
+        else:
+            # event_based: the rlzs are distributed randomly
             out['rlz'] = general.random_choice(rlzs, self.n_occ, 0, self.seed)
         return out
 
@@ -782,9 +783,8 @@ class RuptureProxy(object):
 
     :param rec: a record with the rupture parameters
     """
-    def __init__(self, rec, scenario=False):
+    def __init__(self, rec):
         self.rec = rec
-        self.scenario = scenario
 
     def __getitem__(self, name):
         return self.rec[name]
@@ -794,7 +794,7 @@ class RuptureProxy(object):
         """
         :returns: EBRupture instance associated to the underlying rupture
         """
-        return get_ebr(self.rec, self.geom, trt, self.scenario)
+        return get_ebr(self.rec, self.geom, trt)
 
     def __repr__(self):
         return '<%s#%d[%s], w=%d>' % (

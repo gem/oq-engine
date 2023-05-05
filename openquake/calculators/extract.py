@@ -1279,6 +1279,7 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
+# used in the rupture exporter and in the plugin
 @extract.add('rupture_info')
 def extract_rupture_info(dstore, what):
     """
