@@ -1213,7 +1213,7 @@ def extract_disagg_layer(dstore, what):
     edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    hmap4 = dstore['hmap4'][:]
+    hmap3 = dstore['hmap3'][:]  # shape (N, M, P)
     best_rlzs = dstore['best_rlzs'][:]
     arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
@@ -1231,7 +1231,7 @@ def extract_disagg_layer(dstore, what):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
                     rec[key] = arr[kind][sid, ..., m, p, :] @ ws
-                rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
+                rec['iml-%s-%s' % (imt, poe)] = hmap3[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 

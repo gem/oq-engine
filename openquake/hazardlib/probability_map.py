@@ -208,20 +208,24 @@ def compute_hazard_maps(curves, imls, poes):
     return hmap
 
 
-def compute_hmaps(curvesNL, imtls, poes):
+def compute_hmaps(curvesNML, imtls, poes):
     """
+    :param curvesNML: an array of shape (N, M, L1)
+    :param imlts: a DictArray with M keys
+    :param poes: a sequence of P poes
     :returns: array of shape (N, M, P) with the hazard maps
     """
-    N = len(curvesNL)
+    N = len(curvesNML)
     M = len(imtls)
     P = len(poes)
+    assert M == len(imtls)
     iml3 = numpy.zeros((N, M, P))
-    for m, (imt, imls) in enumerate(imtls.items()):
-        curves = curvesNL[:, imtls(imt)]
+    for m, imls in enumerate(imtls.values()):
+        curves = curvesNML[:, m]
         iml3[:, m] = compute_hazard_maps(curves, imls, poes)
     return iml3
 
-    
+
 def get_lvl(hcurve, imls, poe):
     """
     :param hcurve: a hazard curve, i.e. array of L1 PoEs

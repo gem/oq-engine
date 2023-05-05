@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the disaggregation algorithm (see manual)
   * Extended extract/ruptures to extract a single rupture given the `rup_id`
   * Fixed a bug in classical_damage causing a ValueError: could not broadcast
     input array from shape (X,Y) into shape (X,)
