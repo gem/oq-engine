@@ -95,7 +95,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # no TRT for scenario ruptures
-        ebrs = [EBRupture(rup, 0, 0, id=0, scenario=True)]
+        ebrs = [EBRupture(rup, 0, 0, id=0)]
         ebrs[0].seed = ses_seed
         return ebrs
 
