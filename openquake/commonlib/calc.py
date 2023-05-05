@@ -121,7 +121,7 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
-# TODO: see if it can be simplified, in terms of compute_hmap4
+# TODO: see if it can be simplified
 def make_hmaps(pmaps, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability maps.
