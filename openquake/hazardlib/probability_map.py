@@ -243,7 +243,7 @@ def get_lvl(hcurve, imls, poe):
     >>> get_lvl(hcurve, imls, .8)
     3
     """
-    [[iml]] = compute_hazard_maps(hcurve, imls, poe)
+    [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
     iml -= 1E-10  # small buffer
     return numpy.searchsorted(imls, iml)
 
