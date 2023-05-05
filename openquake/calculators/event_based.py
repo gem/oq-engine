@@ -85,6 +85,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     full_lt.init()
     max_iml = oqparam.get_max_iml()
+    scenario = 'scenario' in oqparam.calculation_mode
     with dstore:
         trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
@@ -147,7 +148,7 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                         # skip this rupture
                         continue
             with cmon:
-                data = computer.compute_all(sig_eps, max_iml)
+                data = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
             times.append(
                 (computer.ebrupture.id, len(computer.ctx.sids), dt))
@@ -351,11 +352,11 @@ class EventBasedCalculator(base.HazardCalculator):
             if self.N > oq.max_sites_disagg:  # many sites, split rupture
                 ebrs = []
                 for i in range(ngmfs):
-                    ebr = EBRupture(rup, 0, 0, G, i, e0=i * G, scenario=True)
+                    ebr = EBRupture(rup, 0, 0, G, i, e0=i * G)
                     ebr.seed = oq.ses_seed + i
                     ebrs.append(ebr)
             else:  # keep a single rupture with a big occupation number
-                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0, scenario=True)]
+                ebrs = [EBRupture(rup, 0, 0, G * ngmfs, 0)]
                 ebrs[0].seed = oq.ses_seed
             srcfilter = SourceFilter(self.sitecol, oq.maximum_distance(trt))
             aw = get_rup_array(ebrs, srcfilter)
@@ -435,9 +436,7 @@ class EventBasedCalculator(base.HazardCalculator):
         # event_based in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
-        scenario = 'scenario' in oq.calculation_mode
-        proxies = [RuptureProxy(rec, scenario)
-                   for rec in dstore['ruptures'][:]]
+        proxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
         if "station_data" in oq.inputs:
             # this is meant to be used in conditioned scenario calculations with
             # a single rupture; we are taking the first copy of the rupture

@@ -269,8 +269,7 @@ def get_rupture_getters(dstore, ct=0, srcfilter=None):
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
     rup_array.sort(order=['trt_smr', 'n_occ', 'seed'])
-    scenario = 'scenario' in dstore['oqparam'].calculation_mode
-    proxies = [RuptureProxy(rec, scenario) for rec in rup_array]
+    proxies = [RuptureProxy(rec) for rec in rup_array]
     maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
     rgetters = []
     for block in general.block_splitter(
