@@ -56,7 +56,7 @@ def _hmap4(rlzs, imtls, poes_disagg, curves):
     acc = AccumDict(accum=[])  # site, imt, poe -> rlzs
     for m, imt in enumerate(imtls):
         for (s, z), rlz in numpy.ndenumerate(rlzs):
-            curve = curves[s][z][imtls(imt)]
+            curve = curves[s][z][imtls(imt)].reshape(1, -1)
             if poes_disagg == (None,):
                 arr[s, m, 0, z] = imtls[imt]
             elif curve.any():

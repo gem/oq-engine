@@ -173,27 +173,18 @@ def compute_hazard_maps(curves, imls, poes):
         should be an array-like of floats.
     :param poes:
         Value(s) on which to interpolate a hazard map from the input
-        ``curves``. Can be an array-like or scalar value (for a single PoE).
+        ``curves``.
     :returns:
         An array of shape N x P, where N is the number of curves and P the
         number of poes.
     """
-    log_poes = numpy.log(poes)
-    if len(log_poes.shape) == 0:
-        # `poes` was passed in as a scalar;
-        # convert it to 1D array of 1 element
-        log_poes = log_poes.reshape(1)
-    P = len(log_poes)
-
-    if len(curves.shape) == 1:
-        # `curves` was passed as 1 dimensional array, there is a single site
-        curves = curves.reshape((1,) + curves.shape)  # 1 x L
-
+    P = len(poes)
     N, L = curves.shape  # number of levels
     if L != len(imls):
         raise ValueError('The curves have %d levels, %d were passed' %
                          (L, len(imls)))
 
+    log_poes = numpy.log(poes)
     hmap = numpy.zeros((N, P))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -215,6 +206,20 @@ def compute_hazard_maps(curves, imls, poes):
                 # see https://bugs.launchpad.net/oq-engine/+bug/1252770
                 hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
     return hmap
+
+
+def compute_hmaps(curvesNL, imtls, poes):
+    """
+    :returns: array of shape (N, M, P) with the hazard maps
+    """
+    N = len(curvesNL)
+    M = len(imtls)
+    P = len(poes)
+    iml3 = numpy.zeros((N, M, P))
+    for m, (imt, imls) in enumerate(imtls.items()):
+        curves = curvesNL[:, imtls(imt)]
+        iml3[:, m] = compute_hazard_maps(curves, imls, poes)
+    return iml3
 
     
 def get_lvl(hcurve, imls, poe):
