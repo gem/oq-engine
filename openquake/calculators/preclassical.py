@@ -141,10 +141,10 @@ class PreClassicalCalculator(base.HazardCalculator):
     accept_precalc = []
 
     def init(self):
-        super().init()
         if self.oqparam.hazard_calculation_id:
-            self.full_lt = self.datastore.parent['full_lt']
+            self.full_lt = self.datastore.parent['full_lt'].init()
         else:
+            super().init()
             self.full_lt = self.csm.full_lt
         arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
         for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
@@ -269,6 +269,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
+        if not hasattr(self, 'csm'):  # used only for post_process
+            return
         cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
         if os.path.exists(cachepath):
             realpath = os.path.realpath(cachepath)
@@ -300,5 +302,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('There are no sources close to the site(s)')
 
     def post_process(self):
-        # needed, otherwise the parent method would be called too early
-        pass
+        if self.oqparam.calculation_mode == 'preclassical':
+            super().post_process()
+        # else do nothing, post_process will be called later on
