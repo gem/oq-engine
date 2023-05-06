@@ -26,10 +26,12 @@ from openquake.hazardlib.calc.gmf import exp
 def calc_med_gmv(src_frags, sitecol, cmaker, monitor):
     cmaker.init_monitoring(monitor)
     ctxs = cmaker.from_srcs(src_frags, sitecol)
-    mean = cmaker.get_mean_stds(ctxs)[0]  # shape (G, M, N)
-    for m, imt in enumerate(cmaker.imtls):
-        mean[:, m] = exp(mean[:, m], imt)
-    return src_frags[0].source_id, mean
+    if ctxs:
+        mean = cmaker.get_mean_stds(ctxs)[0]  # shape (G, M, N)
+        for m, imt in enumerate(cmaker.imtls):
+            mean[:, m] = exp(mean[:, m], imt)
+        gsims = [str(gsim) for gsim in cmaker.gsims]
+        yield basename(src_frags[0]), mean, gsims
 
 
 def main(dstore, csm):
@@ -49,8 +51,9 @@ def main(dstore, csm):
     dstore.swmr_on()  # must come before the Starmap
     smap = parallel.Starmap(calc_med_gmv, allargs, h5=dstore.hdf5)
     n = 0
-    for src_id, gmvs in smap:
-        dset = dstore.create_dset(f'gmv/{src_id}', float, gmvs.shape)
+    for src_id, gmvs, gsims in smap:
+        dset = dstore.create_dset(f'med_gmv/{src_id}', float, gmvs.shape)
+        dset.attrs['gsims'] = gsims
         dset[:] = gmvs
         n += 1
     logging.info('Stored %d sources', n)
