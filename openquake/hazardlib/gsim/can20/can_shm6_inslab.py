@@ -18,6 +18,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import numpy as np
 
+from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
 from openquake.hazardlib.gsim.garcia_2005 import _get_stddevs as _get_stddevs_ga
 from openquake.hazardlib.gsim.zhao_2006 import (
@@ -227,11 +228,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
-        for spec of input and result values.
-        CanadaSHM6 edits: added PGV
-                          limited to the period range of 0.05 - 10s
+        Added PGV limited to the period range of 0.05 - 10s
         """
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
@@ -613,15 +610,8 @@ def extrapolation_factor(GMM, ctx, boundingIMT, extrapIMT):
     boundingIMT: IMT for the bounding period
     extrapIMT: IMT for the SA being extrapolated to
     """
-
-    mean_ext = np.zeros((1, len(ctx.vs30)))
-    mean_bounding = np.zeros((1, len(ctx.vs30)))
-    sig = tau = phi = np.zeros((1, len(ctx.vs30)))
-
-    GMM.compute(ctx, [boundingIMT], mean_bounding, sig, tau, phi)
-    GMM.compute(ctx, [extrapIMT], mean_ext, sig, tau, phi)
-
-    return (mean_ext - mean_bounding)[0]
+    return (get_mean_stds(GMM, ctx, [extrapIMT]) -
+            get_mean_stds(GMM, ctx, [boundingIMT]))[0, 0]  # 4, M, N -> N
 
 
 class CoeffsTable_CanadaSHM6(object):
