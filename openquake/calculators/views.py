@@ -1159,7 +1159,7 @@ def view_event_loss_table(token, dstore):
 @view.add('risk_by_event')
 def view_risk_by_event(token, dstore):
     """
-    Display the top 20 losses of the aggregate loss table as a TSV.
+    Display the top 30 losses of the aggregate loss table as a TSV.
     If aggregate_by was missing in the calculation, returns nothing.
 
     $ oq show risk_by_event:<loss_type>
@@ -1172,9 +1172,37 @@ def view_risk_by_event(token, dstore):
     df = df[df.agg_id == df.agg_id.max()].sort_values('loss', ascending=False)
     del df['agg_id']
     out = io.StringIO()
-    df[:49].to_csv(out, sep='\t', index=False, float_format='%.1f',
+    df[:30].to_csv(out, sep='\t', index=False, float_format='%.1f',
                    line_terminator='\r\n')
     return out.getvalue()
+
+
+@view.add('risk_by_rup')
+def view_risk_by_rup(token, dstore):
+    """
+    Display the top 30 aggregate losses by rupture ID. Usage:
+
+    $ oq show risk_by_rup:<loss_type>
+    """
+    _, ltype = token.split(':')
+    loss_id = LOSSID[ltype]
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id, agg_id=K))
+    del df['loss_id']
+    del df['agg_id']
+    del df['variance']
+    rupids = dstore['events']['rup_id']
+    df['rup_id'] = rupids[df.event_id]
+    del df['event_id']
+    loss_by_rup = df.groupby('rup_id').sum()
+    rdf = dstore.read_df('ruptures', 'id')
+    loss_by_rup['mag']= rdf.mag.loc[loss_by_rup.index]
+    loss_by_rup['n_occ']= rdf.n_occ.loc[loss_by_rup.index]
+    loss_by_rup['lon']= rdf.hypo_0.loc[loss_by_rup.index]
+    loss_by_rup['lat']= rdf.hypo_1.loc[loss_by_rup.index]
+    loss_by_rup['dep']= rdf.hypo_2.loc[loss_by_rup.index]
+
+    return loss_by_rup.sort_values('loss', ascending=False)[:30]
 
 
 @view.add('delta_loss')
