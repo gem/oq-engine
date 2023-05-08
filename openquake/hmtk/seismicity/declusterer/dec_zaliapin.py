@@ -24,8 +24,8 @@ from sklearn import mixture
 
 @DECLUSTERER_METHODS.add(
     "decluster",
-    fractal_dim=np.float,  # spatial weighting factor
-    b_value=np.float,      # magnitude weighting factor
+    fractal_dim=float,  # spatial weighting factor
+    b_value=float,      # magnitude weighting factor
 )
 class Zaliapin(BaseCatalogueDecluster):
     """
@@ -47,7 +47,7 @@ class Zaliapin(BaseCatalogueDecluster):
             Earthquake catalog to examine
         :param config:
             Dictionary containing 
-            1. values for fractal dimension `frac_dim` and Gutenberg-Richter `b-value`
+            1. values for fractal dimension `fractal_dim` and Gutenberg-Richter `b-value`
             2. Method used to choose which events to keep. Use `Threshold = ` to specify a float value for probability at which to keep an event.
                If `Stochastic = True` (or no threshold is provided) a stochastic declustering will be implemented.
                A seed for the stochastic method can be specified with the `stoch_seed` parameter (will default to 5 if not included)
@@ -64,10 +64,10 @@ class Zaliapin(BaseCatalogueDecluster):
             
         else:
             nnd, nni = self.getnnd(catalogue, config['fractal_dim'], config['b_value'], depth = False)
-
+        
         probability_of_independence = self.gaussianmixturefit(nnd)
         
-        if 'threshold' in config and isinstance(s, (int,float)):
+        if 'threshold' in config and isinstance(config['threshold'], (int,float)):
             threshold = config['threshold']
             root, ld, ms_flag = cluster_number(catalogue, nni, probability_of_independence, threshold = 0.5, stochastic = False)
            
@@ -77,8 +77,9 @@ class Zaliapin(BaseCatalogueDecluster):
 
         if 'output_nearest_neighbor_distances' in config and config['output_nearest_neighbor_distances']:
             return probability_of_independence, nnd, ms_flag, root, ld
-        
-        return root, ms_flag
+ì
+        cluster_index = 1 - ms_flag
+        return root, cluster_index
 
    
     @staticmethod
@@ -107,23 +108,22 @@ class Zaliapin(BaseCatalogueDecluster):
             depth = catalogue.data['depth']
             # Set nan depths to 0
             depth[np.isnan(depth)] = 0
-        else: depth = np.zeros(len(catalogue))
+        else: depth = np.zeros(len(catalogue.data['latitude']))
         
         # Is there a faster/better way to do this? Probably yes
         # TODO: Figure it out!
-        time=[0]*len(catalogue)        
+        time=[0]*len(catalogue.data['latitude']) 
         # Change date and time data into one list of datetimes in years (ie 1980.25)       
         for i in range(len(time)):
-            time[i]=datetime.datetime(catalogue.data['year'][i], catalogue.data['month'][i], catalogue.data['day'][i],catalogue.data['hour'][i], catalogue.data['minute'][i],np.int(catalogue.data['second'][i]))
+            time[i]=datetime.datetime(catalogue.data['year'][i], catalogue.data['month'][i], catalogue.data['day'][i],catalogue.data['hour'][i], catalogue.data['minute'][i], int(catalogue.data['second'][i]))
             time[i]=mdates.date2num(time[i])
             # date2num gives days, change to years
             time[i]= (time[i] -1)/365.25
+        
 
-            
-        for j in range(1, len(catalogue)):
+        for j in range(1, len(catalogue.data['latitude'])):
             # Calculate spatial distance between events
-            dist = distance(catalogue.data['latitude'][j], catalogue.data['longitude'][j], depth[j], catalogue.data['latitude'][:j], catalogue.data['longitude'][:j], depth[:j])
-                      
+            dist = distance(catalogue.data['latitude'][j], catalogue.data['longitude'][j], depth[j], catalogue.data['latitude'][:j], catalogue.data['longitude'][:j], depth[:j])      
             time_diff= time[j]-time[:j]
             # If time difference is zero, set to very small value
             time_diff[time_diff == 0] = 0.0000001
@@ -131,7 +131,6 @@ class Zaliapin(BaseCatalogueDecluster):
             dist[dist < 0.1] = 0.1
             # ZBZ interevent distance is product of time_diff*(10^(b*Mi))*spat_dist^(d_f)
             interevent_distance = time_diff*(10**(-b*catalogue.data['magnitude'][:j]))*(dist**d_f)
-
             # Record index of nearest neighbour (needed to reconstruct the clusters) and the nnd (smallest nnd)
             nearest_index[j] = np.argmin(interevent_distance)
             nearest_distance[j] = np.min(interevent_distance)
@@ -208,10 +207,10 @@ def cluster_number(catalogue, nearest_index, prob_ind, threshold = 0.5, stochast
         
     """
          
-    n_id = range(len(catalogue)+1) 
-    root = np.zeros(len(catalogue))
-    ld = np.zeros(len(catalogue))
-    indep_flag = np.zeros(len(catalogue))
+    n_id = range(len(catalogue.data['latitude'])) 
+    root = np.zeros(len(catalogue.data['latitude']))
+    ld = np.zeros(len(catalogue.data['latitude']))
+    indep_flag = np.zeros(len(catalogue.data['latitude']))
      
      
     if stochastic == True:
@@ -224,7 +223,7 @@ def cluster_number(catalogue, nearest_index, prob_ind, threshold = 0.5, stochast
      
     parent = nearest_index*(1-indep_flag)     
 
-    for i in range(len(catalogue)):
+    for i in range(len(catalogue.data['latitude'])):
         
         p = parent[i]
         if(p == 0):
@@ -249,44 +248,7 @@ def cluster_number(catalogue, nearest_index, prob_ind, threshold = 0.5, stochast
             MS_rel = np.argmax(mags)
             MS[j] = idx[MS_rel]
     
-    ms_flag = np.zeros(len(catalogue))
+    ms_flag = np.zeros(len(catalogue.data['latitude']))
     ms_flag[MS] = 1
     
     return root, ld, ms_flag
-
-
-#if __name__ == "__main__":
-
-#    import os
-#    import numpy as np
-
-#    from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
-#    import pytest
-
-#    BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../tests/seismicity/declusterer/data')
-#    BASE_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../tests/seismicity/declusterer/dec_zaliapin_test.py')
-
-#    flnme = 'zaliapin_test_catalogue.csv'
-#    filename = os.path.join(BASE_DATA_PATH, flnme)
-#    print('Testing with:', filename)
-#    parser = CsvCatalogueParser(filename)
-#    cat = parser.read_file()
-#    comment = cat['comment']  # comment is: IndependentProbability,log10nearestDistances
-
-#    indep_prob, log10_nearestdists = np.array([s.split(',') for s in comment], dtype=float).T
-    # nearest_dists = [10. ** np.float(s.split(',')[1]) for s in comment]
-#    nearest_dists = 10 ** log10_nearestdists
-
- #   config = {'fractal_dim': 2., 'b_value': 1.0, 'output_nearest_neighbor_distances': True}
-
- #   dec = Zaliapin()
- #   _, nearest_neighbor_dists = dec.decluster(cat, config)
- #   for n1, n2 in zip(np.round(nearest_neighbor_dists), np.round(nearest_dists)):
- #       if np.isnan(n1):
- #           assert np.isnan(n2)
- #       else:
- #           assert n1 == n2, f"{n1:.4f} vs {n2:.4f}"
-
-#    pytest.main(['-v', BASE_TEST_PATH])
-    
-
