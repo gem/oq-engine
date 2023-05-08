@@ -1387,6 +1387,13 @@ def extract_risk_stats(dstore, what):
     return calc_stats(df, kfields, stats, weights)
 
 
+@extract.add('med_gmv')
+def extract_med_gmv(dstore, what):
+    """
+    Extract med_gmv array for the given source
+    """
+    return extract_(dstore, 'med_gmv/' + what)
+
 # #####################  extraction from the WebAPI ###################### #
 
 
