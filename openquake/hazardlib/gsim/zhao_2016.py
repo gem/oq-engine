@@ -888,7 +888,7 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     REQUIRES_SITES_PARAMETERS = {'vs30','lon','lat'}
 
     #: Required distance measure is Rrup and Rvolc
-    REQUIRES_DISTANCES = {'rrup', 'rvolc'}
+    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'rjb'}
     
     # Set coeff tables
     COEFFS = COEFFS_SLAB

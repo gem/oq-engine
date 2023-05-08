@@ -125,45 +125,61 @@ def get_rupture(lon, lat, dep, msr, mag, aratio, strike, dip, rake, trt,
     return rup
 
 def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
-        # Create context for computation of ground-motions
-        oqp = {'imtls': {k: [] for k in [str(imt)]}, 'mags': [f'{rup.mag:.2f}']}
-        
-        # Get perg version ground-motions
-        ctxm_perg = ContextMaker(gmm_perg.DEFINED_FOR_TECTONIC_REGION_TYPE, [gmm_perg], oqp)
-        ctxs_perg = list(ctxm_perg.get_ctx_iter([rup], sites)) 
-        ctxs_perg = ctxs_perg[0]
-        ctxs_perg.occurrence_rate = 0.0
-        mean_perg, std_perg, tau_perg, phi_perg = ctxm_perg.get_mean_stds([ctxs_perg])
-
-        # Get non-perg version ground-motions
-        ctxm = ContextMaker(gmm.DEFINED_FOR_TECTONIC_REGION_TYPE, [gmm], oqp)
-        ctxs = list(ctxm.get_ctx_iter([rup], sites)) 
-        ctxs = ctxs[0]
-        
-        ctxs.occurrence_rate = 0.0
-        mean, std, tau, phi = ctxm.get_mean_stds([ctxs])
-        
-        # Plot perg vs non-perg for distances in sites collection
-        fig = pyplot.figure()
-        dist_x = ctxs.rrup
-        
-        pyplot.plot(dist_x, np.exp(mean_perg[0][0]), 'r', label = 'PErg')
-        pyplot.plot(dist_x, np.exp(mean[0][0]), 'b', label = 'Non-PErg')
-        
+    """
+    Get ground-motion with and without non-ergodic path effect modifications 
+    and create trellis plots to visually inspect
+    """
+    # Create context for computation of ground-motions
+    oqp = {'imtls': {k: [] for k in [str(imt)]}, 'mags': [f'{rup.mag:.2f}']}
     
-        #ratio_y = np.exp(mean_perg[0][0])/np.exp(mean[0][0])
-        #pyplot.plot(dist_x, ratio_y, 'k', label = 'PErg/Non-PErg')
-        
-        pyplot.loglog()
-        pyplot.ylabel('%s (g)' %(imt))
-        pyplot.xlabel('Rupture distance (km)')
-        pyplot.title('Test scenario for imt = %s and site azimuth = %s' %(imt, azimuth))
-        pyplot.legend()
-        pyplot.show()
-        
+    # Get perg version ground-motions
+    ctxm_perg = ContextMaker(gmm_perg.DEFINED_FOR_TECTONIC_REGION_TYPE,
+                             [gmm_perg], oqp)
+    ctxs_perg = list(ctxm_perg.get_ctx_iter([rup], sites)) 
+    ctxs_perg = ctxs_perg[0]
+    ctxs_perg.occurrence_rate = 0.0
+    mean_perg, std_perg, tau_perg, phi_perg = ctxm_perg.get_mean_stds([ctxs_perg])
+
+    # Get non-perg version ground-motions
+    ctxm = ContextMaker(gmm.DEFINED_FOR_TECTONIC_REGION_TYPE, [gmm], oqp)
+    ctxs = list(ctxm.get_ctx_iter([rup], sites)) 
+    ctxs = ctxs[0]
+    
+    ctxs.occurrence_rate = 0.0
+    mean, std, tau, phi = ctxm.get_mean_stds([ctxs])
+    
+    # Plot perg vs non-perg for distances in sites collection
+    dist_x = ctxs.rjb
+    
+    pyplot.plot(dist_x, np.exp(mean_perg[0][0]), 'r', label = 'PErg')
+    pyplot.plot(dist_x, np.exp(mean[0][0]), 'b', label = 'Non-PErg')
+    pyplot.semilogy()
+    pyplot.ylabel('%s (g)' %(imt))
+    pyplot.xlabel('Joyner-Boore distance (km)')
+    pyplot.title('Test scenario for imt = %s and site azimuth = %s$^o$' %(imt, azimuth))
+    pyplot.legend()
+    pyplot.show()
+    
         
 class TestZhao2016PErg(unittest.TestCase):
+    """
+    Test implementation of non-ergodic path modifications as described within
+    the Zhao et al. (2016) GMMs. 5 volcanic zone polygons including complex
+    shapes (i.e. ones which may be traversed multiple times by the same travel
+    path) are considered here. Multiple spectral ordinates are also considered.
     
+    The test scenarios below consider sites generated w.r.t. the same rupture,
+    but with different site azimuths, resulting in different travel path
+    configurations through these volcanic zone polygons. The expected distances
+    for many scenarios also not considered here were measured using QGIS, and
+    excellent matches were observed when compared against the values computed
+    using the ray tracing functions implemented here. These ray-tracing functions
+    are found within openquake.hazardlib.gsim.zhao_2016_volc_perg.volc_perg
+    
+    The tests below test the execution of the non-ergodic implementation
+    of ZhaoEtAlSSlabPErg, and demonstrate the difference in predicted
+    ground-motion if these path modifications are considered.
+    """
     def setUp(self):
         """
         Create rupture context and setup non-ergodic and ergodic implementations
@@ -192,7 +208,8 @@ class TestZhao2016PErg(unittest.TestCase):
     def test01(self):
         """
         Test with azimuth of 90 degrees from rupture strike to sites collection
-        in straight line for SA(0.5)
+        in straight line for SA(0.5) through test volcanic zone polygons in 
+        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
         """
         # General inputs
         imt = 'SA(0.5)'
@@ -215,7 +232,8 @@ class TestZhao2016PErg(unittest.TestCase):
     def test02(self):
         """
         Test with azimuth of 135 degrees from rupture strike to sites collection
-        in straight line for PGA
+        in straight line for PGA through test volcanic zone polygons in 
+        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
         """
         # General inputs
         imt = 'PGA'
@@ -238,7 +256,8 @@ class TestZhao2016PErg(unittest.TestCase):
     def test03(self):
         """
         Test with azimuth of 160 degrees from rupture strike to sites collection
-        in straight line for SA(0.2)
+        in straight line for SA(0.2) through test volcanic zone polygons in 
+        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
         """
         # General inputs
         imt = 'SA(0.2)'
@@ -261,7 +280,8 @@ class TestZhao2016PErg(unittest.TestCase):
     def test04(self):
         """
         Test with azimuth of 60 degrees from rupture strike to sites collection
-        in straight line for SA(1.0)
+        in straight line for SA(1.0) through test volcanic zone polygons in 
+        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
         """
         # General inputs
         imt = 'SA(1.0)'
