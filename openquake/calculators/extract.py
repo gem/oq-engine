@@ -1128,8 +1128,11 @@ def extract_disagg(dstore, what):
     if len(oq.poes) == 0:
         mean_curve = dstore.sel(
             'hcurves-stats', imt=imt, stat='mean')[sid, 0, 0]
-        attrs['poe'] = numpy.interp(
-            oq.iml_disagg[imt], oq.imtls[imt], mean_curve.reshape(-1))
+        # using loglog interpolation like in compute_hazard_maps
+        attrs['poe'] = numpy.exp(
+            numpy.interp(numpy.log(oq.iml_disagg[imt]),
+                         numpy.log(oq.imtls[imt]),
+                         numpy.log(mean_curve.reshape(-1))))
     elif 'poe_id' in qdict:
         attrs['poe'] = [oq.poes[p] for p in poei]
     else:
