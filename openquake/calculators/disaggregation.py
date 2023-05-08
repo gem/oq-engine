@@ -23,7 +23,7 @@ Disaggregation calculator core functionality
 import logging
 import numpy
 
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import parallel
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
@@ -45,36 +45,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-
-
-def _hmap4(rlzs, imtls, poes_disagg, curves):
-    # an ArrayWrapper of shape (N, M, P, Z)
-    N, Z = rlzs.shape
-    P = len(poes_disagg)
-    M = len(imtls)
-    arr = numpy.empty((N, M, P, Z))
-    acc = AccumDict(accum=[])  # site, imt, poe -> rlzs
-    for m, imt in enumerate(imtls):
-        for (s, z), rlz in numpy.ndenumerate(rlzs):
-            curve = curves[s][z][imtls(imt)]
-            if poes_disagg == (None,):
-                arr[s, m, 0, z] = imtls[imt]
-            elif curve.any():
-                rlz = rlzs[s, z]
-                max_poe = curve.max()
-                arr[s, m, :, z] = probability_map.compute_hazard_maps(
-                    curve, imtls[imt], poes_disagg)
-                for iml, poe in zip(arr[s, m, :, z], poes_disagg):
-                    if iml == 0:
-                        acc[s, imt, poe].append(rlz)
-                    elif poe > max_poe:
-                        logging.warning(
-                            POE_TOO_BIG, s, poe, max_poe, rlz, imt)
-    for (s, imt, poe), zero_rlzs in acc.items():
-        logging.warning('Cannot disaggregate for site %d, %s, '
-                        'poe=%s, rlzs=%s: the hazard is zero',
-                        s, imt, poe, shortlist(zero_rlzs))
-    return hdf5.ArrayWrapper(arr, {'rlzs': rlzs})
 
 
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
@@ -110,7 +80,10 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
         except disagg.FarAwayRupture:
             continue
         with dstore:
-            iml3 = dstore['hmap4'][dis.sid]
+            iml2 = dstore['hmap3'][dis.sid]
+            if iml2.sum() == 0:  # zero hard for this site
+                continue
+
             rlzs = dstore['best_rlzs'][dis.sid]
         for magi in range(dis.Ma):
             try:
@@ -123,9 +96,6 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
                     g = dis.g_by_rlz[rlz]
                 except KeyError:  # non-contributing rlz
                     continue
-                iml2 = iml3[:, :, z]
-                if iml2.sum() == 0:
-                    continue  # do not disaggregate
                 res[rlz] = rates6D = dis.disagg6D(iml2, g)
                 if rwdic:  # compute mean rates and store them in the 0 key
                     if 'mean' not in res:
@@ -268,28 +238,21 @@ class DisaggregationCalculator(base.HazardCalculator):
         assert Z <= self.R, (Z, self.R)
         self.Z = Z
         self.rlzs = rlzs
-        self.curves = []  # curves for z=0, populated in self.get_curves
-        curves = [self.get_curve(sid, rlzs[sid]) for sid in self.sitecol.sids]
-        if oq.iml_disagg:
-            poes = numpy.array(curves)  # shape (N, Z, M)
-            mean = numpy.zeros((self.M, self.N))
-            for m in range(self.M):
-                for sid in self.sitecol.sids:
-                    ws = full_lt.rlzs[rlzs[sid]]['weight']  # shape Z
-                    mean[m, sid] = poes[sid, :, m] @ ws
-            logging.info('mean poes corresponding to the given iml_disagg: %s',
-                         dict(zip(oq.imtls, mean)))
-            self.poe_id = {None: 0}
-        else:
-            self.poe_id = {poe: i for i, poe in enumerate(oq.poes_disagg)}
+        mean_curves = self.datastore.sel('hcurves-stats', stat='mean')[:, 0]
         s = self.shapedic
+        if oq.iml_disagg:
+            iml3 = numpy.zeros((s['N'], s['M'], 1))
+            for m, imt in enumerate(oq.imtls):
+                iml3[:, m] = oq.iml_disagg[imt]
+        else:
+            iml3 = probability_map.compute_hmaps(
+                mean_curves, oq.imtls, oq.poes)
+        if iml3.sum() == 0:
+            raise SystemExit('Cannot do any disaggregation: zero hazard')
         logging.info('Building N * M * P * Z = {:_d} intensities'.format(
                      s['N'] * s['M'] * s['P'] * s['Z']))
-        self.hmap4 = _hmap4(rlzs, oq.imtls, self.poes_disagg, curves)
-        if self.hmap4.array.sum() == 0:
-            raise SystemExit('Cannot do any disaggregation: zero hazard')
-        self.datastore['hmap4'] = self.hmap4
-        self.datastore['poe4'] = numpy.zeros_like(self.hmap4.array)
+        self.datastore['hmap3'] = iml3
+        self.datastore['poe4'] = numpy.zeros((s['N'], s['M'], s['P'], s['Z']))
         self.sr2z = {(s, r): z for s in self.sitecol.sids
                      for z, r in enumerate(rlzs[s])}
         return self.compute()
@@ -450,7 +413,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         out = output_dict(self.shapedic, oq.disagg_outputs, Z)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
-        vcurves = []  # hazard curves with a vertical section for large poes
         best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
         for (s, z), mat8 in sorted(results.items()):
             mat8 = disagg.to_probs(mat8)
@@ -479,7 +441,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                                ' perhaps not enough levels')
                         logging.warning(msg,  s, imt, best_rlzs[s, z],
                                         poe_agg, poe)
-                        vcurves.append(self.curves[s])
                         count[s] += 1
                     if name.endswith('-rlzs'):
                         self.datastore['poe4'][s, m, p, z] = poe_agg
@@ -487,10 +448,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
         self.datastore['_disagg_trt'] = _disagg_trt
-        if len(vcurves):
-            NML1 = len(vcurves), self.M, oq.imtls.size // self.M
-            self.datastore['_vcurves'] = numpy.array(vcurves).reshape(NML1)
-            self.datastore['_vcurves'].attrs['sids'] = numpy.where(count)[0]
 
         # check null realizations in the single site case, see disagg/case_2
         if name.endswith('-rlzs'):

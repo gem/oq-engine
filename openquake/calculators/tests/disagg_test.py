@@ -151,9 +151,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(len(ctx[0]), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctx[1]), 2)  # rlz-1, the one to discard
 
-        haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
+        haz = self.calc.datastore['hmap3'][0, 0]  # shape NMP
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
-        self.assertAlmostEqual(haz[1], 0.1875711524)
+        self.assertAlmostEqual(haz[1], 0.13311564210230828)
 
         # test normal disaggregation
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)

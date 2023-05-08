@@ -45,7 +45,7 @@ class HazardMapsTestCase(unittest.TestCase):
         poe = 0.2
 
         expected = [[0.00847798, 0.00664814, 0.0098, 0, 0.007]]
-        actual = compute_hazard_maps(numpy.array(curves), imls, poe)
+        actual = compute_hazard_maps(numpy.array(curves), imls, [poe])
         aaae(expected, actual.T)
 
     def test_compute_hazard_map_multi_poe(self):

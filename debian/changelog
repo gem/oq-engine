@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the disaggregation algorithm (see manual)
   * Added a view `risk_by_rup`
   * Internal: added command `oq compare med_gmv <imt>`
   * Extended extract/ruptures to extract a single rupture given the `rup_id`

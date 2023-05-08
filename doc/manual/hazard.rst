@@ -2142,7 +2142,10 @@ description of each parameter is provided below.
    defined in the “Calculation configuration” section. For
    the ``poes_disagg`` the intensity measure level(s) for the
    disaggregation are inferred by performing a classical calculation and
-   by inverting the hazard curves.
+   by inverting the mean hazard curve.
+   NB: this has changed in engine 3.17. In previous versions the inversion
+   was made on the individual curves which meant some realizations could be
+   discarded if the PoEs could not be reached.
 
 -  ``iml_disagg``: the intensity measure level(s) to be disaggregated
    can be directly defined by specifying ``iml_disagg``. Note that a
@@ -2797,11 +2800,15 @@ calculation the list of outputs are the following:
 
 Running ``--export-output`` to export the disaggregation results will
 produce individual files for each site. In presence of a nontrivial
-logic tree the user can specify the realization on which to perform the
-disaggregation by setting the ``rlz_index`` parameter in the ``job.ini``
-file. If not specified, for each site the engine will determine the
-realization closest to the mean hazard curve and will use that
-realization to perform the disaggregation.
+logic tree the user can specify the realization on which to perform
+the disaggregation by setting the ``rlz_index`` parameter in the
+``job.ini`` file. If not specified, the engine will compute the mean
+disaggregation across all realizations. NB: before version 3.17 the
+default algorithm used was different: only the realization closest to
+the mean hazard curve was selected and used perform the
+disaggregation. This was a choice forced by performance limitations
+that do not apply to recent versions of the disaggregation calculator.
+
 
 Outputs from Event Based PSHA 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
