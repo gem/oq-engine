@@ -31,7 +31,7 @@ from openquake.commonlib.datastore import read
 from openquake.baselib.writers import write_csv
 from openquake.commonlib.util import max_rel_diff_index
 from openquake.commonlib.calc import gmvs_to_poes
-from openquake.calculators.views import view
+from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.event_based import get_mean_curve, compute_avg_gmf
@@ -461,6 +461,11 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname, _, _] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-6)
+
+        # testing slowest ruptures
+        df = view('slow_ruptures', self.calc.datastore)
+        self.asserEqual(list(df.columns), ['code', 'n_occ', 'mag',
+                                           'rrup', 'time'])
 
     def test_case_23(self):
         # case with implicit grid and site model on a larger grid

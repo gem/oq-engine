@@ -254,10 +254,6 @@ class PmapGetter(object):
         return pmap
 
 
-time_dt = numpy.dtype(
-    [('rup_id', I64), ('nsites', U16), ('time', F32), ('task_no', U16)])
-
-
 def get_rupture_getters(dstore, ct=0, srcfilter=None):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`

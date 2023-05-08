@@ -264,13 +264,12 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'trt_smr']
-    rups = dstore['ruptures'][()][fields]
-    time = dstore['gmf_data/time_by_rup'][()]
-    arr = util.compose_arrays(rups, time)
-    arr = arr[arr['nsites'] > 0]
-    arr.sort(order='time')
-    return arr[-maxrows:]
+    fields = ['code', 'n_occ', 'mag']
+    rups = dstore.read_df('ruptures', 'id')[fields]
+    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    rups['rrup'] = info.rrup.loc[rups.index]
+    rups['time'] = info.time.loc[rups.index]
+    return rups.sort_values('time', ascending=False)[:maxrows]
 
 
 @view.add('contents')
