@@ -267,9 +267,10 @@ def view_slow_ruptures(token, dstore, maxrows=25):
     fields = ['code', 'n_occ', 'mag']
     rups = dstore.read_df('ruptures', 'id')[fields]
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
-    rups['rrup'] = info.rrup.loc[rups.index]
-    rups['time'] = info.time.loc[rups.index]
-    return rups.sort_values('time', ascending=False)[:maxrows]
+    df = rups.join(info).sort_values('time', ascending=False)
+    del df['nsites']
+    del df['task_no']
+    return df[:maxrows]
 
 
 @view.add('contents')
