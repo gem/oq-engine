@@ -997,7 +997,12 @@ class HazardCalculator(BaseCalculator):
         if oq.postproc_func:
             func = getattr(postproc, oq.postproc_func).main
             if 'csm' in inspect.getargspec(func).args:
-                oq.postproc_args['csm'] = self.csm
+                if hasattr(self, 'csm'):  # already there
+                    csm = self.csm
+                else:  # read the csm from the parent calculation
+                    csm = self.datastore.parent['_csm']
+                    csm.full_lt = self.datastore.parent['full_lt'].init()
+                oq.postproc_args['csm'] = csm
             func(self.datastore, **oq.postproc_args)
 
 
