@@ -345,8 +345,7 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_fname = None):
         # zones (total) and set to 12 km if zones traversed but distance is less
         # than 12 km (total)
         ctx.rvolc = volc_perg.get_rvolcs(ctx, volc_arc_fname)
-        
-    #print(ctx.rvolc)    
+
     x_ij = ctx.rrup
     # Get anelastic scaling term in equation 5
     qslh = np.where(ctx.ztor >= 50., C["eSLH"] * (0.02 * ctx.ztor - 1.0), 0)
@@ -550,6 +549,7 @@ class ZhaoEtAl2016Asc(GMPE):
         for spec of input and result values.
         """
         volc_arc_fname = self.volc_arc_fname
+        
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             C_SITE = self.COEFFS_SITE[imt]

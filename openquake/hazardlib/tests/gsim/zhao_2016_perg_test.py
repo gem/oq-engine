@@ -138,7 +138,8 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     ctxs_perg = list(ctxm_perg.get_ctx_iter([rup], sites)) 
     ctxs_perg = ctxs_perg[0]
     ctxs_perg.occurrence_rate = 0.0
-    mean_perg, std_perg, tau_perg, phi_perg = ctxm_perg.get_mean_stds([ctxs_perg])
+    mean_perg, std_perg, tau_perg, phi_perg = ctxm_perg.get_mean_stds(
+        [ctxs_perg])
 
     # Get non-perg version ground-motions
     ctxm = ContextMaker(gmm.DEFINED_FOR_TECTONIC_REGION_TYPE, [gmm], oqp)
@@ -150,15 +151,19 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     
     # Plot perg vs non-perg for distances in sites collection
     dist_x = ctxs.rjb
-    
-    pyplot.plot(dist_x, np.exp(mean_perg[0][0]), 'r', label = 'PErg')
-    pyplot.plot(dist_x, np.exp(mean[0][0]), 'b', label = 'Non-PErg')
+    mean_perg = mean_perg[0][0]
+    mean = mean[0][0]
+    pyplot.plot(dist_x, np.exp(mean_perg), 'r', label = 'PErg')
+    pyplot.plot(dist_x, np.exp(mean), 'b', label = 'Non-PErg')
     pyplot.semilogy()
     pyplot.ylabel('%s (g)' %(imt))
     pyplot.xlabel('Joyner-Boore distance (km)')
-    pyplot.title('Test scenario for imt = %s and site azimuth = %s$^o$' %(imt, azimuth))
+    pyplot.title('Test scenario for imt = %s and site azimuth = %s$^o$' %(
+        imt, azimuth))
     pyplot.legend()
     pyplot.show()
+    
+    return mean_perg, mean
     
         
 class TestZhao2016PErg(unittest.TestCase):
@@ -166,7 +171,9 @@ class TestZhao2016PErg(unittest.TestCase):
     Test implementation of non-ergodic path modifications as described within
     the Zhao et al. (2016) GMMs. 5 volcanic zone polygons including complex
     shapes (i.e. ones which may be traversed multiple times by the same travel
-    path) are considered here. Multiple spectral ordinates are also considered.
+    path) are considered here. The test volcanic zone polygons are in 
+    openquake.hazardlib.tests.gsim.data.ZHAO16PERG. Multiple spectral ordinates
+    are also considered.
     
     The test scenarios below consider sites generated w.r.t. the same rupture,
     but with different site azimuths, resulting in different travel path
@@ -208,8 +215,7 @@ class TestZhao2016PErg(unittest.TestCase):
     def test01(self):
         """
         Test with azimuth of 90 degrees from rupture strike to sites collection
-        in straight line for SA(0.5) through test volcanic zone polygons in 
-        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
+        in straight line for SA(0.5) through test volcanic zone polygons.
         """
         # General inputs
         imt = 'SA(0.5)'
@@ -219,7 +225,7 @@ class TestZhao2016PErg(unittest.TestCase):
         azimuth = 90 # relative to strike of slab
         direction = 'positive'
         hdist = 5000
-        step = 10
+        step = 25
         site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
                        'backarc': False, 'vs30measured': True}
 
@@ -227,13 +233,13 @@ class TestZhao2016PErg(unittest.TestCase):
                                        hdist, step, site_params)
 
         # Get non-ergodic and ergodic results 
-        get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg, self.gmm, azimuth)
+        mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
+                                           self.gmm, azimuth)
         
     def test02(self):
         """
         Test with azimuth of 135 degrees from rupture strike to sites collection
-        in straight line for PGA through test volcanic zone polygons in 
-        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
+        in straight line for PGA through test volcanic zone polygons.
         """
         # General inputs
         imt = 'PGA'
@@ -243,7 +249,7 @@ class TestZhao2016PErg(unittest.TestCase):
         azimuth = 135 # relative to strike of slab
         direction = 'positive'
         hdist = 5000
-        step = 10
+        step = 25
         site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
                        'backarc': False, 'vs30measured': True}
 
@@ -251,13 +257,13 @@ class TestZhao2016PErg(unittest.TestCase):
                                        hdist, step, site_params)
 
         # Get non-ergodic and ergodic results 
-        get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg, self.gmm, azimuth)
+        mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
+                                           self.gmm, azimuth)
         
     def test03(self):
         """
         Test with azimuth of 160 degrees from rupture strike to sites collection
-        in straight line for SA(0.2) through test volcanic zone polygons in 
-        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
+        in straight line for SA(0.2) through test volcanic zone polygons.
         """
         # General inputs
         imt = 'SA(0.2)'
@@ -267,7 +273,7 @@ class TestZhao2016PErg(unittest.TestCase):
         azimuth = 160 # relative to strike of slab
         direction = 'positive'
         hdist = 5000
-        step = 10
+        step = 25
         site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
                        'backarc': False, 'vs30measured': True}
 
@@ -275,23 +281,25 @@ class TestZhao2016PErg(unittest.TestCase):
                                        hdist, step, site_params)
 
         # Get non-ergodic and ergodic results 
-        get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg, self.gmm, azimuth)     
+        mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
+                                           self.gmm, azimuth)     
         
     def test04(self):
         """
-        Test with azimuth of 60 degrees from rupture strike to sites collection
-        in straight line for SA(1.0) through test volcanic zone polygons in 
-        openquake.hazardlib.tests.gsim.data.ZHAO16PERG
+        Test with azimuth of 0 degrees from rupture strike to sites collection
+        in straight line for SA(1.0). This test will generate zero difference
+        in PErg and non-PErg because the generated travel paths do not pass
+        through any volcanic zones.
         """
         # General inputs
         imt = 'SA(1.0)'
         
         # Get sites from rupture
         from_point = 'TC'
-        azimuth = 60 # relative to strike of slab
+        azimuth = 0 # relative to strike of slab
         direction = 'positive'
         hdist = 5000
-        step = 10
+        step = 25
         site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
                        'backarc': False, 'vs30measured': True}
 
@@ -299,4 +307,13 @@ class TestZhao2016PErg(unittest.TestCase):
                                        hdist, step, site_params)
 
         # Get non-ergodic and ergodic results 
-        get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg, self.gmm, azimuth)     
+        mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
+                                           self.gmm, azimuth)     
+        
+        msg = 'PErg and non-PErg GMs should be equal for this test scenario\
+            (no volcanic zones are traversed)'
+            
+        # Check mean_perg and mean are equal
+        for idx_mean, val_mean in enumerate(mean_perg):
+            if mean_perg[idx_mean] != mean[idx_mean]:
+                raise ValueError(msg) 
