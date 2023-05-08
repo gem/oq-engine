@@ -249,30 +249,32 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
 
 if LOCKDOWN:
 
-    try:
-        log_filename = os.path.join(WEBUI_ACCESS_LOG_DIR,  # NOQA
-                                    'webui-access.log')
-    except NameError:
-        # WEBUI_ACCESS_LOG_DIR is not defined, so we use the standard handler
-        pass
-    else:
-        LOGGING['formatters']['timestamp'] = {
-            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        }
-
-        LOGGING['handlers']['file'] = {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'formatter': 'timestamp',
-            'filename': log_filename,
-            'mode': 'a'
-        }
-
-        LOGGING['loggers']['openquake.server.signals'] = {
-            'handlers': ['file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        }
+    # do not log to file unless running through the webui
+    if getpass.getuser() == 'openquake':  # the user that runs the webui
+        try:
+            log_filename = os.path.join(WEBUI_ACCESS_LOG_DIR,  # NOQA
+                                        'webui-access.log')
+        except NameError:
+            # In case WEBUI_ACCESS_LOG_DIR is not defined, we use the standard
+            # handler, without logging to file
+            pass
+        else:
+            LOGGING['formatters']['timestamp'] = {
+                'format': (
+                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            }
+            LOGGING['handlers']['file'] = {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'formatter': 'timestamp',
+                'filename': log_filename,
+                'mode': 'a'
+            }
+            LOGGING['loggers']['openquake.server.signals'] = {
+                'handlers': ['file'],
+                'level': 'DEBUG',
+                'propagate': False,
+            }
 
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
