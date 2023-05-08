@@ -22,6 +22,8 @@ from openquake.commonlib import datastore
 from openquake.calculators.extract import Extractor
 from openquake.calculators import views
 
+aae = numpy.testing.assert_array_equal
+
 
 def get_diff_idxs(array, rtol, atol):
     """
@@ -88,9 +90,9 @@ class Comparator(object):
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
             if what.startswith('hcurves'):  # array NML
-                numpy.testing.assert_array_equal(oq.imtls[imt], imtls[imt])
+                aae(oq.imtls[imt], imtls[imt])
             elif what.startswith('hmaps'):  # array NMP
-                numpy.testing.assert_array_equal(oq.poes, poes)
+                aae(oq.poes, poes)
             arrays.append(extractor.get(what).mean[sids, m, :])
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, L)
@@ -104,8 +106,8 @@ class Comparator(object):
         extractor.close()
         for extractor in self.extractors[1:]:
             oq = extractor.oqparam
-            numpy.testing.assert_array_equal(oq.imtls.array, oq0.imtls.array)
-            numpy.testing.assert_array_equal(oq.poes, oq0.poes)
+            aae(oq.imtls.array, oq0.imtls.array)
+            aae(oq.poes, oq0.poes)
             arrays.append(get_mean(extractor, what, sids, oq0.imtls, p))
             extractor.close()
         return numpy.array(arrays)  # shape (C, N, M*P)
@@ -248,6 +250,38 @@ def compare_avg_gmf(imt, calc_ids: int, files=False, *,
         print('rms-diff =', sigma)
 
 
+def compare_med_gmv(imt, calc_ids: int, *,
+                    rtol: float = 0, atol: float = 1E-3):
+    """
+    Compare the median GMVs of two calculations.
+    """
+    c = Comparator(calc_ids)
+    try:
+        [m] = set(list(ex.oqparam.imtls).index(imt) for ex in c.extractors)
+    except:
+        sys.exit('The imt %s is not present in all calculations' % imt)
+    ex1, ex2 = c.extractors
+    srcs = sorted(ex1.get('med_gmv'))
+    assert srcs == sorted(ex2.get('med_gmv'))
+    for src in srcs:
+        # arrays of shape (G, M, N) => (G, N)
+        aw1 = ex1.get(f'med_gmv/{src}')
+        aw2 = ex2.get(f'med_gmv/{src}')
+        aae(aw1.gsims, aw2.gsims)
+        arr1 = aw1[:, m]
+        arr2 = aw2[:, m]
+        aae(arr1.shape, arr2.shape)
+        if numpy.allclose(arr1, arr2, rtol, atol):
+            print(f'{src}: no differences within the tolerances '
+                  f'{atol=}, rtol={rtol*100}%')
+        else:
+            for g in range(len(arr1)):
+                a1, a2 = arr1[g], arr2[g]
+                if not numpy.allclose(a1, a2, rtol, atol):
+                    n = numpy.abs(a1 - a2).argmax()
+                    print('%s%s: %s vs %s' % (src, aw1.gsims[g], a1[n], a2[n]))
+
+
 # works only locally for the moment
 def compare_risk_by_event(event: int, calc_ids: int, *,
                           rtol: float = 0, atol: float = 1E-3):
@@ -274,10 +308,11 @@ main = dict(rups=compare_rups,
             hmaps=compare_hmaps,
             hcurves=compare_hcurves,
             avg_gmf=compare_avg_gmf,
+            med_gmv=compare_med_gmv,
             risk_by_event=compare_risk_by_event)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
-          compare_risk_by_event):
+          compare_med_gmv, compare_risk_by_event):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:
