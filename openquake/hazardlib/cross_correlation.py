@@ -98,13 +98,10 @@ class BakerJayaram2008(CrossCorrelation):
 
 class CrossCorrelationBetween(ABC):
     def __init__(self, truncation_level=99.):
-        assert truncation_level is not None  # sanity check
+        if truncation_level < 1E-9:
+            truncation_level = 1E-9
         self.truncation_level = truncation_level
-        if self.truncation_level == 0:
-            self.distribution = None
-        else:
-            self.distribution = stats.truncnorm(
-                -truncation_level, truncation_level)
+        self.distribution = stats.truncnorm(-truncation_level, truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:

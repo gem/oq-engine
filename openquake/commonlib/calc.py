@@ -121,7 +121,7 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
-# TODO: see if it can be simplified, in terms of compute_hmap4
+# TODO: see if it can be simplified
 def make_hmaps(pmaps, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability maps.
@@ -172,6 +172,7 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        self.scenario = 'scenario' in self.oqparam.calculation_mode
         try:
             self.N = len(dstore['sitecol'])
         except KeyError:  # missing sitecol
@@ -186,10 +187,9 @@ class RuptureImporter(object):
             srcid, rupid = divmod(int(rup['id']), TWO30)
             ebr = EBRupture(
                 Mock(), rup['source_id'],
-                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'],
-                scenario='scenario' in self.oqparam.calculation_mode)
+                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'])
             ebr.seed = rup['seed']
-            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim):
+            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim, self.scenario):
                 eid_rlz.append((eid, rup['id'], rlz))
         return {ordinal: numpy.array(eid_rlz, events_dt)}
 

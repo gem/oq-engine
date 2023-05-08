@@ -47,7 +47,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
-def _hmap4(rlzs, iml_disagg, imtls, poes_disagg, curves):
+def _hmap4(rlzs, imtls, poes_disagg, curves):
     # an ArrayWrapper of shape (N, M, P, Z)
     N, Z = rlzs.shape
     P = len(poes_disagg)
@@ -285,8 +285,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         s = self.shapedic
         logging.info('Building N * M * P * Z = {:_d} intensities'.format(
                      s['N'] * s['M'] * s['P'] * s['Z']))
-        self.hmap4 = _hmap4(rlzs, oq.iml_disagg, oq.imtls,
-                            self.poes_disagg, curves)
+        self.hmap4 = _hmap4(rlzs, oq.imtls, self.poes_disagg, curves)
         if self.hmap4.array.sum() == 0:
             raise SystemExit('Cannot do any disaggregation: zero hazard')
         self.datastore['hmap4'] = self.hmap4

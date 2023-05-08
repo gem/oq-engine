@@ -51,6 +51,7 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO30 = 2 ** 32
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
@@ -1056,42 +1057,6 @@ def extract_relevant_events(dstore, dummy=None):
     return events
 
 
-@extract.add('event_info')
-def extract_event_info(dstore, eidx):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
-    """
-    event = dstore['events'][int(eidx)]
-    ridx = event['rup_id']
-    [getter] = getters.get_rupture_getters(dstore, slc=slice(ridx, ridx + 1))
-    rupdict = getter.get_rupdict()
-    rlzi = event['rlz_id']
-    full_lt = dstore['full_lt']
-    rlz = full_lt.get_realizations()[rlzi]
-    gsim = full_lt.gsim_by_trt(rlz)[rupdict['trt']]
-    for key, val in rupdict.items():
-        yield key, val
-    yield 'rlzi', rlzi
-    yield 'gsim', repr(gsim)
-
-
-@extract.add('extreme_event')
-def extract_extreme_event(dstore, eidx):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/extreme_event
-    """
-    arr = dstore['gmf_data/gmv_0'][()]
-    idx = arr.argmax()
-    eid = dstore['gmf_data/eid'][idx]
-    dic = dict(extract_event_info(dstore, eid))
-    dic['gmv'] = arr[idx]
-    return dic
-
-
 @extract.add('ruptures_within')
 def get_ruptures_within(dstore, bbox):
     """
@@ -1314,6 +1279,7 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
+# used in the rupture exporter and in the plugin
 @extract.add('rupture_info')
 def extract_rupture_info(dstore, what):
     """
@@ -1335,8 +1301,8 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r in rup_data.to_array(proxies):
+        arr = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim).to_array(proxies)
+        for r in arr:
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
             if len(coordset) < 4:   # degenerate to line
@@ -1358,28 +1324,29 @@ def extract_ruptures(dstore, what):
     """
     Extract the ruptures with their geometry as a big CSV string
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?rup_id=6
     """
+    oq = dstore['oqparam']
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
+    comment = dict(trts=trts, ses_seed=oq.ses_seed)
     qdict = parse(what)
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
     else:
         min_mag = 0
+    if 'rup_id' in qdict:
+        rup_id = int(qdict['rup_id'][0])
+        ebrups = [getters.get_ebrupture(dstore, rup_id)]
+        info = dstore['source_info'][rup_id // TWO30]
+        comment['source_id'] = info['source_id'].decode('utf8')
+    else:
+        ebrups = []
+        for rgetter in getters.get_rupture_getters(dstore):
+            ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
+                          for proxy in rgetter.get_proxies(min_mag))
     bio = io.StringIO()
-    first = True
-    trts = list(dstore.getitem('full_lt').attrs['trts'])
-    for rgetter in getters.get_rupture_getters(dstore):
-        rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
-                for proxy in rgetter.get_proxies(min_mag)]
-        arr = rupture.to_csv_array(rups)
-        if first:
-            header = None
-            comment = dict(trts=trts)
-            first = False
-        else:
-            header = 'no-header'
-            comment = None
-        writers.write_csv(bio, arr, header=header, comment=comment)
+    arr = rupture.to_csv_array(ebrups)
+    writers.write_csv(bio, arr, comment=comment)
     return bio.getvalue()
 
 
@@ -1415,6 +1382,13 @@ def extract_risk_stats(dstore, what):
     weights = dstore['weights'][:]
     return calc_stats(df, kfields, stats, weights)
 
+
+@extract.add('med_gmv')
+def extract_med_gmv(dstore, what):
+    """
+    Extract med_gmv array for the given source
+    """
+    return extract_(dstore, 'med_gmv/' + what)
 
 # #####################  extraction from the WebAPI ###################### #
 
@@ -1557,15 +1531,3 @@ def clusterize(hmaps, rlzs, k):
         paths = [encode(path) for path in grp['path']]
         tbl.append((label, logictree.collect_paths(paths), centroid[label]))
     return numpy.array(tbl, dt), labels
-
-
-def read_ebrupture(dstore, rup_id):
-    """
-    :param dstore: a DataStore instance
-    :param rup_id: an integer rupture ID
-    :returns: an EBRupture instance
-    """
-    [getter] = getters.get_rupture_getters(
-        dstore, slc=slice(rup_id, rup_id + 1))
-    [proxy] = getter.get_proxies()
-    return proxy.to_ebr(getter.trt)

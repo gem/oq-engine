@@ -109,7 +109,8 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.run_calc(case_04.__file__, 'job.ini',
                       calculation_mode='preclassical')
         hc_id = str(self.calc.datastore.calc_id)
-        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id)
+        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id,
+                      postproc_func='disagg_by_rel_sources')
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curve-mean.csv', fname)

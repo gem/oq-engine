@@ -1,4 +1,4 @@
-#,,,,,,,,,,"trts=['Stable Shallow Crust', 'Volcanic']"
+#,,,,,,,,,,"trts=['Stable Shallow Crust', 'Volcanic'], ses_seed=23"
 seed,mag,rake,lon,lat,dep,multiplicity,trt,kind,mesh,extra
 1073742001,4.700000E+00,-9.000000E+01,8.21375,47.64325,9.000000E+00,1,Stable Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[[8.21375, 8.21375, 8.21375, 8.21375]], [[47.62928, 47.6572, 47.62928, 47.6572]], [[7.44772, 7.44772, 10.55228, 10.55228]]]]","{""occurrence_rate"": 7e-05}"
 3221225580,4.900000E+00,-9.000000E+01,5.81690,50.45711,1.250000E+01,1,Stable Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[[5.8169, 5.8169, 5.8169, 5.8169]], [[50.44025, 50.47397, 50.44025, 50.47397]], [[10.62514, 10.62514, 14.37486, 14.37486]]]]","{""occurrence_rate"": 0.00012}"

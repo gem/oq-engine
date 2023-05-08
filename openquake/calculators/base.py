@@ -550,8 +550,7 @@ class HazardCalculator(BaseCalculator):
             if 'gmfs' in oq.inputs:
                 self.datastore['full_lt'] = logictree.FullLogicTree.fake()
                 if oq.inputs['gmfs'].endswith('.csv'):
-                    eids = import_gmfs_csv(self.datastore, oq,
-                                           self.sitecol.complete.sids)
+                    eids = import_gmfs_csv(self.datastore, oq, self.sitecol)
                 elif oq.inputs['gmfs'].endswith('.hdf5'):
                     eids = import_gmfs_hdf5(self.datastore, oq)
                 else:
@@ -998,7 +997,12 @@ class HazardCalculator(BaseCalculator):
         if oq.postproc_func:
             func = getattr(postproc, oq.postproc_func).main
             if 'csm' in inspect.getargspec(func).args:
-                oq.postproc_args['csm'] = self.csm
+                if hasattr(self, 'csm'):  # already there
+                    csm = self.csm
+                else:  # read the csm from the parent calculation
+                    csm = self.datastore.parent['_csm']
+                    csm.full_lt = self.datastore.parent['full_lt'].init()
+                oq.postproc_args['csm'] = csm
             func(self.datastore, **oq.postproc_args)
 
 
@@ -1081,13 +1085,13 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-def import_gmfs_csv(dstore, oqparam, sids):
+def import_gmfs_csv(dstore, oqparam, sitecol):
     """
     Import in the datastore a ground motion field CSV file.
 
     :param dstore: the datastore
     :param oqparam: an OqParam instance
-    :param sids: the complete site IDs
+    :param sitecol: the site collection
     :returns: event_ids
     """
     fname = oqparam.inputs['gmfs']
@@ -1124,7 +1128,7 @@ def import_gmfs_csv(dstore, oqparam, sids):
 
     if 'sid' not in names:
         # there is a custom_site_id instead
-        customs = dstore['sitecol/custom_site_id'][:]
+        customs = sitecol.complete.custom_site_id
         to_sid = {csi: sid for sid, csi in enumerate(customs)}
         for csi in numpy.unique(array['custom_site_id']):
             ok = array['custom_site_id'] == csi
@@ -1147,7 +1151,7 @@ def import_gmfs_csv(dstore, oqparam, sids):
     dic = general.group_array(arr, 'sid')
     offset = 0
     gmvlst = []
-    for sid in sids:
+    for sid in sitecol.complete.sids:
         n = len(dic.get(sid, []))
         if n:
             offset += n

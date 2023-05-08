@@ -129,14 +129,14 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
 
-    def compute_all(self, sig_eps=None, max_iml=None):
+    def compute_all(self, scenario, sig_eps=None, max_iml=None):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.ctx.sids
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim)
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
@@ -212,15 +212,10 @@ class GmfComputer(object):
         rng = numpy.random.default_rng(self.seed)
         num_sids = len(self.ctx.sids)
         ccdist = self.cross_correl.distribution
-        if ccdist:
-            # build arrays of random numbers of shape (M, N, E) and (M, E)
-            intra_eps = [
-                ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
-            inter_eps = self.cross_correl.get_inter_eps(
-                self.imts, num_events, rng)
-        else:
-            intra_eps = [None] * M
-            inter_eps = [numpy.zeros(num_events)] * M
+        # build arrays of random numbers of shape (M, N, E) and (M, E)
+        intra_eps = [
+            ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
+        inter_eps = self.cross_correl.get_inter_eps(self.imts, num_events, rng)
         for m, imt in enumerate(self.imts):
             try:
                 result[m], sig[m], eps[m] = self._compute(

@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Internal: added command `oq compare med_gmv <imt>`
+  * Extended extract/ruptures to extract a single rupture given the `rup_id`
+  * Fixed a bug in classical_damage causing a ValueError: could not broadcast
+    input array from shape (X,Y) into shape (X,)
   * Added check for missing site parameters
   * Optimized the generation of events
   * Fixed the GMFs CSV importer so that it can import exported GMFs even in

@@ -27,8 +27,7 @@ import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
     geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid)
-from openquake.hazardlib.source.rupture import (
-    EBRupture, get_ruptures, _get_rupture)
+from openquake.hazardlib.source.rupture import EBRupture, get_ruptures, get_ebr
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.source_reader import get_csm
 
@@ -96,7 +95,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # no TRT for scenario ruptures
-        ebrs = [EBRupture(rup, 0, 0, id=0, scenario=True)]
+        ebrs = [EBRupture(rup, 0, 0, id=0)]
         ebrs[0].seed = ses_seed
         return ebrs
 
@@ -104,9 +103,7 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
     aw = get_ruptures(fname)
     ebrs = []
     for i, rec in enumerate(aw.array):
-        rupture = _get_rupture(rec, aw.geoms[i], aw.trts[rec['trt_smr']])
-        ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                        rec['n_occ'], rec['id'], rec['e0'])
+        ebr = get_ebr(rec, aw.geoms[i], aw.trts[rec['trt_smr']])
         ebr.seed = ebr.id + ses_seed
         ebrs.append(ebr)
     return ebrs

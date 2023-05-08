@@ -137,7 +137,7 @@ def classical(srcs, sitecol, cmaker, monitor):
     """
     Call the classical calculator in hazardlib
     """
-    # NB: removing the yield would case terrible slow tasks
+    # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     for sites in sitecol.split_in_tiles(cmaker.ntiles):
