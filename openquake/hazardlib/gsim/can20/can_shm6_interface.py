@@ -63,9 +63,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
         for spec of input and result values.
                 CanadaSHM6 edits: Added PGV
                           Limited GMM to the CSHM6 range of 0.05 - 10s.
-
         """
-
         # Checking the IMTs used to compute ground-motion
         _check_imts(imts)
 
@@ -123,7 +121,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 
 
 class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
-                                CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
+        CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
     """
     Zhao et al., 2006 Interface with Cascadia adjustment at a fixed hypo depth
     of 30 km, extrapolated to 0.05 - 10s and with modifications to the site
@@ -140,9 +138,7 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
     HYPO_DEPTH = 30.
 
     def __init__(self):
-        super(CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia,
-              self).__init__()
-
+        super().__init__()
         self.COEFFS_SINTER = CoeffsTable_CanadaSHM6(self.COEFFS_SINTER,
                                                     self.MAX_SA, self.MIN_SA,
                                                     self.MAX_SA_EXTRAP,
@@ -338,7 +334,7 @@ def _set_extrapolation(imt, model):
 
 
 class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
-                                                GhofraniAtkinson2014Cascadia):
+        GhofraniAtkinson2014Cascadia):
     """
     Ghofrani and Atkinson 2014 Interface GMM with Cascadia adjustment,
     extrapolated to 0.05 - 10s and modifications to the site term as
@@ -354,9 +350,7 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
     extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
 
     def __init__(self):
-
-        super(CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia,
-              self).__init__()
+        super().__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation
         self.COEFFS = CoeffsTable_CanadaSHM6(
