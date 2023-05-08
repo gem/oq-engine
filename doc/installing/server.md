@@ -88,12 +88,12 @@ To add a web path prefix to the usual webui web path set ``WEBUI_PATHPREFIX`` va
 
 #### Configure the directory to store the server user access log
 
-By default, the server user access log file `webui-access.log` is created inside the folder `openquake/server/log`.
-The directory can be customized adding to local_settings.py a line like:
+By default, user access information is logged through the standard Django logger. In oder to write such information to a file, for instance to be digested by Fail2Ban, the variable `WEBUI_ACCESS_LOG_DIR` must be specified in `local_settings.py`, for instance:
 ```python
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 ```
-Please note that the above directory must be created if it does not exist yet, e.g.:
+In that case the file `webui-access.log` will be created inside the specified directory.
+Please note that the directory must be created if it does not exist yet, e.g.:
 ```bash
 $ sudo mkdir /var/log/oq-engine
 ```
