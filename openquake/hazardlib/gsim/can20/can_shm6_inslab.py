@@ -81,8 +81,9 @@ def _compute_mean_ga(C, g, ctx, imt):
 
 
 def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
-        """
-        For CanadaSHM6 the ZhaoEtAl2006 site term is replaced with:
+    """
+    For CanadaSHM6 the ZhaoEtAl2006 site term is replaced with:
+
             Vs30
             2000 = minimum(1100, maximum[hard-rock, SC I + AA13/AB06 factor])
             1100 = average of hard-rock and SC I
@@ -91,22 +92,21 @@ def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
             250 = SC III
             160 = SC IV
             log-log interpolation for intermediate values
-        """
-
-        ref_vs30 = np.array([2000., 1100., 760., 450., 250., 160., ])
-        ref_values = np.array([0.0, 0.5*(C['CH'] + C['C1']), C['C1'], C['C2'],
-                               C['C3'], C['C4']])
-
-        # Equivalent to CanadaSHM6_hardrock_site_factor but reproduced here
-        # to avoid using np.interp twice.
-        fac_760_2000 = np.log(1./COEFFS_AB06[imt]['c'])
-        ref_values[0] = np.min([0.5*(C['CH'] + C['C1']), np.max([C['CH'],
-                               C['C1'] + fac_760_2000])])
-        site_term = np.interp(
-            np.log(ctx.vs30), np.log(np.flip(ref_vs30, axis=0)),
-            np.flip(ref_values, axis=0))
-
-        return site_term
+    """    
+    ref_vs30 = np.array([2000., 1100., 760., 450., 250., 160., ])
+    ref_values = np.array([0.0, 0.5*(C['CH'] + C['C1']), C['C1'], C['C2'],
+                           C['C3'], C['C4']])
+    
+    # Equivalent to CanadaSHM6_hardrock_site_factor but reproduced here
+    # to avoid using np.interp twice.
+    fac_760_2000 = np.log(1./COEFFS_AB06[imt]['c'])
+    ref_values[0] = np.min([0.5*(C['CH'] + C['C1']), np.max(
+        [C['CH'], C['C1'] + fac_760_2000])])
+    site_term = np.interp(
+        np.log(ctx.vs30), np.log(np.flip(ref_vs30, axis=0)),
+        np.flip(ref_values, axis=0))
+    
+    return site_term
 
 
 def _compute_soil_amplification(C, ctx, pga_rock, imt):
@@ -298,7 +298,6 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     as implemented for CanadaSHM6.
     See also header in CanadaSHM6_InSlab.py
     """
-
     # Parameters used to extrapolate to 0.05s <= T <= 10s
     MAX_SA = 5.0
     MIN_SA = 0.05
@@ -306,8 +305,8 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     MIN_SA_EXTRAP = 0.05
     extrapolate_GMM = CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55()
 
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     REQUIRES_DISTANCES = {'rrup'}#,'rhypo'}
     HYPO_DEPTH = 55.
 
@@ -379,9 +378,10 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
             # add extrapolation factor if outside SA range (0.05 - 5.0)
             if extrapolate:
-                ctx.rhypo = ctx.rrup  # approximation for extrapolation only
+                ctxt = ctx.copy()
+                ctxt.rhypo = ctx.rrup  # approximation for extrapolation only
                 mean[m] += extrapolation_factor(self.extrapolate_GMM,
-                                                ctx, imt, target_imt)
+                                                ctxt, imt, target_imt)
             if PGVimt:
                 mean[m] = (0.995*mean[m]) + 3.937
 
@@ -503,9 +503,10 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
             # add extrapolation factor if outside SA range (0.07 - 9.09)
             if extrapolate:
-                ctx.rhypo = ctx.rrup  # approximation for extrapolation only
+                ctxt = ctx.copy()
+                ctxt.rhypo = ctx.rrup  # approximation for extrapolation only
                 mean[m] += extrapolation_factor(self.extrapolate_GMM,
-                                         ctx, imt, target_imt)
+                                         ctxt, imt, target_imt)
             if PGVimt:
                 mean[m] = (0.995*mean[m]) + 3.937
 
