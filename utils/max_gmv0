@@ -12,7 +12,7 @@ def max_gmv0(calc_id: int, rup_id: int):
     sitecol = dstore['sitecol']
     ebr = get_ebrupture(dstore, rup_id)
     cmaker = read_cmaker(dstore, ebr.trt_smr)
-    dic, dt = GmfComputer(ebr, sitecol, cmaker).compute_all()
+    dic = GmfComputer(ebr, sitecol, cmaker).compute_all(scenario=False)
     df = pandas.DataFrame(dic).sort_values('gmv_0').groupby('sid').head(1)
     return df
 
