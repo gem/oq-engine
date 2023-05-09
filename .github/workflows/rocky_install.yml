@@ -69,15 +69,11 @@ jobs:
       run: |
         set -x
         source /opt/openquake/venv/bin/activate
-        pip install pytest
-        echo "list installed wheels and other"
-        pip list
-        pip freeze
         mkdir /var/log/oq-engine/
         chown openquake /var/log/oq-engine/
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         # Wait the DbServer to come up
-        while :
+        while true
         do
             (echo > /dev/tcp/localhost/1908) >/dev/null 2>&1
             result=$?
@@ -94,6 +90,7 @@ jobs:
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
+        pip install pytest
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         export PYTEST_ADDOPTS="--color=yes"
         # set owner to openquake to run test and create cache for pytest
