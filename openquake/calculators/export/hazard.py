@@ -543,10 +543,10 @@ def export_mean_rates_by_src(ekey, dstore):
     return fnames
 
 
-@export.add(('mean_disagg_bysrc', 'csv'))
-def export_mean_disagg_bysrc(ekey, dstore):
+@export.add(('mean_disagg_by_src', 'csv'))
+def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
-    df = dstore['mean_disagg_bysrc'].to_dframe()
+    df = dstore['mean_disagg_by_src'].to_dframe()
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]

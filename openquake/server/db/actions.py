@@ -291,7 +291,7 @@ DISPLAY_NAME = {
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
     'mean_rates_by_src': 'Mean Hazard Rates by Source',
-    'mean_disagg_bysrc': 'Mean Disaggregation Rates By Source',
+    'mean_disagg_by_src': 'Mean Disaggregation Rates By Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
     'event_based_mfd': 'Annual Frequency of Events',

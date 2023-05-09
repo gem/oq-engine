@@ -87,7 +87,8 @@ def main(dstore, csm):
         smap.submit((groups, sitecol, relt, (edges, shp), oq))
     mags, dists, lons, lats, eps, trts = edges
     arr = numpy.zeros(
-        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P']))
+        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P'])
+    )
     for srcid, rates5D, rates2D in smap:
         idx = src2idx[basename(srcid, '!;')]
         arr[idx] = disagg.to_probs(rates5D)
@@ -95,7 +96,7 @@ def main(dstore, csm):
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt', 'poe'],
         source_id=rel_ids, imt=list(oq.imtls), poe=oq.poes,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
-    dstore['mean_disagg_bysrc'] = hdf5.ArrayWrapper(arr, dic)
+    dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
 
 
 if __name__ == '__main__':
