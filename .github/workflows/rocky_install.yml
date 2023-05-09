@@ -72,9 +72,11 @@ jobs:
         echo "list installed wheels and other"
         pip list
         pip freeze
-        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s'
-        # set owner to openquake to run test and create cache for pytest
-        curl -v -X HEAD -I http://127.0.0.1:8800/ipt/
+        mkdir /var/log/oq-engine/
+        chown openquake /var/log/oq-engine/
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+        # 
+        curl -v -X HEAD -I http://127.0.0.1:8800/
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
