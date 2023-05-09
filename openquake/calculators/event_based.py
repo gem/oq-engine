@@ -151,12 +151,12 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                         # skip this rupture
                         continue
             with cmon:
-                data = computer.compute_all(scenario, sig_eps, max_iml)
+                df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
             times.append((ebr.id, len(computer.ctx.sids),
                           computer.ctx.rrup.min(), dt))
-            for key in data:
-                alldata[key].extend(data[key])
+            for key in df.columns:
+                alldata[key].extend(df[key])
     for key, val in sorted(alldata.items()):
         if key in 'eid sid rlz':
             alldata[key] = U32(alldata[key])
