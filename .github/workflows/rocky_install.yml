@@ -68,6 +68,7 @@ jobs:
     - name: Run webui test
       run: |
         set -x
+        dnf -y install iproute
         source /opt/openquake/venv/bin/activate
         mkdir /var/log/oq-engine/
         chown openquake /var/log/oq-engine/
@@ -75,7 +76,7 @@ jobs:
         # Wait the DbServer to come up
         while true
         do
-            (echo > /dev/tcp/localhost/1908) >/dev/null 2>&1
+            ss -tnpl | grep 1908 
             result=$?
             if [[ $result -eq 0 ]]; then
                 break
