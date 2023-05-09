@@ -287,6 +287,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
+    UPDATE_CTX = True
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Vs30 value representing typical rock conditions in Switzerland.

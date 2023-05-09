@@ -195,7 +195,7 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
-
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
  
@@ -208,6 +208,7 @@ class ModifiableGMPE(GMPE):
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
         self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
+        self.UPDATE_CTX = self.gmpe.UPDATE_CTX
         self.set_parameters()
 
         if ('set_between_epsilon' in self.params or

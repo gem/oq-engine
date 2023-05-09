@@ -421,6 +421,7 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
 
     COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
     COEFFS_SITE = LanzanoEtAl2019_RJB_OMO.COEFFS_SITE
+    UPDATE_CTX = True
 
     def __init__(self, **kwargs):
         """

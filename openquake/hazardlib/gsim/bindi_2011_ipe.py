@@ -65,6 +65,7 @@ class BindiEtAl2011Repi(GMPE):
     REQUIRES_DISTANCES = {'repi'}
 
     fixedh = None
+    UPDATE_CTX = True
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

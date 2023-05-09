@@ -95,6 +95,8 @@ class YoudEtAl2002(GMPE):
     #: not verified warning
     non_verified = True
 
+    UPDATE_CTX = True
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
             #Adjustment done by Prajakta Jadhav and Dharma Wijewickreme: 
