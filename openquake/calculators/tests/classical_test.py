@@ -590,20 +590,18 @@ class ClassicalTestCase(CalculatorTestCase):
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
-        L = self.calc.oqparam.imtls.size  # 25 levels x 8 IMTs
-        for gid, gsim in enumerate(gsims):
-            df_for_gid = df[df.gid == gid]
+        L = self.calc.oqparam.imtls.size  # 25 levels x 9 IMTs
+        for g, gsim in enumerate(gsims):
+            df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
-            poes[df_for_gid.lid] = df_for_gid.poe
-            csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
+            poes[df_for_g.lid] = df_for_g.poe
             gsim_str = gsim.__class__.__name__
             if 'submodel' in gsim._toml:
                 gsim_str += '_' + gsim.kwargs['submodel']
-            expected_csv = os.path.join(os.path.dirname(os.path.abspath(case_76.__file__)), 'expected/', '%s.csv' % gsim_str)
-            with open(expected_csv, 'r') as f:
-                expected_poes = numpy.array([float(line.strip()) for line in f])
-            for i in range(len(poes)):
-                self.assertAlmostEqual(poes[i], expected_poes[i], delta = 0.01)
+            expected_csv = os.path.join(os.path.dirname(case_76.__file__),
+                                        'expected/', '%s.csv' % gsim_str)
+            got = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
+            self.assertEqualFiles('expected/%s.csv' % gsim_str, got)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
