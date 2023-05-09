@@ -65,13 +65,19 @@ jobs:
         else
           python3 install.py devel_server
         fi
-    - name: Run tests
+    - name: Run webui test
       run: |
         source /opt/openquake/venv/bin/activate
         pip install pytest
         echo "list installed wheels and other"
         pip list
         pip freeze
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s'
+        # set owner to openquake to run test and create cache for pytest
+        curl -v -X HEAD -I http://127.0.0.1:8800/ipt/
+    - name: Run tests
+      run: |
+        source /opt/openquake/venv/bin/activate
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         export PYTEST_ADDOPTS="--color=yes"
         # set owner to openquake to run test and create cache for pytest
