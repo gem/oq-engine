@@ -67,6 +67,7 @@ jobs:
         fi
     - name: Run webui test
       run: |
+        set -x
         source /opt/openquake/venv/bin/activate
         pip install pytest
         echo "list installed wheels and other"
