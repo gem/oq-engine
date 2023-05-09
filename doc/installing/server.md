@@ -88,7 +88,7 @@ To add a web path prefix to the usual webui web path set ``WEBUI_PATHPREFIX`` va
 
 #### Configure the directory to store the server user access log
 
-By default, user access information is logged through the standard Django logger. In oder to write such information to a file, for instance to be digested by Fail2Ban, the variable `WEBUI_ACCESS_LOG_DIR` must be specified in `local_settings.py`, for instance:
+By default, user access information is logged through the standard Django logger. In oder to write such information to a file, for instance to be digested by Fail2Ban, the variable `WEBUI_ACCESS_LOG_DIR` must be specified in `local_settings.py`, e.g.:
 ```python
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 ```
@@ -114,7 +114,7 @@ $ sudo su -
 # deactivate
 ```
 
-When using `python-oq-libs` for Debian *gunicorn* is already provided.
+When using `python-oq-libs` for Debian, *gunicorn* is already provided.
 
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
