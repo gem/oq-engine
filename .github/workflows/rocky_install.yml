@@ -75,13 +75,22 @@ jobs:
         pip freeze
         mkdir /var/log/oq-engine/
         chown openquake /var/log/oq-engine/
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
+        # Wait the DbServer to come up
+        while :
+        do
+            (echo > /dev/tcp/localhost/1908) >/dev/null 2>&1
+            result=$?
+            if [[ $result -eq 0 ]]; then
+                break
+            fi
+            sleep 1
+        done
+        #
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
         ls -lrt /var/log/oq-engine/
         #
-        ps aux | grep webui
-        ss -npl
-        # 
-        curl -v -X HEAD -I http://127.0.0.1:8800/
+        curl -I -X GET http://127.0.0.1:8800/engine
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
