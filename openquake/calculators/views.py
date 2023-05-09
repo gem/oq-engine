@@ -47,6 +47,7 @@ from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
+F64 = numpy.float64
 U32 = numpy.uint32
 U8 = numpy.uint8
 
@@ -1201,13 +1202,13 @@ def view_risk_by_rup(token, dstore):
     loss_by_rup = df.groupby('rup_id').sum()
     rdf = dstore.read_df('ruptures', 'id')
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
-    loss_by_rup['mag'] = rdf.mag.loc[loss_by_rup.index]
-    loss_by_rup['n_occ'] = rdf.n_occ.loc[loss_by_rup.index]
-    loss_by_rup['lon'] = rdf.hypo_0.loc[loss_by_rup.index]
-    loss_by_rup['lat'] = rdf.hypo_1.loc[loss_by_rup.index]
-    loss_by_rup['dep'] = rdf.hypo_2.loc[loss_by_rup.index]
-    loss_by_rup['rrup'] = info.rrup.loc[loss_by_rup.index]
-    return loss_by_rup.sort_values('loss', ascending=False)[:30]
+    df = loss_by_rup.join(rdf).join(info)[
+        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2',
+         'nsites', 'rrup']]
+    for field in df.columns:
+        if field not in ('mag', 'n_occ'):
+            df[field] = numpy.round(F64(df[field]), 1)
+    return df.sort_values('loss', ascending=False)[:30]
 
 
 @view.add('delta_loss')
