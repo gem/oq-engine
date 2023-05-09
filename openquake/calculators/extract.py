@@ -1124,8 +1124,15 @@ def extract_disagg(dstore, what):
     for k, ax in zip(disag_tup, axis):
         attrs[k.lower()] = ax
     attrs['imt'] = qdict['imt'] if 'imt' in qdict else imts
+    imt = attrs['imt'][0]
     if len(oq.poes) == 0:
-        attrs['poe'] = [numpy.nan]
+        mean_curve = dstore.sel(
+            'hcurves-stats', imt=imt, stat='mean')[sid, 0, 0]
+        # using loglog interpolation like in compute_hazard_maps
+        attrs['poe'] = numpy.exp(
+            numpy.interp(numpy.log(oq.iml_disagg[imt]),
+                         numpy.log(oq.imtls[imt]),
+                         numpy.log(mean_curve.reshape(-1))))
     elif 'poe_id' in qdict:
         attrs['poe'] = [oq.poes[p] for p in poei]
     else:
@@ -1213,7 +1220,7 @@ def extract_disagg_layer(dstore, what):
     edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    hmap4 = dstore['hmap4'][:]
+    hmap3 = dstore['hmap3'][:]  # shape (N, M, P)
     best_rlzs = dstore['best_rlzs'][:]
     arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
@@ -1231,7 +1238,7 @@ def extract_disagg_layer(dstore, what):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
                     rec[key] = arr[kind][sid, ..., m, p, :] @ ws
-                rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
+                rec['iml-%s-%s' % (imt, poe)] = hmap3[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 
