@@ -16,9 +16,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-
 import numpy
-
+import pandas
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib import correlation, cross_correlation, imt
@@ -247,7 +246,7 @@ class ConditionedGmfComputer(GmfComputer):
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
-        return data
+        return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mean_covs, rng):
         """

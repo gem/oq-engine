@@ -257,6 +257,11 @@ agg_id
              'loss_type=structural', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_taxo.csv', fname, delta=1E-5)
 
+        # losses by rupture
+        df = view('risk_by_rup:structural', self.calc.datastore)
+        tmp = gettemp(text_table(df, ext='org'))
+        self.assertEqualFiles('expected/risk_by_rup.org', tmp)
+
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_2.__file__, 'job_err.ini')
