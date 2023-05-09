@@ -35,7 +35,7 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc
+from openquake.hazardlib import logictree, calc, source
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util
@@ -47,12 +47,13 @@ from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
+F64 = numpy.float64
 U32 = numpy.uint32
 U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
-
+code2cls = source.rupture.code2cls
 
 # ########################## utility functions ############################## #
 
@@ -259,18 +260,21 @@ def view_slow_sources(token, dstore, maxrows=20):
     return data[::-1][:maxrows]
 
 
-@view.add('slow_ruptures')
-def view_slow_ruptures(token, dstore, maxrows=25):
+@view.add('rup_info')
+def view_rup_info(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'trt_smr']
-    rups = dstore['ruptures'][()][fields]
-    time = dstore['gmf_data/time_by_rup'][()]
-    arr = util.compose_arrays(rups, time)
-    arr = arr[arr['nsites'] > 0]
-    arr.sort(order='time')
-    return arr[-maxrows:]
+    if not code2cls:
+        code2cls.update(source.rupture.BaseRupture.init())
+    fields = ['code', 'n_occ', 'mag']
+    rups = dstore.read_df('ruptures', 'id')[fields]
+    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    df = rups.join(info).sort_values('time', ascending=False)
+    df['surface'] = [code2cls[code][1].__name__ for code in df.code]
+    del df['task_no']
+    del df['code']
+    return df[:maxrows]
 
 
 @view.add('contents')
@@ -1196,13 +1200,14 @@ def view_risk_by_rup(token, dstore):
     del df['event_id']
     loss_by_rup = df.groupby('rup_id').sum()
     rdf = dstore.read_df('ruptures', 'id')
-    loss_by_rup['mag']= rdf.mag.loc[loss_by_rup.index]
-    loss_by_rup['n_occ']= rdf.n_occ.loc[loss_by_rup.index]
-    loss_by_rup['lon']= rdf.hypo_0.loc[loss_by_rup.index]
-    loss_by_rup['lat']= rdf.hypo_1.loc[loss_by_rup.index]
-    loss_by_rup['dep']= rdf.hypo_2.loc[loss_by_rup.index]
-
-    return loss_by_rup.sort_values('loss', ascending=False)[:30]
+    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    df = loss_by_rup.join(rdf).join(info)[
+        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2',
+         'nsites', 'rrup']]
+    for field in df.columns:
+        if field not in ('mag', 'n_occ'):
+            df[field] = numpy.round(F64(df[field]), 1)
+    return df.sort_values('loss', ascending=False)[:30]
 
 
 @view.add('delta_loss')
