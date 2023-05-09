@@ -272,7 +272,6 @@ def view_rup_info(token, dstore, maxrows=25):
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
     df['surface'] = [code2cls[code][1].__name__ for code in df.code]
-    del df['nsites']
     del df['task_no']
     del df['code']
     return df[:maxrows]
