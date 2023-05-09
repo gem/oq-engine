@@ -150,7 +150,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     mean, std, tau, phi = ctxm.get_mean_stds([ctxs])
     
     # Plot perg vs non-perg for distances in sites collection
-    dist_x = ctxs.rjb
+    dist_x = ctxs.rrup
     mean_perg = mean_perg[0][0]
     mean = mean[0][0]
     pyplot.plot(dist_x, np.exp(mean_perg), 'r', label = 'PErg')

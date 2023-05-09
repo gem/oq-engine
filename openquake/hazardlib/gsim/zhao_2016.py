@@ -27,6 +27,7 @@ Module exports :class:`ZhaoEtAl2016Asc`,
                :class:`ZhaoEtAl2016SSlabPErg`
 """
 import numpy as np
+import fiona
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
@@ -265,7 +266,7 @@ get_distance_term = CallableDict()
 
 
 @get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_distance_term_asc(trt, C, ctx, volc_arc_fname=None):
+def get_distance_term_asc(trt, C, ctx, volc_arc_file=None):
     """
     Returns the distance scaling term defined in equation 3
     """
@@ -289,7 +290,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_fname=None):
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
-def get_distance_term_um(trt, C, ctx, volc_arc_fname=None):
+def get_distance_term_um(trt, C, ctx, volc_arc_file=None):
     """
     Returns the distance attenuation term
     """
@@ -309,7 +310,7 @@ def get_distance_term_um(trt, C, ctx, volc_arc_fname=None):
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_distance_term_SInter(trt, C, ctx, volc_arc_fname=None):
+def get_distance_term_SInter(trt, C, ctx, volc_arc_file=None):
     """
     Returns distance scaling term, dependent on top of rupture depth,
     as described in equation 6
@@ -331,7 +332,7 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_fname=None):
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_distance_term_sslab(trt, C, ctx, volc_arc_fname = None):
+def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
     """
     Returns the distance scaling term in equation 2a
 
@@ -339,12 +340,12 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_fname = None):
     of :class:`ZhaoEtAl2016SSlabPErg`. 
     """
     # Check if need to apply non-ergodic path effects
-    if volc_arc_fname is not None:
+    if volc_arc_file is not None:
         # Get distance traversed per travel path through volcanic zones with
         # specified cap at 80km if distance greater than 80 km traversed through
         # zones (total) and set to 12 km if zones traversed but distance is less
         # than 12 km (total)
-        ctx.rvolc = volc_perg.get_rvolcs(ctx, volc_arc_fname)
+        ctx.rvolc = volc_perg.get_rvolcs(ctx, volc_arc_file)
 
     x_ij = ctx.rrup
     # Get anelastic scaling term in equation 5
@@ -538,9 +539,15 @@ class ZhaoEtAl2016Asc(GMPE):
     #: Required distance measure is Rrup and Rvolc
     REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
-    def __init__(self, volc_arc_fname=None, **kwargs):
-        super().__init__(volc_arc_fname=volc_arc_fname, **kwargs)
-        self.volc_arc_fname = volc_arc_fname
+    def __init__(self, volc_arc_file=None, **kwargs):
+        super().__init__(volc_arc_file=volc_arc_file, **kwargs)
+        # If provided read in the volcanic zones geoJSON
+        if volc_arc_file is not None:
+            self.volc_arc_file = fiona.open(volc_arc_file, 'r')
+        else:
+            self.volc_arc_file = None
+            
+        print(type(self.volc_arc_file))
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -548,8 +555,6 @@ class ZhaoEtAl2016Asc(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        volc_arc_fname = self.volc_arc_fname
-        
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             C_SITE = self.COEFFS_SITE[imt]
@@ -558,7 +563,7 @@ class ZhaoEtAl2016Asc(GMPE):
             sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
                        get_sof_term(trt, C, ctx) +
                        get_depth_term(trt, C, ctx) +
-                       get_distance_term(trt, C, ctx, volc_arc_fname))
+                       get_distance_term(trt, C, ctx, self.volc_arc_file))
 
             mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
 
@@ -887,8 +892,8 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30','lon','lat'}
 
-    #: Required distance measure is Rrup and Rvolc
-    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'rjb'}
+    #: Required distance measure is Rrup and Rvolc,
+    REQUIRES_DISTANCES = {'rrup', 'rvolc'}
     
     # Set coeff tables
     COEFFS = COEFFS_SLAB
