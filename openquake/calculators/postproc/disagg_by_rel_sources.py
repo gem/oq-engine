@@ -32,7 +32,8 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
     source_ids = set()
     for im in imts:
         for poe in poes:
-            aw = extract.extract(dstore, f'rates_by_src?imt={im}&poe={poe}')
+            aw = extract.extract(dstore,
+                                 f'mean_rates_by_src?imt={im}&poe={poe}')
             poe_array = aw.array['poe']  # for each source in decreasing order
             max_poe = poe_array[0]
             rel = aw.array[poe_array > threshold * max_poe]
@@ -63,7 +64,7 @@ def main(dstore, csm):
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    if 'rates_by_src' in parent:
+    if 'mean_rates_by_src' in parent:
         rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
     else:
         rel_ids = get_rel_source_ids(dstore, oq.imtls, oq.poes, threshold=.1)

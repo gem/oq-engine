@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Renamed outputs `rates_by_src` to `mean_rates_by_src` and
+    `mean_disagg_bysrc` to `mean_disagg_by_src`
+
   [Michele Simionato]
   * Changed the disaggregation algorithm (see manual)
   * Added a view `risk_by_rup`

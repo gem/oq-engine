@@ -290,7 +290,7 @@ DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
-    'rates_by_src': 'Hazard Rates by Source',
+    'mean_rates_by_src': 'Mean Hazard Rates by Source',
     'mean_disagg_bysrc': 'Mean Disaggregation Rates By Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',

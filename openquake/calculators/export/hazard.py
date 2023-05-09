@@ -523,11 +523,11 @@ def _add_iml(df, imtls):
     return pandas.concat(out)
 
 
-@export.add(('rates_by_src', 'csv'))
-def export_rates_by_src(ekey, dstore):
+@export.add(('mean_rates_by_src', 'csv'))
+def export_mean_rates_by_src(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rates_df = _add_iml(dstore['rates_by_src'].to_dframe(), oq.imtls)
+    rates_df = _add_iml(dstore['mean_rates_by_src'].to_dframe(), oq.imtls)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     header = ['src_id', 'imt', 'iml', 'value']
@@ -537,7 +537,7 @@ def export_rates_by_src(ekey, dstore):
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
-        fname = dstore.export_path('rates_by_src-%d.csv' % site.id)
+        fname = dstore.export_path('mean_rates_by_src-%d.csv' % site.id)
         writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
     return fnames
@@ -622,7 +622,8 @@ def export_disagg_csv(ekey, dstore):
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
                 stat = '-mean' if name == 'disagg-stats' else ''
-                fname = dstore.export_path('%s%s%s-%d.csv' % (k, stat, trad, s))
+                fname = dstore.export_path(
+                    '%s%s%s-%d.csv' % (k, stat, trad, s))
                 writer.save(df, fname, comment=com)
                 fnames.append(fname)
             else:
