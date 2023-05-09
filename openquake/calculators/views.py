@@ -40,7 +40,7 @@ from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util
 from openquake.risklib.scientific import (
-    losses_by_period, return_periods, LOSSID, LOSSTYPE)
+    losses_by_period, return_periods, LOSSID)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_ebrupture
@@ -56,6 +56,7 @@ view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
 code2cls = source.rupture.code2cls
 
 # ########################## utility functions ############################## #
+
 
 def form(value):
     """
@@ -108,6 +109,7 @@ def dt(names):
     if isinstance(names, str):
         names = names.split()
     return numpy.dtype([(name, object) for name in names])
+
 
 class HtmlTable(object):
     """
@@ -676,6 +678,9 @@ def view_required_params_per_trt(token, dstore):
             req.update(gsim.requires())
         req_params = sorted(req - {'mag'})
         gsim_str = ' '.join(map(repr, gsims)).replace('\n', '\\n')
+        if len(gsim_str) > 80:
+            gsim_str = ', '.join(set([repr(gsim).split('\n')[0]
+                                      for gsim in gsims]))
         tbl.append((trt, gsim_str, req_params))
     return text_table(tbl, header='trt gsims req_params'.split(),
                       fmt=scientificformat)
@@ -757,7 +762,7 @@ def view_task_hazard(token, dstore):
     num_ruptures = sdata.nrupts.sum()
     eff_sites = sdata.nsites.sum()
     msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-             'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
+           'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
                  taskno, len(sdata), num_ruptures, eff_sites,
                  rec['weight'], rec['duration'])
     return msg
