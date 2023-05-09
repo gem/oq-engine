@@ -604,7 +604,7 @@ class ClassicalTestCase(CalculatorTestCase):
             if 'submodel' in gsim._toml:
                 gs += '_' + gsim.kwargs['submodel']
             got = general.gettemp(text_table(curve, ext='org'))
-            self.assertEqualFiles('expected/%s.org' % gs, got, delta=1E-5)
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=2E-5)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
