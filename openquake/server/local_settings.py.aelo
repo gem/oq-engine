@@ -27,3 +27,5 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 SERVER_NAME = <localhost>
 SERVER_PORT = <8800>
 USE_HTTPS = <False>
+
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'

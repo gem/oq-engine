@@ -2,7 +2,7 @@
 
 ## Advanced configurations and Authentication support
 
-### Installation from packages
+### Installation from Debian packages
 
 The OpenQuake Engine server supports authentication provided by [Django](https://docs.djangoproject.com/en/stable/topics/auth/) and its backends.
 
@@ -86,6 +86,18 @@ Mapping of unix groups isn't supported at the moment.
 
 To add a web path prefix to the usual webui web path set ``WEBUI_PATHPREFIX`` variable into ``openquake/server/local_settings.py`` to a prefix path starting with ``/`` and ending without it (e.g. ``'/path/prefix'``); the same variable should be set as environment variable.
 
+#### Configure the directory to store the server user access log
+
+By default, user access information is logged through the standard Django logger. In oder to write such information to a file, for instance to be digested by Fail2Ban, the variable `WEBUI_ACCESS_LOG_DIR` must be specified in `local_settings.py`, e.g.:
+```python
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+```
+In that case the file `webui-access.log` will be created inside the specified directory.
+Please note that the directory must be created if it does not exist yet, e.g.:
+```bash
+$ sudo mkdir /var/log/oq-engine
+```
+Furthermore, the user `openquake` must own that directory.
 
 ## Running in production
 
@@ -93,7 +105,16 @@ On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicor
 
 #### gunicorn
 
-*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). When using `python-oq-libs` for RedHat or Debian *gunicorn* is already provided.
+*gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). For example:
+
+```bash
+$ sudo su -
+# source /opt/openquake/venv/bin/activate
+# pip install gunicorn
+# deactivate
+```
+
+When using `python-oq-libs` for Debian, *gunicorn* is already provided.
 
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
