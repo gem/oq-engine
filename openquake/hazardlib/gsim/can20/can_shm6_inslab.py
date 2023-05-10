@@ -18,6 +18,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import numpy as np
 
+from openquake.hazardlib import const
 from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
 from openquake.hazardlib.gsim.garcia_2005 import _get_stddevs as _get_stddevs_ga
@@ -37,7 +38,7 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     _compute_focal_depth_term as _compute_focal_depth_term_abr)
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SSlab, _compute_pga_rock,
+    AbrahamsonEtAl2015SSlab, _compute_pga_rock, get_stress_factor,
     _compute_forearc_backarc_term, _compute_site_response_term)
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
     _compute_mean as _compute_mean_ab)
