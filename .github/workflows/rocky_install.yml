@@ -74,13 +74,25 @@ jobs:
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         # Wait the DbServer to come up
         echo "Waiting DBServer up on port 1907...."
-        while ! nc -z localhost 1907; do   
+        while ! nc -z localhost 1907; do
           sleep 1 # wait for 1/10 of the second before check again
         done
         sleep 2
+        echo "Add settings for login and logging on webui before to start"
+        cd /__w/oq-engine/oq-engine/
+        ls -lrt
+        cd openquake/server
+        cat > local_settings.py << EOF
+        LOCKDOWN = True
+        #
+        WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+        EOF
+        echo "DISPLAY content of local_settings"
+        cat local_settings.py
+        # START WEBUI
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
         echo "Waiting WEBUI up on port 8800...."
-        while ! nc -z localhost 8800; do   
+        while ! nc -z localhost 8800; do
           sleep 1 # wait for 1/10 of the second before check again
         done
         ls -lrt /var/log/oq-engine/
