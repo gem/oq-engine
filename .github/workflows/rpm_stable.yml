@@ -36,7 +36,7 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
+        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
     # Run in Fedora container on Ubuntu VM
 
     container:
@@ -110,6 +110,7 @@ jobs:
           spectool -g -R ~/rpmbuild/SPECS/python3-${REPO}.spec
           rpmbuild -bs  ~/rpmbuild/SPECS/python3-${REPO}.spec
           rpmbuild -bb  ~/rpmbuild/SPECS/python3-${REPO}.spec
+          ls ~/rpmbuild/RPMS/noarch/*.rpm)
           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
           mock -r ${{ matrix.epel-release}} $SRPM
 
