@@ -861,6 +861,15 @@ def check_same_levels(imtls):
     return periods, imls
 
 
+def sort_by_imt(imtls):
+    """
+    :param imtls: a dictionary by IMT
+    :returns: a new dictionary by IMT, sorted by period
+    """
+    imts = sorted(imtls, key=lambda imt: from_string(imt).period)
+    return {imt: imtls[imt] for imt in imts}
+
+
 class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
     KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
@@ -1139,14 +1148,15 @@ class OqParam(valid.ParamSet):
             # normalize things like SA(0.10) -> SA(0.1)
             self.iml_disagg = {str(from_string(imt)): [iml]
                                for imt, iml in self.iml_disagg.items()}
-            self.hazard_imtls = self.iml_disagg
+            self.hazard_imtls = sort_by_imt(self.iml_disagg)
             if 'intensity_measure_types_and_levels' in names_vals:
                 raise InvalidFile(
                     'Please remove the intensity_measure_types_and_levels '
                     'from %s: they will be inferred from the iml_disagg '
                     'dictionary' % job_ini)
         elif 'intensity_measure_types_and_levels' in names_vals:
-            self.hazard_imtls = self.intensity_measure_types_and_levels
+            self.hazard_imtls = sort_by_imt(
+                self.intensity_measure_types_and_levels)
             delattr(self, 'intensity_measure_types_and_levels')
             lens = set(map(len, self.hazard_imtls.values()))
             if len(lens) > 1:
@@ -1155,8 +1165,8 @@ class OqParam(valid.ParamSet):
                     'Each IMT must have the same number of levels, instead '
                     'you have %s' % dic)
         elif 'intensity_measure_types' in names_vals:
-            self.hazard_imtls = dict.fromkeys(
-                self.intensity_measure_types, [0])
+            self.hazard_imtls = sort_by_imt(
+                dict.fromkeys(self.intensity_measure_types, [0]))
             delattr(self, 'intensity_measure_types')
         if 'minimum_intensity' in names_vals:
             dic = {}
@@ -1437,8 +1447,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = self.hazard_imtls or self.risk_imtls
-        imts = sorted(imtls, key=lambda imt: from_string(imt).period)
-        return DictArray({imt: imtls[imt] for imt in imts}) if imtls else {}
+        return DictArray(imtls) if imtls else {}
 
     @property
     def min_iml(self):
@@ -1492,7 +1501,7 @@ class OqParam(valid.ParamSet):
             from_string(rf.imt)  # make sure it is a valid IMT
             imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
         suggested = ['\nintensity_measure_types_and_levels = {']
-        risk_imtls = self.risk_imtls.copy()
+        risk_imtls = sort_by_imt(self.risk_imtls)
         for imt, imls in imtls.items():
             risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %
