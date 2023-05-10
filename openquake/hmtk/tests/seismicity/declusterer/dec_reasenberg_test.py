@@ -52,13 +52,13 @@ import unittest
 import os
 import numpy as np
 
-from openquake.hmtk.seismicity.declusterer.dec_zaliapin import Zaliapin
+from openquake.hmtk.seismicity.declusterer.dec_reasenberg import Reasenberg
 from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
 
 
-class ZaliapinTestCase(unittest.TestCase):
+class ReasenbergTestCase(unittest.TestCase):
     """
-    Unit tests for the Zaliapin declustering algorithm class.
+    Unit tests for the Reasenberg declustering algorithm class.
     """
 
     BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
@@ -72,13 +72,21 @@ class ZaliapinTestCase(unittest.TestCase):
         parser = CsvCatalogueParser(filename)
         self.cat = parser.read_file()
 
-    def test_dec_zaliapin(self):
-        # Testing the Zaliapin algorithm
-        config = {'fractal_dim': 1.6,
-                  'b_value': 1.0,
-                  'threshold': 0.5 }
+    def test_dec_reasenberg(self):
+        # Testing the Reasenberg algorithm
+        config = {    'taumin' : 1.0,  # look ahead time for not clustered events, days
+            'taumax' : 20.0,  # maximum look ahead time for clustered events, days
+            'P' : 0.95,  # confidence level that this is next event in sequence
+            'xk' : 0.5,  # factor used with xmeff to define magnitude cutoff
+            'xmeff' : 1.5,  # magnitude effective, used with xk to define magnitude cutoff
+            'rfact' : 20,  # factor for interaction radius for dependent events
+            'horiz_error' : .5,  # epicenter error, km.  if unspecified or None, it is pulled from the catalogue
+            'depth_error' : 2.0,  # depth error, km.  if unspecified or None, it is pulled from the catalogue
+            'interaction_formula' : 'Reasenberg1985',  # either `Reasenberg1985` or `WellsCoppersmith1994`
+            'max_interaction_dist' : 100 }
+        
         # Instantiate the declusterer and process the sample catalogue
-        dec = Zaliapin()
+        dec = Reasenberg()
         vcl, flagvector = dec.decluster(self.cat, config)
         print('vcl:', vcl)
         print('flagvector:', flagvector, self.cat.data['flag'])
