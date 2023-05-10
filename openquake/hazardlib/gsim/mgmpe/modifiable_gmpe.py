@@ -19,7 +19,6 @@
 Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
-import copy
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
@@ -195,7 +194,7 @@ class ModifiableGMPE(GMPE):
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
     DEFINED_FOR_REFERENCE_VELOCITY = None
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
  
