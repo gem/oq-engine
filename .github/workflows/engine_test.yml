@@ -74,4 +74,4 @@ jobs:
         source ~/openquake/bin/activate
         pip install pyshp pytest
         oq dbserver start
-        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.views_test.EngineServerAeloTestCase
+        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.views_test.EngineServerAeloModeTestCase

@@ -131,8 +131,6 @@ class EngineServerTestCase(django.test.TestCase):
     def tearDownClass(cls):
         try:
             cls.wait()
-        finally:
-            cls.user.delete()
 
     # tests
 
