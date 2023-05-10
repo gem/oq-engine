@@ -1023,9 +1023,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
             Global.exposure.cost_types['name']) - set(['occupants'])
     else:
         missing = set(cost_types) - set(Global.exposure.cost_types['name'])
-    if missing and not oqparam.calculation_mode.endswith('damage'):
-        raise InvalidFile('The exposure %s is missing %s' %
-                          (oqparam.inputs['exposure'], missing))
+    #if missing and not oqparam.calculation_mode.endswith('damage'):
+    #    raise InvalidFile('The exposure %s is missing %s' %
+    #                      (oqparam.inputs['exposure'], missing))
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):
