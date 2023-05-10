@@ -36,7 +36,8 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
+        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
+        #epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
     # Run in Fedora container on Ubuntu VM
 
     container:
