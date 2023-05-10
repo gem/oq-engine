@@ -53,6 +53,7 @@ jobs:
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
+        set -x 
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
