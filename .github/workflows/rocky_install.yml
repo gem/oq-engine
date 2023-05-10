@@ -102,10 +102,21 @@ jobs:
         cd /__w/oq-engine/oq-engine/openquake/engine/
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
         sleep 1
-        curl -L -I -X GET http://127.0.0.1:8800/engine
-        sleep 0.5
         curl -L -I -X GET http://127.0.0.1:8800/accounts/login/
-        echo "display log of webui"
+        echo -n "TEST DJANGO LOGIN "
+        LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+        YOUR_USER='username'
+        YOUR_PASS='password'
+        COOKIES=cookies.txt
+        CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+        echo -n "Django Auth: get csrftoken ..."
+        $CURL_BIN $LOGIN_URL > /dev/null
+        DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+        echo -n " perform login ..."
+        $CURL_BIN \
+            -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+            -X POST $LOGIN_URL
+        echo -n "display log of webui"
         cat /var/log/oq-engine/webui-access.log
     - name: Run tests
       run: |
