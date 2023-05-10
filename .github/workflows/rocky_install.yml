@@ -70,7 +70,7 @@ jobs:
         set -x
         source /opt/openquake/venv/bin/activate
         mkdir /var/log/oq-engine/
-        chown openquake /var/log/oq-engine/
+        chown -R openquake /var/log/oq-engine/
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         # Wait the DbServer to come up
         echo "Waiting DBServer up on port 1907...."
@@ -97,7 +97,10 @@ jobs:
         done
         ls -lrt /var/log/oq-engine/
         sleep 1
-        #
+        # Perform migration after setup local_settings
+        cd /__w/oq-engine/oq-engine/openquake/engine/
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
+        sleep 1
         curl -L -I -X GET http://127.0.0.1:8800/engine
         sleep 0.5
         curl -L -I -X GET http://127.0.0.1:8800/accounts/login/
