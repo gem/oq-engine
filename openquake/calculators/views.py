@@ -678,9 +678,8 @@ def view_required_params_per_trt(token, dstore):
             req.update(gsim.requires())
         req_params = sorted(req - {'mag'})
         gsim_str = ' '.join(map(repr, gsims)).replace('\n', '\\n')
-        if len(gsim_str) > 80:
-            gsim_str = ', '.join(set([repr(gsim).split('\n')[0]
-                                      for gsim in gsims]))
+        if len(gsim_str) > 160:
+            gsim_str = ', '.join(repr(gsim).split('\n')[0] for gsim in gsims)
         tbl.append((trt, gsim_str, req_params))
     return text_table(tbl, header='trt gsims req_params'.split(),
                       fmt=scientificformat)
