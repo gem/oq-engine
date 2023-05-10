@@ -41,6 +41,7 @@ if settings.APPLICATION_MODE.upper() == 'AELO':
     urlpatterns.append(
         re_path(r'^aelo_run$', views.aelo_run))
 else:
-    urlpatterns.extend(
+    urlpatterns.extend([
         re_path(r'^run$', views.calc_run),
-        re_path(r'^validate_zip$', views.validate_zip))
+        re_path(r'^validate_zip$', views.validate_zip),
+    ])
