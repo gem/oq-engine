@@ -112,10 +112,11 @@ jobs:
         echo -n "Django Auth: get csrftoken ..."
         $CURL_BIN $LOGIN_URL > /dev/null
         DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
-        echo -n " perform login ..."
+        echo " perform login ..."
         $CURL_BIN \
             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-            -X POST $LOGIN_URL
+            -X POST $LOGIN_URL > /dev/null 
+        echo "--------------------"
         echo "display log of webui"
         echo "--------------------"
         cat /var/log/oq-engine/webui-access.log
