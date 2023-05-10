@@ -18,6 +18,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import numpy as np
 
+from openquake.hazardlib import const
 from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
 from openquake.hazardlib.gsim.garcia_2005 import _get_stddevs as _get_stddevs_ga
@@ -37,7 +38,7 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     _compute_focal_depth_term as _compute_focal_depth_term_abr)
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SSlab, _compute_pga_rock,
+    AbrahamsonEtAl2015SSlab, _compute_pga_rock, get_stress_factor,
     _compute_forearc_backarc_term, _compute_site_response_term)
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
     _compute_mean as _compute_mean_ab)
@@ -230,6 +231,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
         """
         Added PGV limited to the period range of 0.05 - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
             # set correlated IMT for PGV and check T bounds
@@ -330,6 +332,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
                           added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
             extrapolate = False
@@ -434,6 +437,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                           - 10s
                           limted to the period range of 0.05 - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
 
         # cap magnitude values at 8.0, see page 1709
@@ -557,6 +561,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
                           forced rrup = rhypo (to be inline with the
                                                CanadaSHM6-table implementation)
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
 
