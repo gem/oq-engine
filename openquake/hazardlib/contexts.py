@@ -1053,12 +1053,8 @@ class ContextMaker(object):
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
-                if gsim.UPDATE_CTX:
-                    # make a copy before updating
-                    ctx = ctx.copy()
-                else:
-                    # make the context immutable
-                    ctx.flags.writeable = False
+                # make the context immutable
+                ctx.flags.writeable = False
                 adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 if adj is not None:
                     self.adj[gsim].append(adj)

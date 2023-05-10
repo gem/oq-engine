@@ -208,7 +208,6 @@ class ModifiableGMPE(GMPE):
                 raise ValueError('Unknown %r in ModifiableGMPE' % k)
         self.gmpe = registry[gmpe_name](**kw)
         self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
-        self.UPDATE_CTX = self.gmpe.UPDATE_CTX
         self.set_parameters()
 
         if ('set_between_epsilon' in self.params or
@@ -277,7 +276,7 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         if 'nrcan15_site_term' in self.params:
-            ctx_copy = copy.copy(ctx)
+            ctx_copy = ctx.copy()
             ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
         else:
             ctx_copy = ctx

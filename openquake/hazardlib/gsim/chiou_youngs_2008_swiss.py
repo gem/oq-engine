@@ -80,9 +80,8 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
-    UPDATE_CTX = True
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        ctx = ctx.copy()
         ctx.vs30 = 620 * np.ones(len(ctx.vs30))
         log_phi_ss = 1
         super().compute(ctx, imts, mean, sig, tau, phi)

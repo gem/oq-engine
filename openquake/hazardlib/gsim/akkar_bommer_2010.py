@@ -287,7 +287,6 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
-    UPDATE_CTX = True
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
@@ -300,6 +299,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ctx = ctx.copy()
         ctx.vs30 = np.full_like(ctx.vs30, 600.)
         super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tau'

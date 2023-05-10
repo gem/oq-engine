@@ -421,7 +421,6 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
 
     COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
     COEFFS_SITE = LanzanoEtAl2019_RJB_OMO.COEFFS_SITE
-    UPDATE_CTX = True
 
     def __init__(self, **kwargs):
         """
@@ -439,6 +438,7 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
         for spec of input and result values.
         """
         if self.kappa0 is not None:
+            ctx = ctx.copy()
             ctx.kappa0 = self.kappa0
         [dist_type] = self.REQUIRES_DISTANCES
         for m, imt in enumerate(imts):

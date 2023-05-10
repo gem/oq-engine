@@ -112,11 +112,10 @@ class Zhang_Zhao2005SInter(GMPE):
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
     non_verified = True
-
-    UPDATE_CTX = True
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -150,11 +149,10 @@ class Zhang_Zhao2005SSlab(Zhang_Zhao2005SInter):
     """
     #: This GMPE is based on subduction intraslab earthquakes 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-  
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -188,6 +186,7 @@ class Zhang_Zhao2005Crust(Zhang_Zhao2005SInter):
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
