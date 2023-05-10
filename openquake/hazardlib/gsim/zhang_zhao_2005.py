@@ -29,13 +29,21 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 
     
 def _SDinter_term(ctx):
-    SD = 0.2485 * np.exp(-3.5387 + (1.438 * ctx.mag) - (0.0066 * (10 - ctx.mag) ** 3) - (1.785 * np.log(ctx.rrup + (1.097 * np.exp(0.617 * ctx.mag)))) + (0.00648 * ctx.hypo_depth))
+    SD = 0.2485 * np.exp(-3.5387 + (1.438 * ctx.mag) - (
+        0.0066 * (10 - ctx.mag) ** 3) - (
+            1.785 * np.log(ctx.rrup + (1.097 * np.exp(0.617 * ctx.mag)))) +
+                         (0.00648 * ctx.hypo_depth))
     return (1.856 * np.log10(SD))
     
+
 def _SDslab_term(ctx):    
-    SD = 0.2485 * np.exp(-3.5387 + (1.438 * ctx.mag) - (0.0066 * (10 - ctx.mag) ** 3) - (1.785 * np.log(ctx.rrup + (1.097 * np.exp(0.617 * ctx.mag)))) + (0.00648 * ctx.hypo_depth) + 0.3643)
+    SD = 0.2485 * np.exp(-3.5387 + (1.438 * ctx.mag) - (
+        0.0066 * (10 - ctx.mag) ** 3) - (
+            1.785 * np.log(ctx.rrup + (1.097 * np.exp(0.617 * ctx.mag)))
+        ) + (0.00648 * ctx.hypo_depth) + 0.3643)
     return (1.856 * np.log10(SD))        
     
+
 def _SDCrust_term(ctx, rake, mag):    
      # Reverse faulting
     if (rake >= 45.) & (rake <= 135.):
@@ -47,11 +55,16 @@ def _SDCrust_term(ctx, rake, mag):
     
             
     if mag >= 6.5:
-        SD = 0.06212 * np.exp(C1 + ctx.mag - (1.7 * (np.log(ctx.rrup + (0.3825 * np.exp(0.5882 * ctx.mag))))) + C6 - (0.033 * (8.5 - ctx.mag) ** 2.5))
+        SD = 0.06212 * np.exp(C1 + ctx.mag - (
+            1.7 * (np.log(ctx.rrup + (0.3825 * np.exp(0.5882 * ctx.mag))))
+        ) + C6 - (0.033 * (8.5 - ctx.mag) ** 2.5))
     else:
-        SD = 0.06212 * np.exp(C1 + ctx.mag - (1.7 * (np.log(ctx.rrup + (2.1863 * np.exp(0.32 * ctx.mag))))) + C6 - (0.033 * (8.5 - ctx.mag) ** 2.5))
+        SD = 0.06212 * np.exp(C1 + ctx.mag - (1.7 * (np.log(ctx.rrup + (
+            2.1863 * np.exp(0.32 * ctx.mag))))) + C6 - (
+                0.033 * (8.5 - ctx.mag) ** 2.5))
     return (1.856 * np.log10(SD))
-    
+
+
 def _compute_site_term(sites, c4, c5, c6, c7, c8):
    
     return (c4 * np.log10(sites.slope) +
@@ -62,10 +75,11 @@ def _compute_site_term(sites, c4, c5, c6, c7, c8):
 
 class Zhang_Zhao2005SInter(GMPE):
     """
-    Implements the GMPE of Zhang and Zhao. (2005) for Permanent ground deformation (m)
-	from lateral spread 
-    Zhang, J., & Zhao, J. X. (2005). Empirical models for estimating liquefaction-induced
-    lateral spread displacement. Soil Dynamics and Earthquake Engineering, 25(6), 439-450.
+    Implements the GMPE of Zhang and Zhao. (2005) for Permanent ground
+    deformation (m) from lateral spread 
+    Zhang, J., & Zhao, J. X. (2005). Empirical models for estimating
+    liquefaction-induced lateral spread displacement. Soil Dynamics and
+    Earthquake Engineering, 25(6), 439-450.
     This model is based on Sadigh et al. (1997) and Young et al. (1997) models
     """
     #: This GMPE is based on subduction interface earthquakes 
@@ -98,10 +112,10 @@ class Zhang_Zhao2005SInter(GMPE):
     #: GMPE not tested against independent implementation so raise
     #: not verified warning
     non_verified = True
-    
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -135,11 +149,10 @@ class Zhang_Zhao2005SSlab(Zhang_Zhao2005SInter):
     """
     #: This GMPE is based on subduction intraslab earthquakes 
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-  
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -158,10 +171,11 @@ class Zhang_Zhao2005SSlab(Zhang_Zhao2005SInter):
     
 class Zhang_Zhao2005Crust(Zhang_Zhao2005SInter):
     """
-    Implements the GMPE of Zhang and Zhao. (2005) for Permanent ground deformation (m)
-	from lateral spread 
-    Zhang, J., & Zhao, J. X. (2005). Empirical models for estimating liquefaction-induced
-    lateral spread displacement. Soil Dynamics and Earthquake Engineering, 25(6), 439-450.
+    Implements the GMPE of Zhang and Zhao. (2005) for Permanent ground
+    deformation (m) from lateral spread 
+    Zhang, J., & Zhao, J. X. (2005). Empirical models for estimating
+    liquefaction-induced lateral spread displacement. Soil Dynamics and
+    Earthquake Engineering, 25(6), 439-450.
     This model is based on Sadigh et al. (1997) and Young et al. (1997) models
     """
     #: This GMPE is based on crustal earthquakes 
@@ -169,11 +183,10 @@ class Zhang_Zhao2005Crust(Zhang_Zhao2005SInter):
 
     #: Required rupture parameters are magnitude 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
-
-
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -184,7 +197,7 @@ class Zhang_Zhao2005Crust(Zhang_Zhao2005SInter):
 
             mean[m] = (
                 _SDCrust_term(ctx, ctx.rake[m], ctx.mag[m]) +   
-                _compute_site_term(ctx,  c[0], c[1], c[2], c[3], c[4]))             
+                _compute_site_term(ctx,  c[0], c[1], c[2], c[3], c[4]))
                
             mean[m] = np.log(10.0 ** mean[m])
             sig[m] = np.log(10.0 ** self.COEFFS_SLOPE[imt]["sigma"])

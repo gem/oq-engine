@@ -419,6 +419,7 @@ class CampbellBozorgnia2014(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ctx = ctx.copy()
         _update_ctx(self, ctx)
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)

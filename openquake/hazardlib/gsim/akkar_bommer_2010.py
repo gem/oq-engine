@@ -299,7 +299,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        ctx.vs30 = np.full_like(ctx.vs30, 600.)
+        ctx = ctx.copy()
+        ctx.vs30 = 600.
         super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tau'
         log_phi_ss = np.log(10)

@@ -57,6 +57,12 @@ def columns(line):
                 pass
             else:
                 data.append(numpy.array(floats))
+    elif '|' in line:  # org file
+        for column in line.split('|'):
+            try:
+                data.append(float(column))
+            except ValueError:
+                pass  # ignore nonfloats
     else:  # txt file
         for column in line.split(' '):
             try:

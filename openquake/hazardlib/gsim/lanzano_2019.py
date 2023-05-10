@@ -438,6 +438,7 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
         for spec of input and result values.
         """
         if self.kappa0 is not None:
+            ctx = ctx.copy()
             ctx.kappa0 = self.kappa0
         [dist_type] = self.REQUIRES_DISTANCES
         for m, imt in enumerate(imts):

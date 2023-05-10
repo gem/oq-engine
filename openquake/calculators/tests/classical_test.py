@@ -586,22 +586,25 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
+        oq = self.calc.oqparam
+        L = oq.imtls.size  # 25 levels x 9 IMTs
+        L1 = L // len(oq.imtls)
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
-        L = self.calc.oqparam.imtls.size  # 25 levels x 9 IMTs
         for g, gsim in enumerate(gsims):
+            curve = numpy.zeros(L1, oq.imt_dt())
             df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
             poes[df_for_g.lid] = df_for_g.poe
-            gsim_str = gsim.__class__.__name__
+            for imt in oq.imtls:
+                curve[imt] = poes[oq.imtls(imt)]
+            gs = gsim.__class__.__name__
             if 'submodel' in gsim._toml:
-                gsim_str += '_' + gsim.kwargs['submodel']
-            expected_csv = os.path.join(os.path.dirname(case_76.__file__),
-                                        'expected/', '%s.csv' % gsim_str)
-            got = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
-            self.assertEqualFiles('expected/%s.csv' % gsim_str, got)
+                gs += '_' + gsim.kwargs['submodel']
+            got = general.gettemp(text_table(curve, ext='org'))
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=2E-5)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
