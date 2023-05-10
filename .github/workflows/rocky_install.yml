@@ -45,7 +45,7 @@ jobs:
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
-        dnf install -y git git-lfs iproute
+        dnf install -y git git-lfs nc
         pip3 -V
         python3 -c "import sys; print(sys.version)"
         #
@@ -73,20 +73,18 @@ jobs:
         chown openquake /var/log/oq-engine/
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         # Wait the DbServer to come up
-        #while true
-        #do
-        #    ss -tnpl | grep 1908 
-        #    result=$?
-        #    if [[ $result -eq 0 ]]; then
-        #        break
-        #    fi
-        #    sleep 1
-        #done
-        #
-        sleep 60
+        echo "Waiting DBServer up on port 1907...."
+        while ! nc -z localhost 1907; do   
+          sleep 0.1 # wait for 1/10 of the second before check again
+        done
+        sleep 5
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+        echo "Waiting WEBUI up on port 8800...."
+        while ! nc -z localhost 8800; do   
+          sleep 0.1 # wait for 1/10 of the second before check again
+        done
         ls -lrt /var/log/oq-engine/
-        sleep 60
+        sleep 5
         #
         curl -I -X GET http://127.0.0.1:8800/engine
     - name: Run tests
