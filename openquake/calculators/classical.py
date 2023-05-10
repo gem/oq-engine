@@ -133,6 +133,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 
 #  ########################### task functions ############################ #
 
+
 def classical(srcs, sitecol, cmaker, monitor):
     """
     Call the classical calculator in hazardlib
@@ -309,15 +310,15 @@ class Hazard:
 
     def store_disagg(self, pmaps):
         """
-        Store data inside rates_by_src
+        Store data inside mean_rates_by_src
         """
-        rates_by_src = self.datastore['rates_by_src/array'][()]
+        mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
         for key, pmap in pmaps.items():
             if isinstance(key, str):
-                # in case of rates_by_src key is a source ID
+                # in case of mean_rates_by_src key is a source ID
                 idx = self.srcidx[basename(key, '!;:')]
-                rates_by_src[..., idx] += self.get_rates(pmap)
-        self.datastore['rates_by_src/array'][:] = rates_by_src
+                mean_rates_by_src[..., idx] += self.get_rates(pmap)
+        self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -422,12 +423,12 @@ class ClassicalCalculator(base.HazardCalculator):
             M = len(oq.imtls)
             L1 = oq.imtls.size // M
             sources = self.csm.get_basenames()
-            rates_by_src = numpy.zeros((self.N, M, L1, len(sources)))
+            mean_rates_by_src = numpy.zeros((self.N, M, L1, len(sources)))
             dic = dict(shape_descr=['site_id', 'imt', 'lvl', 'src_id'],
                        site_id=self.N, imt=list(oq.imtls),
                        lvl=L1, src_id=numpy.array(sources))
-            self.datastore['rates_by_src'] = hdf5.ArrayWrapper(
-                rates_by_src, dic)
+            self.datastore['mean_rates_by_src'] = hdf5.ArrayWrapper(
+                mean_rates_by_src, dic)
 
     def check_memory(self, N, L, maxw):
         """
