@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Made the contexts immutable and fixed mutability bugs potentially
+    affecting the modules akkar_bommer_2010, bindi_2011_ipe, can_shm6_inslab,
+    lanzano_2019, youd_etal_2002, zhang_zhao_2005, cauzzi_faccioli_2008_swiss,
+    chiou_youngs_2008_swiss campbell_bozorgnia_2014
   * Changed the disaggregation algorithm (see manual)
   * Added a view `risk_by_rup`
   * Internal: added command `oq compare med_gmv <imt>`

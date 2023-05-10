@@ -230,6 +230,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
         """
         Added PGV limited to the period range of 0.05 - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
             # set correlated IMT for PGV and check T bounds
@@ -330,6 +331,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
                           added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
             extrapolate = False
@@ -434,6 +436,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                           - 10s
                           limted to the period range of 0.05 - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
 
         # cap magnitude values at 8.0, see page 1709
@@ -557,6 +560,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
                           forced rrup = rhypo (to be inline with the
                                                CanadaSHM6-table implementation)
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
 

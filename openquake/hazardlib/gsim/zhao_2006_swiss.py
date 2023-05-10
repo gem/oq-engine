@@ -22,7 +22,6 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
-import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
