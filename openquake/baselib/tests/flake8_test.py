@@ -21,11 +21,8 @@ Test of flake8 violations
 """
 import io
 import os
+import unittest
 from contextlib import redirect_stdout
-from unittest import mock
-from flake8.main import application
-
-app = application.Application()
 
 REPO = os.path.dirname(
     os.path.dirname(
@@ -34,6 +31,12 @@ REPO = os.path.dirname(
 
 
 def test_serious_violations():
+    try:
+        from flake8.main import application
+    except ImportError:
+        raise unittest.SkipTest('no flake8 installed')
+
+    app = application.Application()
     buf = io.BytesIO()
     with redirect_stdout(buf) as out:
         out.buffer = buf
