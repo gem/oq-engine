@@ -47,18 +47,6 @@ from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
 
-# NOTE: before importing User or any other model, django.setup() is needed,
-#       otherwise it would raise:
-#       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
-django.setup()
-try:
-    from django.contrib.auth.models import User  # noqa
-except RuntimeError:
-    # Django tests are meant to be run with the command
-    # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
-    # ./openquake/server/manage.py test tests.views_test
-    raise unittest.SkipTest('Use Django to run such tests')
-
 
 def loadnpz(lines):
     bio = io.BytesIO(b''.join(ln for ln in lines))
@@ -137,18 +125,7 @@ class EngineServerTestCase(django.test.TestCase):
         cls.job_ids = []
         env = os.environ.copy()
         env['OQ_DISTRIBUTE'] = 'no'
-        username = 'django-test-user'
-        email = 'django-test-user@email.test'
-        password = ''.join((secrets.choice(
-            string.ascii_letters + string.digits + string.punctuation)
-            for i in range(8)))
-        cls.user, created = User.objects.get_or_create(
-            username=username, email=email)
-        if created:
-            cls.user.set_password(password)
-            cls.user.save()
         cls.c = Client()
-        cls.c.login(username=username, password=password)
 
     @classmethod
     def tearDownClass(cls):
@@ -447,6 +424,46 @@ class EngineServerTestCase(django.test.TestCase):
 
 
 class EngineServerAeloModeTestCase(EngineServerTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # NOTE: before importing User or any other model, django.setup() is
+        # needed, otherwise it would raise:
+        # django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+        django.setup()
+        try:
+            from django.contrib.auth.models import User  # noqa
+        except RuntimeError:
+            # Django tests are meant to be run with the command
+            # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
+            # ./openquake/server/manage.py test tests.views_test
+            raise unittest.SkipTest('Use Django to run such tests')
+
+        assert get_status() == 'running'
+        dbcmd('reset_is_running')  # cleanup stuck calculations
+        cls.job_ids = []
+        env = os.environ.copy()
+        env['OQ_DISTRIBUTE'] = 'no'
+        username = 'django-test-user'
+        email = 'django-test-user@email.test'
+        password = ''.join((secrets.choice(
+            string.ascii_letters + string.digits + string.punctuation)
+            for i in range(8)))
+        cls.user, created = User.objects.get_or_create(
+            username=username, email=email)
+        if created:
+            cls.user.set_password(password)
+            cls.user.save()
+        cls.c = Client()
+        cls.c.login(username=username, password=password)
+
+    @classmethod
+    def tearDownClass(cls):
+        try:
+            cls.wait()
+        finally:
+            cls.user.delete()
+
     def aelo_run(self, params, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency
