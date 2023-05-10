@@ -43,7 +43,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        OQ_APPLICATION_MODE=public python install.py devel
     - name: hazardlib tests
       run: |
         source ~/openquake/bin/activate
@@ -52,4 +52,26 @@ jobs:
         cd openquake
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
         cd ..
-        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.views_test
+        ./openquake/server/manage.py test tests.views_test.EngineServerTestCase
+
+  aelo:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python  ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version:  ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        OQ_APPLICATION_MODE=aelo python install.py devel
+    - name: aelo tests
+      run: |
+        source ~/openquake/bin/activate
+        pip install pyshp pytest
+        oq dbserver start
+        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.views_test.EngineServerAeloTestCase

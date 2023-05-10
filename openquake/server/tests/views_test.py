@@ -445,6 +445,8 @@ class EngineServerTestCase(django.test.TestCase):
             resp_text_dict = json.loads(resp.content.decode('utf8'))
             self.assertFalse(resp_text_dict['success'])
 
+
+class EngineServerAeloModeTestCase(EngineServerTestCase):
     def aelo_run(self, params, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency

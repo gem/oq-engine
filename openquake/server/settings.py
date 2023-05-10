@@ -214,12 +214,14 @@ except ImportError:
         pass
 
 if TEST:
-    APPLICATION_MODE = 'aelo'
-    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-    # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
-    #        We should redefine it to a different directory for each test,
-    #        in order to avoid concurrency issues in case tests run in parallel
-    EMAIL_FILE_PATH = '/tmp/app-messages'
+    APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', 'public')
+    if APPLICATION_MODE.upper() == 'AELO':
+        EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+        # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
+        #        We should redefine it to a different directory for each test,
+        #        in order to avoid concurrency issues in case tests run in
+        #        parallel
+        EMAIL_FILE_PATH = '/tmp/app-messages'
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
     LOCKDOWN = True
