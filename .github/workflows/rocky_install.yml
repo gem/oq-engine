@@ -75,9 +75,9 @@ jobs:
         # Wait the DbServer to come up
         echo "Waiting DBServer up on port 1907...."
         while ! nc -z localhost 1907; do
-          sleep 1 # wait for 1/10 of the second before check again
+          sleep 2 # wait for 1/10 of the second before check again
         done
-        sleep 2
+        sleep 1
         echo "Add settings for login and logging on webui before to start"
         cd /__w/oq-engine/oq-engine/
         ls -lrt
@@ -93,12 +93,16 @@ jobs:
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
         echo "Waiting WEBUI up on port 8800...."
         while ! nc -z localhost 8800; do
-          sleep 1 # wait for 1/10 of the second before check again
+          sleep 2 # wait for 1/10 of the second before check again
         done
         ls -lrt /var/log/oq-engine/
-        sleep 2
+        sleep 1
         #
-        curl -I -X GET http://127.0.0.1:8800/engine
+        curl -L -I -X GET http://127.0.0.1:8800/engine
+        sleep 0.5
+        curl -L -I -X GET http://127.0.0.1:8800/accounts/login/
+        echo "display log of webui"
+        cat /var/log/oq-engine/webui-access.log
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
