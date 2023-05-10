@@ -26,7 +26,7 @@ on:
 jobs:
 
   build:
-    name: Submit and publish from Fedora 36 container
+    name: Submit and publish from Fedora 37 container
     runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -40,7 +40,7 @@ jobs:
     # Run in Fedora container on Ubuntu VM
 
     container:
-      image: fedora:36
+      image: fedora:37
       options: --privileged
     steps:
       - name: Clone Repository (Latest)
@@ -106,6 +106,7 @@ jobs:
           BRANCH: HEAD
           STABLE: ${{ github.event.inputs.lts-ver }}
         run: |
+          set -x 
           spectool -g -R ~/rpmbuild/SPECS/python3-${REPO}.spec
           rpmbuild -bs  ~/rpmbuild/SPECS/python3-${REPO}.spec
           rpmbuild -bb  ~/rpmbuild/SPECS/python3-${REPO}.spec
