@@ -23,7 +23,8 @@ from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
+from openquake.calculators.export import export
 from openquake.qa_tests_data.postproc import case_mrd
 
 PLOT = False
@@ -32,11 +33,13 @@ PLOT = False
 class PostProcTestCase(CalculatorTestCase):
 
     def test_mrd(self):
-
         # Computes the mean rate density using a simple PSHA input model
         self.run_calc(case_mrd.__file__, 'job.ini', postproc_func='dummy')
-        hc_id = str(self.calc.datastore.calc_id)
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)
 
+        hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_mrd.__file__, 'job.ini', hazard_calculation_id=hc_id)
         mrd = self.calc.datastore['mrd'][:]
         #assert abs(mrd.mean() - 2.334333e-07) < 1e-12, mrd.mean()

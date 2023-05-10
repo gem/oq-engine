@@ -19,7 +19,6 @@
 Module :mod:`openquake.hazardlib.mgmpe.modifiable_gmpe` implements
 :class:`~openquake.hazardlib.mgmpe.ModifiableGMPE`
 """
-import copy
 import numpy as np
 from openquake.hazardlib.gsim.base import GMPE, registry, CoeffsTable
 from openquake.hazardlib.const import StdDev
@@ -276,7 +275,7 @@ class ModifiableGMPE(GMPE):
         for spec of input and result values.
         """
         if 'nrcan15_site_term' in self.params:
-            ctx_copy = copy.copy(ctx)
+            ctx_copy = ctx.copy()
             ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
         else:
             ctx_copy = ctx
