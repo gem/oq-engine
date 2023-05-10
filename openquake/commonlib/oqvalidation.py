@@ -1437,7 +1437,8 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = self.hazard_imtls or self.risk_imtls
-        return DictArray(imtls) if imtls else {}
+        imts = sorted(imtls, key=lambda imt: from_string(imt).period)
+        return DictArray({imt: imtls[imt] for imt in imts}) if imtls else {}
 
     @property
     def min_iml(self):

@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.17.0-git94ac6b44a6', start_date='2023-05-10T08:51:09', checksum=3396488901"
+#,,,,,,"generated_by='OpenQuake engine 3.17.0-gitf0fef42c6c', start_date='2023-05-10T09:55:51', checksum=3396488901"
 rlz_id,policy_id,retention,claim,surplus,quota_shared,wxlr
-0,B,4.19000E+01,6.03712E+02,2.41485E+02,1.20742E+02,1.99585E+02
-0,A,6.34024E+01,4.40252E+02,8.80504E+01,1.32076E+02,1.56724E+02
+0,B,4.15000E+01,6.09532E+02,2.43813E+02,1.21906E+02,2.02313E+02
+0,A,7.14803E+01,4.33648E+02,8.67297E+01,1.30095E+02,1.45344E+02
