@@ -45,7 +45,7 @@ jobs:
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
-        dnf install -y git git-lfs
+        dnf install -y git git-lfs iproute
         pip3 -V
         python3 -c "import sys; print(sys.version)"
         #
@@ -68,24 +68,25 @@ jobs:
     - name: Run webui test
       run: |
         set -x
-        dnf -y install iproute
         source /opt/openquake/venv/bin/activate
         mkdir /var/log/oq-engine/
         chown openquake /var/log/oq-engine/
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         # Wait the DbServer to come up
-        while true
-        do
-            ss -tnpl | grep 1908 
-            result=$?
-            if [[ $result -eq 0 ]]; then
-                break
-            fi
-            sleep 1
-        done
+        #while true
+        #do
+        #    ss -tnpl | grep 1908 
+        #    result=$?
+        #    if [[ $result -eq 0 ]]; then
+        #        break
+        #    fi
+        #    sleep 1
+        #done
         #
+        sleep 60
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
         ls -lrt /var/log/oq-engine/
+        sleep 60
         #
         curl -I -X GET http://127.0.0.1:8800/engine
     - name: Run tests
