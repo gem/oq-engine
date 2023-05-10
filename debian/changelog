@@ -10,6 +10,12 @@
   * Fixed a bug in classical_damage causing a ValueError: could not broadcast
     input array from shape (X,Y) into shape (X,)
   * Added check for missing site parameters
+
+  [Paolo Tormene]
+  * Internal: reduced the size of the gsim column in the view
+    required_params_per_trt in the .rst report
+
+  [Michele Simionato]
   * Optimized the generation of events
   * Fixed the GMFs CSV importer so that it can import exported GMFs even in
     the presence of a `custom_site_id`
