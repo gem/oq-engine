@@ -300,7 +300,7 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
         for spec of input and result values.
         """
         ctx = ctx.copy()
-        ctx.vs30 = np.full_like(ctx.vs30, 600.)
+        ctx.vs30 = 600.
         super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tau'
         log_phi_ss = np.log(10)
