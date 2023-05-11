@@ -63,23 +63,15 @@ class CostCalculator(object):
             cost = economic value
         case 2: cost type: per asset:
             cost * number (of assets) = economic value
-        case 3: cost type: per area and area type: aggregated:
-            cost * area = economic value
-        case 4: cost type: per area and area type: per asset:
+        case 3: cost type: per area
             cost * area * number = economic value
 
     The same "formula" applies to retrofitting cost.
     """
-    def __init__(self, cost_types, area_types, units, tagi={'taxonomy': 0}):
-        if set(cost_types) != set(area_types):
-            raise ValueError('cost_types has keys %s, area_types has keys %s'
-                             % (sorted(cost_types), sorted(area_types)))
+    def __init__(self, cost_types, units, tagi={'taxonomy': 0}):
         for ct in cost_types.values():
             assert ct in ('aggregated', 'per_asset', 'per_area'), ct
-        for at in area_types.values():
-            assert at in ('aggregated', 'per_asset'), at
         self.cost_types = cost_types
-        self.area_types = area_types
         self.units = units
         self.tagi = tagi
 
@@ -93,11 +85,7 @@ class CostCalculator(object):
         if cost_type == "per_asset":
             return cost * number
         if cost_type == "per_area":
-            area_type = self.area_types[loss_type]
-            if area_type == "aggregated":
-                return cost * area
-            elif area_type == "per_asset":
-                return cost * area * number
+            return cost * area * number
         # this should never happen
         raise RuntimeError('Unable to compute cost')
 
@@ -119,12 +107,9 @@ class CostCalculator(object):
 
     def __toh5__(self):
         loss_types = sorted(self.cost_types)
-        dt = numpy.dtype([('cost_type', hdf5.vstr),
-                          ('area_type', hdf5.vstr),
-                          ('unit', hdf5.vstr)])
+        dt = numpy.dtype([('cost_type', hdf5.vstr), ('unit', hdf5.vstr)])
         array = numpy.zeros(len(loss_types), dt)
         array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
-        array['area_type'] = [self.area_types[lt] for lt in loss_types]
         array['unit'] = [self.units[lt] for lt in loss_types]
         attrs = dict(loss_types=hdf5.array_of_vstr(loss_types))
         return array, attrs
@@ -132,7 +117,6 @@ class CostCalculator(object):
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
         self.cost_types = dict(zip(self.loss_types, array['cost_type']))
-        self.area_types = dict(zip(self.loss_types, array['area_type']))
         self.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     def __repr__(self):
@@ -141,7 +125,6 @@ class CostCalculator(object):
 
 costcalculator = CostCalculator(
     cost_types=dict(structural='per_area'),
-    area_types=dict(structural='per_asset'),
     units=dict(structural='EUR'))
 
 
@@ -804,12 +787,10 @@ def _get_exposure(fname, stop=None):
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
     cost_types = numpy.array(cost_types, cost_type_dt)
-    cc = CostCalculator(
-        {}, {}, {}, {name: i for i, name in enumerate(tagnames)})
+    cc = CostCalculator({}, {}, {name: i for i, name in enumerate(tagnames)})
     for ct in cost_types:
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
-        cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
     exp = Exposure(
         exposure['id'], exposure['category'],
