@@ -104,19 +104,8 @@ class EngineServerTestCase(django.test.TestCase):
         # to avoid issues on Jenkins
         raise django.test.SkipTest('Timeout waiting for %s' % running_calcs)
 
-    def postzip(self, archive):
-        with open(os.path.join(self.datadir, archive), 'rb') as a:
-            resp = self.post('run', dict(archive=a))
-        try:
-            js = json.loads(resp.content.decode('utf8'))
-        except Exception:
-            raise ValueError(b'Invalid JSON response: %r' % resp.content)
-        if resp.status_code == 200:  # ok case
-            return dict(job_id=js['job_id'])
-        else:  # error case
-            return dict(tb_str='\n'.join(js['traceback']), job_id=js['job_id'])
 
-    # start/stop server utilities
+class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -133,8 +122,17 @@ class EngineServerTestCase(django.test.TestCase):
         assert c > 0, 'There are no jobs??'
         cls.wait()
 
-
-class EngineServerPublicModeTestCase(EngineServerTestCase):
+    def postzip(self, archive):
+        with open(os.path.join(self.datadir, archive), 'rb') as a:
+            resp = self.post('run', dict(archive=a))
+        try:
+            js = json.loads(resp.content.decode('utf8'))
+        except Exception:
+            raise ValueError(b'Invalid JSON response: %r' % resp.content)
+        if resp.status_code == 200:  # ok case
+            return dict(job_id=js['job_id'])
+        else:  # error case
+            return dict(tb_str='\n'.join(js['traceback']), job_id=js['job_id'])
 
     def test_404(self):
         # looking for a missing calc_id
