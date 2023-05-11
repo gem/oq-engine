@@ -52,7 +52,7 @@ jobs:
         cd openquake
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
         cd ..
-        ./openquake/server/manage.py test tests.views_test.EngineServerPublicModeTestCase
+        ./openquake/server/manage.py test tests.test_views.EngineServerPublicModeTestCase
 
   aelo:
     runs-on: ${{ matrix.os }}
@@ -74,4 +74,4 @@ jobs:
         source ~/openquake/bin/activate
         pip install pyshp pytest
         oq dbserver start
-        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.views_test.EngineServerAeloModeTestCase
+        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_views.EngineServerAeloModeTestCase

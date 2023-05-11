@@ -442,7 +442,8 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         except RuntimeError:
             # Django tests are meant to be run with the command
             # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
-            # ./openquake/server/manage.py test tests.views_test
+            # ./openquake/server/manage.py test \
+            # tests.test_views.EngineServerAeloModeTestCase
             raise unittest.SkipTest('Use Django to run such tests')
 
         assert get_status() == 'running'
