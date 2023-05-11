@@ -133,7 +133,8 @@ class EngineServerTestCase(django.test.TestCase):
         assert c > 0, 'There are no jobs??'
         cls.wait()
 
-    # tests
+
+class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     def test_404(self):
         # looking for a missing calc_id
@@ -344,6 +345,12 @@ class EngineServerTestCase(django.test.TestCase):
         pprint.pprint(dic)
         if dic['error_msg'] is None:  # this should not happen
             raise django.test.SkipTest(dic)
+
+    def test_can_not_run_aelo_calc(self):
+        params = dict(
+            lon=10, lat=45, vs30='800.0', siteid='SITE')
+        resp = self.post('aelo_run', params)
+        assert resp.status_code == 404, resp
 
     # tests for nrml validation
 
@@ -586,3 +593,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.aelo_invalid_input(
             params,
             "Invalid ID 'CCA SITE': the only accepted chars are a-zA-Z0-9_-:")
+
+    def test_aelo_can_not_run_normal_calc(self):
+        with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
+            resp = self.post('run', dict(archive=a))
+        assert resp.status_code == 404, resp
+
+    def test_aelo_can_not_validate_zip(self):
+        with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
+            resp = self.post('validate_zip', dict(archive=a))
+        assert resp.status_code == 404, resp
