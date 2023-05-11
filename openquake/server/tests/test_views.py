@@ -110,6 +110,9 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
+        print('NB: These Django tests are meant to be run with the command'
+              ' ./openquake/server/manage.py test'
+              ' tests.test_views.EngineServerPublicModeTestCase')
         assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
@@ -438,12 +441,12 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         django.setup()
         try:
             User = get_user_model()
-        except RuntimeError:
-            # Django tests are meant to be run with the command
-            # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
-            # ./openquake/server/manage.py test \
-            # tests.test_views.EngineServerAeloModeTestCase
-            raise unittest.SkipTest('Use Django to run such tests')
+        except django.core.exceptions.ImproperlyConfigured:
+            print('NB: These Django tests are meant to be run with the command'
+                  ' OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg'
+                  ' ./openquake/server/manage.py test '
+                  ' tests.test_views.EngineServerAeloModeTestCase')
+            raise
 
         assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
