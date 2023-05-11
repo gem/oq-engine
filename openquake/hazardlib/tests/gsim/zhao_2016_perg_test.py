@@ -30,7 +30,8 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.zhao_2016 import ZhaoEtAl2016SSlabPErg
 
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'DATA', 'ZHAO16PERG')
+DATA_FOLDER = os.path.join(os.path.dirname(__file__),'..','..','tests','gsim',
+                           'data', 'ZHAO16PERG','test_volc.geojson')
 
 def _get_first_point(rup, from_point):
     """
@@ -208,7 +209,7 @@ class TestZhao2016PErg(unittest.TestCase):
                           rake, trt, ztor)
         
         # Get implementations of Zhao et al. (2016) intra-slab GMM
-        volc_arc_fname = os.path.join('..','..','tests','gsim', 'data','ZHAO16PERG','test_volc.geojson')
+        volc_arc_fname = DATA_FOLDER
         self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_fname)
         self.gmm = ZhaoEtAl2016SSlabPErg()
         
