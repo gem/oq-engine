@@ -17,6 +17,7 @@
 import os
 import unittest
 import numpy as np
+import pathlib
 from matplotlib import pyplot
 
 from openquake.hazardlib.geo import Point
@@ -194,7 +195,7 @@ class TestZhao2016PErg(unittest.TestCase):
         of Zhao et al. (2016) intra-slab GMM.
         """
         # Get rupture
-        lon = 106.86
+        lon = 110.86
         lat = 37.95
         dep = 10.0
         msr = WC1994()
