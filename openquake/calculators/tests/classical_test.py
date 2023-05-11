@@ -586,24 +586,25 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
+        oq = self.calc.oqparam
+        L = oq.imtls.size  # 25 levels x 9 IMTs
+        L1 = L // len(oq.imtls)
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
-        L = self.calc.oqparam.imtls.size  # 25 levels x 8 IMTs
-        for gid, gsim in enumerate(gsims):
-            df_for_gid = df[df.gid == gid]
+        for g, gsim in enumerate(gsims):
+            curve = numpy.zeros(L1, oq.imt_dt())
+            df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
-            poes[df_for_gid.lid] = df_for_gid.poe
-            csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
-            gsim_str = gsim.__class__.__name__
+            poes[df_for_g.lid] = df_for_g.poe
+            for imt in oq.imtls:
+                curve[imt] = poes[oq.imtls(imt)]
+            gs = gsim.__class__.__name__
             if 'submodel' in gsim._toml:
-                gsim_str += '_' + gsim.kwargs['submodel']
-            expected_csv = os.path.join(os.path.dirname(os.path.abspath(case_76.__file__)), 'expected/', '%s.csv' % gsim_str)
-            with open(expected_csv, 'r') as f:
-                expected_poes = numpy.array([float(line.strip()) for line in f])
-            for i in range(len(poes)):
-                self.assertAlmostEqual(poes[i], expected_poes[i], delta = 0.01)
+                gs += '_' + gsim.kwargs['submodel']
+            got = general.gettemp(text_table(curve, ext='org'))
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=2E-5)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
@@ -656,13 +657,13 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_82(self):
         # two mps, only one should be collapsed and use reqv
         self.run_calc(case_82.__file__, 'job.ini')
-        [f1] = export(('rates_by_src', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/rates_by_src.csv', f1)
+        [f1] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_rates_by_src.csv', f1)
 
     def test_case_84(self):
         # three sources are identical except for their source_ids.
         # one is collapsed using reqv, while the other two are specified 
         # as 'not collapsed' in the job file field reqv_ignore_sources
         self.run_calc(case_84.__file__, 'job.ini')
-        [f] = export(('rates_by_src', 'csv'), self.calc.datastore)
+        [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rbs.csv', f)

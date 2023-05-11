@@ -18,6 +18,7 @@ Conference on Earthquake Engineering, Quebec City, Canada.
 """
 import numpy as np
 
+from openquake.hazardlib import const
 from openquake.hazardlib.contexts import get_mean_stds
 from openquake.hazardlib.gsim.garcia_2005 import GarciaEtAl2005SSlab
 from openquake.hazardlib.gsim.garcia_2005 import _get_stddevs as _get_stddevs_ga
@@ -37,7 +38,7 @@ from openquake.hazardlib.gsim.abrahamson_2015 import (
 from openquake.hazardlib.gsim.abrahamson_2015 import (
     _compute_focal_depth_term as _compute_focal_depth_term_abr)
 from openquake.hazardlib.gsim.abrahamson_2015 import (
-    AbrahamsonEtAl2015SSlab, _compute_pga_rock,
+    AbrahamsonEtAl2015SSlab, _compute_pga_rock, get_stress_factor,
     _compute_forearc_backarc_term, _compute_site_response_term)
 from openquake.hazardlib.gsim.atkinson_boore_2003 import (
     _compute_mean as _compute_mean_ab)
@@ -81,8 +82,9 @@ def _compute_mean_ga(C, g, ctx, imt):
 
 
 def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
-        """
-        For CanadaSHM6 the ZhaoEtAl2006 site term is replaced with:
+    """
+    For CanadaSHM6 the ZhaoEtAl2006 site term is replaced with:
+
             Vs30
             2000 = minimum(1100, maximum[hard-rock, SC I + AA13/AB06 factor])
             1100 = average of hard-rock and SC I
@@ -91,22 +93,21 @@ def _compute_site_class_term_CanadaSHM6(C, ctx, imt):
             250 = SC III
             160 = SC IV
             log-log interpolation for intermediate values
-        """
-
-        ref_vs30 = np.array([2000., 1100., 760., 450., 250., 160., ])
-        ref_values = np.array([0.0, 0.5*(C['CH'] + C['C1']), C['C1'], C['C2'],
-                               C['C3'], C['C4']])
-
-        # Equivalent to CanadaSHM6_hardrock_site_factor but reproduced here
-        # to avoid using np.interp twice.
-        fac_760_2000 = np.log(1./COEFFS_AB06[imt]['c'])
-        ref_values[0] = np.min([0.5*(C['CH'] + C['C1']), np.max([C['CH'],
-                               C['C1'] + fac_760_2000])])
-        site_term = np.interp(
-            np.log(ctx.vs30), np.log(np.flip(ref_vs30, axis=0)),
-            np.flip(ref_values, axis=0))
-
-        return site_term
+    """    
+    ref_vs30 = np.array([2000., 1100., 760., 450., 250., 160., ])
+    ref_values = np.array([0.0, 0.5*(C['CH'] + C['C1']), C['C1'], C['C2'],
+                           C['C3'], C['C4']])
+    
+    # Equivalent to CanadaSHM6_hardrock_site_factor but reproduced here
+    # to avoid using np.interp twice.
+    fac_760_2000 = np.log(1./COEFFS_AB06[imt]['c'])
+    ref_values[0] = np.min([0.5*(C['CH'] + C['C1']), np.max(
+        [C['CH'], C['C1'] + fac_760_2000])])
+    site_term = np.interp(
+        np.log(ctx.vs30), np.log(np.flip(ref_vs30, axis=0)),
+        np.flip(ref_values, axis=0))
+    
+    return site_term
 
 
 def _compute_soil_amplification(C, ctx, pga_rock, imt):
@@ -230,6 +231,7 @@ class CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55(AbrahamsonEtAl2015SSlab):
         """
         Added PGV limited to the period range of 0.05 - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
             # set correlated IMT for PGV and check T bounds
@@ -298,7 +300,6 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     as implemented for CanadaSHM6.
     See also header in CanadaSHM6_InSlab.py
     """
-
     # Parameters used to extrapolate to 0.05s <= T <= 10s
     MAX_SA = 5.0
     MIN_SA = 0.05
@@ -306,8 +307,8 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
     MIN_SA_EXTRAP = 0.05
     extrapolate_GMM = CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55()
 
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     REQUIRES_DISTANCES = {'rrup'}#,'rhypo'}
     HYPO_DEPTH = 55.
 
@@ -331,6 +332,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
                           added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
             extrapolate = False
@@ -379,9 +381,10 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
             # add extrapolation factor if outside SA range (0.05 - 5.0)
             if extrapolate:
-                ctx.rhypo = ctx.rrup  # approximation for extrapolation only
+                ctxt = ctx.copy()
+                ctxt.rhypo = ctx.rrup  # approximation for extrapolation only
                 mean[m] += extrapolation_factor(self.extrapolate_GMM,
-                                                ctx, imt, target_imt)
+                                                ctxt, imt, target_imt)
             if PGVimt:
                 mean[m] = (0.995*mean[m]) + 3.937
 
@@ -434,6 +437,7 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
                           - 10s
                           limted to the period range of 0.05 - 10s
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
 
         # cap magnitude values at 8.0, see page 1709
@@ -503,9 +507,10 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
 
             # add extrapolation factor if outside SA range (0.07 - 9.09)
             if extrapolate:
-                ctx.rhypo = ctx.rrup  # approximation for extrapolation only
+                ctxt = ctx.copy()
+                ctxt.rhypo = ctx.rrup  # approximation for extrapolation only
                 mean[m] += extrapolation_factor(self.extrapolate_GMM,
-                                         ctx, imt, target_imt)
+                                         ctxt, imt, target_imt)
             if PGVimt:
                 mean[m] = (0.995*mean[m]) + 3.937
 
@@ -556,6 +561,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
                           forced rrup = rhypo (to be inline with the
                                                CanadaSHM6-table implementation)
         """
+        ctx = ctx.copy()
         ctx.hypo_depth = self.HYPO_DEPTH
         for m, imt in enumerate(imts):
 

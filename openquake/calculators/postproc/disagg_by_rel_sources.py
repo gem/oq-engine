@@ -32,7 +32,8 @@ def get_rel_source_ids(dstore, imts, poes, threshold=.1):
     source_ids = set()
     for im in imts:
         for poe in poes:
-            aw = extract.extract(dstore, f'rates_by_src?imt={im}&poe={poe}')
+            aw = extract.extract(dstore,
+                                 f'mean_rates_by_src?imt={im}&poe={poe}')
             poe_array = aw.array['poe']  # for each source in decreasing order
             max_poe = poe_array[0]
             rel = aw.array[poe_array > threshold * max_poe]
@@ -63,7 +64,7 @@ def main(dstore, csm):
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    if 'rates_by_src' in parent:
+    if 'mean_rates_by_src' in parent:
         rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
     else:
         rel_ids = get_rel_source_ids(dstore, oq.imtls, oq.poes, threshold=.1)
@@ -86,7 +87,8 @@ def main(dstore, csm):
         smap.submit((groups, sitecol, relt, (edges, shp), oq))
     mags, dists, lons, lats, eps, trts = edges
     arr = numpy.zeros(
-        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P']))
+        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P'])
+    )
     for srcid, rates5D, rates2D in smap:
         idx = src2idx[basename(srcid, '!;')]
         arr[idx] = disagg.to_probs(rates5D)
@@ -94,7 +96,7 @@ def main(dstore, csm):
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt', 'poe'],
         source_id=rel_ids, imt=list(oq.imtls), poe=oq.poes,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
-    dstore['mean_disagg_bysrc'] = hdf5.ArrayWrapper(arr, dic)
+    dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
 
 
 if __name__ == '__main__':
