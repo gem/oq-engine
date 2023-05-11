@@ -57,7 +57,7 @@ Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
 
-Requires: python3 >= 3.8
+Requires: oq-python3 >= 3.9
 
 Obsoletes: python-oq-hazardlib python-oq-engine
 Provides: python-oq-hazardlib python-oq-engine
