@@ -196,7 +196,7 @@ class TestZhao2016PErg(unittest.TestCase):
         """
         # Get rupture
         lon = 110.86
-        lat = 37.95
+        lat = 27.95
         dep = 10.0
         msr = WC1994()
         mag = 7.0
