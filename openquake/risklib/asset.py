@@ -379,7 +379,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
-            assets_by_site, exposure.tagcol.tagnames, time_event)
+            assets_by_site, exposure.area, exposure.tagcol.tagnames, time_event)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
@@ -638,9 +638,10 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(assets_by_site, tagnames=(), time_event=None):
+def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
     """
     :param assets_by_site: a list of lists of assets
+    :param area: True if there is an area field in the exposure
     :param tagnames: a list of tag names
     :returns: an array `assetcol`
     """
@@ -667,14 +668,12 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     float_fields = loss_types + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagnames
                   if name not in ('id', 'site_id')]
-    extra_fields = []
-    #if 'area' in tagnames:
-        
+    area_field = [('value-area', F32)] if area else []
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
          ('ordinal', U32), ('lon', F32), ('lat', F32),
-         ('site_id', U32), ('value-number', F32), ('value-area', F32)] + [
+         ('site_id', U32), ('value-number', F32)] + area_field + [
              (str(name), float) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -795,7 +794,6 @@ def _get_exposure(fname, stop=None):
         name = ct['name']  # structural, nonstructural, ...
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.units[name] = ct['unit']
-    assert area.attrib['type'] in ('per_asset', '?'), area.attrib
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
@@ -1063,6 +1061,7 @@ class Exposure(object):
                     asset_id, param['fname']))
             asset_refs.add(param['asset_prefix'] + asset_id)
             self._add_asset(idx, asset, param)
+        self.area = 'area' in asset.dtype.names
 
     def _add_asset(self, idx, asset, param):
         values = {}
