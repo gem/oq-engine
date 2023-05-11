@@ -174,7 +174,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(assetcol), 2372)
         self.assertEqual(
             sorted(assetcol.array.dtype.names),
-            sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'area',
+            sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'value-area',
                     'value-contents', 'value-nonstructural', 'value-number',
                     'value-occupants', 'occupants_night', 'value-structural',
                     'ideductible', 'taxonomy', 'NAME_2', 'ID_2', 'ID_1',

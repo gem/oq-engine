@@ -1018,14 +1018,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         Global.exposure, assets_by_site, oqparam.time_event,
         oqparam.aggregate_by)
-    if assetcol.occupancy_periods:
-        missing = set(cost_types) - set(
-            Global.exposure.cost_types['name']) - set(['occupants'])
-    else:
-        missing = set(cost_types) - set(Global.exposure.cost_types['name'])
-    #if missing and not oqparam.calculation_mode.endswith('damage'):
-    #    raise InvalidFile('The exposure %s is missing %s' %
-    #                      (oqparam.inputs['exposure'], missing))
+
+    # check on missing fields in the exposure
+    if ('occupants' in oqparam.loss_types and not any(
+            'occupants' in name for name in assetcol.array.dtype.names)):
+        raise InvalidFile('The exposure %s is missing %s' %
+                          (oqparam.inputs['exposure'],'occupants'))
+
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):

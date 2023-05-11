@@ -684,6 +684,9 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
     float_fields = loss_types + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagnames
                   if name not in ('id', 'site_id')]
+    extra_fields = []
+    #if 'area' in tagnames:
+        
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
@@ -704,6 +707,10 @@ def build_asset_array(assets_by_site, tagnames=(), time_event=None):
                     value = asset.asset_id
                 elif field == 'ordinal':
                     value = asset.ordinal
+                elif field == 'value-number':
+                    value = asset.number
+                elif field == 'area':
+                    value = asset.area
                 elif field == 'site_id':
                     value = sid
                 elif field == 'lon':
@@ -807,6 +814,7 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
+    assert area.attrib['type'] in ('per_asset', '?'), area.attrib
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
