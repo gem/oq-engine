@@ -446,11 +446,11 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         job_ini = general.gettemp('''\
 [general]
 description = Exposure with missing cost_types
-calculation_mode = scenario
+calculation_mode = scenario_risk
 exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
+            readinput.get_sitecol_assetcol(oqparam, exp_types=['structural'])
         self.assertIn("is missing", str(ctx.exception))
 
     def test_Lon_instead_of_lon(self):

@@ -1081,6 +1081,7 @@ class Exposure(object):
                     asset_id, param['fname']))
             asset_refs.add(param['asset_prefix'] + asset_id)
             self._add_asset(idx, asset, param)
+        self.area = 'area' in asset.dtype.names
 
     def _add_asset(self, idx, asset, param):
         values = {}
