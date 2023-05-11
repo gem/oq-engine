@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Deprecated the <area> conversion in the exposure
   * Added new loss types "area" and "number" for usage in risk calculations
   * Made the contexts immutable and fixed mutability bugs potentially
     affecting the modules akkar_bommer_2010, bindi_2011_ipe, can_shm6_inslab,
