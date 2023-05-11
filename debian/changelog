@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Ignoring the <area> node in the exposure, since it was not used
   * Made the contexts immutable and fixed mutability bugs potentially
     affecting the modules akkar_bommer_2010, bindi_2011_ipe, can_shm6_inslab,
     lanzano_2019, youd_etal_2002, zhang_zhao_2005, cauzzi_faccioli_2008_swiss,

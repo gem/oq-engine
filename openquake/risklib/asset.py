@@ -744,14 +744,6 @@ def _get_exposure(fname, stop=None):
     except AttributeError:
         pass  # no fieldmap
     try:
-        area = conversions.area
-    except AttributeError:
-        # NB: the area type cannot be an empty string because when sending
-        # around the CostCalculator object we would run into this numpy bug
-        # about pickling dictionaries with empty strings:
-        # https://github.com/numpy/numpy/pull/5475
-        area = Node('area', dict(type='?'))
-    try:
         occupancy_periods = exposure.occupancyPeriods.text or ''
     except AttributeError:
         occupancy_periods = ''
