@@ -708,7 +708,7 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
                     value = asset.ordinal
                 elif field == 'value-number':
                     value = asset.number
-                elif field == 'area':
+                elif field == 'value-area':
                     value = asset.area
                 elif field == 'site_id':
                     value = sid

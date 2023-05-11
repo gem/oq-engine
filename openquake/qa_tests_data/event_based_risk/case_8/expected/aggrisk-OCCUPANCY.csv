@@ -1,8 +1,11 @@
-#,,,"generated_by='OpenQuake engine 3.17.0-git0d0212832f', start_date='2023-05-11T06:11:19', checksum=1509820795, investigation_time=None, risk_investigation_time=1.0"
+#,,,"generated_by='OpenQuake engine 3.17.0-git09f986f34d', start_date='2023-05-11T10:19:55', checksum=1509820795, investigation_time=None, risk_investigation_time=1.0"
 loss_type,OCCUPANCY,loss_value,loss_ratio
 structural,Res,2.52786E+03,7.70997E-05
+area,Res,5.13053E+01,3.23815E-03
 number,Res,3.63137E+01,7.64499E-04
 structural,Com,4.20420E+01,1.43316E-06
+area,Com,6.50750E+00,2.21728E-04
 number,Com,4.71092E+00,2.35546E-04
 structural,Ind,2.20993E+02,7.58193E-06
+area,Ind,1.09432E+01,4.77450E-04
 number,Ind,6.30167E+00,4.20111E-04
