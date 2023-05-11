@@ -795,7 +795,7 @@ def _get_exposure(fname, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], cc, TagCollection(tagnames), fieldmap)
+        [], cc, TagCollection(tagnames), fieldmap)
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -873,7 +873,7 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'cost_calculator', 'tagcol', 'fieldmap']
+              'assets', 'cost_calculator', 'tagcol', 'fieldmap']
 
     @staticmethod
     def check(fname):
@@ -919,7 +919,6 @@ class Exposure(object):
                 ae(exposure.cost_types, exp.cost_types)
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
                 ae(exposure.retrofitted, exp.retrofitted)
-                ae(exposure.area, exp.area)
                 exp.assets.extend(exposure.assets)
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
