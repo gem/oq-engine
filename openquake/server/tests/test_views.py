@@ -40,6 +40,7 @@ import csv
 
 import django
 from django.test import Client
+from django.contrib.auth import get_user_model
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
@@ -436,7 +437,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         # django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
         django.setup()
         try:
-            from django.contrib.auth.models import User  # noqa
+            User = get_user_model()
         except RuntimeError:
             # Django tests are meant to be run with the command
             # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
