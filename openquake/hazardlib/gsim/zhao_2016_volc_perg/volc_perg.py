@@ -101,7 +101,7 @@ def get_min_dist_rup_to_site(rup, sites):
     :param rup:
         rup: Rupture context
     :param sites:
-        sites: site collection
+        sites: Sites collection
     """
     # Discretize each edge of the rupture surface
     top_left_lon = rup.surface.array[0][0][0] # from array to get floats
@@ -184,7 +184,7 @@ def discretise_lines(min_dist_rup_pnt, sites):
     :param min_dist_rup_pnt:
         rup: Minimum distance from each site to the rupture
     :param sites:
-        sites: Site collection
+        sites: Sites collection
     """
     # Fix to zero to compute horz. dist. as in Zhao et al. 2016 
     fix_depth = 0
@@ -224,13 +224,14 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store,
     :param polygon_per_zone:
         polygon_per_zone: Polygon for each zone
     :param sites:
-        sites: sites collection
+        sites: Sites collection
     """
     # Store the distanc per volc zone per site (i.e. per record)
     dist_per_volc_zone_per_site = OrderedDict([(site_idx, {}) for site_idx,
                                                site in enumerate(sites[0])])  
     in_zone_coo_per_zone_per_site = OrderedDict([(site_idx, {}) for site_idx,
                                                site in enumerate(sites[0])])  
+    
     # For each site...
     for idx_site, site in enumerate(sites[0]):
         mesh_per_site = line_mesh[idx_site]
@@ -266,8 +267,9 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store,
 def get_total_rvolc_per_path(dist_per_volc_zone_per_site, volc_pgn_store):
     """
     Get total rvolc per travel path (one per site in gm calculation context).
-    Note that distance travered per zone in Zhao et al. (2016) papers is capped
-    at minimum of 12 km per zone and max of 80 km per zone
+    Note that total distance traversed through volcanic zones for each travel
+    path in the Zhao et al. (2016) papers is capped at minimum of 12 km
+    (assuming the zone is actually traversed) and maximum of 80 km.
     :param dist_per_volc_zone_per_site:
         dist_per_volc_zone_per_site: Dict of distance traversed per zone per
         site (i.e. per travel path)
@@ -324,7 +326,6 @@ def get_rvolcs(ctx, volc_polygons):
     # Discretise the line from closest pnt on rup to site and get intercepts
     line_mesh = discretise_lines(min_dist_rup_pnt, sites)
  
-               
     # Get the distances traversed across each volcanic zone
     dist_per_volc_zone_per_site,\
         in_zone_coo_per_zone_per_site = get_dist_traversed_per_zone(

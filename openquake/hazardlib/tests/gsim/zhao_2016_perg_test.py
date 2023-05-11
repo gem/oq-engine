@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import pathlib
+import os
 import unittest
 import numpy as np
 from matplotlib import pyplot
@@ -30,7 +30,7 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.zhao_2016 import ZhaoEtAl2016SSlabPErg
 
-HERE = pathlib.Path(__file__)
+DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'DATA', 'ZHAO16PERG')
 
 def _get_first_point(rup, from_point):
     """
@@ -208,7 +208,7 @@ class TestZhao2016PErg(unittest.TestCase):
                           rake, trt, ztor)
         
         # Get implementations of Zhao et al. (2016) intra-slab GMM
-        volc_arc_fname = HERE.parent / 'data' / 'ZHAO16PERG' / 'test_volc.geojson'
+        volc_arc_fname = os.path.join('..','..','tests','gsim', 'data','ZHAO16PERG','test_volc.geojson')
         self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_fname)
         self.gmm = ZhaoEtAl2016SSlabPErg()
         

@@ -28,12 +28,15 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 """
 import numpy as np
 import fiona
+import os
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2016_volc_perg import volc_perg
+
+DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'zhao_2016_volc_perg')
 
 CONSTANTS = {"m_c": 7.1,
              "xcro": 2.0,
@@ -272,7 +275,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_file=None):
     """
     x_ij = ctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-
+    
     # Geometric attenuation scaling described in equation 6
     g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
         np.ones_like(x_ij)
@@ -280,7 +283,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_file=None):
     if np.any(idx):
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
                                       x_ij[idx] + gn_exp)
-
+    
     # equation 5
     c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     # equation 4
@@ -341,12 +344,13 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
     """
     # Check if need to apply non-ergodic path effects
     if volc_arc_file is not None:
-        # Get distance traversed per travel path through volcanic zones with
-        # specified cap at 80km if distance greater than 80 km traversed through
-        # zones (total) and set to 12 km if zones traversed but distance is less
-        # than 12 km (total)
+        # Get distance traversed per travel path through volcanic zones (rvolc),
+        # with rvolc capped at 80km if total distance traversed through zones is 
+        # greater than 80km, and set to 12 km if zones are traversed but the
+        # total distance is less than 12 km. This min/max constraint to rvolc
+        # is detailed within the publications for the Zhao et al. 2016 GMMs.
         ctx.rvolc = volc_perg.get_rvolcs(ctx, volc_arc_file)
-
+    
     x_ij = ctx.rrup
     # Get anelastic scaling term in equation 5
     qslh = np.where(ctx.ztor >= 50., C["eSLH"] * (0.02 * ctx.ztor - 1.0), 0)
@@ -541,32 +545,32 @@ class ZhaoEtAl2016Asc(GMPE):
 
     def __init__(self, volc_arc_file=None, **kwargs):
         super().__init__(volc_arc_file=volc_arc_file, **kwargs)
-        # If provided read in the volcanic zones geoJSON
         if volc_arc_file is not None:
-            self.volc_arc_file = fiona.open(volc_arc_file, 'r')
+            volc_arc_path = os.path.join(DATA_FOLDER, volc_arc_file)
+            self.volc_arc_file = fiona.open(volc_arc_path, 'r')
         else:
             self.volc_arc_file = None
             
-        print(type(self.volc_arc_file))
-
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        print(ctx[0])
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             C_SITE = self.COEFFS_SITE[imt]
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
             s_c, idx = _get_site_classification(ctx.vs30)
+            volc_arc_file = self.volc_arc_file
+            ctx.rvolc[ctx.rvolc != float()] = 0 # Fix to zero if NaN from ctx
             sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
                        get_sof_term(trt, C, ctx) +
                        get_depth_term(trt, C, ctx) +
-                       get_distance_term(trt, C, ctx, self.volc_arc_file))
-
+                       get_distance_term(trt, C, ctx, volc_arc_file))
             mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
-
+            
             if self.__class__.__name__.endswith('SiteSigma'):
                 for i in range(1, 5):
                     phi[m, idx[i]] += C["sc{:g}_sigma_S".format(i)]
@@ -881,11 +885,12 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
 
     Main version with standard deviations independent of site term
     """
+    experimental = True
 
     #: Supported tectonic region type is subduction inslab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
 
-    # Additional rupture paramters required to create rupture surface in ray tracing
+    # Additional rupture parameters required for ray tracing
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_lat', 'hypo_lon', 'hypo_depth',
                                    'ztor', 'rake', 'strike', 'dip'}
     
