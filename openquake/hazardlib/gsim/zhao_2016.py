@@ -557,7 +557,6 @@ class ZhaoEtAl2016Asc(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        print(ctx[0])
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             C_SITE = self.COEFFS_SITE[imt]
