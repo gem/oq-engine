@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the realizations extractor for scenario calculations reading
+    ruptures with multiple different tectonic region types
   * Fixed a subtle mutability bug affecting various GMPEs
   * Fixed rupture sampling in the case of a same source appearing in multiple
     source model logic tree branches
