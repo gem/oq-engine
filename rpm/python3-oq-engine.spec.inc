@@ -18,12 +18,21 @@
 
 # Provide a custom prefix for oq
 %define _oqprefix /opt/openquake
+%define _sysbin /usr/bin/
 %define _oqvenv %{_oqprefix}/venv
 %define _oqpython %{_oqprefix}/bin
 
 # Make sure that the proper installation of python is used by macros
+
+
+%if 0%{?el7}
 %define __python3 %{_oqpython}/python3
 %define __python %{__python3}
+%else
+%define __python3 %{_sysbin}/python3
+%define __python %{__python3}
+%endif
+
 %define installscript install.py
 
 %define oqstable ##_stable_##
