@@ -896,7 +896,7 @@ class HazardCalculator(BaseCalculator):
                 if oq.prefer_global_site_params:
                     self.sitecol.set_global_params(oq)
                 else:
-                    # use the site model parameters over the .ini parameters
+                    # use the site model parameters
                     self.sitecol.assoc(sm, assoc_dist)
                 if oq.override_vs30:
                     # override vs30, z1pt0 and z2pt5
