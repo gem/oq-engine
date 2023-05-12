@@ -57,7 +57,12 @@ Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
 # https://rpm-software-management.github.io/rpm/manual/boolean_dependencies.html
-Requires: (python3 >= 3.8 or oq-python3 >= 3.9)
+
+%if 0%{?el7}
+Requires: oq-python3 >= 3.9
+%else
+Requires: python3 >= 3.8
+%endif
 
 Obsoletes: python-oq-hazardlib python-oq-engine
 Provides: python-oq-engine
