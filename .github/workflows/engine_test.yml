@@ -51,8 +51,6 @@ jobs:
         oq dbserver start
         cd openquake
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
-        cd ..
-        ./openquake/server/manage.py test tests.test_views.EngineServerPublicModeTestCase
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
