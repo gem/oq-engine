@@ -213,17 +213,17 @@ except ImportError:
         # settings in this file only will be used
         pass
 
-if TEST:
-    # NOTE: fallback using the previously defined application mode (e.g. the
-    # one specified in the local settings) if OQ_APPLICATION_MODE is not given
-    APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
-    if APPLICATION_MODE.upper() == 'AELO':
-        EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-        # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
-        #        We should redefine it to a different directory for each test,
-        #        in order to avoid concurrency issues in case tests run in
-        #        parallel
-        EMAIL_FILE_PATH = '/tmp/app-messages'
+# NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
+# both the default setting and the one specified in the local settings
+APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
+
+if TEST and APPLICATION_MODE.upper() == 'AELO':
+    EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+    # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
+    #        We should redefine it to a different directory for each test,
+    #        in order to avoid concurrency issues in case tests run in
+    #        parallel
+    EMAIL_FILE_PATH = '/tmp/app-messages'
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
     LOCKDOWN = True
