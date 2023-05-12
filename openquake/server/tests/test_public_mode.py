@@ -35,7 +35,7 @@ from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
-from openquake.server.tests.test_views import EngineServerTestCase, loadnpz
+from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
 
 
 class EngineServerPublicModeTestCase(EngineServerTestCase):

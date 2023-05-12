@@ -108,7 +108,7 @@ def create_job(db, datadir, calculation_mode='to be set',
         the job ID
     """
     calc_id = get_calc_id(db, datadir) + 1
-    # NB: is_running=1 is needed to make test_views.py happy on Jenkins
+    # NB: is_running=1 is needed to make views_test.py happy on Jenkins
     job = dict(id=calc_id, is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
