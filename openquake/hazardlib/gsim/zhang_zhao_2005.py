@@ -102,6 +102,7 @@ class Zhang_Zhao2005SInter(GMPE):
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -140,6 +141,7 @@ class Zhang_Zhao2005SSlab(Zhang_Zhao2005SInter):
             
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -170,10 +172,9 @@ class Zhang_Zhao2005Crust(Zhang_Zhao2005SInter):
     #: Required rupture parameters are magnitude 
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
 
-
-            
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
+            ctx = ctx.copy()
             zslope = ctx.slope == 0.0
             ctx.slope[zslope] = ctx.freeface_ratio[zslope]
             c = np.zeros((5, len(ctx.sids)))  # slope coeffs updated
@@ -184,8 +185,7 @@ class Zhang_Zhao2005Crust(Zhang_Zhao2005SInter):
 
             mean[m] = (
                 _SDCrust_term(ctx, ctx.rake[m], ctx.mag[m]) +   
-                _compute_site_term(ctx,  c[0], c[1], c[2], c[3], c[4]))             
-               
+                _compute_site_term(ctx,  c[0], c[1], c[2], c[3], c[4]))
             mean[m] = np.log(10.0 ** mean[m])
             sig[m] = np.log(10.0 ** self.COEFFS_SLOPE[imt]["sigma"])
 

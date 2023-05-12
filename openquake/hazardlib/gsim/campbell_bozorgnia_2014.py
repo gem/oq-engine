@@ -418,8 +418,11 @@ class CampbellBozorgnia2014(GMPE):
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
-        """
-        _update_ctx(self, ctx)
+        """                             
+        if (self.estimate_ztor or self.estimate_width or
+                self.estimate_hypo_depth):
+            ctx = ctx.copy() 
+            _update_ctx(self, ctx)
         C_PGA = self.COEFFS[PGA()]
         # Get mean and standard deviation of PGA on rock (Vs30 1100 m/s^2)
         pga1100 = np.exp(get_mean_values(self.SJ, C_PGA, ctx))
