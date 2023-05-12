@@ -214,7 +214,9 @@ except ImportError:
         pass
 
 if TEST:
-    APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', 'public')
+    # NOTE: fallback using the previously defined application mode (e.g. the
+    # one specified in the local settings) if OQ_APPLICATION_MODE is not given
+    APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
     if APPLICATION_MODE.upper() == 'AELO':
         EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
         # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
