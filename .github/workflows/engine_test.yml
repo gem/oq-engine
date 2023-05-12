@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: |
         python install.py devel
-    - name: Test with pytest
+    - name: Calculators and documentation tests
       run: |
         source ~/openquake/bin/activate
         pip install pytest
@@ -44,7 +44,7 @@ jobs:
     - name: Install dependencies
       run: |
         OQ_APPLICATION_MODE=public python install.py devel
-    - name: hazardlib tests
+    - name: Hazardlib tests
       run: |
         source ~/openquake/bin/activate
         pip install pyshp pytest
@@ -67,7 +67,7 @@ jobs:
     - name: Install dependencies
       run: |
         OQ_APPLICATION_MODE=public python install.py devel
-    - name: server public mode tests
+    - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
@@ -88,7 +88,7 @@ jobs:
     - name: Install dependencies
       run: |
         OQ_APPLICATION_MODE=aelo python install.py devel
-    - name: server aelo mode tests
+    - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
