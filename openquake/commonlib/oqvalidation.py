@@ -574,6 +574,9 @@ postproc_args:
   Example: *postproc_args = {'imt': 'PGA'}*
   Default: {} (no arguments)
 
+prefer_global_site_params:
+  INTERNAL. Automatically set by the engine.
+
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.
@@ -863,6 +866,7 @@ def check_same_levels(imtls):
 
 class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
+
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
@@ -994,6 +998,7 @@ class OqParam(valid.ParamSet):
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     postproc_func = valid.Param(valid.simple_id, '')
     postproc_args = valid.Param(valid.dictionary, {})
+    prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -1110,10 +1115,11 @@ class OqParam(valid.ParamSet):
 
         inp = dic.get('inputs', {})
         if 'sites' in inp:
-            if 'site_model' in inp:
+            if inp.get('site_model'):
                 raise NameError('Please remove sites, you should use '
                                 'only site_model')
             inp['site_model'] = [inp.pop('sites')]
+            self.prefer_global_site_params = True
 
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
