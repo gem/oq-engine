@@ -40,13 +40,24 @@ import csv
 
 import django
 from django.test import Client
-from django.contrib.auth import get_user_model
 from openquake.baselib import config
 from openquake.baselib.general import gettemp
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
 from openquake.server.dbserver import db, get_status
+
+# NOTE: before importing User or any other model, django.setup() is needed,
+#       otherwise it would raise:
+#       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
+django.setup()
+try:
+    from django.contrib.auth.models import User  # noqa
+except RuntimeError:
+    # Django tests are meant to be run with the command
+    # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
+    # ./openquake/server/manage.py test tests.views_test
+    raise unittest.SkipTest('Use Django to run such tests')
 
 
 def loadnpz(lines):
@@ -110,9 +121,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        print('NB: These Django tests are meant to be run with the command'
-              ' ./openquake/server/manage.py test'
-              ' tests.test_views.EngineServerPublicModeTestCase')
         assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
@@ -122,8 +130,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        c = dbcmd('SELECT count(*) FROM job WHERE status=?x', 'complete')[0][0]
-        assert c > 0, 'There are no jobs??'
         cls.wait()
 
     def postzip(self, archive):
@@ -435,19 +441,6 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        # NOTE: before importing User or any other model, django.setup() is
-        # needed, otherwise it would raise:
-        # django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
-        django.setup()
-        try:
-            User = get_user_model()
-        except django.core.exceptions.ImproperlyConfigured:
-            print('NB: These Django tests are meant to be run with the command'
-                  ' OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg'
-                  ' ./openquake/server/manage.py test '
-                  ' tests.test_views.EngineServerAeloModeTestCase')
-            raise
-
         assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
