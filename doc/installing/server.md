@@ -12,13 +12,13 @@ LOCKDOWN = True
 ```
 
 Upgrade the database to host users and sessions:
-```bash
+```console
 $ cd /usr/share/openquake/engine
 $ sudo -u openquake oq webui migrate 
 ```
 
 Add a new local superuser:
-```bash
+```console
 $ cd /usr/share/openquake/engine
 $ sudo -u openquake oq webui createsuperuser
 ```
@@ -33,7 +33,7 @@ STATIC_ROOT = '/var/www/webui'
 STATIC_ROOT is the full, absolute path to your static files folder.
 Then issue the commands:
 
-```bash
+```console
 $ cd /usr/share/openquake/engine
 $ sudo -u openquake oq webui collectstatic
 ```
@@ -50,7 +50,7 @@ On that folder there is a template file `local_settings.py.pam` that you can ren
 
 if, for any reason, the `oq` command isn't available in the path you can use the following syntax:
 
-```bash
+```console
 $ python3 -m openquake.server.manage <subcommand> 
 ```
 An example configuration is the follow:
@@ -94,7 +94,7 @@ WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 ```
 In that case the file `webui-access.log` will be created inside the specified directory.
 Please note that the directory must be created if it does not exist yet, e.g.:
-```bash
+```console
 $ sudo mkdir /var/log/oq-engine
 ```
 Furthermore, the user `openquake` must own that directory.
@@ -107,7 +107,7 @@ On a production system [nginx](http://nginx.org/en/) + [gunicorn](http://gunicor
 
 *gunicorn* can be installed either via `pip` or via the system packager (`apt`, `yum`, ...). For example:
 
-```bash
+```console
 $ sudo su -
 # source /opt/openquake/venv/bin/activate
 # pip install gunicorn
@@ -118,7 +118,7 @@ When using `python-oq-libs` for Debian, *gunicorn* is already provided.
 
 *gunicorn* must be started in the `openquake/server` directory with the following syntax:
 
-```bash
+```console
 gunicorn -w N wsgi:application
 ```
 
@@ -138,7 +138,7 @@ STATIC_ROOT = '/var/www/webui'
 
 then collect static files:
 
-```bash
+```console
 $ sudo oq webui collectstatic
 ```
 
