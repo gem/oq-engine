@@ -574,6 +574,9 @@ postproc_args:
   Example: *postproc_args = {'imt': 'PGA'}*
   Default: {} (no arguments)
 
+prefer_global_site_params:
+  INTERNAL. Automatically set by the engine.
+
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.
@@ -997,6 +1000,7 @@ class OqParam(valid.ParamSet):
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     postproc_func = valid.Param(valid.simple_id, '')
     postproc_args = valid.Param(valid.dictionary, {})
+    prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
