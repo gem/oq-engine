@@ -100,6 +100,7 @@ class YoudEtAl2002(GMPE):
             #Adjustment done by Prajakta Jadhav and Dharma Wijewickreme: 
             #To adopt epicentral distance of 5km for deep sources (depth>50km)
             #and within epicentral distance of 5km
+            ctx = ctx.copy()
             ctx.repi[(ctx.repi < 5.) & (ctx.hypo_depth >= 50.)] = 5.0
             
             R = (10 ** ((0.89 * ctx.mag) - 5.64)) + ctx.repi
