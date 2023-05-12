@@ -998,7 +998,8 @@ class ContextMaker(object):
         :param ctx: a vectorized context (recarray) of size N
         :param rup_indep: rupture flag (false for mutex ruptures)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
-        """
+        """                 
+        ctx.flags.writeable = True
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
@@ -1046,6 +1047,7 @@ class ContextMaker(object):
             for ctx in ctxs:
                 for poes, ctxt, invs in cm.gen_poes(ctx, rup_indep):
                     with self.pne_mon:
+                        ctxt.flags.writeable = True  # avoid numba type error
                         pmap.update_(poes, invs, ctxt, itime, rup_indep, idx)
 
     # called by gen_poes and by the GmfComputer
@@ -1071,7 +1073,9 @@ class ContextMaker(object):
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
-            for ctx in recarrays:
+            for ctx in recarrays:                       
+                # make the context immutable
+                ctx.flags.writeable = False
                 slc = slice(start, start + len(ctx))
                 adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 if adj is not None:
