@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: syntax=spec
 #
-# Copyright (C) 2015-2022 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -23,16 +23,17 @@
 %define _oqpython %{_oqprefix}/bin
 
 # Make sure that the proper installation of python is used by macros
+#%if 0%{?el7}
+#%define __python3 %{_oqpython}/python3
+#%define __python %{__python3}
+#%else
+#%define __python3 %{_sysbin}/python3
+#%define __python %{__python3}
+#%endif
+#
 
-
-%if 0%{?el7}
-%define __python3 %{_oqpython}/python3
-%define __python %{__python3}
-%else
-%define __python3 %{_sysbin}/python3
-%define __python %{__python3}
-%endif
-
+#%define __python3 %{_oqpython}/python3
+#%define __python %{__python3}
 %define installscript install.py
 
 %define oqstable ##_stable_##
@@ -67,11 +68,7 @@ Url: http://github.com/gem/oq-engine
 
 # https://rpm-software-management.github.io/rpm/manual/boolean_dependencies.html
 
-%if 0%{?el7}
 Requires: oq-python3 >= 3.9
-%else
-Requires: python3 >= 3.8
-%endif
 
 Obsoletes: python-oq-hazardlib python-oq-engine
 Provides: python-oq-engine
@@ -85,7 +82,7 @@ Source0: %{oqformat}.tar.gz
 %description
 OpenQuake is an open source application that allows users to
 compute seismic hazard and seismic risk of earthquakes on a global scale.
-Copyright (C) 2010-2022 GEM Foundation
+Copyright (C) 2010-2023 GEM Foundation
 
 %prep
 %setup -n %{oqformat}
