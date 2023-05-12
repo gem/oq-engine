@@ -56,11 +56,11 @@ BuildArch: noarch
 Vendor: The GEM OpenQuake team <devops@openquake.org>
 Url: http://github.com/gem/oq-engine
 
-
-Requires: oq-python3 >= 3.9
+# https://rpm-software-management.github.io/rpm/manual/boolean_dependencies.html
+Requires: (python3 >= 3.8 or oq-python3 >= 3.9)
 
 Obsoletes: python-oq-hazardlib python-oq-engine
-Provides: python-oq-hazardlib python-oq-engine
+Provides: python-oq-engine
 
 # =======================
 # Source code and patches
@@ -108,4 +108,3 @@ rm -rf %{buildroot}
 %else
 %{__python3} %{_oqprefix}/%{installscript} server --version=master --remove
 %endif
-
