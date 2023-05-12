@@ -73,7 +73,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
-        ./openquake/server/manage.py test tests.test_views.EngineServerPublicModeTestCase
+        ./openquake/server/manage.py test tests.test_public_mode
 
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
@@ -94,4 +94,4 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
-        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_views.EngineServerAeloModeTestCase
+        OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_aelo_mode
