@@ -242,6 +242,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok([
             'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
 
+        # test prefer_global_site_params
+        ae(self.calc.sitecol.vs30, [600])  # read vs30 from site_model.csv
+        self.run_calc(case_34.__file__, 'job.ini', sites_file='site_model.csv',
+                      site_model_file='', calculation_mode='preclassical')
+        ae(self.calc.sitecol.vs30, [700])  # read vs30 from the job.ini
+
     def test_case_35(self):
         # cluster
         self.assert_curves_ok(['hazard_curve-rlz-000-PGA.csv'],

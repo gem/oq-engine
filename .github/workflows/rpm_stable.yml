@@ -26,7 +26,7 @@ on:
 jobs:
 
   build:
-    name: Submit and publish from Fedora 36 container
+    name: Submit and publish from Fedora 38 container
     runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -36,11 +36,12 @@ jobs:
       GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
-        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
+        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
+        #epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
     # Run in Fedora container on Ubuntu VM
 
     container:
-      image: fedora:36
+      image: fedora:38
       options: --privileged
     steps:
       - name: Clone Repository (Latest)

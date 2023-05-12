@@ -974,11 +974,11 @@ def get_station_data(oqparam):
     return station_data, station_sites, imts
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
-    :param cost_types: the expected cost types
+    :param exp_types: the expected loss types
     :returns: (site collection, asset collection, discarded)
     """
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
@@ -1018,14 +1018,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         Global.exposure, assets_by_site, oqparam.time_event,
         oqparam.aggregate_by)
-    if assetcol.occupancy_periods:
-        missing = set(cost_types) - set(
-            Global.exposure.cost_types['name']) - set(['occupants'])
-    else:
-        missing = set(cost_types) - set(Global.exposure.cost_types['name'])
-    if missing and not oqparam.calculation_mode.endswith('damage'):
-        raise InvalidFile('The exposure %s is missing %s' %
-                          (oqparam.inputs['exposure'], missing))
+
+    # check on missing fields in the exposure
+    if 'risk' in oqparam.calculation_mode:
+        for exp_type in exp_types:
+            if not any(exp_type in name for name in assetcol.array.dtype.names):
+                raise InvalidFile('The exposure %s is missing %s' %
+                                  (oqparam.inputs['exposure'], exp_type))
+
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):

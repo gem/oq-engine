@@ -210,6 +210,63 @@ class MultiSurfaceTestCase(unittest.TestCase):
         expected = [[-70.70686112, -70.60549], [17.89041691, 17.61792],[ 0., 0.]]
         numpy.testing.assert_almost_equal(expected, cpoints.array, decimal=7)
 
+    def test_get_closest_point_v2(self):
+
+        # this test is for two sites and two surfaces. the two sites are on opposite sides
+        # of the multisurface (along strike) so that each is closer to one surface. 
+        # the test confirms that the order of the sites and the order of the surfaces 
+        # is not impacting the result, and confirming that the result for any given site is
+        # the same whether run with another site or alone
+
+        # define two surfaces using four profiles. make two multisurfaces in opposite order 
+        spc = 2.0
+        pro1 = Line([Point(-71.44500, 19.85546, 0.00), Point(-71.44500, 19.85546, 20.00)])
+        pro2 = Line([Point(-71.77656, 19.95929, 0.00), Point(-71.77656, 19.95929, 20.00)])
+        pro3 = Line([Point(-71.12273, 19.72523, 0.00), Point(-71.12273, 19.72523, 20.00)])
+        pro4 = Line([Point(-71.44500, 19.85546, 0.00), Point(-71.44500, 19.85546, 20.00)])
+        sfc1 = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        sfc2 = KiteSurface.from_profiles([pro3, pro4], spc, spc)
+        msurf_1 = MultiSurface([sfc1, sfc2])
+        msurf_2 = MultiSurface([sfc2, sfc1])
+        
+        # Define the mesh of sites. Four meshes: two that switch the sites order and two
+        # that have only one site
+        pcoo_A = numpy.array([[-71.01057, 19.70037],[-71.90549, 19.61792]])
+        pcoo_B = numpy.array([[-71.90549, 19.61792],[-71.01057, 19.70037]])
+        pcoo_1 = numpy.array([[-71.01057, 19.70037]])
+        pcoo_2 = numpy.array([[-71.90549, 19.95792]])
+        mesh_A = Mesh(pcoo_A[:, 0], pcoo_A[:, 1])
+        mesh_B = Mesh(pcoo_B[:, 0], pcoo_B[:, 1])
+        mesh_1 = Mesh(pcoo_1[:, 0], pcoo_1[:, 1])
+        mesh_2 = Mesh(pcoo_2[:, 0], pcoo_2[:, 1])
+        
+        # Compute closest distance between all mesh points and surface combinations
+        cpointsA_1 = msurf_1.get_closest_points(mesh_A)
+        cpointsA_11 = msurf_1.get_closest_points(mesh_1)
+        cpointsA_12 = msurf_1.get_closest_points(mesh_2)
+        cpointsA_2 = msurf_2.get_closest_points(mesh_A)
+        cpointsA_21 = msurf_2.get_closest_points(mesh_1)
+        cpointsA_22 = msurf_2.get_closest_points(mesh_2)
+
+        cpointsB_1 = msurf_1.get_closest_points(mesh_B)
+        cpointsB_11 = msurf_1.get_closest_points(mesh_1)
+        cpointsB_12 = msurf_1.get_closest_points(mesh_2)
+        cpointsB_2 = msurf_2.get_closest_points(mesh_B)
+        cpointsB_21 = msurf_2.get_closest_points(mesh_1)
+        cpointsB_22 = msurf_2.get_closest_points(mesh_2)
+
+        assert cpointsA_1 == cpointsA_2
+        assert cpointsB_1 == cpointsB_2
+        assert (cpointsA_1.array.T[0] == cpointsA_11.array.T[0]).all()
+        assert (cpointsA_1.array.T[0] == cpointsA_21.array.T[0]).all()
+        assert (cpointsA_1.array.T[1] == cpointsA_22.array.T[0]).all()
+        assert (cpointsA_1.array.T[1] == cpointsA_12.array.T[0]).all()
+        assert (cpointsB_1.array.T[1] == cpointsB_11.array.T[0]).all()
+        assert (cpointsB_1.array.T[1] == cpointsB_21.array.T[0]).all()
+        assert (cpointsB_1.array.T[0] == cpointsB_22.array.T[0]).all()
+        assert (cpointsB_1.array.T[0] == cpointsB_12.array.T[0]).all()
+
+
 def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):
     """
     Plots mesh and surface

@@ -22,29 +22,9 @@
       </logicTreeBranch>
       <logicTreeBranch branchID="b_00_03">
 	<uncertaintyModel>
-          [ZhaoEtAl2006Asc]
+          [AtkinsonBoore2006SGS]
         </uncertaintyModel>
 	<uncertaintyWeight>0.10000</uncertaintyWeight>
-      </logicTreeBranch>
-    </logicTreeBranchSet>
-    <logicTreeBranchSet branchSetID="bs_01" uncertaintyType="gmpeModel" applyToTectonicRegionType="Stable Shallow Crust">
-      <logicTreeBranch branchID="b_01_04">
-	<uncertaintyModel>
-          [AtkinsonBoore2006]
-        </uncertaintyModel>
-	<uncertaintyWeight>0.40000</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b_01_05">
-	<uncertaintyModel>
-          [ToroEtAl2002SHARE]
-        </uncertaintyModel>
-	<uncertaintyWeight>0.25000</uncertaintyWeight>
-      </logicTreeBranch>
-      <logicTreeBranch branchID="b_01_06">
-	<uncertaintyModel>
-          [Campbell2003SHARE]
-        </uncertaintyModel>
-	<uncertaintyWeight>0.35000</uncertaintyWeight>
       </logicTreeBranch>
     </logicTreeBranchSet>
     <logicTreeBranchSet branchSetID="bs_02" uncertaintyType="gmpeModel" applyToTectonicRegionType="Subduction Interface">

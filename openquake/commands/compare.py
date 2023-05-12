@@ -261,9 +261,11 @@ def compare_med_gmv(imt, calc_ids: int, *,
     except:
         sys.exit('The imt %s is not present in all calculations' % imt)
     ex1, ex2 = c.extractors
-    srcs = sorted(ex1.get('med_gmv'))
-    assert srcs == sorted(ex2.get('med_gmv'))
-    for src in srcs:
+    srcs1 = sorted(ex1.get('med_gmv'))
+    srcs2 = sorted(ex2.get('med_gmv'))
+    if srcs1 != srcs2:
+        raise ValueError(set(srcs1).symmetric_difference(srcs2))
+    for src in srcs1:
         # arrays of shape (G, M, N) => (G, N)
         aw1 = ex1.get(f'med_gmv/{src}')
         aw2 = ex2.get(f'med_gmv/{src}')
