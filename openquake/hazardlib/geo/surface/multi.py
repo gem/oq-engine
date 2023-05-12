@@ -20,6 +20,7 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 :class:`MultiSurface`.
 """
 import numpy as np
+import logging
 from shapely.geometry import Polygon
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -186,10 +187,11 @@ class MultiSurface(BaseSurface):
 
         # the centroid info for the sites must be evaluated and populated
         # one site at a time
+        rms_warning = False
         for jdx in idx.T:
-            i = int(np.where(jdx)[0])
+            i_all = np.where(jdx)[0]
+            i = int(i_all[0]) if len(i_all)>1 else int(i_all)
             surf = self.surfaces[i]
-
             cps = surf.get_closest_points(mesh)
             idx_i = idx[i, :]
             lons[idx_i] = cps.lons[idx_i]
