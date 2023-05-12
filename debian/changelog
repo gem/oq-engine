@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the realizations extractor for scenario calculations reading
+    ruptures with multiple different tectonic region types
+
   [Kendra Johnson]
   * Fixed a bug in disaggregation by Lon-Lat-TRT when there are multifault
     ruptures and multiple sites
