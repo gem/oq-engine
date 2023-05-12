@@ -67,7 +67,7 @@ jobs:
     - name: Install dependencies
       run: |
         OQ_APPLICATION_MODE=public python install.py devel
-    - name: hazardlib tests
+    - name: server public mode tests
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
@@ -88,7 +88,7 @@ jobs:
     - name: Install dependencies
       run: |
         OQ_APPLICATION_MODE=aelo python install.py devel
-    - name: aelo tests
+    - name: server aelo mode tests
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
