@@ -30,14 +30,14 @@
             {% endif %}
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
-              <!-- <label for"lon">Longitude:</label> -->
-              <input type="text" id="lon" name="lon" placeholder="Longitude"/>
               <!-- <label for"lat">Latitude:</label> -->
               <input type="text" id="lat" name="lat" placeholder="Latitude"/>
+              <!-- <label for"lon">Longitude:</label> -->
+              <input type="text" id="lon" name="lon" placeholder="Longitude"/>
               <!-- <label for"vs30">Vs30:</label> -->
-              <input type="text" id="vs30" name="vs30" placeholder="vs30"/>
+              <input type="text" id="vs30" name="vs30" placeholder="vs30 (default 760 m/s)"/>
               <!-- <label for"siteid">Site ID:</label> -->
-              <input type="text" id="siteid" name="siteid" placeholder="Site name"/>
+              <input type="text" id="siteid" name="siteid" placeholder="Site description"/>
               <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
               <!-- <input type="submit"> -->
             </form>
@@ -162,7 +162,7 @@
         var formData = {
           lon: $("#lon").val(),
           lat: $("#lat").val(),
-          vs30: $("#vs30").val(),
+          vs30: $("#vs30").val().trim() === '' ? '760' : $("#vs30").val(),
           siteid: $("#siteid").val(),
         };
         $.ajax({
