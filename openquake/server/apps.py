@@ -23,4 +23,10 @@ class ServerConfig(AppConfig):
     name = 'openquake.server'
 
     def ready(self):
+        # From Django manual:
+        #     Subclasses can override this method to perform initialization
+        #     tasks such as registering signals. It is called as soon as the
+        #     registry is fully populated.
+        #     Although you can’t import models at the module-level where
+        #     AppConfig classes are defined, you can import them in ready()
         import openquake.server.signals  # NOQA
