@@ -27,7 +27,6 @@ Module exports :class:`ZhaoEtAl2016Asc`,
                :class:`ZhaoEtAl2016SSlabPErg`
 """
 import numpy as np
-import fiona
 import os
 
 from openquake.baselib.general import CallableDict
@@ -37,6 +36,7 @@ from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2016_volc_perg import volc_perg
 
 DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'zhao_2016_volc_perg')
+
 
 CONSTANTS = {"m_c": 7.1,
              "xcro": 2.0,
@@ -545,12 +545,13 @@ class ZhaoEtAl2016Asc(GMPE):
 
     def __init__(self, volc_arc_file=None, **kwargs):
         super().__init__(volc_arc_file=volc_arc_file, **kwargs)
+        
         if volc_arc_file is not None:
-            volc_arc_path = os.path.join(DATA_FOLDER, volc_arc_file)
-            self.volc_arc_file = fiona.open(volc_arc_path, 'r')
+            with open(volc_arc_file, 'rb') as fle:
+                self.volc_arc_file = fle.read().decode('utf-8')
         else:
             self.volc_arc_file = None
-            
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -896,8 +897,8 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30','lon','lat'}
 
-    #: Required distance measure is Rrup and Rvolc,
-    REQUIRES_DISTANCES = {'rrup', 'rvolc'}
+    #: Required distance measure is Rrup, Rvolc and closest_point,
+    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'closest_point'}
     
     # Set coeff tables
     COEFFS = COEFFS_SLAB
