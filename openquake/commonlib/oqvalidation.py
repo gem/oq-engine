@@ -1113,11 +1113,11 @@ class OqParam(valid.ParamSet):
 
         inp = dic.get('inputs', {})
         if 'sites' in inp:
-            if 'site_model' in inp:
+            if inp.get('site_model'):
                 raise NameError('Please remove sites, you should use '
                                 'only site_model')
             inp['site_model'] = [inp.pop('sites')]
-            self.prefer_global_site_params = False
+            self.prefer_global_site_params = True
 
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
