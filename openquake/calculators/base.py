@@ -893,7 +893,11 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
-                self.sitecol.assoc(sm, assoc_dist)
+                if oq.prefer_global_site_params:
+                    self.sitecol.set_global_params(oq)
+                else:
+                    # use the site model parameters
+                    self.sitecol.assoc(sm, assoc_dist)
                 if oq.override_vs30:
                     # override vs30, z1pt0 and z2pt5
                     names = self.sitecol.array.dtype.names

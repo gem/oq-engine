@@ -180,19 +180,22 @@ class MultiSurface(BaseSurface):
         # the mesh points then the calculation is skipped
         lons = np.empty_like(mesh.lons.flatten())
         lats = np.empty_like(mesh.lats.flatten())
+        
         depths = None if mesh.depths is None else \
             np.empty_like(mesh.depths.flatten())
-        for ii, srf in enumerate(self.surfaces):
-            # tested in hazardlib.geo.surface.multi.test_get_closest_point
-            if not idx[ii, :].any():
-                continue
-            else:
-                surf, i = srf, ii
-        cps = surf.get_closest_points(mesh)
-        lons[idx[i, :]] = cps.lons.flatten()[idx[i, :]]
-        lats[idx[i, :]] = cps.lats.flatten()[idx[i, :]]
-        if depths is not None:
-            depths[idx[i, :]] = cps.depths.flatten()[idx[i, :]]
+
+        # the centroid info for the sites must be evaluated and populated
+        # one site at a time
+        for jdx in idx.T:
+            i = int(np.where(jdx)[0])
+            surf = self.surfaces[i]
+
+            cps = surf.get_closest_points(mesh)
+            idx_i = idx[i, :]
+            lons[idx_i] = cps.lons[idx_i]
+            lats[idx_i] = cps.lats[idx_i]
+            if depths is not None:
+                depths[idx_i] = cps.depths[idx_i]
         lons = lons.reshape(mesh.lons.shape)
         lats = lats.reshape(mesh.lats.shape)
         if depths is not None:

@@ -50,7 +50,7 @@ structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins
-reinsurance claim'''.split())
+reinsurance claim area number'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
