@@ -119,8 +119,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: files_rpm
-          path: ~/rpmbuild/RPMS/noarch/*.rpm
-          path: ~/rpmbuild/SRPMS/*.src.rpm
+          path: ~/rpmbuild/
 
   test_upload:
     name: Test RPM packages
@@ -154,8 +153,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: files_rpm
-          path: ~/rpmbuild/RPMS/noarch/*.rpm
-          path: ~/rpmbuild/SRPMS/*.src.rpm
+          path: ~/rpmbuild/
 
       - name: Display structure of downloaded files
         run: |
