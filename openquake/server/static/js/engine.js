@@ -490,5 +490,29 @@
                                setTimer();
                            });
 
+            // NOTE: if not in aelo mode, aelo_run_form does not exist, so this can never be triggered
+            $("#aelo_run_form").submit(function (event) {
+                $('#submit_aelo_calc').prop('disabled', true);
+                var formData = {
+                    lon: $("#lon").val(),
+                    lat: $("#lat").val(),
+                    vs30: $("#vs30").val().trim() === '' ? '760' : $("#vs30").val(),
+                    siteid: $("#siteid").val(),
+                };
+                $.ajax({
+                    type: "POST",
+                    url: gem_oq_server_url + "/v1/calc/aelo_run",
+                    data: formData,
+                    dataType: "json",
+                    encode: true,
+                }).done(function (data) {
+                    // console.log(data);
+                }).error(function (data) {
+                    diaerror.show(false, "Error", data.responseText);
+                }).always(function () {
+                    $('#submit_aelo_calc').prop('disabled', false);
+                });
+                event.preventDefault();
+            });
         });
 })($, Backbone, _, gem_oq_server_url);
