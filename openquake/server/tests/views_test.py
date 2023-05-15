@@ -547,9 +547,9 @@ class EngineServerTestCase(django.test.TestCase):
     def aelo_invalid_input(self, params, expected_error):
         resp = self.post('aelo_run', params)
         self.assertEqual(resp.status_code, 400)
-        err_msg = json.loads(resp.content.decode('utf8'))
-        print(err_msg)
-        self.assertIn(expected_error, err_msg)
+        resp_dict = json.loads(resp.content.decode('utf8'))
+        print(resp_dict)
+        self.assertIn(expected_error, resp_dict['error_msg'])
 
     def test_aelo_invalid_latitude(self):
         params = dict(lon='-86', lat='100', vs30='800', siteid='CCA_SITE')
