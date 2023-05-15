@@ -148,7 +148,7 @@ jobs:
           COPR_TEST: gem/openquake-staging
         run: |
             dnf install -y dnf-plugins-core
-            dnf copr -y enable ${COPR_TEST}
+            dnf copr enable ${COPR_TEST}
             #install oq-python3 required from RPM of engine
             dnf install oq-python39
 
