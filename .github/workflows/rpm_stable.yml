@@ -21,7 +21,9 @@ on:
         required: true
   schedule:
     - cron: "0 19 * * *"
-
+  push:
+    branches:
+      - test_action_rpm
 
 jobs:
 
@@ -112,6 +114,52 @@ jobs:
           rpmbuild -bb  ~/rpmbuild/SPECS/python3-${REPO}.spec
           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
           mock -r ${{ matrix.epel-release}} $SRPM
+
+      - name: Save rpm packages as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: files_rpm
+          path: ~/rpmbuild/RPMS/noarch/*.rpm
+          path: ~/rpmbuild/SRPMS/*.src.rpm
+
+  test_upload:
+    name: Test RPM packages
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      GITHUB_REF:  ${{ github.ref }}
+      GITHUB_HD_REF:  ${{ github.head_ref }}
+      GITHUB_BS_REF:  ${{ github.base_ref }}
+    strategy:
+    # Run in Fedora container on Ubuntu VM
+
+    container:
+      image: fedora:38
+      options: --privileged
+    steps:
+
+      - name: Test created RPM use COPR Staging
+        env:
+          REPO: oq-engine
+          STABLE: ${{ github.event.inputs.lts-ver }}
+          COPR_TEST: gem/openquake-staging
+        run: |
+            dnf install -y dnf-plugins-core
+            dnf copr -y enable ${COPR_TEST}
+            #install oq-python3 required from RPM of engine
+            dnf install oq-python39
+
+      - name: Download all workflow run artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: files_rpm
+          path: ~/rpmbuild/RPMS/noarch/*.rpm
+          path: ~/rpmbuild/SRPMS/*.src.rpm
+
+      - name: Display structure of downloaded files
+        run: |
+            ls -R ~/rpmbuild/
 
       - name: Publish Package on COPR
         env:
