@@ -15,12 +15,12 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import gzip
 import numpy
 from openquake.baselib import parallel, general
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib import InvalidFile, nrml, imt
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
@@ -599,13 +599,14 @@ class ClassicalTestCase(CalculatorTestCase):
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
+        dt = [(im, float) for im in imt.sort_by_imt(oq.imtls)]
         for g, gsim in enumerate(gsims):
-            curve = numpy.zeros(L1, oq.imt_dt())
+            curve = numpy.zeros(L1, dt)
             df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
             poes[df_for_g.lid] = df_for_g.poe
-            for imt in oq.imtls:
-                curve[imt] = poes[oq.imtls(imt)]
+            for im in oq.imtls:
+                curve[im] = poes[oq.imtls(im)]
             gs = gsim.__class__.__name__
             if 'submodel' in gsim._toml:
                 gs += '_' + gsim.kwargs['submodel']
