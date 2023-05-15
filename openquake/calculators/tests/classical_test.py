@@ -20,7 +20,7 @@ import gzip
 import numpy
 from openquake.baselib import parallel, general
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import InvalidFile, nrml, imt
+from openquake.hazardlib import InvalidFile, nrml
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
@@ -599,9 +599,8 @@ class ClassicalTestCase(CalculatorTestCase):
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
-        dt = [(im, float) for im in imt.sort_by_imt(oq.imtls)]
         for g, gsim in enumerate(gsims):
-            curve = numpy.zeros(L1, dt)
+            curve = numpy.zeros(L1, oq.imt_dt())
             df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
             poes[df_for_g.lid] = df_for_g.poe

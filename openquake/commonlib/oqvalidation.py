@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 import re
 import ast
@@ -30,7 +29,7 @@ import numpy
 
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.imt import from_string, sort_by_imt
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
@@ -1446,7 +1445,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = self.hazard_imtls or self.risk_imtls
-        return DictArray(imtls) if imtls else {}
+        return DictArray(sort_by_imt(imtls)) if imtls else {}
 
     @property
     def min_iml(self):
@@ -1560,7 +1559,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: a numpy dtype {imt: float}
         """
-        return numpy.dtype([(imt, dtype) for imt in self.imtls])
+        return numpy.dtype([(imt, dtype) for imt in sort_by_imt(self.imtls)])
 
     @property
     def lti(self):
