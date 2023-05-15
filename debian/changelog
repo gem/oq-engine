@@ -2,6 +2,7 @@
   * Fixed a bug in hazardlib.geo.surface.multi affecting the disaggregation
 
   [Michele Simionato]
+  * Fixed the damage state header in the aggrisk outputs
   * Fixed the realizations extractor for scenario calculations starting from
     ruptures with multiple different tectonic region types
   * Fixed a subtle mutability bug affecting various GMPEs
