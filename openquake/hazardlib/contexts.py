@@ -562,7 +562,7 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 else:
                     val = getattr(ctx, par, numpy.nan)
-                
+
                 if par == 'closest_point':
                     ra['clon'][slc] = val[:, 0]
                     ra['clat'][slc] = val[:, 1]
