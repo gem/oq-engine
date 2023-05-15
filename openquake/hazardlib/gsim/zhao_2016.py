@@ -348,7 +348,7 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
         # with rvolc capped at 80km if total distance traversed through zones is 
         # greater than 80km, and set to 12 km if zones are traversed but the
         # total distance is less than 12 km. This min/max constraint to rvolc
-        # is detailed within the publications for the Zhao et al. 2016 GMMs.
+        # is detailed within the publications for the Zhao et al. 2016 GMMs
         ctx.rvolc = volc_perg.get_rvolcs(ctx, volc_arc_file)
     
     x_ij = ctx.rrup
@@ -895,7 +895,7 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
                                    'ztor', 'rake', 'strike', 'dip'}
     
     # Requires site coordinates for ray tracing
-    REQUIRES_SITES_PARAMETERS = {'vs30','lon','lat'}
+    REQUIRES_SITES_PARAMETERS = {'vs30','lon','lat','clon','clat'}
 
     #: Required distance measure is Rrup, Rvolc and closest_point,
     REQUIRES_DISTANCES = {'rrup', 'rvolc', 'closest_point'}

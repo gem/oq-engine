@@ -138,6 +138,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
                              [gmm_perg], oqp)
     
     ctxs_perg = list(ctxm_perg.get_ctx_iter([rup], sites)) 
+    print(ctxs_perg)
     ctxs_perg = ctxs_perg[0]
     ctxs_perg.occurrence_rate = 0.0
     mean_perg, std_perg, tau_perg, phi_perg = ctxm_perg.get_mean_stds(
@@ -195,7 +196,7 @@ class TestZhao2016PErg(unittest.TestCase):
         of Zhao et al. (2016) intra-slab GMM.
         """
         # Get rupture
-        lon = 107.08
+        lon = 108.08
         lat = 28.328
         dep = 10.0
         msr = WC1994()
@@ -213,6 +214,7 @@ class TestZhao2016PErg(unittest.TestCase):
         volc_arc_fname = DATA_FOLDER
         self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_fname)
         self.gmm = ZhaoEtAl2016SSlabPErg()
+        print(volc_arc_fname)
         
     def test01(self):
         """
@@ -229,7 +231,7 @@ class TestZhao2016PErg(unittest.TestCase):
         hdist = 5000
         step = 25
         site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
-                       'backarc': False, 'vs30measured': True}
+                       'backarc': False, 'vs30measured': True, 'clon':0, 'clat':0}
 
         sites = get_sites_from_rupture(self.rup, from_point, azimuth, direction,
                                        hdist, step, site_params)
