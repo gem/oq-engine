@@ -132,7 +132,8 @@ jobs:
 
 
   test_rpm:
-    name: Submit and publish from Fedora 38 container
+    name: Test latest packages on RockyLinux8
+    needs: build_upload
     runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
