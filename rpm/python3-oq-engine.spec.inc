@@ -54,7 +54,7 @@ Release: %{oqtimestamp}_%{oqrelease}
 # Descriptions, and metadata for subpackages
 # ==========================================
 
-Summary: Computes earthquake hazard and risk
+Summary: OpenQuake's Engine for Seismic Hazard and Risk Analysis
 Name: %{oqname}
 Version: %{oqversion}
 License: AGPLv3
