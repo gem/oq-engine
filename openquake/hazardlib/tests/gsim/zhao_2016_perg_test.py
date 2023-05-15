@@ -17,7 +17,6 @@
 import os
 import unittest
 import numpy as np
-import pathlib
 from matplotlib import pyplot
 
 from openquake.hazardlib.geo import Point
@@ -32,7 +31,7 @@ from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.zhao_2016 import ZhaoEtAl2016SSlabPErg
 
 DATA_FOLDER = os.path.join(os.path.dirname(__file__),'..','..','tests','gsim',
-                           'data', 'ZHAO16PERG','test_volc.geojson')
+                           'data', 'ZHAO16PERG','unit_test_volc.geojson')
 
 def _get_first_point(rup, from_point):
     """
@@ -137,6 +136,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     # Get perg version ground-motions
     ctxm_perg = ContextMaker(gmm_perg.DEFINED_FOR_TECTONIC_REGION_TYPE,
                              [gmm_perg], oqp)
+    
     ctxs_perg = list(ctxm_perg.get_ctx_iter([rup], sites)) 
     ctxs_perg = ctxs_perg[0]
     ctxs_perg.occurrence_rate = 0.0
@@ -151,7 +151,7 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     ctxs.occurrence_rate = 0.0
     mean, std, tau, phi = ctxm.get_mean_stds([ctxs])
     
-    # Plot perg vs non-perg for distances in sites collection
+    # Plot perg vs non-perg predicted gm vs rjb
     dist_x = ctxs.rrup
     mean_perg = mean_perg[0][0]
     mean = mean[0][0]
@@ -195,8 +195,8 @@ class TestZhao2016PErg(unittest.TestCase):
         of Zhao et al. (2016) intra-slab GMM.
         """
         # Get rupture
-        lon = 110.86
-        lat = 27.95
+        lon = 107.08
+        lat = 28.328
         dep = 10.0
         msr = WC1994()
         mag = 7.0
@@ -233,7 +233,7 @@ class TestZhao2016PErg(unittest.TestCase):
 
         sites = get_sites_from_rupture(self.rup, from_point, azimuth, direction,
                                        hdist, step, site_params)
-
+        
         # Get non-ergodic and ergodic results 
         mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
                                            self.gmm, azimuth)
