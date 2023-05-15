@@ -43,7 +43,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        OQ_APPLICATION_MODE=public python install.py devel
+        python install.py devel
     - name: Hazardlib tests
       run: |
         source ~/openquake/bin/activate
@@ -66,7 +66,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        OQ_APPLICATION_MODE=public python install.py devel
+        python install.py devel
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -87,7 +87,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        OQ_APPLICATION_MODE=aelo python install.py devel
+        python install.py devel
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate
