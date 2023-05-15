@@ -547,21 +547,28 @@ class ContextMaker(object):
             shps = [ctx.probs_occur.shape for ctx in ctxs]
             np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
-        if self.fewsites:  # must be at the end
-            dd['clon'] = numpy.float64(0.)
-            dd['clat'] = numpy.float64(0.)
+        # if self.fewsites:  # must be at the end
+        dd['clon'] = numpy.float64(0.)
+        dd['clat'] = numpy.float64(0.)
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
-        for ctx in ctxs:
+        for i, ctx in enumerate(ctxs):
             ctx = ctx.roundup(self.minimum_distance)
             slc = slice(start, start + len(ctx))
             for par in dd:
+
                 if par == 'rup_id':
                     val = getattr(ctx, par)
                 else:
                     val = getattr(ctx, par, numpy.nan)
-                getattr(ra, par)[slc] = val
+
+                if par == 'closest_point':
+                    ra['clon'][slc] = val[:, 0]
+                    ra['clat'][slc] = val[:, 1]
+                else:
+                    getattr(ra, par)[slc] = val
+
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
@@ -727,9 +734,9 @@ class ContextMaker(object):
         # setting distance parameters
         for par in dists:
             ctx[par] = dists[par]
-        if self.fewsites:
-            ctx['clon'] = closest[0]
-            ctx['clat'] = closest[1]
+        #if self.fewsites:
+        ctx['clon'] = closest[0]
+        ctx['clat'] = closest[1]
 
         # setting site parameters
         for par in self.siteparams:
@@ -763,9 +770,9 @@ class ContextMaker(object):
         else:
             dd['probs_occur'] = numpy.zeros(0)
 
-        if self.fewsites:
-            dd['clon'] = numpy.float64(0.)
-            dd['clat'] = numpy.float64(0.)
+        #if self.fewsites:
+        dd['clon'] = numpy.float64(0.)
+        dd['clat'] = numpy.float64(0.)
 
         self.build_ctx = RecordBuilder(**dd).zeros
         self.siteparams = [par for par in sitecol.array.dtype.names
@@ -859,10 +866,10 @@ class ContextMaker(object):
                     rctx.src_id = src_id
                     if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id
-                        if self.fewsites:
-                            c = rup.surface.get_closest_points(sites.complete)
-                            rctx.clon = c.lons[rctx.sids]
-                            rctx.clat = c.lats[rctx.sids]
+                        #if self.fewsites:
+                        c = rup.surface.get_closest_points(sites.complete)
+                        rctx.clon = c.lons[rctx.sids]
+                        rctx.clat = c.lats[rctx.sids]
                     yield rctx
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):

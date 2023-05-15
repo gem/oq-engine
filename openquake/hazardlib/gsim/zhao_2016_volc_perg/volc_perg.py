@@ -28,11 +28,11 @@ from openquake.hazardlib.geo.geodetic import npoints_between, distance
 
 def get_volc_zones(volc_polygons):
     """
-    Construct polygons from the vertex coordinates provided for each volcanic 
+    Construct polygons from the vertex coordinates provided for each volcanic
     zone and assign the associated zone id
     :param volc_polygons:
         volc_polygons: Coordinates of volcanic zone polygon
-        vertices and associated zone id per polygon 
+        vertices and associated zone id per polygon
     """
     # Get the volc zone polygons
     with fiona.open(volc_polygons,'r') as inp:
@@ -40,11 +40,11 @@ def get_volc_zones(volc_polygons):
         polygon_per_volc_zone_lon = {}
         polygon_per_volc_zone_lat = {}
         for idx, f in enumerate(inp):
-            
+
             # Get zone_id
             tmp_props_per_zone = pd.Series(f['properties'])
             volc_zone_id[idx] = tmp_props_per_zone[0]
-            
+
             # Per zone get lat and lon of each polygon vertices
             for idx_coord, coord in enumerate(f['geometry']['coordinates'][0]):
                 polygon_per_volc_zone_lon[
@@ -53,16 +53,16 @@ def get_volc_zones(volc_polygons):
                 polygon_per_volc_zone_lat[
                     volc_zone_id[idx], idx_coord] = f['geometry'][
                         'coordinates'][0][idx_coord][1]
-    
+
     # Store all required info in dict
     volc_pgn_store = {'volc_zone': volc_zone_id,
                       'lons_per_zone': polygon_per_volc_zone_lon,
                       'lats_per_zone': polygon_per_volc_zone_lat}
-    
+
     # Set dict for volcanic zones
     zone_dict = OrderedDict([(volc_pgn_store['volc_zone'][zone], {}
                               ) for zone in volc_pgn_store['volc_zone']])
-    
+
     # Get polygon per zone
     pnts_per_zone = zone_dict
     polygon_per_zone = zone_dict
@@ -74,12 +74,12 @@ def get_volc_zones(volc_polygons):
                     'lons_per_zone'][zone_id, coord[1]],
                           volc_pgn_store['lats_per_zone'][zone_id, coord[1]])
             else:
-                pass 
+                pass
         pnts_list_per_zone = []
         for idx, coordinates in enumerate(pnts_per_zone[zone_id]):
             pnts_list_per_zone.append(pnts_per_zone[zone_id][coordinates])
         polygon_per_zone[zone_id] =  pgn.Polygon(pnts_list_per_zone)
-    return volc_pgn_store, polygon_per_zone    
+    return volc_pgn_store, polygon_per_zone
 
 def discretise_lines(ctx):
     """
@@ -88,25 +88,28 @@ def discretise_lines(ctx):
     :param ctx:
         ctx: Context of ruptures and sites to compute ground-motions for
     """
-    # Fix to zero to compute horz. dist. as in Zhao et al. 2016 
+    # Fix to zero to compute horz. dist. as in Zhao et al. 2016
     fix_depth = 0
-    
+
     # Discretise line into 1000 points
-    npoints_line = 1000
-    
+    npoints_line = 100
+
     # Get line from each rupture to each site
     line_mesh = {}
+
     for idx_site, val_site in enumerate(ctx.lon):
+
         site_lon = ctx.lon[idx_site]
-        site_lat = ctx.lat[idx_site]        
-        min_dist_rup_pnt_per_site_lon = ctx.clon
-        min_dist_rup_pnt_per_site_lat = ctx.clat
-     
+        site_lat = ctx.lat[idx_site]
+        min_dist_rup_pnt_per_site_lon = ctx.clon[idx_site]
+        min_dist_rup_pnt_per_site_lat = ctx.clat[idx_site]
+
         # Discretise shortest dist from rup srf to site and store as line
         dsct_line = npoints_between(site_lon, site_lat, fix_depth,
-                                             min_dist_rup_pnt_per_site_lon,
-                                             min_dist_rup_pnt_per_site_lat,
-                                             fix_depth, npoints_line)
+                                    min_dist_rup_pnt_per_site_lon,
+                                    min_dist_rup_pnt_per_site_lat,
+                                    fix_depth, npoints_line)
+
         # Create mesh of discretized line
         mesh_lons = dsct_line[0]
         mesh_lats = dsct_line[1]
@@ -132,16 +135,16 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store, polygon_per_zone,
     """
     # Store the distanc per volc zone per travel path
     dist_per_volc_zone_per_site = OrderedDict([(site_idx, {}) for site_idx,
-                                               site in enumerate(ctx.lon)])  
+                                               site in enumerate(ctx.lon)])
     in_zone_coo_per_zone_per_site = OrderedDict([(site_idx, {}) for site_idx,
-                                               site in enumerate(ctx.lon)])  
-    
+                                               site in enumerate(ctx.lon)])
+
     # For each travel path
     for idx_site, site in enumerate(ctx.lon):
         mesh_per_site = line_mesh[idx_site]
         mesh_lons = mesh_per_site.lons
         mesh_lats = mesh_per_site.lats
-        
+
         # Get distance between each point
         line_spacing = distance(mesh_lons[0], mesh_lats[0], 0,
                                          mesh_lons[1], mesh_lats[1], 0)
@@ -149,7 +152,7 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store, polygon_per_zone,
         # For each zone...
         for idx_zone, zone in enumerate(volc_pgn_store['volc_zone']):
             zone_id = volc_pgn_store['volc_zone'][zone]
-            
+
             # Check if any points of mesh lie within zone
             checks_per_zone = polygon_per_zone[zone_id].intersects(
                 mesh_per_site)
@@ -157,8 +160,8 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store, polygon_per_zone,
             # N points in zone * line spacing = distance in zone
             num_pnts_in_zone = len(np.argwhere(checks_per_zone == True))
             dist_per_volc_zone = num_pnts_in_zone * line_spacing
-            dist_per_volc_zone_per_site[idx_site][zone_id] = dist_per_volc_zone   
-            
+            dist_per_volc_zone_per_site[idx_site][zone_id] = dist_per_volc_zone
+
             # Get coordinates of mesh points in zone
             in_zone_lons, in_zone_lats = [], []
             for idx_pnt, pnt in enumerate(checks_per_zone):
@@ -172,8 +175,8 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store, polygon_per_zone,
 def get_total_rvolc_per_path(dist_per_volc_zone_per_site, volc_pgn_store):
     """
     Get total rvolc per travel path. Note that total distance traversed through
-    volcanic zones for each travel path in the Zhao et al. (2016) papers is 
-    capped at minimum of 12 km (assuming the zone is actually traversed) and 
+    volcanic zones for each travel path in the Zhao et al. (2016) papers is
+    capped at minimum of 12 km (assuming the zone is actually traversed) and
     maximum of 80 km.
     :param dist_per_volc_zone_per_site:
         dist_per_volc_zone_per_site: Dict of distance traversed per zone per
@@ -211,19 +214,23 @@ def get_rvolcs(ctx, volc_polygons):
         ctx: Context of ruptures and sites to compute ground-motions for
     :param volc_polygons:
         volc_polygons: Fiona collection of coordinates of volcanic zone polygon
-        vertices and associated zone id per polygon 
+        vertices and associated zone id per polygon
     """
     # Read in volcanic zones and get polygons with att. rates
-    volc_pgn_store, polygon_per_zone  = get_volc_zones(volc_polygons)   
-    
-    # Discretise the line from closest pnt on each rup to each site
-    line_mesh = discretise_lines(ctx)
- 
-    # Get the distances traversed across each volcanic zone
-    dist_per_volc_zone_per_site,\
-        in_zone_coo_per_zone_per_site = get_dist_traversed_per_zone(
-        line_mesh, volc_pgn_store, polygon_per_zone, ctx)
-    
+    volc_pgn_store, polygon_per_zone  = get_volc_zones(volc_polygons)
+
+    # Unique sites
+    for ulo, ula in np.vstack({tuple(e) for e in zip(ctx.lon, ctx.lat)}):
+
+        mask = np.logical_and(ctx.lon == ulo, ctx.lon == ula)
+        # Discretise the line from closest pnt on each rup to each site
+        line_mesh = discretise_lines(ctx)
+
+        # Get the distances traversed across each volcanic zone
+        dist_per_volc_zone_per_site,\
+            in_zone_coo_per_zone_per_site = get_dist_traversed_per_zone(
+            line_mesh, volc_pgn_store, polygon_per_zone, ctx)
+
     # Get the total distance traversed across each zone, with limits placed on
     # the minimum and maximum of rvolc as described within the Zhao et al. 2016
     # GMMs
