@@ -1,11 +1,14 @@
+  [Kendra Johnson]
+  * Fixed a bug in hazardlib.geo.surface.multi affecting the disaggregation
+
   [Michele Simionato]
-  * Fixed the realizations extractor for scenario calculations reading
+  * Fixed the realizations extractor for scenario calculations starting from
     ruptures with multiple different tectonic region types
   * Fixed a subtle mutability bug affecting various GMPEs
   * Fixed rupture sampling in the case of a same source appearing in multiple
-    source model logic tree branches
+    logic tree branches
   * Fixed a bug in classical_damage causing a ValueError: could not broadcast
-    input array from shape (X,Y) into shape (X,)
+    input array from shape (X,Y) into shape (X,) in some situations
   * Fixed the CSV importer so that it can import exported GMFs even in
 ￼   the presence of a `custom_site_id`
 
