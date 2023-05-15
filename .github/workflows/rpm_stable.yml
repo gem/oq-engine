@@ -123,7 +123,7 @@ jobs:
         run: |
             set -x
             dnf install -y dnf-plugins-core
-            dnf copr -y enable ${COPR_TEST} -y
+            dnf copr -y enable ${COPR_TEST}
             #install oq-python3 required from RPM of engine
             dnf install oq-python39
             ls -lrt ~/rpmbuild/RPMS/noarch/
