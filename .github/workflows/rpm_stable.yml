@@ -153,7 +153,7 @@ jobs:
             dnf install -y dnf-plugins-core
             dnf copr -y enable ${COPR_TEST}
             #install oq-python3 required from RPM of engine
-            dnf install oq-python39
-            dnf install python3-oq-engine
+            dnf install oq-python39 -y
+            dnf install python3-oq-engine -y
             sleep 5
             oq --version
