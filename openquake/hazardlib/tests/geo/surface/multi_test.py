@@ -267,6 +267,31 @@ class MultiSurfaceTestCase(unittest.TestCase):
         assert (cpointsB_1.array.T[0] == cpointsB_12.array.T[0]).all()
 
 
+    def test_get_closest_point_v3(self):
+
+        # if two sections have the exact same point as the closest distance,
+        # then we can only choose one 
+        spc1 = 4.0
+        pro1 = Line([Point(174.693609, -41.234002, 0.0), Point(174.6937, -41.2337, 21.68)])
+        pro2 = Line([Point(174.6728, -41.2633, 0.0), Point(174.6729, -41.2629, 21.68)])
+        pro3 = Line([Point(174.6728, -41.2633, 0.0), Point(174.6729, -41.2629, 21.68)])
+        pro4 = Line([Point(174.645459, -41.285853, 0.0), Point(174.6455, -41.2855, 21.76)])
+        sfc1 = KiteSurface.from_profiles([pro1, pro2], spc1, spc1)
+        sfc2 = KiteSurface.from_profiles([pro3, pro4], spc1, spc1)
+        msurf1 = MultiSurface([sfc1, sfc2])
+
+        # Define the mesh of sites
+        pcoo = numpy.array([[174.777, -41.289]])
+        mesh = Mesh(pcoo[:, 0], pcoo[:, 1])
+        
+        # Compute closest distance between mesh points and surface
+        cpoints1 = msurf1.get_closest_points(mesh)
+
+        # checking cpoints
+        expected = [[174.6728], [-41.2633],[ 0.]]
+        assert (cpoints1.array == expected).all()
+
+
 def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):
     """
     Plots mesh and surface

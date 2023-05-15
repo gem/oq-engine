@@ -232,20 +232,21 @@ def extract_realizations(dstore, dummy):
     dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
     scenario = 'scenario' in oq.calculation_mode
-    rlzs = dstore['full_lt'].rlzs
+    full_lt = dstore['full_lt']
+    rlzs = full_lt.rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
-    if scenario:
+    if scenario and len(full_lt.trts) == 1:  # only one TRT
         gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
         # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
         arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
-    else:
+    else:  # use the compact representation for the branch paths
         arr['branch_path'] = encode(rlzs['branch_path'])
     return arr
 

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 #
 # LICENSE
 #
@@ -44,9 +43,6 @@
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
-
-"""
-"""
 
 import numpy as np
 
@@ -181,21 +177,21 @@ def generate_synthetic_magnitudes(aval, bval, mmin, mmax, nyears):
     return {'magnitude': mags, 'year': np.sort(year)}
 
 
-def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
-    """
-    Re-sample the completeness table to a specified sample_width
-    """
-    new_comp_table = []
-    for i in range(comp_table.shape[0] - 1):
-        mvals = np.arange(comp_table[i, 1],
-                          comp_table[i + 1, 1], d_m)  # FIXME: d_m is undefined!
-        new_comp_table.extend([[comp_table[i, 0], mval] for mval in mvals])
-    # If mmax > last magnitude in completeness table
-    if mmax and (mmax > comp_table[-1, 1]):
-        new_comp_table.extend(
-            [[comp_table[-1, 0], mval]
-             for mval in np.arange(comp_table[-1, 1], mmax + d_m, d_m)])
-    return np.array(new_comp_table)
+#def downsample_completeness_table(comp_table, sample_width=0.1, mmax=None):
+#    """
+#    Re-sample the completeness table to a specified sample_width
+#    """
+#    new_comp_table = []
+#    for i in range(comp_table.shape[0] - 1):
+#        mvals = np.arange(comp_table[i, 1],
+#                          comp_table[i + 1, 1], d_m)  # FIXME: d_m is undefined!
+#        new_comp_table.extend([[comp_table[i, 0], mval] for mval in mvals])
+#    # If mmax > last magnitude in completeness table
+#    if mmax and (mmax > comp_table[-1, 1]):
+#        new_comp_table.extend(
+#            [[comp_table[-1, 0], mval]
+#             for mval in np.arange(comp_table[-1, 1], mmax + d_m, d_m)])
+#    return np.array(new_comp_table)
 
 
 def get_completeness_counts(catalogue, completeness, d_m):
