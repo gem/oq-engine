@@ -123,6 +123,7 @@ jobs:
 
   test_upload:
     name: Test RPM packages
+    needs: build
     runs-on: ubuntu-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
