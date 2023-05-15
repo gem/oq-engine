@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the order of the IMT to be by period and not lexicographic
   * Fixed the realizations extractor for scenario calculations reading
     ruptures with multiple different tectonic region types
 
