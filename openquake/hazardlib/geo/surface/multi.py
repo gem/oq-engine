@@ -187,9 +187,8 @@ class MultiSurface(BaseSurface):
         # the centroid info for the sites must be evaluated and populated
         # one site at a time
         for jdx in idx.T:
-            i = int(np.where(jdx)[0])
+            i = np.where(jdx)[0][0]
             surf = self.surfaces[i]
-
             cps = surf.get_closest_points(mesh)
             idx_i = idx[i, :]
             lons[idx_i] = cps.lons[idx_i]
