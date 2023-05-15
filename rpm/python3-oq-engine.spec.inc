@@ -18,7 +18,6 @@
 
 # Provide a custom prefix for oq
 %define _oqprefix /opt/openquake
-%define _sysbin /usr/bin/
 %define _oqvenv %{_oqprefix}/venv
 %define _oqpython %{_oqprefix}/bin
 
@@ -68,7 +67,7 @@ Url: http://github.com/gem/oq-engine
 
 # https://rpm-software-management.github.io/rpm/manual/boolean_dependencies.html
 
-Requires: oq-python3 >= 3.9
+Requires: oq-python3 >= 3.9.0
 
 Obsoletes: python-oq-hazardlib python-oq-engine
 Provides: python-oq-engine
