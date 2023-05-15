@@ -17,7 +17,7 @@ on:
         required: true
       copr:
         description: COPR Repository development for default
-        default: openquake
+        default: openquake-staging
         required: true
   schedule:
     - cron: "0 19 * * *"
@@ -27,15 +27,11 @@ on:
 
 jobs:
 
-  build_test_upload:
+  build_upload:
     name: Submit and publish from Fedora 38 container
     runs-on: ubuntu-latest
     env:
-      GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      GITHUB_REF:  ${{ github.ref }}
-      GITHUB_HD_REF:  ${{ github.head_ref }}
-      GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
         epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
@@ -115,20 +111,6 @@ jobs:
           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
           mock -r ${{ matrix.epel-release}} $SRPM
 
-      - name: Test created RPM use COPR Staging
-        env:
-          REPO: oq-engine
-          STABLE: ${{ github.event.inputs.lts-ver }}
-          COPR_TEST: gem/openquake-staging
-        run: |
-            set -x
-            dnf install -y dnf-plugins-core
-            dnf copr -y enable ${COPR_TEST}
-            #install oq-python3 required from RPM of engine
-            dnf install oq-python39
-            ls -lrt ~/rpmbuild/RPMS/noarch/
-            rpm -ivh  ~/rpmbuild/RPMS/noarch/*.rpm
-            oq --version
 
       - name: Publish Package on COPR
         env:
@@ -142,8 +124,41 @@ jobs:
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM
           else
-           COPR_REPO=openquake
+           COPR_REPO=openquake-staging
            echo "COPR REPO: $COPR_REPO"
            SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
            copr-cli build ${COPR_REPO} $SRPM
           fi
+
+
+  test_rpm:
+    name: Submit and publish from Fedora 38 container
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PULL_REQUEST: ${{ github.event.number }}
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+      COPR_REPO: ${{ github.event.inputs.copr }}
+    strategy:
+      matrix:
+        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
+        #epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
+    # Run in Fedora container on Ubuntu VM
+
+    container:
+      image: rockylinux:8
+      options: --privileged
+    steps:
+      - name: Test created RPM use COPR Staging
+        env:
+          REPO: oq-engine
+          COPR_TEST: gem/openquake-staging
+        run: |
+            set -x
+            dnf update -y
+            dnf install -y dnf-plugins-core
+            dnf copr -y enable ${COPR_TEST} ${{ matrix.epel-release}}
+            #install oq-python3 required from RPM of engine
+            dnf install oq-python39
+            dnf install python3-oq-engine
+            sleep 5
+            oq --version
