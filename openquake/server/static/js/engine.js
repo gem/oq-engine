@@ -508,7 +508,8 @@
                 }).done(function (data) {
                     // console.log(data);
                 }).error(function (data) {
-                    diaerror.show(false, "Error", data.responseText);
+                    var err_msg = JSON.parse(data.responseText).error_msg;
+                    diaerror.show(false, "Error", err_msg);
                 }).always(function () {
                     $('#submit_aelo_calc').prop('disabled', false);
                 });

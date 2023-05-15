@@ -91,6 +91,13 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
 
+AELO_FORM_PLACEHOLDERS = {
+    'lon': 'Longitude',
+    'lat': 'Latitude',
+    'vs30': 'Vs30 (default 760 m/s)',
+    'siteid': 'Site name',
+}
+
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
 
@@ -591,16 +598,31 @@ def aelo_run(request):
     :param request:
         a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
     """
+    validation_errs = {}
     try:
         lon = valid.longitude(request.POST.get('lon'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_PLACEHOLDERS['lon']] = str(exc)
+    try:
         lat = valid.latitude(request.POST.get('lat'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_PLACEHOLDERS['lat']] = str(exc)
+    try:
         vs30 = valid.positivefloat(request.POST.get('vs30'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
+    try:
         siteid = valid.simple_id(request.POST.get('siteid'))
     except Exception as exc:
-        # failed even before creating a job
-        exc_msg = str(exc)
-        logging.error(exc_msg)
-        response_data = exc_msg.splitlines()
+        validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
 
@@ -918,9 +940,12 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
+    params = {}
+    if settings.APPLICATION_MODE.upper() == 'AELO':
+        params['aelo_mode'] = True
+        params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
     return render(
-        request, "engine/index.html", {
-            'aelo_mode': settings.APPLICATION_MODE.upper() == 'AELO'})
+        request, "engine/index.html", params)
 
 
 @cross_domain_ajax

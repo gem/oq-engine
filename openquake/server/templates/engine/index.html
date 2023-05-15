@@ -31,13 +31,13 @@
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
               <!-- <label for"lat">Latitude:</label> -->
-              <input type="text" id="lat" name="lat" placeholder="Latitude"/>
+              <input type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/>
               <!-- <label for"lon">Longitude:</label> -->
-              <input type="text" id="lon" name="lon" placeholder="Longitude"/>
+              <input type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/>
               <!-- <label for"vs30">Vs30:</label> -->
-              <input type="text" id="vs30" name="vs30" placeholder="vs30 (default 760 m/s)"/>
+              <input type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}"/>
               <!-- <label for"siteid">Site ID:</label> -->
-              <input type="text" id="siteid" name="siteid" placeholder="Site name"/>
+              <input type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
               <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
               <!-- <input type="submit"> -->
             </form>
