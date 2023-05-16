@@ -311,36 +311,31 @@ def split_source(src):
     from openquake.hazardlib.source import splittable  # avoid circular import
     if not splittable(src):
         return [src]
-    mag_a, mag_b = src.get_min_max_mag()
     splits = list(src)
+    if len(splits) == 1:
+        return [src]
     has_samples = hasattr(src, 'samples')
+    has_smweight = hasattr(src, 'smweight')
     has_scaling_rate = hasattr(src, 'scaling_rate')
+    has_grp_id = hasattr(src, 'grp_id')
     grp_id = getattr(src, 'grp_id', 0)  # 0 in hazardlib
-    if len(splits) > 1:
-        offset = src.offset
-        for i, split in enumerate(splits):
-            split.offset = offset
-            split.source_id = '%s.%s' % (src.source_id, i)
-            split.trt_smr = src.trt_smr
-            split.grp_id = grp_id
-            split.id = src.id
-            if has_samples:
-                split.samples = src.samples
-            if has_scaling_rate:
-                split.scaling_rate = src.scaling_rate
-            offset += split.num_ruptures
-    elif splits:  # single source
-        [s] = splits
-        s.source_id = src.source_id
-        s.trt_smr = src.trt_smr
-        s.grp_id = grp_id
-        s.id = src.id
+    offset = src.offset
+    for i, split in enumerate(splits):
+        split.offset = offset
+        split.source_id = '%s.%s' % (src.source_id, i)
+        split.trt_smr = src.trt_smr
+        split.grp_id = grp_id
+        split.id = src.id
         if has_samples:
-            s.samples = src.samples
+            split.samples = src.samples
+        if has_smweight:
+            split.smweight = src.smweight
         if has_scaling_rate:
-            s.scaling_rate = src.scaling_rate
-    for split in splits:
-        split.nsites = src.nsites
+            split.scaling_rate = src.scaling_rate
+        if has_grp_id:
+            split.grp_id = src.grp_id
+        offset += split.num_ruptures
+        #split.nsites = src.nsites
     return splits
 
 

@@ -1,6 +1,7 @@
 {% extends "engine/base.html" %}
 
   {% block nav-items %}
+                {% if not aelo_mode %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -11,6 +12,7 @@
                     <input type="hidden" name="database" value="openquake2"/>
                   </form>
                 </li>
+                {% endif %}
   {% endblock nav-items %}
 
   {% block main %}
