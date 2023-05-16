@@ -599,22 +599,27 @@ def aelo_run(request):
         a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
     """
     validation_errs = {}
+    invalid_inputs = []
     try:
         lon = valid.longitude(request.POST.get('lon'))
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['lon']] = str(exc)
+        invalid_inputs.append('lon')
     try:
         lat = valid.latitude(request.POST.get('lat'))
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['lat']] = str(exc)
+        invalid_inputs.append('lat')
     try:
         vs30 = valid.positivefloat(request.POST.get('vs30'))
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
+        invalid_inputs.append('vs30')
     try:
         siteid = valid.simple_id(request.POST.get('siteid'))
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
+        invalid_inputs.append('siteid')
     if validation_errs:
         err_msg = 'Invalid input value'
         err_msg += 's\n' if len(validation_errs) > 1 else '\n'
@@ -622,7 +627,8 @@ def aelo_run(request):
             [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
              for field in validation_errs])
         logging.error(err_msg)
-        response_data = {"status": "failed", "error_msg": err_msg}
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
 

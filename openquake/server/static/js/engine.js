@@ -508,12 +508,22 @@
                 }).done(function (data) {
                     // console.log(data);
                 }).error(function (data) {
-                    var err_msg = JSON.parse(data.responseText).error_msg;
+                    var resp = JSON.parse(data.responseText);
+                    if ("invalid_inputs" in resp) {
+                        for (var i = 0; i < resp.invalid_inputs.length; i++) {
+                            var input_id = resp.invalid_inputs[i];
+                            $("#aelo_run_form > input#" + input_id).css("background-color", "#F2DEDE");
+                        }
+                    }
+                    var err_msg = resp.error_msg;
                     diaerror.show(false, "Error", err_msg);
                 }).always(function () {
                     $('#submit_aelo_calc').prop('disabled', false);
                 });
                 event.preventDefault();
+            });
+            $("#aelo_run_form > input").click(function() {
+                $(this).css("background-color", "white");
             });
         });
 })($, Backbone, _, gem_oq_server_url);
