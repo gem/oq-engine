@@ -30,8 +30,8 @@ from openquake.hazardlib.const import TRT
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.zhao_2016 import ZhaoEtAl2016SSlabPErg
 
-DATA_FOLDER = os.path.join(os.path.dirname(__file__),'..','..','tests','gsim',
-                           'data', 'ZHAO16PERG','unit_test_volc.geojson')
+DATA_FOLDER = os.path.join(os.path.dirname(__file__),'data', 'ZHAO16PERG',
+                           'unit_test_volc.geojson')
 
 def _get_first_point(rup, from_point):
     """
