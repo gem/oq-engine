@@ -242,7 +242,7 @@ class EventBasedCalculator(base.HazardCalculator):
         for src in sources:
             try:
                 src.num_ruptures = nrups[src.source_id]
-            except KeyError:
+            except KeyError:  # light source
                 src.num_ruptures = src.count_ruptures()
             src.weight = src.num_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
