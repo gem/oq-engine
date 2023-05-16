@@ -55,7 +55,6 @@ def test_annoying_character():
                     ('changelog', '.txt', '.md', '.rst', '.csv', '.py')):
                 data = open(fname, 'rb').read()
                 if object_replacement_character in data:
-                    print(fname)
-                    for line in open(fname, 'rb'):
+                    for i, line in enumerate(open(fname, 'rb'), 1):
                         if b'\xef\xbf\xbc' in line:
-                            raise ValueError('%s: %s' % (fname, line))
+                            raise ValueError('%s:%d: %s' % (fname, i, line))
