@@ -98,6 +98,8 @@ def poisson_sample(src, eff_num_ses, seed):
     rup_args = []
     rates = []
     for ps in split_source(src):
+        if not hasattr(ps, 'location'):  # unsplit containing a single point source
+            [ps] = src
         lon, lat = ps.location.x, ps.location.y
         for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
             for np_prob, np in ps.nodal_plane_distribution.data:

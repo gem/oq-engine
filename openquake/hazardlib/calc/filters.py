@@ -335,7 +335,7 @@ def split_source(src):
         if has_grp_id:
             split.grp_id = src.grp_id
         offset += split.num_ruptures
-        split.nsites = src.nsites
+        #split.nsites = src.nsites
     return splits
 
 
