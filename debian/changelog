@@ -15,7 +15,7 @@ python3-oq-engine (3.16.3-1~xenial01) xenial; urgency=low
   * Fixed the CSV importer so that it can import exported GMFs even in
     the presence of a `custom_site_id`
 
--- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 May 2023 08:07:48 +0000
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 May 2023 08:07:48 +0000
 
 python3-oq-engine (3.16.2-1~xenial01) xenial; urgency=low
 
@@ -45,7 +45,7 @@ python3-oq-engine (3.16.2-1~xenial01) xenial; urgency=low
   * Fixed the Windows installer so that the engine can be installed without
     administrator privileges
 
--- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 21 Apr 2023 12:22:53 +0000
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Fri, 21 Apr 2023 12:22:53 +0000
 
 python3-oq-engine (3.16.1-1~xenial01) xenial; urgency=low
 
