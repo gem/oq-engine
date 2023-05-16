@@ -686,9 +686,8 @@ class ContextMaker(object):
     def _get_ctx_planar(self, mag, planar, sites, src_id, start_stop, tom):
         # computing distances
         rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-        if self.fewsites:
-            # get the closest points on the surface
-            closest = project_back(planar, xx, yy)  # (3, U, N)
+        # get the closest points on the surface
+        closest = project_back(planar, xx, yy)  # (3, U, N)
         dists = {'rrup': rrup}
         for par in self.REQUIRES_DISTANCES - {'rrup'}:
             dists[par] = get_distances_planar(planar, sites, par)
