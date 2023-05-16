@@ -281,6 +281,7 @@ class SourceGroup(collections.abc.Sequence):
             print(src.weight)
         return self
 
+    # used only in event_based, where weight = num_ruptures
     def split(self, maxweight):
         """
         Split the group in subgroups with weight <= maxweight, unless it
@@ -289,7 +290,6 @@ class SourceGroup(collections.abc.Sequence):
         if self.atomic:
             return [self]
 
-        '''
         # split multipoint sources in avance
         sources = []
         for src in self:
@@ -297,10 +297,9 @@ class SourceGroup(collections.abc.Sequence):
                 sources.extend(split_source(src))
             else:
                 sources.append(src)
-        '''
         out = []
         for block in block_splitter(
-                self, maxweight, operator.attrgetter('weight')):
+                sources, maxweight, operator.attrgetter('num_ruptures')):
             sg = copy.copy(self)
             sg.sources = block
             out.append(sg)
