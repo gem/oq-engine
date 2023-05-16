@@ -35,8 +35,6 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.gsim.zhao_2016_volc_perg import volc_perg
 
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'zhao_2016_volc_perg')
-
 
 CONSTANTS = {"m_c": 7.1,
              "xcro": 2.0,

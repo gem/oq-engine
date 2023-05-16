@@ -91,8 +91,8 @@ def discretise_lines(ctx):
     # Fix to zero to compute horz. dist. as in Zhao et al. 2016
     fix_depth = 0
 
-    # Discretise line into 1000 points
-    npoints_line = 1000
+    # Discretise line into 100 points
+    npoints_line = 100
 
     # Get line from each rupture to each site
     line_mesh = {}
