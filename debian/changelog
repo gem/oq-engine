@@ -1,3 +1,5 @@
+python3-oq-engine (3.16.3-1~xenial01) xenial; urgency=low
+
   [Kendra Johnson]
   * Fixed a bug in hazardlib.geo.surface.multi affecting the disaggregation
 
@@ -11,7 +13,9 @@
   * Fixed a bug in classical_damage causing a ValueError: could not broadcast
     input array from shape (X,Y) into shape (X,) in some situations
   * Fixed the CSV importer so that it can import exported GMFs even in
-￼   the presence of a `custom_site_id`
+    the presence of a `custom_site_id`
+
+-- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 16 May 2023 08:07:48 +0000
 
 python3-oq-engine (3.16.2-1~xenial01) xenial; urgency=low
 
