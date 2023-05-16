@@ -123,7 +123,7 @@ jobs:
           copr-cli build ${COPR_REPO} $SRPM
 
       - name: Upload artifacts of job
-        uses: actions/checkout@v3
+        uses: actions/upload-artifact@v3
         with:
           name: srpm_files
           path: ~/rpmbuild/SRPMS/*.src.rpm
@@ -138,10 +138,6 @@ jobs:
       image: rockylinux:8
       options: --privileged
     steps:
-
-
-
-
       - name: Test created RPM use COPR Staging
         env:
           REPO: oq-engine
