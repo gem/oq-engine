@@ -79,10 +79,12 @@ class MosaicGetter:
         if num_close_models < 1:
             if strict:
                 raise ValueError(
-                    f'Site at lon={lon} lat={lat} is not covered by any model!')
+                    f'Site at lon={lon} lat={lat} is not covered by any'
+                    f' model!')
             else:
                 logging.error(
-                    f'Site at lon={lon} lat={lat} is not covered by any model!')
+                    f'Site at lon={lon} lat={lat} is not covered by any'
+                    f' model!')
                 model = None
         elif num_close_models > 1:
             model = min(close_models, key=close_models.get)
