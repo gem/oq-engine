@@ -609,8 +609,9 @@ def aelo_run(request):
         params = get_params_from(
             dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
         logging.root.handlers = []  # avoid breaking the logs
-    except ValueError as exc:
-        response_data = {'status': 'failed', 'error_msg': str(exc)}
+    except Exception as exc:
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': str(exc)}
         return HttpResponse(
             content=json.dumps(response_data), content_type=JSON, status=400)
     [jobctx] = engine.create_jobs(

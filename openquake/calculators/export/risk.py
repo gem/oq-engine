@@ -110,7 +110,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
             dsdic['dmg_%d' % s] = ls
         df = pandas.DataFrame(out).rename(columns=dsdic)
         fname = dest.format('-'.join(tagnames))
-        writer.save(df, fname, header, comment=md)
+        writer.save(df, fname, comment=md)
         fnames.append(fname)
     return fnames
 
