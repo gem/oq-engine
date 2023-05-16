@@ -148,6 +148,7 @@ jobs:
           REPO: oq-engine
           COPR_TEST: gem/openquake-staging
         run: |
+<<<<<<< HEAD
           set -x
           dnf update -y
           dnf install -y dnf-plugins-core
