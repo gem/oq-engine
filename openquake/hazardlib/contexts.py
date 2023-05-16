@@ -548,7 +548,6 @@ class ContextMaker(object):
             shps = [ctx.probs_occur.shape for ctx in ctxs]
             np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
-        # if self.fewsites:  # must be at the end
         dd['clon'] = numpy.float64(0.)
         dd['clat'] = numpy.float64(0.)
         C = sum(len(ctx) for ctx in ctxs)
@@ -558,7 +557,6 @@ class ContextMaker(object):
             ctx = ctx.roundup(self.minimum_distance)
             slc = slice(start, start + len(ctx))
             for par in dd:
-
                 if par == 'rup_id':
                     val = getattr(ctx, par)
                 else:
@@ -734,7 +732,6 @@ class ContextMaker(object):
         # setting distance parameters
         for par in dists:
             ctx[par] = dists[par]
-        #if self.fewsites:
         ctx['clon'] = closest[0]
         ctx['clat'] = closest[1]
 
@@ -770,7 +767,6 @@ class ContextMaker(object):
         else:
             dd['probs_occur'] = numpy.zeros(0)
 
-        #if self.fewsites:
         dd['clon'] = numpy.float64(0.)
         dd['clat'] = numpy.float64(0.)
 
@@ -866,7 +862,6 @@ class ContextMaker(object):
                     rctx.src_id = src_id
                     if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id
-                        #if self.fewsites:
                         c = rup.surface.get_closest_points(sites.complete)
                         rctx.clon = c.lons[rctx.sids]
                         rctx.clat = c.lats[rctx.sids]
