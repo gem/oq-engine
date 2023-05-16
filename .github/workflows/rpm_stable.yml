@@ -238,6 +238,10 @@ jobs:
           path: ~/rpmbuild/SRPMS
       - name: Display structure of downloaded files
         run: ls -rl ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
+      - name: Install tooling for source RPM build
+        run: |
+          dnf --refresh -y install @development-tools @rpm-development-tools \
+          copr-cli mock make gcc openssl-devel bzip2-devel libffi-devel
       - name: Publish Package on COPR ${COPR_REPO}
         env:
           API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
