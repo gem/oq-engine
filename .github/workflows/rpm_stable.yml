@@ -131,7 +131,7 @@ jobs:
 
   test_rpm:
     name: Test latest packages on RockyLinux8
-    needs: build_upload
+    needs: build
     runs-on: ubuntu-latest
     container:
       image: rockylinux:8
