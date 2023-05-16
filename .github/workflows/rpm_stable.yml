@@ -27,7 +27,7 @@ on:
 
 jobs:
 
-  build_upload:
+  build:
     name: Submit and publish from Fedora 38 container
     runs-on: ubuntu-latest
     env:
@@ -37,7 +37,6 @@ jobs:
         epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
         #epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
     # Run in Fedora container on Ubuntu VM
-
     container:
       image: fedora:38
       options: --privileged
@@ -111,7 +110,6 @@ jobs:
           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
           mock -r ${{ matrix.epel-release}} $SRPM
 
-
       - name: Publish Package on COPR
         env:
           API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
@@ -119,16 +117,17 @@ jobs:
         run: |
           mkdir -p "$HOME/.config"
           echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
-          if [ "$COPR_REPO" != "" ]; then
-           echo "COPR REPO: $COPR_REPO"
-           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-           copr-cli build ${COPR_REPO} $SRPM
-          else
-           COPR_REPO=openquake-staging
-           echo "COPR REPO: $COPR_REPO"
-           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-           copr-cli build ${COPR_REPO} $SRPM
-          fi
+          COPR_REPO=openquake-staging
+          echo "COPR REPO: $COPR_REPO"
+          SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+          copr-cli build ${COPR_REPO} $SRPM
+
+      - name: Upload artifacts of job
+        uses: actions/checkout@v3
+        with:
+          name: srpm_files
+          path: ~/rpmbuild/SRPMS/*.src.rpm
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
 
   test_rpm:
     name: Test latest packages on RockyLinux8
@@ -148,8 +147,8 @@ jobs:
           dnf install -y dnf-plugins-core
           dnf copr -y enable ${COPR_TEST}
           #install oq-python3 required from RPM of engine
-          dnf install oq-python39
-          dnf install python3-oq-engine
+          dnf install oq-python39 -y
+          dnf install python3-oq-engine -y
           sleep 5
           #
           mkdir /var/log/oq-engine/
@@ -215,3 +214,34 @@ jobs:
           # Run a calcs using https
           #
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+
+  upload_copr:
+    name: downloads artifacts and publish from Fedora 38 container
+    needs: test_rpm
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+    strategy:
+      matrix:
+        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
+    container:
+      image: fedora:38
+      options: --privileged
+    steps:
+      - name: Publish Package on COPR ${COPR_REPO}
+        env:
+          API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
+          COPR_REPO: ${{ github.event.inputs.copr }}
+        run: |
+          mkdir -p "$HOME/.config"
+          echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
+          if [ "$COPR_REPO" != "" ]; then
+           echo "COPR REPO: $COPR_REPO"
+           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+           copr-cli build ${COPR_REPO} $SRPM
+          else
+           COPR_REPO=openquake
+           echo "COPR REPO: $COPR_REPO"
+           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+           copr-cli build ${COPR_REPO} $SRPM
+          fi
