@@ -237,8 +237,7 @@ jobs:
           name: srpm_files
           path: ~/rpmbuild/SRPMS
       - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: ~/rpmbuild/SRPMS
+        run: ls -rl ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
       - name: Publish Package on COPR ${COPR_REPO}
         env:
           API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
