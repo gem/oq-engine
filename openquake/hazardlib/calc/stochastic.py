@@ -265,7 +265,9 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['ctimes'].append(dt)
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
+        t0 = time.time()
         rup_array = get_rup_array(eb_ruptures, srcfilter)
+        dt = time.time() - t0
         if len(rup_array):
             yield AccumDict(dict(rup_array=rup_array, source_data=source_data,
                                  eff_ruptures={grp_id: eff_ruptures}))

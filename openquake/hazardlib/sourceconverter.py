@@ -25,14 +25,14 @@ import logging
 from dataclasses import dataclass
 import numpy
 
-from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.source import NonParametricSeismicSource
-
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -288,6 +288,16 @@ class SourceGroup(collections.abc.Sequence):
         """
         if self.atomic:
             return [self]
+
+        '''
+        # split multipoint sources in avance
+        sources = []
+        for src in self:
+            if src.code == b'M':
+                sources.extend(split_source(src))
+            else:
+                sources.append(src)
+        '''
         out = []
         for block in block_splitter(
                 self, maxweight, operator.attrgetter('weight')):
