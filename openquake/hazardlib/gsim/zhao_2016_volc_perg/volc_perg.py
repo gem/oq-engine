@@ -92,7 +92,7 @@ def discretise_lines(ctx):
     fix_depth = 0
 
     # Discretise line into 1000 points
-    npoints_line = 100
+    npoints_line = 1000
 
     # Get line from each rupture to each site
     line_mesh = {}

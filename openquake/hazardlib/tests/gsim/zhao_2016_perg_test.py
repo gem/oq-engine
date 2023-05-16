@@ -213,7 +213,6 @@ class TestZhao2016PErg(unittest.TestCase):
         volc_arc_fname = DATA_FOLDER
         self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_fname)
         self.gmm = ZhaoEtAl2016SSlabPErg()
-        print(volc_arc_fname)
         
     def test01(self):
         """
@@ -289,7 +288,7 @@ class TestZhao2016PErg(unittest.TestCase):
         
     def test04(self):
         """
-        Test with azimuth of 0 degrees from rupture strike to sites collection
+        Test with azimuth of 350 degrees from rupture strike to sites collection
         in straight line for SA(1.0). This test will generate zero difference
         in PErg and non-PErg because the generated travel paths do not pass
         through any volcanic zones.
@@ -299,7 +298,7 @@ class TestZhao2016PErg(unittest.TestCase):
         
         # Get sites from rupture
         from_point = 'TC'
-        azimuth = 0 # relative to strike of slab
+        azimuth = 350 # relative to strike of slab
         direction = 'positive'
         hdist = 5000
         step = 25

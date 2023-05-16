@@ -126,6 +126,12 @@ def get_distances(rupture, sites, param, dcache=None):
     elif param == 'closest_point':
         t = rupture.surface.get_closest_points(sites)
         dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+    elif param == 'clon':
+        t = rupture.surface.get_closest_points(sites)
+        dist = numpy.vstack([t.lons])  # shape (N, 3)   
+    elif param == 'clat':
+        t = rupture.surface.get_closest_points(sites)
+        dist = numpy.vstack([t.lats])  # shape (N, 3)   
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
