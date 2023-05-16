@@ -34,7 +34,8 @@ from openquake.baselib.general import distinct, pprod
 from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
-from openquake.hazardlib.calc.filters import IntegrationDistance, floatdict  # needed
+from openquake.hazardlib.calc.filters import (
+    IntegrationDistance, floatdict)  # needed
 
 PRECISION = pmf.PRECISION
 
@@ -52,6 +53,7 @@ lon_lat_pmf = partial(pprod, axis=(DIS, MAG, EPS))
 mag_lon_lat_pmf = partial(pprod, axis=(DIS, EPS))
 # applied on matrix MAG DIS LON LAT EPS
 
+
 def trt_pmf(matrices):
     """
     From T matrices of shape (Ma, D, Lo, La, E, ...) into one matrix of
@@ -59,6 +61,7 @@ def trt_pmf(matrices):
     """
     return numpy.array([pprod(mat, axis=(MAG, DIS, LON, LAT, EPS))
                         for mat in matrices])
+
 
 # this dictionary is useful to extract a fixed set of
 # submatrices from the full disaggregation matrix
