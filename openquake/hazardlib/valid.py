@@ -325,6 +325,8 @@ class SimpleId(object):
         self.__name__ = 'SimpleId(%d, %s)' % (length, regex)
 
     def __call__(self, value):
+        if len(value) == 0:
+            raise ValueError('Invalid ID: can not be empty')
         if max(map(ord, value)) > 127:
             raise ValueError(
                 'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
