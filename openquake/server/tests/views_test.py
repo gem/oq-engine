@@ -80,5 +80,3 @@ class EngineServerTestCase(django.test.TestCase):
             running_calcs = cls.get('list', is_running='true')
             if not running_calcs:
                 return
-        # to avoid issues on Jenkins
-        raise django.test.SkipTest('Timeout waiting for %s' % running_calcs)
