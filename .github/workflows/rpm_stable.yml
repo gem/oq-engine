@@ -17,11 +17,13 @@ on:
         required: true
       copr:
         description: COPR Repository development for default
-        default: openquake
+        default: openquake-staging
         required: true
   schedule:
     - cron: "0 19 * * *"
-
+  push:
+    branches:
+      - test_action_rpm
 
 jobs:
 
@@ -29,17 +31,12 @@ jobs:
     name: Submit and publish from Fedora 38 container
     runs-on: ubuntu-latest
     env:
-      GITHUB_PULL_REQUEST: ${{ github.event.number }}
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-      GITHUB_REF:  ${{ github.ref }}
-      GITHUB_HD_REF:  ${{ github.head_ref }}
-      GITHUB_BS_REF:  ${{ github.base_ref }}
     strategy:
       matrix:
         epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
         #epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
     # Run in Fedora container on Ubuntu VM
-
     container:
       image: fedora:38
       options: --privileged
@@ -114,6 +111,137 @@ jobs:
           mock -r ${{ matrix.epel-release}} $SRPM
 
       - name: Publish Package on COPR
+        env:
+          API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
+          COPR_REPO: ${{ github.event.inputs.copr }}
+        run: |
+          mkdir -p "$HOME/.config"
+          echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
+          COPR_REPO=openquake-staging
+          echo "COPR REPO: $COPR_REPO"
+          SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
+          copr-cli build ${COPR_REPO} $SRPM
+
+      - name: Upload artifacts of job
+        uses: actions/upload-artifact@v3
+        with:
+          name: srpm_files
+          path: ~/rpmbuild/SRPMS/*.src.rpm
+          retention-days: 5
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+
+  test_rpm:
+    name: Test latest packages on RockyLinux8
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux:8
+      options: --privileged
+    steps:
+      - name: Test created RPM use COPR Staging
+        env:
+          REPO: oq-engine
+          COPR_TEST: gem/openquake-staging
+        run: |
+          set -x
+          dnf update -y
+          dnf install -y dnf-plugins-core nc
+          dnf copr -y enable ${COPR_TEST}
+          #install oq-python3 required from RPM of engine
+          dnf install oq-python39 -y
+          dnf install python3-oq-engine -y
+          sleep 5
+          #
+          mkdir /var/log/oq-engine/
+          chown -R openquake /var/log/oq-engine/
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
+          # Wait the DbServer to come up
+          echo "Waiting DBServer up on port 1907...."
+          while ! nc -z localhost 1907; do
+            sleep 2 # wait for 1/10 of the second before check again
+          done
+          sleep 3
+          oq --version
+          #
+          echo "Add settings for login and logging on webui before to start"
+          cd /opt/openquake/venv/lib/python3.9/site-packages/openquake/server/
+          ls -lrt
+          cat > local_settings.py << EOF
+          LOCKDOWN = True
+          #
+          WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+          EOF
+          echo "DISPLAY content of local_settings"
+          cat local_settings.py
+          # START WEBUI
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+          echo "Waiting WEBUI up on port 8800...."
+          while ! nc -z localhost 8800; do
+            sleep 5 # wait for 1/10 of the second before check again
+          done
+          ls -lrt /var/log/oq-engine/
+          sleep 1
+          # Perform migration after setup local_settings
+          cd /opt/openquake/venv/lib/python3.9/site-packages/openquake/engine/
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
+          sleep 1
+          curl -L -I -X GET http://127.0.0.1:8800/accounts/login/
+          echo -n "TEST DJANGO LOGIN "
+          LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+          YOUR_USER='username'
+          YOUR_PASS='password'
+          COOKIES=cookies.txt
+          CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+          echo -n "Django Auth: get csrftoken ..."
+          $CURL_BIN $LOGIN_URL > /dev/null
+          DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+          echo " perform login ..."
+          $CURL_BIN \
+              -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+              -X POST $LOGIN_URL > /dev/null
+          echo "--------------------"
+          echo "display log of webui"
+          echo "--------------------"
+          cat /var/log/oq-engine/webui-access.log
+          if [ -s /var/log/oq-engine/webui-access.log ]; then
+          # The file is not-empty.
+          cat /var/log/oq-engine/webui-access.log
+          else
+          ## The file is empty.
+          echo "Something not work as expected"
+          exit 1
+          fi
+          # Run a calcs using https
+          #
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+
+  upload_copr:
+    name: downloads artifacts and publish from Fedora 38 container
+    needs: test_rpm
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+    strategy:
+      matrix:
+        epel-release: [rocky+epel-9-x86_64]
+    container:
+      image: fedora:38
+      options: --privileged
+    steps:
+      - name: Create structure of downloaded files
+        run: mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
+      - name: Download artifact of workflow to upload
+        uses: actions/download-artifact@v3
+        with:
+          name: srpm_files
+          path: ~/rpmbuild/SRPMS
+      - name: Display structure of downloaded files
+        run: ls -rl ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
+      - name: Install tooling for source RPM build
+        run: |
+          dnf --refresh -y install @development-tools @rpm-development-tools \
+          copr-cli mock make gcc openssl-devel bzip2-devel libffi-devel
+      - name: Publish Package on COPR ${COPR_REPO}
         env:
           API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
           COPR_REPO: ${{ github.event.inputs.copr }}
