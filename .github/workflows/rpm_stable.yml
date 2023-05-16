@@ -127,6 +127,7 @@ jobs:
         with:
           name: srpm_files
           path: ~/rpmbuild/SRPMS/*.src.rpm
+          retention-days: 5
           if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
 
   test_rpm:
@@ -137,6 +138,10 @@ jobs:
       image: rockylinux:8
       options: --privileged
     steps:
+
+
+
+
       - name: Test created RPM use COPR Staging
         env:
           REPO: oq-engine
@@ -144,7 +149,7 @@ jobs:
         run: |
           set -x
           dnf update -y
-          dnf install -y dnf-plugins-core
+          dnf install -y dnf-plugins-core nc
           dnf copr -y enable ${COPR_TEST}
           #install oq-python3 required from RPM of engine
           dnf install oq-python39 -y
@@ -223,11 +228,21 @@ jobs:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
     strategy:
       matrix:
-        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
+        epel-release: [rocky+epel-9-x86_64]
     container:
       image: fedora:38
       options: --privileged
     steps:
+      - name: Create structure of downloaded files
+        run: mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
+      - name: Download artifact of workflow to upload
+        uses: actions/download-artifact@v3
+        with:
+          name: srpm_files
+          path: ~/rpmbuild/SRPMS
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: ~/rpmbuild/SRPMS
       - name: Publish Package on COPR ${COPR_REPO}
         env:
           API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
