@@ -42,3 +42,20 @@ def test_serious_violations():
         out.buffer = buf
         app.run([REPO, '--select', 'F82'])
     assert out.getvalue().decode('utf8') == ''
+
+
+# cut & paste from github cause the following character to creep inside
+# the codebase
+def test_annoying_character():
+    object_replacement_character = b'\xef\xbf\xbc'
+    for cwd, dirs, files in os.walk(REPO):
+        for f in files:
+            fname = os.path.abspath(os.path.join(cwd, f))
+            if os.path.exists(fname) and fname.endswith(
+                    ('changelog', '.txt', '.md', '.rst', '.csv', '.py')):
+                data = open(fname, 'rb').read()
+                if object_replacement_character in data:
+                    print(fname)
+                    for line in open(fname, 'rb'):
+                        if b'\xef\xbf\xbc' in line:
+                            raise ValueError('%s: %s' % (fname, line))
