@@ -303,6 +303,7 @@ class SourceGroup(collections.abc.Sequence):
             sg = copy.copy(self)
             sg.sources = block
             out.append(sg)
+        logging.info('Produced %d subgroup(s) of %s', len(out), self)
         return out
 
     def get_tom_toml(self, time_span):

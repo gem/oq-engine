@@ -255,7 +255,6 @@ class EventBasedCalculator(base.HazardCalculator):
         for sg in self.csm.src_groups:
             if not sg.sources:
                 continue
-            logging.info('Sending %s', sg)
             rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
             cmaker = ContextMaker(sg.trt, rgb, oq)
             for src_group in sg.split(maxweight):
