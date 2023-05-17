@@ -1210,6 +1210,14 @@ class OqParam(valid.ParamSet):
 
         if self.job_type == 'risk':
             self.check_aggregate_by()
+        if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
+                and self.inputs['job_ini'] != '<in-memory>'
+                and self.calculation_mode != 'scenario'
+                and not self.hazard_calculation_id):
+            if not hasattr(self, 'truncation_level'):
+                raise InvalidFile("Missing truncation_level in %s" %
+                                  self.inputs['job_ini'])
+
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
 
@@ -1772,9 +1780,6 @@ class OqParam(valid.ParamSet):
         """
         In presence of a correlation model the truncation level must be nonzero
         """
-        if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
-                and self.inputs['job_ini'] != '<in-memory>'):
-            self.truncation_level  # check mandatory attribute
         if self.ground_motion_correlation_model:
             return self.truncation_level != 0
         else:
