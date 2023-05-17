@@ -14,7 +14,7 @@ large range of use cases it can be installed in several different ways.
 * [Installing the Long Term Support (LTS) version](#installing-the-long-term-support-lts-version)
 * [Installing the latest version](#installing-the-latest-version)
 * [Changing the OpenQuake Engine version](#changing-the-openquake-engine-version)
-* [Other installation methods](#other-installtion-methods)
+* [Other installation methods](#other-installation-methods)
 * [Getting help](#getting-help)
 
 
