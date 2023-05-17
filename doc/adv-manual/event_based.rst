@@ -480,6 +480,15 @@ NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
 with NAME_1=*Central* and taxonomy=*Concrete*); moreover ``agg_id=25`` means
 full aggregation.
 
+It is also possible to perform the aggregation by multiple tags in cascade,
+using the ';' separator instead of ','. For example, a line like
+
+   ``aggregate_by = NAME_1; taxonomy``
+
+would produce first the aggregation by geographic region (``NAME_1``), then
+by taxonomy. In this case, instead of producing 5 x 5 combinations, only
+5 + 5 outputs would be obtained.
+
 The ``agg_id`` field enters in ``risk_by_event`` and in outputs like
 the aggregate losses; for instance::
 
