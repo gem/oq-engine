@@ -290,10 +290,10 @@ class SourceGroup(collections.abc.Sequence):
         if self.atomic:
             return [self]
 
-        # split multipoint sources in avance
+        # split multipoint/multifault in advance
         sources = []
         for src in self:
-            if src.code == b'M':
+            if src.code in b'MF':
                 sources.extend(split_source(src))
             else:
                 sources.append(src)
@@ -303,6 +303,7 @@ class SourceGroup(collections.abc.Sequence):
             sg = copy.copy(self)
             sg.sources = block
             out.append(sg)
+        logging.info('Produced %d subgroup(s) of %s', len(out), self)
         return out
 
     def get_tom_toml(self, time_span):
