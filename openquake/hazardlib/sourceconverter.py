@@ -300,7 +300,7 @@ class SourceGroup(collections.abc.Sequence):
         out = []
         def weight(src):
             if src.code == b'F':  # consider it much heavier
-                return src.num_ruptures * 5
+                return src.num_ruptures * 25
             return src.num_ruptures
         for block in block_splitter(sources, maxweight, weight):
             sg = copy.copy(self)
