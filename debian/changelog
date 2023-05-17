@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Optimized the rupture sampling for MultiFaultSources and improved
+    the parallelization for MultiFaultSources and MultiPointSources
   * Made the parameter `truncation_level` mandatory
   * Fixed the damage state header in the aggrisk outputs
   * Changed the order of the IMTs to be by period and not lexicographic
