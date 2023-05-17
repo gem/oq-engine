@@ -20,6 +20,7 @@ import os
 import tempfile
 import unittest.mock as mock
 import unittest
+import configparser
 from io import BytesIO
 
 from openquake.baselib import general
@@ -466,6 +467,17 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
             asset.Exposure.read([fname])
         self.assertIn('''\
 Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
+
+    def test_percent_in_description(self):
+        job_ini = general.gettemp('''\
+[general]
+description = Description containing a % sign''')
+        with self.assertRaises(configparser.InterpolationSyntaxError) as ctx:
+            readinput.get_oqparam(job_ini)
+        msg = ('The unsupported character "%" was found in the option'
+               ' "description" of section "general". Please use "%%" to'
+               ' indicate the percent sign instead.')
+        self.assertIn(msg, str(ctx.exception))
 
     def test_GEM4ALL(self):
         # test a call used in the GEM4ALL importer, pure XML

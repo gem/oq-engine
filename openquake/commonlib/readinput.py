@@ -283,7 +283,15 @@ def get_params(job_ini, kw={}):
     _warn_about_duplicates(cp)
     dic = {}
     for sect in cp.sections():
-        dic.update(cp.items(sect))
+        try:
+            dic.update(cp.items(sect))
+        except configparser.InterpolationSyntaxError as exc:
+            if '%' in exc.message:
+                exc.message += (
+                    f'\nThe unsupported character "%" was found in the option'
+                    f' "{exc.option}" of section "{exc.section}". Please use'
+                    f' "%%" to indicate the percent sign instead.')
+            raise exc
 
     # put source_model_logic_tree_file on top of the items so that
     # oq-risk-tests alaska, which has a smmLT.zip file works, since
