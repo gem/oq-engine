@@ -278,20 +278,12 @@ def get_params(job_ini, kw={}):
 
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    cp = configparser.ConfigParser()
+    cp = configparser.ConfigParser(interpolation=False)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     _warn_about_duplicates(cp)
     dic = {}
     for sect in cp.sections():
-        try:
-            dic.update(cp.items(sect))
-        except configparser.InterpolationSyntaxError as exc:
-            if '%' in exc.message:
-                exc.message += (
-                    f'\nThe unsupported character "%" was found in the option'
-                    f' "{exc.option}" of section "{exc.section}". Please use'
-                    f' "%%" instead to indicate the percent sign.')
-            raise exc
+        dic.update(cp.items(sect))
 
     # put source_model_logic_tree_file on top of the items so that
     # oq-risk-tests alaska, which has a smmLT.zip file works, since
@@ -1029,7 +1021,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     # check on missing fields in the exposure
     if 'risk' in oqparam.calculation_mode:
         for exp_type in exp_types:
-            if not any(exp_type in name for name in assetcol.array.dtype.names):
+            if not any(exp_type in name
+                       for name in assetcol.array.dtype.names):
                 raise InvalidFile('The exposure %s is missing %s' %
                                   (oqparam.inputs['exposure'], exp_type))
 
