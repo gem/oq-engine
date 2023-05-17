@@ -1211,6 +1211,7 @@ class OqParam(valid.ParamSet):
         if self.job_type == 'risk':
             self.check_aggregate_by()
         if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
+                and 'multi_peril' not in self.inputs
                 and self.inputs['job_ini'] != '<in-memory>'
                 and self.calculation_mode != 'scenario'
                 and not self.hazard_calculation_id):

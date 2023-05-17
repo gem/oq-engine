@@ -710,8 +710,7 @@ def get_full_lt(oqparam, branchID=''):
         if trt in oqparam.discard_trts.split(','):
             continue
         elif trt.lower() not in trts_lower:
-            raise ValueError('Unknown TRT=%s in %s [reqv]' %
-                             (trt, oqparam.inputs['job_ini']))
+            logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     if len(oqparam.source_id) == 1:
         oversampling = 'reduce-rlzs'
