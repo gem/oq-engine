@@ -447,6 +447,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 [general]
 description = Exposure with missing cost_types
 calculation_mode = scenario_risk
+truncation_level = 5
 exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:
@@ -507,13 +508,13 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
                       str(c.exception))
 
     def test_wrong_trts_in_reqv(self):
-        # invalid TRT in job.ini [reqv]
+        # unknown TRT in job.ini [reqv]
         oq = readinput.get_oqparam('job.ini', case_02)
         fname = oq.inputs['reqv'].pop('active shallow crust')
         oq.inputs['reqv']['act shallow crust'] = fname
-        with self.assertRaises(ValueError) as ctx:
+        with mock.patch('logging.warning') as w:
             readinput.get_composite_source_model(oq)
-        self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
+        self.assertIn('Unknown TRT=act shallow crust', w.call_args[0][0])
 
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')

@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Made the parameter `truncation_level` mandatory
   * Fixed the damage state header in the aggrisk outputs
   * Changed the order of the IMTs to be by period and not lexicographic
   * Fixed the realizations extractor for scenario calculations reading
