@@ -1772,6 +1772,9 @@ class OqParam(valid.ParamSet):
         """
         In presence of a correlation model the truncation level must be nonzero
         """
+        if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
+                and self.inputs['job_ini'] != '<in-memory>'):
+            self.truncation_level  # check mandatory attribute
         if self.ground_motion_correlation_model:
             return self.truncation_level != 0
         else:
@@ -1998,9 +2001,6 @@ class OqParam(valid.ParamSet):
                 'contain a single point')
 
     def check_source_model(self):
-        if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
-                and self.inputs['job_ini'] != '<in-memory>'):
-            self.truncation_level  # check mandatory attribute
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
                 'multi_peril' in self.inputs or 'rupture_model' in self.inputs
                 or 'scenario' in self.calculation_mode
