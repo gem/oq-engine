@@ -475,8 +475,8 @@ description = Description containing a % sign''')
         with self.assertRaises(configparser.InterpolationSyntaxError) as ctx:
             readinput.get_oqparam(job_ini)
         msg = ('The unsupported character "%" was found in the option'
-               ' "description" of section "general". Please use "%%" to'
-               ' indicate the percent sign instead.')
+               ' "description" of section "general". Please use "%%" instead'
+               ' to indicate the percent sign.')
         self.assertIn(msg, str(ctx.exception))
 
     def test_GEM4ALL(self):

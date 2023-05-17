@@ -290,7 +290,7 @@ def get_params(job_ini, kw={}):
                 exc.message += (
                     f'\nThe unsupported character "%" was found in the option'
                     f' "{exc.option}" of section "{exc.section}". Please use'
-                    f' "%%" to indicate the percent sign instead.')
+                    f' "%%" instead to indicate the percent sign.')
             raise exc
 
     # put source_model_logic_tree_file on top of the items so that
