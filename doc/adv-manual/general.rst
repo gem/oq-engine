@@ -442,6 +442,7 @@ Ground Accelation (PGA) of 0.1g by using the ToroEtAl2002SHARE GMPE:
 ... intensity_measure_types_and_levels="{'PGA': [0.1]}",
 ... investigation_time='50.0',
 ... gsim='ToroEtAl2002SHARE',
+... truncation_level='99.0',
 ... maximum_distance='200.0'))
 
 Then we need to specify the source:

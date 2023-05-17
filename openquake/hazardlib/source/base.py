@@ -98,7 +98,7 @@ def poisson_sample(src, eff_num_ses, seed):
     rup_args = []
     rates = []
     for ps in split_source(src):
-        if not hasattr(ps, 'location'):  # unsplit containing a single point source
+        if not hasattr(ps, 'location'):  # unsplit containing a single source
             [ps] = src
         lon, lat = ps.location.x, ps.location.y
         for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
@@ -135,21 +135,20 @@ def timedep_sample(src, eff_num_ses, seed):
     if src.code == b'F':  # time-dependent multifault
         s = src.get_sections()
         for i, probs in enumerate(src.probs_occur):
+            cdf = numpy.cumsum(probs)
+            num_occ = numpy.digitize(rng.random(eff_num_ses), cdf).sum()
+            if num_occ == 0:  # ignore non-occurring ruptures
+                continue
             idxs = src.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = s[idxs[0]]
             else:
                 sfc = MultiSurface([s[idx] for idx in idxs])
-            hypo = s[idxs[0]].get_middle_point()
-            cdf = numpy.cumsum(probs)
-            num_occ = numpy.digitize(
-                rng.random(eff_num_ses), cdf).sum()
-            if num_occ == 0:  # ignore non-occurring ruptures
-                continue
-            data = [(p, o) for o, p in enumerate(probs)]
+            hypo = sfc.get_middle_point()
+            pmf = PMF([(p, o) for o, p in enumerate(probs)])
             yield (NonParametricProbabilisticRupture(
                 src.mags[i], src.rakes[i], src.tectonic_region_type,
-                hypo, sfc, PMF(data)), rupids[i], num_occ)
+                hypo, sfc, pmf), rupids[i], num_occ)
 
     else:  # time-dependent nonparametric
         mutex_weight = getattr(src, 'mutex_weight', 1)
