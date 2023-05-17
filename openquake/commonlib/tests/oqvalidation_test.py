@@ -56,6 +56,7 @@ class OqParamTestCase(unittest.TestCase):
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance='10', sites='0.1 0.2',
                 reference_vs30_value='200',
+                truncation_level='3',
                 not_existing_param='XXX', export_dir=TMP,
                 intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                 rupture_mesh_spacing='1.5').validate()
@@ -138,6 +139,7 @@ class OqParamTestCase(unittest.TestCase):
             calculation_mode='event_based', inputs=GST,
             intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
             intensity_measure_types='PGV', sites='0.1 0.2',
+            truncation_level='3',
             reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()

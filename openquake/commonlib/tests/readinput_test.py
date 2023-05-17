@@ -447,6 +447,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
 [general]
 description = Exposure with missing cost_types
 calculation_mode = scenario_risk
+truncation_level = 5
 exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:

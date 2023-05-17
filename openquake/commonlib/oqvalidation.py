@@ -784,7 +784,7 @@ total_losses:
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: 99
+  Default: no default
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -1051,8 +1051,7 @@ class OqParam(valid.ParamSet):
                      'structural+contents',
                      'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(
-        lambda s: valid.positivefloat(s) or 1E-9, 99.)
+    truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1999,6 +1998,9 @@ class OqParam(valid.ParamSet):
                 'contain a single point')
 
     def check_source_model(self):
+        if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
+                and self.inputs['job_ini'] != '<in-memory>'):
+            self.truncation_level  # check mandatory attribute
         if ('hazard_curves' in self.inputs or 'gmfs' in self.inputs or
                 'multi_peril' in self.inputs or 'rupture_model' in self.inputs
                 or 'scenario' in self.calculation_mode
