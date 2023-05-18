@@ -221,11 +221,12 @@ def gen_outputs(df, crmodel, taxos, rng, monitor):
     mon_risk = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=True)
-    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
-        grp = df[s0:s1]
-        for taxo in taxos:
-            with ass_mon:
-                adf = monitor.read(f'assets/{taxo}').set_index('ordinal')
+    slices = performance.split_slices(df.eid.to_numpy(), 250_000)
+    for taxo in taxos:
+        with ass_mon:
+            adf = monitor.read(f'assets/{taxo}').set_index('ordinal')
+        for s0, s1 in slices:
+            grp = df[s0:s1]
             with fil_mon:
                 # *crucial* for the performance of the next step
                 gmf_df = grp[
