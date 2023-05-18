@@ -439,9 +439,13 @@ Aggregating by multiple tags
 ----------------------------
 
 The engine also supports aggregation by multiple tags. 
-Multiple tags can be indicated as multi-tag and/or various single- aggregations.
-``aggregate_by = NAME_1, taxonomy
-aggregate_by = NAME_1; taxonomy``
+Multiple tags can be indicated as multi-tag and/or various single-tag aggregations:
+
+``aggregate_by = NAME_1, taxonomy``
+
+or
+
+``aggregate_by = NAME_1; taxonomy``
 
 Comma ``,`` separated values will generate keys for all the possible 
 combinations of the indicated tag values, while semicolon ``;`` 
@@ -525,8 +529,8 @@ used. In the case of the demo actually only 20,877 rows are nonzero::
    ...
    [20877 rows x 5 columns]
 
-It is also possible to perform the aggregation by various single- aggregations,
-using the ';' separator instead of ','. For example, a line like
+It is also possible to perform the aggregation by various single-tag aggregations,
+using the ``;`` separator instead of ``,``. For example, a line like
 
    ``aggregate_by = NAME_1; taxonomy``
 
@@ -2061,7 +2065,7 @@ calculations::
 
       ``aggregate_by = policy; tag1``
 
-  In this case, aggregated loss curves will be produced also for tag1 and policy,
+  In this case, aggregated loss curves will be produced also for ``tag1`` and ``policy``,
   while reinsurance outputs will only be produced for the policy.
 
 - ``reinsurance_file``: This dictionary associates the reinsurance information
