@@ -452,7 +452,10 @@ combinations of the indicated tag values, while semicolon ``;``
 will generate keys for the single tags.
 
 For instance the second event based risk demo 
-(the file ``job_eb.ini``) has a line ``aggregate_by = NAME_1, taxonomy`` 
+(the file ``job_eb.ini``) has a line
+
+``aggregate_by = NAME_1, taxonomy``
+
 and it is able to aggregate both on geographic region (``NAME_1``) and
 on ``taxonomy``. There are 25 possible combinations, that you can see with
 the command `oq show agg_keys`::
