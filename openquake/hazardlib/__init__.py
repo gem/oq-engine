@@ -116,7 +116,7 @@ def read_hparams(job_ini):
     :returns: dictionary of hazard parameters
     """
     jobdir = os.path.dirname(job_ini)
-    cp = configparser.ConfigParser(interpolation=False)
+    cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf8')
     params = {'inputs': {}}
     for sect in cp.sections():

@@ -278,7 +278,7 @@ def get_params(job_ini, kw={}):
 
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    cp = configparser.ConfigParser(interpolation=False)
+    cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     _warn_about_duplicates(cp)
     dic = {}

@@ -89,7 +89,7 @@ def read(*paths, **validators):
     by settings with the same key names in the OQ_CONFIG_FILE openquake.cfg.
     """
     paths = config.paths + list(paths)
-    parser = configparser.ConfigParser(interpolation=False)
+    parser = configparser.ConfigParser(interpolation=None)
     found = parser.read(
         [os.path.normpath(os.path.expanduser(p)) for p in paths],
         encoding='utf8')
