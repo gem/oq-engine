@@ -218,6 +218,13 @@ def event_based_risk(df, oqparam, monitor):
 
 
 def gen_outputs(df, crmodel, taxos, rng, monitor):
+    """
+    :param df: GMF dataframe (a slice of events)
+    :param crmodel: CompositeRiskModel instance
+    :param taxos: taxonomies as integers starting from 1
+    :param rng: random number generator
+    :param monitor: Monitor instance
+    """
     mon_risk = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=True)
@@ -226,11 +233,11 @@ def gen_outputs(df, crmodel, taxos, rng, monitor):
         with ass_mon:
             adf = monitor.read(f'assets/{taxo}').set_index('ordinal')
         for s0, s1 in slices:
-            grp = df[s0:s1]
+            gdf = df[s0:s1]
             with fil_mon:
                 # *crucial* for the performance of the next step
-                gmf_df = grp[
-                    numpy.isin(grp.sid.to_numpy(), adf.site_id.to_numpy())]
+                gmf_df = df[s0:s1][
+                    numpy.isin(gdf.sid.to_numpy(), adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             with mon_risk:
