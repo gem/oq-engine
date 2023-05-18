@@ -110,7 +110,11 @@ class CostCalculator(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            if lt == 'occupants':
+            if lt == 'area':
+                unit = 'sqm'
+            elif lt == 'number':
+                unit = 'dwellings'
+            elif lt == 'occupants':
                 unit = 'people'
             else:
                 unit = self.units[lt]
