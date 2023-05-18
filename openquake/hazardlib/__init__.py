@@ -34,6 +34,7 @@ from openquake.hazardlib.source_reader import get_csm
 
 bytrt = operator.attrgetter('tectonic_region_type')
 
+
 def _get_site_model(fname, req_site_params):
     sm = hdf5.read_csv(fname, site.site_param_dt).array
     sm['lon'] = numpy.round(sm['lon'], 5)
@@ -115,7 +116,7 @@ def read_hparams(job_ini):
     :returns: dictionary of hazard parameters
     """
     jobdir = os.path.dirname(job_ini)
-    cp = configparser.ConfigParser()
+    cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf8')
     params = {'inputs': {}}
     for sect in cp.sections():
@@ -320,7 +321,6 @@ class Input(object):
         if len(self.cmakers) == 1:
             return self.cmakers[0]
         raise ValueError('There are multiple cmakers inside %s' % self.cmakers)
-
 
     @property
     def group(self):

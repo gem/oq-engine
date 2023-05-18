@@ -278,7 +278,7 @@ def get_params(job_ini, kw={}):
 
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    cp = configparser.ConfigParser()
+    cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     _warn_about_duplicates(cp)
     dic = {}
@@ -1021,7 +1021,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     # check on missing fields in the exposure
     if 'risk' in oqparam.calculation_mode:
         for exp_type in exp_types:
-            if not any(exp_type in name for name in assetcol.array.dtype.names):
+            if not any(exp_type in name
+                       for name in assetcol.array.dtype.names):
                 raise InvalidFile('The exposure %s is missing %s' %
                                   (oqparam.inputs['exposure'], exp_type))
 

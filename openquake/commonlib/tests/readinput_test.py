@@ -467,6 +467,12 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
         self.assertIn('''\
 Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
 
+    def test_percent_in_description(self):
+        job_ini = general.gettemp('''\
+[general]
+description = Description containing a % sign''')
+        readinput.get_params(job_ini)
+
     def test_GEM4ALL(self):
         # test a call used in the GEM4ALL importer, pure XML
         fname = os.path.join(os.path.dirname(case_caracas.__file__),
