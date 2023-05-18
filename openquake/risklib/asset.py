@@ -1087,6 +1087,9 @@ class Exposure(object):
             array = hdf5.read_csv(fname, conv, rename, errors=errors).array
             array['lon'] = numpy.round(array['lon'], 5)
             array['lat'] = numpy.round(array['lat'], 5)
+            sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
+            if sa:
+                array = general.random_filter(array, sa)
             yield from array
 
     def _populate_from(self, asset_array, param, check_dupl):
