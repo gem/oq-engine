@@ -23,7 +23,7 @@ def analysis(dstore):
             tagname: {i: tag for i, tag in enumerate(tags[tagname])}
             for tagname in tagnames
         }
-    ).assign(id=lambda df: df.id.str.decode("utf-8")).set_index("id")
+    ).set_index("id")
 
     source_nodes = exposure_df.loc[
         exposure_df.supply_or_demand == "source"].index.to_list()

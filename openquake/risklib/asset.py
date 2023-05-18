@@ -110,7 +110,11 @@ class CostCalculator(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            if lt == 'occupants':
+            if lt == 'area':
+                unit = 'sqm'
+            elif lt == 'number':
+                unit = 'dwellings'
+            elif lt == 'occupants':
                 unit = 'people'
             else:
                 unit = self.units[lt]
@@ -152,6 +156,19 @@ class Asset(object):
     interruption cost) or another quantity that can be considered for
     a risk analysis (e.g. occupants).
     """
+    __slots__ = '''
+    asset_id
+    ordinal
+    tagidxs
+    number
+    location
+    values
+    area
+    ideductible
+    _retrofitted
+    calc
+    tags'''.split()  # save 20% memory
+
     def __init__(self,
                  asset_id,
                  ordinal,
@@ -616,6 +633,7 @@ class AssetCollection(object):
         :returns: the associated DataFrame
         """
         dic = {name: self.array[name] for name in self.array.dtype.names}
+        dic['id'] = decode(dic['id'])
         return pandas.DataFrame(dic, dic[indexfield])
 
     def __iter__(self):
@@ -927,8 +945,6 @@ class Exposure(object):
         for i, fname in enumerate(fnames, 1):
             if by_country and len(fnames) > 1:
                 prefix = prefix2cc['E%02d_' % i] + '_'
-            elif len(fnames) > 1:
-                prefix = 'E%02d_' % i
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, region_constraint,

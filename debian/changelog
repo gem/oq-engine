@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Optimized reading the exposure (both speed and memory)
   * Optimized the rupture sampling for MultiFaultSources and improved
     the parallelization for MultiFaultSources and MultiPointSources
   * Made the parameter `truncation_level` mandatory
