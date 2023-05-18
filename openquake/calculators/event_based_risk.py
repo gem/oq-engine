@@ -94,7 +94,7 @@ def debugprint(ln, asset_loss_table, adf):
         print(df)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
+def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -114,7 +114,6 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
-            # debugprint(ln, alt, adf)
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
@@ -150,7 +149,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     """
-    :param slice_by_event:
+    :param slice_by_event: composite array with fields 'start', 'stop'
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
@@ -189,25 +188,6 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             yield event_based_risk, df[s0:s1], oqparam
 
 
-def outputs(taxo_assets, df, crmodel, rng, monitor):
-    mon_risk = monitor('computing risk', measuremem=True)
-    fil_mon = monitor('filtering GMFs', measuremem=False)
-    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
-        grp = df[s0:s1]
-        for taxo, adf in taxo_assets:
-            with fil_mon:
-                # *crucial* for the performance
-                # of the next step, 'computing risk'
-                gmf_df = grp[numpy.isin(
-                    grp.sid.to_numpy(), adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            with mon_risk:  # this is using a lot of memory
-                out = crmodel.get_output(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-            yield out
-
-
 def event_based_risk(df, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -215,28 +195,46 @@ def event_based_risk(df, oqparam, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    with monitor('reading assets/crmodel', measuremem=True):
-        # can aggregate millions of asset by using few GBs of RAM
-        adf = monitor.read('assets')
-        ideduc = adf.ideductible.any()
-        items = adf.groupby('taxonomy')
-        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
+    with monitor('reading crmodel', measuremem=True):
+        ideduc = monitor.read('assets/ideductible')
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (sum(len(assets) for taxo, assets in taxo_assets),
-           len(weights), oqparam.K)
+    ARK = (len(ideduc), len(weights), oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
 
-    avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
-                      crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor)
+    outs = gen_outputs(df, crmodel, rng, monitor)
+    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
+                      monitor)
     return dict(avg=avg, alt=alt)
+
+
+def gen_outputs(df, crmodel, rng, monitor):
+    mon_risk = monitor('computing risk', measuremem=True)
+    fil_mon = monitor('filtering GMFs', measuremem=False)
+    with monitor('reading assets', measuremem=True):
+        adf = monitor.read('assets')
+    taxos = numpy.sort(adf.taxonomy.unique())
+    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
+        grp = df[s0:s1]
+        for taxo in taxos:
+            a = adf[adf.taxonomy == taxo].set_index('ordinal')
+            with fil_mon:
+                # *crucial* for the performance of the next step
+                gmf_df = grp[
+                    numpy.isin(grp.sid.to_numpy(), a.site_id.to_numpy())]
+            if len(gmf_df) == 0:
+                continue
+            with mon_risk:
+                out = crmodel.get_output(
+                    a, gmf_df, crmodel.oqparam._sec_losses, rng)
+            yield out
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
