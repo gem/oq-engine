@@ -222,10 +222,10 @@ def gen_outputs(df, crmodel, rng, monitor):
         # can aggregate millions of asset by using few GBs of RAM
         adf = monitor.read('assets')
         items = adf.groupby('taxonomy')
-        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
     for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
         grp = df[s0:s1]
-        for taxo, adf in taxo_assets:
+        for taxo, a in items:
+            adf = a.set_index('ordinal')
             with fil_mon:
                 # *crucial* for the performance
                 # of the next step, 'computing risk'
