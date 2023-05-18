@@ -219,7 +219,6 @@ def gen_outputs(df, crmodel, rng, monitor):
     mon_risk = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     with monitor('reading assets', measuremem=True):
-        # can aggregate millions of asset by using few GBs of RAM
         adf = monitor.read('assets')
     taxos = numpy.sort(adf.taxonomy.unique())
     for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
@@ -227,13 +226,12 @@ def gen_outputs(df, crmodel, rng, monitor):
         for taxo in taxos:
             a = adf[adf.taxonomy == taxo].set_index('ordinal')
             with fil_mon:
-                # *crucial* for the performance
-                # of the next step, 'computing risk'
+                # *crucial* for the performance of the next step
                 gmf_df = grp[
                     numpy.isin(grp.sid.to_numpy(), a.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
-            with mon_risk:  # this is using a lot of memory
+            with mon_risk:
                 out = crmodel.get_output(
                     a, gmf_df, crmodel.oqparam._sec_losses, rng)
             yield out
