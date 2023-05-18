@@ -221,21 +221,21 @@ def gen_outputs(df, crmodel, rng, monitor):
     with monitor('reading assets', measuremem=True):
         # can aggregate millions of asset by using few GBs of RAM
         adf = monitor.read('assets')
-        items = adf.groupby('taxonomy')
+    taxos = numpy.sort(adf.taxonomy.unique())
     for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
         grp = df[s0:s1]
-        for taxo, a in items:
-            adf = a.set_index('ordinal')
+        for taxo in taxos:
+            a = adf[adf.taxonomy == taxo].set_index('ordinal')
             with fil_mon:
                 # *crucial* for the performance
                 # of the next step, 'computing risk'
-                gmf_df = grp[numpy.isin(
-                    grp.sid.to_numpy(), adf.site_id.to_numpy())]
+                gmf_df = grp[
+                    numpy.isin(grp.sid.to_numpy(), a.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             with mon_risk:  # this is using a lot of memory
                 out = crmodel.get_output(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+                    a, gmf_df, crmodel.oqparam._sec_losses, rng)
             yield out
 
 
