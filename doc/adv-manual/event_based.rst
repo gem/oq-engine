@@ -438,14 +438,20 @@ you will still be able to compute the total loss curve
 Aggregating by multiple tags
 ----------------------------
 
-The engine also supports aggregation my multiple tags. For instance
-the second event based risk demo (the file ``job_eb.ini``) has a line
+The engine also supports aggregation by multiple tags. 
+Multiple tags can be indicated as multi-tag and/or various single- aggregations.
+``aggregate_by = NAME_1, taxonomy
+aggregate_by = NAME_1; taxonomy``
 
-   ``aggregate_by = NAME_1, taxonomy``
+Comma ``,`` separated values will generate keys for all the possible 
+combinations of the indicated tag values, while semicolon ``;`` 
+will generate keys for the single tags.
 
+For instance the second event based risk demo 
+(the file ``job_eb.ini``) has a line ``aggregate_by = NAME_1, taxonomy`` 
 and it is able to aggregate both on geographic region (``NAME_1``) and
-on taxonomy. There are 25 possible combinations, that you can see with
-the command::
+on ``taxonomy``. There are 25 possible combinations, that you can see with
+the command `oq show agg_keys`::
 
    $ oq show agg_keys
    | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
@@ -481,15 +487,6 @@ The lines in this table are associated to the *generalized aggregation ID*,
 NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets
 with NAME_1=*Central* and taxonomy=*Concrete*); moreover ``agg_id=25`` means
 full aggregation.
-
-It is also possible to perform the aggregation by multiple tags in cascade,
-using the ';' separator instead of ','. For example, a line like
-
-   ``aggregate_by = NAME_1; taxonomy``
-
-would produce first the aggregation by geographic region (``NAME_1``), then
-by taxonomy. In this case, instead of producing 5 x 5 combinations, only
-5 + 5 outputs would be obtained.
 
 The ``agg_id`` field enters in ``risk_by_event`` and in outputs like
 the aggregate losses; for instance::
@@ -527,6 +524,15 @@ used. In the case of the demo actually only 20,877 rows are nonzero::
           event_id  agg_id  loss_id           loss      variance
    ...
    [20877 rows x 5 columns]
+
+It is also possible to perform the aggregation by various single- aggregations,
+using the ';' separator instead of ','. For example, a line like
+
+   ``aggregate_by = NAME_1; taxonomy``
+
+would produce first the aggregation by geographic region (``NAME_1``), then
+by ``taxonomy``. In this case, instead of producing 5 x 5 combinations, only
+5 + 5 outputs would be obtained.
 
 
 Rupture sampling: how does it work?
