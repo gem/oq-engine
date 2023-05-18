@@ -20,7 +20,6 @@ import os
 import tempfile
 import unittest.mock as mock
 import unittest
-import configparser
 from io import BytesIO
 
 from openquake.baselib import general
@@ -472,7 +471,7 @@ Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
         job_ini = general.gettemp('''\
 [general]
 description = Description containing a % sign''')
-        readinput.get_oqparam(job_ini)
+        readinput.get_params(job_ini)
 
     def test_GEM4ALL(self):
         # test a call used in the GEM4ALL importer, pure XML
