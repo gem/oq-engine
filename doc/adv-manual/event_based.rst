@@ -433,6 +433,8 @@ If you do not set the ``aggregate_by`` parameter
 you will still be able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
 
+.. _aggregating_by_multiple_tags:
+
 Aggregating by multiple tags
 ----------------------------
 
@@ -2045,9 +2047,16 @@ calculations::
 
 **Additional comments:**
 
-- ``aggregate_by``: it is possible to define multiple aggregation keys.
+- ``aggregate_by``: it is possible to define multiple aggregation keys
+  (see :ref:`aggregating_by_multiple_tags`).
   However, for reinsurance calculations the ``policy`` key must be present,
   otherwise an error message will be raised.
+  In the following example, multiple aggregation keys are used:
+
+      ``aggregate_by = policy; tag1``
+
+  In this case, aggregated loss curves will be produced also for tag1 and policy,
+  while reinsurance outputs will only be produced for the policy.
 
 - ``reinsurance_file``: This dictionary associates the reinsurance information
   to a given the loss_type (the engine supports structural, nonstructural, 
