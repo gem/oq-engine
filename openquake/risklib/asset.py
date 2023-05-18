@@ -156,6 +156,19 @@ class Asset(object):
     interruption cost) or another quantity that can be considered for
     a risk analysis (e.g. occupants).
     """
+    __slots__ = '''
+    asset_id
+    ordinal
+    tagidxs
+    number
+    location
+    values
+    area
+    ideductible
+    _retrofitted
+    calc
+    tags'''.split()  # save 20% memory
+
     def __init__(self,
                  asset_id,
                  ordinal,
