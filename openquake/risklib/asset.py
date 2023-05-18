@@ -157,6 +157,7 @@ class Asset(object):
     a risk analysis (e.g. occupants).
     """
     __slots__ = '''
+    asset_id
     ordinal
     tagidxs
     number
