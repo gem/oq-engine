@@ -27,7 +27,6 @@ Module exports :class:`ZhaoEtAl2016Asc`,
                :class:`ZhaoEtAl2016SSlabPErg`
 """
 import numpy as np
-import os
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
