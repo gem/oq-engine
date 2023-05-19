@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import functools
 from unittest.mock import Mock
 import numpy
 
@@ -300,6 +301,53 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+
+
+def _concat(acc, slc2):
+    if len(acc) == 0:
+        return [slc2]
+    slc1 = acc[-1]  # last slice
+    if slc2[0] == slc1[1]:
+        new = numpy.array([slc1[0], slc2[1]])
+        return acc[:-1] + [new]
+    return acc + [slc2]
+
+
+def compactify(arrayN2):
+    """
+    :param arrayN2: an array with columns (start, stop)
+    :returns: a shorter array with the same structure
+
+    Here is how it works in an example where the first three slices
+    are compactified into one while the last slice stays as it is:
+
+    >>> arr = numpy.array([[84384702, 84385520],
+    ...                    [84385520, 84385770],
+    ...                    [84385770, 84386062],
+    ...                    [84387636, 84388028]])
+    >>> compactify(arr)
+    array([[84384702, 84386062],
+           [84387636, 84388028]])
+    """
+    if len(arrayN2) == 1:
+        # nothing to compactify
+        return arrayN2
+    out = numpy.array(functools.reduce(_concat, arrayN2, []))
+    return out
+
+
+# used in event_based_risk
+def compactify3(arrayN3, maxsize=100_000):
+    """
+    :param arrayN3: an array with columns (idx, start, stop)
+    :returns: a shorter array with columns (start, stop)
+    """
+    out = []
+    for rows in general.block_splitter(
+            arrayN3, maxsize, weight=lambda row: row[2]-row[1]):
+        arr = numpy.vstack(rows)[:, 1:]
+        out.append(compactify(arr))
+    return numpy.concatenate(out)
 
 
 ##############################################################
