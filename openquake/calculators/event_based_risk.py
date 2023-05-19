@@ -239,7 +239,7 @@ def gen_outputs(df, crmodel, tss, rng, monitor):
                 # *crucial* for the performance of the next step
                 gmf_df = gdf[numpy.isin(gdf.sid.to_numpy(),
                                         adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
+            if len(gmf_df) == 0:  # common enough
                 continue
             with mon_risk:
                 out = crmodel.get_output(
