@@ -1020,7 +1020,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
     tax = assetcol.tagcol.taxonomy[u[idx]]
-    logging.info('Found %d taxonomies', len(u))
+    logging.info('Found %d taxonomies with ~%.1f assets each',
+                 len(u), len(assetcol) / len(u))
     logging.info('The most common taxonomy is %s with %d assets', tax, c[idx])
 
     # check on missing fields in the exposure

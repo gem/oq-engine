@@ -337,7 +337,7 @@ def compactify(arrayN2):
 
 
 # used in event_based_risk
-def compactify3(arrayN3, maxsize=100_000):
+def compactify3(arrayN3, maxsize=1_000_000):
     """
     :param arrayN3: an array with columns (idx, start, stop)
     :returns: a shorter array with columns (start, stop)
