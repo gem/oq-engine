@@ -233,12 +233,12 @@ def gen_outputs(df, crmodel, tss, rng, monitor):
     for t, s0, s1 in tss:
         with ass_mon:
             adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        for s0, s1 in slices:
-            gdf = df[s0:s1]
+        for start, stop in slices:
+            gdf = df[start:stop]
             with fil_mon:
                 # *crucial* for the performance of the next step
-                gmf_df = df[s0:s1][
-                    numpy.isin(gdf.sid.to_numpy(), adf.site_id.to_numpy())]
+                gmf_df = gdf[numpy.isin(gdf.sid.to_numpy(),
+                                        adf.site_id.to_numpy())]
             if len(gmf_df) == 0:
                 continue
             with mon_risk:
