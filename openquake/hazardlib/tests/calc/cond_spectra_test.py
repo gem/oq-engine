@@ -25,6 +25,7 @@ from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.calc.cond_spectra import get_cs_out, cond_spectra
 
+PLOT = False
 OVERWRITE_EXPECTED = False
 
 CWD = os.path.dirname(__file__)
@@ -111,7 +112,7 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # The hazard for the target IMT and poe
         inp.cmaker.poes = [0.000404]
-        imls = [0.394359437]
+        imls = np.array([[0.394359437]])
 
         mom1 = get_cs_out(inp.cmaker, ctx1, imti, imls, tom)[0]
         mom2 = get_cs_out(inp.cmaker, ctx2, imti, imls, tom)[0]
@@ -137,7 +138,7 @@ class CondSpectraTestCase(unittest.TestCase):
 
         # The hazard for the target IMT and poe=0.002105
         cmaker.poes = [0.002105]
-        imls = [0.238531932]
+        imls = np.array([[0.0483352]])
 
         # Compute mean CS
         outdic = get_cs_out(cmaker, ctx, imti, imls, tom)
@@ -162,5 +163,6 @@ class CondSpectraTestCase(unittest.TestCase):
                       float_format='%.6f')
         expdf = pandas.read_csv(expected)
         pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)
-        # to plot the spectra uncomment the following line
-        # plot(df, cmaker.imts)
+        # Plot the spectra for the two sites
+        if PLOT:
+            plot(df, cmaker.imts)

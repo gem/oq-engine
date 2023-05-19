@@ -17,8 +17,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-12]
-        python-version: [3.8, 3.9, "3.10"]
+        os: [macos-13, macos-12]
+        python-version: [3.9, "3.10"]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)

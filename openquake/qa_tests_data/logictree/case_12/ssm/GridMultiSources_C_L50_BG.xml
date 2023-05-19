@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="North Africa - Smoothed Seismicity"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Tectonic_Type_C"
+        >
+            <pointSource
+            id="BG_10"
+            name="BG_10"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            30.1 31.1
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        45.0
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    2.0
+                </ruptAspectRatio>
+                <arbitraryMFD>
+                    <magnitudes>
+                        4.05 4.1499999999999995 4.25 4.35 4.45 4.55 4.65 4.75 4.85 4.95 5.05 5.15 5.25 5.35 5.45 5.55
+                    </magnitudes>
+                    <occurRates>
+                        0.0001247063254104289 9.68679211545123e-05 7.524393103488836e-05 5.844710085759283e-05 4.5399855532184325e-05 3.526516888092087e-05 2.739286549751812e-05 2.1277909732939635e-05 1.6528005901542216e-05 1.3114105865780013e-05 1.0188752844905148e-05 7.915955963528353e-06 6.150150049802529e-06 4.778241037387868e-06 3.7123626621289664e-06 2.8842489165643673e-06
+                    </occurRates>
+                </arbitraryMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="60.0" probability="0.6" rake="45.0" strike="240.0"/>
+                    <nodalPlane dip="45.0" probability="0.4" rake="90.0" strike="240.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="0.283334"/>
+                    <hypoDepth depth="15.0" probability="0.383333"/>
+                    <hypoDepth depth="25.0" probability="0.2"/>
+                    <hypoDepth depth="35.0" probability="0.133333"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

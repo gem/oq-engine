@@ -49,7 +49,8 @@ structural+nonstructural structural+contents nonstructural+contents
 structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
-structural_ins nonstructural_ins reinsurance'''.split())
+structural_ins nonstructural_ins
+reinsurance claim area number'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
@@ -966,7 +967,7 @@ def classical_damage(
     :param steps_per_interval:
         steps per interval
     :returns:
-        an array of M probabilities of occurrence where M is the numbers
+        an array of D probabilities of occurrence where D is the numbers
         of damage states.
     """
     if steps_per_interval > 1:  # interpolate
@@ -1163,24 +1164,37 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
             values = numpy.sum(lst, axis=0)  # shape num_values
         else:
             values = j['value-' + lt].to_numpy()
+        aids = j.aid.to_numpy()
         losses = j.loss.to_numpy()
         deds = j.deductible.to_numpy() * values
         lims = j.insurance_limit.to_numpy() * values
+        ids_of_invalid_assets = aids[deds > lims]
+        if len(ids_of_invalid_assets):
+            invalid_assets = set(
+                asset_df['id'][aid] for aid in ids_of_invalid_assets)
+            raise ValueError(
+                f"Please check deductible values. Values larger than the"
+                f" insurance limit were found for asset(s) {invalid_assets}.")
         new['loss'] = insured_losses(losses, deds, lims)
         losses_by_lt[lt + '_ins'] = new
 
 
-def total_losses(asset_df, losses_by_lt, kind):
+def total_losses(asset_df, losses_by_lt, kind, ideduc=False):
     """
     :param asset_df: DataFrame of assets
     :param losses_by_lt: lt -> DataFrame[eid, aid]
     :param kind: kind of total loss (i.e. "structural+nonstructural")
+    :param ideduc: if True compute the insurance claim
     """
-    if kind in TOTLOSSES:
-        ltypes = kind.split('+')
-    else:
-        raise ValueError(kind)
-    losses_by_lt[kind] = _agg([losses_by_lt[lt] for lt in ltypes])
+    ltypes = kind.split('+')
+    losses_by_lt[kind] = df = _agg([losses_by_lt[lt] for lt in ltypes])
+    # event loss table eid aid variance loss
+    if ideduc:
+        loss = df.loss.to_numpy()
+        ideductible = asset_df.ideductible[df.aid].to_numpy()
+        df = df.copy()
+        df['loss'] = numpy.maximum(loss - ideductible, 0)
+        losses_by_lt['claim'] = df
 
 
 def insurance_loss_curve(curve, deductible, insurance_limit):

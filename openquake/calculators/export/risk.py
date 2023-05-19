@@ -44,7 +44,7 @@ def get_rup_data(ebruptures):
     dic = {}
     for ebr in ebruptures:
         point = ebr.rupture.surface.get_middle_point()
-        dic[ebr.rup_id] = (ebr.rupture.mag, point.x, point.y, point.z)
+        dic[ebr.id] = (ebr.rupture.mag, point.x, point.y, point.z)
     return dic
 
 # ############################### exporters ############################## #
@@ -89,6 +89,8 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
             loss_type = scientific.LOSSTYPE[lid]
+            if loss_type == 'claim':  # temporary hack
+                continue
             out['loss_type'].extend([loss_type] * n)
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
@@ -108,7 +110,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
             dsdic['dmg_%d' % s] = ls
         df = pandas.DataFrame(out).rename(columns=dsdic)
         fname = dest.format('-'.join(tagnames))
-        writer.save(df, fname, header, comment=md)
+        writer.save(df, fname, comment=md)
         fnames.append(fname)
     return fnames
 
@@ -329,7 +331,7 @@ def export_loss_maps_npz(ekey, dstore):
     kind = ekey[0].split('-')[1]  # rlzs or stats
     assets = get_assets(dstore)
     value = get_loss_maps(dstore, kind)
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     if kind == 'rlzs':
         rlzs_or_stats = ['rlz-%03d' % r for r in range(R)]
     else:
@@ -590,6 +592,8 @@ def export_aggcurves_csv(ekey, dstore):
         edic = general.AccumDict(accum=[])
         for (agg_id, rlz_id, loss_id), d in dataf[ok].groupby(
                 ['agg_id', 'rlz_id', 'loss_id']):
+            if loss_id == scientific.LOSSID['claim']:  # temporary hack
+                continue
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
                     edic[tagname].extend([tag] * len(d))

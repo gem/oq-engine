@@ -1,14 +1,14 @@
-#,,,,"generated_by='OpenQuake engine 3.15.0-git8bbbdf5666', start_date='2022-07-13T07:11:15', checksum=1294929062, risk_investigation_time=1.0, num_events=69, effective_time=2000.0, limit_states=''"
+#,,,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:53:11', checksum=1294929062, risk_investigation_time=1.0, num_events=66, effective_time=2000.0, limit_states=''"
 NAME_1,return_period,loss_type,loss_value,loss_ratio
-Region A,50,structural,9.84202E+02,4.92101E-02
-Region A,100,structural,1.98661E+03,9.93305E-02
-Region A,200,structural,4.46517E+03,2.23259E-01
-Region A,500,structural,8.32783E+03,4.16391E-01
-Region A,1000,structural,9.99794E+03,4.99897E-01
-Region A,2000,structural,1.22291E+04,6.11457E-01
-RegionB,50,structural,1.09900E+03,2.19800E-02
-RegionB,100,structural,1.78007E+03,3.56013E-02
-RegionB,200,structural,3.31885E+03,6.63771E-02
-RegionB,500,structural,6.65154E+03,1.33031E-01
-RegionB,1000,structural,1.02915E+04,2.05830E-01
-RegionB,2000,structural,1.07270E+04,2.14541E-01
+Region A,50,structural,8.36457E+02,4.18229E-02
+Region A,100,structural,1.45784E+03,7.28922E-02
+Region A,200,structural,2.00664E+03,1.00332E-01
+Region A,500,structural,3.44011E+03,1.72005E-01
+Region A,1000,structural,5.29400E+03,2.64700E-01
+Region A,2000,structural,5.87140E+03,2.93570E-01
+RegionB,50,structural,8.54347E+02,1.70869E-02
+RegionB,100,structural,1.52858E+03,3.05716E-02
+RegionB,200,structural,2.09032E+03,4.18065E-02
+RegionB,500,structural,2.64318E+03,5.28635E-02
+RegionB,1000,structural,4.24756E+03,8.49513E-02
+RegionB,2000,structural,5.56840E+03,1.11368E-01

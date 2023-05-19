@@ -51,7 +51,7 @@ class LossCurveExporter(object):
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
         self.loss_types = dstore.get_attr('crm', 'loss_types')
-        self.R = dstore['full_lt'].get_num_rlzs()
+        self.R = dstore['full_lt'].get_num_paths()
 
     def parse(self, what):
         """

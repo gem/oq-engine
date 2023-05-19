@@ -1,0 +1,3 @@
+id,lon,lat,taxonomy,number,structural,contents,nonstructural,business_interruption,night,tag_1,policy
+a1,-122,38.113,tax1,1,10000,5000,15000,2000,6,zone_1,p1_a1
+a2,-122.114,38.113,tax1,1,10000,5000,15000,2000,6,zone_1,p1_a2

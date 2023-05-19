@@ -56,6 +56,16 @@ def check_fields(fields, dframe, policyidx, fname, policyfname, treaties,
     :param treaty_types: treaty types
     """
     key = fields[0]
+    [indices] = np.where(dframe.deductible.to_numpy() == '')
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (rows %s): empty deductible values were found' % (
+                policyfname, [idx + 2 for idx in indices]))
+    [indices] = np.where(dframe.liability.to_numpy() == '')
+    if len(indices) > 0:
+        raise InvalidFile(
+            '%s (rows %s): empty liability values were found' % (
+                policyfname, [idx + 2 for idx in indices]))
     [indices] = np.where(dframe.duplicated(subset=[key]).to_numpy())
     if len(indices) > 0:
         # NOTE: reporting only the first row found
@@ -229,7 +239,7 @@ def parse(fname, policy_idx):
     df.columns = df.columns.str.strip()
     all_policies = df.policy.to_numpy()  # ex ['A', 'B']
     exp_policies = np.array(list(policy_idx))  # ex ['?', 'B', 'A']
-    if len(all_policies) !=  len(exp_policies[1:]):
+    if len(all_policies) != len(exp_policies[1:]):
         # reduce the policy dataframe to the policies actually in the exposure
         df = df[np.isin(all_policies, exp_policies[1:])]
     check_fields(['policy', 'deductible', 'liability'], df, policy_idx, fname,
@@ -364,10 +374,10 @@ def clever_agg(ukeys, datalist, treaty_df, idx, overdict, eids):
 
 
 # tested in reinsurance_test.py
-def by_policy(agglosses_df, pol_dict, treaty_df):
+def by_policy(rbe, pol_dict, treaty_df):
     '''
-    :param DataFrame agglosses_df:
-        losses aggregated by policy (keys agg_id, event_id)
+    :param DataFrame rbe:
+        losses aggregated by policy (agg_id) and event_id
     :param dict pol_dict:
         Policy parameters, with pol_dict['policy'] being an integer >= 1
     :param DataFrame treaty_df:
@@ -376,7 +386,7 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
         DataFrame of reinsurance losses by event ID and policy ID
     '''
     out = {}
-    df = agglosses_df[agglosses_df.agg_id == pol_dict['policy'] - 1]
+    df = rbe[rbe.agg_id == pol_dict['policy'] - 1]
     losses = df.loss.to_numpy()
     ded, lim = pol_dict['deductible'], pol_dict['liability']
     claim = scientific.insured_losses(losses, ded, lim)
@@ -384,14 +394,15 @@ def by_policy(agglosses_df, pol_dict, treaty_df):
     out['policy_id'] = np.array([pol_dict['policy']] * len(df), int)
     out.update(claim_to_cessions(claim, pol_dict, treaty_df))
     nonzero = out['claim'] > 0  # discard zero claims
-    out_df = pd.DataFrame({k: out[k][nonzero] for k in out})
+    rbp = pd.DataFrame({k: out[k][nonzero] for k in out})
     # ex: event_id, policy_id, retention, claim, surplus, quota_shared, wxlr
-    out_df['policy_grp'] = build_policy_grp(pol_dict, treaty_df)
-    return out_df
+    rbp['policy_grp'] = build_policy_grp(pol_dict, treaty_df)
+    return rbp
 
 
-def _by_event(rbp, treaty_df, mon=Monitor()):
-    with mon('processing policy_loss_table', measuremem=True):
+# called by post_risk
+def by_event(rbp, treaty_df, mon=Monitor()):
+    with mon('processing reinsurance by policy', measuremem=True):
         # this is very fast
         tdf = treaty_df.set_index('code')
         inpcols = ['eid', 'claim'] + [t.id for _, t in tdf.iterrows()

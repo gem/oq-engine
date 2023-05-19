@@ -305,6 +305,7 @@ are essentially the same thing, since a loss curve is just an array of
 PMLs, one for each return period. 
 
 For instance:
+
 .. code-block:: python
 
    >>> from openquake.risklib.scientific import losses_by_period
@@ -342,8 +343,8 @@ Aggregate loss curves
 ~~~~~~~~~~~~~~~~~~~~~
 In some cases the computation of the PML is particularly simple and
 you can do it by hand: this happens when the ratio
-``eff_time/return_period`` is an integer. Consider for instance an
-``eff_time=10,000`` of years and ``return_period=2,000`` of years;
+``eff_time/return_period`` is an integer. Consider for instance a case with
+``eff_time=10,000`` years and ``return_period=2,000`` years;
 suppose there are the following 10 losses aggregating the commercial
 and residential buildings of an exposure:
 
@@ -352,8 +353,8 @@ and residential buildings of an exposure:
 >>> losses_RES = np.array([0, 800, 200, 0, 500, 1200, 250, 600, 300, 150])
 
 The loss curve associate the highest loss to 10,000 years, the second
-highest to 10,000/2 years, the third highest to 10,000/3 years, the
-fourth highest to 10,000/4 years, the fifth highest to 10,000 / 5 years
+highest to 10,000 / 2 years, the third highest to 10,000 / 3 years, the
+fourth highest to 10,000 / 4 years, the fifth highest to 10,000 / 5 years
 and so on until the lowest loss is associated to 10,000 / 10 years.
 Since the return period is 2,000 = 10,000 / 5 to compute the MPL
 it is enough to take the fifth loss ordered in descending order:
@@ -432,17 +433,32 @@ If you do not set the ``aggregate_by`` parameter
 you will still be able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
 
+.. _aggregating_by_multiple_tags:
+
 Aggregating by multiple tags
 ----------------------------
 
-The engine also supports aggregation my multiple tags. For instance
-the second event based risk demo (the file ``job_eb.ini``) has a line
+The engine also supports aggregation by multiple tags. 
+Multiple tags can be indicated as multi-tag and/or various single-tag aggregations:
 
-   ``aggregate_by = NAME_1, taxonomy``
+``aggregate_by = NAME_1, taxonomy``
+
+or
+
+``aggregate_by = NAME_1; taxonomy``
+
+Comma ``,`` separated values will generate keys for all the possible 
+combinations of the indicated tag values, while semicolon ``;`` 
+will generate keys for the single tags.
+
+For instance the second event based risk demo 
+(the file ``job_eb.ini``) has a line
+
+``aggregate_by = NAME_1, taxonomy``
 
 and it is able to aggregate both on geographic region (``NAME_1``) and
-on taxonomy. There are 25 possible combinations, that you can see with
-the command::
+on ``taxonomy``. There are 25 possible combinations, that you can see with
+the command `oq show agg_keys`::
 
    $ oq show agg_keys
    | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
@@ -515,6 +531,15 @@ used. In the case of the demo actually only 20,877 rows are nonzero::
           event_id  agg_id  loss_id           loss      variance
    ...
    [20877 rows x 5 columns]
+
+It is also possible to perform the aggregation by various single-tag aggregations,
+using the ``;`` separator instead of ``,``. For example, a line like
+
+   ``aggregate_by = NAME_1; taxonomy``
+
+would produce first the aggregation by geographic region (``NAME_1``), then
+by ``taxonomy``. In this case, instead of producing 5 x 5 combinations, only
+5 + 5 outputs would be obtained.
 
 
 Rupture sampling: how does it work?
@@ -594,7 +619,7 @@ long effective investigation time. After running the calculation, inside
 the datastore, in the ``ruptures`` dataset you will find the two
 ruptures, their occurrence rates and their integer number of
 occurrences (``n_occ``). If the effective investigation time is large
-enough the relation
+enough then the relation
 
 ``n_occ ~ occurrence_rate * eff_investigation_time``
 
@@ -680,6 +705,127 @@ correspondence with GMPEs. In this example, it is true because there is
 a single tectonic region type. However, usually there are multiple tectonic
 region types, and a realization is associated to a tuple of GMPEs.
 
+Rupture sampling: how to get it wrong
+=====================================
+
+Rupture samplings is *much more complex than one could expect* and in
+many respects *surprising*. In the many years of existence of the
+engine, multiple approached were tried and you can expect some
+detail of the rupture sampling mechanism to be different nearly at every
+version of the engine.
+
+Here we will discuss some tricky points that may help you understand
+why different versions of the engine may give different results and also
+why the comparison between the engine and other software performing
+rupture sampling is nontrivial.
+
+We will start with the first subtlety, the *interaction between
+sampling and filtering*. The short version is that you should *first
+sample and then filter*. Here is the long version. Consider the
+following code emulating rupture sampling for poissonian ruptures:
+
+.. code-block::
+  
+  import numpy
+  
+  class FakeRupture:
+      def __init__(self, mag, rate):
+          self.mag = mag
+          self.rate = rate
+  
+  def calc_n_occ(ruptures, eff_time, seed):
+      rates = numpy.array([rup.rate for rup in ruptures])
+      return numpy.random.default_rng(seed).poisson(rates * eff_time)
+  
+  mag_rates = [(5.0, 1e-5), (5.1, 2e-5), (5.2, 1e-5), (5.3, 2e-5),
+               (5.4, 1e-5), (5.5, 2e-5), (5.6, 1e-5), (5.7, 2e-5)]
+  fake_ruptures = [FakeRupture(mag, rate) for mag, rate in mag_rates]
+  eff_time = 50 * 10_000
+  seed = 42
+
+Running this code will give you the following numbers of occurrence for the
+8 ruptures considered:
+
+.. code-block::
+
+   >> calc_n_occ(fake_ruptures, eff_time, seed)
+   [ 8  9  6 13  7  6  6 10]
+
+Here we did not consider the fact that engine has a ``minimum_magnitude``
+feature and it is able to discard ruptures below the minimum magnitude.
+But how should it work? The natural approach to follow, for performance-oriented
+applications, would be to first discard the low magnitudes and then perform
+the sampling. However, that would have effects that would be surprising
+for many users. Consider the following two alternative:
+
+.. code-block::
+  
+  def calc_n_occ_after_filtering(ruptures, eff_time, seed, min_mag):
+      mags = numpy.array([rup.mag for rup in ruptures])
+      rates = numpy.array([rup.rate for rup in ruptures])
+      return numpy.random.default_rng(seed).poisson(
+          rates[mags >= min_mag] * eff_time)
+  
+  def calc_n_occ_before_filtering(ruptures, eff_time, seed, min_mag):
+      mags = numpy.array([rup.mag for rup in ruptures])
+      rates = numpy.array([rup.rate for rup in ruptures])
+      n_occ = numpy.random.default_rng(seed).poisson(rates * eff_time)
+      return n_occ[mags >= min_mag]
+  
+Most users would expect that removing a little number of ruptures has a
+little effect; for instance, if we set ``min_mag = 5.1`` such that only
+the first rupture is removed from the total 8 ruptures, we would expect
+a minor change. However, if we follow the filter-early approach the user
+would get completely different occupation numbers:
+
+.. code-block::
+
+   >> calc_n_occ_after_filtering(fake_ruptures, eff_time, seed, min_mag)
+   [13  6  9  6 13  7  6]
+
+It is only by using the filter-late approach that the occupation numbers
+are consistent with the no-filtering case:
+
+.. code-block::
+
+    >> calc_n_occ_before_filtering(fake_ruptures, eff_time, seed, min_mag)
+    [ 9  6 13  7  6  6 10]
+
+Historically the engine followed the filter-early approach and it is in
+the process of transiting to the filter-late approach. The transition is
+extremely tricky and error prone, since the minimum magnitude feature is
+spread across many modules, and it could easily go on for years.
+
+The problem with the filtering is absolutely general and not restricted
+only to the magnitude filtering: it is exactly the same also for distance
+filtering. Suppose you have a ``maximum_distance`` of 300 km and than
+you decide that you want to increase it to 301 km. One would expect this
+change to have a minor impact; instead, the occupation numbers will be
+completely different and you sample a very different set of ruptures.
+
+It is true that average quantities like the hazard curves obtained from
+the ground motion fields will converge for long enough effective time,
+however in practice you are always in situations were
+
+1. you cannot perform the calculation for a long enough effective time
+   since it would be computationally prohibitive
+2. you are interested on quantities which are strongly sensitive to a
+   change in the sampling, like the Maximum Probable Loss at some return period
+
+In such situations changing the site collection (or changing
+the maximum distance which is akin to changing the site collection) can change
+the sampling of the ruptures significantly.
+
+Users wanting to compare the GMFs or the risk on different site collections
+should be aware of this effect; the solution is to first sample the
+ruptures without setting any site collection (i.e. disabling the
+filtering) and then perform the calculation with the site collection
+starting from the sampled ruptures.
+
+The problem is discussed also in the section about `Risk profiles`_
+which discusses why you should not split the hazard calculation in
+different countries when running a continental scale calculation.
+
 Extra tips specific to event based calculations
 ===============================================
 
@@ -697,32 +843,6 @@ For this reason they live in memory, they are used to produce the
 hazard curves and immediately discarded right after. The exception if
 for the case of few sites, i.e. if the number of sites is less than
 the parameter ``max_sites_disagg`` which by default is 10.
-
-
-Sampling of the logic tree
-----------------------------------------------------
-
-There are real life examples of very large logic trees, like the model
-for South Africa which features 3,194,799,993,706,229,268,480 branches.
-In such situations it is impossible to perform a computation with full
-enumeration. However, the engine allows to
-sample the branches of the complete logic tree. More precisely,
-for each branch sampled from the source model logic tree,
-a branch of the GMPE logic tree is chosen randomly,
-by taking into account the weights in the GMPE logic tree file.
-
-It should be noticed that even if source model path is sampled several
-times, the model is parsed and sent to the workers *only once*. In
-particular if there is a single source model (like for South America)
-and ``number_of_logic_tree_samples =100``, we generate effectively 1
-source model realization and not 100 equivalent source model
-realizations, as we did in past (actually in the engine version 1.3).
-The engine keeps track of how many times a model has been sampled (say
-`Ns`) and in the event based case it produce ruptures (*with different
-seeds*) by calling the appropriate hazardlib function `Ns` times. This
-is done inside the worker nodes. In the classical case, all the
-ruptures are identical and there are no seeds, so the computation is
-done only once, in an efficient way.
 
 
 Convergency of the GMFs for non-trivial logic trees
@@ -1654,18 +1774,18 @@ non-proportional treaties.
 - Surplus
 - Facultative
 
-NOTE: proportional treaties may have a parameter "max_cession_event"
+*NOTE: proportional treaties may have a parameter "max_cession_event"
 limiting the total losses per event that can be ceded to the
 reinsurer. The excess of loss generated
 by events that exceed the maximum cession per event (overspill losses)
-is going back to the insurer.
+is going back to the insurer.*
 
 **Non-proportional treaties**
 
 - Working excess of loss per risk, WXL/R (``wxlr``).
   The unit of loss under this treaty is the "risk". The engine
   aggregates the losses per "risk" at the policy level, which
-  can include single or multiple assests.
+  can include single or multiple assets.
 - Catastrophic excess of loss per event, CatXL (``catxl``).
   The unit of loss under this treaty is the "event".
 
@@ -1675,9 +1795,9 @@ is going back to the insurer.
   first the ``wxlr`` are estimated, and then the successive layers
   of CatXL are applied over the net loss retention
         
-NOTE: The CatXL is applied over the net loss retention per event
+*NOTE: The CatXL is applied over the net loss retention per event
 coming from the proportional layers and therefore it includes the
-overspill losses.
+overspill losses.*
 
 Reinsurance calculations provide, in addition to the ground up losses, 
 the losses allocated to different treaties  during a single event or 
@@ -1692,23 +1812,28 @@ To run reinsurance calculations, in addition to the required files for
 performing event-based or scenario risk calculations, it is required to adjust
 the exposure information, and to include two additional files:
 
-1. Insurance and reinsurance information: an ``.xml`` file defining the
-   insurance and reinsurance treaties (e.g., "reinsurance.xml").
+1. Reinsurance information: an ``.xml`` file defining the characteristics of
+   the reinsurance treaties (e.g., "reinsurance.xml").
 2. Policy information: a ``.csv`` file with details of each policy
    indicated in the exposure model and the associated reinsurance
    treaties (e.g., "policy.csv").
 
+The insurance information includes the allocation of assets into a given policy, 
+the liability and the deductible. The deductible can be defined at asset level
+(therefore indicated in the exposure model ``csv`` file), or in at the policy level
+(therefore indicated in the policy ``csv`` file).
+The current implementation only supports liability at policy level.
 
 Exposure file
 ~~~~~~~~~~~~~~
 
 The exposure input file (csv and xml with metadata) needs to be adjusted
 to include a ``policy`` tag that indicates the type of policy 
-(and therefore the reinsurance contracts) associated to each asset.
+(and therefore the reinsurance contracts) associated with each asset.
 
 Policies can be defined for single or multiple assets. When multiple assets 
 are allocated to the same policy, losses are aggregated at the policy level
-before applying the insurance and reinsurance deductions.
+before applying the insurance and reinsurance deductions. 
 
 Below we present an example of an exposure model considering the
 policy information and its associated metadata:
@@ -1757,12 +1882,22 @@ policy information and its associated metadata:
     </nrml>
 
 This example presents 7 assets (a1 to a7) with 4 associated policies.
-Notice that the column ``policy`` is mandatory, as
+Notice that the column ``policy`` is mandatory, as 
 well as the line ``<tagNames>policy</tagNames>`` in
 the xml. Additional tags can be included as needed.
 
-Insurance reinsurance information (``reinsurance.xml``)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Starting from OpenQuake 3.17, the exposure module can also include 
+deductibles at asset level (called ``ideductible``).
+In this case, the deductions are applied at asset level, and later
+aggregated at the policy level before applying the liability and 
+reinsurance allocations.
+
+*NOTE: It is not possible to have a policy with ``ideductible`` at asset
+and ``deductible`` at policy level. The engine only accepts one value.*
+
+
+Insurance and reinsurance information (``reinsurance.xml``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The insurance and reinsurance information is defined by a ``reinsurance.xml`` 
 that includes the metadata and treaty characteristics for each treaty
@@ -1778,7 +1913,11 @@ input file:
           xmlns:gml="http://www.opengis.net/gml">
       <reinsuranceModel>
         <description>reinsurance model</description>
+
         <fieldMap>
+          <field oq="liability" input="Limit" />
+          <field oq="deductible" input="Deductible" />
+
           <field input="treaty_1" type="prop" max_cession_event="400" />
           <field input="treaty_2" type="prop" max_cession_event="400" />
           <field input="xlr1" type="wxlr" deductible="200" limit="1000" />
@@ -1795,13 +1934,14 @@ is used to define the reinsurance treaties and their parameters.
 
 The ``oq`` and ``input`` parameters are used to specify the *key* used
 in the engine (``oq``) and its equivalent column header in the policy
-file (``input``).  All reinsurance calculations must include, at
-least, the insurance characteristics of each policy: deductible and
-liability. Then, the definition of reinsurance treaties depends on the
+file (``input``).  All reinsurance calculations must include, at least, 
+the insurance characteristics of each policy: liability and deductible
+(that can be at asset or policy level, depending on the portfolio characteristics). 
+Then, the definition of reinsurance treaties depends on the
 treaty type: proportional or non proportional.
 
 *Proportional* treaties are identified by the parameter
-``type="prop"``.  The fraction of losses ceeded to each treaty is
+``type="prop"``.  The fraction of losses ceded to each treaty is
 specified for each policy covered by the treaty, and the retention is
 calculated as 1 minus all the fractions specified in the multiple
 layers of proportional treaties. For each proportional treaty it is
@@ -1817,10 +1957,16 @@ of type "catxl".*
 
 - **insurance deductible**: the amount (economic value) that the insurer will
   "deduct" from the ground up losses before paying up to its policy
-  limits. The claim is calculated as ``claim = ground_up_loss -
-  deductible`` The units of the deductible must be compatible with
-  the units indicated in the exposure model (e.g. USD dollars or
-  Euros).
+  limits. The units of the deductible must be compatible with
+  the units indicated in the exposure model (e.g. USD dollars or Euros).
+  The deductible can be specified at policy (``deductible``) or asset level
+  (``ideductible``) depending on the insurance contract.
+  
+  The claim is calculated as ``claim = ground_up_loss - deductible`` for
+  policies with deductibles defined at the policy level, or
+  ``claim = ground_up_loss - ideductible`` 
+  for policies with deductibles defined at the asset level.
+
 
 - **insurance liability**: the maximum economic amount that can be covered by
   the insurance, according to the policy characteristics. The
@@ -1850,6 +1996,7 @@ of type "catxl".*
 *Note: the current engine implementation does not support an "annual
 aggregate limit" for non-proportional reinsurance treaties.*
 
+
 Policy information (``policy.csv``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1868,7 +2015,7 @@ of the exposure model and the reinsurance presented above:
 ``policy.csv``
 
     +--------+-----------+------------+----------+----------+------+
-    | policy | liability | deductible | treaty_1 | treaty_2 | xlr1 |
+    | policy | Limit     | Deductible | treaty_1 | treaty_2 | xlr1 |
     +========+===========+============+==========+==========+======+
     | p1_a1  | 2000      | 400        | 0.1      | 0.2      | 1    |
     +--------+-----------+------------+----------+----------+------+
@@ -1913,15 +2060,22 @@ calculations::
 
 **Additional comments:**
 
-- ``aggregate_by``: it is possible to define multiple aggregation keys.
+- ``aggregate_by``: it is possible to define multiple aggregation keys
+  (see :ref:`aggregating_by_multiple_tags`).
   However, for reinsurance calculations the ``policy`` key must be present,
   otherwise an error message will be raised.
+  In the following example, multiple aggregation keys are used:
+
+      ``aggregate_by = policy; tag1``
+
+  In this case, aggregated loss curves will be produced also for ``tag1`` and ``policy``,
+  while reinsurance outputs will only be produced for the policy.
 
 - ``reinsurance_file``: This dictionary associates the reinsurance information
   to a given the loss_type (the engine supports structural, nonstructural, 
   contents or its sum). The insurance and reinsurance calculations are applied 
   over the indicated loss_types, i.e. to the sum of the ground up losses 
-  associated to the specified loss_types.
+  associated with the specified loss_types.
 
   *NOTE: The current implementation works only with a single reinsurance file.*
 
@@ -2011,10 +2165,11 @@ The parameters indicated in the previous outputs include:
   per event ("max_cession_event") for *proportional* and/or *catxl*
   treaties.
 
-NOTE: The sum of the claim is not equal to the ground up losses, since
+*NOTE: The sum of the claim is not equal to the ground up losses, since
 usually the deductible is nonzero. Moreover there could be
 "non-insured" losses corresponding to policies with no insurance
-contracts or that exceed the policy liability.
+contracts or that exceed the policy liability.*
+
 
 How the hazard sites are determined
 ===================================
@@ -2424,66 +2579,6 @@ ground-motion values at small distances. The minimum distance is somewhat
 heuristic. It may be useful to experiment with different values of the
 ``minimum_distance``, to see how the hazard and risk change.
 
-GMPE logic trees with weighted IMTs
------------------------------------
-
-In order to support Canada's 6th Generation seismic hazard model, the engine now
-has the ability to manage GMPE logic trees where the weight assigned to each
-GMPE may be different for each IMT. For instance you could have a particular
-GMPE applied to PGA with a certain weight, to SA(0.1) with a different weight,
-and to SA(1.0) with yet another weight. The user may want to assign a higher
-weight to the IMTs where the GMPE has a small uncertainty and a lower weight to
-the IMTs with a large uncertainty. Moreover a particular GMPE may not be
-applicable for some periods, and in that case the user can assign to a zero
-weight for those periods, in which case the engine will ignore it entirely for
-those IMTs. This is useful when you have a logic tree with multiple GMPEs per
-branchset, some of which are applicable for some IMTs and not for others.  Here
-is an example:
-
-.. code-block:: xml
-
-    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-            applyToTectonicRegionType="Volcanic">
-        <logicTreeBranch branchID="BooreEtAl1997GeometricMean">
-            <uncertaintyModel>BooreEtAl1997GeometricMean</uncertaintyModel>
-            <uncertaintyWeight>0.33</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="SadighEtAl1997">
-            <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
-            <uncertaintyWeight>0.33</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="MunsonThurber1997Hawaii">
-            <uncertaintyModel>MunsonThurber1997Hawaii</uncertaintyModel>
-            <uncertaintyWeight>0.34</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
-        </logicTreeBranch>
-        <logicTreeBranch branchID="Campbell1997">
-            <uncertaintyModel>Campbell1997</uncertaintyModel>
-            <uncertaintyWeight>0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
-            <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
-        </logicTreeBranch>
-    </logicTreeBranchSet>        
-
-Clearly the weights for each IMT must sum up to 1, otherwise the engine
-will complain. Note that this feature only works for the classical and
-disaggregation calculators: in the event based case only the default
-``uncertaintyWeight`` (i.e. the first in the list of weights, the one
-without ``imt`` attribute) would be taken for all IMTs.
-
 Equivalent Epicenter Distance Approximation
 -------------------------------------------
 
@@ -2493,7 +2588,7 @@ engine with time-honored Fortran codes using the same approximation.
 
 You can enable it in the engine by adding a ``[reqv]`` section to the
 job.ini, like in our example in
-openquake/qa_tests_data/classical/case_2/job.ini::
+openquake/qa_tests_data/logictree/case_02/job.ini::
 
   reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
                'stable shallow crust': 'lookup_sta.hdf5'}
@@ -2508,7 +2603,7 @@ there are 26 magnitudes ranging from 6.05 to 8.55) and N is the
 number of epicenter distances (in the examples ranging from 1 km to 1000 km).
 
 Depending on the tectonic region type and rupture magnitude, the
-engine converts the epicentral distance ``repi` into an equivalent
+engine converts the epicentral distance ``repi`` into an equivalent
 distance by looking at the lookup table and use it to determine the
 ``rjb`` and ``rrup`` distances, instead of the regular routines. This
 means that within this approximation ruptures are treated as

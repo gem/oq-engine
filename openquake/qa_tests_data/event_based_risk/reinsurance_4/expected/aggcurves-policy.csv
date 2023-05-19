@@ -1,0 +1,26 @@
+#,,,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:54:40', checksum=454246847, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states=''"
+policy,return_period,loss_type,loss_value,loss_ratio
+p1,50,contents,5.92748E+02,3.95165E-02
+p1,100,contents,1.46212E+03,9.74746E-02
+p1,200,contents,1.62724E+03,1.08483E-01
+p1,50,nonstructural,8.94411E+02,1.98758E-02
+p1,100,nonstructural,1.69573E+03,3.76828E-02
+p1,200,nonstructural,1.79115E+03,3.98033E-02
+p1,50,structural,1.51375E+02,5.04583E-03
+p1,100,structural,6.63045E+02,2.21015E-02
+p1,200,structural,7.86107E+02,2.62036E-02
+p1,50,structural+contents,7.44123E+02,1.65361E-02
+p1,100,structural+contents,2.12516E+03,4.72259E-02
+p1,200,structural+contents,2.41335E+03,5.36299E-02
+p2,50,contents,1.13305E+03,5.66523E-02
+p2,100,contents,1.21764E+03,6.08821E-02
+p2,200,contents,1.32791E+03,6.63956E-02
+p2,50,nonstructural,1.63010E+03,2.71683E-02
+p2,100,nonstructural,1.79353E+03,2.98922E-02
+p2,200,nonstructural,1.95757E+03,3.26261E-02
+p2,50,structural,4.84967E+02,1.21242E-02
+p2,100,structural,5.56344E+02,1.39086E-02
+p2,200,structural,8.20575E+02,2.05144E-02
+p2,50,structural+contents,1.68213E+03,2.80356E-02
+p2,100,structural+contents,1.77398E+03,2.95664E-02
+p2,200,structural+contents,2.14849E+03,3.58081E-02

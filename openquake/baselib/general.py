@@ -388,6 +388,9 @@ def gettemp(content=None, dir=None, prefix="tmp", suffix="tmp", remove=True):
     :param string dir: directory where the file should be created
     :param string prefix: file name prefix
     :param string suffix: file name suffix
+    :param bool remove:
+        True by default, meaning the file will be automatically removed
+        at the exit of the program
     :returns: a string with the path to the temporary file
     """
     if dir is not None:
@@ -759,12 +762,12 @@ class DictArray(Mapping):
         self.L1 = len(levels)
         self.size = self.M * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
-                               for imt, imls in sorted(imtls.items())])
+                               for imt, imls in imtls.items()])
         self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
         self.mdic = {}
-        for m, (imt, imls) in enumerate(sorted(imtls.items())):
+        for m, (imt, imls) in enumerate(imtls.items()):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
@@ -1172,21 +1175,52 @@ def random_filter(objects, reduction_factor, seed=42):
     return out
 
 
-def random_histogram(counts, nbins, seed):
+def random_choice(array, num_samples, offset=0, seed=42):
     """
-    Distribute a total number of counts on a set of bins homogenously.
+    Extract num_samples from an array. It has the fundamental property
+    of splittability, i.e. if the seed is the same and `||` means
+    array concatenation:
+
+    choice(a, N) = choice(a, n, 0) || choice(a, N-n, n)
+
+    This property makes `random_choice` suitable to be parallelized,
+    while `random.choice` is not. It as also absurdly fast.
+    """
+    rng = numpy.random.default_rng(seed)
+    rng.bit_generator.advance(offset)
+    N = len(array)
+    cumsum = numpy.repeat(1./N, N).cumsum()
+    choices = numpy.searchsorted(cumsum, rng.random(num_samples))
+    return array[choices]
+
+
+def random_histogram(counts, nbins_or_binweights, seed):
+    """
+    Distribute a total number of counts over a set of bins. If the
+    weights of the bins are equal you can just pass the number of the
+    bins and a faster algorithm will be used. Otherwise pass the weights.
+    Here are a few examples:
 
     >>> random_histogram(1, 2, seed=42)
-    array([1, 0])
+    array([0, 1])
     >>> random_histogram(100, 5, seed=42)
-    array([28, 18, 17, 19, 18])
+    array([22, 17, 21, 26, 14])
     >>> random_histogram(10000, 5, seed=42)
-    array([2043, 2015, 2050, 1930, 1962])
+    array([2034, 2000, 2014, 1998, 1954])
+    >>> random_histogram(1000, [.3, .3, .4], seed=42)
+    array([308, 295, 397])
     """
-    if nbins == 1:
-        return numpy.array([counts])
-    numpy.random.seed(seed)
-    return numpy.histogram(numpy.random.random(counts), nbins, (0, 1))[0]
+    rng = numpy.random.default_rng(seed)
+    try:
+        nbins = len(nbins_or_binweights)
+    except TypeError:  # 'int' has no len()
+        nbins = nbins_or_binweights
+        weights = numpy.repeat(1./nbins, nbins)
+    else:
+        weights = numpy.array(nbins_or_binweights)
+        weights /= weights.sum()  # normalize to 1
+    bins = numpy.searchsorted(weights.cumsum(), rng.random(counts))
+    return numpy.bincount(bins, minlength=len(weights))
 
 
 def safeprint(*args, **kwargs):

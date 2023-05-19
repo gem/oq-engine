@@ -162,7 +162,7 @@ attach the second ``extendModel`` to everything and get 8 paths:
  >>> logictree.get_all_paths()  # 3 * 2 + 2 paths
  ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'B.F', 'B.G']
 
-The complete realizations can be obtained by not specifying ``applyToSources``:
+The complete realizations can be obtained by not specifying ``applyToBranches``:
 
 .. code-block:: python
 
@@ -302,7 +302,7 @@ branch IDs by using the command ``oq show branches``::
 The first character of the ``abbrev`` specifies the branch number ("A"
 means the first branch, "B" the second, etc) while the other characters
 are the branch set number starting from zero. The format works up to
-184 branches per branchset, bu using printable UTF8 characters.
+184 branches per branchset, using printable UTF8 characters.
 For instance the realization #322 has the following branch path in
 compact form::
 
@@ -732,6 +732,33 @@ Here is the usage:
 Looking at the source-specific realizations is useful to assess if
 the logic tree can be collapsed.
 
+
+Sampling of the logic tree
+----------------------------------------------------
+
+There are real life examples of very large logic trees, like the model
+for South Africa which features 3,194,799,993,706,229,268,480 branches.
+In such situations it is impossible to perform a computation with full
+enumeration. However, the engine allows to
+sample the branches of the complete logic tree. More precisely,
+for each branch sampled from the source model logic tree,
+a branch of the GMPE logic tree is chosen randomly,
+by taking into account the weights in the GMPE logic tree file.
+
+It should be noticed that even if source model path is sampled several
+times, the model is parsed and sent to the workers *only once*. In
+particular if there is a single source model (like for South America)
+and ``number_of_logic_tree_samples =100``, we generate effectively 1
+source model realization and not 100 equivalent source model
+realizations, as we did in past (actually in the engine version 1.3).
+The engine keeps track of how many times a model has been sampled (say
+`Ns`) and in the event based case it produce ruptures (*with different
+seeds*) by calling the appropriate hazardlib function `Ns` times. This
+is done inside the worker nodes. In the classical case, all the
+ruptures are identical and there are no seeds, so the computation is
+done only once, in an efficient way.
+
+
 Logic tree sampling strategies
 ==============================
 
@@ -805,3 +832,64 @@ times, XC 20 times, YA 12 times, YB 18 times, YC 30 times. Instead we get:
     >>> paths = random_sample(bsets, 100, 45, 'late_latin')
     >>> collections.Counter(paths)
     Counter({'YC': 18, 'XA': 18, 'XC': 16, 'YA': 16, 'XB': 16, 'YB': 16})
+
+   
+GMPE logic trees with weighted IMTs
+-----------------------------------
+
+In order to support Canada's 5th Generation seismic hazard model, the engine now
+has the ability to manage GMPE logic trees where the weight assigned to each
+GMPE may be different for each IMT. For instance you could have a particular
+GMPE applied to PGA with a certain weight, to SA(0.1) with a different weight,
+and to SA(1.0) with yet another weight. The user may want to assign a higher
+weight to the IMTs where the GMPE has a small uncertainty and a lower weight to
+the IMTs with a large uncertainty. Moreover a particular GMPE may not be
+applicable for some periods, and in that case the user can assign to a zero
+weight for those periods, in which case the engine will ignore it entirely for
+those IMTs. This is useful when you have a logic tree with multiple GMPEs per
+branchset, some of which are applicable for some IMTs and not for others.  Here
+is an example:
+
+.. code-block:: xml
+
+    <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+            applyToTectonicRegionType="Volcanic">
+        <logicTreeBranch branchID="BooreEtAl1997GeometricMean">
+            <uncertaintyModel>BooreEtAl1997GeometricMean</uncertaintyModel>
+            <uncertaintyWeight>0.33</uncertaintyWeight>
+            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="SadighEtAl1997">
+            <uncertaintyModel>SadighEtAl1997</uncertaintyModel>
+            <uncertaintyWeight>0.33</uncertaintyWeight>
+            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(0.5)">0.5</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(1.0)">0.5</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(2.0)">0.5</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="MunsonThurber1997Hawaii">
+            <uncertaintyModel>MunsonThurber1997Hawaii</uncertaintyModel>
+            <uncertaintyWeight>0.34</uncertaintyWeight>
+            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
+        </logicTreeBranch>
+        <logicTreeBranch branchID="Campbell1997">
+            <uncertaintyModel>Campbell1997</uncertaintyModel>
+            <uncertaintyWeight>0.0</uncertaintyWeight>
+            <uncertaintyWeight imt="PGA">0.25</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(0.5)">0.0</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(1.0)">0.0</uncertaintyWeight>
+            <uncertaintyWeight imt="SA(2.0)">0.0</uncertaintyWeight>
+        </logicTreeBranch>
+    </logicTreeBranchSet>        
+
+Clearly the weights for each IMT must sum up to 1, otherwise the engine
+will complain. Note that this feature only works for the classical
+calculators: in the event based case only the default
+``uncertaintyWeight`` (i.e. the first in the list of weights, the one
+without ``imt`` attribute) would be taken for all IMTs.

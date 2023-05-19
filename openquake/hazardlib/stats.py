@@ -190,6 +190,8 @@ def quantile_curve(quantile, curves, weights=None):
     >>> arr = numpy.array([.15, .25, .3, .4, .5, .6, .75, .8, .9])
     >>> quantile_curve(.8, arr)
     array(0.76)
+    >>> quantile_curve(.85, numpy.array([.15, .15, .15]))  # constant array
+    array(0.15)
     """
     if not isinstance(curves, numpy.ndarray):
         curves = numpy.array(curves)

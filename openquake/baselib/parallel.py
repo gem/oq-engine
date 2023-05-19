@@ -881,8 +881,8 @@ class Starmap(object):
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
         if self.task_queue:
-            first_args = self.task_queue[:self.num_cores]
-            self.task_queue[:] = self.task_queue[self.num_cores:]
+            first_args = self.task_queue[:self.CT]
+            self.task_queue[:] = self.task_queue[self.CT:]
             for func, args in first_args:
                 self.submit(args, func=func)
         if not hasattr(self, 'socket'):  # no submit was ever made
@@ -1007,7 +1007,7 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
             break
 
 
-def multispawn(func, allargs, num_cores=Starmap.num_cores):
+def multispawn(func, allargs, chunksize=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
@@ -1018,9 +1018,11 @@ def multispawn(func, allargs, num_cores=Starmap.num_cores):
         proc = mp_context.Process(target=func, args=args)
         proc.start()
         procs[proc.sentinel] = proc
-        while len(procs) >= num_cores:  # wait for something to finish
+        while len(procs) >= chunksize:  # wait for something to finish
             for finished in wait(procs):
+                procs[finished].join()
                 del procs[finished]
     while procs:
         for finished in wait(procs):
+            procs[finished].join()
             del procs[finished]

@@ -46,22 +46,6 @@ else:
             array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
 
 
-def combine(pmap, rlz_groups):
-    """
-    Convert a ProbabilityMap with shape (N, L, G) into a ProbabilityMap
-    with shape (N, L, R), being G the number of realization groups, which
-    are list of integers in the range 0..R-1.
-    """
-    N, L, G = pmap.array.shape
-    R = max(max(rlzs) for rlzs in rlz_groups) + 1
-    out = ProbabilityMap(range(N), L, R).fill(0.)
-    for g, rlz_group in enumerate(rlz_groups):
-        rlzs = U32(rlz_group)
-        for sid in range(N):
-            combine_probs(out.array[sid], pmap.array[sid, :, g], rlzs)
-    return out
-
-
 def get_mean_curve(dstore, imt, site_id=0):
     """
     Extract the mean hazard curve from the datastore for the first site.
@@ -189,27 +173,18 @@ def compute_hazard_maps(curves, imls, poes):
         should be an array-like of floats.
     :param poes:
         Value(s) on which to interpolate a hazard map from the input
-        ``curves``. Can be an array-like or scalar value (for a single PoE).
+        ``curves``.
     :returns:
         An array of shape N x P, where N is the number of curves and P the
         number of poes.
     """
-    log_poes = numpy.log(poes)
-    if len(log_poes.shape) == 0:
-        # `poes` was passed in as a scalar;
-        # convert it to 1D array of 1 element
-        log_poes = log_poes.reshape(1)
-    P = len(log_poes)
-
-    if len(curves.shape) == 1:
-        # `curves` was passed as 1 dimensional array, there is a single site
-        curves = curves.reshape((1,) + curves.shape)  # 1 x L
-
+    P = len(poes)
     N, L = curves.shape  # number of levels
     if L != len(imls):
         raise ValueError('The curves have %d levels, %d were passed' %
                          (L, len(imls)))
 
+    log_poes = numpy.log(poes)
     hmap = numpy.zeros((N, P))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -232,7 +207,25 @@ def compute_hazard_maps(curves, imls, poes):
                 hmap[n, p] = numpy.exp(numpy.interp(log_poe, log_curve, imls))
     return hmap
 
-    
+
+def compute_hmaps(curvesNML, imtls, poes):
+    """
+    :param curvesNML: an array of shape (N, M, L1)
+    :param imlts: a DictArray with M keys
+    :param poes: a sequence of P poes
+    :returns: array of shape (N, M, P) with the hazard maps
+    """
+    N = len(curvesNML)
+    M = len(imtls)
+    P = len(poes)
+    assert M == len(imtls)
+    iml3 = numpy.zeros((N, M, P))
+    for m, imls in enumerate(imtls.values()):
+        curves = curvesNML[:, m]
+        iml3[:, m] = compute_hazard_maps(curves, imls, poes)
+    return iml3
+
+
 def get_lvl(hcurve, imls, poe):
     """
     :param hcurve: a hazard curve, i.e. array of L1 PoEs
@@ -250,7 +243,7 @@ def get_lvl(hcurve, imls, poe):
     >>> get_lvl(hcurve, imls, .8)
     3
     """
-    [[iml]] = compute_hazard_maps(hcurve, imls, poe)
+    [[iml]] = compute_hazard_maps(hcurve.reshape(1, -1), imls, [poe])
     iml -= 1E-10  # small buffer
     return numpy.searchsorted(imls, iml)
 
@@ -362,6 +355,24 @@ class ProbabilityMap(object):
         :returns: a new Pmap associated to a reshaped array
         """
         return self.new(self.array.reshape(N, M, P))
+
+    # used in calc/disagg_test.py
+    def expand(self, full_lt):
+        """
+        Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
+        with shape (N, L, R): works only for rates
+        """
+        N, L, G = self.array.shape
+        assert G == full_lt.Gt, (G, full_lt.Gt)
+        R = full_lt.get_num_paths()
+        out = ProbabilityMap(range(N), L, R).fill(0.)
+        for g, rlzs in full_lt.rlzs_by_g.items():
+            for sid in range(N):
+                for rlz in rlzs:
+                    out.array[sid, :, rlz] += self.array[sid, :, g]
+                # NB: for probabilities use
+                # combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
+        return out
 
     # used in calc_hazard_curves
     def convert(self, imtls, nsites, idx=0):

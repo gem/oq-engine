@@ -32,38 +32,36 @@ class MultiRiskTestCase(CalculatorTestCase):
         # case with volcanic multiperil ASH, LAVA, LAHAR, PYRO
         self.run_calc(case_1.__file__, 'job.ini')
 
+        # check extract
+        md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)
+        ae(md['names'],
+           ['value-number', 'occupants_night', 'value-structural'])
+        ae(md['multi_risk'], ['collapse-structural-ASH_DRY',
+                              'collapse-structural-ASH_WET',
+                              'loss-structural-ASH_DRY',
+                              'loss-structural-ASH_WET',
+                              'loss-structural-LAHAR',
+                              'loss-structural-LAVA',
+                              'loss-structural-PYRO',
+                              'no_damage-structural-ASH_DRY',
+                              'no_damage-structural-ASH_WET',
+                              'number-LAHAR',
+                              'number-LAVA',
+                              'number-PYRO',
+                              'occupants_night-LAHAR',
+                              'occupants_night-LAVA',
+                              'occupants_night-PYRO'])
+
+        # check export
         [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/asset_risk.csv', fname)
         [fname] = export(('agg_risk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/agg_risk.csv', fname)
 
-        # check extract
-        md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)
-        ae(md['names'],
-           ['value-number', 'occupants_night', 'value-structural'])
-        ae(md['multi_risk'], ['collapse-structural-ASH_DRY',
-                              'collapse-structural-ASH_WET',
-                              'loss-structural-ASH_DRY',
-                              'loss-structural-ASH_WET',
-                              'loss-structural-LAHAR',
-                              'loss-structural-LAVA',
-                              'loss-structural-PYRO',
-                              'no_damage-structural-ASH_DRY',
-                              'no_damage-structural-ASH_WET',
-                              'number-LAHAR',
-                              'number-LAVA',
-                              'number-PYRO',
-                              'occupants_night-LAHAR',
-                              'occupants_night-LAVA',
-                              'occupants_night-PYRO'])
-
     def test_case_2(self):
         # case with two damage states
         self.run_calc(case_1.__file__, 'job_2.ini')
 
-        [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/asset_risk_2.csv', fname)
-
         # check extract
         md = json.loads(extract(self.calc.datastore, 'exposure_metadata').json)
         ae(md['names'],
@@ -83,6 +81,10 @@ class MultiRiskTestCase(CalculatorTestCase):
                               'occupants_night-LAHAR',
                               'occupants_night-LAVA',
                               'occupants_night-PYRO'])
+
+        # check export
+        [fname] = export(('asset_risk', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/asset_risk_2.csv', fname)
 
         # check invalid key structural_fragility_file
         with self.assertRaises(ValueError):

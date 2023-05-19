@@ -17,6 +17,7 @@
 import os
 import tempfile
 import unittest
+import numpy
 from openquake.baselib import hdf5, python3compat
 from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -74,7 +75,7 @@ class MultiFaultTestCase(unittest.TestCase):
         self.sections = sections
         self.rup_idxs = rup_idxs
         self.pmfs = pmfs
-        self.mags = rup_mags
+        self.mags = numpy.array(rup_mags)
         self.rakes = rakes
 
     def test01(self):

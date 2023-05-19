@@ -1,5 +1,5 @@
-#,,,"generated_by='OpenQuake engine 3.17.0-gita49dd31444', start_date='2023-02-15T07:46:41', checksum=4154651540, investigation_time=1.0, mag_bin_edges=[7.4, 7.5], dist_bin_edges=[0.0, 20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0], lon_bin_edges=[171.18903363165364, 178.36848636834642], lat_bin_edges=[-43.970690000000005, -38.57477], eps_bin_edges=[-3.0, 3.0], tectonic_region_types=['Active Shallow Crust'], lon=174.77876000000003, lat=-41.27273"
-imt,poe,mag,mean
-PGA,nan,7.45000E+00,1.05892E-04
-SA(0.2),nan,7.45000E+00,2.58752E-05
-SA(1.0),nan,7.45000E+00,5.79331E-05
+#,,,,"generated_by='OpenQuake engine 3.17.0-git5adb6553aa', start_date='2023-05-05T11:16:58', checksum=2393570326, investigation_time=1.0, mag_bin_edges=[7.4, 7.5], dist_bin_edges=[0.0, 20.0, 40.0, 60.0, 80.0, 100.0, 120.0, 140.0, 160.0, 180.0, 200.0, 220.0, 240.0, 260.0, 280.0, 300.0], lon_bin_edges=[171.18903363165364, 178.36848636834642], lat_bin_edges=[-43.970690000000005, -38.57477], eps_bin_edges=[-3.0, 3.0], tectonic_region_types=['Active Shallow Crust'], lon=174.77876000000003, lat=-41.27273, weights=[0.6, 0.4], rlz_ids=[3, 4]"
+imt,iml,poe,mag,mean
+PGA,6.39252E-01,1.05892E-04,7.45000E+00,2.64595E-05
+SA(0.2),2.45761E+00,1.05892E-04,7.45000E+00,8.63575E-06
+SA(1.0),6.34604E-01,1.05892E-04,7.45000E+00,1.77023E-05

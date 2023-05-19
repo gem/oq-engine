@@ -81,13 +81,12 @@ class GodaAtkinson2009Test(unittest.TestCase):
                          [0.41330149, 0.83261724, 1.        , 0.88167281],
                          [0.23046633, 0.68322083, 0.88167281, 1.        ]]))
 
-        numpy.random.seed(42)
-        eps = self.cm.get_inter_eps(self.imts, 2)  # a 4x2 matrix
-        aac(eps, numpy.array([[-0.60624845, -0.3066977 ],
-                              [-0.13441677,  0.62122982],
-                              [-0.667341  ,  0.28429873],
-                              [-0.3573499 ,  0.0350888 ]]),
-            rtol=1e-5)
+        rng= numpy.random.default_rng(42)
+        eps = self.cm.get_inter_eps(self.imts, 2, rng)  # a 4x2 matrix
+        aac(eps, numpy.array([[-1.131419,  0.316332],
+                              [-0.182555,  1.594268],
+                              [-0.121286,  2.252899],
+                              [ 0.162968,  2.217294]]), rtol=1e-5)
 
 
 class NoCrossCorrelationTest(unittest.TestCase):
@@ -97,12 +96,12 @@ class NoCrossCorrelationTest(unittest.TestCase):
     def test(self):
         cm = NoCrossCorrelation(truncation_level=3.)
         imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
-        numpy.random.seed(42)
-        eps = cm.get_inter_eps(imts, 2)  # a 4x2 matrix
-        aac(eps, numpy.array([[-0.318959,  1.640001],
-                              [ 0.616954,  0.249188],
-                              [-1.007084, -1.007184],
-                              [-1.560874,  1.103927]]),
+        rng = numpy.random.default_rng(42)
+        eps = cm.get_inter_eps(imts, 2, rng)  # a 4x2 matrix
+        aac(eps, numpy.array([[0.749481, -0.153395],
+                              [1.069731,  0.51532],
+                              [-1.308966, 1.948765],
+                              [ 0.707702, 0.790191]]),
             rtol=1e-5)
 
 
@@ -113,12 +112,12 @@ class FullCrossCorrelationTest(unittest.TestCase):
     def test(self):
         cm = FullCrossCorrelation(truncation_level=3.)
         imts = [PGA(), SA(0.3), SA(0.6), SA(1.0)]
-        numpy.random.seed(42)
-        eps = cm.get_inter_eps(imts, 2)  # a 4x2 matrix with same eps per IMT
-        aac(eps, numpy.array([[-0.318959,  1.640001],
-                              [-0.318959,  1.640001],
-                              [-0.318959,  1.640001],
-                              [-0.318959,  1.640001]]),
+        rng = numpy.random.default_rng(42)
+        eps = cm.get_inter_eps(imts, 2, rng)  # same eps per IMT
+        aac(eps, numpy.array([[ 0.749481, -0.153395],
+                              [0.749481, -0.153395],
+                              [0.749481, -0.153395],
+                              [ 0.749481, -0.153395]]),
             rtol=1e-5)
 
 

@@ -239,7 +239,7 @@ main.list_risk_calculations = dict(
 main.delete_uncompleted_calculations = dict(
     abbrev='--duc', help='Delete all the uncompleted calculations')
 main.multi = 'Run multiple job.inis in parallel'
-main.reuse_input = 'Read the sources|exposures from the cache (if any)'
+main.reuse_input = 'Read the CompositeSourceModel from the cache (if any)'
 
 # options
 main.log_file = dict(

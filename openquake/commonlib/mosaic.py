@@ -5,11 +5,13 @@ import pprint
 import logging
 import time
 import csv
+import sys
 import os
 from shapely.geometry import Point, shape
 from collections import Counter
-from openquake.baselib import sap, config
+from openquake.baselib import sap
 from openquake.hazardlib.geo.packager import fiona
+from openquake.qa_tests_data import mosaic
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
@@ -20,14 +22,17 @@ class MosaicGetter:
     """
     def __init__(self, shapefile_path=None):
         if shapefile_path is None:  # read from openquake.cfg
-            shapefile_path = os.path.join(config.directory.mosaic_dir,
-                                          'ModelBoundaries.shp')
+            mosaic_dir = os.path.dirname(mosaic.__file__)
+            shapefile_path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
         self.shapefile_path = shapefile_path
 
     def get_models_list(self):
         """
         Returns a list of all models in the shapefile
         """
+        if fiona is None:
+            print('fiona/GDAL is not installed properly!', sys.stderr)
+            return []
         with fiona.open(self.shapefile_path, 'r') as shp:
             models = [polygon['properties']['code'] for polygon in shp]
         return models
@@ -74,10 +79,12 @@ class MosaicGetter:
         if num_close_models < 1:
             if strict:
                 raise ValueError(
-                    f'Site at lon={lon} lat={lat} is not covered by any model!')
+                    f'Site at lon={lon} lat={lat} is not covered by any'
+                    f' model!')
             else:
                 logging.error(
-                    f'Site at lon={lon} lat={lat} is not covered by any model!')
+                    f'Site at lon={lon} lat={lat} is not covered by any'
+                    f' model!')
                 model = None
         elif num_close_models > 1:
             model = min(close_models, key=close_models.get)

@@ -202,6 +202,7 @@ jobs:
 
           # multi-version doc switcher could be runned just from master because
           # is the only one known the master version (from sources)
+          set -x
           if [ "$MULTI_DOCS_FOR_DEVEL" == "true" -o  "$BUILD" == "master" ]; then
               ddown_adv="["
               ddown_man="["
@@ -274,6 +275,7 @@ jobs:
               ddown_adv="${ddown_adv}]"
               echo "$ddown_adv" > dot_ddown_adv.json
           fi
+          set +x
 
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
           chmod 600 ./.deploy_rsa
@@ -324,6 +326,7 @@ jobs:
           echo "Upload OpenQuakeforAdvancedUsers (PDF)"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/"
 
+          ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuakeforAdvancedUsers.pdf\" \"OpenQuake for Advanced Users ${PDF_VER}.pdf\" .'"
 
           echo "Make Advanced Manual (HTML)"
           cd ../adv-manual && make clean && make html

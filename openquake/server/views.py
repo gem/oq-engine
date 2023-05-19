@@ -40,6 +40,7 @@ from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.shortcuts import render
+import numpy
 
 from openquake.baselib import hdf5, config
 from openquake.baselib.general import groupby, gettemp, zipfiles, mp
@@ -52,6 +53,7 @@ from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo
+from openquake.engine.aelo import get_params_from
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -88,6 +90,13 @@ ACCESS_HEADERS = {'Access-Control-Allow-Origin': '*',
 
 KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
+
+AELO_FORM_PLACEHOLDERS = {
+    'lon': 'Longitude',
+    'lat': 'Latitude',
+    'vs30': 'Vs30 (default 760 m/s)',
+    'siteid': 'Site name',
+}
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
 oqvalidation.OqParam.is_valid_export_dir = lambda self: True
@@ -234,7 +243,10 @@ def get_ini_defaults(request):
         obj = getattr(oqvalidation.OqParam, newname)
         if (isinstance(obj, valid.Param)
                 and obj.default is not valid.Param.NODEFAULT):
-            ini_defs[name] = obj.default
+            if isinstance(obj.default, float) and numpy.isnan(obj.default):
+                pass
+            else:
+                ini_defs[name] = obj.default
     return HttpResponse(content=json.dumps(ini_defs), content_type=JSON)
 
 
@@ -586,34 +598,70 @@ def aelo_run(request):
     :param request:
         a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
     """
+    validation_errs = {}
+    invalid_inputs = []
     try:
         lon = valid.longitude(request.POST.get('lon'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_PLACEHOLDERS['lon']] = str(exc)
+        invalid_inputs.append('lon')
+    try:
         lat = valid.latitude(request.POST.get('lat'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_PLACEHOLDERS['lat']] = str(exc)
+        invalid_inputs.append('lat')
+    try:
         vs30 = valid.positivefloat(request.POST.get('vs30'))
+    except Exception as exc:
+        validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
+        invalid_inputs.append('vs30')
+    try:
         siteid = valid.simple_id(request.POST.get('siteid'))
     except Exception as exc:
-        # failed even before creating a job
-        exc_msg = str(exc)
-        logging.error(exc_msg)
-        response_data = exc_msg.splitlines()
+        validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
+        invalid_inputs.append('siteid')
+    if validation_errs:
+        err_msg = 'Invalid input value'
+        err_msg += 's\n' if len(validation_errs) > 1 else '\n'
+        err_msg += '\n'.join(
+            [f'{field.split(" (")[0]}: "{validation_errs[field]}"'
+             for field in validation_errs])
+        logging.error(err_msg)
+        response_data = {"status": "failed", "error_msg": err_msg,
+                         "invalid_inputs": invalid_inputs}
         return HttpResponse(content=json.dumps(response_data),
                             content_type=JSON, status=400)
 
     # build a LogContext object associated to a database job
+    try:
+        params = get_params_from(
+            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+        logging.root.handlers = []  # avoid breaking the logs
+    except Exception as exc:
+        response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
+                         'error_msg': str(exc)}
+        return HttpResponse(
+            content=json.dumps(response_data), content_type=JSON, status=400)
     [jobctx] = engine.create_jobs(
-        [dict(calculation_mode='custom', description='AELO for ' + siteid)],
+        [params],
         config.distribution.log_level, None, utils.get_user(request), None)
     job_id = jobctx.calc_id
 
-    outputs_uri = request.build_absolute_uri(
+    outputs_uri_web = request.build_absolute_uri(
         reverse('outputs', args=[job_id]))
+
+    outputs_uri_api = request.build_absolute_uri(
+        reverse('results', args=[job_id]))
+
+    log_uri = request.build_absolute_uri(
+        reverse('log', args=[job_id, '0', '']))
 
     traceback_uri = request.build_absolute_uri(
         reverse('traceback', args=[job_id]))
 
     response_data = dict(
-        status='created', job_id=job_id, outputs_uri=outputs_uri,
-        traceback_uri=traceback_uri)
+        status='created', job_id=job_id, outputs_uri=outputs_uri_api,
+        log_uri=log_uri, traceback_uri=traceback_uri)
 
     job_owner_email = request.user.email
     if not job_owner_email:
@@ -623,11 +671,11 @@ def aelo_run(request):
             ' the job completes, you can access its outputs at the following'
             ' link: %s. If the job fails, the error traceback will be'
             ' accessible at the following link: %s'
-            % (outputs_uri, traceback_uri))
+            % (outputs_uri_api, traceback_uri))
 
     # spawn the AELO main process
     mp.Process(target=aelo.main, args=(
-        lon, lat, vs30, siteid, job_owner_email, outputs_uri, jobctx,
+        lon, lat, vs30, siteid, job_owner_email, outputs_uri_web, jobctx,
         aelo_callback)).start()
     return HttpResponse(content=json.dumps(response_data), content_type=JSON,
                         status=200)
@@ -899,9 +947,12 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
+    params = {}
+    if settings.APPLICATION_MODE.upper() == 'AELO':
+        params['aelo_mode'] = True
+        params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
     return render(
-        request, "engine/index.html", {
-            'aelo_mode': settings.APPLICATION_MODE.upper() == 'AELO'})
+        request, "engine/index.html", params)
 
 
 @cross_domain_ajax

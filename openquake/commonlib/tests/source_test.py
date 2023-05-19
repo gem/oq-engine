@@ -746,7 +746,7 @@ Subduction Interface,gA1,[SadighEtAl1997],w=1.0>''')
             list(map(len, csm.src_groups)))
 
     def test_oversampling(self):
-        from openquake.qa_tests_data.classical import case_17
+        from openquake.qa_tests_data.logictree import case_17
         oq = readinput.get_oqparam(
             os.path.join(os.path.dirname(case_17.__file__), 'job.ini'))
         csm = readinput.get_composite_source_model(oq)

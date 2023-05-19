@@ -1,0 +1,7 @@
+#,,"generated_by='OpenQuake engine 3.17.0-git8294465154', start_date='2023-05-03T07:46:49', checksum=1312865486"
+custom_site_id,lon,lat
+site0,83.31382,39.23617
+site1,83.31382,29.23617
+site2,83.31382,29.46117
+site3,85.00417,27.38750
+site4,86.65417,26.78750

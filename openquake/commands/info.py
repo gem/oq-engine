@@ -32,7 +32,7 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib import gsim, nrml, imt
 from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
-from openquake.hazardlib.calc.disagg import pmf_map
+from openquake.hazardlib.valid import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput, logictree
 from openquake.risklib import scientific

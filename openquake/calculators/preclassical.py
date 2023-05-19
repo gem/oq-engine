@@ -20,6 +20,7 @@ import os
 import logging
 import operator
 import numpy
+import h5py
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo
 from openquake.baselib.general import AccumDict, groupby, block_splitter
@@ -29,6 +30,7 @@ from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import split_source, SourceFilter
 from openquake.hazardlib.scalerel.point import PointMSR
+from openquake.commonlib import readinput
 from openquake.calculators import base
 
 U16 = numpy.uint16
@@ -36,6 +38,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
+
+rlzs_by_g_dt = numpy.dtype([('rlzs', hdf5.vuint32), ('weight', float)])
 
 
 def source_data(sources):
@@ -54,8 +58,8 @@ def check_maxmag(pointlike):
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
         if maxmag >= 8.:
-            logging.warning('%s %s has maximum magnitude %s',
-                            src.__class__.__name__, src.source_id, maxmag)
+            logging.info('%s %s has maximum magnitude %s',
+                         src.__class__.__name__, src.source_id, maxmag)
 
 
 def collapse_nphc(src):
@@ -114,8 +118,10 @@ def preclassical(srcs, sites, cmaker, monitor):
         dic['after'] = len(split_sources)
         yield dic
     else:
+        cnt = 0
         for msr, block in groupby(split_sources, msr_name).items():
-            dic = grid_point_sources(block, spacing, msr, monitor)
+            dic = grid_point_sources(block, spacing, msr, cnt, monitor)
+            cnt = dic.pop('cnt')
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
@@ -135,44 +141,47 @@ class PreClassicalCalculator(base.HazardCalculator):
     accept_precalc = []
 
     def init(self):
-        super().init()
         if self.oqparam.hazard_calculation_id:
-            full_lt = self.datastore.parent['full_lt']
-            trt_smrs = self.datastore.parent['trt_smrs'][:]
+            self.full_lt = self.datastore.parent['full_lt'].init()
         else:
-            full_lt = self.csm.full_lt
-            trt_smrs = self.csm.get_trt_smrs()
-        self.grp_ids = numpy.arange(len(trt_smrs))
-        rlzs_by_g = []
-        for t in trt_smrs:
-            for rlzs in full_lt.get_rlzs_by_gsim(t).values():
-                rlzs_by_g.append(rlzs)
-        self.datastore.hdf5.save_vlen(
-            'rlzs_by_g', [U32(rlzs) for rlzs in rlzs_by_g])
+            super().init()
+            self.full_lt = self.csm.full_lt
+        arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
+        for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
+            arr[g]['rlzs'] = rlzs
+            arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
+        dset = self.datastore.create_dset(
+            'rlzs_by_g', rlzs_by_g_dt, (self.full_lt.Gt,), fillvalue=None)
+        dset[:] = arr
 
-    def populate_csm(self):
-        # and store full_lt and source_info
-        csm = self.csm
-        self.datastore['trt_smrs'] = csm.get_trt_smrs()
+    def store(self):
+        # store full_lt, toms
+        self.datastore['full_lt'] = self.csm.full_lt
         self.datastore['toms'] = numpy.array(
             [sg.get_tom_toml(self.oqparam.investigation_time)
-             for sg in csm.src_groups], hdf5.vstr)
-        cmakers = read_cmakers(self.datastore, csm.full_lt)
+             for sg in self.csm.src_groups], hdf5.vstr)
+
+    def populate_csm(self):
+        oq = self.oqparam
+        csm = self.csm
+        self.store()
+        cmakers = read_cmakers(self.datastore, csm)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
         # do nothing for atomic sources except counting the ruptures
         atomic_sources = []
         normal_sources = []
-        reqv = 'reqv' in self.oqparam.inputs
+        reqv = 'reqv' in oq.inputs
         if reqv:
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
         for sg in csm.src_groups:
-            if reqv and sg.trt in self.oqparam.inputs['reqv']:
+            if reqv and sg.trt in oq.inputs['reqv']:
                 for src in sg:
-                    collapse_nphc(src)
+                    if src.source_id not in oq.reqv_ignore_sources:
+                        collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
                 cmakers[grp_id].set_weight(sg, sites)
@@ -186,10 +195,8 @@ class PreClassicalCalculator(base.HazardCalculator):
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
-        self.datastore.hdf5['full_lt'] = csm.full_lt
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
-        self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
@@ -204,7 +211,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
-                if self.oqparam.ps_grid_spacing:
+                if oq.ps_grid_spacing:
                     # do not split the pointsources
                     smap.submit(
                         (pointsources + pointlike, sites, cmakers[grp_id]))
@@ -262,17 +269,39 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
-        self.populate_csm()
+        if not hasattr(self, 'csm'):  # used only for post_process
+            return
+        cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
+        if os.path.exists(cachepath):
+            realpath = os.path.realpath(cachepath)
+            logging.info('Copying csm from %s', realpath)
+            with h5py.File(realpath, 'r') as cache:  # copy _csm
+                cache.copy(cache['_csm'], self.datastore.hdf5)
+            self.store()  # full_lt, toms
+        else:
+            self.populate_csm()
+            try:
+                self.datastore['_csm'] = self.csm
+            except RuntimeError as exc:
+                # this happens when setrecursionlimit is too low
+                # we can continue anyway, this is not critical
+                logging.error(str(exc), exc_info=True)
+            else:
+                if cachepath:
+                    os.symlink(self.datastore.filename, cachepath)
         self.max_weight = self.csm.get_max_weight(self.oqparam)
         return self.csm
 
     def post_execute(self, csm):
         """
-        Store the CompositeSourceModel in binary format
+        Raise an error if the sources were all discarded
         """
-        try:
-            self.datastore['_csm'] = csm
-        except RuntimeError as exc:
-            # this happens when setrecursionlimit is too low
-            # we can continue anyway, this is not critical
-            logging.error(str(exc), exc_info=True)
+        if 'source_info' in self.datastore:
+            num_sites = self.datastore['source_info']['num_sites']
+            if (num_sites == 0).all():
+                raise RuntimeError('There are no sources close to the site(s)')
+
+    def post_process(self):
+        if self.oqparam.calculation_mode == 'preclassical':
+            super().post_process()
+        # else do nothing, post_process will be called later on

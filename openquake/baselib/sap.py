@@ -25,7 +25,7 @@ which is extremely powerful. Its features are
    a hierarchic parser from a Python package.
 
 Here is a minimal example of usage:
-￼
+
 .. code-block:: python
 
  >>> def convert_archive(input_, output=None, inplace=False, *, out='/tmp'):

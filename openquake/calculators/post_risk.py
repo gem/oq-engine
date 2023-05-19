@@ -158,15 +158,20 @@ def get_src_loss_table(dstore, loss_id):
                          dict(agg_id=K, loss_id=loss_id))
     if len(alt) == 0:  # no losses for this loss type
         return [], ()
+
+    ws = dstore['weights'][:]
+    events = dstore['events'][:]
+    ruptures = dstore['ruptures'][:]
+    source_id = dstore['source_info']['source_id']
     eids = alt.event_id.to_numpy()
-    evs = dstore['events'][:][eids]
+    evs = events[eids]
     rlz_ids = evs['rlz_id']
-    rup_ids = evs['rup_id']
-    source_id = python3compat.decode(dstore['ruptures']['source_id'][rup_ids])
-    w = dstore['weights'][:]
+    srcidx = dict(ruptures[['id', 'source_id']])
+    srcids = [srcidx[rup_id] for rup_id in evs['rup_id']]
+    srcs = python3compat.decode(source_id[srcids])
     acc = general.AccumDict(accum=0)
-    for src, rlz_id, loss in zip(source_id, rlz_ids, alt.loss.to_numpy()):
-        acc[src] += loss * w[rlz_id]
+    for src, rlz_id, loss in zip(srcs, rlz_ids, alt.loss.to_numpy()):
+        acc[src] += loss * ws[rlz_id]
     return zip(*sorted(acc.items()))
 
 
@@ -383,7 +388,13 @@ class PostRiskCalculator(base.RiskCalculator):
             self.policy_df = self.datastore.read_df('policy')
             self.treaty_df = self.datastore.read_df('treaty_df')
             # there must be a single loss type (possibly a total type)
-            [lt] = oq.inputs['reinsurance']
+            ideduc = self.datastore['assetcol/array']['ideductible'].any()
+            if (oq.total_losses or len(oq.loss_types) == 1) and ideduc:
+                # claim already computed and present in risk_by_event
+                lt = 'claim'
+            else:
+                # claim to be computed from the policies
+                [lt] = oq.inputs['reinsurance']
             loss_id = scientific.LOSSID[lt]
             parent = self.datastore.parent
             if parent and 'risk_by_event' in parent:
@@ -391,6 +402,8 @@ class PostRiskCalculator(base.RiskCalculator):
             else:
                 dstore = self.datastore
             ct = oq.concurrent_tasks or 1
+
+            # now aggregate risk_by_event by policy
             allargs = [(dstore, pdf, self.treaty_df, loss_id)
                        for pdf in numpy.array_split(self.policy_df, ct)]
             self.datastore.swmr_on()
@@ -398,8 +411,8 @@ class PostRiskCalculator(base.RiskCalculator):
                                     h5=self.datastore.hdf5)
             rbp = pandas.concat(list(smap))
             if len(rbp) == 0:
-                raise ValueError('No losses for reinsurance %s' % lt)
-            rbe = reinsurance._by_event(rbp, self.treaty_df, self._monitor)
+                raise ValueError('No data in risk_by_event for %r' % lt)
+            rbe = reinsurance.by_event(rbp, self.treaty_df, self._monitor)
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
         if oq.investigation_time and oq.return_periods != [0]:

@@ -37,6 +37,36 @@ param = dict(
     backarc='reference_backarc')
 
 
+# TODO: equivalents of calculate_z1pt0 and calculate_z2pt5
+# are inside some GSIM implementations, we should avoid duplication
+def calculate_z1pt0(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 1.0 km/s velocity horizon (in m)
+    Ref: Chiou & Youngs (2014) California model
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30m
+    '''
+    c1 = 571 ** 4.
+    c2 = 1360.0 ** 4.
+    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
+
+
+def calculate_z2pt5(vs30):
+    '''
+    Reads an array of vs30 values (in m/s) and
+    returns the depth to the 2.5 km/s velocity horizon (in km)
+    Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
+    'NGA-West2 ground motion model for the average horizontal components of
+    PGA, PGV, and 5pct damped linear acceleration response spectra.'
+    Earthquake Spectra, 30(3), pp.1087–1114.
+
+    :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
+    '''
+    c1 = 7.089
+    c2 = -1.144
+    return numpy.exp(c1 + numpy.log(vs30) * c2)
+
+
 class Site(object):
     """
     Site object represents a geographical location defined by its position
@@ -119,6 +149,7 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
+    'site_id': numpy.uint32,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,
@@ -264,16 +295,7 @@ class SiteCollection(object):
         if sitemodel is None:
             pass
         elif hasattr(sitemodel, 'reference_vs30_value'):
-            # sitemodel is actually an OqParam instance
-            self._set('vs30', sitemodel.reference_vs30_value)
-            self._set('vs30measured',
-                      sitemodel.reference_vs30_type == 'measured')
-            if 'z1pt0' in req_site_params:
-                self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
-            if 'z2pt5' in req_site_params:
-                self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
-            if 'backarc' in req_site_params:
-                self._set('backarc', sitemodel.reference_backarc)
+            self.set_global_params(sitemodel, req_site_params)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
@@ -296,6 +318,20 @@ class SiteCollection(object):
 
     xyz = Mesh.xyz
 
+    def set_global_params(self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
+        """
+        Set the global site parameters (vs30, vs30measured, z1pt0, z2pt5, backarc)
+        """
+        self._set('vs30', oq.reference_vs30_value)
+        self._set('vs30measured',
+                  oq.reference_vs30_type == 'measured')
+        if 'z1pt0' in req_site_params:
+            self._set('z1pt0', oq.reference_depth_to_1pt0km_per_sec)
+        if 'z2pt5' in req_site_params:
+            self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
+        if 'backarc' in req_site_params:
+            self._set('backarc', oq.reference_backarc)
+        
     def filtered(self, indices):
         """
         :param indices:
@@ -578,6 +614,18 @@ class SiteCollection(object):
         :returns: number of distinct geohashes in the site collection
         """
         return len(numpy.unique(self.geohash(length)))
+
+    def calculate_z1pt0(self):
+        """
+        Compute the column z1pt0 from the vs30
+        """
+        self.array['z1pt0'] = calculate_z1pt0(self.vs30)
+
+    def calculate_z2pt5(self):
+        """
+        Compute the column z2pt5 from the vs30 using a formula for NGA-West2
+        """
+        self.array['z2pt5'] = calculate_z2pt5(self.vs30)
 
     def __getstate__(self):
         return dict(array=self.array, complete=self.complete)

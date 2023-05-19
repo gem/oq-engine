@@ -1,4 +1,6 @@
-APPLICATION_MODE = aelo
+import os
+
+APPLICATION_MODE = 'aelo'
 
 # # Static Folder
 # STATIC_ROOT = ''
@@ -18,3 +20,19 @@ EMAIL_PORT = os.environ.get('EMAIL_PORT', 587)
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', True)
 EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+
+# NOTE: the following variables are needed to send pasword reset emails
+#       using the createnormaluser Django command. They should be the same
+#       specified in /etc/nginx/conf.d/webui.conf
+SERVER_NAME = <localhost>
+SERVER_PORT = <8800>
+USE_HTTPS = <False>
+
+WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+
+# Local time zone for this installation. Choices can be found here:
+# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
+# although not all choices may be available on all operating systems.
+# If running in a Windows environment this must be set to the same as your
+# system time zone.
+# TIME_ZONE = 

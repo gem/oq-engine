@@ -191,7 +191,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                         # make it possible to read the information directly
                         # from the source section via old scripts.
                         # if (not srcnode['groupname'] and
-                        #         grp_trt and not srcnode.get('tectonicRegion')):
+                        #     grp_trt and not srcnode.get('tectonicRegion')):
                         if grp_trt and not srcnode.get('tectonicRegion'):
                             srcnode['tectonicRegion'] = grp_trt
                         row = converter.convert_node(srcnode)

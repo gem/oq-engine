@@ -20,7 +20,7 @@ import re
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.contexts import read_ctx_by_grp
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -99,14 +99,10 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_4(self):
         # a case with number of lon/lat bins different for site 0/site 1
-        # this exercise sampling
+        # this exercises sampling and empty CSV files not being saved
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 16)
-        # Dist-0 Lon_Lat-0 Lon_Lat_TRT-0 Lon_Lat_TRT-1
-        # Mag-0 Mag_Dist-0 Mag_Dist_Eps-0 Mag_Dist_TRT-0
-        # Mag_Dist_TRT-1 Mag_Dist_TRT_Eps-0 Mag_Dist_TRT_Eps-1
-        # Mag_Lon_Lat-0, TRT-0 TRT-1
+        self.assertEqual(len(fnames), 11)
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
@@ -151,14 +147,13 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_7(self):
         # test with 7+2 ruptures of two source models, 1 GSIM, 1 site
         self.run_calc(case_7.__file__, 'job.ini')
-        cmakers = read_cmakers(self.calc.datastore)
         ctx = read_ctx_by_grp(self.calc.datastore)
         self.assertEqual(len(ctx[0]), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctx[1]), 2)  # rlz-1, the one to discard
 
-        haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
+        haz = self.calc.datastore['hmap3'][0, 0]  # shape NMP
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
-        self.assertAlmostEqual(haz[1], 0.1875711524)
+        self.assertAlmostEqual(haz[1], 0.13311564210230828)
 
         # test normal disaggregation
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
@@ -197,9 +192,17 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
-        # checking that the right number of sources appear in dsg_by_src
-        dstore = self.calc.datastore.open('r')
-        self.assertEqual(dstore['disagg_by_src'].shape[-1], 6)
+        # extract API
+        aw = extract(self.calc.datastore, 'disagg?kind=Mag&site_id=0&'
+                     'imt=SA(0.1)&poe_id=0&spec=rlzs')
+        self.assertEqual(len(aw.mag), 8)
+        self.assertEqual(aw.shape, (8, 1, 1))
+
+        aw = extract(self.calc.datastore, 'disagg?kind=Mag_Dist_Eps&site_id=0&'
+                     'imt=SA(0.1)&poe_id=0&spec=rlzs')
+        self.assertEqual(len(aw.dist), 60)
+        self.assertEqual(len(aw.eps), 12)
+        self.assertEqual(aw.shape, (8, 60, 12, 1, 1))
 
     def test_case_10(self):
         # test single magnitude
@@ -215,10 +218,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         #if platform.machine() == 'arm64':
         #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
-
-        # checking that the right number of sources appear in dsg_by_src
-        dstore = self.calc.datastore.open('r')
-        self.assertEqual(dstore['disagg_by_src'].shape[-1], 3)
 
     def test_case_12(self):
         # check source IDs with :, . and ;

@@ -25,7 +25,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import hdf5, performance, parallel, general
+from openquake.baselib import (
+    hdf5, performance, parallel, general, python3compat)
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs
@@ -82,7 +83,18 @@ def average_losses(ln, alt, rlz_id, AR, collect_rlzs):
         return sparse.coo_matrix((tot.to_numpy(), (aids, rlzs)), AR)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
+def debugprint(ln, asset_loss_table, adf):
+    """
+    Print risk_by_event in a reasonable format. To be used with --nd
+    """
+    if '+' in ln or ln == 'claim':
+        df = asset_loss_table.set_index('aid').rename(columns={'loss': ln})
+        df['asset_id'] = python3compat.decode(adf.id[df.index].to_numpy())
+        del df['variance']
+        print(df)
+
+
+def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -90,13 +102,15 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
     mon_avg = monitor('averaging losses', measuremem=False)
     oq = crmodel.oqparam
     xtypes = oq.ext_loss_types
+    if ideduc:
+        xtypes.append('claim')
     loss_by_AR = {ln: [] for ln in xtypes}
     correl = int(oq.asset_correlation)
     (A, R, K), L = ARK, len(xtypes)
     acc = general.AccumDict(accum=numpy.zeros((L, 2)))  # u8idx->array
     value_cols = ['variance', 'loss']
     for out in outputs:
-        for li, ln in enumerate(oq.ext_loss_types):
+        for li, ln in enumerate(xtypes):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
@@ -135,7 +149,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, monitor):
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     """
-    :param slice_by_event:
+    :param slice_by_event: composite array with fields 'start', 'stop'
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
@@ -174,25 +188,6 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             yield event_based_risk, df[s0:s1], oqparam
 
 
-def outputs(taxo_assets, df, crmodel, rng, monitor):
-    mon_risk = monitor('computing risk', measuremem=True)
-    fil_mon = monitor('filtering GMFs', measuremem=False)
-    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
-        grp = df[s0:s1]
-        for taxo, adf in taxo_assets:
-            with fil_mon:
-                # *crucial* for the performance
-                # of the next step, 'computing risk'
-                gmf_df = grp[numpy.isin(
-                    grp.sid.to_numpy(), adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            with mon_risk:  # this is using a lot of memory
-                out = crmodel.get_output(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-            yield out
-
-
 def event_based_risk(df, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -200,26 +195,46 @@ def event_based_risk(df, oqparam, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    with monitor('reading assets/crmodel', measuremem=True):
-        # can aggregate millions of asset by using few GBs of RAM
-        items = monitor.read('assets').groupby('taxonomy')
-        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
+    with monitor('reading crmodel', measuremem=True):
+        ideduc = monitor.read('assets/ideductible')
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (sum(len(assets) for taxo, assets in taxo_assets),
-           len(weights), oqparam.K)
+    ARK = (len(ideduc), len(weights), oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
 
-    avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
-                      crmodel, ARK, aggids, rlz_id, monitor)
+    outs = gen_outputs(df, crmodel, rng, monitor)
+    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
+                      monitor)
     return dict(avg=avg, alt=alt)
+
+
+def gen_outputs(df, crmodel, rng, monitor):
+    mon_risk = monitor('computing risk', measuremem=True)
+    fil_mon = monitor('filtering GMFs', measuremem=False)
+    with monitor('reading assets', measuremem=True):
+        adf = monitor.read('assets')
+    taxos = numpy.sort(adf.taxonomy.unique())
+    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
+        grp = df[s0:s1]
+        for taxo in taxos:
+            a = adf[adf.taxonomy == taxo].set_index('ordinal')
+            with fil_mon:
+                # *crucial* for the performance of the next step
+                gmf_df = grp[
+                    numpy.isin(grp.sid.to_numpy(), a.site_id.to_numpy())]
+            if len(gmf_df) == 0:
+                continue
+            with mon_risk:
+                out = crmodel.get_output(
+                    a, gmf_df, crmodel.oqparam._sec_losses, rng)
+            yield out
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
@@ -306,8 +321,15 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         if hasattr(self, 'policy_df') and 'reinsurance' not in oq.inputs:
             sec_losses.append(
                 partial(insurance_losses, policy_df=self.policy_df))
+        ideduc = self.assetcol['ideductible'].any()
         if oq.total_losses:
-            sec_losses.append(partial(total_losses, kind=oq.total_losses))
+            sec_losses.append(
+                partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
+        elif ideduc:
+            # subtract the insurance deductible for a single loss_type
+            [lt] = oq.loss_types
+            sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
+            
         oq._sec_losses = sec_losses
         oq.M = len(oq.all_imts())
         oq.N = self.N
@@ -328,6 +350,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         base.create_risk_by_event(self)
         self.rlzs = self.datastore['events']['rlz_id']
         self.num_events = numpy.bincount(self.rlzs, minlength=self.R)
+        self.xtypes = oq.ext_loss_types
+        if self.assetcol['ideductible'].any():
+            self.xtypes.append('claim')
+
         if oq.avg_losses:
             self.create_avg_losses()
         alt_nbytes = 4 * self.E * L
@@ -350,7 +376,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             else:  # scenario
                 self.avg_ratio = 1. / self.num_events
         self.avg_losses = {}
-        for lt in oq.ext_loss_types:
+        for lt in self.xtypes:
             self.avg_losses[lt] = numpy.zeros((self.A, R), F32)
             self.datastore.create_dset(
                 'avg_losses-rlzs/' + lt, F32, (self.A, R))
@@ -373,8 +399,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             srcfilter = self.src_filter()
-            scenario = 'scenario' in oq.calculation_mode
-            proxies = [RuptureProxy(rec, scenario)
+            proxies = [RuptureProxy(rec)
                        for rec in self.datastore['ruptures'][:]]
             full_lt = self.datastore['full_lt']
             self.datastore.swmr_on()  # must come before the Starmap
@@ -443,7 +468,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # sanity check on the risk_by_event
         alt = self.datastore.read_df('risk_by_event')
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
-        upper_limit = self.E * (K + 1) * len(oq.ext_loss_types)
+        upper_limit = self.E * (K + 1) * len(self.xtypes)
         size = len(alt)
         assert size <= upper_limit, (size, upper_limit)
         # sanity check on uniqueness by (agg_id, loss_id, event_id)
@@ -454,7 +479,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                                (len(arr) - len(uni)))
 
         if oq.avg_losses:
-            for lt in oq.ext_loss_types:
+            for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):
                     al[:, r] *= self.avg_ratio[r]

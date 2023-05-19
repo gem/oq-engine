@@ -363,7 +363,7 @@ class PointToMultiPointTestCase(unittest.TestCase):
 
     def test_complex(self):
         testfile = os.path.normpath(os.path.join(
-            testdir, '../../../qa_tests_data/classical/case_30/ssm/shallow/'
+            testdir, '../../../qa_tests_data/logictree/case_30/ssm/shallow/'
             'gridded_seismicity_source_4.xml'))
         sm = nrml.read(testfile).sourceModel
         update_source_model(sm, testfile)
@@ -456,14 +456,14 @@ class SourceConverterTestCase(unittest.TestCase):
 
     def test_dupl_values_npdist(self):
         testfile = os.path.join(testdir, 'wrong-npdist.xml')
-        with unittest.mock.patch('logging.warning') as w:
+        with unittest.mock.patch('logging.info') as w:
             nrml.to_python(testfile)
         self.assertEqual(
             'There were repeated values %s in %s:%s', w.call_args[0][0])
 
     def test_dupl_values_hddist(self):
         testfile = os.path.join(testdir, 'wrong-hddist.xml')
-        with unittest.mock.patch('logging.warning') as w:
+        with unittest.mock.patch('logging.info') as w:
             nrml.to_python(testfile)
         self.assertEqual(
             'There were repeated values %s in %s:%s', w.call_args[0][0])

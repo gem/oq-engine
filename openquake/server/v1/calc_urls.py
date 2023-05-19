@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 from django.urls import re_path
+from django.conf import settings
 from openquake.server import views
 
 # each url is prefixed with /v1/calc/
@@ -27,15 +28,20 @@ urlpatterns = [
     re_path(r'^(\d+)/abort$', views.calc_abort),
     re_path(r'^(\d+)/datastore$', views.calc_datastore),
     re_path(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
-    re_path(r'^(\d+)/results$', views.calc_results),
+    re_path(r'^(\d+)/results$', views.calc_results, name="results"),
     re_path(r'^(\d+)/hmap_(\d+)_(\d+)$', views.hmap_png),
     re_path(r'^(\d+)/traceback$', views.calc_traceback, name="traceback"),
     re_path(r'^(\d+)/log/size$', views.calc_log_size),
-    re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log),
+    re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log, name="log"),
     re_path(r'^(\d+)/remove$', views.calc_remove),
     re_path(r'^result/(\d+)$', views.calc_result),
-    re_path(r'^validate_zip$', views.validate_zip),
     re_path(r'^(\d+)/result/list$', views.calc_results),
-    re_path(r'^aelo_run$', views.aelo_run),
-    re_path(r'^run$', views.calc_run),
 ]
+if settings.APPLICATION_MODE.upper() == 'AELO':
+    urlpatterns.append(
+        re_path(r'^aelo_run$', views.aelo_run))
+else:
+    urlpatterns.extend([
+        re_path(r'^run$', views.calc_run),
+        re_path(r'^validate_zip$', views.validate_zip),
+    ])

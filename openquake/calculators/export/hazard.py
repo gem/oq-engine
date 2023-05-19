@@ -178,7 +178,7 @@ def export_hcurves_csv(ekey, dstore):
     """
     oq = dstore['oqparam']
     info = get_info(dstore)
-    R = dstore['full_lt'].get_num_rlzs()
+    R = dstore['full_lt'].get_num_paths()
     sitecol = dstore['sitecol']
     sitemesh = get_sites(sitecol)
     key, kind, fmt = get_kkf(ekey)
@@ -222,10 +222,10 @@ def export_hcurves_csv(ekey, dstore):
 UHS = collections.namedtuple('UHS', 'imls location')
 
 
-def get_metadata(realizations, kind):
+def get_metadata(rlzs, kind):
     """
-    :param list realizations:
-        realization objects
+    :param rlzs:
+        realization array with field 'branch_path'
     :param str kind:
         kind of data, i.e. a key in the datastore
     :returns:
@@ -233,9 +233,9 @@ def get_metadata(realizations, kind):
     """
     metadata = {}
     if kind.startswith('rlz-'):
-        rlz = realizations[int(kind[4:])]
-        metadata['smlt_path'] = '_'.join(rlz.sm_lt_path)
-        metadata['gsimlt_path'] = rlz.gsim_rlz.pid
+        smlt_path, gslt_path = rlzs[int(kind[4:])]['branch_path'].split('~')
+        metadata['smlt_path'] = smlt_path
+        metadata['gsimlt_path'] = gslt_path
     elif kind.startswith('quantile-'):
         metadata['statistics'] = 'quantile'
         metadata['quantile_value'] = float(kind[9:])
@@ -252,7 +252,7 @@ def get_metadata(realizations, kind):
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
-    rlzs = dstore['full_lt'].get_realizations()
+    rlzs = dstore['full_lt'].rlzs
     R = len(rlzs)
     sitemesh = get_sites(dstore['sitecol'].complete)
     key, kind, fmt = get_kkf(ekey)
@@ -362,22 +362,15 @@ def export_hmaps_xml(ekey, dstore):
 @export.add(('cs-stats', 'csv'))
 def export_cond_spectra(ekey, dstore):
     sitecol = dstore['sitecol']
-    dset = dstore[ekey[0]]  # shape (1, M, N, 2, P)
-    periods = dset.attrs['periods']
-    imls = dset.attrs['imls']
+    aw = dstore[ekey[0]]  # shape (N, P, K, M, 2)
+    dframe = aw.to_dframe()
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     fnames = []
     for n in sitecol.sids:
-        spe = dset[0, :, n, 0]  # shape M, P
-        std = dset[0, :, n, 1]  # shape M, P
+        df = dframe[dframe.site_id == n]
+        del df['site_id']
         fname = dstore.export_path('conditional-spectrum-%d.csv' % n)
-        dic = dict(sa_period=periods)
-        for p in range(len(imls)):
-            dic['val%d' % p] = spe[:, p]
-            dic['std%d' % p] = std[:, p]
-        df = pandas.DataFrame(dic)
         comment = dstore.metadata.copy()
-        comment['imls'] = list(imls)
         comment['site_id'] = n
         comment['lon'] = sitecol.lons[n]
         comment['lat'] = sitecol.lats[n]
@@ -518,29 +511,49 @@ def iproduct(*sizes):
     return itertools.product(*ranges)
 
 
-@export.add(('disagg_by_src', 'csv'))
-def export_disagg_by_src(ekey, dstore):
+def _add_iml(df, imtls):
+    # add field iml and remove field lvl in a dataframe with fields imt, lvl
+    out = []
+    for imt in imtls:
+        imls = imtls[imt]
+        dframe = df[df.imt == imt]
+        dframe['iml'] = imls[dframe.lvl]
+        del dframe['lvl']
+        out.append(dframe)
+    return pandas.concat(out)
+
+
+@export.add(('mean_rates_by_src', 'csv'))
+def export_mean_rates_by_src(ekey, dstore):
     oq = dstore['oqparam']
-    if len(oq.poes) == 0:
-        raise ValueError('disagg_by_src cannot be exported, poes are missing')
     sitecol = dstore['sitecol']
+    rates_df = _add_iml(dstore['mean_rates_by_src'].to_dframe(), oq.imtls)
     fnames = []
-    header=['imt', 'poe_id', 'src_id', 'value']
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    header = ['src_id', 'imt', 'iml', 'value']
     for site in sitecol:
-        sid = site.id
-        com = dict(lon=round(site.location.x, 3), lat=round(site.location.y, 3),
-                   poes=list(oq.poes))
-        out = []
-        for imt in oq.imtls:
-            for poe_id, poe in enumerate(oq.poes):
-                aw = extract(dstore, 'disagg_by_src?site_id=%d&imt=%s&poe=%s'%
-                             (sid, imt, poe))
-                for src_id, val in aw.array:
-                    out.append((imt, poe_id, src_id, val))
-        fname = dstore.export_path('disagg_by_src-%d.csv' % sid)
-        writers.write_csv(fname, out, header=header, comment=com, fmt='%.5E')
+        df = rates_df[rates_df.site_id == site.id]
+        del df['site_id']
+        com = dstore.metadata.copy()
+        com['lon'] = round(site.location.x, 5)
+        com['lat'] = round(site.location.y, 5)
+        fname = dstore.export_path('mean_rates_by_src-%d.csv' % site.id)
+        writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
     return fnames
+
+
+@export.add(('mean_disagg_by_src', 'csv'))
+def export_mean_disagg_by_src(ekey, dstore):
+    sitecol = dstore['sitecol']
+    df = dstore['mean_disagg_by_src'].to_dframe()
+    fname = dstore.export_path('%s.%s' % ekey)
+    com = dstore.metadata.copy()
+    com['lon'] = sitecol.lons[0]
+    com['lat'] = sitecol.lats[0]
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer.save(df, fname, comment=com)
+    return [fname]
 
 
 @export.add(('disagg-rlzs', 'csv'),
@@ -552,14 +565,13 @@ def export_disagg_csv(ekey, dstore):
     spec = name[7:]  # rlzs, stats, rlzs-traditional, stats-traditional
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    hmap4 = dstore['hmap4']
     rlzs = dstore['full_lt'].get_realizations()
     best_rlzs = dstore['best_rlzs'][:]
-    N, M, P, Z = hmap4.shape
-    imts = list(oq.imtls)
+    N = len(best_rlzs)
+    P = len(oq.poes) or 1
     fnames = []
     bins = {name: dset[:] for name, dset in dstore['disagg-bins'].items()}
-    ex = 'disagg?kind=%s&imt=%s&site_id=%s&poe_id=%d&spec=%s'
+    ex = 'disagg?kind=%s&site_id=%s&spec=%s'
     trad = '-traditional' if 'traditional' in name else ''
     skip_keys = ('Mag', 'Dist', 'Lon', 'Lat', 'Eps', 'TRT')
     metadata = dstore.metadata
@@ -569,6 +581,7 @@ def export_disagg_csv(ekey, dstore):
             poes_disagg[p] = str(oq.poes_disagg[p])
         except IndexError:
             pass
+    writer = writers.CsvWriter(fmt='%.5E')
     for s in range(N):
         lon, lat = sitecol.lons[s], sitecol.lats[s]
         md = dict(investigation_time=oq.investigation_time,
@@ -579,41 +592,42 @@ def export_disagg_csv(ekey, dstore):
                   eps_bin_edges=bins['Eps'].tolist(),
                   tectonic_region_types=decode(bins['TRT'].tolist()),
                   lon=lon, lat=lat)
-        if name == 'disagg-stats':
-            rlzcols = list(oq.hazard_stats())
-        else:
-            rlzcols = ['rlz%d' % r for r in best_rlzs[s]]
+        if spec.startswith('rlzs') or oq.iml_disagg:
             weights = numpy.array([rlzs[r].weight['weight']
                                    for r in best_rlzs[s]])
             weights /= weights.sum()  # normalize to 1
             md['weights'] = weights.tolist()
             md['rlz_ids'] = best_rlzs[s].tolist()
+        iml2 = dstore['hmap3'][s]  # shape (M, P)
         metadata.update(md)
         for k in oq.disagg_outputs:
-            splits = k.lower().split('_')
-            header = ['imt', 'poe'] + splits + rlzcols
-            values = []
-            nonzeros = []
-            for m, p in iproduct(M, P):
-                imt = imts[m]
-                aw = extract(dstore, ex % (k, imt, s, p, spec))
-                # for instance for Mag_Dist [(mag, dist, poe0, poe1), ...]
-                poes = aw[:, len(splits):]
-                if 'trt' in header:
-                    nonzeros.append(True)
-                else:
-                    nonzeros.append(poes.any())  # nonzero poes
-                for row in aw:
-                    values.append([imt, poes_disagg[p]] + list(row))
-            if any(nonzeros):
+            aw = extract(dstore, ex % (k, s, spec))
+            if aw.array.sum() == 0:
+                continue
+            df = aw.to_dframe(skip_zeros=False)
+            # move the columns imt and poe at the beginning for backward compat
+            cols = [col for col in df.columns if col not in ('imt', 'poe')]
+            # add the IMLs corresponding to the mean hazard maps
+            cols = ['imt', 'iml', 'poe'] + cols
+            imt2idx = {imt: m for m, imt in enumerate(oq.imtls)}
+            poe2idx = {poe: p for p, poe in enumerate(df.poe.unique())}
+            imt_idx = [imt2idx[imt] for imt in df.imt]
+            poe_idx = [poe2idx[poe] for poe in df.poe]
+            df['iml'] = iml2[imt_idx, poe_idx]
+
+            df = pandas.DataFrame(
+                {col: df[col] for col in cols}).sort_values(['imt', 'poe'])
+            if len(df):
                 com = {key: value for key, value in metadata.items()
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
                 stat = '-mean' if name == 'disagg-stats' else ''
-                fname = dstore.export_path('%s%s%s-%d.csv' % (k, stat, trad, s))
-                writers.write_csv(fname, values, header=header,
-                                  comment=com, fmt='%.5E')
+                fname = dstore.export_path(
+                    '%s%s%s-%d.csv' % (k, stat, trad, s))
+                writer.save(df, fname, comment=com)
                 fnames.append(fname)
+            else:
+                print('Empty file %s not saved', fname)
     return sorted(fnames)
 
 
@@ -631,6 +645,17 @@ def export_events(ekey, dstore):
     path = dstore.export_path('events.csv')
     writers.write_csv(path, events, fmt='%s', renamedict=dict(id='event_id'),
                       comment=dstore.metadata)
+    return [path]
+
+
+@export.add(('event_based_mfd', 'csv'))
+def export_event_based_mfd(ekey, dstore):
+    aw = extract(dstore, 'event_based_mfd?')
+    path = dstore.export_path('event_based_mfd.csv')
+    magfreq = numpy.zeros(len(aw.mag), [('mag', float), ('freq', float)])
+    magfreq['mag'] = numpy.round(aw.mag, 1)
+    magfreq['freq'] = aw.freq
+    writers.write_csv(path, magfreq, fmt='%.7e', comment=dstore.metadata)
     return [path]
 
 

@@ -449,6 +449,9 @@ class File(h5py.File):
             pyclass = cls2dotname(cls)
         else:
             pyclass = ''
+        if isinstance(obj, (list, tuple)) and len(obj) and isinstance(
+                obj[0], (str, bytes)):  # flat sequence of strings
+            obj = numpy.array(encode(obj))
         if isinstance(obj, (dict, Group)) and obj:
             for k, v in obj.items():
                 # NB: there was a line sorted(obj.items()) here
@@ -628,7 +631,7 @@ class ArrayWrapper(object):
 
     def __init__(self, array, attrs, extra=('value',)):
         vars(self).update(attrs)
-        self._extra = tuple(extra)
+        self.extra = list(extra)
         if len(array):
             self.array = array
 
@@ -656,20 +659,25 @@ class ArrayWrapper(object):
             self.array[idx] = val
 
     def __toh5__(self):
-        arr = getattr(self, 'array', ())
-        if len(arr):
-            return arr, self.to_dict()
-        return self.to_dict(), {}
+        return vars(self), {}
 
-    def __fromh5__(self, array, attrs):
-        self.__init__(array, attrs)
+    def __fromh5__(self, dic, attrs):
+        for k, v in dic.items():
+            if isinstance(v, h5py.Dataset):
+                arr = v[()]
+                if isinstance(arr, INT):
+                    arr = numpy.arange(arr)  
+                elif len(arr) and isinstance(arr[0], bytes):
+                    arr = decode(arr)
+                setattr(self, k, arr)
+            else:
+                setattr(self, k, v)
+        vars(self).update(attrs)
 
     def __repr__(self):
         if hasattr(self, 'shape_descr'):
-            assert len(self.shape) == len(self.shape_descr), (
-                self.shape_descr, self.shape)
-            lst = ['%s=%d' % (descr, size)
-                   for descr, size in zip(self.shape_descr, self.shape)]
+            sd = decode(self.shape_descr)
+            lst = ['%s=%d' % (des, size) for des, size in zip(sd, self.shape)]
             return '<%s(%s)>' % (self.__class__.__name__, ', '.join(lst))
         elif hasattr(self, 'shape'):
             return '<%s%s>' % (self.__class__.__name__, self.shape)
@@ -702,11 +710,11 @@ class ArrayWrapper(object):
                 dic[k] = v
         return toml.dumps(dic)
 
-    def to_dframe(self):
+    def to_dframe(self, skip_zeros=True):
         """
         Convert an ArrayWrapper with shape (D1, ..., DN) and attributes
-        T1, ..., TN which are list of tags of lenghts D1, ... DN into
-        a DataFrame with rows (tag1, ... tagN, extra1, ... extraM) of maximum
+        (T1, ..., TN) which are list of tags of lenghts (D1, ..., DN) into
+        a DataFrame with rows (tag1, ..., tagN, value) of maximum
         length D1 * ... * DN. Zero values are discarded.
 
         >>> from pprint import pprint
@@ -723,6 +731,17 @@ class ArrayWrapper(object):
         0       RC       RES  2000.0
         1       RC       IND  5000.0
         2     WOOD       RES   500.0
+
+        It is also possible to pass M > 1 extra fields an convert an array of
+        shape  (D1, ..., DN, M) and attributes (T1, ..., TN) into a DataFrame
+        with rows (tag1, ..., tagN, value1, ..., valueM).
+
+        >>> dic = dict(shape_descr=['taxonomy'], taxonomy=['RC', 'WOOD'])
+        >>> aw = ArrayWrapper(arr, dic, ['RES', 'IND', 'COM'])
+        >>> pprint(aw.to_dframe())
+          taxonomy     RES     IND  COM
+        0       RC  2000.0  5000.0  0.0
+        1     WOOD   500.0     0.0  0.0
         """
         if hasattr(self, 'array'):
             names = self.array.dtype.names
@@ -732,14 +751,15 @@ class ArrayWrapper(object):
         if hasattr(self, 'json'):
             vars(self).update(json.loads(self.json))
         shape = self.shape
-        tup = len(self._extra) > 1
+        tup = len(self.extra) > 1
         if tup:
-            if shape[-1] != len(self._extra):
+            if shape[-1] != len(self.extra):
                 raise ValueError(
                     'There are %d extra-fields but %d dimensions in %s' %
-                    (len(self._extra), shape[-1], self))
+                    (len(self.extra), shape[-1], self))
         shape_descr = tuple(decode(d) for d in self.shape_descr)
-        fields = shape_descr + self._extra
+        extra = tuple(decode(d) for d in self.extra)
+        fields = shape_descr + extra
         out = []
         tags = []
         idxs = []
@@ -755,18 +775,34 @@ class ArrayWrapper(object):
                                itertools.product(*tags)):
             val = self.array[idx]
             if isinstance(val, numpy.ndarray):
-                if val.sum():
-                    out.append(values + tuple(val))
-            elif val:  # is a scalar
-                out.append(values + (val,))
+                tup = tuple(val)
+            else:
+                tup = (val,)
+            if skip_zeros:
+                if sum(tup):
+                    out.append(values + tup)
+            else:
+                out.append(values + tup)
         return pandas.DataFrame(out, columns=fields)
 
     def to_dict(self):
         """
         Convert the public attributes into a dictionary
         """
-        return {k: v for k, v in vars(self).items()
-                if k != 'array' and not k.startswith('_')}
+        return {k: v for k, v in vars(self).items() if not k.startswith('_')}
+
+    def save(self, path, h5):
+        fields = ['shape_descr'] + self.shape_descr
+        for k in fields + ['array', 'extra']:
+            arr = getattr(self, k)
+            if not isinstance(arr, numpy.ndarray):
+                if len(arr) and isinstance(arr[0], str):
+                    arr = encode(arr)
+                arr = numpy.array(arr)
+            dset = h5.create_dataset('%s/%s' % (path, k), arr.shape, arr.dtype)
+            dset[:] = arr
+        h5[path].attrs['__pyclass__'] = cls2dotname(self.__class__)
+        h5.flush()
 
 
 def decode_array(values):

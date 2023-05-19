@@ -21,9 +21,9 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
 import numpy
+import pandas
 
 from openquake.baselib.general import AccumDict
-from openquake.baselib.python3compat import decode
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -45,11 +45,6 @@ that defines only the total standard deviation. If you want to use a \
 correlation model you have to select a GMPE that provides the inter and \
 intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
-
-
-def rvs(distribution, *size):
-    array = distribution.rvs(size)
-    return array
 
 
 def exp(vals, imt):
@@ -121,10 +116,11 @@ class GmfComputer(object):
         if hasattr(rupture, 'source_id'):
             self.ebrupture = rupture
             self.source_id = rupture.source_id  # the underlying source
+            self.seed = rupture.seed
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.source_id = '?'
-        self.seed = rupture.seed
+            self.seed = rupture.seed
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
         if not ctxs:
             raise FarAwayRupture
@@ -134,19 +130,19 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
 
-    def compute_all(self, sig_eps=None):
+    def compute_all(self, scenario, sig_eps=None, max_iml=None):
         """
-        :returns: (dict with fields eid, sid, gmv_X, ...), dt
+        :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.ctx.sids
-        eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
-            num_events = sum(len(eids_by_rlz[rlz]) for rlz in rlzs)
+            num_events = numpy.isin(eid_rlz['rlz'], rlzs).sum()
             if num_events == 0:  # it may happen
                 continue
             # NB: the trick for performance is to keep the call to
@@ -154,14 +150,25 @@ class GmfComputer(object):
             # it is better to have few calls producing big arrays
             array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
+
+            # manage max_iml
+            if max_iml is not None:
+                for m, im in enumerate(self.cmaker.imtls):
+                    if (array[m] > max_iml[m]).any():
+                        for n in range(N):
+                            bad = array[m, n] > max_iml[m]  # shape E
+                            array[m, n, bad] = exp(mean_stds[0, g, m, n], im)
+
+            # manage min_iml
             for n in range(N):
                 for e in range(E):
                     if (array[:, n, e] < min_iml).all():
                         array[:, n, e] = 0
+    
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eids_by_rlz[rlz]
+                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:
@@ -186,7 +193,7 @@ class GmfComputer(object):
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
-        return data
+        return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mean_stds):
         """
@@ -203,17 +210,13 @@ class GmfComputer(object):
             (len(self.imts), len(self.ctx.sids), num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
-        numpy.random.seed(self.seed)
+        rng = numpy.random.default_rng(self.seed)
         num_sids = len(self.ctx.sids)
-        if self.cross_correl.distribution:
-            # build arrays of random numbers of shape (M, N, E) and (M, E)
-            intra_eps = [
-                rvs(self.cross_correl.distribution, num_sids, num_events)
-                for _ in range(M)]
-            inter_eps = self.cross_correl.get_inter_eps(self.imts, num_events)
-        else:
-            intra_eps = [None] * M
-            inter_eps = [numpy.zeros(num_events)] * M
+        ccdist = self.cross_correl.distribution
+        # build arrays of random numbers of shape (M, N, E) and (M, E)
+        intra_eps = [
+            ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
+        inter_eps = self.cross_correl.get_inter_eps(self.imts, num_events, rng)
         for m, imt in enumerate(self.imts):
             try:
                 result[m], sig[m], eps[m] = self._compute(
@@ -221,7 +224,7 @@ class GmfComputer(object):
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, decode(self.source_id),
+                    (gsim, imt, self.source_id,
                      exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:

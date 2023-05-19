@@ -15,13 +15,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import os
 import numpy
 from numpy.testing import assert_almost_equal as aae
 
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15,
-    case_16, case_17, case_18, case_19, case_20, case_21)
+    case_16, case_17, case_18, case_19, case_20, case_21, case_22)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.calculators.export import export
@@ -95,7 +97,7 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_6(self):
         f1, f2 = self.frequencies(case_6, 0.5, 1.0)
         aae(f1, 0.05, decimal=2)
-        aae(f2, 0.006, decimal=3)
+        aae(f2, 0.0077, decimal=3)
 
     def test_case_7(self):
         f1, f2 = self.frequencies(case_7, 0.5, 1.0)
@@ -154,7 +156,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/branches.org', gettemp(tbl))
 
     def test_case_14(self):
-        # new Swiss GMPEs
+        # Swiss GMPEs with amplfactor
         self.run_calc(case_14.__file__, 'job.ini')
         self.assertEqual(len(self.calc.datastore['gmf_data/eid']), 1000)
 
@@ -162,7 +164,7 @@ class ScenarioTestCase(CalculatorTestCase):
         # choosing invalid GMPE
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_15.__file__, 'job.ini')
-        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id='NA')"
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id=0)"
                       " CorrelationButNoInterIntraStdDevs", str(ctx.exception))
 
     def test_case_16(self):
@@ -172,10 +174,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(assetcol), 2372)
         self.assertEqual(
             sorted(assetcol.array.dtype.names),
-            sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'area',
+            sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'value-area',
                     'value-contents', 'value-nonstructural', 'value-number',
                     'value-occupants', 'occupants_night', 'value-structural',
-                    'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
+                    'ideductible', 'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
                     'OCCUPANCY', 'NAME_1']))
 
     def test_case_17(self):
@@ -204,14 +206,53 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_20.__file__, 'job.ini',
                       gsim_logic_tree_file='epsilon_tau.xml')
         aae(old.sig_inter_PGA.unique(), 0.3501)
-        aae(old.eps_inter_PGA.mean(), -0.025970912)
+        aae(old.eps_inter_PGA.mean(), 0.027470892)
         # `set_between_epsilon` sets `sig_inter` to zero
         new = self.calc.datastore.read_df('gmf_data/sigma_epsilon', 'eid')
         aae(new.sig_inter_PGA.unique(), 0)
-        aae(new.eps_inter_PGA.mean(), -0.025970920)
+        aae(new.eps_inter_PGA.mean(), 0.027470892)
 
     def test_case_21(self):
         # conditioned gmfs
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
+
+    def test_case_22(self):
+        # check that exported GMFs are importable
+        self.run_calc(case_22.__file__, 'job.ini')
+        df0 = self.calc.datastore.read_df('gmf_data')
+        gmfs, _, sites = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('gmf-data.csv', gmfs)
+        self.assertEqualFiles('sitemesh.csv', sites)
+        self.run_calc(case_22.__file__, 'job_from_csv.ini')
+        ds = self.calc.datastore
+
+        # check the 4 sites and 4x10 GMVs were imported correctly
+        self.assertEqual(len(ds['sitecol']), 4)
+        self.assertEqual(len(ds['gmf_data/sid']), 40)
+        df1 = self.calc.datastore.read_df('gmf_data')
+        for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
+            for g1, g2 in zip(df0[gmv], df1[gmv]):
+                assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
+
+    def test_case_22_bis(self):
+        # check that exported GMFs are importable, with custom_site_id
+        # and a filtered site collection
+        self.run_calc(case_22.__file__, 'job_bis.ini')
+        df0 = self.calc.datastore.read_df('gmf_data')
+        gmfs, _, sites = export(('gmf_data', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('gmfdata.csv', gmfs)
+        self.assertEqualFiles('sitemodel.csv', sites)
+        self.run_calc(case_22.__file__, 'job_from_csv.ini',
+                      gmfs_file='gmfdata.csv',sites_csv='sitemodel.csv')
+        self.assertEqual(str(self.calc.sitecol),
+                         '<SiteCollection with 4/5 sites>')
+        ds = self.calc.datastore
+        # check the 4 of 5 sites and 4x10 GMVs were imported correctly
+        self.assertEqual(len(ds['sitecol']), 4)
+        self.assertEqual(len(ds['gmf_data/sid']), 40)
+        df1 = self.calc.datastore.read_df('gmf_data')
+        for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
+            for g1, g2 in zip(df0[gmv], df1[gmv]):
+                assert abs(g1-g2) < 5E-6, (gmv, g1, g2)

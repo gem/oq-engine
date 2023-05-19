@@ -63,7 +63,7 @@ def get_ctx(names, values, grp):
 
 def main(gsim_str):
     gsim = valid.gsim(gsim_str)
-    imtls = {imt: [0] for imt in imts}
+    imtls = {im: [0] for im in imts}
     trt = gsim.DEFINED_FOR_TECTONIC_REGION_TYPE
     cmaker = contexts.ContextMaker(
         trt.value if trt else "*", [gsim], {'imtls': imtls})
