@@ -196,8 +196,9 @@ def event_based_risk(df, oqparam, monitor):
     :returns: a dictionary of arrays
     """
     with monitor('reading crmodel', measuremem=True):
-        taxos = numpy.arange(1, oqparam.num_taxos)
-        blks = [monitor.read(f'assets/{taxo}/ideductible') for taxo in taxos]
+        tss = monitor.read('taxo-start-stop')
+        blks = [monitor.read('assets/ideductible', slice(s0, s1))
+                for t, s0, s1 in tss]
         ideduc = numpy.concatenate(blks)
         aggids = monitor.read('aggids')
         crmodel = monitor.read('crmodel')
@@ -211,17 +212,17 @@ def event_based_risk(df, oqparam, monitor):
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
 
-    outs = gen_outputs(df, crmodel, taxos, rng, monitor)
+    outs = gen_outputs(df, crmodel, tss, rng, monitor)
     avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
                       monitor)
     return dict(avg=avg, alt=alt)
 
 
-def gen_outputs(df, crmodel, taxos, rng, monitor):
+def gen_outputs(df, crmodel, tss, rng, monitor):
     """
     :param df: GMF dataframe (a slice of events)
     :param crmodel: CompositeRiskModel instance
-    :param taxos: taxonomies as integers starting from 1
+    :param tss: triples (taxonomy index, start, stop)
     :param rng: random number generator
     :param monitor: Monitor instance
     """
@@ -229,9 +230,9 @@ def gen_outputs(df, crmodel, taxos, rng, monitor):
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=True)
     slices = performance.split_slices(df.eid.to_numpy(), 250_000)
-    for taxo in taxos:
+    for t, s0, s1 in tss:
         with ass_mon:
-            adf = monitor.read(f'assets/{taxo}').set_index('ordinal')
+            adf = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
         for s0, s1 in slices:
             gdf = df[s0:s1]
             with fil_mon:
@@ -277,9 +278,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        adf = self.assetcol.to_dframe()
-        for taxo, grp in adf.groupby('taxonomy'):
-            monitor.save(f'assets/{taxo}', grp)
+        adf = self.assetcol.to_dframe().sort_values('taxonomy')
+        monitor.save('assets', adf)
+        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
+        monitor.save('taxo-start-stop', tss)
         monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
@@ -399,7 +401,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         Compute risk from GMFs or ruptures depending on what is stored
         """
         oq = self.oqparam
-        oq.num_taxos = len(self.assetcol.tagcol.taxonomy)
         self.gmf_bytes = 0
         if 'gmf_data' not in self.datastore:  # start from ruptures
             if (oq.ground_motion_fields and
