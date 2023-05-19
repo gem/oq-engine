@@ -280,6 +280,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         adf = self.assetcol.to_dframe().sort_values('taxonomy')
         monitor.save('assets', adf)
         tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
+        # storing start-stop indices in a smart way, so that the assets are
+        # read from the workers in chunks of at most 1 million elements
         monitor.save('start-stop', compactify3(tss))
         monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
