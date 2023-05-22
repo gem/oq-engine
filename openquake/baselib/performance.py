@@ -340,18 +340,19 @@ class Monitor(object):
                 f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
         return True
 
-    def read(self, key):
+    def read(self, key, slc=slice(None)):
         """
         :param key: key in the _tmp.hdf5 file
+        :param slc: slice to read (default all)
         :return: unpickled object
         """
         tmp = self.filename[:-5] + '_tmp.hdf5'
         with hdf5.File(tmp, 'r') as f:
             dset = f[key]
             if '__pdcolumns__' in dset.attrs:
-                return f.read_df(key)
+                return f.read_df(key, slc=slc)
             elif dset.shape:
-                return dset[()]
+                return dset[slc]
             return pickle.loads(dset[()])
 
     def iter(self, genobj):
