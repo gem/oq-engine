@@ -347,7 +347,7 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
         # total distance is less than 12 km. This min/max constraint to rvolc
         # is detailed within the publications for the Zhao et al. 2016 GMMs
         ctx.rvolc = volc_perg.get_rvolcs(ctx, volc_arc_file)
-    
+
     x_ij = ctx.rrup
     # Get anelastic scaling term in equation 5
     qslh = np.where(ctx.ztor >= 50., C["eSLH"] * (0.02 * ctx.ztor - 1.0), 0)
@@ -561,7 +561,6 @@ class ZhaoEtAl2016Asc(GMPE):
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
             s_c, idx = _get_site_classification(ctx.vs30)
             volc_arc_file = self.volc_arc_file
-            ctx.rvolc[ctx.rvolc != float()] = 0 # Fix to zero if NaN from ctx
             sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
                        get_sof_term(trt, C, ctx) +
                        get_depth_term(trt, C, ctx) +
