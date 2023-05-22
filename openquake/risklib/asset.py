@@ -165,7 +165,8 @@ class Asset(object):
     asset_id
     ordinal
     tagidxs
-    location
+    lon
+    lat
     values
     ideductible
     _retrofitted
@@ -175,7 +176,8 @@ class Asset(object):
                  asset_id,
                  ordinal,
                  tagidxs,
-                 location,
+                 lon,
+                 lat,
                  values,
                  ideductible=0,
                  retrofitted=None):
@@ -186,8 +188,10 @@ class Asset(object):
             an integer identifier for the asset, used to order them
         :param tagidxs:
             a list of indices for the taxonomy and other tags
-        :param location:
-            geographic location of the asset
+        :param lon:
+            geographic longitude of the asset in degrees
+        :param lat:
+            geographic latitude of the asset in degrees
         :param dict values:
             asset values keyed by loss types
         :param ideductible:
@@ -200,7 +204,8 @@ class Asset(object):
         self.asset_id = asset_id
         self.ordinal = ordinal
         self.tagidxs = tagidxs
-        self.location = location
+        self.lon = lon
+        self.lat = lat
         self.values = values
         self.ideductible = ideductible
         self._retrofitted = retrofitted
@@ -716,9 +721,9 @@ def build_asset_array(calc, assets_by_site, area, tagnames=(), time_event=None):
                 elif field == 'site_id':
                     value = sid
                 elif field == 'lon':
-                    value = asset.location[0]
+                    value = asset.lon
                 elif field == 'lat':
-                    value = asset.location[1]
+                    value = asset.lat
                 elif field.startswith('occupants_'):
                     value = asset.values[field]
                 elif field == 'ideductible':
@@ -1086,6 +1091,11 @@ class Exposure(object):
                 raise nrml.DuplicatedID('asset_id=%s while processing %s' % (
                     asset_id, param['fname']))
             asset_refs.add(param['asset_prefix'] + asset_id)
+            location = asset['lon'], asset['lat']
+            if param['region'] and not geometry.Point(*location).within(
+                    param['region']):
+                param['out_of_region'] += 1
+                continue
             self._add_asset(idx, asset, param)
 
     def _add_asset(self, idx, asset, param):
@@ -1104,14 +1114,7 @@ class Exposure(object):
             retrofitted = None
         asset_id = asset['id']
         prefix = param['asset_prefix']
-        # FIXME: in case of an exposure split in CSV files the line number
-        # is None because param['fname'] points to the .xml file :-(
         taxonomy = asset['taxonomy']
-        location = asset['lon'], asset['lat']
-        if param['region'] and not geometry.Point(*location).within(
-                param['region']):
-            param['out_of_region'] += 1
-            return
         dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
                if tagname not in ('country', 'exposure') and
                asset[tagname] != '?'}
@@ -1143,15 +1146,15 @@ class Exposure(object):
             raise ValueError("Invalid Exposure. "
                              "Missing cost %s for asset %s" % (
                                  missing, asset_id))
-        ass = Asset(prefix + asset_id, idx, idxs, location, values,
-                    ideductible, retrofitted)
+        ass = Asset(prefix + asset_id, idx, idxs, asset['lon'], asset['lat'],
+                    values, ideductible, retrofitted)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
         """
         :returns: (Mesh instance, assets_by_site list)
         """
-        assets_by_loc = general.groupby(self, key=lambda a: a.location)
+        assets_by_loc = general.groupby(self, key=lambda a: (a.lon, a.lat))
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
