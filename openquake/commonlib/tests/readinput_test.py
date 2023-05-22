@@ -490,8 +490,8 @@ description = Description containing a % sign''')
             ass.tags['taxonomy']
             ass.number
             ass.area
-            ass.location[0]
-            ass.location[1]
+            ass.lon,
+            ass.lat,
             ass.tags.get('geometry')
 
 

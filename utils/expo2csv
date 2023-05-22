@@ -46,15 +46,14 @@ def expo2csv(job_ini):
     header.extend(occupancy_periods)
     header.extend(exposure.tagcol.tagnames)
     for asset in exposure.assets:
-        row = [asset.asset_id, asset.location[0], asset.location[1],
-               asset.number]
+        row = [asset.asset_id, asset.lon, asset.lat, asset.number]
         if area:
             row.append(asset.area)
         for costname in exposure.cost_types['name']:
             if costname != 'occupants':
                 row.append(asset.values[costname])
         if exposure.retrofitted:
-            row.append(asset._retrofitted)
+            row.append(asset.retrofitted)
         for time_event in occupancy_periods:
             row.append(asset.values['occupants_' + time_event])
         for tagname, tagidx in zip(exposure.tagcol.tagnames, asset.tagidxs):
