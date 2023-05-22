@@ -87,8 +87,8 @@ class CostCalculator(object):
         if loss_type in ('number', 'area'):
             return values[loss_type]
     
-        area = values['area']
-        number = values['number']
+        area = values.get('area', 1.0)
+        number = values.get('number', 1.0)
         cost = values.get(loss_type)
         if cost is None:
             return numpy.nan
@@ -986,17 +986,15 @@ class Exposure(object):
                 ignore_missing_costs)
         else:
             array = exposure._read_csv(errors)
-        param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
-            ['occupants'])
+        param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
+            'occupants'}
         exposure._populate_from(array, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
-        # sanity checks
-        values = any(len(ass.values) for ass in exposure.assets)
-        assert values, 'Could not find any value??'
+
         exposure.param = param
         return exposure
 
@@ -1088,6 +1086,7 @@ class Exposure(object):
     def _populate_from(self, asset_array, param, check_dupl):
         asset_refs = set()
         for idx, asset in enumerate(asset_array):
+            self.area = 'area' in asset.dtype.names
             asset_id = asset['id']
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
@@ -1096,7 +1095,6 @@ class Exposure(object):
                     asset_id, param['fname']))
             asset_refs.add(param['asset_prefix'] + asset_id)
             self._add_asset(idx, asset, param)
-        self.area = 'area' in asset.dtype.names
 
     def _add_asset(self, idx, asset, param):
         values = {}
@@ -1150,10 +1148,8 @@ class Exposure(object):
             raise ValueError("Invalid Exposure. "
                              "Missing cost %s for asset %s" % (
                                  missing, asset_id))
-        try:
+        if self.area:
             values['area'] = asset['area']
-        except ValueError:
-            values['area'] = 1
         ass = Asset(prefix + asset_id, idx, idxs, location, values,
                     ideductible, retrofitted, self.cost_calculator)
         self.assets.append(ass)
