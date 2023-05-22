@@ -178,8 +178,7 @@ class Asset(object):
                  location,
                  values,
                  ideductible=0,
-                 retrofitted=None,
-                 calc=costcalculator):
+                 retrofitted=None):
         """
         :param asset_id:
             a short string identifier
