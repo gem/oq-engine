@@ -169,7 +169,7 @@ class Asset(object):
     lat
     values
     ideductible
-    _retrofitted
+    retrofitted
     tags'''.split()  # save 20% memory
 
     def __init__(self,
@@ -208,7 +208,7 @@ class Asset(object):
         self.lat = lat
         self.values = values
         self.ideductible = ideductible
-        self._retrofitted = retrofitted
+        self.retrofitted = retrofitted
 
     def __getattr__(self, name):
         return self.values[name]
@@ -694,7 +694,7 @@ def build_asset_array(calc, assets_by_site, area, tagnames=(), time_event=None):
     # loss_types can be ['value-business_interruption', 'value-contents',
     # 'value-nonstructural', 'value-occupants', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
-    retro = ['retrofitted'] if first_asset._retrofitted else []
+    retro = ['retrofitted'] if first_asset.retrofitted else []
     float_fields = loss_types + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagnames
                   if name not in ('id', 'site_id')]
@@ -729,7 +729,7 @@ def build_asset_array(calc, assets_by_site, area, tagnames=(), time_event=None):
                 elif field == 'ideductible':
                     value = asset.ideductible
                 elif field == 'retrofitted':
-                    value = asset._retrofitted
+                    value = asset.retrofitted
                 elif field in tagnames:
                     value = asset.tagidxs[tagi[field]]
                 else:
