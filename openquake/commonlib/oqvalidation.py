@@ -1047,10 +1047,20 @@ class OqParam(valid.ParamSet):
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
     total_losses = valid.Param(
-        valid.Choice('structural+nonstructural',
+        valid.Choice('structural',
+                     'nonstructural',
+                     'business_interruption',
+                     'contents',
+                     'structural+nonstructural',
+                     'structural+business_interruption',
                      'structural+contents',
+                     'structural+nonstructural+business_interruption',
+                     'structural+nonstructural+contents',
+                     'structural+nonstructural+business_interruption+contents',
+                     'nonstructural+business_interruption',
                      'nonstructural+contents',
-                     'structural+nonstructural+contents'), None)
+                     'nonstructural+business_interruption+contents',
+                     ), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
