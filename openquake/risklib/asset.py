@@ -709,7 +709,7 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
          ('ordinal', U32), ('lon', F32), ('lat', F32),
          ('site_id', U32), ('value-number', F32)] + area_field + [
-             (str(name), float) for name in float_fields] + int_fields)
+             (str(name), F32) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0

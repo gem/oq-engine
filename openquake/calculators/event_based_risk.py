@@ -278,6 +278,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
         adf = self.assetcol.to_dframe().sort_values('taxonomy')
+        del adf['id']
         monitor.save('assets', adf)
         tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
         # storing start-stop indices in a smart way, so that the assets are
