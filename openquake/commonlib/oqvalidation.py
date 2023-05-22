@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 import re
 import ast
@@ -30,7 +29,7 @@ import numpy
 
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.imt import from_string, sort_by_imt
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
@@ -574,6 +573,9 @@ postproc_args:
   Example: *postproc_args = {'imt': 'PGA'}*
   Default: {} (no arguments)
 
+prefer_global_site_params:
+  INTERNAL. Automatically set by the engine.
+
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.
@@ -782,7 +784,7 @@ total_losses:
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: 99
+  Default: no default
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -863,28 +865,32 @@ def check_same_levels(imtls):
 
 class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
-    KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
-                    'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-                    'source_model_logic_tree', 'hazard_curves',
-                    'insurance', 'reinsurance', 'ins_loss',
-                    'job_ini', 'multi_peril', 'taxonomy_mapping',
-                    'fragility', 'consequence', 'reqv', 'input_zip',
-                    'reqv_ignore_sources',
-                    'amplification', 'station_data',
-                    'nonstructural_vulnerability',
-                    'nonstructural_fragility',
-                    'nonstructural_consequence',
-                    'structural_vulnerability',
-                    'structural_fragility',
-                    'structural_consequence',
-                    'contents_vulnerability',
-                    'contents_fragility',
-                    'contents_consequence',
-                    'business_interruption_vulnerability',
-                    'business_interruption_fragility',
-                    'business_interruption_consequence',
-                    'structural_vulnerability_retrofitted',
-                    'occupants_vulnerability'}
+
+    KNOWN_INPUTS = {
+        'rupture_model', 'exposure', 'site_model',
+        'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+        'source_model_logic_tree', 'hazard_curves',
+        'insurance', 'reinsurance', 'ins_loss',
+        'job_ini', 'multi_peril', 'taxonomy_mapping',
+        'fragility', 'consequence', 'reqv', 'input_zip',
+        'reqv_ignore_sources', 'amplification', 'station_data',
+        'nonstructural_vulnerability',
+        'nonstructural_fragility',
+        'nonstructural_consequence',
+        'structural_vulnerability',
+        'structural_fragility',
+        'structural_consequence',
+        'contents_vulnerability',
+        'contents_fragility',
+        'contents_consequence',
+        'business_interruption_vulnerability',
+        'business_interruption_fragility',
+        'business_interruption_consequence',
+        'structural_vulnerability_retrofitted',
+        'occupants_vulnerability',
+        'area_vulnerability',
+        'number_vulnerability',
+    }
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
                'quantile_hazard_curves': 'quantiles',
@@ -991,6 +997,7 @@ class OqParam(valid.ParamSet):
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
     postproc_func = valid.Param(valid.simple_id, '')
     postproc_args = valid.Param(valid.dictionary, {})
+    prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -1044,8 +1051,7 @@ class OqParam(valid.ParamSet):
                      'structural+contents',
                      'nonstructural+contents',
                      'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(
-        lambda s: valid.positivefloat(s) or 1E-9, 99.)
+    truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1107,10 +1113,11 @@ class OqParam(valid.ParamSet):
 
         inp = dic.get('inputs', {})
         if 'sites' in inp:
-            if 'site_model' in inp:
+            if inp.get('site_model'):
                 raise NameError('Please remove sites, you should use '
                                 'only site_model')
             inp['site_model'] = [inp.pop('sites')]
+            self.prefer_global_site_params = True
 
     def __init__(self, **names_vals):
         if '_log' in names_vals:  # called from engine
@@ -1203,6 +1210,15 @@ class OqParam(valid.ParamSet):
 
         if self.job_type == 'risk':
             self.check_aggregate_by()
+        if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
+                and 'multi_peril' not in self.inputs
+                and self.inputs['job_ini'] != '<in-memory>'
+                and self.calculation_mode != 'scenario'
+                and not self.hazard_calculation_id):
+            if not hasattr(self, 'truncation_level'):
+                raise InvalidFile("Missing truncation_level in %s" %
+                                  self.inputs['job_ini'])
+
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
 
@@ -1437,7 +1453,7 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = self.hazard_imtls or self.risk_imtls
-        return DictArray(imtls) if imtls else {}
+        return DictArray(sort_by_imt(imtls)) if imtls else {}
 
     @property
     def min_iml(self):

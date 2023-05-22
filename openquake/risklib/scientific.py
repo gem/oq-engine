@@ -50,7 +50,7 @@ structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins
-reinsurance claim'''.split())
+reinsurance claim area number'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
@@ -1170,8 +1170,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         lims = j.insurance_limit.to_numpy() * values
         ids_of_invalid_assets = aids[deds > lims]
         if len(ids_of_invalid_assets):
-            invalid_assets = set(asset_df['id'][aid].decode('utf8')
-                                 for aid in ids_of_invalid_assets)
+            invalid_assets = set(ids_of_invalid_assets)
             raise ValueError(
                 f"Please check deductible values. Values larger than the"
                 f" insurance limit were found for asset(s) {invalid_assets}.")

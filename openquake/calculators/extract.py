@@ -232,20 +232,21 @@ def extract_realizations(dstore, dummy):
     dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
     scenario = 'scenario' in oq.calculation_mode
-    rlzs = dstore['full_lt'].rlzs
+    full_lt = dstore['full_lt']
+    rlzs = full_lt.rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
-    if scenario:
+    if scenario and len(full_lt.trts) == 1:  # only one TRT
         gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
         # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
         arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
-    else:
+    else:  # use the compact representation for the branch paths
         arr['branch_path'] = encode(rlzs['branch_path'])
     return arr
 
@@ -1124,8 +1125,15 @@ def extract_disagg(dstore, what):
     for k, ax in zip(disag_tup, axis):
         attrs[k.lower()] = ax
     attrs['imt'] = qdict['imt'] if 'imt' in qdict else imts
+    imt = attrs['imt'][0]
     if len(oq.poes) == 0:
-        attrs['poe'] = [numpy.nan]
+        mean_curve = dstore.sel(
+            'hcurves-stats', imt=imt, stat='mean')[sid, 0, 0]
+        # using loglog interpolation like in compute_hazard_maps
+        attrs['poe'] = numpy.exp(
+            numpy.interp(numpy.log(oq.iml_disagg[imt]),
+                         numpy.log(oq.imtls[imt]),
+                         numpy.log(mean_curve.reshape(-1))))
     elif 'poe_id' in qdict:
         attrs['poe'] = [oq.poes[p] for p in poei]
     else:
@@ -1165,16 +1173,16 @@ def norm(qdict, params):
     return dic
 
 
-@extract.add('rates_by_src')
-def extract_rates_by_src(dstore, what):
+@extract.add('mean_rates_by_src')
+def extract_mean_rates_by_src(dstore, what):
     """
-    Extract the rates_by_src information.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/rates_by_src?site_id=0&imt=PGA&poe=.001
+    Extract the mean_rates_by_src information.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/mean_rates_by_src?site_id=0&imt=PGA&poe=.001
     """
     qdict = parse(what)
-    dset = dstore['rates_by_src/array']
+    dset = dstore['mean_rates_by_src/array']
     oq = dstore['oqparam']
-    src_id = dstore['rates_by_src/src_id'][:]
+    src_id = dstore['mean_rates_by_src/src_id'][:]
     [imt] = qdict['imt']
     [poe] = qdict['poe']
     [site_id] = qdict.get('site_id', ['0'])
@@ -1213,7 +1221,7 @@ def extract_disagg_layer(dstore, what):
     edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    hmap4 = dstore['hmap4'][:]
+    hmap3 = dstore['hmap3'][:]  # shape (N, M, P)
     best_rlzs = dstore['best_rlzs'][:]
     arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
@@ -1231,7 +1239,7 @@ def extract_disagg_layer(dstore, what):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
                     rec[key] = arr[kind][sid, ..., m, p, :] @ ws
-                rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
+                rec['iml-%s-%s' % (imt, poe)] = hmap3[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 
@@ -1382,6 +1390,13 @@ def extract_risk_stats(dstore, what):
     weights = dstore['weights'][:]
     return calc_stats(df, kfields, stats, weights)
 
+
+@extract.add('med_gmv')
+def extract_med_gmv(dstore, what):
+    """
+    Extract med_gmv array for the given source
+    """
+    return extract_(dstore, 'med_gmv/' + what)
 
 # #####################  extraction from the WebAPI ###################### #
 

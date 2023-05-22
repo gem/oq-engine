@@ -161,7 +161,7 @@ agg_id
                           insurance_csv="{'structural': 'policy_ins_ko.csv'}")
         self.assertIn(
             "Please check deductible values. Values larger than the insurance"
-            " limit were found for asset(s) {'a3'}.",
+            " limit were found for asset(s) {3}.",
             str(ctx.exception))
 
     def test_case_1f(self):
@@ -256,6 +256,11 @@ agg_id
             ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0&'
              'loss_type=structural', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_taxo.csv', fname, delta=1E-5)
+
+        # losses by rupture
+        df = view('risk_by_rup:structural', self.calc.datastore)
+        tmp = gettemp(text_table(df, ext='org'))
+        self.assertEqualFiles('expected/risk_by_rup.org', tmp)
 
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:

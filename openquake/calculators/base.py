@@ -893,7 +893,11 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
-                self.sitecol.assoc(sm, assoc_dist)
+                if oq.prefer_global_site_params:
+                    self.sitecol.set_global_params(oq)
+                else:
+                    # use the site model parameters
+                    self.sitecol.assoc(sm, assoc_dist)
                 if oq.override_vs30:
                     # override vs30, z1pt0 and z2pt5
                     names = self.sitecol.array.dtype.names
@@ -997,7 +1001,12 @@ class HazardCalculator(BaseCalculator):
         if oq.postproc_func:
             func = getattr(postproc, oq.postproc_func).main
             if 'csm' in inspect.getargspec(func).args:
-                oq.postproc_args['csm'] = self.csm
+                if hasattr(self, 'csm'):  # already there
+                    csm = self.csm
+                else:  # read the csm from the parent calculation
+                    csm = self.datastore.parent['_csm']
+                    csm.full_lt = self.datastore.parent['full_lt'].init()
+                oq.postproc_args['csm'] = csm
             func(self.datastore, **oq.postproc_args)
 
 

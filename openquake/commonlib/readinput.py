@@ -278,7 +278,7 @@ def get_params(job_ini, kw={}):
 
     base_path = os.path.dirname(job_ini)
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
-    cp = configparser.ConfigParser()
+    cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
     _warn_about_duplicates(cp)
     dic = {}
@@ -710,8 +710,7 @@ def get_full_lt(oqparam, branchID=''):
         if trt in oqparam.discard_trts.split(','):
             continue
         elif trt.lower() not in trts_lower:
-            raise ValueError('Unknown TRT=%s in %s [reqv]' %
-                             (trt, oqparam.inputs['job_ini']))
+            logging.warning('Unknown TRT=%s in [reqv] section' % trt)
     gsim_lt = get_gsim_lt(oqparam, trts or ['*'])
     if len(oqparam.source_id) == 1:
         oversampling = 'reduce-rlzs'
@@ -974,11 +973,11 @@ def get_station_data(oqparam):
     return station_data, station_sites, imts
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
-    :param cost_types: the expected cost types
+    :param exp_types: the expected loss types
     :returns: (site collection, asset collection, discarded)
     """
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
@@ -1018,14 +1017,21 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, cost_types=()):
     assetcol = asset.AssetCollection(
         Global.exposure, assets_by_site, oqparam.time_event,
         oqparam.aggregate_by)
-    if assetcol.occupancy_periods:
-        missing = set(cost_types) - set(
-            Global.exposure.cost_types['name']) - set(['occupants'])
-    else:
-        missing = set(cost_types) - set(Global.exposure.cost_types['name'])
-    if missing and not oqparam.calculation_mode.endswith('damage'):
-        raise InvalidFile('The exposure %s is missing %s' %
-                          (oqparam.inputs['exposure'], missing))
+    u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
+    idx = c.argmax()  # index of the most common taxonomy
+    tax = assetcol.tagcol.taxonomy[u[idx]]
+    logging.info('Found %d taxonomies with ~%.1f assets each',
+                 len(u), len(assetcol) / len(u))
+    logging.info('The most common taxonomy is %s with %d assets', tax, c[idx])
+
+    # check on missing fields in the exposure
+    if 'risk' in oqparam.calculation_mode:
+        for exp_type in exp_types:
+            if not any(exp_type in name
+                       for name in assetcol.array.dtype.names):
+                raise InvalidFile('The exposure %s is missing %s' %
+                                  (oqparam.inputs['exposure'], exp_type))
+
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
             and sitecol is not sitecol.complete):

@@ -35,26 +35,28 @@ from openquake.baselib.general import (
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
-from openquake.hazardlib import logictree, calc
+from openquake.hazardlib import logictree, calc, source
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util
 from openquake.risklib.scientific import (
-    losses_by_period, return_periods, LOSSID, LOSSTYPE)
+    losses_by_period, return_periods, LOSSID)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
 F32 = numpy.float32
+F64 = numpy.float64
 U32 = numpy.uint32
 U8 = numpy.uint8
 
 # a dictionary of views datastore -> array
 view = CallableDict(keyfunc=lambda s: s.split(':', 1)[0])
-
+code2cls = source.rupture.code2cls
 
 # ########################## utility functions ############################## #
+
 
 def form(value):
     """
@@ -107,6 +109,7 @@ def dt(names):
     if isinstance(names, str):
         names = names.split()
     return numpy.dtype([(name, object) for name in names])
+
 
 class HtmlTable(object):
     """
@@ -259,18 +262,21 @@ def view_slow_sources(token, dstore, maxrows=20):
     return data[::-1][:maxrows]
 
 
-@view.add('slow_ruptures')
-def view_slow_ruptures(token, dstore, maxrows=25):
+@view.add('rup_info')
+def view_rup_info(token, dstore, maxrows=25):
     """
     Show the slowest ruptures
     """
-    fields = ['code', 'n_occ', 'mag', 'trt_smr']
-    rups = dstore['ruptures'][()][fields]
-    time = dstore['gmf_data/time_by_rup'][()]
-    arr = util.compose_arrays(rups, time)
-    arr = arr[arr['nsites'] > 0]
-    arr.sort(order='time')
-    return arr[-maxrows:]
+    if not code2cls:
+        code2cls.update(source.rupture.BaseRupture.init())
+    fields = ['code', 'n_occ', 'mag']
+    rups = dstore.read_df('ruptures', 'id')[fields]
+    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    df = rups.join(info).sort_values('time', ascending=False)
+    df['surface'] = [code2cls[code][1].__name__ for code in df.code]
+    del df['task_no']
+    del df['code']
+    return df[:maxrows]
 
 
 @view.add('contents')
@@ -672,6 +678,8 @@ def view_required_params_per_trt(token, dstore):
             req.update(gsim.requires())
         req_params = sorted(req - {'mag'})
         gsim_str = ' '.join(map(repr, gsims)).replace('\n', '\\n')
+        if len(gsim_str) > 160:
+            gsim_str = ', '.join(repr(gsim).split('\n')[0] for gsim in gsims)
         tbl.append((trt, gsim_str, req_params))
     return text_table(tbl, header='trt gsims req_params'.split(),
                       fmt=scientificformat)
@@ -753,7 +761,7 @@ def view_task_hazard(token, dstore):
     num_ruptures = sdata.nrupts.sum()
     eff_sites = sdata.nsites.sum()
     msg = ('taskno={:_d}, fragments={:_d}, num_ruptures={:_d}, '
-             'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
+           'eff_sites={:_d}, weight={:.1f}, duration={:.1f}s').format(
                  taskno, len(sdata), num_ruptures, eff_sites,
                  rec['weight'], rec['duration'])
     return msg
@@ -952,7 +960,7 @@ def view_mean_disagg(token, dstore):
     Display mean quantities for the disaggregation. Useful for checking
     differences between two calculations.
     """
-    N, M, P, Z = dstore['hmap4'].shape
+    N, M, P = dstore['hmap3'].shape
     tbl = []
     kd = {key: dset[:] for key, dset in sorted(dstore['disagg-rlzs'].items())}
     oq = dstore['oqparam']
@@ -1159,7 +1167,7 @@ def view_event_loss_table(token, dstore):
 @view.add('risk_by_event')
 def view_risk_by_event(token, dstore):
     """
-    Display the top 20 losses of the aggregate loss table as a TSV.
+    Display the top 30 losses of the aggregate loss table as a TSV.
     If aggregate_by was missing in the calculation, returns nothing.
 
     $ oq show risk_by_event:<loss_type>
@@ -1172,9 +1180,38 @@ def view_risk_by_event(token, dstore):
     df = df[df.agg_id == df.agg_id.max()].sort_values('loss', ascending=False)
     del df['agg_id']
     out = io.StringIO()
-    df[:49].to_csv(out, sep='\t', index=False, float_format='%.1f',
+    df[:30].to_csv(out, sep='\t', index=False, float_format='%.1f',
                    line_terminator='\r\n')
     return out.getvalue()
+
+
+@view.add('risk_by_rup')
+def view_risk_by_rup(token, dstore):
+    """
+    Display the top 30 aggregate losses by rupture ID. Usage:
+
+    $ oq show risk_by_rup:<loss_type>
+    """
+    _, ltype = token.split(':')
+    loss_id = LOSSID[ltype]
+    K = dstore['risk_by_event'].attrs.get('K', 0)
+    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id, agg_id=K))
+    del df['loss_id']
+    del df['agg_id']
+    del df['variance']
+    rupids = dstore['events']['rup_id']
+    df['rup_id'] = rupids[df.event_id]
+    del df['event_id']
+    loss_by_rup = df.groupby('rup_id').sum()
+    rdf = dstore.read_df('ruptures', 'id')
+    info = dstore.read_df('gmf_data/rup_info', 'rup_id')
+    df = loss_by_rup.join(rdf).join(info)[
+        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2',
+         'nsites', 'rrup']]
+    for field in df.columns:
+        if field not in ('mag', 'n_occ'):
+            df[field] = numpy.round(F64(df[field]), 1)
+    return df.sort_values('loss', ascending=False)[:30]
 
 
 @view.add('delta_loss')
@@ -1435,7 +1472,7 @@ def view_relevant_sources(token, dstore):
     """
     imt = token.split(':')[1]
     poe = dstore['oqparam'].poes[0]
-    aw = extract(dstore, f'rates_by_src?imt={imt}&poe={poe}')
+    aw = extract(dstore, f'mean_rates_by_src?imt={imt}&poe={poe}')
     poes = aw.array['poe']  # for each source in decreasing order
     max_poe = poes[0]
     return aw.array[poes > .1 * max_poe]

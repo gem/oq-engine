@@ -433,17 +433,32 @@ If you do not set the ``aggregate_by`` parameter
 you will still be able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
 
+.. _aggregating_by_multiple_tags:
+
 Aggregating by multiple tags
 ----------------------------
 
-The engine also supports aggregation my multiple tags. For instance
-the second event based risk demo (the file ``job_eb.ini``) has a line
+The engine also supports aggregation by multiple tags. 
+Multiple tags can be indicated as multi-tag and/or various single-tag aggregations:
 
-   ``aggregate_by = NAME_1, taxonomy``
+``aggregate_by = NAME_1, taxonomy``
+
+or
+
+``aggregate_by = NAME_1; taxonomy``
+
+Comma ``,`` separated values will generate keys for all the possible 
+combinations of the indicated tag values, while semicolon ``;`` 
+will generate keys for the single tags.
+
+For instance the second event based risk demo 
+(the file ``job_eb.ini``) has a line
+
+``aggregate_by = NAME_1, taxonomy``
 
 and it is able to aggregate both on geographic region (``NAME_1``) and
-on taxonomy. There are 25 possible combinations, that you can see with
-the command::
+on ``taxonomy``. There are 25 possible combinations, that you can see with
+the command `oq show agg_keys`::
 
    $ oq show agg_keys
    | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
@@ -516,6 +531,15 @@ used. In the case of the demo actually only 20,877 rows are nonzero::
           event_id  agg_id  loss_id           loss      variance
    ...
    [20877 rows x 5 columns]
+
+It is also possible to perform the aggregation by various single-tag aggregations,
+using the ``;`` separator instead of ``,``. For example, a line like
+
+   ``aggregate_by = NAME_1; taxonomy``
+
+would produce first the aggregation by geographic region (``NAME_1``), then
+by ``taxonomy``. In this case, instead of producing 5 x 5 combinations, only
+5 + 5 outputs would be obtained.
 
 
 Rupture sampling: how does it work?
@@ -2036,9 +2060,16 @@ calculations::
 
 **Additional comments:**
 
-- ``aggregate_by``: it is possible to define multiple aggregation keys.
+- ``aggregate_by``: it is possible to define multiple aggregation keys
+  (see :ref:`aggregating_by_multiple_tags`).
   However, for reinsurance calculations the ``policy`` key must be present,
   otherwise an error message will be raised.
+  In the following example, multiple aggregation keys are used:
+
+      ``aggregate_by = policy; tag1``
+
+  In this case, aggregated loss curves will be produced also for ``tag1`` and ``policy``,
+  while reinsurance outputs will only be produced for the policy.
 
 - ``reinsurance_file``: This dictionary associates the reinsurance information
   to a given the loss_type (the engine supports structural, nonstructural, 
@@ -2557,7 +2588,7 @@ engine with time-honored Fortran codes using the same approximation.
 
 You can enable it in the engine by adding a ``[reqv]`` section to the
 job.ini, like in our example in
-openquake/qa_tests_data/classical/case_2/job.ini::
+openquake/qa_tests_data/logictree/case_02/job.ini::
 
   reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
                'stable shallow crust': 'lookup_sta.hdf5'}
@@ -2572,7 +2603,7 @@ there are 26 magnitudes ranging from 6.05 to 8.55) and N is the
 number of epicenter distances (in the examples ranging from 1 km to 1000 km).
 
 Depending on the tectonic region type and rupture magnitude, the
-engine converts the epicentral distance ``repi` into an equivalent
+engine converts the epicentral distance ``repi`` into an equivalent
 distance by looking at the lookup table and use it to determine the
 ``rjb`` and ``rrup`` distances, instead of the regular routines. This
 means that within this approximation ruptures are treated as

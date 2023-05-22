@@ -446,11 +446,12 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         job_ini = general.gettemp('''\
 [general]
 description = Exposure with missing cost_types
-calculation_mode = scenario
+calculation_mode = scenario_risk
+truncation_level = 5
 exposure_file = %s''' % os.path.basename(self.exposure4))
         oqparam = readinput.get_oqparam(job_ini)
         with self.assertRaises(InvalidFile) as ctx:
-            readinput.get_sitecol_assetcol(oqparam, cost_types=['structural'])
+            readinput.get_sitecol_assetcol(oqparam, exp_types=['structural'])
         self.assertIn("is missing", str(ctx.exception))
 
     def test_Lon_instead_of_lon(self):
@@ -465,6 +466,12 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
             asset.Exposure.read([fname])
         self.assertIn('''\
 Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
+
+    def test_percent_in_description(self):
+        job_ini = general.gettemp('''\
+[general]
+description = Description containing a % sign''')
+        readinput.get_params(job_ini)
 
     def test_GEM4ALL(self):
         # test a call used in the GEM4ALL importer, pure XML
@@ -483,8 +490,8 @@ Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
             ass.tags['taxonomy']
             ass.number
             ass.area
-            ass.location[0]
-            ass.location[1]
+            ass.lon,
+            ass.lat,
             ass.tags.get('geometry')
 
 
@@ -507,13 +514,13 @@ class GetCompositeSourceModelTestCase(unittest.TestCase):
                       str(c.exception))
 
     def test_wrong_trts_in_reqv(self):
-        # invalid TRT in job.ini [reqv]
+        # unknown TRT in job.ini [reqv]
         oq = readinput.get_oqparam('job.ini', case_02)
         fname = oq.inputs['reqv'].pop('active shallow crust')
         oq.inputs['reqv']['act shallow crust'] = fname
-        with self.assertRaises(ValueError) as ctx:
+        with mock.patch('logging.warning') as w:
             readinput.get_composite_source_model(oq)
-        self.assertIn('Unknown TRT=act shallow crust', str(ctx.exception))
+        self.assertIn('Unknown TRT=act shallow crust', w.call_args[0][0])
 
     def test_extra_large_source(self):
         raise unittest.SkipTest('Removed check on MAX_EXTENT')

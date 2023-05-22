@@ -84,11 +84,9 @@ AUTHENTICATION_BACKENDS = ()
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
-# On Unix systems, a value of None will cause Django to use the same
-# timezone as the operating system.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = 'Europe/Rome'
+TIME_ZONE = 'UTC'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -213,12 +211,16 @@ except ImportError:
         # settings in this file only will be used
         pass
 
-if TEST:
-    APPLICATION_MODE = 'aelo'
+# NOTE: the OQ_APPLICATION_MODE environment variable, if defined, overrides
+# both the default setting and the one specified in the local settings
+APPLICATION_MODE = os.environ.get('OQ_APPLICATION_MODE', APPLICATION_MODE)
+
+if TEST and APPLICATION_MODE.upper() == 'AELO':
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     # FIXME: this is mandatory, but it writes anyway in /tmp/app-messages.
     #        We should redefine it to a different directory for each test,
-    #        in order to avoid concurrency issues in case tests run in parallel
+    #        in order to avoid concurrency issues in case tests run in
+    #        parallel
     EMAIL_FILE_PATH = '/tmp/app-messages'
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
@@ -248,6 +250,34 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
                 f' must all be defined')
 
 if LOCKDOWN:
+
+    # do not log to file unless running through the webui
+    if getpass.getuser() == 'openquake':  # the user that runs the webui
+        try:
+            log_filename = os.path.join(WEBUI_ACCESS_LOG_DIR,  # NOQA
+                                        'webui-access.log')
+        except NameError:
+            # In case WEBUI_ACCESS_LOG_DIR is not defined, we use the standard
+            # handler, without logging to file
+            pass
+        else:
+            LOGGING['formatters']['timestamp'] = {
+                'format': (
+                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            }
+            LOGGING['handlers']['file'] = {
+                'level': 'DEBUG',
+                'class': 'logging.FileHandler',
+                'formatter': 'timestamp',
+                'filename': log_filename,
+                'mode': 'a'
+            }
+            LOGGING['loggers']['openquake.server.signals'] = {
+                'handlers': ['file'],
+                'level': 'DEBUG',
+                'propagate': False,
+            }
+
     AUTHENTICATION_BACKENDS += (
         'django.contrib.auth.backends.ModelBackend',
         # 'dpam.backends.PAMBackend',

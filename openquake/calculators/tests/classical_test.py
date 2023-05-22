@@ -15,7 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import os
+
 import gzip
 import numpy
 from openquake.baselib import parallel, general
@@ -241,6 +241,12 @@ class ClassicalTestCase(CalculatorTestCase):
         # spectral averaging
         self.assert_curves_ok([
             'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
+
+        # test prefer_global_site_params
+        ae(self.calc.sitecol.vs30, [600])  # read vs30 from site_model.csv
+        self.run_calc(case_34.__file__, 'job.ini', sites_file='site_model.csv',
+                      site_model_file='', calculation_mode='preclassical')
+        ae(self.calc.sitecol.vs30, [700])  # read vs30 from the job.ini
 
     def test_case_35(self):
         # cluster
@@ -586,24 +592,25 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
+        oq = self.calc.oqparam
+        L = oq.imtls.size  # 25 levels x 9 IMTs
+        L1 = L // len(oq.imtls)
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
-        L = self.calc.oqparam.imtls.size  # 25 levels x 8 IMTs
-        for gid, gsim in enumerate(gsims):
-            df_for_gid = df[df.gid == gid]
+        for g, gsim in enumerate(gsims):
+            curve = numpy.zeros(L1, oq.imt_dt())
+            df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
-            poes[df_for_gid.lid] = df_for_gid.poe
-            csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
-            gsim_str = gsim.__class__.__name__
+            poes[df_for_g.lid] = df_for_g.poe
+            for im in oq.imtls:
+                curve[im] = poes[oq.imtls(im)]
+            gs = gsim.__class__.__name__
             if 'submodel' in gsim._toml:
-                gsim_str += '_' + gsim.kwargs['submodel']
-            expected_csv = os.path.join(os.path.dirname(os.path.abspath(case_76.__file__)), 'expected/', '%s.csv' % gsim_str)
-            with open(expected_csv, 'r') as f:
-                expected_poes = numpy.array([float(line.strip()) for line in f])
-            for i in range(len(poes)):
-                self.assertAlmostEqual(poes[i], expected_poes[i], delta = 0.01)
+                gs += '_' + gsim.kwargs['submodel']
+            got = general.gettemp(text_table(curve, ext='org'))
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=2E-5)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
@@ -656,8 +663,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_82(self):
         # two mps, only one should be collapsed and use reqv
         self.run_calc(case_82.__file__, 'job.ini')
-        [f1] = export(('rates_by_src', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/rates_by_src.csv', f1)
+        [f1] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_rates_by_src.csv', f1)
 
     def test_case_83(self):
         # Non-ergodic Zhao
@@ -670,5 +677,5 @@ class ClassicalTestCase(CalculatorTestCase):
         # one is collapsed using reqv, while the other two are specified
         # as 'not collapsed' in the job file field reqv_ignore_sources
         self.run_calc(case_84.__file__, 'job.ini')
-        [f] = export(('rates_by_src', 'csv'), self.calc.datastore)
+        [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/rbs.csv', f)

@@ -109,7 +109,8 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.run_calc(case_04.__file__, 'job.ini',
                       calculation_mode='preclassical')
         hc_id = str(self.calc.datastore.calc_id)
-        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id)
+        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id,
+                      postproc_func='disagg_by_rel_sources')
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curve-mean.csv', fname)
@@ -118,9 +119,9 @@ class LogicTreeTestCase(CalculatorTestCase):
         # use_rates, two sources, two uncertainties per source, full_enum
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
 
-        # test mean_disagg_bysrc
-        [fname] = export(('mean_disagg_bysrc', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/mean_disagg_bysrc.csv', fname)
+        # test mean_disagg_by_src
+        [fname] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_disagg_by_src.csv', fname)
 
     def test_case_05_bis(self):
         # use_rates, two sources, two uncertainties per source, sampling
@@ -180,7 +181,8 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # test extract/hcurves/rlz-0
         haz = vars(extract(self.calc.datastore, 'hcurves?kind=rlz-1'))
-        self.assertEqual(sorted(haz), ['extra', 'k', 'kind', 'rlz-001', 'rlzs'])
+        self.assertEqual(sorted(haz),
+                         ['extra', 'k', 'kind', 'rlz-001', 'rlzs'])
         self.assertEqual(haz['rlz-001'].shape, (1, 1, 4))  # (N, M, L1)
 
     def test_case_11(self):
@@ -321,7 +323,8 @@ hazard_uhs-std.csv
         # checking the mean rates
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
         mean_rates = to_rates(mean_poes)
-        rates_by_source = self.calc.datastore['rates_by_src'][0]  # (M, L1, Ns)
+        rates_by_source = self.calc.datastore[
+            'mean_rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
 
     def test_case_20(self):
@@ -364,17 +367,17 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
     def test_case_20_bis(self):
-        # rates_by_src
+        # mean_rates_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
-        dbs = self.calc.datastore['rates_by_src']
+        dbs = self.calc.datastore['mean_rates_by_src']
         ae(dbs.shape_descr, ['site_id', 'imt', 'lvl', 'src_id'])
         ae(dbs.site_id, [0])
         ae(dbs.imt, ['PGA', 'SA(1.0)'])
         ae(dbs.lvl, [0, 1, 2, 3])
         ae(dbs.src_id, ['CHAR1', 'COMFLT1', 'SFLT1'])
 
-        # testing extract_rates_by_src
-        aw = extract(self.calc.datastore, 'rates_by_src?imt=PGA&poe=1E-3')
+        # testing extract_mean_rates_by_src
+        aw = extract(self.calc.datastore, 'mean_rates_by_src?imt=PGA&poe=1E-3')
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
         self.assertEqual(aw.poe, .001)
@@ -435,7 +438,6 @@ hazard_uhs-std.csv
         tbl = general.gettemp(text_table(aw.array, ext='org'))
         self.assertEqualFiles('expected/realizations.org', tbl)
 
-
     def test_case_28_bis(self):
         # missing z1pt0
         with self.assertRaises(InvalidFile) as ctx:
@@ -485,7 +487,7 @@ hazard_uhs-std.csv
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
-            'hazard_map-mean.csv'], case_39.__file__, delta=2E-5)        
+            'hazard_map-mean.csv'], case_39.__file__, delta=2E-5)
 
         # check realizations
         aw = extract(self.calc.datastore, 'realizations')

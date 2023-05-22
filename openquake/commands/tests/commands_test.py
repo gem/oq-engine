@@ -39,7 +39,7 @@ from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
 from openquake.qa_tests_data.event_based_damage import case_15
-from openquake.qa_tests_data.logictree import case_09, case_56
+from openquake.qa_tests_data.logictree import case_09, case_13, case_56
 from openquake.qa_tests_data.classical import case_01, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
@@ -304,6 +304,16 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
 
+class CompareTestCase(unittest.TestCase):
+    def test_med_gmv(self):
+        # testing the postprocessor med_gmv
+        ini = os.path.join(os.path.dirname(case_13.__file__), 'job_gmv.ini')
+        [job] = run_jobs(create_jobs([ini]))
+        id = job.calc_id
+        with Print.patch() as p:
+            sap.runline(f"openquake.commands compare med_gmv PGA {id} {id}")
+        self.assertIn('0_0!0: no differences within the tolerances', str(p))
+        
 
 class SampleSmTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)
@@ -598,7 +608,8 @@ class ReduceSourceModelTestCase(unittest.TestCase):
     def test_reduce_sm_with_duplicate_source_ids(self):
         # testing reduce_sm in case of two sources with the same ID and
         # different codes (false duplicates)
-        raise unittest.SkipTest('reduce_sm does not work with false duplicates!')
+        raise unittest.SkipTest(
+            'reduce_sm does not work with false duplicates!')
         temp_dir = tempfile.mkdtemp()
         calc_dir = os.path.dirname(to_reduce.__file__)
         shutil.copytree(calc_dir, os.path.join(temp_dir, 'data'))

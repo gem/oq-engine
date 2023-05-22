@@ -21,6 +21,7 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
 import numpy
+import pandas
 
 from openquake.baselib.general import AccumDict
 from openquake.hazardlib.const import StdDev
@@ -131,7 +132,7 @@ class GmfComputer(object):
 
     def compute_all(self, scenario, sig_eps=None, max_iml=None):
         """
-        :returns: (dict with fields eid, sid, gmv_X, ...), dt
+        :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
@@ -192,7 +193,7 @@ class GmfComputer(object):
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
-        return data
+        return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mean_stds):
         """

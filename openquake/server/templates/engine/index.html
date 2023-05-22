@@ -1,6 +1,7 @@
 {% extends "engine/base.html" %}
 
   {% block nav-items %}
+                {% if not aelo_mode %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -11,6 +12,7 @@
                     <input type="hidden" name="database" value="openquake2"/>
                   </form>
                 </li>
+                {% endif %}
   {% endblock nav-items %}
 
   {% block main %}
@@ -30,14 +32,14 @@
             {% endif %}
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
-              <!-- <label for"lon">Longitude:</label> -->
-              <input type="text" id="lon" name="lon" placeholder="Longitude"/>
               <!-- <label for"lat">Latitude:</label> -->
-              <input type="text" id="lat" name="lat" placeholder="Latitude"/>
+              <input type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/>
+              <!-- <label for"lon">Longitude:</label> -->
+              <input type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/>
               <!-- <label for"vs30">Vs30:</label> -->
-              <input type="text" id="vs30" name="vs30" placeholder="vs30"/>
+              <input type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}"/>
               <!-- <label for"siteid">Site ID:</label> -->
-              <input type="text" id="siteid" name="siteid" placeholder="Site name"/>
+              <input type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
               <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
               <!-- <input type="submit"> -->
             </form>
@@ -154,34 +156,4 @@
   {% block extra_script %}
   {{ block.super }}
   <script type="text/javascript" src="{{ STATIC_URL }}js/engine.js"></script>
-  {% if aelo_mode %}
-  <script>
-    $(document).ready(function () {
-      $("#aelo_run_form").submit(function (event) {
-        $('#submit_aelo_calc').prop('disabled', true);
-        var formData = {
-          lon: $("#lon").val(),
-          lat: $("#lat").val(),
-          vs30: $("#vs30").val(),
-          siteid: $("#siteid").val(),
-        };
-        $.ajax({
-          type: "POST",
-          url: "{{ oq_engine_server_url }}/v1/calc/aelo_run",
-          data: formData,
-          dataType: "json",
-          encode: true,
-        }).done(function (data) {
-          // console.log(data);
-        }).error(function (data) {
-          // TODO: replace with a better looking modal dialog with title
-          window.alert(data.responseText);
-        }).always(function () {
-          $('#submit_aelo_calc').prop('disabled', false);
-        });
-        event.preventDefault();
-      });
-    });
-  </script>
-  {% endif %}
   {% endblock extra_script %}

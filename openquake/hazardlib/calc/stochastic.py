@@ -248,7 +248,6 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
         for src in sources:
             nr = src.num_ruptures
             eff_ruptures += nr
-            t0 = time.time()
             if len(eb_ruptures) > MAX_RUPTURES:
                 # yield partial result to avoid running out of memory
                 yield AccumDict(dict(rup_array=get_rup_array(eb_ruptures,
@@ -256,6 +255,7 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
                                      source_data={}, eff_ruptures={}))
                 eb_ruptures.clear()
             samples = getattr(src, 'samples', 1)
+            t0 = time.time()
             eb_ruptures.extend(
                 src.sample_ruptures(samples * num_ses, cmaker.ses_seed))
             dt = time.time() - t0
@@ -265,7 +265,9 @@ def sample_ruptures(sources, cmaker, sitecol=None, monitor=Monitor()):
             source_data['ctimes'].append(dt)
             source_data['weight'].append(src.weight)
             source_data['taskno'].append(monitor.task_no)
+        t0 = time.time()
         rup_array = get_rup_array(eb_ruptures, srcfilter)
+        dt = time.time() - t0
         if len(rup_array):
             yield AccumDict(dict(rup_array=rup_array, source_data=source_data,
                                  eff_ruptures={grp_id: eff_ruptures}))
