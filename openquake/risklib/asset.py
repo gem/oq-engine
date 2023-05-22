@@ -224,13 +224,6 @@ def avalue(self, loss_type, time_event=None):
     return self.calc(loss_type, self.values)
 
 
-def retrofitted(self):
-    """
-    :returns: the asset retrofitted value
-    """
-    return self.calc('structural', {'structural': self._retrofitted})
-
-
 class TagCollection(object):
     """
     An iterable collection of tags in the form "tagname=tagvalue".
@@ -732,7 +725,7 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
                 elif field == 'ideductible':
                     value = asset.ideductible
                 elif field == 'retrofitted':
-                    value = retrofitted(asset)
+                    value = asset._retrofitted
                 elif field in tagnames:
                     value = asset.tagidxs[tagi[field]]
                 else:
@@ -1097,13 +1090,17 @@ class Exposure(object):
             self._add_asset(idx, asset, param)
 
     def _add_asset(self, idx, asset, param):
-        values = {}
+        values = {'number': asset['number']}
+        if self.area:
+            values['area'] = asset['area']
         try:
             ideductible = asset['ideductible']
         except ValueError:
             ideductible = 0
         try:
-            retrofitted = asset['retrofitted']
+            retrofitted = self.cost_calculator(
+                'structural', {'structural': asset['retrofitted'],
+                               'number': asset['number']})
         except ValueError:
             retrofitted = None
         asset_id = asset['id']
@@ -1111,7 +1108,6 @@ class Exposure(object):
         # FIXME: in case of an exposure split in CSV files the line number
         # is None because param['fname'] points to the .xml file :-(
         taxonomy = asset['taxonomy']
-        values['number'] = asset['number']
         location = asset['lon'], asset['lat']
         if param['region'] and not geometry.Point(*location).within(
                 param['region']):
@@ -1148,8 +1144,6 @@ class Exposure(object):
             raise ValueError("Invalid Exposure. "
                              "Missing cost %s for asset %s" % (
                                  missing, asset_id))
-        if self.area:
-            values['area'] = asset['area']
         ass = Asset(prefix + asset_id, idx, idxs, location, values,
                     ideductible, retrofitted, self.cost_calculator)
         self.assets.append(ass)
