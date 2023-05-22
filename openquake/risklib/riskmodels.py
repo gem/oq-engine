@@ -228,6 +228,17 @@ def rescale(curves, values):
     return array
 
 
+def avg_occupants(adf):
+    """
+    :returns: the average number of occupants, (day+night+transit)/3
+    """
+    occfields = [col for col in adf.columns if col.startswith('occupants_')]
+    occ = adf[occfields[0]].to_numpy().copy()
+    for f in occfields[1:]:
+        occ += adf[f].to_numpy()
+    return occ / len(occfields)
+
+
 class RiskModel(object):
     """
     Base class. Can be used in the tests as a mock.
@@ -388,8 +399,11 @@ class RiskModel(object):
         sid = assets['site_id']
         if loss_type == 'occupants' and self.time_event:
             val = assets['occupants_%s' % self.time_event].to_numpy()
+        elif loss_type == 'occupants':
+            val = avg_occupants(assets)
         else:
             val = assets['value-' + loss_type].to_numpy()
+
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type]
         return vf(asset_df, gmf_df, col, rndgen,
