@@ -206,6 +206,9 @@ class Asset(object):
         self.ideductible = ideductible
         self._retrofitted = retrofitted
 
+    def __getattr__(self, name):
+        return self.values[name]
+    
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
 
