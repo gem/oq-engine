@@ -45,15 +45,15 @@ KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
-structural+nonstructural structural+business_interruption
-structural+contents
-structural+nonstructural+business_interruption
+structural+nonstructural
+structural+contents structural+business_interruption
 structural+nonstructural+contents
-structural+nonstructural+business_interruption+contents
+structural+nonstructural+business_interruption
+structural+nonstructural+contents+business_interruption
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
-nonstructural+business_interruption nonstructural+contents
-nonstructural+business_interruption+contents
+nonstructural+contents nonstructural+business_interruption
+nonstructural+contents+business_interruption
 structural_ins nonstructural_ins
 reinsurance claim area number'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]

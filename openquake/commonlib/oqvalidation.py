@@ -1049,17 +1049,17 @@ class OqParam(valid.ParamSet):
     total_losses = valid.Param(
         valid.Choice('structural',
                      'nonstructural',
-                     'business_interruption',
                      'contents',
+                     'business_interruption',
                      'structural+nonstructural',
-                     'structural+business_interruption',
                      'structural+contents',
-                     'structural+nonstructural+business_interruption',
+                     'structural+business_interruption',
                      'structural+nonstructural+contents',
-                     'structural+nonstructural+business_interruption+contents',
-                     'nonstructural+business_interruption',
+                     'structural+nonstructural+business_interruption',
+                     'structural+nonstructural+contents+business_interruption',
                      'nonstructural+contents',
-                     'nonstructural+business_interruption+contents',
+                     'nonstructural+business_interruption',
+                     'nonstructural+contents+business_interruption',
                      ), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
