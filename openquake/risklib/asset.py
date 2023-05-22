@@ -169,7 +169,6 @@ class Asset(object):
     values
     ideductible
     _retrofitted
-    calc
     tags'''.split()  # save 20% memory
 
     def __init__(self,
@@ -196,8 +195,6 @@ class Asset(object):
             insurance deductible (default 0)
         :param retrofitted:
             asset retrofitted value
-        :param calc:
-            cost calculator instance
         :param ordinal:
             asset collection ordinal
         """
@@ -208,20 +205,19 @@ class Asset(object):
         self.values = values
         self.ideductible = ideductible
         self._retrofitted = retrofitted
-        self.calc = calc
 
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
 
 
-def avalue(self, loss_type, time_event=None):
+def avalue(self, calc, loss_type, time_event=None):
     """
     :returns: the total asset value for `loss_type`
     """
     if loss_type == 'occupants':
         return (self.values['occupants_' + str(time_event)]
                 if time_event else self.values['occupants'])
-    return self.calc(loss_type, self.values)
+    return calc(loss_type, self.values)
 
 
 class TagCollection(object):
@@ -404,6 +400,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
+            exposure.cost_calculator,
             assets_by_site, exposure.area, exposure.tagcol.tagnames, time_event)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
@@ -664,7 +661,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
+def build_asset_array(calc, assets_by_site, area, tagnames=(), time_event=None):
     """
     :param assets_by_site: a list of lists of assets
     :param area: True if there is an area field in the exposure
@@ -730,7 +727,7 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
                     value = asset.tagidxs[tagi[field]]
                 else:
                     name, lt = field.split('-')
-                    value = avalue(asset, lt, time_event)
+                    value = avalue(asset, calc, lt, time_event)
                 record[field] = value
     return assetcol, ' '.join(occupancy_periods)
 
@@ -1145,7 +1142,7 @@ class Exposure(object):
                              "Missing cost %s for asset %s" % (
                                  missing, asset_id))
         ass = Asset(prefix + asset_id, idx, idxs, location, values,
-                    ideductible, retrofitted, self.cost_calculator)
+                    ideductible, retrofitted)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
