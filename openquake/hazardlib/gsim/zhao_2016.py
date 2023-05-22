@@ -26,6 +26,7 @@ Module exports :class:`ZhaoEtAl2016Asc`,
                :class:`ZhaoEtAl2016SSlabSiteSigma`,
                :class:`ZhaoEtAl2016SSlabPErg`
 """
+import copy
 import numpy as np
 
 from openquake.baselib.general import CallableDict
@@ -340,26 +341,27 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
     of :class:`ZhaoEtAl2016SSlabPErg`. 
     """
     # Check if need to apply non-ergodic path effects
+    cctx = copy.copy(ctx)
     if volc_arc_file is not None:
         # Get distance traversed per travel path through volcanic zones (rvolc),
         # with rvolc capped at 80km if total distance traversed through zones is 
         # greater than 80km, and set to 12 km if zones are traversed but the
         # total distance is less than 12 km. This min/max constraint to rvolc
         # is detailed within the publications for the Zhao et al. 2016 GMMs
-        r_volc = volc_perg.get_rvolcs(ctx, volc_arc_file)
-        ctx.rvolc = r_volc
+        r_volc = volc_perg.get_rvolcs(ctx, volc_arc_file)     
+        cctx.rvolc = r_volc
         
-    x_ij = ctx.rrup
+    x_ij = cctx.rrup
     # Get anelastic scaling term in equation 5
-    qslh = np.where(ctx.ztor >= 50., C["eSLH"] * (0.02 * ctx.ztor - 1.0), 0)
+    qslh = np.where(cctx.ztor >= 50., C["eSLH"] * (0.02 * cctx.ztor - 1.0), 0)
 
     # Get r_ij - distance for geometric spreading (equations 3 and 4)
-    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(cctx.mag, CONSTANTS["m_c"])
     r_ij = x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
     return C["gSL"] * np.log(r_ij) + \
         C["gLL"] * np.log(x_ij + 200.) +\
         C["eSL"] * x_ij + qslh * x_ij +\
-        C["eSLV"] * ctx.rvolc + C["gamma"]
+        C["eSLV"] * cctx.rvolc + C["gamma"]
 
 
 def _get_ln_sf(trt, C, C_SITE, idx, n_sites, ctx):
