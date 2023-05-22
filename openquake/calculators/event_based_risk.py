@@ -225,7 +225,7 @@ def gen_outputs(df, crmodel, rng, monitor):
     mon_risk = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=True)
-    slices = performance.split_slices(df.eid.to_numpy(), 250_000)
+    slices = performance.split_slices(df.eid.to_numpy(), 1_000_000)
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
