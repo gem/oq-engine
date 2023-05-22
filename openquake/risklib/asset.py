@@ -558,7 +558,7 @@ class AssetCollection(object):
         for field in self.occfields:
             dic[field] = self[field]
         vfields = self.fields + self.occfields
-        value_dt = [(f, float) for f in vfields]
+        value_dt = [(f, F32) for f in vfields]
         agg_values = numpy.zeros(K+1, value_dt)
         dataf = pandas.DataFrame(dic)
         for ag, tagnames in enumerate(aggregate_by):
@@ -706,7 +706,7 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
          ('ordinal', U32), ('lon', F32), ('lat', F32),
          ('site_id', U32)] + [
-             (str(name), float) for name in float_fields] + int_fields)
+             (str(name), F32) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
