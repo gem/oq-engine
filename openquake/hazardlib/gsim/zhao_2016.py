@@ -346,8 +346,9 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
         # greater than 80km, and set to 12 km if zones are traversed but the
         # total distance is less than 12 km. This min/max constraint to rvolc
         # is detailed within the publications for the Zhao et al. 2016 GMMs
-        ctx.rvolc = volc_perg.get_rvolcs(ctx, volc_arc_file)
-
+        r_volc = volc_perg.get_rvolcs(ctx, volc_arc_file)
+        ctx.rvolc = r_volc
+        
     x_ij = ctx.rrup
     # Get anelastic scaling term in equation 5
     qslh = np.where(ctx.ztor >= 50., C["eSLH"] * (0.02 * ctx.ztor - 1.0), 0)
