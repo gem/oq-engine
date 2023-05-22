@@ -29,7 +29,7 @@ from openquake.baselib import (
     hdf5, performance, parallel, general, python3compat)
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.commonlib.calc import starmap_from_gmfs
+from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -216,25 +216,34 @@ def event_based_risk(df, oqparam, monitor):
 
 
 def gen_outputs(df, crmodel, rng, monitor):
+    """
+    :param df: GMF dataframe (a slice of events)
+    :param crmodel: CompositeRiskModel instance
+    :param rng: random number generator
+    :param monitor: Monitor instance
+    """
     mon_risk = monitor('computing risk', measuremem=True)
     fil_mon = monitor('filtering GMFs', measuremem=False)
-    with monitor('reading assets', measuremem=True):
-        adf = monitor.read('assets')
-    taxos = numpy.sort(adf.taxonomy.unique())
-    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
-        grp = df[s0:s1]
+    ass_mon = monitor('reading assets', measuremem=True)
+    slices = performance.split_slices(df.eid.to_numpy(), 250_000)
+    for s0, s1 in monitor.read('start-stop'):
+        with ass_mon:
+            assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+        taxos = numpy.sort(assets.taxonomy.unique())
         for taxo in taxos:
-            a = adf[adf.taxonomy == taxo].set_index('ordinal')
-            with fil_mon:
-                # *crucial* for the performance of the next step
-                gmf_df = grp[
-                    numpy.isin(grp.sid.to_numpy(), a.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            with mon_risk:
-                out = crmodel.get_output(
-                    a, gmf_df, crmodel.oqparam._sec_losses, rng)
-            yield out
+            adf = assets[assets.taxonomy == taxo]
+            for start, stop in slices:
+                gdf = df[start:stop]
+                with fil_mon:
+                    # *crucial* for the performance of the next step
+                    gmf_df = gdf[numpy.isin(gdf.sid.to_numpy(),
+                                            adf.site_id.to_numpy())]
+                if len(gmf_df) == 0:  # common enough
+                    continue
+                with mon_risk:
+                    out = crmodel.get_output(
+                        adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+                yield out
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
@@ -268,7 +277,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        monitor.save('assets', self.assetcol.to_dframe())
+        adf = self.assetcol.to_dframe().sort_values('taxonomy')
+        del adf['id']
+        monitor.save('assets', adf)
+        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
+        # storing start-stop indices in a smart way, so that the assets are
+        # read from the workers in chunks of at most 1 million elements
+        monitor.save('start-stop', compactify3(tss))
         monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
