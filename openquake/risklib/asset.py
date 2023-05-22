@@ -83,7 +83,12 @@ class CostCalculator(object):
         self.units = units
         self.tagi = tagi
 
-    def __call__(self, loss_type, values, area, number):
+    def __call__(self, loss_type, values):
+        if loss_type in ('number', 'area'):
+            return values[loss_type]
+    
+        area = values.get('area', 1.0)
+        number = values.get('number', 1.0)
         cost = values.get(loss_type)
         if cost is None:
             return numpy.nan
@@ -160,26 +165,20 @@ class Asset(object):
     asset_id
     ordinal
     tagidxs
-    number
     location
     values
-    area
     ideductible
     _retrofitted
-    calc
     tags'''.split()  # save 20% memory
 
     def __init__(self,
                  asset_id,
                  ordinal,
                  tagidxs,
-                 number,
                  location,
                  values,
-                 area=1,
                  ideductible=0,
-                 retrofitted=None,
-                 calc=costcalculator):
+                 retrofitted=None):
         """
         :param asset_id:
             a short string identifier
@@ -187,8 +186,6 @@ class Asset(object):
             an integer identifier for the asset, used to order them
         :param tagidxs:
             a list of indices for the taxonomy and other tags
-        :param number:
-            number of apartments of number of people in the given asset
         :param location:
             geographic location of the asset
         :param dict values:
@@ -197,40 +194,32 @@ class Asset(object):
             insurance deductible (default 0)
         :param retrofitted:
             asset retrofitted value
-        :param calc:
-            cost calculator instance
         :param ordinal:
             asset collection ordinal
         """
         self.asset_id = asset_id
         self.ordinal = ordinal
         self.tagidxs = tagidxs
-        self.number = number
         self.location = location
         self.values = values
-        self.area = area
         self.ideductible = ideductible
         self._retrofitted = retrofitted
-        self.calc = calc
 
-    def value(self, loss_type, time_event=None):
-        """
-        :returns: the total asset value for `loss_type`
-        """
-        if loss_type == 'occupants':
-            return (self.values['occupants_' + str(time_event)]
-                    if time_event else self.values['occupants'])
-        return self.calc(loss_type, self.values, self.area, self.number)
-
-    def retrofitted(self):
-        """
-        :returns: the asset retrofitted value
-        """
-        return self.calc('structural', {'structural': self._retrofitted},
-                         self.area, self.number)
-
+    def __getattr__(self, name):
+        return self.values[name]
+    
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
+
+
+def avalue(self, calc, loss_type, time_event=None):
+    """
+    :returns: the total asset value for `loss_type`
+    """
+    if loss_type == 'occupants':
+        return (self.values['occupants_' + str(time_event)]
+                if time_event else self.values['occupants'])
+    return calc(loss_type, self.values)
 
 
 class TagCollection(object):
@@ -413,6 +402,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(assets_by_site)
         self.array, self.occupancy_periods = build_asset_array(
+            exposure.cost_calculator,
             assets_by_site, exposure.area, exposure.tagcol.tagnames, time_event)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
@@ -560,7 +550,7 @@ class AssetCollection(object):
         for field in self.occfields:
             dic[field] = self[field]
         vfields = self.fields + self.occfields
-        value_dt = [(f, float) for f in vfields]
+        value_dt = [(f, F32) for f in vfields]
         agg_values = numpy.zeros(K+1, value_dt)
         dataf = pandas.DataFrame(dic)
         for ag, tagnames in enumerate(aggregate_by):
@@ -673,7 +663,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
+def build_asset_array(calc, assets_by_site, area, tagnames=(), time_event=None):
     """
     :param assets_by_site: a list of lists of assets
     :param area: True if there is an area field in the exposure
@@ -703,12 +693,11 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
     float_fields = loss_types + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagnames
                   if name not in ('id', 'site_id')]
-    area_field = [('value-area', F32)] if area else []
     tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
          ('ordinal', U32), ('lon', F32), ('lat', F32),
-         ('site_id', U32), ('value-number', F32)] + area_field + [
+         ('site_id', U32)] + [
              (str(name), F32) for name in float_fields] + int_fields)
     num_assets = sum(len(assets) for assets in assets_by_site)
     assetcol = numpy.zeros(num_assets, asset_dt)
@@ -724,10 +713,6 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
                     value = asset.asset_id
                 elif field == 'ordinal':
                     value = asset.ordinal
-                elif field == 'value-number':
-                    value = asset.number
-                elif field == 'value-area':
-                    value = asset.area
                 elif field == 'site_id':
                     value = sid
                 elif field == 'lon':
@@ -739,12 +724,12 @@ def build_asset_array(assets_by_site, area, tagnames=(), time_event=None):
                 elif field == 'ideductible':
                     value = asset.ideductible
                 elif field == 'retrofitted':
-                    value = asset.retrofitted()
+                    value = asset._retrofitted
                 elif field in tagnames:
                     value = asset.tagidxs[tagi[field]]
                 else:
                     name, lt = field.split('-')
-                    value = asset.value(lt, time_event)
+                    value = avalue(asset, calc, lt, time_event)
                 record[field] = value
     return assetcol, ' '.join(occupancy_periods)
 
@@ -993,17 +978,15 @@ class Exposure(object):
                 ignore_missing_costs)
         else:
             array = exposure._read_csv(errors)
-        param['relevant_cost_types'] = set(exposure.cost_types['name']) - set(
-            ['occupants'])
+        param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
+            'occupants'}
         exposure._populate_from(array, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
-        # sanity checks
-        values = any(len(ass.values) + ass.number for ass in exposure.assets)
-        assert values, 'Could not find any value??'
+
         exposure.param = param
         return exposure
 
@@ -1095,6 +1078,7 @@ class Exposure(object):
     def _populate_from(self, asset_array, param, check_dupl):
         asset_refs = set()
         for idx, asset in enumerate(asset_array):
+            self.area = 'area' in asset.dtype.names
             asset_id = asset['id']
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
@@ -1103,16 +1087,19 @@ class Exposure(object):
                     asset_id, param['fname']))
             asset_refs.add(param['asset_prefix'] + asset_id)
             self._add_asset(idx, asset, param)
-        self.area = 'area' in asset.dtype.names
 
     def _add_asset(self, idx, asset, param):
-        values = {}
+        values = {'number': asset['number']}
+        if self.area:
+            values['area'] = asset['area']
         try:
             ideductible = asset['ideductible']
         except ValueError:
             ideductible = 0
         try:
-            retrofitted = asset['retrofitted']
+            retrofitted = self.cost_calculator(
+                'structural', {'structural': asset['retrofitted'],
+                               'number': asset['number']})
         except ValueError:
             retrofitted = None
         asset_id = asset['id']
@@ -1120,7 +1107,6 @@ class Exposure(object):
         # FIXME: in case of an exposure split in CSV files the line number
         # is None because param['fname'] points to the .xml file :-(
         taxonomy = asset['taxonomy']
-        number = asset['number']
         location = asset['lon'], asset['lat']
         if param['region'] and not geometry.Point(*location).within(
                 param['region']):
@@ -1157,12 +1143,8 @@ class Exposure(object):
             raise ValueError("Invalid Exposure. "
                              "Missing cost %s for asset %s" % (
                                  missing, asset_id))
-        try:
-            area = asset['area']
-        except ValueError:
-            area = 1
-        ass = Asset(prefix + asset_id, idx, idxs, number, location, values,
-                    area, ideductible, retrofitted, self.cost_calculator)
+        ass = Asset(prefix + asset_id, idx, idxs, location, values,
+                    ideductible, retrofitted)
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
