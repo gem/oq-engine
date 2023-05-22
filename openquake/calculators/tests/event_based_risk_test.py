@@ -161,7 +161,7 @@ agg_id
                           insurance_csv="{'structural': 'policy_ins_ko.csv'}")
         self.assertIn(
             "Please check deductible values. Values larger than the insurance"
-            " limit were found for asset(s) {'a3'}.",
+            " limit were found for asset(s) {3}.",
             str(ctx.exception))
 
     def test_case_1f(self):

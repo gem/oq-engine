@@ -268,7 +268,9 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        monitor.save('assets', self.assetcol.to_dframe())
+        df = self.assetcol.to_dframe()
+        del df['id']
+        monitor.save('assets', df)
         monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
