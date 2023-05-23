@@ -307,7 +307,10 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type]
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = assets['value-' + loss_type].to_numpy()
+        if loss_type == 'occupants':
+            values = assets['occupants_avg'].to_numpy()
+        else:
+            values = assets['value-' + loss_type].to_numpy()
         rtime = self.risk_investigation_time or self.investigation_time
         lrcurves = numpy.array(
             [scientific.classical(
