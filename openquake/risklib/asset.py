@@ -424,9 +424,9 @@ class AssetCollection(object):
         if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
                             'in the exposure', self.occupancy_periods)
-        #elif self.occupancy_periods.strip() != exp_periods.strip():
-        #    raise ValueError('Expected %s, got %s' %
-        #                     (exp_periods, self.occupancy_periods))
+        elif self.occupancy_periods.strip() != exp_periods.strip():
+            raise ValueError('Expected %s, got %s' %
+                             (exp_periods, self.occupancy_periods))
         self.fields = [f[6:] for f in self.array.dtype.names
                        if f.startswith('value-')]
         self.occfields = [f for f in self.array.dtype.names
@@ -698,7 +698,8 @@ def build_asset_array(calc, assets_by_site, area,
         if name.startswith('occupants_'):
             period = name.split('_', 1)[1]
             # see scenario_risk test_case_2d
-            occupancy_periods.append(period)
+            if period != 'avg':
+                occupancy_periods.append(period)
             loss_types.append(name)
         else:
             loss_types.append('value-' + name)
