@@ -176,7 +176,7 @@ class ScenarioTestCase(CalculatorTestCase):
             sorted(assetcol.array.dtype.names),
             sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'value-area',
                     'value-contents', 'value-nonstructural', 'value-number',
-                    'value-occupants', 'occupants_night', 'value-structural',
+                    'occupants_avg', 'occupants_night', 'value-structural',
                     'ideductible', 'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
                     'OCCUPANCY', 'NAME_1']))
 

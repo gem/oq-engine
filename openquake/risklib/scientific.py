@@ -1633,7 +1633,7 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     elif consequence == 'fatalities':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_night']
+        return dmgdist @ coeffs * asset['occupants_avg']
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype):

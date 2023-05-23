@@ -283,8 +283,8 @@ def extract_exposure_metadata(dstore, what):
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
     dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
-                    if name.startswith(('value-', 'number', 'occupants'))
-                    and name != 'value-occupants']
+                    if name.startswith(('value-', 'occupants'))
+                    and name != 'occupants_avg']
     return ArrayWrapper((), dict(json=hdf5.dumps(dic)))
 
 

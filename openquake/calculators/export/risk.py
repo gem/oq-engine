@@ -83,12 +83,12 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
     for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
         pairs.append((tagnames, numpy.isin(aggrisk.agg_id, agg_ids)))
     for tagnames, ok in pairs:
-        header = ['loss_type'] + tagnames + ['exposed_value'] + [
-            '%s_ratio' % csq for csq in csqs]
         out = general.AccumDict(accum=[])
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
             loss_type = scientific.LOSSTYPE[lid]
+            if loss_type == 'occupants':
+                loss_type += '_' + oq.time_event
             if loss_type == 'claim':  # temporary hack
                 continue
             out['loss_type'].extend([loss_type] * n)
@@ -594,6 +594,10 @@ def export_aggcurves_csv(ekey, dstore):
                 ['agg_id', 'rlz_id', 'loss_id']):
             if loss_id == scientific.LOSSID['claim']:  # temporary hack
                 continue
+            if loss_id == scientific.LOSSID['occupants']:
+                lt =  LT[loss_id] + '_' + oq.time_event
+            else:
+                lt =  LT[loss_id]
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
                     edic[tagname].extend([tag] * len(d))
@@ -604,8 +608,7 @@ def export_aggcurves_csv(ekey, dstore):
                 edic['rlz_id'].extend([rlz_id] * len(d))
             for cons in consequences:
                 edic[cons + '_value'].extend(d[cons])
-                aval = scientific.get_agg_value(
-                    cons, agg_values, agg_id, LT[loss_id])
+                aval = scientific.get_agg_value(cons, agg_values, agg_id, lt)
                 edic[cons + '_ratio'].extend(d[cons] / aval)
         fname = dest.format('-'.join(tagnames))
         writer.save(pandas.DataFrame(edic), fname, comment=md)

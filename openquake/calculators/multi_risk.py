@@ -68,10 +68,10 @@ def build_asset_risk(assetcol, dmg_csq, hazard, loss_types, damage_states,
     dtlist = []
     field2tup = {}
     occupants = [name for name in assetcol.array.dtype.names
-                 if name.startswith('occupants')]
+                 if name.startswith('occupants') and not
+                 name.startswith('occupants_avg')]
     for name, dt in assetcol.array.dtype.descr:
-        if name not in {
-                'area', 'value-occupants', 'ordinal', 'id', 'ideductible'}:
+        if name not in {'occupants_avg', 'ordinal', 'id', 'ideductible'}:
             dtlist.append((name, dt))
     dtlist.sort()
     dtlist.insert(0, ('id', '<S100'))

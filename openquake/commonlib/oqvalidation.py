@@ -765,7 +765,7 @@ time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
   Valid choices are "day", "night", "transit".
   Example: *time_event = day*.
-  Default: None
+  Default: "avg"
 
 time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
@@ -1044,7 +1044,7 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    time_event = valid.Param(str, None)
+    time_event = valid.Param(str, 'avg')
     time_per_task = valid.Param(valid.positivefloat, 2000)
     total_losses = valid.Param(
         valid.Choice('structural+nonstructural',
@@ -1348,7 +1348,7 @@ class OqParam(valid.ParamSet):
                 costtypes = set(rt.rsplit('/')[1] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
-        self.all_cost_types = sorted(costtypes)
+        self.all_cost_types = sorted(costtypes)  # including occupants
 
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
