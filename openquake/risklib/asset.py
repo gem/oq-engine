@@ -1126,10 +1126,6 @@ class Exposure(object):
         values = {'number': asset['number']}
         if param['area']:
             values['area'] = asset['area']
-        try:
-            ideductible = asset['ideductible']
-        except KeyError:
-            ideductible = 0
         prefix = param['asset_prefix']
         taxonomy = asset['taxonomy']
         dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
@@ -1162,7 +1158,8 @@ class Exposure(object):
                              "Missing cost %s for asset %s" % (
                                  missing, asset_id))
         ass = Asset(prefix + asset_id, idx, idxs, asset['lon'], asset['lat'],
-                    values, ideductible, asset['retrofitted'])
+                    values, getattr(asset, 'ideductible', 0),
+                    getattr(asset, 'retrofitted', None))
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
