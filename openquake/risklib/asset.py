@@ -910,7 +910,7 @@ def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
                         raise
             else:
                 rec[field] = asset.attrib.get(field, '?')
-    return pandas.DataFrame({f: array[f] for f in fields}).set_index('id')
+    return pandas.DataFrame({f: array[f] for f, dt in dtlist}).set_index('id')
 
 
 class Exposure(object):
