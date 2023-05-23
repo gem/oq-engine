@@ -40,6 +40,7 @@ import collections
 import multiprocessing
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
+import pandas
 from decorator import decorator
 from openquake.baselib import __version__
 from openquake.baselib.python3compat import decode
@@ -1168,6 +1169,12 @@ def random_filter(objects, reduction_factor, seed=42):
     if reduction_factor == 1:  # do not reduce
         return objects
     rnd = random.Random(seed)
+    if isinstance(objects, pandas.DataFrame):
+        df = pandas.DataFrame({
+            col: random_filter(objects[col], reduction_factor, seed)
+            for col in objects.columns})
+        df.set_index(objects.index)
+        return df
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:

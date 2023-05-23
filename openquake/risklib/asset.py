@@ -38,6 +38,7 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
 ae = numpy.testing.assert_equal
+OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
 
 
 def get_case_similar(names):
@@ -58,7 +59,7 @@ def avg_occupants(adf):
     """
     :returns: the average number of occupants, (day+night+transit)/3
     """
-    occfields = [col for col in adf.columns if col.startswith('occupants_')]
+    occfields = [col for col in adf.columns if col in OCC_FIELDS]
     occ = adf[occfields[0]].to_numpy().copy()
     for f in occfields[1:]:
         occ += adf[f].to_numpy()
@@ -866,13 +867,13 @@ def _minimal_tagcol(fnames, by_country):
     return TagCollection(alltags)
 
 
-def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
+def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
     """
-    :returns: an array of assets from the asset nodes
+    :returns: a DataFrame of assets from the asset nodes
     """
     first_asset = asset_nodes[0]
     for occ in getattr(first_asset, 'occupancies', []):
-        name = 'occupants_' + occ['period']
+        name = 'occupants_' + occ['period'].lower()
         if name not in fields:
             fields.append(name)
     dtlist = [(f, object) for f in fields]
@@ -883,7 +884,8 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
     for asset, rec in zip(nodes, array):
         # fix asset.attrib
         for occ in getattr(asset, 'occupancies', []):
-            asset.attrib['occupants_' + occ['period']] = occ['occupants']
+            ofield = 'occupants_' + occ['period'].lower()
+            asset.attrib[ofield] = occ['occupants']
         for cost in getattr(asset, 'costs', []):
             asset.attrib[cost['type']] = cost['value']
             if retrofitted and 'retrofitted' in cost.attrib:
@@ -908,7 +910,7 @@ def assets2array(asset_nodes, fields, retrofitted, ignore_missing_costs):
                         raise
             else:
                 rec[field] = asset.attrib.get(field, '?')
-    return array
+    return pandas.DataFrame({f: array[f] for f in fields}).set_index('id')
 
 
 class Exposure(object):
@@ -988,18 +990,18 @@ class Exposure(object):
         if tagcol:
             exposure.tagcol = tagcol
         if assetnodes:
-            array = assets2array(
+            df = assets2df(
                 assetnodes, exposure._csv_header(),
                 exposure.retrofitted or calculation_mode == 'classical_bcr',
                 ignore_missing_costs)
-            fname_arrays = [(fname, array)]
+            fname_dfs = [(fname, df)]
         else:
-            fname_arrays = exposure._read_csv(errors)
+            fname_dfs = exposure._read_csv(errors)
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
             'occupants'}
-        for fname, array in fname_arrays:
+        for fname, df in fname_dfs:
             param['fname'] = fname
-            exposure._populate_from(array, param, check_dupl)
+            exposure._populate_from(df, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
@@ -1086,19 +1088,23 @@ class Exposure(object):
             conv[f] = float
             rename[f] = 'occupants_' + field
         for fname in self.datafiles:
-            array = hdf5.read_csv(fname, conv, rename, errors=errors).array
-            array['lon'] = numpy.round(array['lon'], 5)
-            array['lat'] = numpy.round(array['lat'], 5)
+            df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            df['lon'] = numpy.round(df.lon, 5)
+            df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
-                array = general.random_filter(array, sa)
-            yield fname, array
+                df = general.random_filter(df, sa)
+            yield fname, df
 
-    def _populate_from(self, asset_array, param, check_dupl):
+    def _populate_from(self, asset_df, param, check_dupl):
+        names = asset_df.columns
+        self.area = 'area' in names
+        self.occupants = any(n.startswith('occupants_') for n in names)
+        if self.occupants and 'avg_occupants' not in names:
+            asset_df['occupants_avg'] = avg_occupants(asset_df)
+
         asset_refs = set()
-        for idx, asset in enumerate(asset_array):
-            self.area = 'area' in asset.dtype.names
-            asset_id = asset['id']
+        for idx, (asset_id, asset) in enumerate(asset_df.iterrows()):
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
@@ -1110,23 +1116,22 @@ class Exposure(object):
                     param['region']):
                 param['out_of_region'] += 1
                 continue
-            self._add_asset(idx, asset, param)
+            self._add_asset(idx, asset_id, asset, param)
 
-    def _add_asset(self, idx, asset, param):
+    def _add_asset(self, idx, asset_id, asset, param):
         values = {'number': asset['number']}
         if self.area:
             values['area'] = asset['area']
         try:
             ideductible = asset['ideductible']
-        except ValueError:
+        except KeyError:
             ideductible = 0
         try:
             retrofitted = self.cost_calculator(
                 'structural', {'structural': asset['retrofitted'],
                                'number': asset['number']})
-        except ValueError:
+        except KeyError:
             retrofitted = None
-        asset_id = asset['id']
         prefix = param['asset_prefix']
         taxonomy = asset['taxonomy']
         dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
@@ -1134,23 +1139,16 @@ class Exposure(object):
                asset[tagname] != '?'}
         dic['taxonomy'] = taxonomy
         idxs = self.tagcol.add_tags(dic, prefix)
-        tot_occupants = 0
-        num_occupancies = 0
-        for name in asset.dtype.names:
+        for name in asset.index:
             if name.startswith('value-'):
                 values[name[6:]] = asset[name]
             elif name.startswith('occupants_'):
                 try:
-                    values[name] = occ = float(asset[name])
+                    values[name] = float(asset[name])
                 except ValueError:
                     raise InvalidFile(
                         ('%(fname)s:{} {}={}' % param).format(
                             idx + 2, name, asset[name]))
-                tot_occupants += occ
-                num_occupancies += 1
-        if num_occupancies and 'occupants_avg' not in values:
-            # store average occupants
-            values['occupants_avg'] = tot_occupants / num_occupancies
 
         # check if we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
