@@ -1002,6 +1002,15 @@ class Exposure(object):
             'occupants'}
         for fname, df in fname_dfs:
             param['fname'] = fname
+            names = df.columns
+            param['area'] = 'area' in names
+            occupants = any(n.startswith('occupants_') for n in names)
+            if occupants and 'calc_occupants_avg' not in names:
+                df['occupants_avg'] = calc_occupants_avg(df)
+            if exposure.retrofitted:
+                df['retrofitted'] = exposure.cost_calculator(
+                    'structural', {'structural':df.retrofitted,
+                                   'number': df.number})
             exposure._populate_from(df, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
@@ -1098,12 +1107,6 @@ class Exposure(object):
             yield fname, df
 
     def _populate_from(self, asset_df, param, check_dupl):
-        names = asset_df.columns
-        self.area = 'area' in names
-        self.occupants = any(n.startswith('occupants_') for n in names)
-        if self.occupants and 'calc_occupants_avg' not in names:
-            asset_df['occupants_avg'] = calc_occupants_avg(asset_df)
-
         asset_refs = set()
         for idx, (asset_id, asset) in enumerate(asset_df.iterrows()):
             # check_dupl is False only in oq prepare_site_model since
@@ -1121,18 +1124,12 @@ class Exposure(object):
 
     def _add_asset(self, idx, asset_id, asset, param):
         values = {'number': asset['number']}
-        if self.area:
+        if param['area']:
             values['area'] = asset['area']
         try:
             ideductible = asset['ideductible']
         except KeyError:
             ideductible = 0
-        try:
-            retrofitted = self.cost_calculator(
-                'structural', {'structural': asset['retrofitted'],
-                               'number': asset['number']})
-        except KeyError:
-            retrofitted = None
         prefix = param['asset_prefix']
         taxonomy = asset['taxonomy']
         dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
@@ -1165,7 +1162,7 @@ class Exposure(object):
                              "Missing cost %s for asset %s" % (
                                  missing, asset_id))
         ass = Asset(prefix + asset_id, idx, idxs, asset['lon'], asset['lat'],
-                    values, ideductible, retrofitted)
+                    values, ideductible, asset['retrofitted'])
         self.assets.append(ass)
 
     def get_mesh_assets_by_site(self):
