@@ -55,7 +55,7 @@ def get_case_similar(names):
     return [sorted(names) for names in dic.values() if len(names) > 1]
 
 
-def avg_occupants(adf):
+def calc_occupants_avg(adf):
     """
     :returns: the average number of occupants, (day+night+transit)/3
     """
@@ -1100,8 +1100,8 @@ class Exposure(object):
         names = asset_df.columns
         self.area = 'area' in names
         self.occupants = any(n.startswith('occupants_') for n in names)
-        if self.occupants and 'avg_occupants' not in names:
-            asset_df['occupants_avg'] = avg_occupants(asset_df)
+        if self.occupants and 'calc_occupants_avg' not in names:
+            asset_df['occupants_avg'] = calc_occupants_avg(asset_df)
 
         asset_refs = set()
         for idx, (asset_id, asset) in enumerate(asset_df.iterrows()):
