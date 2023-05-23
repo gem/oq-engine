@@ -83,8 +83,6 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
     for tagnames, agg_ids in zip(oq.aggregate_by, aggids):
         pairs.append((tagnames, numpy.isin(aggrisk.agg_id, agg_ids)))
     for tagnames, ok in pairs:
-        header = ['loss_type'] + tagnames + ['exposed_value'] + [
-            '%s_ratio' % csq for csq in csqs]
         out = general.AccumDict(accum=[])
         for (agg_id, lid), df in aggrisk[ok].groupby(['agg_id', 'loss_id']):
             n = len(df)
