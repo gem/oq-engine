@@ -1655,8 +1655,6 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
-        if xltype == 'occupants':
-            xltype = 'occupants_avg'
         return aval[xltype]
     else:
         raise NotImplementedError(consequence)
