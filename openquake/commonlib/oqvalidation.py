@@ -468,7 +468,7 @@ max_sites_disagg:
 
 pmap_max_gb:
    Control the memory used in large classical calculations. The default is .4
-   (meant for people with 2 GB per core or less) but you increase it if you
+   (meant for people with 2 GB per core or less) but you can increase it if you
    have plenty of memory, thus producing less tiles and making the calculation
    more efficient. For small calculations it has no effect.
    Example: *pmap_max_gb = 2*
