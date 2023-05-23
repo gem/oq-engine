@@ -595,7 +595,7 @@ def export_aggcurves_csv(ekey, dstore):
             if loss_id == scientific.LOSSID['claim']:  # temporary hack
                 continue
             if loss_id == scientific.LOSSID['occupants']:
-                lt =  LT[loss_id] + oq.time_event
+                lt =  LT[loss_id] + '_' + oq.time_event
             else:
                 lt =  LT[loss_id]
             if tagnames:
