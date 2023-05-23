@@ -54,6 +54,17 @@ def get_case_similar(names):
     return [sorted(names) for names in dic.values() if len(names) > 1]
 
 
+def avg_occupants(adf):
+    """
+    :returns: the average number of occupants, (day+night+transit)/3
+    """
+    occfields = [col for col in adf.columns if col.startswith('occupants_')]
+    occ = adf[occfields[0]].to_numpy().copy()
+    for f in occfields[1:]:
+        occ += adf[f].to_numpy()
+    return occ / len(occfields)
+
+
 class CostCalculator(object):
     """
     Return the value of an asset for the given loss type depending
@@ -217,13 +228,12 @@ class Asset(object):
         return '<Asset #%s>' % self.ordinal
 
 
-def avalue(self, calc, loss_type, time_event=None):
+def avalue(self, calc, loss_type, time_event='avg'):
     """
     :returns: the total asset value for `loss_type`
     """
     if loss_type == 'occupants':
-        return (self.values['occupants_' + str(time_event)]
-                if time_event else self.values['occupants'])
+        return self.values['occupants_' + time_event]
     return calc(loss_type, self.values)
 
 
@@ -414,9 +424,9 @@ class AssetCollection(object):
         if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
                             'in the exposure', self.occupancy_periods)
-        elif self.occupancy_periods.strip() != exp_periods.strip():
-            raise ValueError('Expected %s, got %s' %
-                             (exp_periods, self.occupancy_periods))
+        #elif self.occupancy_periods.strip() != exp_periods.strip():
+        #    raise ValueError('Expected %s, got %s' %
+        #                     (exp_periods, self.occupancy_periods))
         self.fields = [f[6:] for f in self.array.dtype.names
                        if f.startswith('value-')]
         self.occfields = [f for f in self.array.dtype.names
@@ -645,7 +655,7 @@ class AssetCollection(object):
         # NB: the loss types do not contain spaces, so we can store them
         # together as a single space-separated string
         op = decode(self.occupancy_periods)
-        attrs = {'time_event': self.time_event or 'None',
+        attrs = {'time_event': self.time_event,
                  'occupancy_periods': op,
                  'tot_sites': self.tot_sites,
                  'fields': ' '.join(self.fields),
@@ -668,7 +678,8 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(calc, assets_by_site, area, tagnames=(), time_event=None):
+def build_asset_array(calc, assets_by_site, area,
+                      tagnames=(), time_event='avg'):
     """
     :param assets_by_site: a list of lists of assets
     :param area: True if there is an area field in the exposure
@@ -692,7 +703,7 @@ def build_asset_array(calc, assets_by_site, area, tagnames=(), time_event=None):
         else:
             loss_types.append('value-' + name)
     # loss_types can be ['value-business_interruption', 'value-contents',
-    # 'value-nonstructural', 'value-occupants', 'occupants_day',
+    # 'value-nonstructural', 'occupants_avg', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if first_asset.retrofitted else []
     float_fields = loss_types + ['ideductible'] + retro
@@ -1131,7 +1142,7 @@ class Exposure(object):
                 num_occupancies += 1
         if num_occupancies:
             # store average occupants
-            values['occupants'] = tot_occupants / num_occupancies
+            values['occupants_avg'] = tot_occupants / num_occupancies
 
         # check if we are not missing a cost type
         missing = param['relevant_cost_types'] - set(values)
