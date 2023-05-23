@@ -983,9 +983,8 @@ class Exposure(object):
             param['region'] = wkt.loads(region_constraint)
         else:
             param['region'] = None
-        param['fname'] = fname
         param['ignore_missing_costs'] = set(ignore_missing_costs)
-        exposure, assetnodes = _get_exposure(param['fname'])
+        exposure, assetnodes = _get_exposure(fname)
         if tagcol:
             exposure.tagcol = tagcol
         if assetnodes:
@@ -993,11 +992,14 @@ class Exposure(object):
                 assetnodes, exposure._csv_header(),
                 exposure.retrofitted or calculation_mode == 'classical_bcr',
                 ignore_missing_costs)
+            fname_arrays = [(fname, array)]
         else:
-            array = exposure._read_csv(errors)
+            fname_arrays = exposure._read_csv(errors)
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
             'occupants'}
-        exposure._populate_from(array, param, check_dupl)
+        for fname, array in fname_arrays:
+            param['fname'] = fname
+            exposure._populate_from(array, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
@@ -1090,7 +1092,7 @@ class Exposure(object):
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 array = general.random_filter(array, sa)
-            yield from array
+            yield fname, array
 
     def _populate_from(self, asset_array, param, check_dupl):
         asset_refs = set()
@@ -1138,10 +1140,15 @@ class Exposure(object):
             if name.startswith('value-'):
                 values[name[6:]] = asset[name]
             elif name.startswith('occupants_'):
-                values[name] = occ = float(asset[name])
+                try:
+                    values[name] = occ = float(asset[name])
+                except ValueError:
+                    raise InvalidFile(
+                        ('%(fname)s:{} {}={}' % param).format(
+                            idx + 2, name, asset[name]))
                 tot_occupants += occ
                 num_occupancies += 1
-        if num_occupancies:
+        if num_occupancies and 'occupants_avg' not in values:
             # store average occupants
             values['occupants_avg'] = tot_occupants / num_occupancies
 
