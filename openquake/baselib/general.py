@@ -1170,11 +1170,12 @@ def random_filter(objects, reduction_factor, seed=42):
         return objects
     rnd = random.Random(seed)
     if isinstance(objects, pandas.DataFrame):
+        name = objects.index.name
+        df = objects.reset_index()
         df = pandas.DataFrame({
-            col: random_filter(objects[col], reduction_factor, seed)
-            for col in objects.columns})
-        df.set_index(objects.index)
-        return df
+            col: random_filter(df[col], reduction_factor, seed)
+            for col in df.columns})
+        return df.set_index(name)
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:
