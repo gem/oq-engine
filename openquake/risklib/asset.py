@@ -989,11 +989,12 @@ class Exposure(object):
         exposure, assetnodes = _get_exposure(fname)
         if tagcol:
             exposure.tagcol = tagcol
+        if calculation_mode == 'classical_bcr':
+            exposure.retrofitted = True
         if assetnodes:
             df = assets2df(
                 assetnodes, exposure._csv_header(),
-                exposure.retrofitted or calculation_mode == 'classical_bcr',
-                ignore_missing_costs)
+                exposure.retrofitted, ignore_missing_costs)
             fname_dfs = [(fname, df)]
         else:
             fname_dfs = exposure._read_csv(errors)
