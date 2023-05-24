@@ -42,17 +42,21 @@ U8 = numpy.uint8
 TWO32 = 2 ** 32
 KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless']
-SINGLE_LOSS_TYPES = [
-    'structural', 'nonstructural', 'contents', 'business_interruption']
-LOSS_TYPE_COMBINATIONS = numpy.array([
-    '+'.join(s) for l_idx in range(len(SINGLE_LOSS_TYPES))
-    for s in itertools.combinations(SINGLE_LOSS_TYPES, l_idx + 1)])
-LOSSTYPE = numpy.concatenate((LOSS_TYPE_COMBINATIONS, numpy.array('''\
+LOSSTYPE = numpy.array('''\
+business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
+structural+nonstructural structural+contents nonstructural+contents
+structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins
-reinsurance claim area number'''.split())), axis=0)
+reinsurance claim area number
+structural+business_interruption nonstructural+business_interruption
+contents+business_interruption
+structural+nonstructural+business_interruption
+structural+contents+business_interruption
+nonstructural+contents+business_interruption
+structural+nonstructural+contents+business_interruption'''.split())
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
