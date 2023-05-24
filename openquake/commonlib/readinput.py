@@ -1006,10 +1006,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
             assetcol.array = assetcol.array[~bad]
             assetcol.array['ordinal'] = numpy.arange(len(assetcol.array))
         assetcol.array['site_id'] = [sid_by[idx] for idx in assetcol['site_id']]
+        logging.info('Associated {:_d} assets to {:_d} sites'.
+                     format(len(assetcol), len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
-        discarded = []
+        discarded = []	
+        logging.info('Read {:_d} sites and {:_d} assets from the exposure'.	
+                     format(len(sitecol), len(assetcol)))
 
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy

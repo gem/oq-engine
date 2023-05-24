@@ -739,8 +739,6 @@ def build_asset_array(calc, assets, area, tagnames=(), time_event='avg'):
                 name, lt = field.split('-')
                 value = avalue(asset, calc, lt, time_event)
             record[field] = value
-        print(record)
-    assetcol.sort(order='ordinal')
     assetcol['ordinal'] = numpy.arange(len(assets))
     u, i = numpy.unique(assetcol[['lon', 'lat']], return_inverse=1)
     assetcol['site_id'] = i
