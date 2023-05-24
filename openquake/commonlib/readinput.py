@@ -994,21 +994,27 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    assetcol = asset.AssetCollection(
-        Global.exposure, Global.exposure.assets_by_site, oqparam.time_event,
-        oqparam.aggregate_by)
-    diff_mesh = haz_sitecol.mesh != Global.exposure.mesh
-    if diff_mesh:
-        sitecol, sid_by, discarded = geo.utils._GeographicObjects(
-            haz_sitecol).assoc2(Global.exposure.mesh, haz_distance, 'filter')
-        if len(discarded):
-            bad = numpy.isin(assetcol['site_id'], discarded)
-            assetcol.array = assetcol.array[~bad]
-        assetcol.array['site_id'] = [sid_by[idx] for idx in assetcol['site_id']]
+    if haz_sitecol.mesh != Global.exposure.mesh:
+        # associate the assets to the hazard sites
+        sitecol, assets_by, discarded = geo.utils.assoc(
+            Global.exposure.assets_by_site, haz_sitecol, haz_distance,
+            'filter')
+        num_assets = sum(len(assets) for assets in assets_by)
+        logging.info('Associated {:_d} assets to {:_d} sites'.
+                     format(num_assets, len(sitecol)))
     else:
+        # asset sites and hazard sites are the same
         sitecol = haz_sitecol
+        assets_by_site = Global.exposure.assets_by_site
         discarded = []
+        assets_by = Global.exposure.assets_by_site
+        num_assets = sum(len(assets) for assets in assets_by)
+        logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
+                     format(len(sitecol), num_assets))
 
+    assetcol = asset.AssetCollection(
+        Global.exposure, sitecol, assets_by, oqparam.time_event,
+        oqparam.aggregate_by)
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
     tax = assetcol.tagcol.taxonomy[u[idx]]

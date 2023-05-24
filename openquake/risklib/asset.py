@@ -413,13 +413,13 @@ def tagset(aggregate_by):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, assets_by_site, time_event, aggregate_by):
+    def __init__(self, exposure, sitecol, assets_by, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
         self.time_event = time_event
-        self.tot_sites = len(assets_by_site)
+        self.tot_sites = len(sitecol.complete)
         self.array, self.occupancy_periods = build_asset_array(
-            exposure.cost_calculator,
-            assets_by_site, exposure.area, exposure.tagcol.tagnames, time_event)
+            exposure.cost_calculator, sitecol.sids, assets_by,
+            exposure.area, exposure.tagcol.tagnames, time_event)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
@@ -679,7 +679,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(calc, assets_by_site, area,
+def build_asset_array(calc, sids, assets_by, area,
                       tagnames=(), time_event='avg'):
     """
     :param assets_by_site: a list of lists of assets
@@ -687,7 +687,7 @@ def build_asset_array(calc, assets_by_site, area,
     :param tagnames: a list of tag names
     :returns: an array `assetcol`
     """
-    for assets in assets_by_site:
+    for assets in assets_by:
         if len(assets):
             first_asset = assets[0]
             break
@@ -717,11 +717,11 @@ def build_asset_array(calc, assets_by_site, area,
          ('ordinal', U32), ('lon', F32), ('lat', F32),
          ('site_id', U32)] + [
              (str(name), F32) for name in float_fields] + int_fields)
-    num_assets = sum(len(assets) for assets in assets_by_site)
+    num_assets = sum(len(assets) for assets in assets_by)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
     fields = set(asset_dt.fields)
-    for sid, assets_ in enumerate(assets_by_site):
+    for sid, assets_ in zip(sids, assets_by):
         for asset in assets_:
             asset.ordinal = asset_ordinal
             record = assetcol[asset_ordinal]

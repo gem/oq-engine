@@ -261,8 +261,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         nodes = self.calc.datastore.read_df('functional_demand_nodes')
         got = dict(zip(nodes.id, nodes.number))
         expected = {'D1': 36, 'D10': 26, 'D11': 26, 'D12': 25, 'D2': 36,
-                    'D3': 36, 'D4': 36, 'D5': 36, 'D6': 36, 'D7': 25,
-                    'D8': 25, 'D9': 25}
+                    'D3': 36, 'D4': 36, 'D5': 36, 'D6': 36, 'D7': 28,
+                    'D8': 28, 'D9': 28}
         self.assertEqual(got, expected)
 
     def test_case_16(self):
