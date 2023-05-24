@@ -999,23 +999,20 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         sitecol, assets_by, discarded = geo.utils.assoc(
             Global.exposure.assets_by_site, haz_sitecol, haz_distance,
             'filter')
-        assets_by_site = [[] for _ in sitecol.complete.sids]
-        num_assets = 0
-        for sid, assets in zip(sitecol.sids, assets_by):
-            assets_by_site[sid] = assets
-            num_assets += len(assets)
+        num_assets = sum(len(assets) for assets in assets_by)
         logging.info('Associated {:_d} assets to {:_d} sites'.
                      format(num_assets, len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
-        assets_by_site = Global.exposure.assets_by_site
         discarded = []
+        assets_by = Global.exposure.assets_by_site
+        num_assets = sum(len(assets) for assets in assets_by)
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
-                     format(len(sitecol), sum(len(a) for a in assets_by_site)))
+                     format(len(sitecol), num_assets))
 
     assetcol = asset.AssetCollection(
-        Global.exposure, assets_by_site, oqparam.time_event,
+        Global.exposure, sitecol, assets_by, oqparam.time_event,
         oqparam.aggregate_by)
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
