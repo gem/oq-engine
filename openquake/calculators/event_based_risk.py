@@ -202,7 +202,7 @@ def event_based_risk(df, oqparam, monitor):
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (len(ideduc), len(weights), oqparam.K)
+    ARK = (oqparam.A, len(weights), oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -350,6 +350,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.M = len(oq.all_imts())
         oq.N = self.N
         oq.K = K
+        oq.A = self.assetcol['ordinal'].max() + 1
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
