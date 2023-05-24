@@ -1011,8 +1011,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), num_assets))
 
+    for sid, assets_ in zip(sitecol.sids, assets_by):
+        for ass in assets_:
+            ass.site_id = sid
     assetcol = asset.AssetCollection(
-        Global.exposure, sitecol, assets_by, oqparam.time_event,
+        Global.exposure, sitecol, sum(assets_by, []), oqparam.time_event,
         oqparam.aggregate_by)
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
