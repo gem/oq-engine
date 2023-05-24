@@ -1004,6 +1004,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         if len(discarded):
             bad = numpy.isin(assetcol['site_id'], discarded)
             assetcol.array = assetcol.array[~bad]
+            assetcol.array['ordinal'] = numpy.arange(len(assetcol.array))
         assetcol.array['site_id'] = [sid_by[idx] for idx in assetcol['site_id']]
     else:
         # asset sites and hazard sites are the same

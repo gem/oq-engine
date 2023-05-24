@@ -353,7 +353,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.A = self.assetcol['ordinal'].max() + 1
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
-        self.A = A = len(self.assetcol)
+        self.A = A = oq.A
         self.L = L = len(oq.loss_types)
         if (oq.calculation_mode == 'event_based_risk' and
                 A * self.R > 1_000_000 and oq.avg_losses
