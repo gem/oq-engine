@@ -68,8 +68,8 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        for asset_ref, retrofitted in zip(self.assetcol.asset_refs,
-                                          self.assetcol.array['retrofitted']):
+        for asset_ref, retrofitted in zip(self.assetcol['id'],
+                                          self.assetcol['retrofitted']):
             if numpy.isnan(retrofitted):
                 raise ValueError('The asset %s has no retrofitted value!'
                                  % asset_ref.decode('utf8'))

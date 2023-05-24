@@ -453,13 +453,6 @@ class AssetCollection(object):
         """
         return self.tagcol.tagnames
 
-    @property
-    def asset_refs(self):
-        """
-        :returns: array of asset ids as strings
-        """
-        return self.array['id']
-
     def num_taxonomies_by_site(self):
         """
         :returns: an array with the number of assets per each site
