@@ -1053,7 +1053,7 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
-    total_losses = valid.Param(valid.Choice(LOSS_TYPE_COMBINATIONS), None)
+    total_losses = valid.Param(valid.Choice(*LOSS_TYPE_COMBINATIONS), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
