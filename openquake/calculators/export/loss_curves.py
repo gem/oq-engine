@@ -47,7 +47,7 @@ class LossCurveExporter(object):
         except KeyError:  # no 'events' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']
-        arefs = [decode(aref) for aref in self.assetcol.asset_refs]
+        arefs = decode(self.assetcol['id'])
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
         self.loss_types = dstore.get_attr('crm', 'loss_types')
