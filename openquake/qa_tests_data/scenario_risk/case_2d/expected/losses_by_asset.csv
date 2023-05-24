@@ -1,5 +1,5 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-gitc157a3bc4c', start_date='2023-04-24T09:33:05', checksum=1915882603, investigation_time=None, risk_investigation_time=None"
+#,,,,"generated_by='OpenQuake engine 3.17.0-gitc1217b53d8', start_date='2023-05-24T11:27:16', checksum=1915882603, investigation_time=None, risk_investigation_time=None"
 asset_id,taxonomy,lon,lat,occupants
-a3,tax1,-122.02000,38.11300,9.63326E-03
-a2,tax1,-122.01000,38.11300,1.11575E-02
 a1,tax1,-122.00000,38.11300,1.29705E-02
+a2,tax1,-122.01000,38.11300,1.11575E-02
+a3,tax1,-122.02000,38.11300,9.63326E-03
