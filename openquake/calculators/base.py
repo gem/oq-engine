@@ -21,6 +21,7 @@ import abc
 import pdb
 import json
 import time
+import inspect
 import logging
 import operator
 import traceback
@@ -34,7 +35,8 @@ import pandas
 from openquake.baselib import general, hdf5
 from openquake.baselib import performance, parallel, python3compat
 from openquake.baselib.performance import Monitor
-from openquake.hazardlib import InvalidFile, site, stats
+from openquake.hazardlib import (
+    InvalidFile, site, stats, logictree, source_reader)
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
@@ -42,10 +44,9 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
 from openquake.risklib import riskinput, riskmodels, reinsurance
-from openquake.commonlib import (
-    readinput, logictree, datastore, source_reader, logs)
+from openquake.commonlib import readinput, datastore, logs
 from openquake.calculators.export import export as exp
-from openquake.calculators import getters
+from openquake.calculators import getters, postproc
 
 get_taxonomy = operator.attrgetter('taxonomy')
 get_weight = operator.attrgetter('weight')
@@ -241,15 +242,15 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                 self.result = self.execute()
                 if self.result is not None:
                     self.post_execute(self.result)
+                self.post_process()
                 self.export(kw.get('exports', ''))
-            except Exception:
+            except Exception as exc:
                 if kw.get('pdb'):  # post-mortem debug
                     tb = sys.exc_info()[2]
                     traceback.print_tb(tb)
                     pdb.post_mortem(tb)
                 else:
-                    logging.critical('', exc_info=True)
-                    raise
+                    raise exc from None
             finally:
                 if shutdown:
                     parallel.Starmap.shutdown()
@@ -320,6 +321,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                        'hcurves-rlzs' in self.datastore)
         if has_hcurves:
             keys.add('hcurves')
+        if 'ruptures' in self.datastore:
+            keys.add('event_based_mfd')
         for fmt in fmts:
             if not fmt:
                 continue
@@ -357,7 +360,7 @@ def check_time_event(oqparam, occupancy_periods):
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event and time_event not in occupancy_periods:
+    if time_event != 'avg' and time_event not in occupancy_periods:
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
             (time_event, oqparam.inputs['job_ini'],
@@ -502,20 +505,14 @@ class HazardCalculator(BaseCalculator):
                 oq.hazard_calculation_id is None):
             with self.monitor('composite source model', measuremem=True):
                 self.csm = csm = readinput.get_composite_source_model(
-                    oq, self.datastore.hdf5)
+                    oq, self.datastore)
                 self.datastore['full_lt'] = self.full_lt = csm.full_lt
-                oq.mags_by_trt = csm.get_mags_by_trt()
+                oq.mags_by_trt = csm.get_mags_by_trt(oq.maximum_distance)
+                assert oq.mags_by_trt, 'Filtered out all magnitudes!'
                 for trt in oq.mags_by_trt:
-                    mags = oq.mags_by_trt[trt]
-                    min_mag, max_mag = float(mags[0]), float(mags[-1])
-                    self.datastore['source_mags/' + trt] = numpy.array(mags)
+                    mags = numpy.array(oq.mags_by_trt[trt])
+                    self.datastore['source_mags/' + trt] = mags
                     interp = oq.maximum_distance(trt)
-                    if min_mag < interp.x[0]:
-                        logging.warning(
-                            '%s: discarding mags < %.2f', trt, interp.x[0])
-                    if max_mag > interp.x[-1]:
-                        logging.warning(
-                            '%s: discarding mags > %.2f', trt, interp.x[-1])
                     if len(interp.x) > 2:
                         md = '%s->%d, ... %s->%d, %s->%d' % (
                             interp.x[0], interp.y[0],
@@ -553,8 +550,7 @@ class HazardCalculator(BaseCalculator):
             if 'gmfs' in oq.inputs:
                 self.datastore['full_lt'] = logictree.FullLogicTree.fake()
                 if oq.inputs['gmfs'].endswith('.csv'):
-                    eids = import_gmfs_csv(self.datastore, oq,
-                                           self.sitecol.complete.sids)
+                    eids = import_gmfs_csv(self.datastore, oq, self.sitecol)
                 elif oq.inputs['gmfs'].endswith('.hdf5'):
                     eids = import_gmfs_hdf5(self.datastore, oq)
                 else:
@@ -859,7 +855,8 @@ class HazardCalculator(BaseCalculator):
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
                 raise ValueError('Missing exposure both in hazard and risk!')
-            if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
+            if (oq_hazard.time_event != 'avg' and
+                    oq_hazard.time_event != oq.time_event):
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
@@ -897,9 +894,20 @@ class HazardCalculator(BaseCalculator):
                 assoc_dist = (oq.region_grid_spacing * 1.414
                               if oq.region_grid_spacing else 5)  # Graeme's 5km
                 sm = readinput.get_site_model(oq)
-                self.sitecol.assoc(sm, assoc_dist)
+                if oq.prefer_global_site_params:
+                    self.sitecol.set_global_params(oq)
+                else:
+                    # use the site model parameters
+                    self.sitecol.assoc(sm, assoc_dist)
                 if oq.override_vs30:
+                    # override vs30, z1pt0 and z2pt5
+                    names = self.sitecol.array.dtype.names
                     self.sitecol.array['vs30'] = oq.override_vs30
+                    if 'z1pt0' in names:
+                        self.sitecol.calculate_z1pt0()
+                    if 'z2pt5' in names:
+                        self.sitecol.calculate_z2pt5()
+
                 self.datastore['sitecol'] = self.sitecol
 
         # store amplification functions if any
@@ -957,7 +965,7 @@ class HazardCalculator(BaseCalculator):
         """
         keep_trts = set()
         nrups = []
-        for grp_id, trt_smrs in enumerate(self.datastore['trt_smrs']):
+        for grp_id, trt_smrs in enumerate(self.csm.get_trt_smrs()):
             trti, smrs = numpy.divmod(trt_smrs, 2**24)
             trt = self.full_lt.trts[trti[0]]
             nr = rel_ruptures.get(grp_id, 0)
@@ -985,11 +993,22 @@ class HazardCalculator(BaseCalculator):
         recs = [tuple(row) for row in self.csm.source_info.values()]
         self.datastore['source_info'][:] = numpy.array(
             recs, source_reader.source_info_dt)
-        if 'trt_smrs' not in self.datastore:
-            self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
 
     def post_process(self):
-        """For compatibility with the engine"""
+       	"""
+        Run postprocessing function, if any
+        """
+        oq = self.oqparam
+        if oq.postproc_func:
+            func = getattr(postproc, oq.postproc_func).main
+            if 'csm' in inspect.getargspec(func).args:
+                if hasattr(self, 'csm'):  # already there
+                    csm = self.csm
+                else:  # read the csm from the parent calculation
+                    csm = self.datastore.parent['_csm']
+                    csm.full_lt = self.datastore.parent['full_lt'].init()
+                oq.postproc_args['csm'] = csm
+            func(self.datastore, **oq.postproc_args)
 
 
 class RiskCalculator(HazardCalculator):
@@ -1071,23 +1090,29 @@ class RiskCalculator(HazardCalculator):
         return acc + res
 
 
-def import_gmfs_csv(dstore, oqparam, sids):
+def import_gmfs_csv(dstore, oqparam, sitecol):
     """
     Import in the datastore a ground motion field CSV file.
 
     :param dstore: the datastore
     :param oqparam: an OqParam instance
-    :param sids: the complete site IDs
+    :param sitecol: the site collection
     :returns: event_ids
     """
     fname = oqparam.inputs['gmfs']
-    array = hdf5.read_csv(fname, {'sid': U32, 'eid': U32, None: F32},
-                          renamedict=dict(site_id='sid', event_id='eid',
-                                          rlz_id='rlzi')).array
+    dtdict = {'sid': U32,
+              'eid': U32,
+              'custom_site_id': (numpy.string_, 8),
+              None: F32}
+    array = hdf5.read_csv(
+        fname, dtdict,
+        renamedict=dict(site_id='sid', event_id='eid', rlz_id='rlzi')
+    ).array
     names = array.dtype.names  # rlz_id, sid, ...
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
-    imts = [name.lstrip('gmv_') for name in names[2:]]
+    names = [n for n in names if n != 'custom_site_id']
+    imts = [name.lstrip('gmv_') for name in names if name not in ('sid', 'eid')]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:
@@ -1106,7 +1131,15 @@ def import_gmfs_csv(dstore, oqparam, sids):
         else:
             arr[name] = array[name]
 
-    n = len(numpy.unique(array[['sid', 'eid']]))
+    if 'sid' not in names:
+        # there is a custom_site_id instead
+        customs = sitecol.complete.custom_site_id
+        to_sid = {csi: sid for sid, csi in enumerate(customs)}
+        for csi in numpy.unique(array['custom_site_id']):
+            ok = array['custom_site_id'] == csi
+            arr['sid'][ok] = to_sid[csi]
+
+    n = len(numpy.unique(arr[['sid', 'eid']]))
     if n != len(array):
         raise ValueError('Duplicated site_id, event_id in %s' % fname)
     # store the events
@@ -1123,7 +1156,7 @@ def import_gmfs_csv(dstore, oqparam, sids):
     dic = general.group_array(arr, 'sid')
     offset = 0
     gmvlst = []
-    for sid in sids:
+    for sid in sitecol.complete.sids:
         n = len(dic.get(sid, []))
         if n:
             offset += n

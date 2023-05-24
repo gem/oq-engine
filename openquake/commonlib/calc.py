@@ -16,18 +16,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import itertools
 import logging
+import functools
 from unittest.mock import Mock
 import numpy
 
-from openquake.baselib import performance, parallel, hdf5
+from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
 from openquake.hazardlib.source.rupture import EBRupture, events_dt
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
+TWO24 = 2 ** 24
+TWO30 = 2 ** 30
 TWO32 = numpy.float64(2 ** 32)
 MAX_NBYTES = 1024**3
 MAX_INT = 2 ** 31 - 1  # this is used in the random number generator
@@ -120,7 +122,7 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
-# TODO: see if it can be simplified, in terms of compute_hmap4
+# TODO: see if it can be simplified
 def make_hmaps(pmaps, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability maps.
@@ -171,25 +173,26 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        self.scenario = 'scenario' in self.oqparam.calculation_mode
         try:
             self.N = len(dstore['sitecol'])
         except KeyError:  # missing sitecol
             self.N = 0
 
-    def get_eid_rlz(self, proxies, rlzs_by_gsim):
+    def get_eid_rlz(self, proxies, rlzs_by_gsim, ordinal):
         """
         :returns: a composite array with the associations eid->rlz
         """
         eid_rlz = []
         for rup in proxies:
+            srcid, rupid = divmod(int(rup['id']), TWO30)
             ebr = EBRupture(
-                Mock(seed=rup['seed']), rup['source_id'],
-                rup['trt_smr'], rup['n_occ'], e0=rup['e0'],
-                scenario='scenario' in self.oqparam.calculation_mode)
-            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-                for eid in eids:
-                    eid_rlz.append((eid, rup['id'], rlz_id))
-        return numpy.array(eid_rlz, events_dt)
+                Mock(), rup['source_id'],
+                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'])
+            ebr.seed = rup['seed']
+            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim, self.scenario):
+                eid_rlz.append((eid, rup['id'], rlz))
+        return {ordinal: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
@@ -198,16 +201,12 @@ class RuptureImporter(object):
         """
         oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
-        # order the ruptures by seed
-        rup_array.sort(order='seed')
+        geom_id = numpy.argsort(rup_array['id'])
+        rup_array = rup_array[geom_id]
         nr = len(rup_array)
-        seeds, counts = numpy.unique(rup_array['seed'], return_counts=True)
-        if len(seeds) != nr:
-            dupl = seeds[counts > 1]
-            logging.debug('The following %d rupture seeds are duplicated: %s',
-                          len(dupl), dupl)
-        rup_array['geom_id'] = rup_array['id']
-        rup_array['id'] = numpy.arange(nr)
+        rupids = numpy.unique(rup_array['id'])
+        assert len(rupids) == nr, 'rup_id not unique!'
+        rup_array['geom_id'] = geom_id
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
@@ -228,24 +227,31 @@ class RuptureImporter(object):
         E = rup_array['n_occ'].sum()
         self.check_overflow(E)  # check the number of events
         events = numpy.zeros(E, rupture.events_dt)
+        # DRAMATIC! the event IDs will be overridden a few lines below,
+        # see the line events['id'] = numpy.arange(len(events))
+
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
         # this is very fast: I saw 30 million events associated in 1 minute!
-        iterargs = ((rg.proxies, rg.rlzs_by_gsim) for rg in rgetters)
+        iterargs = []
+        for i, rg in enumerate(rgetters):
+            iterargs.append((rg.proxies, rg.rlzs_by_gsim, i))
         if len(events) < 1E5:
-            it = itertools.starmap(self.get_eid_rlz, iterargs)
+            acc = general.AccumDict()  # ordinal -> eid_rlz
+            for args in iterargs:
+                acc += self.get_eid_rlz(*args)
         else:
-            it = parallel.Starmap(
-                self.get_eid_rlz, iterargs, progress=logging.debug)
+            acc = parallel.Starmap(
+                self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
         i = 0
-        for eid_rlz in it:
+        for ordinal, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:
                 events[i] = er
                 i += 1
                 if i >= TWO32:
                     raise ValueError('There are more than %d events!' % i)
-        events.sort(order='rup_id')  # fast too
+
         # sanity check
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
@@ -253,11 +259,12 @@ class RuptureImporter(object):
         # set event year and event ses starting from 1
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
-        numpy.random.seed(self.oqparam.ses_seed)
+
+        rng = numpy.random.default_rng(self.oqparam.ses_seed)
         if self.oqparam.investigation_time:
             itime = int(self.oqparam.investigation_time)
-            extra['year'] = numpy.random.choice(itime, len(events)) + 1
-        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
+            extra['year'] = rng.choice(itime, len(events)) + 1
+        extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
         cumsum = self.datastore['ruptures']['n_occ'].cumsum()
         rup_array['e0'][1:] = cumsum[:-1]
@@ -294,6 +301,53 @@ class RuptureImporter(object):
                 raise ValueError(
                     'The %s calculator is restricted to %d %s, got %d' %
                     (oq.calculation_mode, max_[var], var, num_[var]))
+
+
+def _concat(acc, slc2):
+    if len(acc) == 0:
+        return [slc2]
+    slc1 = acc[-1]  # last slice
+    if slc2[0] == slc1[1]:
+        new = numpy.array([slc1[0], slc2[1]])
+        return acc[:-1] + [new]
+    return acc + [slc2]
+
+
+def compactify(arrayN2):
+    """
+    :param arrayN2: an array with columns (start, stop)
+    :returns: a shorter array with the same structure
+
+    Here is how it works in an example where the first three slices
+    are compactified into one while the last slice stays as it is:
+
+    >>> arr = numpy.array([[84384702, 84385520],
+    ...                    [84385520, 84385770],
+    ...                    [84385770, 84386062],
+    ...                    [84387636, 84388028]])
+    >>> compactify(arr)
+    array([[84384702, 84386062],
+           [84387636, 84388028]])
+    """
+    if len(arrayN2) == 1:
+        # nothing to compactify
+        return arrayN2
+    out = numpy.array(functools.reduce(_concat, arrayN2, []))
+    return out
+
+
+# used in event_based_risk
+def compactify3(arrayN3, maxsize=1_000_000):
+    """
+    :param arrayN3: an array with columns (idx, start, stop)
+    :returns: a shorter array with columns (start, stop)
+    """
+    out = []
+    for rows in general.block_splitter(
+            arrayN3, maxsize, weight=lambda row: row[2]-row[1]):
+        arr = numpy.vstack(rows)[:, 1:]
+        out.append(compactify(arr))
+    return numpy.concatenate(out)
 
 
 ##############################################################

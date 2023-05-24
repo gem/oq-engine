@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <logicTree logicTreeID="lt_gmpe">
+    <logicTreeBranchSet
+        applyToTectonicRegionType="Stable Crust Non Cratonic"
+        branchSetID="Shallow_Def"
+        uncertaintyType="gmpeModel"
+        >
+      <logicTreeBranch branchID="Shallow_Default_VLowStress_FastAtt">
+        <uncertaintyModel>
+	  [KothaEtAl2020ESHM20]
+	  sigma_mu_epsilon = -2.85697000
+	  c3_epsilon = -1.73205100
+        </uncertaintyModel>
+        <uncertaintyWeight>
+	  0.5
+        </uncertaintyWeight>
+      </logicTreeBranch>
+      <logicTreeBranch
+	  branchID="Shallow_Default_VLowStress_CentralAtt"
+	  >
+        <uncertaintyModel>
+	  [KothaEtAl2020ESHM20]
+          sigma_mu_epsilon = -2.85697000
+        </uncertaintyModel>
+        <uncertaintyWeight>
+	  0.5
+        </uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+  </logicTree>
+</nrml>

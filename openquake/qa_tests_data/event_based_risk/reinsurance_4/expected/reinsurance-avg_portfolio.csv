@@ -1,3 +1,3 @@
-#,,,,,,"generated_by='OpenQuake engine 3.17.0-git2835dfbf6f', start_date='2023-03-08T05:02:10', checksum=1448297306"
+#,,,,,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:54:40', checksum=454246847"
 rlz_id,retention,claim,treaty_1,treaty_2,xlr1,overspill_treaty_2
-0,2.75435E+01,5.90055E+01,3.91503E+00,7.19243E+00,2.03546E+01,8.57973E+00
+0,1.87992E+01,5.27548E+01,2.70619E+00,8.00000E+00,2.32494E+01,7.68953E+00

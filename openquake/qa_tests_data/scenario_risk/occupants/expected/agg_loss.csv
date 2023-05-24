@@ -1,3 +1,3 @@
-#,,"generated_by='OpenQuake engine 3.13.0-gitfd10c012c5', start_date='2021-11-10T11:21:19', checksum=3953215024, investigation_time=None, risk_investigation_time=None"
+#,,"generated_by='OpenQuake engine 3.17.0-git42db4b1b37', start_date='2023-05-23T05:02:56', checksum=3953215024, investigation_time=None, risk_investigation_time=None"
 loss_type,loss_value,loss_ratio
-occupants,2.62649E+00,4.04075E-02
+occupants_day,2.72800E+00,4.19692E-02

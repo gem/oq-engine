@@ -263,15 +263,12 @@ class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
 
 
-def basename(src):
+def basename(src, splitchars='.:'):
     """
     :returns: the base name of a split source
     """
     src_id = src if isinstance(src, str) else src.source_id
-    splits = re.split('[.:]', src_id, 1)
-    if len(splits) == 2 and ';' in splits[1]:
-        return splits[0] + ';' + splits[1].split(';')[1]
-    return splits[0]
+    return re.split('[%s]' % splitchars, src_id)[0]
 
 
 def get_num_distances(gsims):
@@ -284,6 +281,7 @@ def get_num_distances(gsims):
     return len(dists)
 
 
+# NB: minimum_magnitude is ignored
 def _interp(param, name, trt):
     try:
         mdd = param[name]
@@ -292,7 +290,11 @@ def _interp(param, name, trt):
     if isinstance(mdd, IntegrationDistance):
         return mdd(trt)
     elif isinstance(mdd, dict):
-        return magdepdist(getdefault(mdd, trt))
+        if mdd:
+            magdist = getdefault(mdd, trt)
+        else:
+            magdist = [(MINMAG, 1000), (MAXMAG, 1000)]
+        return magdepdist(magdist)
     return mdd
 
 
@@ -584,7 +586,8 @@ class ContextMaker(object):
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
         for i, src in enumerate(srcs):
-            src.id = i
+            if src.id == -1:  # not set yet
+                src.id = i
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 ctxs.extend(self.get_ctx_iter(src, sites))
@@ -854,12 +857,12 @@ class ContextMaker(object):
                     r_sites = sites.filter(mask)
                     rctx = self.get_rctx(rup, r_sites, dist[mask])
                     rctx.src_id = src_id
-                    if src_id:  # not event based
+                    if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id
-                    if self.fewsites:
-                        c = rup.surface.get_closest_points(sites.complete)
-                        rctx.clon = c.lons[rctx.sids]
-                        rctx.clat = c.lats[rctx.sids]
+                        if self.fewsites:
+                            c = rup.surface.get_closest_points(sites.complete)
+                            rctx.clon = c.lons[rctx.sids]
+                            rctx.clat = c.lats[rctx.sids]
                     yield rctx
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
@@ -882,11 +885,11 @@ class ContextMaker(object):
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
-                allrups = [rup for rup in src.iter_ruptures(
-                    shift_hypo=self.shift_hypo, step=step)
-                           if minmag < rup.mag < maxmag]
+                allrups = list(src.iter_ruptures(
+                    shift_hypo=self.shift_hypo, step=step))
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
+                allrups = [rup for rup in allrups if minmag < rup.mag < maxmag]
                 self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
@@ -895,7 +898,7 @@ class ContextMaker(object):
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
-            src_id = 0
+            src_id = -1
         rctxs = self.gen_contexts(rups_sites, src_id)
         blocks = block_splitter(rctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
@@ -975,6 +978,7 @@ class ContextMaker(object):
         :param rup_indep: rupture flag (false for mutex ruptures)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
+        ctx.flags.writeable = True
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
@@ -987,6 +991,7 @@ class ContextMaker(object):
                 poes = numpy.concatenate(list(self._gen_poes(kctx)))
                 yield poes, ctxt, invs
 
+    # used in source_disagg
     def get_pmap(self, ctxs, tom=None, rup_mutex={}):
         """
         :param ctxs: a list of context arrays (only one for poissonian ctxs)
@@ -1020,6 +1025,7 @@ class ContextMaker(object):
         for ctx in ctxs:
             for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
                 with self.pne_mon:
+                    ctxt.flags.writeable = True  # avoid numba type error
                     pmap.update(poes, invs, ctxt, itime, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
@@ -1047,6 +1053,8 @@ class ContextMaker(object):
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
+                # make the context immutable
+                ctx.flags.writeable = False
                 adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 if adj is not None:
                     self.adj[gsim].append(adj)
@@ -1620,18 +1628,15 @@ def get_effect_by_mag(mags, sitecol1, gsims_by_trt, maximum_distance, imtls):
 
 def get_cmakers(src_groups, full_lt, oq):
     """
-    :params src_groups: a list of SourceGroups (or trt_smrs arrays)
+    :params src_groups: a list of SourceGroups
     :param full_lt: a FullLogicTree instance
     :param oq: object containing the calculation parameters
     :returns: list of ContextMakers associated to the given src_groups
     """
-    if isinstance(src_groups, numpy.ndarray):  # passed trt_smrs
-        all_trt_smrs = src_groups
-    else:
-        all_trt_smrs = []
-        for sg in src_groups:
-            src = sg.sources[0]
-            all_trt_smrs.append(full_lt.get_trt_smrs(src))
+    all_trt_smrs = []
+    for sg in src_groups:
+        src = sg.sources[0]
+        all_trt_smrs.append(src.trt_smrs)
     trts = list(full_lt.gsim_lt.values)
     cmakers = []
     for grp_id, trt_smrs in enumerate(all_trt_smrs):
@@ -1648,10 +1653,10 @@ def get_cmakers(src_groups, full_lt, oq):
     return cmakers
 
 
-def read_cmakers(dstore, full_lt=None):
+def read_cmakers(dstore, csm=None):
     """
     :param dstore: a DataStore-like object
-    :param full_lt: a FullLogicTree instance, if given
+    :param csm: a CompositeSourceModel instance, if given
     :returns: a list of ContextMaker instances, one per source group
     """
     from openquake.hazardlib.site_amplification import AmplFunction
@@ -1663,11 +1668,10 @@ def read_cmakers(dstore, full_lt=None):
         oq.af = AmplFunction.from_dframe(df)
     else:
         oq.af = None
-    trt_smrs = dstore['trt_smrs'][:]
-    if full_lt is None:
-        full_lt = dstore['full_lt']
-        full_lt.init()
-    cmakers = get_cmakers(trt_smrs, full_lt, oq)
+    if csm is None:
+        csm = dstore['_csm']
+        csm.full_lt = dstore['full_lt'].init()
+    cmakers = get_cmakers(csm.src_groups, csm.full_lt, oq)
     if 'delta_rates' in dstore:  # aftershock
         for cmaker in cmakers:
             cmaker.deltagetter = DeltaRatesGetter(dstore)

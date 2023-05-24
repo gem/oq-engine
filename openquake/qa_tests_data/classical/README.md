@@ -5,7 +5,6 @@
 | case_12 | Two TRTs, 1 rlz                                                                                        |
 | case_14 | Test reqv                                                                                              |
 | case_18 | 3 GMPETables                                                                                           |
-| case_19 | Test AvgGMPE                                                                                           |
 | case_22 | Test tiling and International Date Line                                                                |
 | case_23 | Filtering away a TRT                                                                                   |
 | case_24 | Test collapsing rjb-independent GMPE                                                                   |

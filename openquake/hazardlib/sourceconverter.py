@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import os
-import math
 import operator
 import collections
 import pickle
@@ -26,14 +25,14 @@ import logging
 from dataclasses import dataclass
 import numpy
 
-from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.source import NonParametricSeismicSource
-
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 U32 = numpy.uint32
 F32 = numpy.float32
@@ -85,8 +84,8 @@ def fix_dupl(dist, fname=None, lineno=None):
         if fname is None:  # when called from the sourcewriter
             raise ValueError('There are repeated values in %s' % got)
         else:
-            logging.warning('There were repeated values %s in %s:%s',
-                            extract_dupl(got), fname, lineno)
+            logging.info('There were repeated values %s in %s:%s',
+                         extract_dupl(got), fname, lineno)
             assert abs(sum(values.values()) - 1) < EPSILON  # sanity check
             newdist = sorted([(p, v) for v, p in values.items()])
             if isinstance(newdist[0][1], tuple):  # nodal planes
@@ -251,10 +250,8 @@ class SourceGroup(collections.abc.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-        src.min_mag = max(src.min_mag, self.min_mag.get(self.trt)
-                          or self.min_mag['default'])
-        if src.min_mag and not src.get_mags():  # filtered out
-            return
+        min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
+
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
                 self.rup_interdep == 'mutex'):
@@ -284,6 +281,7 @@ class SourceGroup(collections.abc.Sequence):
             print(src.weight)
         return self
 
+    # used only in event_based, where weight = num_ruptures
     def split(self, maxweight):
         """
         Split the group in subgroups with weight <= maxweight, unless it
@@ -291,12 +289,24 @@ class SourceGroup(collections.abc.Sequence):
         """
         if self.atomic:
             return [self]
+
+        # split multipoint/multifault in advance
+        sources = []
+        for src in self:
+            if src.code in b'MF':
+                sources.extend(split_source(src))
+            else:
+                sources.append(src)
         out = []
-        for block in block_splitter(
-                self, maxweight, operator.attrgetter('weight')):
+        def weight(src):
+            if src.code == b'F':  # consider it much heavier
+                return src.num_ruptures * 25
+            return src.num_ruptures
+        for block in block_splitter(sources, maxweight, weight):
             sg = copy.copy(self)
             sg.sources = block
             out.append(sg)
+        logging.info('Produced %d subgroup(s) of %s', len(out), self)
         return out
 
     def get_tom_toml(self, time_span):
@@ -1233,7 +1243,9 @@ class SourceConverter(RuptureConverter):
                 else:  # transmit as it is
                     setattr(src, attr, node[attr])
             sg.update(src)
-        if sg.src_interdep == 'mutex':
+        if sg and sg.src_interdep == 'mutex':
+            # sg can be empty if source_id is specified and it is different
+            # from any source in sg
             if len(node) and len(srcs_weights) != len(node):
                 raise ValueError(
                     'There are %d srcs_weights but %d source(s) in %s'

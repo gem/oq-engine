@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import gzip
-import unittest
 import numpy
 from openquake.baselib import parallel, general
 from openquake.baselib.python3compat import decode
@@ -29,7 +28,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
-    case_01, case_12, case_18, case_19, case_22, case_23,
+    case_01, case_12, case_18, case_22, case_23,
     case_24, case_25, case_26, case_27, case_29, case_32, case_33,
     case_34, case_35, case_37, case_38, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
@@ -93,7 +92,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # check minimum_magnitude discards the source
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_01.__file__, 'job.ini', minimum_magnitude='4.5')
-        self.assertIn('All sources were discarded!?', str(ctx.exception))
+        self.assertIn('All sources were discarded', str(ctx.exception))
 
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
@@ -142,14 +141,6 @@ class ClassicalTestCase(CalculatorTestCase):
         # extracting hmaps
         hmaps = extract(self.calc.datastore, 'hmaps')['all']['mean']
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
-
-    def test_case_19(self):
-        # test for AvgGMPE
-        self.assert_curves_ok([
-            'hazard_curve-mean_PGA.csv',
-            'hazard_curve-mean_SA(0.1).csv',
-            'hazard_curve-mean_SA(0.15).csv',
-        ], case_19.__file__, delta=1E-5)
 
     def test_case_22(self):  # crossing date line calculation for Alaska
         # this also tests the splitting of the source model in two files
@@ -251,6 +242,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok([
             'hazard_curve-mean-AvgSA.csv'], case_34.__file__)
 
+        # test prefer_global_site_params
+        ae(self.calc.sitecol.vs30, [600])  # read vs30 from site_model.csv
+        self.run_calc(case_34.__file__, 'job.ini', sites_file='site_model.csv',
+                      site_model_file='', calculation_mode='preclassical')
+        ae(self.calc.sitecol.vs30, [700])  # read vs30 from the job.ini
+
     def test_case_35(self):
         # cluster
         self.assert_curves_ok(['hazard_curve-rlz-000-PGA.csv'],
@@ -269,6 +266,12 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
                                "hazard_uhs-mean.csv"],
                               case_38.__file__)
+
+        # check override_vs30
+        sitecol = self.calc.datastore['sitecol']
+        aac(sitecol.vs30, [800, 800])
+        aac(sitecol.z1pt0, [31.070149, 31.070149], atol=1e-6)
+        aac(sitecol.z2pt5, [0.572241, 0.572241], atol=1e-6)
 
     def test_case_40(self):
         # NGA East
@@ -497,6 +500,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_65(self):
         # multiFaultSource with infer_occur_rates=true
         self.run_calc(case_65.__file__, 'job.ini')
+        rates = self.calc.datastore['rup/occurrence_rate'][:]
+        aac(rates, [0.356675, 0.105361], atol=5e-7)
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
@@ -587,21 +592,25 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_76(self):
         # CanadaSHM6 GMPEs
         self.run_calc(case_76.__file__, 'job.ini')
+        oq = self.calc.oqparam
+        L = oq.imtls.size  # 25 levels x 9 IMTs
+        L1 = L // len(oq.imtls)
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
         df = self.calc.datastore.read_df('_poes')
         del df['sid']
-        L = self.calc.oqparam.imtls.size  # 25 levels x 8 IMTs
-        for gid, gsim in enumerate(gsims):
-            df_for_gid = df[df.gid == gid]
+        for g, gsim in enumerate(gsims):
+            curve = numpy.zeros(L1, oq.imt_dt())
+            df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
-            poes[df_for_gid.lid] = df_for_gid.poe
-            csv = general.gettemp('\r\n'.join('%.6f' % poe for poe in poes))
-            gsim_str = gsim.__class__.__name__
-            if hasattr(gsim, 'submodel'):
-                gsim_str += '_' + gsim.submodel
-            raise unittest.SkipTest('Not passing yet')
-            self.assertEqualFiles('expected/%s.csv' % gsim_str, csv)
+            poes[df_for_g.lid] = df_for_g.poe
+            for im in oq.imtls:
+                curve[im] = poes[oq.imtls(im)]
+            gs = gsim.__class__.__name__
+            if 'submodel' in gsim._toml:
+                gs += '_' + gsim.kwargs['submodel']
+            got = general.gettemp(text_table(curve, ext='org'))
+            self.assertEqualFiles('expected/%s.org' % gs, got, delta=2E-5)
 
     def test_case_77(self):
         # test calculation for modifiable GMPE with original tabular GMM
@@ -637,6 +646,14 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-mean-PGA.csv', f1)
 
+        # test sampling
+        self.run_calc(case_80.__file__, 'job.ini',
+                      calculation_mode='event_based',
+                      ground_motion_fields='false')
+        rups = self.calc.datastore['ruptures'][()]
+        tbl = text_table(rups[['source_id', 'n_occ', 'mag']], ext='org')
+        self.assertEqualFiles('expected/rups.org', general.gettemp(tbl))
+
     def test_case_81(self):
         # collapse_level=2
         self.run_calc(case_81.__file__, 'job.ini')
@@ -646,13 +663,13 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_82(self):
         # two mps, only one should be collapsed and use reqv
         self.run_calc(case_82.__file__, 'job.ini')
-        [f1] = export(('disagg_by_src', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/disagg_by_src.csv', f1)
+        [f1] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_rates_by_src.csv', f1)
 
     def test_case_84(self):
         # three sources are identical except for their source_ids.
         # one is collapsed using reqv, while the other two are specified 
         # as 'not collapsed' in the job file field reqv_ignore_sources
         self.run_calc(case_84.__file__, 'job.ini')
-        [f] = export(('disagg_by_src', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/dbs.csv', f)
+        [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/rbs.csv', f)

@@ -307,7 +307,10 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type]
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = assets['value-' + loss_type].to_numpy()
+        if loss_type == 'occupants':
+            values = assets['occupants_avg'].to_numpy()
+        else:
+            values = assets['value-' + loss_type].to_numpy()
         rtime = self.risk_investigation_time or self.investigation_time
         lrcurves = numpy.array(
             [scientific.classical(
@@ -379,17 +382,18 @@ class RiskModel(object):
             steps_per_interval=self.steps_per_interval)
         damages = numpy.array([a['value-number'] * damage
                                for a in assets.to_records()])
-        return numpy.array([damages] * len(assets))
+        return damages
 
     def event_based_risk(self, loss_type, assets, gmf_df, col, rndgen):
         """
         :returns: a DataFrame with columns eid, eid, loss
         """
         sid = assets['site_id']
-        if loss_type == 'occupants' and self.time_event:
+        if loss_type == 'occupants':
             val = assets['occupants_%s' % self.time_event].to_numpy()
         else:
             val = assets['value-' + loss_type].to_numpy()
+
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type]
         return vf(asset_df, gmf_df, col, rndgen,

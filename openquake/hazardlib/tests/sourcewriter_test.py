@@ -18,13 +18,26 @@
 
 import os
 import copy
+import toml
+import difflib
+import filecmp
+import pathlib
 import unittest
 import tempfile
-import toml
+
 from openquake.baselib import general
 from openquake.hazardlib.sourcewriter import write_source_model, tomldump
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib import nrml
+
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.surface import PlanarSurface
+from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.const import TRT
+from openquake.hazardlib.scalerel.wc1994 import WC1994
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.source import NonParametricSeismicSource
+from openquake.hazardlib.sourceconverter import SourceGroup
 
 NONPARAM = os.path.join(os.path.dirname(__file__),
                         'source_model/nonparametric-source.xml')
@@ -59,6 +72,9 @@ KITEFAULT = os.path.join(os.path.dirname(__file__),
 TOML = os.path.join(os.path.dirname(__file__), 'expected_sources.toml')
 
 conv = SourceConverter(50., 1., 20, 0.1, 10.)
+
+HERE = pathlib.Path(__file__)
+OVERWRITE = False
 
 
 class SourceWriterTestCase(unittest.TestCase):
@@ -148,3 +164,53 @@ class DeepcopyTestCase(unittest.TestCase):
         # NB: without Node.__deepcopy__ the serialization would fail
         # with a RuntimeError: maximum recursion depth exceeded while
         # calling a Python object
+
+
+class NonParametricSourceTest(unittest.TestCase):
+    def test_non_parametric_src(self):
+        lon = 0.0
+        lat = 0.0
+        dep = 10.0
+        msr = WC1994()
+        mag = 7.0
+        aratio = 2.0
+        strike = 270.0
+        dip = 30.0
+        rake = 90.0
+        trt = TRT.SUBDUCTION_INTERFACE
+        ztor = 0.0
+
+        hypoc = Point(lon, lat, dep)
+        surface = PlanarSurface.from_hypocenter(
+            hypoc, msr, mag, aratio, strike, dip, rake, ztor)
+        rup = BaseRupture(mag, rake, trt, hypoc, surface)
+        pmf = PMF([(0.9, 0), (0.1, 1)])
+
+        data = [(rup, pmf)]
+        src = NonParametricSeismicSource('0', '0', trt, data)
+        grp = SourceGroup(sources=[src], trt=trt)
+
+        # Write file
+        computed = general.gettemp(suffix='.xml')
+        write_source_model(computed, [grp], name='test')
+
+        # Reference
+        expected = HERE.parent / 'data' / 'test_non_param_write.xml'
+        if OVERWRITE:
+            write_source_model(expected, [grp], name='test')
+
+        # Testing file created
+        msg = f'The two files do not match:\n{expected}\n{computed}\n'
+        with open(expected, 'r') as hosts0:
+            with open(computed, 'r') as hosts1:
+                diff = difflib.unified_diff(
+                    hosts0.readlines(),
+                    hosts1.readlines(),
+                    fromfile='expected',
+                    tofile='computed',
+                )
+                for line in diff:
+                    msg += line
+                    msg += '\n'
+
+        self.assertTrue(filecmp.cmp(expected, computed, shallow=True), msg)

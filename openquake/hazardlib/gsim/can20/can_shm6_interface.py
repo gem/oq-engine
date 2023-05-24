@@ -28,7 +28,7 @@ import openquake.hazardlib.gsim.atkinson_macias_2009 as AM09
 import openquake.hazardlib.gsim.can20.can_shm6_active_crust as CanadaSHM6_ASC
 import openquake.hazardlib.gsim.ghofrani_atkinson_2014 as GA14
 import openquake.hazardlib.gsim.zhao_2006 as ZH06
-
+import openquake.hazardlib.gsim.can20.can_shm6_inslab as CAN_inslab
 from scipy.constants import g
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA, PGV
@@ -63,9 +63,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
         for spec of input and result values.
                 CanadaSHM6 edits: Added PGV
                           Limited GMM to the CSHM6 range of 0.05 - 10s.
-
         """
-
         # Checking the IMTs used to compute ground-motion
         _check_imts(imts)
 
@@ -123,7 +121,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 
 
 class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
-                                CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
+        CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
     """
     Zhao et al., 2006 Interface with Cascadia adjustment at a fixed hypo depth
     of 30 km, extrapolated to 0.05 - 10s and with modifications to the site
@@ -140,15 +138,11 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
     HYPO_DEPTH = 30.
 
     def __init__(self):
-        super(CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia,
-              self).__init__()
-
+        super().__init__()
         self.COEFFS_SINTER = CoeffsTable_CanadaSHM6(self.COEFFS_SINTER,
                                                     self.MAX_SA, self.MIN_SA,
                                                     self.MAX_SA_EXTRAP,
                                                     self.MIN_SA_EXTRAP)
-
-
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -158,8 +152,11 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
         """
         for m, imt in enumerate(imts):
 
-            # Extrapolation
-            extrapolate, imt, target_imt = _set_extrapolation(imt, self)
+            if imt == PGV():
+                extrapolate, imt, target_imt = False, SA(1.92), PGV
+            else:
+                # Extrapolation
+                extrapolate, imt, target_imt = _set_extrapolation(imt, self)
 
             # extracting dictionary of coefficients specific to required
             # intensity measure type.
@@ -171,24 +168,30 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
             # faulting style and intraslab terms (that is FR, SS, SSL = 0) and
             # inter and intra event terms, plus the magnitude-squared term
             # correction factor (equation 5 p. 909)
+
             mean[m] = ZH06._compute_magnitude_term(C, ctx.mag) +\
                 ZH06._compute_distance_term(C, ctx.mag, ctx.rrup) +\
                 ZH06._compute_focal_depth_term(C, self.HYPO_DEPTH) +\
-                ZH06._compute_site_class_term(C, ctx.vs30) + \
+                CAN_inslab._compute_site_class_term_CanadaSHM6(C,
+                                                               ctx, imt) +\
                 ZH06._compute_magnitude_squared_term(P=0.0, M=6.3,
-                                                Q=C_SINTER['QI'],
-                                                W=C_SINTER['WI'],
-                                                mag=ctx.mag) +\
+                                                     Q=C_SINTER['QI'],
+                                                     W=C_SINTER['WI'],
+                                                     mag=ctx.mag) +\
                 C_SINTER['SI']
-
-            if target_imt == PGV():
-                mean[m] = (0.897*mean[m]) + 4.835
-
             # convert from cm/s**2 to g
-            mean[m] = np.log(np.exp(mean[m] * C_SF["MF"]) * 1e-2 / g)
+            mean[m] = np.log((np.exp(mean[m]) * C_SF["MF"]) * 1e-2 / g)
+
             ZH06._set_stddevs(
                 sig[m], tau[m], phi[m], C['sigma'], C_SINTER['tauI'])
 
+            if extrapolate:
+                mean[m] += extrapolation_factor(
+                    self.extrapolate_GMM, ctx, imt, target_imt)
+
+            if target_imt == PGV:
+
+                mean[m] = (0.897*mean[m]) + 4.835
 
     # Coefs taken from ZhaoEtAl2006SInter
     COEFFS_SINTER = CoeffsTable(sa_damping=5, table="""\
@@ -279,12 +282,12 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
             C = AtkinsonMacias2009.COEFFS[imt]
 
             # AM09 is for Vs30 = 760m/s
-            imean = _get_mean_760_am09(ctx, imt)
-            imean += _site_term_am09(ctx, imt)
+            mean[m] = _get_mean_760_am09(ctx, imt)
+            mean[m] += _site_term_am09(ctx, imt)
             sig[m] = np.log(10.0 ** C["sigma"])
 
             if fix:
-                mean[m] = (0.897*imean) + 4.835
+                mean[m] = (0.897*mean[m]) + 4.835
 
 # =============================================================================
 # =============================================================================
@@ -305,7 +308,7 @@ def _get_site_term_ga14(C, vs30, imt):
 
     # CanadaSHM6 hard rock site factor
     F = CanadaSHM6_hardrock_site_factor(GA14_1100, GA14_2000,
-                                  vs30[vs30 >= 1100], imt)
+                                        vs30[vs30 >= 1100], imt)
 
     # for Vs30 > 1100 set to CanadaSHM6 factor
     GA14_vs[vs30 >= 1100] = np.log10(np.exp(F))
@@ -317,8 +320,7 @@ def _set_extrapolation(imt, model):
     target_imt = None
     if imt == PGV():
         extrapolate = False
-        imt = SA(1.92)
-    elif imt.period < model.MIN_SA and imt.period >= model.MIN_SA_EXTRAP:
+    if imt.period < model.MIN_SA and imt.period >= model.MIN_SA_EXTRAP:
         target_imt = imt
         imt = SA(model.MIN_SA)
         extrapolate = True
@@ -332,7 +334,7 @@ def _set_extrapolation(imt, model):
 
 
 class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
-                                                GhofraniAtkinson2014Cascadia):
+        GhofraniAtkinson2014Cascadia):
     """
     Ghofrani and Atkinson 2014 Interface GMM with Cascadia adjustment,
     extrapolated to 0.05 - 10s and modifications to the site term as
@@ -348,15 +350,12 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
     extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
 
     def __init__(self):
-
-        super(CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia,
-              self).__init__()
+        super().__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation
         self.COEFFS = CoeffsTable_CanadaSHM6(
             GhofraniAtkinson2014Cascadia.COEFFS, self.MAX_SA, self.MIN_SA,
             self.MAX_SA_EXTRAP, self.MIN_SA_EXTRAP)
-
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -373,21 +372,21 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
             C = self.COEFFS[imt]
 
             # Compute the median
-            imean = (GA14._get_magnitude_term(C, ctx.mag) +
-                     GA14._get_distance_term(
+            mean[m] = (GA14._get_magnitude_term(C, ctx.mag) +
+                       GA14._get_distance_term(
                          C, ctx.rrup, np.bool_(ctx.backarc)) +
-                     _get_site_term_ga14(C, ctx.vs30, imt) +
-                     GA14._get_scaling_term(self.kind, C, ctx.rrup))
+                       _get_site_term_ga14(C, ctx.vs30, imt) +
+                       GA14._get_scaling_term(self.kind, C, ctx.rrup))
 
             # Convert mean from cm/s and cm/s/s and from common logarithm to
             # natural logarithm
             if imt.string.startswith(('PGA', 'SA')):
-                mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
+                mean[m] = np.log((10.0 ** (mean[m] - 2.0)) / g)
             else:
-                mean[m] = np.log((10.0 ** (imean)))
+                mean[m] = np.log((10.0 ** (mean[m])))
 
             if extrapolate:
-                mean += extrapolation_factor(
+                mean[m] += extrapolation_factor(
                     self.extrapolate_GMM, ctx, imt, target_imt)
 
             sig[m] = np.log(10.0 ** np.sqrt(C["tau"] ** 2. + C["sigma"] ** 2.))

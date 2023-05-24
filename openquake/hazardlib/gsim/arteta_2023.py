@@ -79,10 +79,10 @@ def _compute_site_term(C_SITE, vs30):
     Returns the site amplification from P and type list (Eq. 10)
     """
     f_sites = np.zeros_like(vs30)
-    f_sites[vs30 >= 600] = C_SITE["s2"] * np.log(2.5)
-    f_sites[(vs30 >= 300) & (vs30 < 600)] = C_SITE["s3"] * np.log(3.1)
-    f_sites[(vs30 >= 200) & (vs30 < 300)] = C_SITE["s4"] * np.log(3.6)
-    f_sites[(vs30 >= 0.0) & (vs30 < 200)] = C_SITE["s5"] * np.log(3.2)
+    f_sites[vs30 >= 600] = C_SITE["s2"] * np.log(3.29)
+    f_sites[(vs30 >= 370) & (vs30 < 600)] = C_SITE["s3"] * np.log(4.48)
+    f_sites[(vs30 >= 230) & (vs30 < 370)] = C_SITE["s4"] * np.log(4.24)
+    f_sites[(vs30 >= 0.0) & (vs30 < 230)] = C_SITE["s5"] * np.log(3.47)
     return f_sites
 
 
@@ -101,7 +101,6 @@ class ArtetaEtAl2023_Vs30(GMPE):
     America 2023 ( doi: https://doi.org/10.1785/0120220168) by Carlos A.
     Arteta, Cesar A. Pajaro, Vicente Mercado, Julián Montejo, Mónica Arcila,
     Norman A. Abrahamson;
-
     Soil term is associated with Vs30 using the simplification given in terms
     of natural period of HVRSR and mean value of P*
     """
@@ -212,7 +211,6 @@ class ArtetaEtAl2023_Vs30(GMPE):
         6	-0.210	0.028	0.203	0.597
         7.5	-0.210	0.028	0.203	0.597
         10	-0.210	0.028	0.203	0.597
-
     """)
 
 
@@ -237,7 +235,6 @@ class ArtetaEtAl2023(ArtetaEtAl2023_Vs30):
     America 2023 ( doi: https://doi.org/10.1785/0120220168) by Carlos A.
     Arteta, Cesar A. Pajaro, Vicente Mercado, Julián Montejo, Mónica Arcila,
     Norman A. Abrahamson;
-
     Soil term depends of natural perod and peak value of HVRSR spectra
     """
 

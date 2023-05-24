@@ -23,7 +23,6 @@ extracting a specific PMF from the result of :func:`disaggregation`.
 """
 
 import re
-import copy
 import operator
 import collections
 import itertools
@@ -37,7 +36,6 @@ from openquake.baselib.performance import idx_start_stop, Monitor
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
-from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)
@@ -46,28 +44,11 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
 from openquake.hazardlib.contexts import (
     ContextMaker, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.calc.mean_rates import (
+    calc_rmap, calc_mean_rates, to_rates, to_probs)
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
-
-def to_rates(probs):
-    """
-    Convert an array of probabilities into an array of rates
-
-    >>> round(to_rates(.8), 6)
-    1.609438
-    """
-    return - numpy.log(1. - probs)
-
-
-def to_probs(rates):
-    """
-    Convert an array of rates into an array of probabilities
-
-    >>> round(to_probs(1.609438), 6)
-    0.8
-    """
-    return 1. - numpy.exp(- rates)
 
 
 def assert_same_shape(arrays):
@@ -448,7 +429,7 @@ class Disaggregator(object):
                                               self.src_mutex['weight'])
                             if s in src_ids]
 
-    def disagg6D(self, iml2, rlz):
+    def disagg6D(self, iml2, g):
         """
         Disaggregate a single realization.
 
@@ -458,7 +439,6 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(self.cmaker.imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
-        g = self.g_by_rlz[rlz]
         if not self.src_mutex:
             return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,
@@ -631,71 +611,30 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def get_smr(source_id):
-    # i.e. SHD-AS-ITAS318;0.0 => 0
-    try:
-        suffix = source_id.split(';')[1]
-    except IndexError:  # no ";"
-        return 0
-    smr = int(suffix.split('.')[0])
-    return smr
-
-
-def reduce_groups(src_groups, source_id):
-    """
-    :returns: a reduced list of groups containing fragments of the same source
-    """
-    groups = []
-    for sg in src_groups:
-        ok = []
-        for src in sg:
-            if re.split('[:;.]', src.source_id)[0] == source_id:
-                src.trt_smr = get_smr(src.source_id)
-                ok.append(src)
-        if ok:
-            grp = copy.copy(sg)
-            grp.sources = ok
-            groups.append(grp)
-    return groups
-
-
-def by_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
+def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
               monitor=Monitor()):
     """
     Compute disaggregation for the given source.
 
-    :returns: rates of shape (Ma, D, E, M, P), rates of shape (M, L1)
+    :param groups: groups containing a single source ID
+    :param sitecol: a SiteCollection
+    :param reduced_lt: a FullLogicTree reduced to the source ID
+    :param edges_shapedic: pair (bin_edges, shapedic)
+    :param oq: Oqparam instance
+    :param monitor: a Monitor instance
+    :returns: source_id, rates(Ma, D, E, M, P), rates(M, L1)
     """
     assert len(sitecol) == 1, sitecol
     if not hasattr(reduced_lt, 'rlzs_by_g'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    L = oq.imtls.size
-    rates1D = numpy.zeros(L)
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
-    source_id = groups[0].sources[0].source_id.split(';')[0]
-    cmakers = get_cmakers(groups, reduced_lt, oq)
+    source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
+    rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
+    iml3 = rmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # (M, P, Z)
     ws = reduced_lt.rlzs['weight']
-    pmap = ProbabilityMap(sitecol.sids, L, reduced_lt.Gt).fill(0)
-    disaggs = []
-    for c, cmaker in enumerate(cmakers):
-        all_rlzs = list(cmaker.gsims.values())
-        G = len(all_rlzs)
-        ctxs = cmaker.from_srcs(groups[c], sitecol)
-        if not ctxs:
-            continue
-        poes = cmaker.get_pmap(ctxs).array[0]  # shape (L, G)
-        for c, g in enumerate(cmaker.gidx):
-            i = c % G
-            pmap.array[0, :, g] += poes[:, i]
-            rates1D += to_rates(poes[:, i]) * ws[all_rlzs[i]].sum()
-        try:
-            dis = Disaggregator(ctxs, sitecol, cmaker, edges)
-        except FarAwayRupture:
-            continue  # source corresponding to a noncontributing realization
-        else:
-            disaggs.append(dis)
-    iml3 = pmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # MPZ
-    for dis in disaggs:
+    for ctx, cmaker in zip(ctxs, cmakers):
+        dis = Disaggregator([ctx], sitecol, cmaker, edges)
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
-    return source_id, rates5D, rates1D.reshape(s['M'], L // len(oq.imtls))
+    rates2D = calc_mean_rates(rmap, reduced_lt.g_weights, oq.imtls)[0]
+    return source_id, rates5D, rates2D
