@@ -713,16 +713,11 @@ def build_asset_array(calc, assets, area, tagnames=(), time_event='avg'):
              (str(name), F32) for name in float_fields] + int_fields)
     num_assets = len(assets)
     assetcol = numpy.zeros(num_assets, asset_dt)
-    asset_ordinal = 0
-    fields = set(asset_dt.fields) - {'site_id'}
-    for asset in assets:
-        record = assetcol[asset_ordinal]
-        asset_ordinal += 1
+    fields = set(asset_dt.fields) - {'site_id', 'ordinal'}
+    for asset, record in zip(assets, assetcol):
         for field in fields:
             if field == 'id':
                 value = asset.asset_id
-            elif field == 'ordinal':
-                value = asset.ordinal
             elif field == 'lon':
                 value = asset.lon
             elif field == 'lat':
@@ -739,9 +734,9 @@ def build_asset_array(calc, assets, area, tagnames=(), time_event='avg'):
                 name, lt = field.split('-')
                 value = avalue(asset, calc, lt, time_event)
             record[field] = value
-    assetcol['ordinal'] = numpy.arange(len(assets))
     u, i = numpy.unique(assetcol[['lon', 'lat']], return_inverse=1)
     assetcol['site_id'] = i
+    assetcol['ordinal'] = numpy.arange(len(assets))
     return assetcol, ' '.join(occupancy_periods)
 
 
