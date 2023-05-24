@@ -230,24 +230,25 @@ class _GeographicObjects(object):
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
-        sids = []
+        sid_by_idx = {}
         discarded = []
         for i, (lon, lat) in enumerate(zip(risk_mesh.lons, risk_mesh.lats)):
             obj, distance = self.get_closest(lon, lat)
             if distance <= assoc_dist:
                 # keep the site
-                sids.append(obj['sids'])
+                sid_by_idx[i] = obj['sids']
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
             else:
                 discarded.append(i)
-        if not sids:
+        if not sid_by_idx:
             raise SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
-        return self.objects.filtered(sids), discarded
+        fsitecol = self.objects.filtered(sorted(set(sid_by_idx.values())))
+        return fsitecol, sid_by_idx, discarded
 
 
 def assoc(objects, sitecol, assoc_dist, mode):

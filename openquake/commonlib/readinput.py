@@ -997,13 +997,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     assetcol = asset.AssetCollection(
         Global.exposure, Global.exposure.assets_by_site, oqparam.time_event,
         oqparam.aggregate_by)
-    if haz_sitecol.mesh != Global.exposure.mesh:
-        sitecol, discarded = geo.utils._GeographicObjects(
+    diff_mesh = haz_sitecol.mesh != Global.exposure.mesh
+    if diff_mesh:
+        sitecol, sid_by, discarded = geo.utils._GeographicObjects(
             haz_sitecol).assoc2(Global.exposure.mesh, haz_distance, 'filter')
         if len(discarded):
             bad = numpy.isin(assetcol['site_id'], discarded)
             assetcol.array = assetcol.array[~bad]
-        assetcol.array['site_id'] = sitecol.sids[assetcol['site_id']]
+        assetcol.array['site_id'] = [sid_by[idx] for idx in assetcol['site_id']]
     else:
         sitecol = haz_sitecol
         discarded = []
