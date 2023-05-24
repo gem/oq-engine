@@ -178,7 +178,7 @@ class _GeographicObjects(object):
         return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode):
+    def assoc3(self, assets_by_site, assoc_dist, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -218,6 +218,37 @@ class _GeographicObjects(object):
         discarded = numpy.array(data, asset_dt)
         return self.objects.filtered(sids), assets_by_site, discarded
 
+    def assoc2(self, risk_mesh, assoc_dist, mode):
+        """
+        Associated a risk mesh to the site collection used
+        to instantiate GeographicObjects.
+
+        :param risk mesh: a Mesh instance
+        :param assoc_dist: the maximum distance for association
+        :param mode: 'strict', 'warn' or 'filter'
+        :returns: filtered site collection, discarded mesh indices
+        """
+        assert mode in 'strict filter', mode
+        self.objects.filtered  # self.objects must be a SiteCollection
+        sids = []
+        discarded = []
+        for i, (lon, lat) in enumerate(zip(risk_mesh.lons, risk_mesh.lats)):
+            obj, distance = self.get_closest(lon, lat)
+            if distance <= assoc_dist:
+                # keep the site
+                sids.append(obj['sids'])
+            elif mode == 'strict':
+                raise SiteAssociationError(
+                    'There is nothing closer than %s km '
+                    'to site (%s %s)' % (assoc_dist, lon, lat))
+            else:
+                discarded.append(i)
+        if not sids:
+            raise SiteAssociationError(
+                'Could not associate any site to any assets within the '
+                'asset_hazard_distance of %s km' % assoc_dist)
+        return self.objects.filtered(sids), discarded
+
 
 def assoc(objects, sitecol, assoc_dist, mode):
     """
@@ -237,7 +268,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
         # objects is a geo array with lon, lat fields; used for ShakeMaps
         return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
     else:  # objects is the list assets_by_site
-        return _GeographicObjects(sitecol).assoc2(
+        return _GeographicObjects(sitecol).assoc3(
             objects, assoc_dist, mode)
 
 
