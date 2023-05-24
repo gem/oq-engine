@@ -196,9 +196,9 @@ def event_based_risk(df, oqparam, monitor):
     :returns: a dictionary of arrays
     """
     with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
         ideduc = monitor.read('assets/ideductible')
         aggids = monitor.read('aggids')
-        crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
@@ -221,10 +221,11 @@ def gen_outputs(df, crmodel, rng, monitor):
     :param crmodel: CompositeRiskModel instance
     :param rng: random number generator
     :param monitor: Monitor instance
+    :yields: one output per taxonomy and slice of events
     """
-    mon_risk = monitor('computing risk', measuremem=True)
+    mon_risk = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=True)
+    ass_mon = monitor('reading assets', measuremem=False)
     slices = performance.split_slices(df.eid.to_numpy(), 1_000_000)
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
