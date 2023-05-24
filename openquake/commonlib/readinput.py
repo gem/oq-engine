@@ -993,13 +993,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
                           haz_distance, asset_hazard_distance)
     else:
         haz_distance = asset_hazard_distance
-        
+
     assetcol = asset.AssetCollection(
-        Global.exposure,
-        haz_sitecol,
-        Global.exposure.assets_by_site,
-        oqparam.time_event,
-        oqparam.aggregate_by)
+        Global.exposure, haz_sitecol,
+        oqparam.time_event, oqparam.aggregate_by)
 
     if haz_sitecol.mesh != Global.exposure.mesh:
         sitecol, sid_by, discarded = geo.utils._GeographicObjects(

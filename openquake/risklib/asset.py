@@ -413,12 +413,12 @@ def tagset(aggregate_by):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, sitecol, assets_by, time_event, aggregate_by):
+    def __init__(self, exposure, sitecol, time_event, aggregate_by):
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
         self.array, self.occupancy_periods = build_asset_array(
-            exposure.cost_calculator, sitecol.sids, assets_by,
+            exposure.cost_calculator, exposure.assets,
             exposure.area, exposure.tagcol.tagnames, time_event)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
@@ -679,20 +679,14 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(calc, sids, assets_by, area,
-                      tagnames=(), time_event='avg'):
+def build_asset_array(calc, assets, area, tagnames=(), time_event='avg'):
     """
-    :param assets_by_site: a list of lists of assets
+    :param assets: a list of assets
     :param area: True if there is an area field in the exposure
     :param tagnames: a list of tag names
     :returns: an array `assetcol`
     """
-    for assets in assets_by:
-        if len(assets):
-            first_asset = assets[0]
-            break
-    else:  # no break
-        raise ValueError('There are no assets!')
+    first_asset = assets[0]
     loss_types = []
     occupancy_periods = []
     for name in sorted(first_asset.values):
@@ -717,38 +711,40 @@ def build_asset_array(calc, sids, assets_by, area,
          ('ordinal', U32), ('lon', F32), ('lat', F32),
          ('site_id', U32)] + [
              (str(name), F32) for name in float_fields] + int_fields)
-    num_assets = sum(len(assets) for assets in assets_by)
+    num_assets = len(assets)
     assetcol = numpy.zeros(num_assets, asset_dt)
     asset_ordinal = 0
-    fields = set(asset_dt.fields)
-    for sid, assets_ in zip(sids, assets_by):
-        for asset in assets_:
-            asset.ordinal = asset_ordinal
-            record = assetcol[asset_ordinal]
-            asset_ordinal += 1
-            for field in fields:
-                if field == 'id':
-                    value = asset.asset_id
-                elif field == 'ordinal':
-                    value = asset.ordinal
-                elif field == 'site_id':
-                    value = sid
-                elif field == 'lon':
-                    value = asset.lon
-                elif field == 'lat':
-                    value = asset.lat
-                elif field.startswith('occupants_'):
-                    value = asset.values[field]
-                elif field == 'ideductible':
-                    value = asset.ideductible
-                elif field == 'retrofitted':
-                    value = asset.retrofitted
-                elif field in tagnames:
-                    value = asset.tagidxs[tagi[field]]
-                else:
-                    name, lt = field.split('-')
-                    value = avalue(asset, calc, lt, time_event)
-                record[field] = value
+    fields = set(asset_dt.fields) - {'site_id'}
+    for asset in assets:
+        asset.ordinal = asset_ordinal
+        record = assetcol[asset_ordinal]
+        asset_ordinal += 1
+        for field in fields:
+            if field == 'id':
+                value = asset.asset_id
+            elif field == 'ordinal':
+                value = asset.ordinal
+            elif field == 'site_id':
+                value = sid
+            elif field == 'lon':
+                value = asset.lon
+            elif field == 'lat':
+                value = asset.lat
+            elif field.startswith('occupants_'):
+                value = asset.values[field]
+            elif field == 'ideductible':
+                value = asset.ideductible
+            elif field == 'retrofitted':
+                value = asset.retrofitted
+            elif field in tagnames:
+                value = asset.tagidxs[tagi[field]]
+            else:
+                name, lt = field.split('-')
+                value = avalue(asset, calc, lt, time_event)
+            record[field] = value
+        print(record)
+    u, i = numpy.unique(assetcol[['lon', 'lat']], return_inverse=1)
+    assetcol['site_id'] = i
     return assetcol, ' '.join(occupancy_periods)
 
 
