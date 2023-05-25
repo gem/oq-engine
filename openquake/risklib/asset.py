@@ -240,11 +240,6 @@ class TagCollection(object):
         getattr(self, tagname).extend(uniq)
         return inv + 1
 
-    def extend(self, other):
-        for tagname in other.tagnames:
-            for tagvalue in getattr(other, tagname):
-                self.add(tagname, tagvalue)
-
     def get_tag(self, tagname, tagidx):
         """
         :returns: the tag associated to the given tagname and tag index
@@ -844,8 +839,8 @@ class Exposure(object):
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, region_constraint,
-                            ignore_missing_costs, check_dupl, prefix,
-                            tagcol, errors))
+                            ignore_missing_costs, check_dupl, by_country,
+                            prefix, tagcol, errors))
         exp = None
         all_assets = []
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
@@ -858,7 +853,6 @@ class Exposure(object):
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
                 ae(exposure.retrofitted, exp.retrofitted)
                 ae(exposure.area, exp.area)
-                exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         exp.assets = numpy.concatenate(all_assets)
@@ -866,7 +860,7 @@ class Exposure(object):
 
     @staticmethod
     def read_exp(fname, calculation_mode='', region_constraint='',
-                 ignore_missing_costs=(), check_dupl=True,
+                 ignore_missing_costs=(), check_dupl=True, by_country=False,
                  asset_prefix='', tagcol=None, errors=None, monitor=None):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
@@ -895,6 +889,8 @@ class Exposure(object):
         for fname, df in fname_dfs:
             if len(df) == 0:
                 raise InvalidFile('%s is empty' % fname)
+            if by_country:
+                df['country'] = asset_prefix[:-1]
 
             param['fname'] = fname
             names = df.columns
