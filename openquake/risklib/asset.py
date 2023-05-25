@@ -896,6 +896,7 @@ class Exposure(object):
         exp = None
         all_assets = []
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
+            all_assets.append(exposure.assets)
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
@@ -904,7 +905,6 @@ class Exposure(object):
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
                 ae(exposure.retrofitted, exp.retrofitted)
                 ae(exposure.area, exp.area)
-                all_assets.append(exposure.assets)
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
