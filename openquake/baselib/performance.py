@@ -295,7 +295,7 @@ class Monitor(object):
             for child in self.children:
                 lst.append(child.get_data())
                 child.reset()
-            data = numpy.concatenate(lst)
+            data = numpy.concatenate(lst, dtype=perf_dt)
         if len(data) == 0:  # no information
             return
         hdf5.extend(h5['performance_data'], data)
