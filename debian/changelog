@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Extended total_losses to include business_interruption
+
   [Michele Simionato]
   * Optimized reading the exposure (both speed and memory)
   * Optimized the rupture sampling for MultiFaultSources and improved
