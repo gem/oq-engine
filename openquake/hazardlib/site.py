@@ -318,9 +318,11 @@ class SiteCollection(object):
 
     xyz = Mesh.xyz
 
-    def set_global_params(self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
+    def set_global_params(
+            self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
         """
-        Set the global site parameters (vs30, vs30measured, z1pt0, z2pt5, backarc)
+        Set the global site parameters
+        (vs30, vs30measured, z1pt0, z2pt5, backarc)
         """
         self._set('vs30', oq.reference_vs30_value)
         self._set('vs30measured',
