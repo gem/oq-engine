@@ -123,8 +123,8 @@ $ oq show_attrs / X
 ```
 
 where `/` indicates the root attributes of the datastore (`checksum`, `date`
-`engine_version` and `input_size`) and X (an integer number) is the calculation
-id. In case the calculation id is not specified, the attributes will be retrieved
+`engine_version` and `input_size`) and `X` (an integer number) is the calculation
+id. In case the calculation id is not specified, the attributes are retrieved
 for the latest calculation.
 
 ******
