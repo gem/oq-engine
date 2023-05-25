@@ -194,7 +194,7 @@ def build_assets(adf, tagnames):
                   'occupants_avg', 'occupants_night',
                   'occupants_day', 'occupants_transit']
     dtlist = [('tagidxs', (U32, (T,))), ('site_id', U32)]
-    for f in adf.columns:
+    for f in sorted(adf.columns):
         if f in STR_FIELDS:
             dtlist.append((f, object))
         elif f in F64_FIELDS:
@@ -949,10 +949,11 @@ class Exposure(object):
             assets = exposure._populate_from(
                 assets, param, check_dupl, asset_refs)
             all_assets.append(assets)
-        exposure.assets = numpy.concatenate(all_assets)
-        if len(exposure.assets) == 0:
+
+        if not asset_refs:
             raise RuntimeError('Could not find any asset within the region!')
 
+        exposure.assets = numpy.concatenate(all_assets)
         exposure.param = param
         return exposure
 
