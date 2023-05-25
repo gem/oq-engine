@@ -914,7 +914,7 @@ class Exposure(object):
         if not asset_refs:
             raise RuntimeError('Could not find any asset within the region!')
 
-        exposure.assets = numpy.concatenate(all_assets)
+        exposure.assets = numpy.concatenate(all_assets, dtype=assets.dtype)
         exposure.param = param
         return exposure
 

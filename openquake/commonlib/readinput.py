@@ -1022,8 +1022,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
             assets.append(ass)
 
     array, occupancy_periods = asset.build_asset_array(
-        exp.tagcol, exp.cost_calculator, sitecol.sids, numpy.array(assets),
-        exp.area, exp.tagcol.tagnames)
+        exp.tagcol, exp.cost_calculator, sitecol.sids,
+        numpy.array(assets, ass.dtype), exp.area, exp.tagcol.tagnames)
     assetcol = asset.AssetCollection(
         exp, sitecol, array, occupancy_periods, oqparam.time_event,
         oqparam.aggregate_by)
