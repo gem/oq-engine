@@ -223,56 +223,22 @@ class TagCollection(object):
         for tagname in tagnames:
             self.add_tagname(tagname)
 
-    def get_tagidx(self, tagname):
-        """
-        :returns: a dictionary tag string -> tag index
-        """
-        return {tag: idx for idx, tag in enumerate(getattr(self, tagname))}
-
     def add_tagname(self, tagname):
         self.tagnames.append(tagname)
         setattr(self, tagname + '_idx', {'?': 0})
         setattr(self, tagname, ['?'])
 
-    def add(self, tagname, tagvalue):
+    def get_tagi(self, tagname, assets):
         """
-        :returns: numeric index associated to the tag
+        :param tagname: name of a tag
+        :param assets: composite array of assets with string-valued tags
+        :returns: indices associated to the tag, from 1 to num_tags
         """
-        dic = getattr(self, tagname + '_idx')
-        try:
-            return dic[tagvalue]
-        except KeyError:
-            dic[tagvalue] = idx = len(dic)
-            getattr(self, tagname).append(tagvalue)
-            if idx > TWO32:
-                raise InvalidFile('contains more then %d tags' % TWO32)
-            return idx
-
-    def add_tags(self, dic, prefix):
-        """
-        :param dic: a dictionary tagname -> tagvalue
-        :returns: a list of tag indices, one per tagname
-        """
-        # fill missing tagvalues with "?", raise an error for unknown tagnames
-        idxs = []
-        for tagname in self.tagnames:
-            if tagname in ('exposure', 'country'):
-                idxs.append(self.add(tagname, prefix))
-                continue
-            try:
-                tagvalue = dic.pop(tagname)
-            except KeyError:
-                tagvalue = '?'
-            else:
-                if tagvalue in '?*':
-                    raise ValueError(
-                        'Invalid tagvalue="%s"' % tagvalue)
-            idxs.append(self.add(tagname, tagvalue))
-        if dic:
-            raise ValueError(
-                'Unknown tagname %s or <tagNames> not '
-                'specified in the exposure' % ', '.join(dic))
-        return idxs
+        uniq, inv = numpy.unique(assets[tagname], return_inverse=True)
+        dic = {u: i for i, u in enumerate(uniq, 1)}
+        getattr(self, tagname + '_idx').update(dic)
+        getattr(self, tagname).extend(uniq)
+        return inv + 1
 
     def extend(self, other):
         for tagname in other.tagnames:
@@ -292,13 +258,6 @@ class TagCollection(object):
         values = tuple(getattr(self, tagname)[tagidx + 1]
                        for tagidx, tagname in zip(tagidxs, tagnames))
         return values
-
-    def get_tagdict(self, tagidxs):
-        """
-        :returns: dictionary {tagname: tag}
-        """
-        return {tagname: getattr(self, tagname)[tagidx]
-                for tagidx, tagname in zip(tagidxs, self.tagnames)}
 
     def get_aggkey(self, alltagnames, max_aggregations):
         """
@@ -639,7 +598,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(calc, sids, assets, area, tagnames=()):
+def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
     """
     :param assets_by_site: a list of assets
     :param area: True if there is an area field in the exposure
@@ -675,8 +634,7 @@ def build_asset_array(calc, sids, assets, area, tagnames=()):
     fields = set(asset_dt.fields) - {'ordinal'}
     for field in fields:
         if field in tagnames:
-            idx = tagi[field]
-            assetcol[field] = assets['tagidxs'][:, idx]
+            assetcol[field] = tagcol.get_tagi(field, assets)
         elif field in assets.dtype.names:
             assetcol[field] = assets[field]
     calc.update(assetcol)
@@ -1062,7 +1020,6 @@ class Exposure(object):
             if param['region'] and not geometry.Point(*location).within(
                     param['region']):
                 out_of_region.append(idx)
-            self._update_asset(asset, param)
         if out_of_region:
             if len(out_of_region) == len(assets):                
                 raise RuntimeError('Could not find any asset within the region')
@@ -1071,14 +1028,6 @@ class Exposure(object):
             out = numpy.isin(numpy.arange(len(assets)), out_of_region)
             return assets[~out]
         return assets
-
-    def _update_asset(self, asset, param):
-        prefix = param['asset_prefix']
-        dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
-               if tagname not in ('country', 'exposure') and
-               asset[tagname] != '?'}
-        dic['taxonomy'] = asset['taxonomy']
-        asset['tagidxs'] = self.tagcol.add_tags(dic, prefix)
 
     def get_mesh_assets_by_site(self):
         """
