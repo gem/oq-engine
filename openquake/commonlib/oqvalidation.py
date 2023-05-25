@@ -26,6 +26,7 @@ import functools
 import collections
 import multiprocessing
 import numpy
+import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
@@ -838,6 +839,12 @@ ALL_CALCULATORS = ['aftershock',
                    'event_based_damage',
                    'scenario_damage']
 
+COST_TYPES = [
+    'structural', 'nonstructural', 'contents', 'business_interruption']
+ALL_COST_TYPES = [
+    '+'.join(s) for l_idx in range(len(COST_TYPES))
+    for s in itertools.combinations(COST_TYPES, l_idx + 1)]
+
 
 def check_same_levels(imtls):
     """
@@ -1046,11 +1053,7 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, 'avg')
     time_per_task = valid.Param(valid.positivefloat, 2000)
-    total_losses = valid.Param(
-        valid.Choice('structural+nonstructural',
-                     'structural+contents',
-                     'nonstructural+contents',
-                     'structural+nonstructural+contents'), None)
+    total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
