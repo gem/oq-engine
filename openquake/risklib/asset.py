@@ -95,15 +95,26 @@ class CostCalculator(object):
         self.units = units
         self.tagi = tagi
 
-    def __call__(self, loss_type, values):
-        if loss_type in ('number', 'area'):
-            return values[loss_type]
-    
-        area = values.get('area', 1.0)
-        number = values.get('number', 1.0)
-        cost = values.get(loss_type)
-        if cost is None:
-            return numpy.nan
+    def update(self, assetcol):
+        for name in assetcol.dtype.names:
+            if name.startswith('value-') and not name in (
+                    'value-area', 'value-number'):
+                assetcol[name] = self(name[6:], assetcol)
+
+    def __call__(self, loss_type, assetcol):
+        A = len(assetcol)
+        try:
+            area = assetcol['value-area']
+        except (ValueError, KeyError):
+            area = numpy.ones(A)
+        try:
+            number = assetcol['value-number']
+        except (ValueError, KeyError):
+            number = numpy.ones(A)
+        try:
+            cost = assetcol['value-' + loss_type]
+        except ValueError:
+            return numpy.repeat(numpy.nan, A)
         cost_type = self.cost_types[loss_type]
         if cost_type == "aggregated":
             return cost
@@ -229,15 +240,6 @@ class Asset(object):
     
     def __repr__(self):
         return '<Asset #%s>' % self.ordinal
-
-
-def avalue(self, calc, loss_type, time_event='avg'):
-    """
-    :returns: the total asset value for `loss_type`
-    """
-    if loss_type == 'occupants':
-        return self.values['occupants_' + time_event]
-    return calc(loss_type, self.values)
 
 
 class TagCollection(object):
@@ -421,7 +423,7 @@ class AssetCollection(object):
         self.tot_sites = len(sitecol.complete)
         self.array, self.occupancy_periods = build_asset_array(
             exposure.cost_calculator, sitecol.sids, assets,
-            exposure.area, exposure.tagcol.tagnames, time_event)
+            exposure.area, exposure.tagcol.tagnames)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
@@ -674,8 +676,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(calc, sids, assets, area,
-                      tagnames=(), time_event='avg'):
+def build_asset_array(calc, sids, assets, area, tagnames=()):
     """
     :param assets_by_site: a list of assets
     :param area: True if there is an area field in the exposure
@@ -712,7 +713,7 @@ def build_asset_array(calc, sids, assets, area,
     asset_ordinal = 0
     fields = set(asset_dt.fields) - {'ordinal'}
     for asset in assets:
-        asset.ordinal = asset_ordinal
+        #asset.ordinal = asset_ordinal
         record = assetcol[asset_ordinal]
         asset_ordinal += 1
         for field in fields:
@@ -732,10 +733,10 @@ def build_asset_array(calc, sids, assets, area,
                 value = asset.retrofitted
             elif field in tagnames:
                 value = asset.tagidxs[tagi[field]]
-            else:
-                name, lt = field.split('-')
-                value = avalue(asset, calc, lt, time_event)
+            elif '-' in field:
+                value = getattr(asset, field[6:])
             record[field] = value
+    calc.update(assetcol)
     assetcol['ordinal'] = numpy.arange(num_assets)
     return assetcol, ' '.join(occupancy_periods)
 
@@ -997,8 +998,8 @@ class Exposure(object):
                 df['occupants_avg'] = calc_occupants_avg(df)
             if exposure.retrofitted:
                 df['retrofitted'] = exposure.cost_calculator(
-                    'structural', {'structural':df.retrofitted,
-                                   'number': df.number})
+                    'structural', {'value-structural':df.retrofitted,
+                                   'value-number': df.number})
             exposure._populate_from(df, param, check_dupl)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
