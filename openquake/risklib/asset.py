@@ -831,8 +831,10 @@ def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
                 rec[field] = asset.location['lon']
             elif field == 'lat':
                 rec[field] = asset.location['lat']
-            elif field in 'area number':
-                rec[field] = float(asset.attrib.get(field, 1))
+            elif field == 'value-area':
+                rec[field] = float(asset.attrib.get('area', 1))
+            elif field == 'value-number':
+                rec[field] = float(asset.attrib.get('number', 1))
             elif field.startswith('value-'):
                 cost = field[6:]
                 try:
@@ -939,7 +941,7 @@ class Exposure(object):
             if exposure.retrofitted:
                 df['retrofitted'] = exposure.cost_calculator(
                     'structural', {'value-structural':df.retrofitted,
-                                   'value-number': df.number})
+                                   'value-number': df['value-number']})
             assets = build_assets(df.reset_index(), tagcol.tagnames)
             assets = exposure._populate_from(assets, param, check_dupl)
             all_assets.append(assets)
@@ -967,11 +969,11 @@ class Exposure(object):
         """
         Extract the expected CSV header from the exposure metadata
         """
-        fields = ['id', 'number', 'taxonomy', 'lon', 'lat']
+        fields = ['id', value + 'number', 'taxonomy', 'lon', 'lat']
         for name in self.cost_types['name']:
             fields.append(value + name)
         if 'per_area' in self.cost_types['type']:
-            fields.append('area')
+            fields.append(value + 'area')
         for op in self.occupancy_periods.split():
             fields.append(occupants + op)
         fields.extend(self.tagcol.tagnames)

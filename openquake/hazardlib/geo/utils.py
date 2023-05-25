@@ -212,7 +212,7 @@ class _GeographicObjects(object):
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
         assets_by_site = [assets_by_sid[sid] for sid in sids]
-        data = [(asset.asset_id, asset.lon, asset.lat) for asset in discarded]
+        data = [(asset.id, asset.lon, asset.lat) for asset in discarded]
         discarded = numpy.array(data, asset_dt)
         return self.objects.filtered(sids), assets_by_site, discarded
 
