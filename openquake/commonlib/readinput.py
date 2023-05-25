@@ -1013,7 +1013,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
 
     for sid, assets_ in zip(sitecol.sids, assets_by):
         for ass in assets_:
-            ass.site_id = sid
+            ass['site_id'] = sid
     assetcol = asset.AssetCollection(
         Global.exposure, sitecol, sum(assets_by, []), oqparam.time_event,
         oqparam.aggregate_by)

@@ -37,6 +37,7 @@ U64 = numpy.uint64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
+by_lonlat = operator.itemgetter('lon', 'lat')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
 
@@ -177,69 +178,25 @@ costcalculator = CostCalculator(
     units=dict(structural='EUR'))
 
 
-class Asset(object):
-    """
-    Describe an Asset as a collection of several values. A value can
-    represent a replacement cost (e.g. structural cost, business
-    interruption cost) or another quantity that can be considered for
-    a risk analysis (e.g. occupants).
-    """
-    __slots__ = '''
-    asset_id
-    site_id
-    ordinal
-    tagidxs
-    lon
-    lat
-    values
-    ideductible
-    retrofitted
-    tags'''.split()  # save 20% memory
-
-    def __init__(self,
-                 asset_id,
-                 site_id,
-                 ordinal,
-                 tagidxs,
-                 lon,
-                 lat,
-                 values,
-                 ideductible=0,
-                 retrofitted=None):
-        """
-        :param asset_id:
-            a short string identifier
-        :param ordinal:
-            an integer identifier for the asset, used to order them
-        :param tagidxs:
-            a list of indices for the taxonomy and other tags
-        :param lon:
-            geographic longitude of the asset in degrees
-        :param lat:
-            geographic latitude of the asset in degrees
-        :param dict values:
-            asset values keyed by loss types
-        :param ideductible:
-            insurance deductible (default 0)
-        :param retrofitted:
-            asset retrofitted value
-        :param ordinal:
-            asset collection ordinal
-        """
-        self.asset_id = asset_id
-        self.ordinal = ordinal
-        self.tagidxs = tagidxs
-        self.lon = lon
-        self.lat = lat
-        self.values = values
-        self.ideductible = ideductible
-        self.retrofitted = retrofitted
-
-    def __getattr__(self, name):
-        return self.values[name]
-    
-    def __repr__(self):
-        return '<Asset #%s>' % self.ordinal
+def build_assets(adf, tagnames):
+    STR_FIELDS = ['id', 'taxonomy'] + [
+        name for name in tagnames if name not in ('id', 'site_id')]
+    F32_FIELDS = ['lon', 'lat', 'ideductible', 'retrofitted',
+                  'value-structural', 'value-nonstructural',
+                  'value-contents', 'value-business_interruption',
+                  'value-area', 'value-number',
+                  'occupants_avg', 'occupants_night',
+                  'occupants_day', 'occupants_transit']
+    dtlist = [('tagidxs', object), ('site_id', U32)]
+    for f in adf.columns:
+        if f in STR_FIELDS:
+            dtlist.append((f, object))
+        elif f in F32_FIELDS:
+            dtlist.append((f, F32))
+    assets = numpy.zeros(len(adf), dtlist)
+    for f, _ in dtlist[2:]:
+        assets[f] = adf[f]
+    return assets.view(numpy.recarray)
 
 
 class TagCollection(object):
@@ -422,7 +379,7 @@ class AssetCollection(object):
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
         self.array, self.occupancy_periods = build_asset_array(
-            exposure.cost_calculator, sitecol.sids, assets,
+            exposure.cost_calculator, sitecol.sids, numpy.array(assets),
             exposure.area, exposure.tagcol.tagnames)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
@@ -683,22 +640,21 @@ def build_asset_array(calc, sids, assets, area, tagnames=()):
     :param tagnames: a list of tag names
     :returns: an array `assetcol`
     """
-    first_asset = assets[0]
     loss_types = []
     occupancy_periods = []
-    for name in sorted(first_asset.values):
+    for name in assets.dtype.names:
         if name.startswith('occupants_'):
             period = name.split('_', 1)[1]
             # see scenario_risk test_case_2d
             if period != 'avg':
                 occupancy_periods.append(period)
             loss_types.append(name)
-        else:
-            loss_types.append('value-' + name)
+        elif name.startswith('value-'):
+            loss_types.append(name)
     # loss_types can be ['value-business_interruption', 'value-contents',
     # 'value-nonstructural', 'occupants_avg', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
-    retro = ['retrofitted'] if first_asset.retrofitted else []
+    retro = ['retrofitted'] if 'retrofitted' in assets.dtype.names else []
     float_fields = loss_types + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagnames
                   if name not in ('id', 'site_id')]
@@ -713,28 +669,15 @@ def build_asset_array(calc, sids, assets, area, tagnames=()):
     asset_ordinal = 0
     fields = set(asset_dt.fields) - {'ordinal'}
     for asset in assets:
-        #asset.ordinal = asset_ordinal
         record = assetcol[asset_ordinal]
         asset_ordinal += 1
         for field in fields:
-            if field == 'id':
-                value = asset.asset_id
-            elif field == 'site_id':
-                value = asset.site_id
-            elif field == 'lon':
-                value = asset.lon
-            elif field == 'lat':
-                value = asset.lat
-            elif field.startswith('occupants_'):
-                value = asset.values[field]
-            elif field == 'ideductible':
-                value = asset.ideductible
-            elif field == 'retrofitted':
-                value = asset.retrofitted
+            if field == 'ideductible':
+                value = getattr(asset, 'ideductible', 0.)
             elif field in tagnames:
-                value = asset.tagidxs[tagi[field]]
-            elif '-' in field:
-                value = getattr(asset, field[6:])
+                value = asset['tagidxs'][tagi[field]]
+            else:
+                value = asset[field]
             record[field] = value
     calc.update(assetcol)
     assetcol['ordinal'] = numpy.arange(num_assets)
@@ -957,9 +900,6 @@ class Exposure(object):
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
-        for i, ass in enumerate(exp.assets):
-            # used by the GED4ALL importer
-            ass.tags = exp.tagcol.get_tagdict(ass.tagidxs)
         return exp
 
     @staticmethod
@@ -989,6 +929,7 @@ class Exposure(object):
             fname_dfs = exposure._read_csv(errors)
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
             'occupants'}
+        all_assets = []
         for fname, df in fname_dfs:
             param['fname'] = fname
             names = df.columns
@@ -1000,7 +941,10 @@ class Exposure(object):
                 df['retrofitted'] = exposure.cost_calculator(
                     'structural', {'value-structural':df.retrofitted,
                                    'value-number': df.number})
-            exposure._populate_from(df, param, check_dupl)
+            assets = build_assets(df.reset_index(), tagcol.tagnames)
+            exposure._populate_from(assets, param, check_dupl)
+            all_assets.append(assets)
+        exposure.assets = numpy.concatenate(all_assets)
         if param['region'] and param['out_of_region']:
             logging.info('Discarded %d assets outside the region',
                          param['out_of_region'])
@@ -1078,7 +1022,7 @@ class Exposure(object):
             if oq in conv:
                 conv[inp] = conv[oq]
         rename = self.fieldmap.copy()
-        for field in self.cost_types['name']:
+        for field in set(self.cost_types['name']) | {'area', 'number'}:
             f = revmap.get(field, field)
             conv[f] = float
             rename[f] = 'value-' + field
@@ -1095,9 +1039,10 @@ class Exposure(object):
                 df = general.random_filter(df, sa)
             yield fname, df
 
-    def _populate_from(self, asset_df, param, check_dupl):
+    def _populate_from(self, assets, param, check_dupl):
         asset_refs = set()
-        for idx, (asset_id, asset) in enumerate(asset_df.iterrows()):
+        for asset in assets:
+            asset_id = asset['id']
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
@@ -1108,54 +1053,22 @@ class Exposure(object):
             if param['region'] and not geometry.Point(*location).within(
                     param['region']):
                 param['out_of_region'] += 1
-                continue
-            self._add_asset(idx, asset_id, asset, param)
+            self._update_asset(asset, param)
 
-    def _add_asset(self, idx, asset_id, asset, param):
-        values = {'number': asset['number']}
-        if param['area']:
-            values['area'] = asset['area']
+    def _update_asset(self, asset, param):
         prefix = param['asset_prefix']
-        taxonomy = asset['taxonomy']
         dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
                if tagname not in ('country', 'exposure') and
                asset[tagname] != '?'}
-        dic['taxonomy'] = taxonomy
-        idxs = self.tagcol.add_tags(dic, prefix)
-        for name in asset.index:
-            if name.startswith('value-'):
-                values[name[6:]] = asset[name]
-            elif name.startswith('occupants_'):
-                try:
-                    values[name] = float(asset[name])
-                except ValueError:
-                    raise InvalidFile(
-                        ('%(fname)s:{} {}={}' % param).format(
-                            idx + 2, name, asset[name]))
-
-        # check if we are not missing a cost type
-        missing = param['relevant_cost_types'] - set(values)
-        if missing and missing <= param['ignore_missing_costs']:
-            logging.warning(
-                'Ignoring asset %s, missing cost type(s): %s',
-                asset_id, ', '.join(missing))
-            for cost_type in missing:
-                values[cost_type] = None
-        elif missing and 'damage' not in param['calculation_mode']:
-            # missing the costs is okay for damage calculators
-            raise ValueError("Invalid Exposure. "
-                             "Missing cost %s for asset %s" % (
-                                 missing, asset_id))
-        ass = Asset(prefix + asset_id, 0, idx, idxs, asset['lon'], asset['lat'],
-                    values, getattr(asset, 'ideductible', 0),
-                    getattr(asset, 'retrofitted', None))
-        self.assets.append(ass)
+        dic['taxonomy'] = asset['taxonomy']
+        asset['tagidxs'] = self.tagcol.add_tags(dic, prefix)
+        asset['id'] = prefix + asset['id']
 
     def get_mesh_assets_by_site(self):
         """
         :returns: (Mesh instance, assets_by_site list)
         """
-        assets_by_loc = general.groupby(self, key=lambda a: (a.lon, a.lat))
+        assets_by_loc = general.groupby(self, key=by_lonlat)
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
