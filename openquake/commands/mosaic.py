@@ -64,9 +64,9 @@ def from_file(fname, concurrent_jobs=8):
             if only_siteids and siteid not in only_siteids.split(','):
                 continue
             curr_model = siteid[:3]
-            if exclude_models and curr_model in exclude_models:
+            if exclude_models and curr_model in exclude_models.split(','):
                 continue
-            if only_models and curr_model not in only_models:
+            if only_models and curr_model not in only_models.split(','):
                 continue
             try:
                 count_sites_per_model[curr_model] += 1

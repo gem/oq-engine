@@ -2,13 +2,13 @@ General
 =======================================
 
 This manual is for advanced users, i.e.  people who already know how to use the
-engine and have already read the official manual cover-to-cover. 
+engine and have already read the official manual cover-to-cover.
 If you have just started on your journey of using and working with the
 OpenQuake engine, this manual is probably NOT for you. Beginners should study
 the `official manual
 <https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual>`_ first.
 This manual is intended for users who are either running *large* calculations
-or those who are interested in programatically interacting with the datastore. 
+or those who are interested in programatically interacting with the datastore.
 
 For the purposes of this manual a calculation is large if it cannot be run,
 i.e. if it runs out of memory, it fails with strange errors
@@ -35,7 +35,7 @@ The single most important parameter in the report is the
 distance and magnitude filtering. For instance your report could
 contain numbers like the following::
 
-#eff_ruptures 239,556  
+#eff_ruptures 239,556
 #tot_ruptures 8,454,592
 
 This is an example of a computation which is potentially large - there
@@ -71,7 +71,7 @@ are really important. Here is a list of parameters relevant for all
 calculators:
 
 maximum_distance:
-   The larger the maximum_distance, the more sources and ruptures will be 
+   The larger the maximum_distance, the more sources and ruptures will be
    considered; the effect is quadratic, i.e. a calculation with
    ``maximum_distance=500`` km could take up to 6.25 times more time than a
    calculation with ``maximum_distance=200`` km.
@@ -104,7 +104,7 @@ complex_fault_mesh_spacing:
   The same as the ``rupture_mesh_spacing``, but for complex fault sources.
   If not specified, the value of ``rupture_mesh_spacing`` will be used.
   This is a common cause of problems; if you have performance issue you
-  should consider using a larger ``complex_fault_mesh_spacing``. For instance, 
+  should consider using a larger ``complex_fault_mesh_spacing``. For instance,
   if you use a ``rupture_mesh_spacing=2`` for simple fault sources but
   ``complex_fault_mesh_spacing=10`` for complex fault sources, your computation
   can become up to 25 times faster, assuming the complex fault sources
@@ -142,7 +142,7 @@ the engine will ignore all sites over the maximum distance ``md(trt, mag)``.
 The precise value is given via linear interpolation of the values listed
 in the job.ini; you can determine the distance as follows:
 
->>> from openquake.hazardlib.calc.filters import IntegrationDistance 
+>>> from openquake.hazardlib.calc.filters import IntegrationDistance
 >>> idist = IntegrationDistance.new('[(4, 0), (6, 100), (7, 200), (8.5, 300)]')
 >>> interp = idist('TRT')
 >>> interp([4.5, 5.5, 6.5, 7.5, 8])
@@ -363,11 +363,11 @@ starting from the demos directory which contains example of hazard and
 risk calculations. For instance you could run the area source demo with the
 following command::
 
- $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini 
+ $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini
 
 You should notice that we used here the command ``oq run`` while the engine
 manual recommend the usage of ``oq engine --run``. There is no contradiction.
-The command ``oq engine --run`` is meant for production usage, 
+The command ``oq engine --run`` is meant for production usage,
 but here we are doing development, so the recommended command is ``oq run``
 which will will be easier to debug thanks to the
 flag ``--pdb``, which will start the python debugger
@@ -1103,7 +1103,7 @@ set up the credentials to access the WebAPI. There are two cases:
 
 In both case you need to create a file called ``openquake.cfg`` with the
 following format::
-  
+
   [webapi]
   server = http(s)://the-url-of-the-server(:port)
   username = my-username
@@ -1229,7 +1229,7 @@ Here is an example for the event based demo::
   In [3]: aw = extractor.get('rupture_info?min_mag=5')
   In [4]: aw
   Out[4]: <ArrayWrapper(1511,)>
-  In [5]: aw.array                                                   
+  In [5]: aw.array
   Out[5]:
   array([(   0, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
          (   1, 1, 5.05, 0.08456119,  0.15503392, 5., b'Active Shallow Crust', 4.4999969e+01, 90.      , 0.),
@@ -1260,7 +1260,7 @@ then you can process the hazard curves as follows:
   >> df = dstore.read_df('hcurves-stats', index='lvl',
   ..                     sel=dict(imt='PGA', stat='mean', site_id=0))
        site_id stat     imt     value
-  lvl                                
+  lvl
   0      0  b'mean'  b'PGA'  0.999982
   1      0  b'mean'  b'PGA'  0.999949
   2      0  b'mean'  b'PGA'  0.999850
@@ -1296,7 +1296,7 @@ a fixed investigation time and a fixed ``ses_per_logic_tree_path``.
 You can do that with code like the following:
 
 .. code-block:: python
-                
+
  def print_events_by_mag(calc_id):
      # open the DataStore for the current calculation
      dstore = datastore.read(calc_id)
@@ -1323,7 +1323,7 @@ the ``gmf_data`` table indexed by event ID, i.e. the ``eid`` field:
    >> gmf_data = dstore.read_df('gmf_data', index='eid') # engine>3.11
    >> gmf_data.loc[eid]
         sid     gmv_0
-   eid               
+   eid
    20    93   0.113241
    20   102   0.114756
    20   121   0.242828
@@ -1338,7 +1338,7 @@ from the ground motion values by using the function `gmvs_to_poes`,
 available since engine 3.10:
 
 .. code-block::
-   
+
    >> from openquake.commonlib.calc import gmvs_to_poes
    >> gmf_data = dstore.read_df('gmf_data', index='sid')
    >> df = gmf_data.loc[0]  # first site
@@ -1368,23 +1368,23 @@ it is an expensive operation, it is done only for small calculations.
 Limitations of Floating-point Arithmetic
 ========================================
 
-Most practitioners of numeric calculations are aware that addition 
+Most practitioners of numeric calculations are aware that addition
 of floating-point numbers is non-associative; for instance
 
->>> (.1 + .2) + .3                                                          
+>>> (.1 + .2) + .3
 0.6000000000000001
 
 is not identical to
 
->>> .1 + (.2 + .3)                                                         
+>>> .1 + (.2 + .3)
 0.6
 
 Other floating-point operations, such as multiplication,
-are also non-associative. The order in which operations are performed plays 
+are also non-associative. The order in which operations are performed plays
 a role in the results of a calculation.
 
 Single-precision floating-point variables are able to represent integers
-between [-16777216, 16777216] exactly, but start losing precision 
+between [-16777216, 16777216] exactly, but start losing precision
 beyond that range; for instance:
 
 >>> numpy.float32(16777216)
@@ -1406,45 +1406,45 @@ for numerical reproducibility of scientific computations, particularly
 in a parallel or distributed computing environment.
 
 For the purposes of this discussion, let us define numerical reproducibility
-as obtaining bit-wise identical results for different runs of the 
+as obtaining bit-wise identical results for different runs of the
 same computation on either the same machine or different machines.
 
-Given that the OpenQuake engine works by parallelizing calculations, 
-numerical reproducibility cannot be fully guaranteed, even for 
+Given that the OpenQuake engine works by parallelizing calculations,
+numerical reproducibility cannot be fully guaranteed, even for
 different runs on the same machine (unless the computation is run
 using the --no-distribute or --nd flag).
 
 Consider the following strategies for distributing the
 calculation of the asset losses for a set of events, followed by
-aggregation of the results for the portfolio due to all of the events. 
+aggregation of the results for the portfolio due to all of the events.
 The assets could be split into blocks with each task computing the
 losses for a particular block of assets and for all events, and the partial
 losses coming in from each task is aggregated at the end.
 Alternatively, the assets could be kept as a single block, splitting
-the set of events/ruptures into blocks instead; once again the engine has to 
-aggregate partial losses coming in from each of the tasks. 
-The order of the tasks is arbitrary, because it is impossible to know 
+the set of events/ruptures into blocks instead; once again the engine has to
+aggregate partial losses coming in from each of the tasks.
+The order of the tasks is arbitrary, because it is impossible to know
 how long each task will take before the computation actually begins.
 
 For instance, suppose there are 3 tasks, the first one producing a partial
 loss of 0.1 billion, the second one of 0.2 billion, and the third one of 0.3 billion.
-If we run the calculation and the order in which the results are received 
+If we run the calculation and the order in which the results are received
 is 1-2-3, we will compute a total loss of (.1 + .2) + .3 = 0.6000000000000001 billion.
 On the other hand, if for some reason the order in which the results arrive is
 2-3-1, say for instance, if the first core is particularly hot and the
 operating system decides to enable some throttling on it, then the
-aggregation will be (.2 + .3) + .1 = 0.6 billion, which is different 
-from the previous value by 1.11E-7 units. This example assumes the use of 
+aggregation will be (.2 + .3) + .1 = 0.6 billion, which is different
+from the previous value by 1.11E-7 units. This example assumes the use of
 Python's IEEE-754 “double precision” 64-bit floats.
 
 However, the engine uses single-precision 32-bit floats rather than
 double-precision 64-bit floats in a tradeoff necessary for reducing the
-memory demand (both RAM and disk space) for large computations, 
-so the precision of results is less than in the above example. 
-64-bit floats have 53 bits of precision, and this why the relative error 
-in the example above was around 1.11E-16 (i.e. 2^-53). 32-bit floats 
-have only 24 bits of precision, so we should expect a relative error of 
-around 6E-8 (i.e. 2^-24), which for the example above would be around 60 units. 
+memory demand (both RAM and disk space) for large computations,
+so the precision of results is less than in the above example.
+64-bit floats have 53 bits of precision, and this why the relative error
+in the example above was around 1.11E-16 (i.e. 2^-53). 32-bit floats
+have only 24 bits of precision, so we should expect a relative error of
+around 6E-8 (i.e. 2^-24), which for the example above would be around 60 units.
 Loss of precision in representing and storing large numbers is a factor
 that *must* be considered when running large computations.
 
@@ -1453,12 +1453,12 @@ small differences may accumulate when there are hundreds or even thousands
 of tasks handling different parts of the overall computation and sending
 back results for aggregation.
 
-Anticipating these issues, some adjustments can be made to the input models 
+Anticipating these issues, some adjustments can be made to the input models
 in order to circumvent or at least minimize surprises arising from floating-point
-arithmetic. Representing asset values in the exposure using thousands of dollars 
-as the unit instead of dollars could be one such defensive measure. 
+arithmetic. Representing asset values in the exposure using thousands of dollars
+as the unit instead of dollars could be one such defensive measure.
 
-This is why, as an aid to the interested user, 
+This is why, as an aid to the interested user,
 starting from version 3.9, the engine logs a warning if it finds
 inconsistencies beyond a tolerance level in the aggregated loss results.
 
@@ -1488,11 +1488,11 @@ You can see the full list of commands by running `oq --help`::
    usage: oq [--version]
              {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
              ...
-   
+
    positional arguments:
      {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
                            available subcommands; use oq <subcmd> --help
-   
+
    optional arguments:
      -h, --help            show this help message and exit
      -v, --version         show program's version number and exit
@@ -1508,14 +1508,14 @@ for instance, here is the help for `purge`::
 
   Remove the given calculation. If you want to remove all calculations, use oq
   reset.
-  
+
   positional arguments:
     calc_id      calculation ID
-  
+
   optional arguments:
     -h, --help   show this help message and exit
     -f, --force  ignore dependent calculations
-  
+
 Some of these commands are highly experimental and may disappear; others are
 meant for debugging and are not meant to be used by end-users. Here I will
 document only the commands that are useful for the general public and
@@ -1612,9 +1612,9 @@ command; the number of exporters defined changes at each version::
   Uniform Hazard Spectra "uhs" ['csv', 'xml', 'npz']
   There are 44 exporters defined.
 
-At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
-`hdf5`. `xml` has been deprecated for some outputs and is not the recommended 
-format for large exports. For large exports, the recommended formats are `npz` 
+At the present the supported export types are `xml`, `csv`, `rst`, `npz` and
+`hdf5`. `xml` has been deprecated for some outputs and is not the recommended
+format for large exports. For large exports, the recommended formats are `npz`
 (which is a binary format for numpy arrays) and `hdf5`. If you want the data for
 a specific realization (say the first one), you can use::
 
@@ -1635,11 +1635,11 @@ to a computation from a machine to another is `oq zip`::
 
   $ oq zip --help
   usage: oq zip [-h] [-r] what [archive_zip]
-  
+
   positional arguments:
     what               path to a job.ini, a ssmLT.xml file, or an exposure.xml
     archive_zip        path to a non-existing .zip file [default: '']
-  
+
   optional arguments:
     -h, --help         show this help message and exit
     -r , --risk-file   optional file for risk
@@ -1698,12 +1698,12 @@ exposure used in a calculation together with the hazard sites::
 
   $ oq plot_assets --help
   usage: oq plot_assets [-h] [calc_id]
-  
+
   Plot the sites and the assets
-  
+
   positional arguments:
     calc_id     a computation id [default: -1]
-  
+
   optional arguments:
     -h, --help  show this help message and exit
 
@@ -1716,13 +1716,13 @@ the sources into .gpkg format and use QGIS to plot them::
 
   $ oq nrml_to --help
   usage: oq nrml_to [-h] [-o .] [-c] {csv,gpkg} fnames [fnames ...]
-  
+
   Convert source models into CSV files or a geopackage.
-  
+
   positional arguments:
     {csv,gpkg}        csv or gpkg
     fnames            source model files in XML
-  
+
   optional arguments:
     -h, --help        show this help message and exit
     -o ., --outdir .  output directory
@@ -1747,10 +1747,10 @@ prepare_site_model
 ------------------
 
 The command `oq prepare_site_model`, introduced in engine 3.3, is quite useful
-if you have a vs30 file with fields lon, lat, vs30 and you want to generate a 
-site model from it. Normally this feature is used for risk calculations: 
-given an exposure, one wants to generate a collection of hazard sites covering 
-the exposure and with vs30 values extracted from the vs30 file with a nearest 
+if you have a vs30 file with fields lon, lat, vs30 and you want to generate a
+site model from it. Normally this feature is used for risk calculations:
+given an exposure, one wants to generate a collection of hazard sites covering
+the exposure and with vs30 values extracted from the vs30 file with a nearest
 neighbour algorithm::
 
   $ oq prepare_site_model -h
@@ -1758,16 +1758,16 @@ neighbour algorithm::
                                [-e [EXPOSURE_XML [EXPOSURE_XML ...]]]
                                [-s SITES_CSV] [-g 0] [-a 5] [-o site_model.csv]
                                vs30_csv [vs30_csv ...]
-  
+
   Prepare a site_model.csv file from exposure xml files/site csv files, vs30 csv
   files and a grid spacing which can be 0 (meaning no grid). For each site the
   closest vs30 parameter is used. The command can also generate (on demand) the
   additional fields z1pt0, z2pt5 and vs30measured which may be needed by your
   hazard model, depending on the required GSIMs.
-  
+
   positional arguments:
     vs30_csv              files with lon,lat,vs30 and no header
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -1, --z1pt0
@@ -1791,7 +1791,7 @@ from the closest vs30 record is taken. In the second case, when a
 exposure is built and the points with assets are associated to the
 vs30 records. In both cases if the closest vs30 record is
 over the `site_param_distance` - which by default is 5 km - a warning
-is printed. 
+is printed.
 
 In large risk calculations, it is quite preferable *to use the gridded mode*
 because with a well spaced grid,
@@ -1799,7 +1799,7 @@ because with a well spaced grid,
 1) the results are the nearly the same than without the grid and
 2) the calculation is a lot faster and uses a lot less memory.
 
-Gridding of the exposure makes large calculations more manageable. 
+Gridding of the exposure makes large calculations more manageable.
 The command is able to manage multiple Vs30 files at once. Here is an example
 of usage::
 
@@ -1826,13 +1826,13 @@ to the original ones.
 
   $ oq reduce_sm -h
   usage: oq reduce_sm [-h] calc_id
-  
+
   Reduce the source model of the given (pre)calculation by discarding all
   sources that do not contribute to the hazard.
-  
+
   positional arguments:
     calc_id     calculation ID
-  
+
   optional arguments:
     -h, --help  show this help message and exit
 
@@ -1846,13 +1846,13 @@ the engine version. Here are a few examples::
 
   $ oq compare hcurves --help
   usage: oq compare hcurves [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
-  
+
   Compare the hazard curves of two or more calculations.
-  
+
   positional arguments:
     imt                   intensity measure type to compare
     calc_ids              calculation IDs
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
@@ -1860,16 +1860,16 @@ the engine version. Here are a few examples::
     -r 0, --rtol 0        relative tolerance
     -a 0.001, --atol 0.001
                           absolute tolerance
-  
+
   $ oq compare hmaps --help
   usage: oq compare hmaps [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
-  
+
   Compare the hazard maps of two or more calculations.
-  
+
   positional arguments:
     imt                   intensity measure type to compare
     calc_ids              calculation IDs
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
@@ -1877,15 +1877,15 @@ the engine version. Here are a few examples::
     -r 0, --rtol 0        relative tolerance
     -a 0.001, --atol 0.001
                           absolute tolerance
-  
+
   $ oq compare uhs --help
   usage: oq compare uhs [-h] [-f] [-s] [-r 0] [-a 0.001] calc_ids [calc_ids ...]
-  
+
   Compare the uniform hazard spectra of two or more calculations.
-  
+
   positional arguments:
     calc_ids              calculation IDs
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
@@ -1920,3 +1920,95 @@ If the key `/` is requested, the root attributes are retrieved,
 i.e. `checksum`, `date` `engine_version` and `input_size`.
 If the calculation id is not specified, the value of the
 requested key is retrieved for the latest calculation.
+
+Mosaic-related commands
+-----------------------
+
+Mosaic-related commands are defined as subcommands of the `oq mosaic` command::
+
+  $ oq mosaic -h
+  usage: oq mosaic [-h] {run_site,sample_rups,sample_gmfs} ...
+
+  positional arguments:
+    {run_site,sample_rups,sample_gmfs}
+                          available subcommands; use oq mosaic <subcmd> --help
+
+  options:
+    -h, --help            show this help message and exit
+
+The `oq mosaic run_site` subcommand gives the possibility to run a PSHA
+analysis for a site on the given longitude and latitude, or for multiple sites
+specified in a CSV file::
+
+  $ oq mosaic run_site -h
+  usage: oq mosaic run_site [-h] [--hc HC] [-s SLOWEST] [-c 8] lonlat_or_fname
+
+  Run a PSHA analysis on the given lon, lat
+
+  positional arguments:
+    lonlat_or_fname       lon,lat of the site to analyze or CSV file
+
+  options:
+    -h, --help            show this help message and exit
+    --hc HC               previous calculation ID
+    -s SLOWEST, --slowest SLOWEST
+                          profile and show the slowest operations
+    -c 8, --concurrent-jobs 8
+                          maximum number of concurrent jobs
+
+If a CSV file is provided, it must contain in each row a site identifier starting
+with the 3-character code of the mosaic model that covers it, and
+the longitude and latitude of the site, separated by commas. In this case, it
+is also possible to define environment variable to select or exclude subsets of
+sites from those specified in the CSV file:
+
+  * `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each identified by
+    the corresponding 3-charracters code) to be selected, excluding sites
+    covered by other models
+  * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by all models
+    except those specified in this list
+  * `OQ_ONLY_SITEIDS`: a comma-separated list of site identifiers to be selected,
+    excluding all others from the analysis
+  * `OQ_EXCLUDE_SITEIDS`: a comma-separated list of site identifiers to be excluded,
+    selecting all the others
+  * `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected between
+    those covered by each model
+
+The `oq mosaic sample_rups` subcommand gives the possibility to sample the
+ruptures of the given model in the mosaic with an effective investigation time
+of 100,000 years::
+
+  $ oq mosaic sample_rups -h                                                                                                                           2
+  usage: oq mosaic sample_rups [-h] [-s SLOWEST] model
+
+  Sample the ruptures of the given model in the mosaic with an effective investigation time of 100,000 years
+
+  positional arguments:
+    model                 3-letter name of the model
+
+  options:
+    -h, --help            show this help message and exit
+    -s SLOWEST, --slowest SLOWEST
+                          profile and show the slowest operations
+
+The `oq mosaic sample_gmfs` subcommand gives the possiblity to sample the gmfs of the given model in the mosaic with an effective investigation time of 100,000 years::
+
+  $ oq mosaic sample_gmfs -h
+  usage: oq mosaic sample_gmfs [-h] [-t -1] [-m 0.0] [-e 1000.0] [--hc HC] [-s SLOWEST] model
+
+  Sample the gmfs of the given model in the mosaic with an effective investigation time of 100,000 years
+
+  positional arguments:
+    model                 3-letter name of the model
+
+  options:
+    -h, --help            show this help message and exit
+    -t -1, --trunclevel -1
+                          truncation level (default: the one in job_vs30.ini)
+    -m 0.0, --mindist 0.0
+                          minimum_distance (default: 0)
+    -e 1000.0, --extreme-gmv 1000.0
+                          threshold above which a GMV is extreme
+    --hc HC               previous hazard calculation
+    -s SLOWEST, --slowest SLOWEST
+                          profile and show the slowest operations
