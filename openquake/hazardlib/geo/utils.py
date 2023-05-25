@@ -22,7 +22,6 @@ to several geographical primitives and some other low-level spatial operations.
 """
 import math
 import logging
-import operator
 import collections
 
 import numpy
@@ -752,6 +751,7 @@ def bbox2poly(bbox):
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
 # it may turn useful in the future (with SiteCollection.geohash)
+@compile('s8(f8,f8,u1)')
 def geohash(lon, lat, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
