@@ -1956,11 +1956,11 @@ specified in a CSV file::
     -c 8, --concurrent-jobs 8
                           maximum number of concurrent jobs
 
-If a CSV file is provided, it must contain in each row a site identifier starting
-with the 3-character code of the mosaic model that covers it, and
-the longitude and latitude of the site, separated by commas. In this case, it
-is also possible to define environment variable to select or exclude subsets of
-sites from those specified in the CSV file:
+If a CSV file is provided, it must contain in each row a site identifier
+starting with the 3-character code of the mosaic model that covers it, and the
+longitude and latitude of the site, separated by commas. In this case, it may
+be convenient also to define environment variables to select or exclude subsets
+of sites from those specified in the CSV file:
 
 * `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each identified by
   the corresponding 3-charracters code) to be selected, excluding sites
@@ -1973,6 +1973,16 @@ sites from those specified in the CSV file:
   selecting all the others
 * `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected between
   those covered by each model
+
+For instance,
+
+```
+$ OQ_ONLY_MODELS=CAN,AUS oq mosaic run_site sites.csv
+```
+
+would select from the file `sites.csv` only those for which the site id starts
+with the codes `CAN` or `AUS`, i.e. those covered by the mosaic models
+for Canada and Australia.
 
 The `oq mosaic sample_rups` subcommand gives the possibility to sample the
 ruptures of the given model in the mosaic with an effective investigation time
