@@ -908,7 +908,7 @@ class Exposure(object):
                 exp.tagcol.extend(exposure.tagcol)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
-        exp.asset = numpy.concatenate(all_assets)
+        exp.assets = numpy.concatenate(all_assets)
         return exp
 
     @staticmethod
