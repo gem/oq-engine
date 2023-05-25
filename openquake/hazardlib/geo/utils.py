@@ -195,7 +195,7 @@ class _GeographicObjects(object):
         assets_by_sid = collections.defaultdict(list)
         discarded = []
         for assets in assets_by_site:
-            lon, lat = assets[0].lon, assets[0].lat
+            lon, lat = assets[0]['lon'], assets[0]['lat']
             obj, distance = self.get_closest(lon, lat)
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
@@ -212,7 +212,7 @@ class _GeographicObjects(object):
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
         assets_by_site = [assets_by_sid[sid] for sid in sids]
-        data = [(asset.asset_id, asset.lon, asset.lat) for asset in discarded]
+        data = [(asset.id, asset.lon, asset.lat) for asset in discarded]
         discarded = numpy.array(data, asset_dt)
         return self.objects.filtered(sids), assets_by_site, discarded
 
