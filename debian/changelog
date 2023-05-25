@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Extended total_losses to include business_interruption
+
   [Michele Simionato]
   * Recognized `occupants_avg` field in the exposure
   * Optimized reading the exposure (both speed and memory)
