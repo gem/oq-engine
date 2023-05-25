@@ -671,19 +671,14 @@ def build_asset_array(calc, sids, assets, area, tagnames=()):
              (str(name), F32) for name in float_fields] + int_fields)
     num_assets = len(assets)
     assetcol = numpy.zeros(num_assets, asset_dt)
-    asset_ordinal = 0
     fields = set(asset_dt.fields) - {'ordinal'}
-    for asset in assets:
-        record = assetcol[asset_ordinal]
-        asset_ordinal += 1
-        for field in fields:
-            if field == 'ideductible':
-                value = getattr(asset, 'ideductible', 0.)
-            elif field in tagnames:
-                value = asset['tagidxs'][tagi[field]]
-            else:
-                value = asset[field]
-            record[field] = value
+    tagidxs = assets['tagidxs']
+    for field in fields:
+        if field in tagnames:
+            idx = tagi[field]
+            assetcol[field] = [t[idx] for t in tagidxs]
+        elif field in assets.dtype.names:
+            assetcol[field] = assets[field]
     calc.update(assetcol)
     assetcol['ordinal'] = numpy.arange(num_assets)
     return assetcol, ' '.join(occupancy_periods)
