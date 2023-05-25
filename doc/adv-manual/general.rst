@@ -1974,11 +1974,9 @@ of sites from those specified in the CSV file:
 * `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected between
   those covered by each model
 
-For instance,
+For instance::
 
-```
-$ OQ_ONLY_MODELS=CAN,AUS oq mosaic run_site sites.csv
-```
+  $ OQ_ONLY_MODELS=CAN,AUS oq mosaic run_site sites.csv
 
 would select from the file `sites.csv` only those for which the site id starts
 with the codes `CAN` or `AUS`, i.e. those covered by the mosaic models
