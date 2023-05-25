@@ -20,6 +20,7 @@ import re
 import ast
 import copy
 import zlib
+import time
 import shutil
 import zipfile
 import pathlib
@@ -996,12 +997,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
 
     if haz_sitecol.mesh != Global.exposure.mesh:
         # associate the assets to the hazard sites
+        t0 = time.time()
         sitecol, assets_by, discarded = geo.utils.assoc(
             Global.exposure.assets_by_site, haz_sitecol, haz_distance,
             'filter')
         num_assets = sum(len(assets) for assets in assets_by)
-        logging.info('Associated {:_d} assets to {:_d} sites'.
-                     format(num_assets, len(sitecol)))
+        dt = time.time() - t0
+        logging.info('Associated {:_d} assets to {:_d} sites in {:.1f}s'.
+                     format(num_assets, len(sitecol), dt))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
@@ -1011,11 +1014,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), num_assets))
 
+    assets = []
     for sid, assets_ in zip(sitecol.sids, assets_by):
         for ass in assets_:
             ass['site_id'] = sid
+            assets.append(ass)
     assetcol = asset.AssetCollection(
-        Global.exposure, sitecol, sum(assets_by, []), oqparam.time_event,
+        Global.exposure, sitecol, assets, oqparam.time_event,
         oqparam.aggregate_by)
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy

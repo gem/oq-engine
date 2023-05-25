@@ -474,6 +474,8 @@ description = Description containing a % sign''')
         readinput.get_params(job_ini)
 
     def test_GEM4ALL(self):
+        raise unittest.SkipTest('Dropped support for GEM4ALL')
+
         # test a call used in the GEM4ALL importer, pure XML
         fname = os.path.join(os.path.dirname(case_caracas.__file__),
                              'exposure_caracas.xml')

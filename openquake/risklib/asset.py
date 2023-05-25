@@ -20,6 +20,7 @@ import itertools
 import logging
 import csv
 import os
+
 import numpy
 import pandas
 from shapely import wkt, geometry
@@ -378,9 +379,12 @@ class AssetCollection(object):
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
+        t0 = time.time()
         self.array, self.occupancy_periods = build_asset_array(
             exposure.cost_calculator, sitecol.sids, numpy.array(assets),
             exposure.area, exposure.tagcol.tagnames)
+        t1 = time.time()
+        logging.info('Built assetcol in %.1fs', t1-t0)
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
