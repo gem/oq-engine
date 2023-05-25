@@ -909,7 +909,6 @@ class Exposure(object):
         logging.info('Reading %s', fname)
         param = {'calculation_mode': calculation_mode}
         param['asset_prefix'] = asset_prefix
-        param['out_of_region'] = 0
         if region_constraint:
             param['region'] = wkt.loads(region_constraint)
         else:
@@ -942,12 +941,9 @@ class Exposure(object):
                     'structural', {'value-structural':df.retrofitted,
                                    'value-number': df.number})
             assets = build_assets(df.reset_index(), tagcol.tagnames)
-            exposure._populate_from(assets, param, check_dupl)
+            assets = exposure._populate_from(assets, param, check_dupl)
             all_assets.append(assets)
         exposure.assets = numpy.concatenate(all_assets)
-        if param['region'] and param['out_of_region']:
-            logging.info('Discarded %d assets outside the region',
-                         param['out_of_region'])
         if len(exposure.assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
 
@@ -1041,19 +1037,26 @@ class Exposure(object):
 
     def _populate_from(self, assets, param, check_dupl):
         asset_refs = set()
-        for asset in assets:
+        out_of_region = []
+        for idx, asset in enumerate(assets):
             asset_id = asset['id']
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
                 raise nrml.DuplicatedID('asset_id=%s while processing %s' % (
                     asset_id, param['fname']))
-            asset_refs.add(param['asset_prefix'] + asset_id)
+            asset_refs.add(asset_id)
             location = asset['lon'], asset['lat']
             if param['region'] and not geometry.Point(*location).within(
                     param['region']):
-                param['out_of_region'] += 1
+                out_of_region.append(idx)
             self._update_asset(asset, param)
+        if out_of_region:
+            logging.info('Discarded %d assets outside the region',
+                         len(out_of_region))
+            out = numpy.isin(numpy.arange(len(assets)), out_of_region)
+            return assets[~out]
+        return assets
 
     def _update_asset(self, asset, param):
         prefix = param['asset_prefix']
