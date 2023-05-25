@@ -935,6 +935,9 @@ class Exposure(object):
         all_assets = []
         asset_refs = set()
         for fname, df in fname_dfs:
+            if len(df) == 0:
+                raise InvalidFile('%s is empty' % fname)
+
             param['fname'] = fname
             names = df.columns
             param['area'] = 'area' in names
@@ -1061,6 +1064,8 @@ class Exposure(object):
                 out_of_region.append(idx)
             self._update_asset(asset, param)
         if out_of_region:
+            if len(out_of_region) == len(assets):                
+                raise RuntimeError('Could not find any asset within the region')
             logging.info('Discarded %d assets outside the region',
                          len(out_of_region))
             out = numpy.isin(numpy.arange(len(assets)), out_of_region)
