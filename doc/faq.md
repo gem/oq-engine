@@ -112,20 +112,20 @@ directory, e.g.:
 
 #### Can two installations of the engine share the same `oqdata` directory?
 
-The `oqdata` directory, that stores calculation data, can safely be shared between
-two different instances of the engine working on a same computer. Each datastore
-is independent from all others and has a unique identifier. It is possible to
-determine the version of the engine that produced each datastore (for instance
-`calc_X.hdf5`) using the command
+The `oqdata` directory, that stores calculation data, can safely be shared
+between two different instances of the engine working on a same computer. Each
+HDF5 dataset is independent from all others in the datastore and it has a unique
+identifier. It is possible to determine the version of the engine that produced
+each HDF5 file (`calc_<calc_id>.hdf5`) using the command
 
 ```
-$ oq show_attrs / X
+$ oq show_attrs / <calc_id>
 ```
 
-where `/` indicates the root attributes of the datastore (`checksum`, `date`
-`engine_version` and `input_size`) and `X` (an integer number) is the calculation
-id. In case the calculation id is not specified, the attributes are retrieved
-for the latest calculation.
+where `/` indicates the root attributes (`checksum`, `date`
+`engine_version` and `input_size`) and `<calc_id>` (an integer number) is the
+calculation identifier. In case the calculation id is not specified, the
+attributes are retrieved for the latest calculation.
 
 ******
 

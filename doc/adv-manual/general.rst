@@ -1896,3 +1896,27 @@ the engine version. Here are a few examples::
 
 Notice the ``compare uhs`` is able to compare all IMTs at once, so it
 is the most convenient to use if there are many IMTs.
+
+Showing calculation attributes
+------------------------------
+
+The command `oq show_attrs` offers a convenient way to retrieve
+the attributes of a calculation without needing to open the
+datastore with any external tools::
+
+  $ oq show_attrs -h
+  usage: oq show_attrs [-h] key [calc_id]
+
+  Show the attributes of a HDF5 dataset in the datastore.
+
+  positional arguments:
+    key         key of the datastore
+    calc_id     calculation ID [default: -1]
+
+  options:
+    -h, --help  show this help message and exit
+
+If the key `/` is requested, the root attributes are retrieved,
+i.e. `checksum`, `date` `engine_version` and `input_size`.
+If the calculation id is not specified, the value of the
+requested key is retrieved for the latest calculation.
