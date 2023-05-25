@@ -181,7 +181,7 @@ costcalculator = CostCalculator(
 def build_assets(adf, tagnames):
     STR_FIELDS = ['id', 'taxonomy'] + [
         name for name in tagnames if name not in ('id', 'site_id')]
-    F32_FIELDS = ['lon', 'lat', 'ideductible', 'retrofitted',
+    F64_FIELDS = ['lon', 'lat', 'ideductible', 'retrofitted',
                   'value-structural', 'value-nonstructural',
                   'value-contents', 'value-business_interruption',
                   'value-area', 'value-number',
@@ -191,8 +191,8 @@ def build_assets(adf, tagnames):
     for f in adf.columns:
         if f in STR_FIELDS:
             dtlist.append((f, object))
-        elif f in F32_FIELDS:
-            dtlist.append((f, F32))
+        elif f in F64_FIELDS:
+            dtlist.append((f, float))
     assets = numpy.zeros(len(adf), dtlist)
     for f, _ in dtlist[2:]:
         assets[f] = adf[f]

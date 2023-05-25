@@ -195,7 +195,7 @@ class _GeographicObjects(object):
         assets_by_sid = collections.defaultdict(list)
         discarded = []
         for assets in assets_by_site:
-            lon, lat = assets[0].lon, assets[0].lat
+            lon, lat = assets[0]['lon'], assets[0]['lat']
             obj, distance = self.get_closest(lon, lat)
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
