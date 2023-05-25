@@ -223,63 +223,22 @@ class TagCollection(object):
         for tagname in tagnames:
             self.add_tagname(tagname)
 
-    def get_tagidx(self, tagname):
-        """
-        :returns: a dictionary tag string -> tag index
-        """
-        return {tag: idx for idx, tag in enumerate(getattr(self, tagname))}
-
     def add_tagname(self, tagname):
         self.tagnames.append(tagname)
         setattr(self, tagname + '_idx', {'?': 0})
         setattr(self, tagname, ['?'])
 
     def get_tagi(self, tagname, assets):
+        """
+        :param tagname: name of a tag
+        :param assets: composite array of assets with string-valued tags
+        :returns: indices associated to the tag, from 1 to num_tags
+        """
         uniq, inv = numpy.unique(assets[tagname], return_inverse=True)
         dic = {u: i for i, u in enumerate(uniq, 1)}
         getattr(self, tagname + '_idx').update(dic)
         getattr(self, tagname).extend(uniq)
         return inv + 1
-
-    def add(self, tagname, tagvalue):
-        """
-        :returns: numeric index associated to the tag
-        """
-        dic = getattr(self, tagname + '_idx')
-        try:
-            return dic[tagvalue]
-        except KeyError:
-            dic[tagvalue] = idx = len(dic)
-            getattr(self, tagname).append(tagvalue)
-            if idx > TWO32:
-                raise InvalidFile('contains more then %d tags' % TWO32)
-            return idx
-
-    def add_tags(self, dic, prefix):
-        """
-        :param dic: a dictionary tagname -> tagvalue
-        :returns: a list of tag indices, one per tagname
-        """
-        # fill missing tagvalues with "?", raise an error for unknown tagnames
-        idxs = []
-        for tagname in self.tagnames:
-            if tagname in ('exposure', 'country'):
-                idxs.append(self.add(tagname, prefix))
-                continue
-            try:
-                tagvalue = dic.pop(tagname)
-            except KeyError:
-                tagvalue = '?'
-            else:
-                if tagvalue in '?*':
-                    raise ValueError(
-                        'Invalid tagvalue="%s"' % tagvalue)
-            idxs.append(self.add(tagname, tagvalue))
-        if dic:
-            raise ValueError(
-                'Unknown tagname %s or <tagNames> not '
-                'specified in the exposure' % ', '.join(dic))
-        return idxs
 
     def extend(self, other):
         for tagname in other.tagnames:
@@ -299,13 +258,6 @@ class TagCollection(object):
         values = tuple(getattr(self, tagname)[tagidx + 1]
                        for tagidx, tagname in zip(tagidxs, tagnames))
         return values
-
-    def get_tagdict(self, tagidxs):
-        """
-        :returns: dictionary {tagname: tag}
-        """
-        return {tagname: getattr(self, tagname)[tagidx]
-                for tagidx, tagname in zip(tagidxs, self.tagnames)}
 
     def get_aggkey(self, alltagnames, max_aggregations):
         """
