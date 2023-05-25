@@ -604,7 +604,8 @@ class SiteCollection(object):
         :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
-        lst = [geohash(lon, lat, length)
+        l = numpy.uint8(length)
+        lst = [geohash(lon, lat, l).tobytes()
                for lon, lat in zip(self['lon'], self['lat'])]
         return numpy.array(lst, (numpy.string_, length))
 

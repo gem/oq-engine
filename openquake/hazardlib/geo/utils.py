@@ -752,7 +752,7 @@ def bbox2poly(bbox):
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
 # it may turn useful in the future (with SiteCollection.geohash)
-#@compile('s8(f8,f8,u1)')
+@compile('u1[:](f8,f8,u1)')
 def geohash(lon, lat, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
@@ -760,33 +760,35 @@ def geohash(lon, lat, length):
     >>> geohash(lon=10, lat=45, length=5)
     b'spzpg'
     """
-    lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
-    chars = []
+    lat_interval, lon_interval = [-90.0, 90.0], [-180.0, 180.0]
+    chars = numpy.zeros(length, U8)
     bits = [16, 8, 4, 2, 1]
     bit = 0
     ch = 0
     even = True
-    while len(chars) < length:
+    i = 0
+    while i < length:
         if even:
             mid = (lon_interval[0] + lon_interval[1]) / 2
             if lon > mid:
                 ch |= bits[bit]
-                lon_interval = (mid, lon_interval[1])
+                lon_interval = [mid, lon_interval[1]]
             else:
-                lon_interval = (lon_interval[0], mid)
+                lon_interval = [lon_interval[0], mid]
         else:
             mid = (lat_interval[0] + lat_interval[1]) / 2
             if lat > mid:
                 ch |= bits[bit]
-                lat_interval = (mid, lat_interval[1])
+                lat_interval = [mid, lat_interval[1]]
             else:
-                lat_interval = (lat_interval[0], mid)
+                lat_interval = [lat_interval[0], mid]
         even = not even
         if bit < 4:
             bit += 1
         else:
-            chars.append(ch)
+            chars[i] = ch
             bit = 0
             ch = 0
-    return U8(CODE32[chars]).tobytes()
+            i += 1
+    return CODE32[chars]
 
