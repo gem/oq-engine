@@ -34,6 +34,7 @@ from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 
+U8 = numpy.uint8
 U32 = numpy.uint32
 F32 = numpy.float32
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
@@ -43,7 +44,7 @@ spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
-
+CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
 
 class BBoxError(ValueError):
     """Bounding box too large"""
@@ -751,7 +752,7 @@ def bbox2poly(bbox):
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
 # it may turn useful in the future (with SiteCollection.geohash)
-@compile('s8(f8,f8,u1)')
+#@compile('s8(f8,f8,u1)')
 def geohash(lon, lat, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
@@ -760,7 +761,7 @@ def geohash(lon, lat, length):
     b'spzpg'
     """
     lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
-    chars = b''
+    chars = []
     bits = [16, 8, 4, 2, 1]
     bit = 0
     ch = 0
@@ -784,7 +785,8 @@ def geohash(lon, lat, length):
         if bit < 4:
             bit += 1
         else:
-            chars += BASE32[ch]
+            chars.append(ch)
             bit = 0
             ch = 0
-    return chars
+    return U8(CODE32[chars]).tobytes()
+
