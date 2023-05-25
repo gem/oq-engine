@@ -234,6 +234,13 @@ class TagCollection(object):
         setattr(self, tagname + '_idx', {'?': 0})
         setattr(self, tagname, ['?'])
 
+    def get_tagi(self, tagname, assets):
+        uniq, inv = numpy.unique(assets[tagname], return_inverse=True)
+        dic = {u: i for i, u in enumerate(uniq, 1)}
+        getattr(self, tagname + '_idx').update(dic)
+        getattr(self, tagname).extend(uniq)
+        return inv + 1
+
     def add(self, tagname, tagvalue):
         """
         :returns: numeric index associated to the tag
@@ -639,7 +646,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
-def build_asset_array(calc, sids, assets, area, tagnames=()):
+def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
     """
     :param assets_by_site: a list of assets
     :param area: True if there is an area field in the exposure
@@ -675,8 +682,7 @@ def build_asset_array(calc, sids, assets, area, tagnames=()):
     fields = set(asset_dt.fields) - {'ordinal'}
     for field in fields:
         if field in tagnames:
-            idx = tagi[field]
-            assetcol[field] = assets['tagidxs'][:, idx]
+            assetcol[field] = tagcol.get_tagi(field, assets)
         elif field in assets.dtype.names:
             assetcol[field] = assets[field]
     calc.update(assetcol)
@@ -1062,7 +1068,6 @@ class Exposure(object):
             if param['region'] and not geometry.Point(*location).within(
                     param['region']):
                 out_of_region.append(idx)
-            self._update_asset(asset, param)
         if out_of_region:
             if len(out_of_region) == len(assets):                
                 raise RuntimeError('Could not find any asset within the region')
@@ -1071,14 +1076,6 @@ class Exposure(object):
             out = numpy.isin(numpy.arange(len(assets)), out_of_region)
             return assets[~out]
         return assets
-
-    def _update_asset(self, asset, param):
-        prefix = param['asset_prefix']
-        dic = {tagname: asset[tagname] for tagname in self.tagcol.tagnames
-               if tagname not in ('country', 'exposure') and
-               asset[tagname] != '?'}
-        dic['taxonomy'] = asset['taxonomy']
-        asset['tagidxs'] = self.tagcol.add_tags(dic, prefix)
 
     def get_mesh_assets_by_site(self):
         """

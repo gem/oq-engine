@@ -97,12 +97,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(str(agg_id), '''\
        policy taxonomy
 agg_id                
-0           B       RM
-1           B        W
-2           B       RC
-3           A       RM
-4           A        W
-5           A       RC''')
+0           A       RC
+1           A       RM
+2           A        W
+3           B       RC
+4           B       RM
+5           B        W''')
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
