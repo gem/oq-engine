@@ -1043,7 +1043,7 @@ class Exposure(object):
             yield fname, df
 
     def _populate_from(self, assets, param, check_dupl):
-        logging.info('Found {:_d} assets in {}'.format(
+        logging.info('Read {:_d} assets in {}'.format(
             len(assets), param['fname']))
         asset_refs = set()
         out_of_region = []
