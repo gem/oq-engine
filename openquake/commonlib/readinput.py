@@ -981,10 +981,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     :param exp_types: the expected loss types
     :returns: (site collection, asset collection, discarded)
     """
+    exp = Global.exposure
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
-    if Global.exposure is None:
+    if exp is None:
         # haz_sitecol not extracted from the exposure
-        Global.exposure = get_exposure(oqparam)
+        exp = get_exposure(oqparam)
     if haz_sitecol is None:
         haz_sitecol = get_site_collection(oqparam)
     if oqparam.region_grid_spacing:
@@ -995,11 +996,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    if haz_sitecol.mesh != Global.exposure.mesh:
+    if haz_sitecol.mesh != exp.mesh:
         # associate the assets to the hazard sites
         t0 = time.time()
         sitecol, assets_by, discarded = geo.utils.assoc(
-            Global.exposure.assets_by_site, haz_sitecol, haz_distance,
+            exp.assets_by_site, haz_sitecol, haz_distance,
             'filter')
         num_assets = sum(len(assets) for assets in assets_by)
         dt = time.time() - t0
@@ -1009,7 +1010,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         discarded = []
-        assets_by = Global.exposure.assets_by_site
+        assets_by = exp.assets_by_site
         num_assets = sum(len(assets) for assets in assets_by)
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), num_assets))
@@ -1019,8 +1020,12 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         for ass in assets_:
             ass['site_id'] = sid
             assets.append(ass)
+
+    array, occupancy_periods = asset.build_asset_array(
+        exp.cost_calculator, sitecol.sids, numpy.array(assets),
+        exp.area, exp.tagcol.tagnames)
     assetcol = asset.AssetCollection(
-        Global.exposure, sitecol, assets, oqparam.time_event,
+        exp, sitecol, array, occupancy_periods, oqparam.time_event,
         oqparam.aggregate_by)
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy

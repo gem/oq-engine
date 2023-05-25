@@ -18,7 +18,6 @@
 import operator
 import itertools
 import logging
-import time
 import csv
 import os
 
@@ -381,16 +380,13 @@ def tagset(aggregate_by):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, sitecol, assets, time_event, aggregate_by):
+    def __init__(self, exposure, sitecol, array, occupancy_periods,
+                 time_event, aggregate_by):
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
-        t0 = time.time()
-        self.array, self.occupancy_periods = build_asset_array(
-            exposure.cost_calculator, sitecol.sids, numpy.array(assets),
-            exposure.area, exposure.tagcol.tagnames)
-        t1 = time.time()
-        logging.info('Built assetcol in %.1fs', t1-t0)
+        self.array = array
+        self.occupancy_periods = occupancy_periods
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
