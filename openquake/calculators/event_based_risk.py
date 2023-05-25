@@ -230,7 +230,7 @@ def gen_outputs(df, crmodel, rng, monitor):
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        taxos = numpy.sort(assets.taxonomy.unique())
+        taxos = assets.taxonomy.unique()
         for taxo in taxos:
             adf = assets[assets.taxonomy == taxo]
             for start, stop in slices:
