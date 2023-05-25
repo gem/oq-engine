@@ -181,6 +181,11 @@ costcalculator = CostCalculator(
 
 
 def build_assets(adf, tagnames):
+    """
+    :param adf: DataFrame associated to the exposure.csv file
+    :param tagnames: tag names (including taxonomy)
+    """
+    T = len(tagnames)
     STR_FIELDS = ['id', 'taxonomy'] + [
         name for name in tagnames if name not in ('id', 'site_id')]
     F64_FIELDS = ['lon', 'lat', 'ideductible', 'retrofitted',
@@ -189,7 +194,7 @@ def build_assets(adf, tagnames):
                   'value-area', 'value-number',
                   'occupants_avg', 'occupants_night',
                   'occupants_day', 'occupants_transit']
-    dtlist = [('tagidxs', object), ('site_id', U32)]
+    dtlist = [('tagidxs', (U32, (T,))), ('site_id', U32)]
     for f in adf.columns:
         if f in STR_FIELDS:
             dtlist.append((f, object))
@@ -672,11 +677,10 @@ def build_asset_array(calc, sids, assets, area, tagnames=()):
     num_assets = len(assets)
     assetcol = numpy.zeros(num_assets, asset_dt)
     fields = set(asset_dt.fields) - {'ordinal'}
-    tagidxs = assets['tagidxs']
     for field in fields:
         if field in tagnames:
             idx = tagi[field]
-            assetcol[field] = [t[idx] for t in tagidxs]
+            assetcol[field] = assets['tagidxs'][:, idx]
         elif field in assets.dtype.names:
             assetcol[field] = assets[field]
     calc.update(assetcol)
