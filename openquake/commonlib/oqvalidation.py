@@ -839,11 +839,11 @@ ALL_CALCULATORS = ['aftershock',
                    'event_based_damage',
                    'scenario_damage']
 
-LOSS_TYPES = [
+COST_TYPES = [
     'structural', 'nonstructural', 'contents', 'business_interruption']
-LOSS_TYPE_COMBINATIONS = [
-    '+'.join(s) for l_idx in range(len(LOSS_TYPES))
-    for s in itertools.combinations(LOSS_TYPES, l_idx + 1)]
+ALL_COST_TYPES = [
+    '+'.join(s) for l_idx in range(len(COST_TYPES))
+    for s in itertools.combinations(COST_TYPES, l_idx + 1)]
 
 
 def check_same_levels(imtls):
@@ -1053,7 +1053,7 @@ class OqParam(valid.ParamSet):
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, None)
     time_per_task = valid.Param(valid.positivefloat, 2000)
-    total_losses = valid.Param(valid.Choice(*LOSS_TYPE_COMBINATIONS), None)
+    total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)

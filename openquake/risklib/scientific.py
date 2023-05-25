@@ -56,7 +56,19 @@ contents+business_interruption
 structural+nonstructural+business_interruption
 structural+contents+business_interruption
 nonstructural+contents+business_interruption
-structural+nonstructural+contents+business_interruption'''.split())
+structural+nonstructural+contents+business_interruption
+contents_ins business_interruption_ins
+structural_ins+nonstructural_ins structural_ins+contents_ins
+structural_ins+business_interruption_ins nonstructural_ins+contents_ins
+nonstructural_ins+business_interruption_ins
+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins
+structural_ins+nonstructural_ins+business_interruption_ins
+structural_ins+contents_ins+business_interruption_ins
+nonstructural_ins+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+'''.split())
+
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
