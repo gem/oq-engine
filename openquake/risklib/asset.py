@@ -18,7 +18,6 @@
 import operator
 import itertools
 import logging
-import time
 import csv
 import os
 
@@ -181,6 +180,11 @@ costcalculator = CostCalculator(
 
 
 def build_assets(adf, tagnames):
+    """
+    :param adf: DataFrame associated to the exposure.csv file
+    :param tagnames: tag names (including taxonomy)
+    """
+    T = len(tagnames)
     STR_FIELDS = ['id', 'taxonomy'] + [
         name for name in tagnames if name not in ('id', 'site_id')]
     F64_FIELDS = ['lon', 'lat', 'ideductible', 'retrofitted',
@@ -189,8 +193,8 @@ def build_assets(adf, tagnames):
                   'value-area', 'value-number',
                   'occupants_avg', 'occupants_night',
                   'occupants_day', 'occupants_transit']
-    dtlist = [('tagidxs', object), ('site_id', U32)]
-    for f in adf.columns:
+    dtlist = [('tagidxs', (U32, (T,))), ('site_id', U32)]
+    for f in sorted(adf.columns):
         if f in STR_FIELDS:
             dtlist.append((f, object))
         elif f in F64_FIELDS:
@@ -376,16 +380,13 @@ def tagset(aggregate_by):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, sitecol, assets, time_event, aggregate_by):
+    def __init__(self, exposure, sitecol, array, occupancy_periods,
+                 time_event, aggregate_by):
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
-        t0 = time.time()
-        self.array, self.occupancy_periods = build_asset_array(
-            exposure.cost_calculator, sitecol.sids, numpy.array(assets),
-            exposure.area, exposure.tagcol.tagnames)
-        t1 = time.time()
-        logging.info('Built assetcol in %.1fs', t1-t0)
+        self.array = array
+        self.occupancy_periods = occupancy_periods
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
@@ -672,11 +673,10 @@ def build_asset_array(calc, sids, assets, area, tagnames=()):
     num_assets = len(assets)
     assetcol = numpy.zeros(num_assets, asset_dt)
     fields = set(asset_dt.fields) - {'ordinal'}
-    tagidxs = assets['tagidxs']
     for field in fields:
         if field in tagnames:
             idx = tagi[field]
-            assetcol[field] = [t[idx] for t in tagidxs]
+            assetcol[field] = assets['tagidxs'][:, idx]
         elif field in assets.dtype.names:
             assetcol[field] = assets[field]
     calc.update(assetcol)
@@ -935,6 +935,9 @@ class Exposure(object):
         all_assets = []
         asset_refs = set()
         for fname, df in fname_dfs:
+            if len(df) == 0:
+                raise InvalidFile('%s is empty' % fname)
+
             param['fname'] = fname
             names = df.columns
             param['area'] = 'area' in names
@@ -949,10 +952,11 @@ class Exposure(object):
             assets = exposure._populate_from(
                 assets, param, check_dupl, asset_refs)
             all_assets.append(assets)
-        exposure.assets = numpy.concatenate(all_assets)
-        if len(exposure.assets) == 0:
+
+        if not asset_refs:
             raise RuntimeError('Could not find any asset within the region!')
 
+        exposure.assets = numpy.concatenate(all_assets)
         exposure.param = param
         return exposure
 
@@ -1060,6 +1064,8 @@ class Exposure(object):
                 out_of_region.append(idx)
             self._update_asset(asset, param)
         if out_of_region:
+            if len(out_of_region) == len(assets):                
+                raise RuntimeError('Could not find any asset within the region')
             logging.info('Discarded %d assets outside the region',
                          len(out_of_region))
             out = numpy.isin(numpy.arange(len(assets)), out_of_region)

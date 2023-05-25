@@ -403,7 +403,7 @@ POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
         oqparam.aggregate_by = []
         with self.assertRaises(RuntimeError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn('Could not find any asset within the region!',
+        self.assertIn('Could not find any asset within the region',
                       str(ctx.exception))
 
     def test_wrong_cost_type(self):
