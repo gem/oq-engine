@@ -936,6 +936,7 @@ class Exposure(object):
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
             'occupants'}
         all_assets = []
+        asset_refs = set()
         for fname, df in fname_dfs:
             param['fname'] = fname
             names = df.columns
@@ -948,7 +949,8 @@ class Exposure(object):
                     'structural', {'value-structural':df.retrofitted,
                                    'value-number': df['value-number']})
             assets = build_assets(df.reset_index(), tagcol.tagnames)
-            assets = exposure._populate_from(assets, param, check_dupl)
+            assets = exposure._populate_from(
+                assets, param, check_dupl, asset_refs)
             all_assets.append(assets)
         exposure.assets = numpy.concatenate(all_assets)
         if len(exposure.assets) == 0:
@@ -1042,13 +1044,13 @@ class Exposure(object):
                 df = general.random_filter(df, sa)
             yield fname, df
 
-    def _populate_from(self, assets, param, check_dupl):
+    def _populate_from(self, assets, param, check_dupl, asset_refs):
         logging.info('Read {:_d} assets in {}'.format(
             len(assets), param['fname']))
-        asset_refs = set()
         out_of_region = []
         for idx, asset in enumerate(assets):
-            asset_id = asset['id']
+            asset_id = param['asset_prefix'] + asset['id']
+            asset['id'] = asset_id
             # check_dupl is False only in oq prepare_site_model since
             # in that case we are only interested in the asset locations
             if check_dupl and asset_id in asset_refs:
@@ -1074,7 +1076,6 @@ class Exposure(object):
                asset[tagname] != '?'}
         dic['taxonomy'] = asset['taxonomy']
         asset['tagidxs'] = self.tagcol.add_tags(dic, prefix)
-        asset['id'] = prefix + asset['id']
 
     def get_mesh_assets_by_site(self):
         """
