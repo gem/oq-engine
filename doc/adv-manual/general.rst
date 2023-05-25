@@ -1962,17 +1962,17 @@ the longitude and latitude of the site, separated by commas. In this case, it
 is also possible to define environment variable to select or exclude subsets of
 sites from those specified in the CSV file:
 
-  * `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each identified by
-    the corresponding 3-charracters code) to be selected, excluding sites
-    covered by other models
-  * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by all models
-    except those specified in this list
-  * `OQ_ONLY_SITEIDS`: a comma-separated list of site identifiers to be selected,
-    excluding all others from the analysis
-  * `OQ_EXCLUDE_SITEIDS`: a comma-separated list of site identifiers to be excluded,
-    selecting all the others
-  * `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected between
-    those covered by each model
+* `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each identified by
+  the corresponding 3-charracters code) to be selected, excluding sites
+  covered by other models
+* `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by all models
+  except those specified in this list
+* `OQ_ONLY_SITEIDS`: a comma-separated list of site identifiers to be selected,
+  excluding all others from the analysis
+* `OQ_EXCLUDE_SITEIDS`: a comma-separated list of site identifiers to be excluded,
+  selecting all the others
+* `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected between
+  those covered by each model
 
 The `oq mosaic sample_rups` subcommand gives the possibility to sample the
 ruptures of the given model in the mosaic with an effective investigation time
