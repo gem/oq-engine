@@ -868,14 +868,11 @@ class Exposure(object):
                  ignore_missing_costs=(), check_dupl=True, by_country=False,
                  asset_prefix='', tagcol=None, errors=None, monitor=None):
         logging.info('Reading %s', fname)
-        param = {'calculation_mode': calculation_mode}
-        param['asset_prefix'] = asset_prefix
-        if region_constraint:
-            param['region'] = wkt.loads(region_constraint)
-        else:
-            param['region'] = None
-        param['ignore_missing_costs'] = set(ignore_missing_costs)
         exposure, assetnodes = _get_exposure(fname)
+        if region_constraint:
+            exposure.region = wkt.loads(region_constraint)
+        else:
+            exposure.region = None
         if tagcol:
             exposure.tagcol = tagcol
         if calculation_mode == 'classical_bcr':
@@ -887,8 +884,6 @@ class Exposure(object):
             fname_dfs = [(fname, df)]
         else:
             fname_dfs = exposure._read_csv(errors)
-        param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
-            'occupants'}
         all_assets = []
         # loop on each CSV file associated to exposure.xml
         for fname, df in fname_dfs:
@@ -900,9 +895,7 @@ class Exposure(object):
                 df['exposure'] = asset_prefix[:-1]
 
             logging.info('Read {:_d} assets in {}'.format(len(df), fname))
-            param['fname'] = fname
             names = df.columns
-            param['area'] = 'area' in names
             occupants = any(n.startswith('occupants_') for n in names)
             if occupants and 'calc_occupants_avg' not in names:
                 df['occupants_avg'] = calc_occupants_avg(df)
@@ -911,11 +904,8 @@ class Exposure(object):
                     'structural', {'value-structural':df.retrofitted,
                                    'value-number': df['value-number']})
             assets = build_assets(df.reset_index(), tagcol.tagnames)
-            assets = exposure._populate_from(assets, param)
+            assets['id'] = asset_prefix + assets['id']
             all_assets.append(assets)
-
-        if len(assets) == 0:
-            raise RuntimeError('Could not find any asset within the region!')
 
         exposure.assets = numpy.concatenate(all_assets, dtype=assets.dtype)
         # check_dupl is False only in oq prepare_site_model since
@@ -925,8 +915,6 @@ class Exposure(object):
             dupl = u[c > 1]
             if len(dupl):
                 raise nrml.DuplicatedID(dupl)
-
-        exposure.param = param
         return exposure
 
     @staticmethod
@@ -1014,29 +1002,24 @@ class Exposure(object):
                 df = general.random_filter(df, sa)
             yield fname, df
 
-    def _populate_from(self, assets, param):
-        out_of_region = []
-        for idx, asset in enumerate(assets):
-            asset['id'] = param['asset_prefix'] + asset['id']
-            location = asset['lon'], asset['lat']
-            if param['region'] and not geometry.Point(*location).within(
-                    param['region']):
-                out_of_region.append(idx)
-        if out_of_region:
-            if len(out_of_region) == len(assets):                
-                raise RuntimeError('Could not find any asset within the region')
-            logging.info('Discarded %d assets outside the region',
-                         len(out_of_region))
-            out = numpy.isin(numpy.arange(len(assets)), out_of_region)
-            return assets[~out]
-        return assets
-
     def get_mesh_assets_by_site(self):
         """
         :returns: (Mesh instance, assets_by_site list)
         """
         assets_by_loc = general.groupby(self, key=by_lonlat)
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
+        if self.region:
+            out = []
+            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
+                if not geometry.Point(lon, lat).within(self.region):
+                    out.append(i)
+            if out:
+                ok = ~numpy.isin(numpy.arange(len(mesh)), out)
+                if ok.sum() == 0:
+                    raise RuntimeError(
+                        'Could not find any asset within the region!')
+                mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
+                logging.info('Discarded %d assets outside the region', len(out))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         return mesh, assets_by_site
