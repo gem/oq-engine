@@ -1922,6 +1922,17 @@ engine_version, etc.).
 If the calculation id is not specified, the value of the
 requested key is retrieved for the latest calculation.
 
+For example, you can retrieve the `crm` attribute of calculation number 4 as follows::
+
+  $ oq show_attrs crm 4
+
+  __pdcolumns__ riskid loss_type riskfunc
+  consequences []
+  covs 0
+  limit_states ['slight' 'moderate' 'extreme' 'complete']
+  loss_types ['structural']
+  tmap {'structural': [[('?', 1)], [('Wood', 1)], [('Adobe', 1)], [('Stone-Masonry', 1)], [('Unreinforced-Brick-Masonry', 1)], [('Concrete', 1)]]}
+
 Mosaic-related commands
 -----------------------
 
