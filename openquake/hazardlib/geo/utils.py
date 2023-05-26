@@ -753,7 +753,7 @@ def bbox2poly(bbox):
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
 # used in SiteCollection.geohash
-@compile('u1[:, :](f8[:],f8[:],u1)')
+@compile('(f8[:],f8[:],u1)')
 def geohash(lons, lats, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
@@ -764,7 +764,8 @@ def geohash(lons, lats, length):
     """
     l1 = len(lons)
     l2 = len(lats)
-    #assert l1 == l2
+    if l1 != l2:
+        raise ValueError('lons, lats of different lenghts')
     chars = numpy.zeros((l1, length), U8)
     for p in range(l1):
         lon = lons[p]
