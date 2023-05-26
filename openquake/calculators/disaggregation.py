@@ -409,7 +409,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if name.endswith('rlzs'):
             Z = self.shapedic['Z']
         else:
-            Z = len(oq.hazard_stats())
+            Z = 1  # only mean is supported
         out = output_dict(self.shapedic, oq.disagg_outputs, Z)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])

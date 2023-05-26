@@ -234,7 +234,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 
-        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 22)
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
