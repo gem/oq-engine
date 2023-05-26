@@ -95,7 +95,7 @@ rst_epilog = """
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -171,7 +171,7 @@ html_theme_options = {
     "navbar_start": ["version-switcher"],
     "switcher": {
         "json_url": "../../.ddown_man.json",
-        "version_match": "development" if it_is_master == True else '.'.join(version.split('.')[0:2])
+        "version_match": "development" if it_is_master is True else '.'.join(version.split('.')[0:2])
     },
     "icon_links": [
         {
