@@ -1916,22 +1916,18 @@ datastore with any external tools::
   options:
     -h, --help  show this help message and exit
 
-If the key `/` is requested, the root attributes are retrieved (date,
-engine_version, etc.).
+If the key `/` is requested, the root attributes are retrieved.
+For instance::
+
+  $ oq show_attrs / 4
+
+  checksum32 1572793419
+  date 2023-04-25T08:19:33
+  engine_version 3.17.0-gitcae0748
+  input_size 4021
 
 If the calculation id is not specified, the value of the
 requested key is retrieved for the latest calculation.
-
-For example, you can retrieve the `crm` attribute of calculation number 4 as follows::
-
-  $ oq show_attrs crm 4
-
-  __pdcolumns__ riskid loss_type riskfunc
-  consequences []
-  covs 0
-  limit_states ['slight' 'moderate' 'extreme' 'complete']
-  loss_types ['structural']
-  tmap {'structural': [[('?', 1)], [('Wood', 1)], [('Adobe', 1)], [('Stone-Masonry', 1)], [('Unreinforced-Brick-Masonry', 1)], [('Concrete', 1)]]}
 
 Mosaic-related commands
 -----------------------
