@@ -318,9 +318,11 @@ class SiteCollection(object):
 
     xyz = Mesh.xyz
 
-    def set_global_params(self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
+    def set_global_params(
+            self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
         """
-        Set the global site parameters (vs30, vs30measured, z1pt0, z2pt5, backarc)
+        Set the global site parameters
+        (vs30, vs30measured, z1pt0, z2pt5, backarc)
         """
         self._set('vs30', oq.reference_vs30_value)
         self._set('vs30measured',
@@ -604,9 +606,9 @@ class SiteCollection(object):
         :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
-        lst = [geohash(lon, lat, length)
-               for lon, lat in zip(self['lon'], self['lat'])]
-        return numpy.array(lst, (numpy.string_, length))
+        l = numpy.uint8(length)
+        arr = geohash(self['lon'], self['lat'], l)
+        return [row.tobytes() for row in arr]
 
     def num_geohashes(self, length):
         """
