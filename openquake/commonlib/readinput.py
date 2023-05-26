@@ -931,7 +931,8 @@ def get_exposure(oqparam):
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
-    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    exposure.mesh, exposure.assets_by_site = asset.get_mesh_assets_by_site(
+        exposure.assets, exposure.region)
     return exposure
 
 

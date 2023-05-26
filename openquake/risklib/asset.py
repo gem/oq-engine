@@ -26,7 +26,7 @@ import numpy
 import pandas
 from shapely import wkt, geometry
 
-from openquake.baselib import hdf5, general
+from openquake.baselib import hdf5, general, performance
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
@@ -42,6 +42,36 @@ by_taxonomy = operator.attrgetter('taxonomy')
 by_lonlat = operator.itemgetter('lon', 'lat')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
+
+
+def get_mesh_assets_by_site(assets, region):
+    """
+    :returns: (Mesh instance, assets_by_site list)
+    """
+    t0 = time.time()
+    assets.sort(order=['lon', 'lat'])
+    lonlat = assets[['lon', 'lat']]
+    ll, sids = numpy.unique(lonlat, return_inverse=1)
+    assets['site_id'] = sids
+    assets_by_site = performance.split_array(assets, assets['site_id'])
+    mesh = geo.Mesh(ll['lon'], ll['lat'])
+    rangeN = numpy.arange(len(mesh))
+    if region:
+        out = []
+        for i, assets in enumerate(assets_by_site):
+            ass = assets[0]
+            if not geometry.Point(ass['lon'], ass['lat']).within(region):
+                out.append(i)
+        if out:
+            ok = ~numpy.isin(rangeN, out)
+            if ok.sum() == 0:
+                raise RuntimeError(
+                    'Could not find any asset within the region!')
+            mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
+            assets_by_site = [assets_by_site[i] for i in rangeN if ok[i]]
+            logging.info('Discarded %d assets outside the region', len(out))
+    logging.info('get_mesh_assets_by_site took %.2f s', time.time() - t0)
+    return mesh, assets_by_site
 
 
 def get_case_similar(names):
@@ -888,7 +918,6 @@ class Exposure(object):
         all_assets = []
         # loop on each CSV file associated to exposure.xml
         for fname, df in fname_dfs:
-            t0 = time.time()
             if len(df) == 0:
                 raise InvalidFile('%s is empty' % fname)
             elif by_country:
@@ -906,8 +935,6 @@ class Exposure(object):
             assets = build_assets(df.reset_index(), tagcol.tagnames)
             assets['id'] = asset_prefix + assets['id']
             all_assets.append(assets)
-            logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
-                len(df), time.time() - t0, fname))
 
         exposure.assets = numpy.concatenate(all_assets, dtype=assets.dtype)
         # check_dupl is False only in oq prepare_site_model since
@@ -996,36 +1023,16 @@ class Exposure(object):
             conv[f] = float
             rename[f] = 'occupants_' + field
         for fname in self.datafiles:
+            t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 df = general.random_filter(df, sa)
+            logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
+                len(df), time.time() - t0, fname))
             yield fname, df
-
-    def get_mesh_assets_by_site(self):
-        """
-        :returns: (Mesh instance, assets_by_site list)
-        """
-        logging.info('get_mesh_assets_by_site')
-        assets_by_loc = general.group_array(self.assets, 'lon', 'lat')
-        mesh = geo.Mesh.from_coords(list(assets_by_loc))
-        if self.region:
-            out = []
-            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-                if not geometry.Point(lon, lat).within(self.region):
-                    out.append(i)
-            if out:
-                ok = ~numpy.isin(numpy.arange(len(mesh)), out)
-                if ok.sum() == 0:
-                    raise RuntimeError(
-                        'Could not find any asset within the region!')
-                mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
-                logging.info('Discarded %d assets outside the region', len(out))
-        assets_by_site = [
-            assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
-        return mesh, assets_by_site
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
