@@ -18,6 +18,7 @@
 import operator
 import itertools
 import logging
+import time
 import csv
 import os
 
@@ -887,14 +888,13 @@ class Exposure(object):
         all_assets = []
         # loop on each CSV file associated to exposure.xml
         for fname, df in fname_dfs:
+            t0 = time.time()
             if len(df) == 0:
                 raise InvalidFile('%s is empty' % fname)
             elif by_country:
                 df['country'] = asset_prefix[:-1]
             elif asset_prefix:  # multiple exposure files
                 df['exposure'] = asset_prefix[:-1]
-
-            logging.info('Read {:_d} assets in {}'.format(len(df), fname))
             names = df.columns
             occupants = any(n.startswith('occupants_') for n in names)
             if occupants and 'calc_occupants_avg' not in names:
@@ -906,6 +906,8 @@ class Exposure(object):
             assets = build_assets(df.reset_index(), tagcol.tagnames)
             assets['id'] = asset_prefix + assets['id']
             all_assets.append(assets)
+            logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
+                len(df), time.time() - t0, fname))
 
         exposure.assets = numpy.concatenate(all_assets, dtype=assets.dtype)
         # check_dupl is False only in oq prepare_site_model since
@@ -1006,7 +1008,8 @@ class Exposure(object):
         """
         :returns: (Mesh instance, assets_by_site list)
         """
-        assets_by_loc = general.groupby(self, key=by_lonlat)
+        logging.info('get_mesh_assets_by_site')
+        assets_by_loc = general.group_array(self.assets, 'lon', 'lat')
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         if self.region:
             out = []
@@ -1023,9 +1026,6 @@ class Exposure(object):
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         return mesh, assets_by_site
-
-    def __iter__(self):
-        return iter(self.assets)
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
