@@ -585,7 +585,7 @@ ps_grid_spacing:
 
 quantiles:
   List of probabilities used to compute the quantiles across realizations.
-  Example: quantiles = 9.15 0.50 0.85
+  Example: quantiles = 0.15 0.50 0.85
   Default: empty list
 
 random_seed:
