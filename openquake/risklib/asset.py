@@ -1019,6 +1019,7 @@ class Exposure(object):
                     raise RuntimeError(
                         'Could not find any asset within the region!')
                 mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
+                logging.info('Discarded %d assets outside the region', len(out))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         return mesh, assets_by_site
