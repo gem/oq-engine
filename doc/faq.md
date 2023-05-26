@@ -89,7 +89,7 @@ different directories and the ports used by their dbservers are different.
 
 When you install the engine using the `install.py` script,
 you may specify the `--venv` parameter to choose in which directory the engine
-virtual environment must to be stored. On an existing installation of the engine,
+virtual environment must be stored. On an existing installation of the engine,
 you can run the command
 
 ```
