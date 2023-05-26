@@ -12,8 +12,6 @@ Subpackages
     openquake.hazardlib.mfd
     openquake.hazardlib.scalerel
     openquake.hazardlib.source
-    openquake.hazardlib.source_reader
-    openquake.hazardlib.logictree
 
 
 source_reader module
