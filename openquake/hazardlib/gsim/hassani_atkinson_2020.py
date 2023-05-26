@@ -267,7 +267,7 @@ class HassaniAtkinson2020SInter(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mag = np.unique(np.round(ctx.mag, 6))
+        mag = np.unique(np.round(ctx.mag, 2))
         C_PGA = self.COEFFS[PGA()]
         dsigma = _dsigma(self.CONST_REGION, ctx.hypo_depth)
         fm_pga = _fm_ha18(C_PGA, mag)

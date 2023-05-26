@@ -162,7 +162,7 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         # Check input imts
         _check_imts(imts)
         # Magnitudes
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
 
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, mag)
@@ -487,7 +487,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
         _check_imts(imts)
 
         # Magnitudes
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
 
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, mag)
