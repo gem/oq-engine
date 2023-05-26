@@ -18,4 +18,3 @@ Contents:
    logic_trees
    classical_PSHA
    event_based
-   secondary_perils
