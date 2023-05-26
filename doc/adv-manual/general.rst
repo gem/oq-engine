@@ -1916,8 +1916,9 @@ datastore with any external tools::
   options:
     -h, --help  show this help message and exit
 
-If the key `/` is requested, the root attributes are retrieved,
-i.e. `checksum`, `date` `engine_version` and `input_size`.
+If the key `/` is requested, the root attributes are retrieved (date,
+engine_version, etc.).
+
 If the calculation id is not specified, the value of the
 requested key is retrieved for the latest calculation.
 
@@ -1935,6 +1936,9 @@ Mosaic-related commands are defined as subcommands of the `oq mosaic` command::
 
   options:
     -h, --help            show this help message and exit
+
+Running a PSHA analysis
+^^^^^^^^^^^^^^^^^^^^^^^
 
 The `oq mosaic run_site` subcommand gives the possibility to run a PSHA
 analysis for a site on the given longitude and latitude, or for multiple sites
@@ -1958,35 +1962,16 @@ specified in a CSV file::
 
 If a CSV file is provided, it must contain in each row a site identifier
 starting with the 3-character code of the mosaic model that covers it, and the
-longitude and latitude of the site, separated by commas. In this case, it may
-be convenient also to define environment variables to select or exclude subsets
-of sites from those specified in the CSV file:
+longitude and latitude of the site, separated by commas.
 
-* `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each identified by
-  the corresponding 3-charracters code) to be selected, excluding sites
-  covered by other models
-* `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by all models
-  except those specified in this list
-* `OQ_ONLY_SITEIDS`: a comma-separated list of site identifiers to be selected,
-  excluding all others from the analysis
-* `OQ_EXCLUDE_SITEIDS`: a comma-separated list of site identifiers to be excluded,
-  selecting all the others
-* `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected between
-  those covered by each model
-
-For instance::
-
-  $ OQ_ONLY_MODELS=CAN,AUS oq mosaic run_site sites.csv
-
-would select from the file `sites.csv` only those for which the site id starts
-with the codes `CAN` or `AUS`, i.e. those covered by the mosaic models
-for Canada and Australia.
+Sampling ruptures
+^^^^^^^^^^^^^^^^^
 
 The `oq mosaic sample_rups` subcommand gives the possibility to sample the
 ruptures of the given model in the mosaic with an effective investigation time
 of 100,000 years::
 
-  $ oq mosaic sample_rups -h                                                                                                                           2
+  $ oq mosaic sample_rups -h
   usage: oq mosaic sample_rups [-h] [-s SLOWEST] model
 
   Sample the ruptures of the given model in the mosaic with an effective investigation time of 100,000 years
@@ -1998,6 +1983,9 @@ of 100,000 years::
     -h, --help            show this help message and exit
     -s SLOWEST, --slowest SLOWEST
                           profile and show the slowest operations
+
+Sampling ground motion fields
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The `oq mosaic sample_gmfs` subcommand gives the possiblity to sample the gmfs of the given model in the mosaic with an effective investigation time of 100,000 years::
 

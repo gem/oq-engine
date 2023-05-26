@@ -122,8 +122,8 @@ each HDF5 file (`calc_<calc_id>.hdf5`) using the command
 $ oq show_attrs / <calc_id>
 ```
 
-where `/` indicates the root attributes (`checksum`, `date`
-`engine_version` and `input_size`) and `<calc_id>` (an integer number) is the
+where `/` indicates the root attributes (date, engine_version, etc.)
+and `<calc_id>` (an integer number) is the
 calculation identifier. In case the calculation id is not specified, the
 attributes are retrieved for the latest calculation.
 
