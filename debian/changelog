@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed bug in disaggregation calculations associated to an error
+    in the line `[mag] = np.unique(np.round(ctx.mag, 6))`
   * Optimized the calculation of geohashes by using numba
 
   [Paolo Tormene]

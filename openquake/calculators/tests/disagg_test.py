@@ -27,7 +27,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -226,6 +226,11 @@ class DisaggregationTestCase(CalculatorTestCase):
     def test_case_13(self):
         # check split_by_mag, essential with GMPETable
         self.run_calc(case_13.__file__, 'job.ini')
+
+    def test_case_14(self):
+        # check split_by_mag with NGAEastUSGS, see bug
+        # https://github.com/gem/oq-engine/issues/8780
+        self.run_calc(case_14.__file__, 'job.ini')
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
