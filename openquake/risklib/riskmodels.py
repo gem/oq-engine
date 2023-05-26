@@ -38,9 +38,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-COST_TYPE_REGEX = '|'.join(valid.cost_type.choices )
-RISK_TYPE_REGEX = re.compile(
-    r'(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
+LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number'
+RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)' % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
@@ -149,8 +148,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     rmodels = AccumDict()
     for kind in kinds:
         for key in sorted(oqparam.inputs):
-            mo = re.match('(occupants|%s|area|number)_%s$' %
-                          (COST_TYPE_REGEX, kind), key)
+            mo = re.match('(occupants|%s)_%s$' % (LTYPE_REGEX, kind), key)
             if mo:
                 loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
