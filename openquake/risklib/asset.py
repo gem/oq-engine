@@ -890,7 +890,6 @@ class Exposure(object):
         param['relevant_cost_types'] = set(exposure.cost_types['name']) - {
             'occupants'}
         all_assets = []
-        asset_refs = set()
         # loop on each CSV file associated to exposure.xml
         for fname, df in fname_dfs:
             if len(df) == 0:
@@ -900,6 +899,7 @@ class Exposure(object):
             elif asset_prefix:  # multiple exposure files
                 df['exposure'] = asset_prefix[:-1]
 
+            logging.info('Read {:_d} assets in {}'.format(len(df), fname))
             param['fname'] = fname
             names = df.columns
             param['area'] = 'area' in names
@@ -911,14 +911,21 @@ class Exposure(object):
                     'structural', {'value-structural':df.retrofitted,
                                    'value-number': df['value-number']})
             assets = build_assets(df.reset_index(), tagcol.tagnames)
-            assets = exposure._populate_from(
-                assets, param, check_dupl, asset_refs)
+            assets = exposure._populate_from(assets, param)
             all_assets.append(assets)
 
-        if not asset_refs:
+        if len(assets) == 0:
             raise RuntimeError('Could not find any asset within the region!')
 
         exposure.assets = numpy.concatenate(all_assets, dtype=assets.dtype)
+        # check_dupl is False only in oq prepare_site_model since
+        # in that case we are only interested in the asset locations
+        if check_dupl:
+            u, c = numpy.unique(exposure.assets['id'], return_counts=1)
+            dupl = u[c > 1]
+            if len(dupl):
+                raise nrml.DuplicatedID(dupl)
+
         exposure.param = param
         return exposure
 
@@ -1007,19 +1014,10 @@ class Exposure(object):
                 df = general.random_filter(df, sa)
             yield fname, df
 
-    def _populate_from(self, assets, param, check_dupl, asset_refs):
-        logging.info('Read {:_d} assets in {}'.format(
-            len(assets), param['fname']))
+    def _populate_from(self, assets, param):
         out_of_region = []
         for idx, asset in enumerate(assets):
-            asset_id = param['asset_prefix'] + asset['id']
-            asset['id'] = asset_id
-            # check_dupl is False only in oq prepare_site_model since
-            # in that case we are only interested in the asset locations
-            if check_dupl and asset_id in asset_refs:
-                raise nrml.DuplicatedID('asset_id=%s while processing %s' % (
-                    asset_id, param['fname']))
-            asset_refs.add(asset_id)
+            asset['id'] = param['asset_prefix'] + asset['id']
             location = asset['lon'], asset['lat']
             if param['region'] and not geometry.Point(*location).within(
                     param['region']):
