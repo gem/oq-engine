@@ -834,8 +834,13 @@ class Exposure(object):
         allargs = []
         tagcol = _minimal_tagcol(fnames, by_country)
         for i, fname in enumerate(fnames, 1):
-            if by_country and len(fnames) > 1:
-                prefix = prefix2cc['E%02d_' % i] + '_'
+            if len(fnames) > 1:
+                # multiple exposure.xml files, add a prefix
+                # this is tested in oq-risk-tests/old_hazard
+                if by_country:
+                    prefix = prefix2cc['E%02d_' % i] + '_'
+                else:
+                    prefix = 'E%02d_' % i
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, region_constraint,
@@ -886,11 +891,14 @@ class Exposure(object):
             'occupants'}
         all_assets = []
         asset_refs = set()
+        # loop on each CSV file associated to exposure.xml
         for fname, df in fname_dfs:
             if len(df) == 0:
                 raise InvalidFile('%s is empty' % fname)
-            if by_country:
+            elif by_country:
                 df['country'] = asset_prefix[:-1]
+            elif asset_prefix:  # multiple exposure files
+                df['exposure'] = asset_prefix[:-1]
 
             param['fname'] = fname
             names = df.columns

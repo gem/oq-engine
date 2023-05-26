@@ -22,7 +22,6 @@ to several geographical primitives and some other low-level spatial operations.
 """
 import math
 import logging
-import operator
 import collections
 
 import numpy
@@ -35,8 +34,10 @@ from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 
+U8 = numpy.uint8
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geodetic.EARTH_RADIUS
@@ -44,7 +45,7 @@ spherical_to_cartesian = geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
-
+CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
 
 class BBoxError(ValueError):
     """Bounding box too large"""
@@ -751,40 +752,53 @@ def bbox2poly(bbox):
 # see also https://en.wikipedia.org/wiki/Geohash
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
-# it may turn useful in the future (with SiteCollection.geohash)
-def geohash(lon, lat, length):
+# used in SiteCollection.geohash
+@compile(['(f8[:],f8[:],u1)', '(f4[:],f4[:],u1)'])
+def geohash(lons, lats, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
 
-    >>> geohash(lon=10, lat=45, length=5)
-    b'spzpg'
+    >>> arr = geohash(F64([10., 10.]), F64([45., 46.]), length=5)
+    >>> [row.tobytes() for row in arr]
+    [b'spzpg', b'u0pje']
     """
-    lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
-    chars = b''
-    bits = [16, 8, 4, 2, 1]
-    bit = 0
-    ch = 0
-    even = True
-    while len(chars) < length:
-        if even:
-            mid = (lon_interval[0] + lon_interval[1]) / 2
-            if lon > mid:
-                ch |= bits[bit]
-                lon_interval = (mid, lon_interval[1])
+    l1 = len(lons)
+    l2 = len(lats)
+    if l1 != l2:
+        raise ValueError('lons, lats of different lenghts')
+    chars = numpy.zeros((l1, length), U8)
+    for p in range(l1):
+        lon = lons[p]
+        lat = lats[p]
+        lat_interval = [-90.0, 90.0]
+        lon_interval = [-180.0, 180.0]
+        bits = [16, 8, 4, 2, 1]
+        bit = 0
+        ch = 0
+        even = True
+        i = 0
+        while i < length:
+            if even:
+                mid = (lon_interval[0] + lon_interval[1]) / 2
+                if lon > mid:
+                    ch |= bits[bit]
+                    lon_interval[:] = [mid, lon_interval[1]]
+                else:
+                    lon_interval[:] = [lon_interval[0], mid]
             else:
-                lon_interval = (lon_interval[0], mid)
-        else:
-            mid = (lat_interval[0] + lat_interval[1]) / 2
-            if lat > mid:
-                ch |= bits[bit]
-                lat_interval = (mid, lat_interval[1])
+                mid = (lat_interval[0] + lat_interval[1]) / 2
+                if lat > mid:
+                    ch |= bits[bit]
+                    lat_interval[:] = [mid, lat_interval[1]]
+                else:
+                    lat_interval[:] = [lat_interval[0], mid]
+            even = not even
+            if bit < 4:
+                bit += 1
             else:
-                lat_interval = (lat_interval[0], mid)
-        even = not even
-        if bit < 4:
-            bit += 1
-        else:
-            chars += BASE32[ch]
-            bit = 0
-            ch = 0
+                chars[p, i] = CODE32[ch]
+                bit = 0
+                ch = 0
+                i += 1
     return chars
+
