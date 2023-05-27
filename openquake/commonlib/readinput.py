@@ -409,7 +409,7 @@ def get_mesh(oqparam, h5=None):
     # the site model has the precedence over the exposure, see the
     # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
-        logging.info('Extracting the hazard sites from the site model')
+        logging.info('Extracting hazard sites from the site model')
         sm = get_site_model(oqparam)
         if h5:
             h5['site_model'] = sm
@@ -999,9 +999,8 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     if haz_sitecol.mesh != exp.mesh:
         # associate the assets to the hazard sites
         t0 = time.time()
-        sitecol, assets_by, discarded = geo.utils.assoc(
-            exp.assets_by_site, haz_sitecol, haz_distance,
-            'filter')
+        sitecol, assets_by, discarded = geo.utils._GeographicObjects(
+            haz_sitecol).assoc2(exp.assets_by_site, haz_distance, 'filter')
         num_assets = sum(len(assets) for assets in assets_by)
         dt = time.time() - t0
         logging.info('Associated {:_d} assets to {:_d} sites in {:.1f}s'.
