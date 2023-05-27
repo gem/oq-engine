@@ -19,7 +19,7 @@ import os
 import gzip
 import logging
 import numpy
-from openquake.baselib import performance, writers, hdf5
+from openquake.baselib import performance, writers, hdf5, general
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import _GeographicObjects
 from openquake.risklib.asset import Exposure
@@ -118,8 +118,7 @@ def main(
     with performance.Monitor(measuremem=True) as mon:
         if exposure_xml:
             exp = Exposure.read(exposure_xml, check_dupl=False)
-            assets_by = list(
-                general.group_array(exp.assets, 'site_id').values())
+            assets_by = general.group_array(exp.assets, 'site_id').values()
             hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
                 exp.mesh.lons, exp.mesh.lats, req_site_params=req_site_params)
             if grid_spacing:
@@ -132,7 +131,7 @@ def main(
                     'exposure sites', len(haz_sitecol), len(exp.mesh))
                 haz_sitecol, assets_by, discarded = _GeographicObjects(
                     haz_sitecol).assoc2(
-                        assets_by, grid_spacing * SQRT2, 'filter')
+                        exp.mesh, assets_by, grid_spacing * SQRT2, 'filter')
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))
