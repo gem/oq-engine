@@ -223,8 +223,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     Associate geographic objects to a site collection.
 
     :param objects:
-        something with .lons, .lats or ['lon'] ['lat'], or a list of lists
-        of objects with a .location attribute (i.e. assets_by_site)
+        something with .lons, .lats or ['lon'] ['lat']
     :param assoc_dist:
         the maximum distance for association
     :param mode:
@@ -232,12 +231,8 @@ def assoc(objects, sitecol, assoc_dist, mode):
         if 'error' fail if all sites are not associated
     :returns: (filtered site collection, filtered objects)
     """
-    if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
-        # objects is a geo array with lon, lat fields; used for ShakeMaps
-        return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
-    else:  # objects is the list assets_by_site
-        return _GeographicObjects(sitecol).assoc2(
-            objects, assoc_dist, mode)
+    # objects is a geo array with lon, lat fields; used for ShakeMaps
+    return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
 
 ERROR_OUTSIDE = 'The site (%.1f %.1f) is outside of any vs30 area.'
