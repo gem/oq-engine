@@ -198,12 +198,11 @@ class _GeographicObjects(object):
         discarded = []
         objs, distances = self.get_closest(mesh.lons, mesh.lats)
         for obj, distance, assets in zip(objs, distances, assets_by_site):
-            lon, lat = assets[0]['lon'], assets[0]['lat']
-            obj, distance = self.get_closest(lon, lat)
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
             elif mode == 'strict':
+                lon, lat = assets[0]['lon'], assets[0]['lat']
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
