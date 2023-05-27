@@ -179,11 +179,12 @@ class _GeographicObjects(object):
         return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode):
+    def assoc2(self, mesh, assets_by_site, assoc_dist, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
 
+        :param mesh: exposure mesh
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
@@ -195,13 +196,13 @@ class _GeographicObjects(object):
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
         discarded = []
-        for assets in assets_by_site:
-            lon, lat = assets[0]['lon'], assets[0]['lat']
-            obj, distance = self.get_closest(lon, lat)
+        objs, distances = self.get_closest(mesh.lons, mesh.lats)
+        for obj, distance, assets in zip(objs, distances, assets_by_site):
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
             elif mode == 'strict':
+                lon, lat = assets[0]['lon'], assets[0]['lat']
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
                     'to site (%s %s)' % (assoc_dist, lon, lat))
@@ -223,8 +224,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
     Associate geographic objects to a site collection.
 
     :param objects:
-        something with .lons, .lats or ['lon'] ['lat'], or a list of lists
-        of objects with a .location attribute (i.e. assets_by_site)
+        something with .lons, .lats or ['lon'] ['lat']
     :param assoc_dist:
         the maximum distance for association
     :param mode:
@@ -232,12 +232,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
         if 'error' fail if all sites are not associated
     :returns: (filtered site collection, filtered objects)
     """
-    if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
-        # objects is a geo array with lon, lat fields; used for ShakeMaps
-        return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
-    else:  # objects is the list assets_by_site
-        return _GeographicObjects(sitecol).assoc2(
-            objects, assoc_dist, mode)
+    return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
 
 ERROR_OUTSIDE = 'The site (%.1f %.1f) is outside of any vs30 area.'
