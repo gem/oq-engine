@@ -232,7 +232,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
         if 'error' fail if all sites are not associated
     :returns: (filtered site collection, filtered objects)
     """
-    return _GeographicObjects(sitecol).assoc2(objects, assoc_dist, mode)
+    return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
 
 ERROR_OUTSIDE = 'The site (%.1f %.1f) is outside of any vs30 area.'
