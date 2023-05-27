@@ -852,6 +852,7 @@ class Exposure(object):
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         exp.assets = numpy.concatenate(all_assets)
+        exp._set_mesh_assets_by_site()
         return exp
 
     @staticmethod
@@ -995,10 +996,7 @@ class Exposure(object):
                 len(df), time.time() - t0, fname))
             yield fname, df
 
-    def get_mesh_assets_by_site(self):
-        """
-        :returns: (Mesh instance, assets_by_site list)
-        """
+    def _set_mesh_assets_by_site(self):
         assets_by_loc = general.group_array(self.assets, 'lon', 'lat')
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         if self.region:
@@ -1013,10 +1011,10 @@ class Exposure(object):
                         'Could not find any asset within the region!')
                 mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
                 logging.info('Discarded %d assets outside the region', len(out))
-        assets_by_site = [
+        self.mesh = mesh
+        self.assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         logging.info('Risk mesh with {:_d} unique locations'.format(len(mesh)))
-        return mesh, assets_by_site
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
