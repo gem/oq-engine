@@ -995,11 +995,12 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     else:
         haz_distance = asset_hazard_distance
 
+    assets_by = group_array(exp.assets, 'site_id').values()
     if haz_sitecol.mesh != exp.mesh:
         # associate the assets to the hazard sites
         t0 = time.time()
         sitecol, assets_by, discarded = geo.utils._GeographicObjects(
-            haz_sitecol).assoc2(exp.assets_by_site, haz_distance, 'filter')
+            haz_sitecol).assoc2(assets_by, haz_distance, 'filter')
         num_assets = sum(len(assets) for assets in assets_by)
         dt = time.time() - t0
         logging.info('Associated {:_d} assets to {:_d} sites in {:.1f}s'.
@@ -1008,7 +1009,6 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         discarded = []
-        assets_by = exp.assets_by_site
         num_assets = sum(len(assets) for assets in assets_by)
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), num_assets))

@@ -852,7 +852,7 @@ class Exposure(object):
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         exp.assets = numpy.concatenate(all_assets)
-        exp._set_mesh_assets_by_site()
+        exp._set_mesh()
         return exp
 
     @staticmethod
@@ -996,9 +996,10 @@ class Exposure(object):
                 len(df), time.time() - t0, fname))
             yield fname, df
 
-    def _set_mesh_assets_by_site(self):
-        assets_by_loc = general.group_array(self.assets, 'lon', 'lat')
-        mesh = geo.Mesh.from_coords(list(assets_by_loc))
+    def _set_mesh(self):
+        ll, inv = numpy.unique(self.assets[['lon', 'lat']], return_inverse=True)
+        self.assets['site_id'] = inv
+        mesh = geo.Mesh(ll['lon'], ll['lat'])
         if self.region:
             out = []
             for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
@@ -1010,10 +1011,9 @@ class Exposure(object):
                     raise RuntimeError(
                         'Could not find any asset within the region!')
                 mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
+                self.assets = self.assets[~numpy.isin(inv, out)]
                 logging.info('Discarded %d assets outside the region', len(out))
         self.mesh = mesh
-        self.assets_by_site = [
-            assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         logging.info('Risk mesh with {:_d} unique locations'.format(len(mesh)))
 
     def __repr__(self):
