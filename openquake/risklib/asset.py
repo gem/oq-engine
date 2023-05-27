@@ -1025,6 +1025,7 @@ class Exposure(object):
                 logging.info('Discarded %d assets outside the region', len(out))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
+        logging.info('Risk mesh with {:_d} unique locations'.format(len(mesh)))
         return mesh, assets_by_site
 
     def __iter__(self):
