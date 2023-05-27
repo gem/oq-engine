@@ -39,7 +39,6 @@ U64 = numpy.uint64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
-by_lonlat = operator.itemgetter('lon', 'lat')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
 
@@ -1009,7 +1008,7 @@ class Exposure(object):
         """
         :returns: (Mesh instance, assets_by_site list)
         """
-        assets_by_loc = general.groupby(self, key=by_lonlat)
+        assets_by_loc = general.group_array(self.assets, 'lon', 'lat')
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         if self.region:
             out = []
@@ -1027,9 +1026,6 @@ class Exposure(object):
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         logging.info('Risk mesh with {:_d} unique locations'.format(len(mesh)))
         return mesh, assets_by_site
-
-    def __iter__(self):
-        return iter(self.assets)
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
