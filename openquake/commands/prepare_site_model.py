@@ -21,7 +21,7 @@ import logging
 import numpy
 from openquake.baselib import performance, writers, hdf5
 from openquake.hazardlib import site, valid
-from openquake.hazardlib.geo.utils import assoc
+from openquake.hazardlib.geo.utils import _GeographicObjects
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import datastore
 
@@ -129,9 +129,9 @@ def main(
                 logging.info(
                     'Associating exposure grid with %d locations to %d '
                     'exposure sites', len(haz_sitecol), len(assets_by_site))
-                haz_sitecol, assets_by, discarded = assoc(
-                    assets_by_site, haz_sitecol,
-                    grid_spacing * SQRT2, 'filter')
+                haz_sitecol, assets_by, discarded = _GeographicObjects(
+                    haz_sitecol).assoc2(
+                        assets_by_site, grid_spacing * SQRT2, 'filter')
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))
