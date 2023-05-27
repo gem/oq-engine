@@ -18,6 +18,7 @@
 import operator
 import itertools
 import logging
+import time
 import csv
 import os
 
@@ -894,7 +895,6 @@ class Exposure(object):
             elif asset_prefix:  # multiple exposure files
                 df['exposure'] = asset_prefix[:-1]
 
-            logging.info('Read {:_d} assets in {}'.format(len(df), fname))
             names = df.columns
             occupants = any(n.startswith('occupants_') for n in names)
             if occupants and 'calc_occupants_avg' not in names:
@@ -994,12 +994,15 @@ class Exposure(object):
             conv[f] = float
             rename[f] = 'occupants_' + field
         for fname in self.datafiles:
+            t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 df = general.random_filter(df, sa)
+            logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
+                len(df), time.time() - t0, fname))
             yield fname, df
 
     def get_mesh_assets_by_site(self):
