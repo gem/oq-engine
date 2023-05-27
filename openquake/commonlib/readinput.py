@@ -1000,7 +1000,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         # associate the assets to the hazard sites
         t0 = time.time()
         sitecol, assets_by, discarded = geo.utils._GeographicObjects(
-            haz_sitecol).assoc2(assets_by, haz_distance, 'filter')
+            haz_sitecol).assoc2(exp.mesh, assets_by, haz_distance, 'filter')
         num_assets = sum(len(assets) for assets in assets_by)
         dt = time.time() - t0
         logging.info('Associated {:_d} assets to {:_d} sites in {:.1f}s'.

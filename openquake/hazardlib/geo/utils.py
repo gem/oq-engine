@@ -179,7 +179,7 @@ class _GeographicObjects(object):
         return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode):
+    def assoc2(self, mesh, assets_by_site, assoc_dist, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -195,16 +195,15 @@ class _GeographicObjects(object):
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
         discarded = []
-        for assets in assets_by_site:
-            lon, lat = assets[0]['lon'], assets[0]['lat']
-            obj, distance = self.get_closest(lon, lat)
+        objs, distances = self.get_closest(mesh.lons, mesh.lats)
+        for obj, distance, assets in zip(objs, distances, assets_by_site):
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
-                    'to site (%s %s)' % (assoc_dist, lon, lat))
+                    'to site (%s %s)' % (assoc_dist, obj['lon'], obj['lat']))
             else:
                 discarded.extend(assets)
         sids = sorted(assets_by_sid)
