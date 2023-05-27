@@ -184,6 +184,7 @@ class _GeographicObjects(object):
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
 
+        :param mesh: exposure mesh
         :param assets_by_sites: a list of lists of assets
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
@@ -222,7 +223,8 @@ def assoc(objects, sitecol, assoc_dist, mode):
     Associate geographic objects to a site collection.
 
     :param objects:
-        something with .lons, .lats or ['lon'] ['lat']
+        something with .lons, .lats or ['lon'] ['lat'], or a list of lists
+        of objects with a .location attribute (i.e. assets_by_site)
     :param assoc_dist:
         the maximum distance for association
     :param mode:
@@ -230,7 +232,6 @@ def assoc(objects, sitecol, assoc_dist, mode):
         if 'error' fail if all sites are not associated
     :returns: (filtered site collection, filtered objects)
     """
-    # objects is a geo array with lon, lat fields; used for ShakeMaps
     return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
 

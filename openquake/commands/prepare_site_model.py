@@ -19,7 +19,7 @@ import os
 import gzip
 import logging
 import numpy
-from openquake.baselib import performance, writers, hdf5, general
+from openquake.baselib import performance, writers, hdf5
 from openquake.hazardlib import site, valid
 from openquake.hazardlib.geo.utils import _GeographicObjects
 from openquake.risklib.asset import Exposure

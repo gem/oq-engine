@@ -20,7 +20,6 @@ import re
 import ast
 import copy
 import zlib
-import time
 import shutil
 import zipfile
 import pathlib
@@ -998,13 +997,12 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     assets_by = group_array(exp.assets, 'site_id').values()
     if haz_sitecol.mesh != exp.mesh:
         # associate the assets to the hazard sites
-        t0 = time.time()
+        # this is absurdely fast: 10 million assets can be associated in <10s
         sitecol, assets_by, discarded = geo.utils._GeographicObjects(
             haz_sitecol).assoc2(exp.mesh, assets_by, haz_distance, 'filter')
         num_assets = sum(len(assets) for assets in assets_by)
-        dt = time.time() - t0
-        logging.info('Associated {:_d} assets to {:_d} sites in {:.1f}s'.
-                     format(num_assets, len(sitecol), dt))
+        logging.info('Associated {:_d} assets to {:_d} sites'.
+                     format(num_assets, len(sitecol)))
     else:
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
