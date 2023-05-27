@@ -129,7 +129,7 @@ def main(
                     grid.lons, grid.lats, req_site_params=req_site_params)
                 logging.info(
                     'Associating exposure grid with %d locations to %d '
-                    'exposure sites', len(haz_sitecol), len(exp.assets_by_site))
+                    'exposure sites', len(haz_sitecol), len(exp.mesh))
                 haz_sitecol, assets_by, discarded = _GeographicObjects(
                     haz_sitecol).assoc2(
                         assets_by, grid_spacing * SQRT2, 'filter')
