@@ -131,7 +131,7 @@ def main(
                     'exposure sites', len(haz_sitecol), len(assets_by_site))
                 haz_sitecol, assets_by, discarded = _GeographicObjects(
                     haz_sitecol).assoc2(
-                        assets_by_site, grid_spacing * SQRT2, 'filter')
+                        mesh, assets_by_site, grid_spacing * SQRT2, 'filter')
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))
