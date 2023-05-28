@@ -1001,7 +1001,9 @@ class Exposure(object):
         :returns: (Mesh instance, assets_by_site list)
         """
         t0 = time.time()
-        assets_by_loc = general.group_array(self.assets, 'lon', 'lat')
+        # NB: groupby is much faster than group_array and uses half the memory!
+        assets_by_loc = general.groupby(
+            self.assets, operator.itemgetter('lon', 'lat'))
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         if self.region:
             out = []
