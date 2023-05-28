@@ -884,8 +884,6 @@ class Exposure(object):
                 df['country'] = asset_prefix[:-1]
             elif asset_prefix:  # multiple exposure files
                 df['exposure'] = asset_prefix[:-1]
-
-            logging.info('Read {:_d} assets in {}'.format(len(df), fname))
             names = df.columns
             occupants = any(n.startswith('occupants_') for n in names)
             if occupants and 'calc_occupants_avg' not in names:
@@ -987,18 +985,22 @@ class Exposure(object):
             conv[f] = float
             rename[f] = 'occupants_' + field
         for fname in self.datafiles:
+            t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 df = general.random_filter(df, sa)
+            logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
+                len(df), time.time() - t0, fname))
             yield fname, df
 
     def get_mesh_assets_by_site(self):
         """
         :returns: (Mesh instance, assets_by_site list)
         """
+        t0 = time.time()
         assets_by_loc = general.group_array(self.assets, 'lon', 'lat')
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         if self.region:
@@ -1015,6 +1017,7 @@ class Exposure(object):
                 logging.info('Discarded %d assets outside the region', len(out))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
+        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
         return mesh, assets_by_site
 
 
