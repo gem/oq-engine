@@ -20,6 +20,7 @@ import re
 import ast
 import copy
 import zlib
+import time
 import shutil
 import zipfile
 import pathlib
@@ -408,7 +409,7 @@ def get_mesh(oqparam, h5=None):
     # the site model has the precedence over the exposure, see the
     # discussion in https://github.com/gem/oq-engine/pull/5217
     elif 'site_model' in oqparam.inputs:
-        logging.info('Extracting hazard sites from the site model')
+        logging.info('Extracting the hazard sites from the site model')
         sm = get_site_model(oqparam)
         if h5:
             h5['site_model'] = sm
@@ -930,6 +931,7 @@ def get_exposure(oqparam):
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
+    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
 
 
@@ -994,12 +996,12 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    assets_by = group_array(exp.assets, 'site_id').values()
     if haz_sitecol.mesh != exp.mesh:
         # associate the assets to the hazard sites
         # this is absurdely fast: 10 million assets can be associated in <10s
         sitecol, assets_by, discarded = geo.utils._GeographicObjects(
-            haz_sitecol).assoc2(exp.mesh, assets_by, haz_distance, 'filter')
+            haz_sitecol).assoc2(
+                exp.mesh, exp.assets_by_site, haz_distance, 'filter')
         num_assets = sum(len(assets) for assets in assets_by)
         logging.info('Associated {:_d} assets to {:_d} sites'.
                      format(num_assets, len(sitecol)))
@@ -1007,6 +1009,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
         # asset sites and hazard sites are the same
         sitecol = haz_sitecol
         discarded = []
+        assets_by = exp.assets_by_site
         num_assets = sum(len(assets) for assets in assets_by)
         logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
                      format(len(sitecol), num_assets))
