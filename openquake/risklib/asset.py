@@ -906,6 +906,8 @@ class Exposure(object):
             dupl = u[c > 1]
             if len(dupl):
                 raise nrml.DuplicatedID(dupl)
+        exposure.mesh, exposure.assets_by_site = \
+            exposure.get_mesh_assets_by_site()
         return exposure
 
     @staticmethod
