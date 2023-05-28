@@ -118,7 +118,6 @@ def main(
     with performance.Monitor(measuremem=True) as mon:
         if exposure_xml:
             exp = Exposure.read(exposure_xml, check_dupl=False)
-            assets_by = general.group_array(exp.assets, 'site_id').values()
             hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
                 exp.mesh.lons, exp.mesh.lats, req_site_params=req_site_params)
             if grid_spacing:
@@ -129,9 +128,8 @@ def main(
                 logging.info(
                     'Associating exposure grid with %d locations to %d '
                     'exposure sites', len(haz_sitecol), len(exp.mesh))
-                haz_sitecol, assets_by, discarded = _GeographicObjects(
-                    haz_sitecol).assoc2(
-                        exp.mesh, assets_by, grid_spacing * SQRT2, 'filter')
+                haz_sitecol, discarded = _GeographicObjects(
+                    haz_sitecol).assoc2(exp, grid_spacing * SQRT2, 'filter')
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))
