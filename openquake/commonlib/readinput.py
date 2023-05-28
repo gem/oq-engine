@@ -997,21 +997,14 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
 
     # associate the assets to the hazard sites
     # this is absurdely fast: 10 million assets can be associated in <10s
-    sitecol, assets_by, discarded = geo.utils._GeographicObjects(
-        haz_sitecol).assoc2(
-            exp.mesh, exp.assets_by_site, haz_distance, 'filter')
-    num_assets = sum(len(assets) for assets in assets_by)
+    sitecol, discarded = geo.utils._GeographicObjects(
+        haz_sitecol).assoc2(exp, haz_distance, 'filter')
     logging.info('Associated {:_d} assets to {:_d} sites'.
-                 format(num_assets, len(sitecol)))
-    assets = []
-    for sid, assets_ in zip(sitecol.sids, assets_by):
-        for ass in assets_:
-            ass['site_id'] = sid
-            assets.append(ass)
+                 format(len(exp.assets), len(sitecol)))
 
     array, occupancy_periods = asset.build_asset_array(
         exp.tagcol, exp.cost_calculator, sitecol.sids,
-        numpy.array(assets, ass.dtype), exp.area, exp.tagcol.tagnames)
+        exp.assets, exp.area, exp.tagcol.tagnames)
     assetcol = asset.AssetCollection(
         exp, sitecol, array, occupancy_periods, oqparam.time_event,
         oqparam.aggregate_by)

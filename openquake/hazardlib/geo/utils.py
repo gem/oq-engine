@@ -179,16 +179,15 @@ class _GeographicObjects(object):
         return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, mesh, assets_by_site, assoc_dist, mode):
+    def assoc2(self, exp, assoc_dist, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
 
-        :param mesh: exposure mesh
-        :param assets_by_sites: a list of lists of assets
+        :param exp: Exposure instance
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :returns: filtered site collection, filtered assets by site, discarded
+        :returns: filtered site collection, discarded
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
@@ -196,8 +195,8 @@ class _GeographicObjects(object):
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
         discarded = []
-        objs, distances = self.get_closest(mesh.lons, mesh.lats)
-        for obj, distance, assets in zip(objs, distances, assets_by_site):
+        objs, distances = self.get_closest(exp.mesh.lons, exp.mesh.lats)
+        for obj, distance, assets in zip(objs, distances, exp.assets_by_site):
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
@@ -215,7 +214,13 @@ class _GeographicObjects(object):
         assets_by_site = [assets_by_sid[sid] for sid in sids]
         data = [(asset.id, asset.lon, asset.lat) for asset in discarded]
         discarded = numpy.array(data, asset_dt)
-        return self.objects.filtered(sids), assets_by_site, discarded
+        assets = []
+        for sid, assets_ in zip(sids, assets_by_site):
+            for ass in assets_:
+                ass['site_id'] = sid
+                assets.append(ass)
+        exp.assets = numpy.array(assets, ass.dtype)
+        return self.objects.filtered(sids), discarded
 
 
 def assoc(objects, sitecol, assoc_dist, mode):
