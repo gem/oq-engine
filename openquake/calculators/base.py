@@ -679,7 +679,7 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        with self.monitor('reading exposure'):
+        with self.monitor('reading/associating exposure'):
             self.sitecol, self.assetcol, discarded = (
                 readinput.get_sitecol_assetcol(
                     oq, haz_sitecol, self.crmodel.loss_types))
