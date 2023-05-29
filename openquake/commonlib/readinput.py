@@ -927,8 +927,8 @@ def get_exposure(oqparam, h5=None):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    with Monitor('reading exposure', h5=h5):
-        exposure = Global.exposure = asset.Exposure.read(
+    with Monitor('reading exposure', measuremem=True, h5=h5):
+        exposure = Global.exposure = asset.Exposure.read_all(
             oqparam.inputs['exposure'], oqparam.calculation_mode,
             oqparam.ignore_missing_costs,
             by_country='country' in asset.tagset(oqparam.aggregate_by),
@@ -983,7 +983,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     :returns: (site collection, asset collection, discarded)
     """
     exp = Global.exposure
-    if exp is None:
+    if exp is None:  # not read already
         exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
@@ -998,22 +998,19 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     # associate the assets to the hazard sites
     # this is absurdely fast: 10 million assets can be associated in <10s
-    with Monitor('associating exposure', h5=h5):
+    with Monitor('associating exposure', measuremem=True, h5=h5):
         region = wkt.loads(oqparam.region) if oqparam.region else None
         sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
     logging.info('Associated {:_d} assets to {:_d} sites'.
                  format(len(exp.assets), len(sitecol)))
 
-    # build_asset_array is fast
-    array, occupancy_periods = asset.build_asset_array(
-        exp.tagcol, exp.cost_calculator, sitecol.sids,
-        exp.assets, exp.area, exp.tagcol.tagnames)
-    assetcol = asset.AssetCollection(
-        exp, sitecol, array, occupancy_periods, oqparam.time_event,
-        oqparam.aggregate_by)
-    u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
-    idx = c.argmax()  # index of the most common taxonomy
-    tax = assetcol.tagcol.taxonomy[u[idx]]
+    with Monitor('building assetcol', measuremem=True, h5=h5):
+        assetcol = asset.AssetCollection(
+            exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
+        u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
+        idx = c.argmax()  # index of the most common taxonomy
+        tax = assetcol.tagcol.taxonomy[u[idx]]
+
     logging.info('Found %d taxonomies with ~%.1f assets each',
                  len(u), len(assetcol) / len(u))
     logging.info('The most common taxonomy is %s with %d assets', tax, c[idx])

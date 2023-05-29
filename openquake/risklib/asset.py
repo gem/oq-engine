@@ -178,11 +178,8 @@ costcalculator = CostCalculator(
     units=dict(structural='EUR'))
 
 
-def build_assets(adf, tagnames):
-    """
-    :param adf: DataFrame associated to the exposure.csv file
-    :param tagnames: tag names (including taxonomy)
-    """
+# this is fast
+def _build_assets(adf, tagnames):
     T = len(tagnames)
     STR_FIELDS = ['id', 'taxonomy'] + [
         name for name in tagnames if name not in ('id', 'site_id')]
@@ -333,13 +330,17 @@ def tagset(aggregate_by):
 
 
 class AssetCollection(object):
-    def __init__(self, exposure, sitecol, array, occupancy_periods,
-                 time_event, aggregate_by):
+    """
+    Wrapper over an array of assets
+    """
+    def __init__(self, exposure, sitecol, time_event, aggregate_by):
+        # build_asset_array is fast
+        self.array, self.occupancy_periods = build_asset_array(
+            exposure.tagcol, exposure.cost_calculator, sitecol.sids,
+            exposure.assets, exposure.area, exposure.tagcol.tagnames)
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
-        self.array = array
-        self.occupancy_periods = occupancy_periods
         self.update_tagcol(aggregate_by)
         exp_periods = exposure.occupancy_periods
         if self.occupancy_periods and not exp_periods:
@@ -810,8 +811,8 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read(fnames, calculation_mode='', ignore_missing_costs=(),
-             check_dupl=True, tagcol=None, by_country=False, errors=None):
+    def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
+                 check_dupl=True, tagcol=None, by_country=False, errors=None):
         """
         Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
         keeping all the assets in memory.
@@ -837,7 +838,7 @@ class Exposure(object):
                             check_dupl, by_country, prefix, tagcol, errors))
         exp = None
         all_assets = []
-        for exposure in itertools.starmap(Exposure.read_exp, allargs):
+        for exposure in itertools.starmap(Exposure.read_one, allargs):
             all_assets.append(exposure.assets)
             if exp is None:  # first time
                 exp = exposure
@@ -853,7 +854,7 @@ class Exposure(object):
         return exp
 
     @staticmethod
-    def read_exp(fname, calculation_mode='', ignore_missing_costs=(),
+    def read_one(fname, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, by_country=False, asset_prefix='',
                  tagcol=None, errors=None, monitor=None):
         logging.info('Reading %s', fname)
@@ -886,7 +887,7 @@ class Exposure(object):
                 df['retrofitted'] = exposure.cost_calculator(
                     'structural', {'value-structural':df.retrofitted,
                                    'value-number': df['value-number']})
-            assets = build_assets(df.reset_index(), tagcol.tagnames)
+            assets = _build_assets(df.reset_index(), tagcol.tagnames)
             assets['id'] = asset_prefix + assets['id']
             all_assets.append(assets)
 
