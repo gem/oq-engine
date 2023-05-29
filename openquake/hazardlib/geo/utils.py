@@ -227,7 +227,8 @@ class _GeographicObjects(object):
             raise SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
-        data = [(asset.id, asset.lon, asset.lat) for asset in discarded]
+        data = [(asset['id'], asset['lon'], asset['lat'])
+                for asset in discarded]
         discarded = numpy.array(data, asset_dt)
         assets = []
         for sid in sids:
@@ -236,6 +237,7 @@ class _GeographicObjects(object):
                 assets.append(ass)
         exp.mesh = mesh
         exp.assets = numpy.array(assets, ass.dtype)
+        exp.assets['ordinal'] = numpy.arange(len(exp.assets))
         return self.objects.filtered(sids), discarded
 
 

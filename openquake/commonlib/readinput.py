@@ -1004,13 +1004,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     logging.info('Associated {:_d} assets to {:_d} sites'.
                  format(len(exp.assets), len(sitecol)))
 
-    with Monitor('building assetcol', measuremem=True, h5=h5):
-        assetcol = asset.AssetCollection(
-            exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
-        u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
-        idx = c.argmax()  # index of the most common taxonomy
-        tax = assetcol.tagcol.taxonomy[u[idx]]
-
+    assetcol = asset.AssetCollection(
+        exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
+    u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
+    idx = c.argmax()  # index of the most common taxonomy
+    tax = assetcol.tagcol.taxonomy[u[idx]]
     logging.info('Found %d taxonomies with ~%.1f assets each',
                  len(u), len(assetcol) / len(u))
     logging.info('The most common taxonomy is %s with %d assets', tax, c[idx])
