@@ -387,25 +387,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-:, line 11", str(ctx.exception))
 
-    def test_no_assets(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.cachedir = ''
-        oqparam.calculation_mode = 'scenario_risk'
-        oqparam.all_cost_types = ['structural']
-        oqparam.insurance_losses = True
-        oqparam.inputs = {'exposure': [self.exposure],
-                          'structural_vulnerability': None}
-        oqparam.region = '''\
-POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
-        oqparam.time_event = None
-        oqparam.ignore_missing_costs = []
-        oqparam.aggregate_by = []
-        with self.assertRaises(RuntimeError) as ctx:
-            readinput.get_exposure(oqparam)
-        self.assertIn('Could not find any asset within the region',
-                      str(ctx.exception))
-
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'

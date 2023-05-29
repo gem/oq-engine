@@ -128,8 +128,8 @@ def main(
                 logging.info(
                     'Associating exposure grid with %d locations to %d '
                     'exposure sites', len(haz_sitecol), len(exp.mesh))
-                haz_sitecol, discarded = _GeographicObjects(
-                    haz_sitecol).assoc2(exp, grid_spacing * SQRT2, 'filter')
+                haz_sitecol, discarded = exp.associate(
+                    haz_sitecol, grid_spacing * SQRT2)
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))

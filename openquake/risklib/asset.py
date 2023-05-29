@@ -24,7 +24,6 @@ import os
 
 import numpy
 import pandas
-from shapely import wkt, geometry
 
 from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
@@ -584,6 +583,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
+# NB: all the time is spent in tagcol.get_tagi
 def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
     """
     :param assets_by_site: a list of assets
@@ -810,9 +810,8 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read(fnames, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), check_dupl=True,
-             tagcol=None, by_country=False, errors=None):
+    def read(fnames, calculation_mode='', ignore_missing_costs=(),
+             check_dupl=True, tagcol=None, by_country=False, errors=None):
         """
         Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
         keeping all the assets in memory.
@@ -834,9 +833,8 @@ class Exposure(object):
                     prefix = 'E%02d_' % i
             else:
                 prefix = ''
-            allargs.append((fname, calculation_mode, region_constraint,
-                            ignore_missing_costs, check_dupl, by_country,
-                            prefix, tagcol, errors))
+            allargs.append((fname, calculation_mode, ignore_missing_costs,
+                            check_dupl, by_country, prefix, tagcol, errors))
         exp = None
         all_assets = []
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
@@ -855,15 +853,11 @@ class Exposure(object):
         return exp
 
     @staticmethod
-    def read_exp(fname, calculation_mode='', region_constraint='',
-                 ignore_missing_costs=(), check_dupl=True, by_country=False,
-                 asset_prefix='', tagcol=None, errors=None, monitor=None):
+    def read_exp(fname, calculation_mode='', ignore_missing_costs=(),
+                 check_dupl=True, by_country=False, asset_prefix='',
+                 tagcol=None, errors=None, monitor=None):
         logging.info('Reading %s', fname)
         exposure, assetnodes = _get_exposure(fname)
-        if region_constraint:
-            exposure.region = wkt.loads(region_constraint)
-        else:
-            exposure.region = None
         if tagcol:
             exposure.tagcol = tagcol
         if calculation_mode == 'classical_bcr':
@@ -896,18 +890,18 @@ class Exposure(object):
             assets['id'] = asset_prefix + assets['id']
             all_assets.append(assets)
 
-        exposure.assets = numpy.concatenate(all_assets, dtype=assets.dtype)
+        assets = numpy.concatenate(all_assets, dtype=assets.dtype)
         # check_dupl is False only in oq prepare_site_model since
         # in that case we are only interested in the asset locations
         if check_dupl:
-            u, c = numpy.unique(exposure.assets['id'], return_counts=1)
+            u, c = numpy.unique(assets['id'], return_counts=1)
             dupl = u[c > 1]
             if len(dupl):
                 raise nrml.DuplicatedID(dupl)
-        exposure.mesh, exposure.assets_by_site = \
-            exposure.get_mesh_assets_by_site()
-        return exposure
 
+        exposure._set_mesh(assets)
+        return exposure
+        
     @staticmethod
     def read_headers(fnames):
         """
@@ -996,32 +990,21 @@ class Exposure(object):
                 len(df), time.time() - t0, fname))
             yield fname, df
 
-    def get_mesh_assets_by_site(self):
+    def associate(self, haz_sitecol, haz_distance, region=None):
         """
-        :returns: (Mesh instance, assets_by_site list)
+        Associate the a exposure to the given site collection
         """
-        t0 = time.time()
-        # NB: groupby is much faster than group_array and uses half the memory!
-        assets_by_loc = general.groupby(
-            self.assets, operator.itemgetter('lon', 'lat'))
-        mesh = geo.Mesh.from_coords(list(assets_by_loc))
-        if self.region:
-            out = []
-            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-                if not geometry.Point(lon, lat).within(self.region):
-                    out.append(i)
-            if out:
-                ok = ~numpy.isin(numpy.arange(len(mesh)), out)
-                if ok.sum() == 0:
-                    raise RuntimeError(
-                        'Could not find any asset within the region!')
-                mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
-                logging.info('Discarded %d assets outside the region', len(out))
-        assets_by_site = [
-            assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
-        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
-        return mesh, assets_by_site
+        return geo.utils._GeographicObjects(
+            haz_sitecol).assoc2(self, haz_distance, region, 'filter')
 
+    def _set_mesh(self, assets):
+        t0 = time.time()
+        assets.sort(order=['lon', 'lat'])
+        ll, sids = numpy.unique(assets[['lon', 'lat']], return_inverse=1)
+        assets['site_id'] = sids
+        self.mesh = geo.Mesh(ll['lon'], ll['lat'])
+        self.assets = assets
+        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
