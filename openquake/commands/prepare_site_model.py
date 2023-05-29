@@ -117,7 +117,7 @@ def main(
         fields.append('vs30measured')
     with performance.Monitor(measuremem=True) as mon:
         if exposure_xml:
-            exp = Exposure.read(exposure_xml, check_dupl=False)
+            exp = Exposure.read_all(exposure_xml, check_dupl=False)
             hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
                 exp.mesh.lons, exp.mesh.lats, req_site_params=req_site_params)
             if grid_spacing:
