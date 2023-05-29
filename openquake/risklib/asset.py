@@ -619,16 +619,16 @@ def build_asset_array(tagcol, calc, assets, area, loss_types):
          ('site_id', U32)] + [
              (str(name), F32) for name in float_fields] + int_fields)
     num_assets = len(assets)
-    assetcol = numpy.zeros(num_assets, asset_dt)
+    array = numpy.zeros(num_assets, asset_dt)
     fields = set(asset_dt.fields) - {'ordinal'}
     for field in fields:
         if field in tagcol.tagnames:
-            assetcol[field] = tagcol.get_tagi(field, assets)
+            array[field] = tagcol.get_tagi(field, assets)
         elif field in assets.dtype.names:
-            assetcol[field] = assets[field]
-    calc.update(assetcol)
-    assetcol['ordinal'] = numpy.arange(num_assets)
-    return assetcol
+            array[field] = assets[field]
+    calc.update(array)
+    array['ordinal'] = numpy.arange(num_assets)
+    return array
 
 
 # ########################### exposure ############################ #
