@@ -610,7 +610,6 @@ def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
     float_fields = loss_types + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagnames
                   if name not in ('id', 'site_id')]
-    tagi = {str(name): i for i, name in enumerate(tagnames)}
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
          ('ordinal', U32), ('lon', F32), ('lat', F32),
