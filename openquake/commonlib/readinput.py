@@ -36,6 +36,7 @@ import requests
 from shapely import wkt
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
+from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip, decode
@@ -371,7 +372,7 @@ def get_mesh(oqparam, h5=None):
     """
     if 'exposure' in oqparam.inputs and Global.exposure is None:
         # read it only once
-        Global.exposure = get_exposure(oqparam)
+        Global.exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'hazard_curves' in oqparam.inputs:
@@ -916,7 +917,7 @@ def get_crmodel(oqparam):
     return crm
 
 
-def get_exposure(oqparam):
+def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.asset.Asset` instances.
@@ -926,11 +927,12 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    exposure = Global.exposure = asset.Exposure.read(
-        oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.ignore_missing_costs,
-        by_country='country' in asset.tagset(oqparam.aggregate_by),
-        errors='ignore' if oqparam.ignore_encoding_errors else None)
+    with Monitor('reading exposure', h5=h5):
+        exposure = Global.exposure = asset.Exposure.read(
+            oqparam.inputs['exposure'], oqparam.calculation_mode,
+            oqparam.ignore_missing_costs,
+            by_country='country' in asset.tagset(oqparam.aggregate_by),
+            errors='ignore' if oqparam.ignore_encoding_errors else None)
     return exposure
 
 
@@ -973,7 +975,7 @@ def get_station_data(oqparam):
     return station_data, station_sites, imts
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
@@ -981,12 +983,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     :returns: (site collection, asset collection, discarded)
     """
     exp = Global.exposure
-    asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if exp is None:
-        # haz_sitecol not extracted from the exposure
-        exp = get_exposure(oqparam)
+        exp = Global.exposure = get_exposure(oqparam, h5)
+    asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
     if haz_sitecol is None:
-        haz_sitecol = get_site_collection(oqparam)
+        haz_sitecol = get_site_collection(oqparam, h5)
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
@@ -997,11 +998,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
 
     # associate the assets to the hazard sites
     # this is absurdely fast: 10 million assets can be associated in <10s
-    region = wkt.loads(oqparam.region) if oqparam.region else None
-    sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
+    with Monitor('associating exposure', h5=h5):
+        region = wkt.loads(oqparam.region) if oqparam.region else None
+        sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
     logging.info('Associated {:_d} assets to {:_d} sites'.
                  format(len(exp.assets), len(sitecol)))
 
+    # build_asset_array is fast
     array, occupancy_periods = asset.build_asset_array(
         exp.tagcol, exp.cost_calculator, sitecol.sids,
         exp.assets, exp.area, exp.tagcol.tagnames)
