@@ -31,7 +31,7 @@ from shapely import geometry
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.performance import compile
+from openquake.baselib.performance import compile, split_array
 from openquake.hazardlib import geo
 
 U8 = numpy.uint8
@@ -192,7 +192,7 @@ class _GeographicObjects(object):
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
         mesh = exp.mesh
-        assets_by_site = exp.assets_by_site
+        assets_by_site = split_array(exp.assets, exp.assets['site_id'])
         if region:
             # TODO: use SRTree
             out = []
@@ -205,7 +205,7 @@ class _GeographicObjects(object):
                     raise RuntimeError(
                         'Could not find any asset within the region!')
                 mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
-                assets_by_site = numpy.array(exp.assets_by_site)[ok]
+                assets_by_site = numpy.array(assets_by_site)[ok]
                 logging.info('Discarded %d assets outside the region', len(out))
         asset_dt = numpy.dtype(
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])

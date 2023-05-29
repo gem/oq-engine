@@ -24,7 +24,6 @@ import os
 
 import numpy
 import pandas
-from shapely import wkt
 
 from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
@@ -890,16 +889,22 @@ class Exposure(object):
             assets['id'] = asset_prefix + assets['id']
             all_assets.append(assets)
 
-        exposure.assets = numpy.concatenate(all_assets, dtype=assets.dtype)
+        assets = numpy.concatenate(all_assets, dtype=assets.dtype)
         # check_dupl is False only in oq prepare_site_model since
         # in that case we are only interested in the asset locations
         if check_dupl:
-            u, c = numpy.unique(exposure.assets['id'], return_counts=1)
+            u, c = numpy.unique(assets['id'], return_counts=1)
             dupl = u[c > 1]
             if len(dupl):
                 raise nrml.DuplicatedID(dupl)
-        exposure.mesh, exposure.assets_by_site = \
-            exposure.get_mesh_assets_by_site()
+
+        t0 = time.time()
+        assets.sort(order=['lon', 'lat'])
+        ll, sids = numpy.unique(assets[['lon', 'lat']], return_inverse=1)
+        assets['site_id'] = sids
+        exposure.mesh = geo.Mesh(ll['lon'], ll['lat'])
+        exposure.assets = assets
+        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
         return exposure
 
     @staticmethod
@@ -989,20 +994,6 @@ class Exposure(object):
             logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
                 len(df), time.time() - t0, fname))
             yield fname, df
-
-    def get_mesh_assets_by_site(self):
-        """
-        :returns: (Mesh instance, assets_by_site list)
-        """
-        t0 = time.time()
-        # NB: groupby is much faster than group_array and uses half the memory!
-        assets_by_loc = general.groupby(
-            self.assets, operator.itemgetter('lon', 'lat'))
-        mesh = geo.Mesh.from_coords(list(assets_by_loc))
-        assets_by_site = [
-            assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
-        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
-        return mesh, assets_by_site
 
     def associate(self, haz_sitecol, haz_distance, region=None):
         """
