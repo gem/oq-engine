@@ -201,13 +201,14 @@ class TagCollection(object):
         setattr(self, tagname + '_idx', {'?': 0})
         setattr(self, tagname, ['?'])
 
-    def get_tagi(self, tagname, assets):
+    def get_tagi(self, tagname, assets_df):
         """
         :param tagname: name of a tag
-        :param assets: composite array of assets with string-valued tags
+        :param assets_df: DataFrame of assets
         :returns: indices associated to the tag, from 1 to num_tags
         """
-        uniq, inv = numpy.unique(assets[tagname], return_inverse=True)
+        vals = assets_df[tagname].to_numpy()
+        uniq, inv = numpy.unique(vals, return_inverse=True)
         dic = {u: i for i, u in enumerate(uniq, 1)}
         getattr(self, tagname + '_idx').update(dic)
         getattr(self, tagname).extend(uniq)
