@@ -966,10 +966,10 @@ class Exposure(object):
     def _set_mesh_assets(self, assets_df):
         t0 = time.time()
         assets_df.sort_values(['lon', 'lat'], inplace=True)
-        lonlat = numpy.zeros((len(assets_df), 2))
-        lonlat[:, 0] = assets_df['lon']
-        lonlat[:, 1] = assets_df['lat']
-        ll, sids = numpy.unique(lonlat, return_inverse=1, axis=0)
+        ll = numpy.zeros((len(assets_df), 2))
+        ll[:, 0] = assets_df['lon']
+        ll[:, 1] = assets_df['lat']
+        ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
         assets_df['site_id'] = sids
         self.mesh = geo.Mesh(ll[:, 0], ll[:, 1])
         logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
