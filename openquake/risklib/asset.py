@@ -335,9 +335,21 @@ class AssetCollection(object):
     """
     def __init__(self, exposure, sitecol, time_event, aggregate_by):
         # build_asset_array is fast
-        self.array, self.occupancy_periods = build_asset_array(
+        loss_types = []
+        occupancy_periods = []
+        for name in exposure.assets.dtype.names:
+            if name.startswith('occupants_'):
+                period = name.split('_', 1)[1]
+                # see scenario_risk test_case_2d
+                if period != 'avg':
+                    occupancy_periods.append(period)
+                loss_types.append(name)
+            elif name.startswith('value-'):
+                loss_types.append(name)
+        self.occupancy_periods = ' '.join(occupancy_periods)
+        self.array = build_asset_array(
             exposure.tagcol, exposure.cost_calculator,
-            exposure.assets, exposure.area)
+            exposure.assets, exposure.area, loss_types)
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
@@ -585,7 +597,7 @@ class AssetCollection(object):
 
 
 # NB: all the time is spent in tagcol.get_tagi
-def build_asset_array(tagcol, calc, assets, area):
+def build_asset_array(tagcol, calc, assets, area, loss_types):
     """
     :param tagcol: a TagCollection instance
     :param calc: a CostCalcylator instance
@@ -594,17 +606,6 @@ def build_asset_array(tagcol, calc, assets, area):
     :param tagnames: a list of tag names
     :returns: an array `assetcol`
     """
-    loss_types = []
-    occupancy_periods = []
-    for name in assets.dtype.names:
-        if name.startswith('occupants_'):
-            period = name.split('_', 1)[1]
-            # see scenario_risk test_case_2d
-            if period != 'avg':
-                occupancy_periods.append(period)
-            loss_types.append(name)
-        elif name.startswith('value-'):
-            loss_types.append(name)
     # loss_types can be ['value-business_interruption', 'value-contents',
     # 'value-nonstructural', 'occupants_avg', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
@@ -627,7 +628,7 @@ def build_asset_array(tagcol, calc, assets, area):
             assetcol[field] = assets[field]
     calc.update(assetcol)
     assetcol['ordinal'] = numpy.arange(num_assets)
-    return assetcol, ' '.join(occupancy_periods)
+    return assetcol
 
 
 # ########################### exposure ############################ #
