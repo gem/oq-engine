@@ -194,6 +194,7 @@ class _GeographicObjects(object):
         mesh = exp.mesh
         assets_by_site = exp.assets_by_site
         if region:
+            # TODO: use SRTree
             out = []
             for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
                 if not geometry.Point(lon, lat).within(region):
