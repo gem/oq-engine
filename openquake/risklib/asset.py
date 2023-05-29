@@ -1005,18 +1005,6 @@ class Exposure(object):
         assets_by_loc = general.groupby(
             self.assets, operator.itemgetter('lon', 'lat'))
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
-        if self.region:
-            out = []
-            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
-                if not geometry.Point(lon, lat).within(self.region):
-                    out.append(i)
-            if out:
-                ok = ~numpy.isin(numpy.arange(len(mesh)), out)
-                if ok.sum() == 0:
-                    raise RuntimeError(
-                        'Could not find any asset within the region!')
-                mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
-                logging.info('Discarded %d assets outside the region', len(out))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
         logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)

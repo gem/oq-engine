@@ -26,13 +26,13 @@ import collections
 
 import numpy
 from scipy.spatial import cKDTree
-import shapely.geometry
+from shapely import geometry
 
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import geodetic
+from openquake.hazardlib import geo
 
 U8 = numpy.uint8
 U32 = numpy.uint32
@@ -40,8 +40,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
-EARTH_RADIUS = geodetic.EARTH_RADIUS
-spherical_to_cartesian = geodetic.spherical_to_cartesian
+EARTH_RADIUS = geo.geodetic.EARTH_RADIUS
+spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
@@ -179,7 +179,7 @@ class _GeographicObjects(object):
         return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, exp, assoc_dist, mode):
+    def assoc2(self, exp, assoc_dist, region, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
@@ -191,12 +191,27 @@ class _GeographicObjects(object):
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
+        mesh = exp.mesh
+        assets_by_site = exp.assets_by_site
+        if region:
+            out = []
+            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
+                if not geometry.Point(lon, lat).within(region):
+                    out.append(i)
+            if out:
+                ok = ~numpy.isin(numpy.arange(len(mesh)), out)
+                if ok.sum() == 0:
+                    raise RuntimeError(
+                        'Could not find any asset within the region!')
+                mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
+                assets_by_site = numpy.array(exp.assets_by_site)[ok]
+                logging.info('Discarded %d assets outside the region', len(out))
         asset_dt = numpy.dtype(
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
         discarded = []
-        objs, distances = self.get_closest(exp.mesh.lons, exp.mesh.lats)
-        for obj, distance, assets in zip(objs, distances, exp.assets_by_site):
+        objs, distances = self.get_closest(mesh.lons, mesh.lats)
+        for obj, distance, assets in zip(objs, distances, assets_by_site):
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
@@ -218,6 +233,7 @@ class _GeographicObjects(object):
             for ass in assets_by_sid[sid]:
                 ass['site_id'] = sid
                 assets.append(ass)
+        exp.mesh = mesh
         exp.assets = numpy.array(assets, ass.dtype)
         return self.objects.filtered(sids), discarded
 
@@ -258,7 +274,7 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
     index_by_id = dict((id(pl), i) for i, pl in enumerate(polygons))
 
     for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
-        point = shapely.geometry.Point(lon, lat)
+        point = geometry.Point(lon, lat)
         result = next((index_by_id[id(o)]
                        for o in tree.query(point) if o.contains(point)), None)
         if result is not None:
@@ -329,12 +345,12 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     proj = OrthographicProjection(west, east, north, south)
 
     xx, yy = proj(lons, lats)
-    if not shapely.geometry.LineString(list(zip(xx, yy))).is_simple:
+    if not geometry.LineString(list(zip(xx, yy))).is_simple:
         return True
 
     if closed_shape:
         xx, yy = proj(numpy.roll(lons, 1), numpy.roll(lats, 1))
-        if not shapely.geometry.LineString(list(zip(xx, yy))).is_simple:
+        if not geometry.LineString(list(zip(xx, yy))).is_simple:
             return True
 
     return False
@@ -566,9 +582,9 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     """
     if lon1 == lon2 and lat1 == lat2:
         return lon1, lat1
-    dist = geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
-    azimuth = geodetic.azimuth(lon1, lat1, lon2, lat2)
-    return geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
+    dist = geo.geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
+    azimuth = geo.geodetic.azimuth(lon1, lat1, lon2, lat2)
+    return geo.geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
 
 
 @compile("f8[:,:](f8[:,:])")
@@ -668,7 +684,7 @@ def point_to_polygon_distance(polygon, pxx, pyy):
         pxx = pxx.reshape((1, ))
         pyy = pyy.reshape((1, ))
     result = numpy.array([
-        polygon.distance(shapely.geometry.Point(pxx.item(i), pyy.item(i)))
+        polygon.distance(geometry.Point(pxx.item(i), pyy.item(i)))
         for i in range(pxx.size)
     ])
     return result.reshape(pxx.shape)

@@ -20,7 +20,6 @@ import re
 import ast
 import copy
 import zlib
-import time
 import shutil
 import zipfile
 import pathlib
@@ -34,6 +33,7 @@ import itertools
 import numpy
 import pandas
 import requests
+from shapely import wkt
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.general import (
@@ -997,8 +997,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
 
     # associate the assets to the hazard sites
     # this is absurdely fast: 10 million assets can be associated in <10s
+    region = wkt.loads(oqparam.region) if oqparam.region else None
     sitecol, discarded = geo.utils._GeographicObjects(
-        haz_sitecol).assoc2(exp, haz_distance, 'filter')
+        haz_sitecol).assoc2(exp, haz_distance, region, 'filter')
     logging.info('Associated {:_d} assets to {:_d} sites'.
                  format(len(exp.assets), len(sitecol)))
 
