@@ -998,8 +998,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     # associate the assets to the hazard sites
     # this is absurdely fast: 10 million assets can be associated in <10s
     region = wkt.loads(oqparam.region) if oqparam.region else None
-    sitecol, discarded = geo.utils._GeographicObjects(
-        haz_sitecol).assoc2(exp, haz_distance, region, 'filter')
+    sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
     logging.info('Associated {:_d} assets to {:_d} sites'.
                  format(len(exp.assets), len(sitecol)))
 

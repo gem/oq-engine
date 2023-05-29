@@ -24,7 +24,7 @@ import os
 
 import numpy
 import pandas
-from shapely import wkt, geometry
+from shapely import wkt
 
 from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
@@ -1010,6 +1010,12 @@ class Exposure(object):
         logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
         return mesh, assets_by_site
 
+    def associate(self, haz_sitecol, haz_distance, region=None):
+        """
+        Associate the a exposure to the given site collection
+        """
+        return geo.utils._GeographicObjects(
+            haz_sitecol).assoc2(self, haz_distance, region, 'filter')
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
