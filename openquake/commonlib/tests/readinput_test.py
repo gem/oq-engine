@@ -438,13 +438,13 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
     def test_Lon_instead_of_lon(self):
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
-            asset.Exposure.read([fname])
+            asset.Exposure.read_all([fname])
         self.assertIn("missing {'lon'}", str(ctx.exception))
 
     def test_case_similar(self):
         fname = os.path.join(DATADIR, 'exposure2.xml')
         with self.assertRaises(InvalidFile) as ctx:
-            asset.Exposure.read([fname])
+            asset.Exposure.read_all([fname])
         self.assertIn('''\
 Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
 
@@ -460,14 +460,14 @@ description = Description containing a % sign''')
         # test a call used in the GEM4ALL importer, pure XML
         fname = os.path.join(os.path.dirname(case_caracas.__file__),
                              'exposure_caracas.xml')
-        a0, a1 = asset.Exposure.read([fname]).assets
+        a0, a1 = asset.Exposure.read_all([fname]).assets
         self.assertEqual(a0.tags, {'taxonomy': 'MUR+ADO_H1'})
         self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
 
         # test a call used in the GEM4ALL importer, XML + CSV
         fname = os.path.join(os.path.dirname(case_2.__file__),
                              'exposure.xml')
-        for ass in asset.Exposure.read([fname]).assets:
+        for ass in asset.Exposure.read_all([fname]).assets:
             # make sure all the attributes exist
             ass.asset_id
             ass.tags['taxonomy']
