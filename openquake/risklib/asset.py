@@ -810,9 +810,8 @@ class Exposure(object):
         return '\n'.join(err)
 
     @staticmethod
-    def read(fnames, calculation_mode='', region_constraint='',
-             ignore_missing_costs=(), check_dupl=True,
-             tagcol=None, by_country=False, errors=None):
+    def read(fnames, calculation_mode='', ignore_missing_costs=(),
+             check_dupl=True, tagcol=None, by_country=False, errors=None):
         """
         Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
         keeping all the assets in memory.
@@ -834,9 +833,8 @@ class Exposure(object):
                     prefix = 'E%02d_' % i
             else:
                 prefix = ''
-            allargs.append((fname, calculation_mode, region_constraint,
-                            ignore_missing_costs, check_dupl, by_country,
-                            prefix, tagcol, errors))
+            allargs.append((fname, calculation_mode, ignore_missing_costs,
+                            check_dupl, by_country, prefix, tagcol, errors))
         exp = None
         all_assets = []
         for exposure in itertools.starmap(Exposure.read_exp, allargs):
@@ -855,15 +853,11 @@ class Exposure(object):
         return exp
 
     @staticmethod
-    def read_exp(fname, calculation_mode='', region_constraint='',
-                 ignore_missing_costs=(), check_dupl=True, by_country=False,
-                 asset_prefix='', tagcol=None, errors=None, monitor=None):
+    def read_exp(fname, calculation_mode='', ignore_missing_costs=(),
+                 check_dupl=True, by_country=False, asset_prefix='',
+                 tagcol=None, errors=None, monitor=None):
         logging.info('Reading %s', fname)
         exposure, assetnodes = _get_exposure(fname)
-        if region_constraint:
-            exposure.region = wkt.loads(region_constraint)
-        else:
-            exposure.region = None
         if tagcol:
             exposure.tagcol = tagcol
         if calculation_mode == 'classical_bcr':
