@@ -178,29 +178,6 @@ costcalculator = CostCalculator(
     units=dict(structural='EUR'))
 
 
-# this is fast
-def _build_assets(adf, tagnames):
-    T = len(tagnames)
-    STR_FIELDS = ['id', 'taxonomy'] + [
-        name for name in tagnames if name not in ('id', 'site_id')]
-    F64_FIELDS = ['lon', 'lat', 'ideductible', 'retrofitted',
-                  'value-structural', 'value-nonstructural',
-                  'value-contents', 'value-business_interruption',
-                  'value-area', 'value-number',
-                  'occupants_avg', 'occupants_night',
-                  'occupants_day', 'occupants_transit']
-    dtlist = [('tagidxs', (U32, (T,))), ('site_id', U32)]
-    for f in sorted(adf.columns):
-        if f in STR_FIELDS:
-            dtlist.append((f, object))
-        elif f in F64_FIELDS:
-            dtlist.append((f, float))
-    assets = numpy.zeros(len(adf), dtlist)
-    for f, _ in dtlist[2:]:
-        assets[f] = adf[f]
-    return assets.view(numpy.recarray)
-
-
 class TagCollection(object):
     """
     An iterable collection of tags in the form "tagname=tagvalue".
