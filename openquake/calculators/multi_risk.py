@@ -34,17 +34,18 @@ F64 = numpy.float64
 def get_dmg_csq(crm, assets_by_site, gmf):
     """
     :param crm: a CompositeRiskModel object
-    :param assets_by_site: a list of arrays per each site
+    :param assets_by_site: a dictionary of arrays per each site
     :param gmf: a ground motion field
     :returns:
         an array of shape (A, L, 1, D + 1) with the number of buildings
         in each damage state for each asset and loss type
     """
-    A = sum(len(assets) for assets in assets_by_site)
+    A = sum(len(assets) for assets in assets_by_site.values())
     L = len(crm.loss_types)
     D = len(crm.damage_states)
     out = numpy.zeros((A, L, 1, D + 1), F32)
-    for assets, gmv in zip(assets_by_site, gmf):
+    for sid, assets in assets_by_site.items():
+        gmv = gmf[sid]
         df = pandas.DataFrame(dict(peril=[gmv]))
         group = general.group_array(assets, 'taxonomy')
         for taxonomy, assets in group.items():
@@ -206,7 +207,7 @@ class MultiRiskCalculator(base.RiskCalculator):
         dmg_csq = numpy.zeros((A, P, L, 1, D + 1), F32)
         perils = []
         if 'ASH' in theperils:
-            assets = self.assetcol.assets_by_site()
+            assets = general.group_array(self.assetcol, 'site_id')
             gmf = self.datastore['multi_peril']['ASH']
             dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf)
             perils.append('ASH_DRY')

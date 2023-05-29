@@ -647,17 +647,17 @@ def view_assets_by_site(token, dstore):
     Display statistical information about the distribution of the assets
     """
     taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
-    assets_by_site = dstore['assetcol'].assets_by_site()
+    assets_by = group_array(dstore['assetcol'].array, 'site_id')
     data = ['taxonomy num_sites mean stddev min max num_assets'.split()]
     num_assets = AccumDict()
-    for assets in assets_by_site:
+    for assets in assets_by.values():
         num_assets += {k: [len(v)] for k, v in group_array(
             assets, 'taxonomy').items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
         data.append(stats(taxonomies[taxo], val, val.sum()))
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
-        n_assets = numpy.array([len(assets) for assets in assets_by_site])
+        n_assets = numpy.array([len(assets) for assets in assets_by.values()])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))
     return text_table(data)
 

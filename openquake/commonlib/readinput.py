@@ -931,7 +931,6 @@ def get_exposure(oqparam):
         oqparam.region, oqparam.ignore_missing_costs,
         by_country='country' in asset.tagset(oqparam.aggregate_by),
         errors='ignore' if oqparam.ignore_encoding_errors else None)
-    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
     return exposure
 
 
@@ -996,33 +995,16 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    if haz_sitecol.mesh != exp.mesh:
-        # associate the assets to the hazard sites
-        # this is absurdely fast: 10 million assets can be associated in <10s
-        sitecol, assets_by, discarded = geo.utils._GeographicObjects(
-            haz_sitecol).assoc2(
-                exp.mesh, exp.assets_by_site, haz_distance, 'filter')
-        num_assets = sum(len(assets) for assets in assets_by)
-        logging.info('Associated {:_d} assets to {:_d} sites'.
-                     format(num_assets, len(sitecol)))
-    else:
-        # asset sites and hazard sites are the same
-        sitecol = haz_sitecol
-        discarded = []
-        assets_by = exp.assets_by_site
-        num_assets = sum(len(assets) for assets in assets_by)
-        logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
-                     format(len(sitecol), num_assets))
-
-    assets = []
-    for sid, assets_ in zip(sitecol.sids, assets_by):
-        for ass in assets_:
-            ass['site_id'] = sid
-            assets.append(ass)
+    # associate the assets to the hazard sites
+    # this is absurdely fast: 10 million assets can be associated in <10s
+    sitecol, discarded = geo.utils._GeographicObjects(
+        haz_sitecol).assoc2(exp, haz_distance, 'filter')
+    logging.info('Associated {:_d} assets to {:_d} sites'.
+                 format(len(exp.assets), len(sitecol)))
 
     array, occupancy_periods = asset.build_asset_array(
         exp.tagcol, exp.cost_calculator, sitecol.sids,
-        numpy.array(assets, ass.dtype), exp.area, exp.tagcol.tagnames)
+        exp.assets, exp.area, exp.tagcol.tagnames)
     assetcol = asset.AssetCollection(
         exp, sitecol, array, occupancy_periods, oqparam.time_event,
         oqparam.aggregate_by)

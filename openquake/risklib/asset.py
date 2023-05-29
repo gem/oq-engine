@@ -18,6 +18,7 @@
 import operator
 import itertools
 import logging
+import time
 import csv
 import os
 
@@ -38,7 +39,6 @@ U64 = numpy.uint64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
-by_lonlat = operator.itemgetter('lon', 'lat')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
 
@@ -401,15 +401,6 @@ class AssetCollection(object):
         Return a list of taxonomies, one per asset (with duplicates)
         """
         return self.array['taxonomy']
-
-    def assets_by_site(self):
-        """
-        :returns: numpy array of lists with the assets by each site
-        """
-        assets_by_site = [[] for sid in range(self.tot_sites)]
-        for i, ass in enumerate(self.array):
-            assets_by_site[ass['site_id']].append(self[i])
-        return numpy.array(assets_by_site, dtype=object)
 
     # used in the extract API
     def aggregateby(self, tagnames, array):
@@ -893,8 +884,6 @@ class Exposure(object):
                 df['country'] = asset_prefix[:-1]
             elif asset_prefix:  # multiple exposure files
                 df['exposure'] = asset_prefix[:-1]
-
-            logging.info('Read {:_d} assets in {}'.format(len(df), fname))
             names = df.columns
             occupants = any(n.startswith('occupants_') for n in names)
             if occupants and 'calc_occupants_avg' not in names:
@@ -915,6 +904,8 @@ class Exposure(object):
             dupl = u[c > 1]
             if len(dupl):
                 raise nrml.DuplicatedID(dupl)
+        exposure.mesh, exposure.assets_by_site = \
+            exposure.get_mesh_assets_by_site()
         return exposure
 
     @staticmethod
@@ -994,19 +985,25 @@ class Exposure(object):
             conv[f] = float
             rename[f] = 'occupants_' + field
         for fname in self.datafiles:
+            t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
             if sa:
                 df = general.random_filter(df, sa)
+            logging.info('Read {:_d} assets in {:.2f}s from {}'.format(
+                len(df), time.time() - t0, fname))
             yield fname, df
 
     def get_mesh_assets_by_site(self):
         """
         :returns: (Mesh instance, assets_by_site list)
         """
-        assets_by_loc = general.groupby(self, key=by_lonlat)
+        t0 = time.time()
+        # NB: groupby is much faster than group_array and uses half the memory!
+        assets_by_loc = general.groupby(
+            self.assets, operator.itemgetter('lon', 'lat'))
         mesh = geo.Mesh.from_coords(list(assets_by_loc))
         if self.region:
             out = []
@@ -1022,10 +1019,9 @@ class Exposure(object):
                 logging.info('Discarded %d assets outside the region', len(out))
         assets_by_site = [
             assets_by_loc[lonlat] for lonlat in zip(mesh.lons, mesh.lats)]
+        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
         return mesh, assets_by_site
 
-    def __iter__(self):
-        return iter(self.assets)
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
