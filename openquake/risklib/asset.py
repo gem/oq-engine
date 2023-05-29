@@ -583,6 +583,7 @@ class AssetCollection(object):
         return '<%s with %d asset(s)>' % (self.__class__.__name__, len(self))
 
 
+# NB: all the time is spent in tagcol.get_tagi
 def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
     """
     :param assets_by_site: a list of assets
@@ -898,15 +899,9 @@ class Exposure(object):
             if len(dupl):
                 raise nrml.DuplicatedID(dupl)
 
-        t0 = time.time()
-        assets.sort(order=['lon', 'lat'])
-        ll, sids = numpy.unique(assets[['lon', 'lat']], return_inverse=1)
-        assets['site_id'] = sids
-        exposure.mesh = geo.Mesh(ll['lon'], ll['lat'])
-        exposure.assets = assets
-        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
+        exposure._set_mesh(assets)
         return exposure
-
+        
     @staticmethod
     def read_headers(fnames):
         """
@@ -1001,6 +996,15 @@ class Exposure(object):
         """
         return geo.utils._GeographicObjects(
             haz_sitecol).assoc2(self, haz_distance, region, 'filter')
+
+    def _set_mesh(self, assets):
+        t0 = time.time()
+        assets.sort(order=['lon', 'lat'])
+        ll, sids = numpy.unique(assets[['lon', 'lat']], return_inverse=1)
+        assets['site_id'] = sids
+        self.mesh = geo.Mesh(ll['lon'], ll['lat'])
+        self.assets = assets
+        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
