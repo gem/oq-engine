@@ -336,8 +336,8 @@ class AssetCollection(object):
     def __init__(self, exposure, sitecol, time_event, aggregate_by):
         # build_asset_array is fast
         self.array, self.occupancy_periods = build_asset_array(
-            exposure.tagcol, exposure.cost_calculator, sitecol.sids,
-            exposure.assets, exposure.area, exposure.tagcol.tagnames)
+            exposure.tagcol, exposure.cost_calculator,
+            exposure.assets, exposure.area)
         self.tagcol = exposure.tagcol
         self.time_event = time_event
         self.tot_sites = len(sitecol.complete)
@@ -585,9 +585,11 @@ class AssetCollection(object):
 
 
 # NB: all the time is spent in tagcol.get_tagi
-def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
+def build_asset_array(tagcol, calc, assets, area):
     """
-    :param assets_by_site: a list of assets
+    :param tagcol: a TagCollection instance
+    :param calc: a CostCalcylator instance
+    :param assets: 
     :param area: True if there is an area field in the exposure
     :param tagnames: a list of tag names
     :returns: an array `assetcol`
@@ -608,7 +610,7 @@ def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if 'retrofitted' in assets.dtype.names else []
     float_fields = loss_types + ['ideductible'] + retro
-    int_fields = [(str(name), U32) for name in tagnames
+    int_fields = [(str(name), U32) for name in tagcol.tagnames
                   if name not in ('id', 'site_id')]
     asset_dt = numpy.dtype(
         [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
@@ -619,7 +621,7 @@ def build_asset_array(tagcol, calc, sids, assets, area, tagnames=()):
     assetcol = numpy.zeros(num_assets, asset_dt)
     fields = set(asset_dt.fields) - {'ordinal'}
     for field in fields:
-        if field in tagnames:
+        if field in tagcol.tagnames:
             assetcol[field] = tagcol.get_tagi(field, assets)
         elif field in assets.dtype.names:
             assetcol[field] = assets[field]
