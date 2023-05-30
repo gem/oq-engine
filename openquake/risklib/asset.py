@@ -823,6 +823,9 @@ class Exposure(object):
             dfs.append(df)
 
         assets_df = pandas.concat(dfs)
+        del fname_dfs  # save memory
+        del dfs  # save memory
+
         # check_dupl is False only in oq prepare_site_model since
         # in that case we are only interested in the asset locations
         if check_dupl:
