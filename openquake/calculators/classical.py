@@ -520,11 +520,13 @@ class ClassicalCalculator(base.HazardCalculator):
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
+        gs = [g for g in acc if isinstance(g, numpy.int64)]
+        nbytes = sum(acc[g].array.nbytes for g in gs)
+        logging.info('Storing %s of PoEs', humansize(nbytes))
         with self.monitor('storing PoEs', measuremem=True):
-            for g in list(acc):
-                if isinstance(g, numpy.int64):
-                    pne = acc.pop(g)
-                    self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+            for g in gs:
+                pne = acc.pop(g)
+                self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
         return acc
 
     def store_info(self):
