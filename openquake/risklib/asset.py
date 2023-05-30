@@ -752,7 +752,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         names = df.columns
         df = df.reset_index()
         occupants = any(n.startswith('occupants_') for n in names)
-        if occupants and 'calc_occupants_avg' not in names:
+        if occupants and 'occupants_avg' not in names:
             df['occupants_avg'] = calc_occupants_avg(df)
         if exposure.retrofitted:
             df['retrofitted'] = exposure.cost_calculator(
