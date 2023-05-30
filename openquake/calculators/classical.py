@@ -273,6 +273,7 @@ class Hazard:
             self.offset += len(sids)
         self.acc[g]['avg_poe'] = poes.mean(axis=0) @ self.level_weights
         self.acc[g]['nsites'] = len(pnes_sids)
+        return len(sids) * 16  # 4 + 2 + 2 + 8 bytes
 
     def store_disagg(self, pmaps):
         """
@@ -521,12 +522,12 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         gs = [g for g in acc if isinstance(g, numpy.int64)]
-        nbytes = sum(acc[g].array.nbytes for g in gs)
-        logging.info('Storing %s of PoEs', humansize(nbytes))
+        nbytes = 0
         with self.monitor('storing PoEs', measuremem=True):
             for g in gs:
                 pne = acc.pop(g)
-                self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+                nbytes += self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+        logging.info('Stored %s of PoEs', humansize(nbytes))
         return acc
 
     def store_info(self):
