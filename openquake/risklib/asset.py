@@ -34,6 +34,7 @@ from openquake.risklib import countries
 U8 = numpy.uint8
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 U64 = numpy.uint64
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
@@ -723,6 +724,94 @@ def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
     return pandas.DataFrame({f: array[f] for f, dt in dtlist}).set_index('id')
 
 
+def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
+                check_dupl=True, by_country=False, asset_prefix='',
+                tagcol=None, errors=None, monitor=None):
+    logging.info('Reading %s', fname)
+    exposure, assetnodes = _get_exposure(fname)
+    if tagcol:
+        exposure.tagcol = tagcol
+    if calculation_mode == 'classical_bcr':
+        exposure.retrofitted = True
+    if assetnodes:
+        df = assets2df(
+            assetnodes, exposure._csv_header(),
+            exposure.retrofitted, ignore_missing_costs)
+        fname_dfs = [(fname, df)]
+    else:
+        fname_dfs = exposure._read_csv(errors)
+    # loop on each CSV file associated to exposure.xml
+    dfs = []
+    for fname, df in fname_dfs:
+        if len(df) == 0:
+            raise InvalidFile('%s is empty' % fname)
+        elif by_country:
+            df['country'] = asset_prefix[:-1]
+        elif asset_prefix:  # multiple exposure files
+            df['exposure'] = asset_prefix[:-1]
+        names = df.columns
+        df = df.reset_index()
+        occupants = any(n.startswith('occupants_') for n in names)
+        if occupants and 'calc_occupants_avg' not in names:
+            df['occupants_avg'] = calc_occupants_avg(df)
+        if exposure.retrofitted:
+            df['retrofitted'] = exposure.cost_calculator(
+                'structural', {'value-structural':df.retrofitted,
+                               'value-number': df['value-number']})
+        df['id'] = asset_prefix + df.id
+        dfs.append(df)
+
+    assets_df = pandas.concat(dfs)
+    del fname_dfs  # save memory
+    del dfs  # save memory
+
+    # check_dupl is False only in oq prepare_site_model since
+    # in that case we are only interested in the asset locations
+    if check_dupl:
+        u, c = numpy.unique(assets_df['id'], return_counts=1)
+        dupl = u[c > 1]
+        if len(dupl):
+            raise nrml.DuplicatedID(dupl)
+
+    return exposure, assets_df
+
+
+def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
+    t0 = time.time()
+    assets_df.sort_values(['lon', 'lat'], inplace=True)
+    ll = numpy.zeros((len(assets_df), 2))
+    ll[:, 0] = assets_df['lon']
+    ll[:, 1] = assets_df['lat']
+    ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
+    assets_df['site_id'] = sids
+    mesh = geo.Mesh(ll[:, 0], ll[:, 1])
+    logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
+
+    names = assets_df.columns
+    # loss_types can be ['value-business_interruption', 'value-contents',
+    # 'value-nonstructural', 'occupants_avg', 'occupants_day',
+    # 'occupants_night', 'occupants_transit']
+    retro = ['retrofitted'] if 'retrofitted' in names else []
+    float_fields = loss_types + ['ideductible'] + retro
+    int_fields = [(str(name), U32) for name in tagcol.tagnames
+                  if name not in ('id', 'site_id')]
+    asset_dt = numpy.dtype(
+        [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
+         ('ordinal', U32), ('lon', F32), ('lat', F32),
+         ('site_id', U32)] + [
+             (str(name), F32) for name in float_fields] + int_fields)
+    num_assets = len(assets_df)
+    array = numpy.zeros(num_assets, asset_dt)
+    fields = set(asset_dt.fields) - {'ordinal'}
+    for field in fields:
+        if field in tagcol.tagnames:
+            array[field] = tagcol.get_tagi(field, assets_df)
+        elif field in names:
+            array[field] = assets_df[field]
+    cost_calculator.update(array)
+    return mesh, array
+
+
 class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
@@ -745,8 +834,7 @@ class Exposure(object):
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, by_country=False, errors=None):
         """
-        Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
-        keeping all the assets in memory.
+        :returns: an :class:`Exposure` instance keeping all the assets in memory
         """
         if by_country:  # E??_ -> countrycode
             prefix2cc = countries.from_exposures(
@@ -768,9 +856,9 @@ class Exposure(object):
             allargs.append((fname, calculation_mode, ignore_missing_costs,
                             check_dupl, by_country, prefix, tagcol, errors))
         exp = None
-        all_assets = []
-        for exposure in itertools.starmap(Exposure.read_one, allargs):
-            all_assets.append(exposure.assets)
+        dfs = []
+        for exposure, df in itertools.starmap(read_exp_df, allargs):
+            dfs.append(df)
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
@@ -781,60 +869,9 @@ class Exposure(object):
                 ae(exposure.area, exp.area)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
-        exp.assets = numpy.concatenate(all_assets, dtype=exposure.assets.dtype)
-        return exp
-
-    @staticmethod
-    def read_one(fname, calculation_mode='', ignore_missing_costs=(),
-                 check_dupl=True, by_country=False, asset_prefix='',
-                 tagcol=None, errors=None, monitor=None):
-        logging.info('Reading %s', fname)
-        exposure, assetnodes = _get_exposure(fname)
-        if tagcol:
-            exposure.tagcol = tagcol
-        if calculation_mode == 'classical_bcr':
-            exposure.retrofitted = True
-        if assetnodes:
-            df = assets2df(
-                assetnodes, exposure._csv_header(),
-                exposure.retrofitted, ignore_missing_costs)
-            fname_dfs = [(fname, df)]
-        else:
-            fname_dfs = exposure._read_csv(errors)
-        # loop on each CSV file associated to exposure.xml
-        dfs = []
-        for fname, df in fname_dfs:
-            if len(df) == 0:
-                raise InvalidFile('%s is empty' % fname)
-            elif by_country:
-                df['country'] = asset_prefix[:-1]
-            elif asset_prefix:  # multiple exposure files
-                df['exposure'] = asset_prefix[:-1]
-            names = df.columns
-            df = df.reset_index()
-            occupants = any(n.startswith('occupants_') for n in names)
-            if occupants and 'calc_occupants_avg' not in names:
-                df['occupants_avg'] = calc_occupants_avg(df)
-            if exposure.retrofitted:
-                df['retrofitted'] = exposure.cost_calculator(
-                    'structural', {'value-structural':df.retrofitted,
-                                   'value-number': df['value-number']})
-            df['id'] = asset_prefix + df.id
-            dfs.append(df)
-
         assets_df = pandas.concat(dfs)
-        del fname_dfs  # save memory
         del dfs  # save memory
-
-        # check_dupl is False only in oq prepare_site_model since
-        # in that case we are only interested in the asset locations
-        if check_dupl:
-            u, c = numpy.unique(assets_df['id'], return_counts=1)
-            dupl = u[c > 1]
-            if len(dupl):
-                raise nrml.DuplicatedID(dupl)
-
-        exposure.loss_types = []
+        exp.loss_types = []
         occupancy_periods = []
         for name in assets_df.columns:
             if name.startswith('occupants_'):
@@ -842,12 +879,13 @@ class Exposure(object):
                 # see scenario_risk test_case_2d
                 if period != 'avg':
                     occupancy_periods.append(period)
-                exposure.loss_types.append(name)
+                exp.loss_types.append(name)
             elif name.startswith('value-'):
-                exposure.loss_types.append(name)
-        exposure.occupancy_periods = ' '.join(occupancy_periods)
-        exposure._set_mesh_assets(assets_df)
-        return exposure
+                exp.loss_types.append(name)
+        exp.occupancy_periods = ' '.join(occupancy_periods)
+        exp.mesh, exp.assets = _get_mesh_assets(
+            assets_df, exp.tagcol, exp.cost_calculator, exp.loss_types)
+        return exp
         
     @staticmethod
     def read_headers(fnames):
@@ -943,41 +981,6 @@ class Exposure(object):
         """
         return geo.utils._GeographicObjects(
             haz_sitecol).assoc2(self, haz_distance, region, 'filter')
-
-    def _set_mesh_assets(self, assets_df):
-        t0 = time.time()
-        assets_df.sort_values(['lon', 'lat'], inplace=True)
-        ll = numpy.zeros((len(assets_df), 2))
-        ll[:, 0] = assets_df['lon']
-        ll[:, 1] = assets_df['lat']
-        ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
-        assets_df['site_id'] = sids
-        self.mesh = geo.Mesh(ll[:, 0], ll[:, 1])
-        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
-
-        names = assets_df.columns
-        # loss_types can be ['value-business_interruption', 'value-contents',
-        # 'value-nonstructural', 'occupants_avg', 'occupants_day',
-        # 'occupants_night', 'occupants_transit']
-        retro = ['retrofitted'] if 'retrofitted' in names else []
-        float_fields = self.loss_types + ['ideductible'] + retro
-        int_fields = [(str(name), U32) for name in self.tagcol.tagnames
-                      if name not in ('id', 'site_id')]
-        asset_dt = numpy.dtype(
-            [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
-             ('ordinal', U32), ('lon', F32), ('lat', F32),
-             ('site_id', U32)] + [
-                 (str(name), F32) for name in float_fields] + int_fields)
-        num_assets = len(assets_df)
-        array = numpy.zeros(num_assets, asset_dt)
-        fields = set(asset_dt.fields) - {'ordinal'}
-        for field in fields:
-            if field in self.tagcol.tagnames:
-                array[field] = self.tagcol.get_tagi(field, assets_df)
-            elif field in names:
-                array[field] = assets_df[field]
-        self.cost_calculator.update(array)
-        self.assets = array
 
     def __repr__(self):
         return '<%s with %s assets>' % (self.__class__.__name__,
