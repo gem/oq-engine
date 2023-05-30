@@ -107,7 +107,7 @@ def classical(srcs, sitecol, cmaker, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    for sites in sitecol.split_in_tiles(cmaker.ntiles):
+    for sites in sitecol.split_in_tiles(cmaker.itiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
@@ -342,6 +342,9 @@ class ClassicalCalculator(base.HazardCalculator):
                 if self.n_outs[g] == 0:  # no other tasks for this g
                     with self.monitor('storing PoEs', measuremem=True):
                         pne = acc.pop(g)
+                        #pnes = pne.array[pne.sids==111]
+                        #if len(pnes) and not (pnes == 1).all():
+                        #    print('-------', 1-pnes)
                         self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
             else:  # single output
                 with self.monitor('storing PoEs', measuremem=True):
@@ -503,16 +506,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # maximum size of the pmap array in GB
             size_gb = G * L * len(sitecol) * 8 / 1024**3
-            ntiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
+            itiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
             # NB: disagg_by_src is disabled in case of tiling
-            assert not (ntiles > 1 and oq.disagg_by_src)
-            # NB: tiling only works with many sites
-            if ntiles > 1 and self.N < oq.max_sites_disagg * ntiles:
-                raise RuntimeError('There are not enough sites (%d) for '
-                                   '%d tiles' % (self.N, ntiles))
-            cm.ntiles = ntiles
-            if ntiles > 1:
-                logging.debug('Producing %d inner tiles', ntiles)
+            assert not (itiles > 1 and oq.disagg_by_src)
+            cm.itiles = itiles
+            if itiles > 1:
+                logging.debug('Producing %d inner tiles', itiles)
 
             if oq.disagg_by_src:  # possible only with a single tile
                 blks = groupby(sg, basename).values()
@@ -524,7 +523,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
                 for g in cm.gidx:
-                    self.n_outs[g] += cm.ntiles
+                    self.n_outs[g] += cm.itiles
                 allargs.append((block, sitecol, cm))
 
             # allocate memory
