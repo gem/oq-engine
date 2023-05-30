@@ -782,8 +782,7 @@ class Exposure(object):
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, by_country=False, errors=None):
         """
-        Call `Exposure.read(fnames)` to get an :class:`Exposure` instance
-        keeping all the assets in memory.
+        :returns: an :class:`Exposure` instance keeping all the assets in memory
         """
         if by_country:  # E??_ -> countrycode
             prefix2cc = countries.from_exposures(
@@ -806,8 +805,8 @@ class Exposure(object):
                             check_dupl, by_country, prefix, tagcol, errors))
         exp = None
         dfs = []
-        for exposure in itertools.starmap(Exposure.read_one, allargs):
-            dfs.append(exposure.assets_df)
+        for exposure, df in itertools.starmap(Exposure.read_exp_df, allargs):
+            dfs.append(df)
             if exp is None:  # first time
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
@@ -819,7 +818,7 @@ class Exposure(object):
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
         assets_df = pandas.concat(dfs)
-        del dfs
+        del dfs  # save memory
         exp.loss_types = []
         occupancy_periods = []
         for name in assets_df.columns:
@@ -837,9 +836,9 @@ class Exposure(object):
         return exp
 
     @staticmethod
-    def read_one(fname, calculation_mode='', ignore_missing_costs=(),
-                 check_dupl=True, by_country=False, asset_prefix='',
-                 tagcol=None, errors=None, monitor=None):
+    def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
+                    check_dupl=True, by_country=False, asset_prefix='',
+                    tagcol=None, errors=None, monitor=None):
         logging.info('Reading %s', fname)
         exposure, assetnodes = _get_exposure(fname)
         if tagcol:
@@ -874,19 +873,19 @@ class Exposure(object):
             df['id'] = asset_prefix + df.id
             dfs.append(df)
 
-        exposure.assets_df = pandas.concat(dfs)
+        assets_df = pandas.concat(dfs)
         del fname_dfs  # save memory
         del dfs  # save memory
 
         # check_dupl is False only in oq prepare_site_model since
         # in that case we are only interested in the asset locations
         if check_dupl:
-            u, c = numpy.unique(exposure.assets_df['id'], return_counts=1)
+            u, c = numpy.unique(assets_df['id'], return_counts=1)
             dupl = u[c > 1]
             if len(dupl):
                 raise nrml.DuplicatedID(dupl)
 
-        return exposure
+        return exposure, assets_df
         
     @staticmethod
     def read_headers(fnames):
