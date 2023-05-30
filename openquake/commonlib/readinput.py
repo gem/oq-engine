@@ -998,11 +998,13 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     # associate the assets to the hazard sites
     # this is absurdely fast: 10 million assets can be associated in <10s
+    A = len(exp.assets)
+    N = len(haz_sitecol)
     with Monitor('associating exposure', measuremem=True, h5=h5):
         region = wkt.loads(oqparam.region) if oqparam.region else None
         sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
-    logging.info('Associated {:_d} assets to {:_d} sites'.
-                 format(len(exp.assets), len(sitecol)))
+    logging.info('Associated {:_d} assets (of {:_d}) to {:_d} sites (of {:_d})'.
+                 format(len(exp.assets), A, len(sitecol), N))
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)

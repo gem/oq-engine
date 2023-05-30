@@ -510,7 +510,7 @@ class AssetCollection(object):
                 arr = self[self['site_id'] == sid]
                 arr['site_id'] = idx
                 arrays.append(arr)
-            self.array = numpy.concatenate(arrays)
+            self.array = numpy.concatenate(arrays, dtype=arr.dtype)
             self.array['ordinal'] = numpy.arange(len(self.array))
             self.tot_sites = len(sitecol)
         sitecol.make_complete()
@@ -781,7 +781,7 @@ class Exposure(object):
                 ae(exposure.area, exp.area)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
-        exp.assets = numpy.concatenate(all_assets)
+        exp.assets = numpy.concatenate(all_assets, dtype=exposure.assets.dtype)
         return exp
 
     @staticmethod
