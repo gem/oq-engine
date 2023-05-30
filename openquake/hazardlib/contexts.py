@@ -433,6 +433,7 @@ class ContextMaker(object):
         self.shift_hypo = param.get('shift_hypo')
         self.set_imts_conv()
         self.init_monitoring(monitor)
+        self.csize = collections.Counter()
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
@@ -1229,7 +1230,9 @@ class PmapMaker(object):
         sites = self.srcfilter.get_close_sites(src)
         if sites is None:
             return
+        src_id = basename(src.source_id, '!;:.')
         for ctx in self.cmaker.get_ctx_iter(src, sites):
+            self.cmaker.csize[src_id] += len(ctx)
             if self.cmaker.deltagetter:
                 # adjust occurrence rates in case of aftershocks
                 with self.cmaker.delta_mon:

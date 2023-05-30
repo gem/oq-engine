@@ -582,6 +582,13 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Check for slow tasks
         """
+        src, csize = [], []
+        for cm in self.cmakers:
+            for s, n in cm.csize.items():
+                src.append(s)
+                csize.append(n)
+        df = pandas.DataFrame(dict(src=src, csize=csize)).sort_values('csize')
+        self.datastore.create_df('ctxt', df)
         oq = self.oqparam
         task_info = self.datastore.read_df('task_info', 'taskname')
         try:
