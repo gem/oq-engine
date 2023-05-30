@@ -335,21 +335,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pm.trt_smrs = pnemap.trt_smrs
         G = pnemap.array.shape[2]
         for i, g in enumerate(pnemap.gidx):
-            if g in acc:
-                acc[g].multiply_pnes(pnemap, i % G)
-                self.n_outs[g] -= 1
-                assert self.n_outs[g] > -1, (g, self.n_outs[g])
-                if self.n_outs[g] == 0:  # no other tasks for this g
-                    with self.monitor('storing PoEs', measuremem=True):
-                        pne = acc.pop(g)
-                        #pnes = pne.array[pne.sids==111]
-                        #if len(pnes) and not (pnes == 1).all():
-                        #    print('-------', 1-pnes)
-                        self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
-            else:  # single output
-                with self.monitor('storing PoEs', measuremem=True):
-                    self.haz.store_poes(
-                        g, pnemap.array[:, :, i % G], pnemap.sids)
+            acc[g].multiply_pnes(pnemap, i % G)
         return acc
 
     def create_rup(self):
@@ -449,7 +435,6 @@ class ClassicalCalculator(base.HazardCalculator):
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
         ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
-        self.n_outs = AccumDict(accum=0)
         if ntiles > 1:
             self.execute_seq(maxw, ntiles)
         else:  # regular case
@@ -496,7 +481,7 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Run a subset of sites and update the accumulator
         """
-        acc = {}  # g -> pmap
+        acc = {}  # g -> pmap of shape (N, L, 1)
         oq = self.oqparam
         L = oq.imtls.size
         allargs = []
@@ -522,14 +507,11 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                for g in cm.gidx:
-                    self.n_outs[g] += cm.itiles
                 allargs.append((block, sitecol, cm))
 
             # allocate memory
             for g in cm.gidx:
-                if self.n_outs[g] > 1:
-                    acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
+                acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
 
         totsize = sum(pmap.array.nbytes for pmap in acc.values())
         if totsize:
@@ -537,7 +519,13 @@ class ClassicalCalculator(base.HazardCalculator):
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        return smap.reduce(self.agg_dicts, acc)
+        acc = smap.reduce(self.agg_dicts, acc)
+        with self.monitor('storing PoEs', measuremem=True):
+            for g in list(acc):
+                if isinstance(g, numpy.int64):
+                    pne = acc.pop(g)
+                    self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
+        return acc
 
     def store_info(self):
         """
