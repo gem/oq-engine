@@ -350,7 +350,6 @@ class KothaEtAl2020(GMPE):
         Parameter to control the source-region scaling as a number of
         standard deviations by which to multiply the source-region to source-
         region variance, max(tau_l2l, sigma_mu)
-
     :param float c3_epsilon:
         Parameter to control the residual attenuation scaling as a number
         of standard deviations by which to multiply the attenuation-region
@@ -359,16 +358,13 @@ class KothaEtAl2020(GMPE):
         attenuation as an instance of :class:
         `openquake.hazardlib.gsim.base.CoeffsTable`. If absent, the value is
         taken from the normal coefficients table.
-
     :param bool ergodic:
         Use the ergodic standard deviation (True) or non-ergodic standard
         deviation (False)
-
     :param dict dl2l:
         If specifying the source-region scaling directly, defines the
         increase or decrease of the ground motion in the form of an imt-
         dependent dictionary of delta L2L factors
-
     :param dict c3:
         If specifying the residual attenuation scaling directly, defines the
         apparent anelastic attenuation term, c3, as an imt-dependent
