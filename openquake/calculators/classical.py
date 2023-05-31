@@ -435,9 +435,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
-        ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
-        if ntiles > 1:
-            self.execute_seq(maxw, ntiles)
+        self.ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
+        if self.ntiles > 1:
+            self.execute_seq(maxw)
         else:  # regular case
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_par(maxw)
@@ -462,17 +462,17 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.oqparam.disagg_by_src:
             self.haz.store_disagg(acc)
 
-    def execute_seq(self, maxw, ntiles):
+    def execute_seq(self, maxw):
         """
         Use sequential tiling
         """
         assert self.N > self.oqparam.max_sites_disagg, self.N
-        logging.info('Running %d tiles', ntiles)
-        for n, tile in enumerate(self.sitecol.split(ntiles)):
+        logging.info('Running %d tiles', self.ntiles)
+        for n, tile in enumerate(self.sitecol.split(self.ntiles)):
             if n == 0:
                 self.check_memory(len(tile), self.oqparam.imtls.size, maxw)
             self.run_one(tile, maxw)
-            logging.info('Finished tile %d of %d', n+1, ntiles)
+            logging.info('Finished tile %d of %d', n+1, self.ntiles)
             if parallel.oq_distribute() == 'zmq':
                 w.WorkerMaster(config.zworkers).restart()
             else:

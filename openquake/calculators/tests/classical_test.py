@@ -143,12 +143,13 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqual(hmaps.dtype.names, ('PGA', 'SA(0.2)', 'SA(1.0)'))
 
     def test_case_22(self):  # crossing date line calculation for Alaska
-        # this also tests the splitting of the source model in two files
+        # this also tests the splitting in two tiles
         self.assert_curves_ok([
             '/hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1)',
             'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
             'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
+        self.assertEqual(self.calc.ntiles, 2)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
