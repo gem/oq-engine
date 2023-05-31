@@ -107,7 +107,7 @@ def classical(srcs, sitecol, cmaker, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    for sites in sitecol.split_in_tiles(cmaker.ntiles):
+    for sites in sitecol.split_in_tiles(cmaker.itiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
@@ -245,7 +245,7 @@ class Hazard:
                 out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
         return out.reshape((self.N, self.M, self.L1))
 
-    def store_poes(self, g, pnes, pnes_sids):
+    def store_poes(self, pnes, pnes_sids):
         """
         Store 1-pnes inside the _poes dataset
         """
@@ -260,19 +260,20 @@ class Hazard:
         poes = 1. - pnes
         poes[poes == 1.] = .9999999999999999
         # poes[poes < 1E-5] = 0.  # minimum_poe
-        idxs, lids = poes.nonzero()
-        gids = numpy.repeat(g, len(idxs))
-        if len(idxs):
-            sids = pnes_sids[idxs]
-            hdf5.extend(self.datastore['_poes/sid'], sids)
-            hdf5.extend(self.datastore['_poes/gid'], gids)
-            hdf5.extend(self.datastore['_poes/lid'], lids)
-            hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids])
-            sbs = build_slice_by_sid(sids, self.offset)
-            hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
-            self.offset += len(sids)
-        self.acc[g]['avg_poe'] = poes.mean(axis=0) @ self.level_weights
-        self.acc[g]['nsites'] = len(pnes_sids)
+        idxs, lids, gids = poes.nonzero()
+        if len(idxs) == 0:  # happens in case_60
+            return 0
+        sids = pnes_sids[idxs]
+        hdf5.extend(self.datastore['_poes/sid'], sids)
+        hdf5.extend(self.datastore['_poes/gid'], gids)
+        hdf5.extend(self.datastore['_poes/lid'], lids)
+        hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
+        sbs = build_slice_by_sid(sids, self.offset)
+        hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+        self.offset += len(sids)
+        self.acc['avg_poe'] = poes.mean(axis=(0, 2)) @ self.level_weights
+        self.acc['nsites'] = len(pnes_sids)
+        return len(sids) * 16  # 4 + 2 + 2 + 8 bytes
 
     def store_disagg(self, pmaps):
         """
@@ -335,18 +336,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pm.trt_smrs = pnemap.trt_smrs
         G = pnemap.array.shape[2]
         for i, g in enumerate(pnemap.gidx):
-            if g in acc:
-                acc[g].multiply_pnes(pnemap, i % G)
-                self.n_outs[g] -= 1
-                assert self.n_outs[g] > -1, (g, self.n_outs[g])
-                if self.n_outs[g] == 0:  # no other tasks for this g
-                    with self.monitor('storing PoEs', measuremem=True):
-                        pne = acc.pop(g)
-                        self.haz.store_poes(g, pne.array[:, :, 0], pne.sids)
-            else:  # single output
-                with self.monitor('storing PoEs', measuremem=True):
-                    self.haz.store_poes(
-                        g, pnemap.array[:, :, i % G], pnemap.sids)
+            self.pmap.multiply_pnes(pnemap, g, i % G)
         return acc
 
     def create_rup(self):
@@ -445,10 +435,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req = get_pmaps_gb(self.datastore)
-        ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
-        self.n_outs = AccumDict(accum=0)
-        if ntiles > 1:
-            self.execute_seq(maxw, ntiles)
+        self.ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
+        if self.ntiles > 1:
+            self.execute_seq(maxw)
         else:  # regular case
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_par(maxw)
@@ -473,17 +462,17 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.oqparam.disagg_by_src:
             self.haz.store_disagg(acc)
 
-    def execute_seq(self, maxw, ntiles):
+    def execute_seq(self, maxw):
         """
         Use sequential tiling
         """
         assert self.N > self.oqparam.max_sites_disagg, self.N
-        logging.info('Running %d tiles', ntiles)
-        for n, tile in enumerate(self.sitecol.split(ntiles)):
+        logging.info('Running %d tiles', self.ntiles)
+        for n, tile in enumerate(self.sitecol.split(self.ntiles)):
             if n == 0:
                 self.check_memory(len(tile), self.oqparam.imtls.size, maxw)
             self.run_one(tile, maxw)
-            logging.info('Finished tile %d of %d', n+1, ntiles)
+            logging.info('Finished tile %d of %d', n+1, self.ntiles)
             if parallel.oq_distribute() == 'zmq':
                 w.WorkerMaster(config.zworkers).restart()
             else:
@@ -493,9 +482,13 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         Run a subset of sites and update the accumulator
         """
-        acc = {}  # g -> pmap
+        acc = {}  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
+        Gt = self.full_lt.Gt
+        nbytes = 8 * len(sitecol) * L * Gt
+        logging.info('Allocating %s for the global pmap', humansize(nbytes))
+        self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)
         allargs = []
         for cm in self.cmakers:
             G = len(cm.gsims)
@@ -503,16 +496,12 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # maximum size of the pmap array in GB
             size_gb = G * L * len(sitecol) * 8 / 1024**3
-            ntiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
+            itiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
             # NB: disagg_by_src is disabled in case of tiling
-            assert not (ntiles > 1 and oq.disagg_by_src)
-            # NB: tiling only works with many sites
-            if ntiles > 1 and self.N < oq.max_sites_disagg * ntiles:
-                raise RuntimeError('There are not enough sites (%d) for '
-                                   '%d tiles' % (self.N, ntiles))
-            cm.ntiles = ntiles
-            if ntiles > 1:
-                logging.debug('Producing %d inner tiles', ntiles)
+            assert not (itiles > 1 and oq.disagg_by_src)
+            cm.itiles = itiles
+            if itiles > 1:
+                logging.debug('Producing %d inner tiles', itiles)
 
             if oq.disagg_by_src:  # possible only with a single tile
                 blks = groupby(sg, basename).values()
@@ -523,22 +512,16 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                for g in cm.gidx:
-                    self.n_outs[g] += cm.ntiles
                 allargs.append((block, sitecol, cm))
-
-            # allocate memory
-            for g in cm.gidx:
-                if self.n_outs[g] > 1:
-                    acc[g] = ProbabilityMap(sitecol.sids, L, 1).fill(1)
-
-        totsize = sum(pmap.array.nbytes for pmap in acc.values())
-        if totsize:
-            logging.info('Global pmap size %s', humansize(totsize))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
-        return smap.reduce(self.agg_dicts, acc)
+        acc = smap.reduce(self.agg_dicts, acc)
+        with self.monitor('storing PoEs', measuremem=True):
+            nbytes = self.haz.store_poes(self.pmap.array, self.pmap.sids)
+        logging.info('Stored %s of PoEs', humansize(nbytes))
+        del self.pmap
+        return acc
 
     def store_info(self):
         """

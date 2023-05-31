@@ -436,12 +436,12 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def multiply_pnes(self, other, i):
+    def multiply_pnes(self, other, g, i):
         """
         Multiply by the probabilities of no exceedence
         """
         # assume other.sids are a subset of self.sids
-        self.array[self.sidx[other.sids], :, 0] *= other.array[:, :, i]
+        self.array[self.sidx[other.sids], :, g] *= other.array[:, :, i]
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):
         """
