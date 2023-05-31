@@ -261,15 +261,16 @@ class Hazard:
         poes[poes == 1.] = .9999999999999999
         # poes[poes < 1E-5] = 0.  # minimum_poe
         idxs, lids, gids = poes.nonzero()
-        if len(idxs):
-            sids = pnes_sids[idxs]
-            hdf5.extend(self.datastore['_poes/sid'], sids)
-            hdf5.extend(self.datastore['_poes/gid'], gids)
-            hdf5.extend(self.datastore['_poes/lid'], lids)
-            hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
-            sbs = build_slice_by_sid(sids, self.offset)
-            hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
-            self.offset += len(sids)
+        if len(idxs) == 0:  # happens in case_60
+            return 0
+        sids = pnes_sids[idxs]
+        hdf5.extend(self.datastore['_poes/sid'], sids)
+        hdf5.extend(self.datastore['_poes/gid'], gids)
+        hdf5.extend(self.datastore['_poes/lid'], lids)
+        hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
+        sbs = build_slice_by_sid(sids, self.offset)
+        hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+        self.offset += len(sids)
         self.acc['avg_poe'] = poes.mean(axis=(0, 2)) @ self.level_weights
         self.acc['nsites'] = len(pnes_sids)
         return len(sids) * 16  # 4 + 2 + 2 + 8 bytes
