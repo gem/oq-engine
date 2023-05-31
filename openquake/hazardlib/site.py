@@ -447,6 +447,8 @@ class SiteCollection(object):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
+        if hint > len(self):
+            hint = len(self)
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
             assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
