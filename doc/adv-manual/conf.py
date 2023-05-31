@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# OpenQuake for Advanced Users documentation build configuration file, created by
-# sphinx-quickstart on Fri Mar  2 07:29:39 2018.
+# OpenQuake for Advanced Users documentation build configuration file, created
+# by sphinx-quickstart on Fri Mar  2 07:29:39 2018.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -12,6 +12,8 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import os
+import shutil
 from openquake import engine
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -140,13 +142,18 @@ todo_include_todos = False
 # html_theme = 'alabaster'
 html_theme = 'pydata_sphinx_theme'
 
+json_url_path = "../../.ddown_adv.json"
+if not os.path.exists(json_url_path):
+    shutil.copyfile("../samples/dot_ddown_adv.json.sample",
+                    json_url_path)
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
     "navbar_start": ["version-switcher"],
     "switcher": {
-        "json_url": "../../.ddown_adv.json",
+        "json_url": json_url_path,
         "version_match": "development" if it_is_master is True else '.'.join(version.split('.')[0:2])
     },
     "icon_links": [
