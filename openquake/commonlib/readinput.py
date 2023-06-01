@@ -20,7 +20,6 @@ import re
 import ast
 import copy
 import zlib
-import time
 import shutil
 import zipfile
 import pathlib
@@ -34,8 +33,10 @@ import itertools
 import numpy
 import pandas
 import requests
+from shapely import wkt
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
+from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip, decode
@@ -371,7 +372,7 @@ def get_mesh(oqparam, h5=None):
     """
     if 'exposure' in oqparam.inputs and Global.exposure is None:
         # read it only once
-        Global.exposure = get_exposure(oqparam)
+        Global.exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'hazard_curves' in oqparam.inputs:
@@ -916,7 +917,7 @@ def get_crmodel(oqparam):
     return crm
 
 
-def get_exposure(oqparam):
+def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.asset.Asset` instances.
@@ -926,12 +927,12 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    exposure = Global.exposure = asset.Exposure.read(
-        oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.region, oqparam.ignore_missing_costs,
-        by_country='country' in asset.tagset(oqparam.aggregate_by),
-        errors='ignore' if oqparam.ignore_encoding_errors else None)
-    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    with Monitor('reading exposure', measuremem=True, h5=h5):
+        exposure = Global.exposure = asset.Exposure.read_all(
+            oqparam.inputs['exposure'], oqparam.calculation_mode,
+            oqparam.ignore_missing_costs,
+            by_country='country' in asset.tagset(oqparam.aggregate_by),
+            errors='ignore' if oqparam.ignore_encoding_errors else None)
     return exposure
 
 
@@ -974,7 +975,7 @@ def get_station_data(oqparam):
     return station_data, station_sites, imts
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
@@ -982,12 +983,11 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     :returns: (site collection, asset collection, discarded)
     """
     exp = Global.exposure
+    if exp is None:  # not read already
+        exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
-    if exp is None:
-        # haz_sitecol not extracted from the exposure
-        exp = get_exposure(oqparam)
     if haz_sitecol is None:
-        haz_sitecol = get_site_collection(oqparam)
+        haz_sitecol = get_site_collection(oqparam, h5)
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
@@ -996,37 +996,18 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    if haz_sitecol.mesh != exp.mesh:
-        # associate the assets to the hazard sites
-        t0 = time.time()
-        sitecol, assets_by, discarded = geo.utils.assoc(
-            exp.assets_by_site, haz_sitecol, haz_distance,
-            'filter')
-        num_assets = sum(len(assets) for assets in assets_by)
-        dt = time.time() - t0
-        logging.info('Associated {:_d} assets to {:_d} sites in {:.1f}s'.
-                     format(num_assets, len(sitecol), dt))
-    else:
-        # asset sites and hazard sites are the same
-        sitecol = haz_sitecol
-        discarded = []
-        assets_by = exp.assets_by_site
-        num_assets = sum(len(assets) for assets in assets_by)
-        logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
-                     format(len(sitecol), num_assets))
+    # associate the assets to the hazard sites
+    # this is absurdely fast: 10 million assets can be associated in <10s
+    A = len(exp.assets)
+    N = len(haz_sitecol)
+    with Monitor('associating exposure', measuremem=True, h5=h5):
+        region = wkt.loads(oqparam.region) if oqparam.region else None
+        sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
+    logging.info('Associated {:_d} assets (of {:_d}) to {:_d} sites (of {:_d})'.
+                 format(len(exp.assets), A, len(sitecol), N))
 
-    assets = []
-    for sid, assets_ in zip(sitecol.sids, assets_by):
-        for ass in assets_:
-            ass['site_id'] = sid
-            assets.append(ass)
-
-    array, occupancy_periods = asset.build_asset_array(
-        exp.tagcol, exp.cost_calculator, sitecol.sids,
-        numpy.array(assets, ass.dtype), exp.area, exp.tagcol.tagnames)
     assetcol = asset.AssetCollection(
-        exp, sitecol, array, occupancy_periods, oqparam.time_event,
-        oqparam.aggregate_by)
+        exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
     tax = assetcol.tagcol.taxonomy[u[idx]]

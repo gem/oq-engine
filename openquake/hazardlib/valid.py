@@ -1163,7 +1163,7 @@ def host_port(value=None):
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
-                   'business_interruption', 'area', 'number')
+                   'business_interruption')
 
 cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
 

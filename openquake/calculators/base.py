@@ -570,7 +570,7 @@ class HazardCalculator(BaseCalculator):
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
-            haz_sitecol = readinput.get_site_collection(oq)
+            haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
@@ -679,26 +679,24 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        with self.monitor('reading exposure'):
-            self.sitecol, self.assetcol, discarded = (
-                readinput.get_sitecol_assetcol(
-                    oq, haz_sitecol, self.crmodel.loss_types))
-            # this is overriding the sitecol in test_case_miriam
-            self.datastore['sitecol'] = self.sitecol
-            if len(discarded):
-                self.datastore['discarded'] = discarded
-                if 'scenario' in oq.calculation_mode:
-                    # this is normal for the case of scenario from rupture
-                    logging.info('%d assets were discarded because too far '
-                                 'from the rupture; use `oq show discarded` '
-                                 'to show them and `oq plot_assets` to plot '
-                                 'them' % len(discarded))
-                elif not oq.discard_assets:  # raise an error
-                    self.datastore['assetcol'] = self.assetcol
-                    raise RuntimeError(
-                        '%d assets were discarded; use `oq show discarded` to'
-                        ' show them and `oq plot_assets` to plot them' %
-                        len(discarded))
+        self.sitecol, self.assetcol, discarded = readinput.get_sitecol_assetcol(
+            oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
+        # this is overriding the sitecol in test_case_miriam
+        self.datastore['sitecol'] = self.sitecol
+        if len(discarded):
+            self.datastore['discarded'] = discarded
+            if 'scenario' in oq.calculation_mode:
+                # this is normal for the case of scenario from rupture
+                logging.info('%d assets were discarded because too far '
+                             'from the rupture; use `oq show discarded` '
+                             'to show them and `oq plot_assets` to plot '
+                             'them' % len(discarded))
+            elif not oq.discard_assets:  # raise an error
+                self.datastore['assetcol'] = self.assetcol
+                raise RuntimeError(
+                    '%d assets were discarded; use `oq show discarded` to'
+                    ' show them and `oq plot_assets` to plot them' %
+                    len(discarded))
         if 'insurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['insurance'].items())
         elif 'reinsurance' in oq.inputs:

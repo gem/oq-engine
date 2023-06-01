@@ -1060,8 +1060,8 @@ class FullLogicTree(object):
         self.gdict = {}
         g = 0
         rlzs_by_g = []
-        for smr in range(self.Re):
-            for trti, trt in enumerate(self.trts):
+        for trti, trt in enumerate(self.trts):
+            for smr in range(self.Re):
                 trt_smr = trti * TWO24 + smr
                 rgb = self.get_rlzs_by_gsim(trt_smr)
                 self.gdict[trt_smr] = numpy.arange(g, g + len(rgb)) 

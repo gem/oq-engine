@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Optimized the postclassical phase
+  * Fixed a serious issue in the classical calculator with tiles
+  * Vectorized the association assets <-> hazard sites (up to 32x speedup)
   * Fixed bug in disaggregation calculations associated to an error
     in the line `[mag] = np.unique(np.round(ctx.mag, 6))`
   * Optimized the calculation of geohashes by using numba

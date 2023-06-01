@@ -19,9 +19,9 @@ import os
 import gzip
 import logging
 import numpy
-from openquake.baselib import performance, writers, hdf5
+from openquake.baselib import performance, writers, hdf5, general
 from openquake.hazardlib import site, valid
-from openquake.hazardlib.geo.utils import assoc
+from openquake.hazardlib.geo.utils import _GeographicObjects
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import datastore
 
@@ -117,21 +117,19 @@ def main(
         fields.append('vs30measured')
     with performance.Monitor(measuremem=True) as mon:
         if exposure_xml:
-            mesh, assets_by_site = Exposure.read(
-                exposure_xml, check_dupl=False).get_mesh_assets_by_site()
+            exp = Exposure.read_all(exposure_xml, check_dupl=False)
             hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, req_site_params=req_site_params)
+                exp.mesh.lons, exp.mesh.lats, req_site_params=req_site_params)
             if grid_spacing:
-                grid = mesh.get_convex_hull().dilate(
+                grid = exp.mesh.get_convex_hull().dilate(
                     grid_spacing).discretize(grid_spacing)
                 haz_sitecol = site.SiteCollection.from_points(
                     grid.lons, grid.lats, req_site_params=req_site_params)
                 logging.info(
                     'Associating exposure grid with %d locations to %d '
-                    'exposure sites', len(haz_sitecol), len(assets_by_site))
-                haz_sitecol, assets_by, discarded = assoc(
-                    assets_by_site, haz_sitecol,
-                    grid_spacing * SQRT2, 'filter')
+                    'exposure sites', len(haz_sitecol), len(exp.mesh))
+                haz_sitecol, discarded = exp.associate(
+                    haz_sitecol, grid_spacing * SQRT2)
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))
