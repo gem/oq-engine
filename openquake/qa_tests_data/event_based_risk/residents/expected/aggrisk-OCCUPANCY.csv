@@ -1,0 +1,6 @@
+#,,,"generated_by='OpenQuake engine 3.16.0-gita5188e8be6', start_date='2023-05-26T09:09:44', checksum=1053868223, investigation_time=None, risk_investigation_time=1.0"
+loss_type,OCCUPANCY,loss_value,loss_ratio
+occupants_avg,Com,5.97E-09,5.97E-11
+occupants_avg,Ind,1.74E-08,1.16E-09
+occupants_avg,Res,8.65E-05,6.41E-07
+residents,Res,1.79E-02,7.16E-05

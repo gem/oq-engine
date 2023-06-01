@@ -897,6 +897,7 @@ class OqParam(valid.ParamSet):
         'occupants_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
+        'residents_vulnerability',
     }
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',

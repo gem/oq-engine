@@ -353,7 +353,8 @@ def get_fragility_model_04(fmodel, fname):
 
 
 valid_loss_types = valid.Choice('structural', 'nonstructural', 'contents',
-                                'business_interruption', 'occupants')
+                                'business_interruption', 'occupants',
+                                'residents')
 
 
 def asset_mean_stddev(value, assetRef, mean, stdDev):
@@ -396,6 +397,7 @@ def update_validators():
         'max_cession_event': valid.positivefloat,
         'limit': valid.positivefloat,
         'occupants': valid.positivefloat,
+        'residents': valid.positivefloat,
         'value': valid.positivefloat,
         'retrofitted': valid.positivefloat,
         'number': valid.compose(valid.nonzero, valid.positivefloat),

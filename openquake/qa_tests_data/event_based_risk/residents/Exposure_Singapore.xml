@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5" 
+      xmlns:gml="http://www.opengis.net/gml">
+  <exposureModel id="Exposure_Model_Singapore" category="buildings">
+    <description>Exposure Model for Singapore</description>
+    <conversions>
+      <area type="aggregated" unit="SQM" />
+      <costTypes>
+        <costType name="structural" type="aggregated" unit="USD" />
+        <costType name="contents" type="aggregated" unit="USD" />
+      </costTypes>
+    </conversions>
+    <exposureFields>
+      <field oq="id" input="ASSET_REF" />
+      <field oq="lon" input="LONGITUDE" />
+      <field oq="lat" input="LATITUDE" />
+      <field oq="taxonomy" input="TAXONOMY" />
+      <field oq="number" input="BUILDINGS" />
+      <field oq="area" input="TOTAL_FLOOR_AREA_SQM" />
+      <field oq="structural" input="COST_BUILDING_USD" />
+      <field oq="contents" input="COST_CONTENTS_USD" />
+      <field oq="night" input="OCCUPANTS_PER_ASSET" />
+      <field oq="occupants_avg" input="AVG_OCCUPANTS" />
+      <field oq="residents" input="RESIDENTS" />
+    </exposureFields>
+    <occupancyPeriods>night</occupancyPeriods>
+    <tagNames>ID_1 NAME_1 ID_2 NAME_2 ID_3 NAME_3 OCCUPANCY NUM_FLOORS COST_PER_AREA_USD</tagNames>
+    <assets>
+      Exposure_Res_Singapore.csv
+      Exposure_Com_Singapore.csv
+      Exposure_Ind_Singapore.csv
+    </assets>
+  </exposureModel>
+</nrml>

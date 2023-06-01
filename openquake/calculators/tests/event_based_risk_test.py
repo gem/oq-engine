@@ -31,7 +31,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.post_risk import PostRiskCalculator
 from openquake.qa_tests_data.event_based_risk import (
     case_1, case_2, case_3, case_4, case_4a, case_5, case_6c, case_master,
-    case_miriam, occupants, case_1f, case_1g, case_7a, case_8,
+    case_miriam, occupants, residents, case_1f, case_1g, case_7a, case_8,
     recompute, reinsurance_1, reinsurance_2, reinsurance_3,
     reinsurance_4, reinsurance_5)
 
@@ -583,6 +583,29 @@ agg_id
     def test_scenario_from_ruptures(self):
         # same files as in test_recompute, but performing a scenario
         self.run_calc(recompute.__file__, 'job_scenario.ini')
+
+    def test_residents(self):
+        dir_path = os.path.dirname(residents.__file__)
+        self.run_calc(residents.__file__, 'job.ini')
+        # check aggrisk-
+        fnames = export(('aggrisk', 'csv'), self.calc.datastore)
+        for fname in fnames:
+            with open(fname, 'r') as out:
+                print()
+                print('=' * len(fname))
+                print(fname)
+                print('=' * len(fname))
+                print(out.read())
+            expected_path = os.path.join(
+                dir_path, 'expected', strip_calc_id(fname))
+            with open(expected_path, 'r') as expected:
+                print('=' * len(expected_path))
+                print(expected_path)
+                print('========')
+                print('=' * len(expected_path))
+                print(expected.read())
+            # self.assertEqualFiles('expected/' + strip_calc_id(fname),
+            #                       fname, delta=5E-4)
 
 
 class ReinsuranceTestCase(CalculatorTestCase):
