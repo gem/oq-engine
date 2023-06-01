@@ -2,7 +2,10 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    =
+# NOTE: -W treats also warnings as errors and produces an exit code != 0 in presence
+#       of any warning or error. A bug in sphinx causes the build to produce an
+#       exit code == 0 if -W is not set, regardless from the presence of any error.
+SPHINXOPTS    = -W --keep-going
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build

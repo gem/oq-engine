@@ -1099,7 +1099,7 @@ Scenario based Seismic Hazard Analysis
 In case of Scenario Based Seismic Hazard Analysis, the engine simulates a set of 
 ground motion fields (GMFs) at the target sites for the requested set of 
 intensity measure types. This set of GMFs can then be used in 
-:ref:`Scenario Damage Assessment` and :ref:`Scenario Risk Assessment`
+:ref:`sec-scenario_damage_assessment` and :ref:`sec-config_scenario_risk`
 to estimate the distribution of potential damage, economic losses, fatalities, 
 and other consequences. The scenario calculator is useful for simulating 
 both historical and hypothetical earthquakes.
@@ -2355,7 +2355,7 @@ be specifed by using the ``sites`` or ``sites_csv`` parameters,
 or the ``region`` and ``region_grid_spacing`` parameters, similar to the
 classical PSHA and event-based PSHA calculators; other options include the 
 definition of the sites through the ``site_model_file`` or the 
-exposure model (see Section :ref:`Exposure Models`).
+exposure model (see Section :ref:`sec-exposure`).
 
 The parameters unique to the scenario calculator are described below:
 
@@ -2400,15 +2400,16 @@ a ``site_model_stations.csv`` file.
       | VIGA            | LAS VIGAS    | -99.23326  | 16.7587  | seismic      | 0.355     | 0            | 0.5262        | 0                | 0.1012        | 0                |
       | VNTA            | LA VENTA     | -99.81885  | 16.91426 | seismic      | 0.2061    | 0            | 0.3415        | 0                | 0.1051        | 0                |
       | COYC            | COYUCA       | -100.08996 | 16.99778 | seismic      | 0.1676    | 0            | 0.2643        | 0                | 0.0872        | 0                |
-      | ⋮               | ⋮             | ⋮          | ⋮        | ⋮             | ⋮         | ⋮            | ⋮              | ⋮                | ⋮             | ⋮                |
+      | ⋮               | ⋮            | ⋮          | ⋮        | ⋮            | ⋮         | ⋮            | ⋮             | ⋮                | ⋮             | ⋮                |
       | UTM_14Q_041_186 | NA           | -99.7982   | 16.86687 | macroseismic | 0.6512    | 0.8059       | 0.9535        | 1.0131           | 0.4794        | 1.0822           |
       | UTM_14Q_041_185 | NA           | -99.79761  | 16.77656 | macroseismic | 0.5797    | 0.8059       | 0.8766        | 1.0131           | 0.4577        | 1.0822           |
       | UTM_14Q_040_186 | NA           | -99.89182  | 16.86655 | macroseismic | 0.477     | 0.8059       | 0.722         | 1.0131           | 0.3223        | 1.0822           |
-      | ⋮               | ⋮             | ⋮          | ⋮        | ⋮             | ⋮         | ⋮            | ⋮              | ⋮                | ⋮             | ⋮                |
+      | ⋮               | ⋮            | ⋮          | ⋮        | ⋮            | ⋮         | ⋮            | ⋮             | ⋮                | ⋮             | ⋮                |
       +-----------------+--------------+------------+----------+--------------+-----------+--------------+---------------+------------------+---------------+------------------+
 
 The following parameters are mandatory:
--  ``STATION_ID``: string; subject to the same validity checks as the ``id`` fields 
+
+-  ``STATION_ID``: string; subject to the same validity checks as the ``id`` fields
    in other input files.
 
 -  ``LONGITUDE``, ``LATITUDE``: floats; valid longitude and latitude values.
@@ -2427,6 +2428,7 @@ The following parameters are mandatory:
       using the column headers <IMT>_VALUE, <IMT>_STDDEV respectively.
 
 The following parameters are optional:
+
 -  ``STATION_NAME``: string; free form and not subject to the same constraints as the 
    `STATION_ID` field. The optional STATION_NAME field can contain information that aids 
    in identifying a particular station.
