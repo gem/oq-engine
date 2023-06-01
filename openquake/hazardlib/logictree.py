@@ -1277,7 +1277,7 @@ class FullLogicTree(object):
             self._rlzs_by = {}
             for trtsmr, dic in acc.items():
                 self._rlzs_by[trtsmr] = {
-                    gsim: U32(rlzs) for gsim, rlzs in sorted(dic.items())}
+                    gsim: U32(rlzs) for gsim, rlzs in dic.items()}
         if not self._rlzs_by:
             return {}
         return self._rlzs_by[trt_smr]
