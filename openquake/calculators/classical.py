@@ -335,8 +335,8 @@ class ClassicalCalculator(base.HazardCalculator):
             pm.gidx = pnemap.gidx
             pm.trt_smrs = pnemap.trt_smrs
         G = pnemap.array.shape[2]
-        for i, g in enumerate(pnemap.gidx):
-            self.pmap.multiply_pnes(pnemap, g, i % G)
+        for i, gid in enumerate(pnemap.gidx):
+            self.pmap.multiply_pnes(pnemap, gid, i % G)
         return acc
 
     def create_rup(self):
