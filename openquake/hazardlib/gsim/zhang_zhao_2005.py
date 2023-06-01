@@ -139,17 +139,19 @@ class Zhang_Zhao2005SInter(GMPE):
     LSD           0.456   0.0552  3.204  -1.0248  -4.743    0.22
     """)
 
+
 class Zhang_Zhao2005SSlab(Zhang_Zhao2005SInter):
     """
-    Implements the GMPE of Zhang and Zhao. (2005) for Permanent ground deformation (m)
-	from lateral spread 
-    Zhang, J., & Zhao, J. X. (2005). Empirical models for estimating liquefaction-induced
-    lateral spread displacement. Soil Dynamics and Earthquake Engineering, 25(6), 439-450.
-    This model is based on Sadigh et al. (1997) and Young et al. (1997) models
+    Implements the GMPE of Zhang and Zhao. (2005) for Permanent ground
+    deformation (m) from lateral spread
+    Zhang, J., & Zhao, J. X. (2005). Empirical models for estimating
+    liquefaction-induced lateral spread displacement. Soil Dynamics and
+    Earthquake Engineering, 25(6), 439-450. This model is based on Sadigh et
+    al. (1997) and Young et al. (1997) models
     """
-    #: This GMPE is based on subduction intraslab earthquakes 
+    #: This GMPE is based on subduction intraslab earthquakes
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-            
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
             ctx = ctx.copy()

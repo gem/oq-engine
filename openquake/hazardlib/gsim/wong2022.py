@@ -19,7 +19,7 @@
 """
 Module exports :class:`WongEtAl2015`.
                :class:`WongEtAl2022Shallow`.
-               :class:`WongEtAl2022Deep.
+               :class:`WongEtAl2022Deep`.
 """
 import numpy as np
 
@@ -50,8 +50,8 @@ class WongEtAl2022Shallow(GMPE):
     Implements GMPE developed by Ivan Wong, Robert Darragh, Sarah Smith, Qimin
     Wu, Walter Silva, Tadahiro Kishida; "Ground motion models for shallow
     crustal and deep earthquakes in Hawaii and analyses of the 2018 M 6.9
-    Kalapana sequence." Earthquake Spectra 2022;; 38 (1): 579–614.  doi:
-        https://doi.org/10.1177/87552930211044521
+    Kalapana sequence." Earthquake Spectra 2022;; 38 (1): 579–614. doi:
+    https://doi.org/10.1177/87552930211044521
 
     SA are given up to 10 s.  The regressions are developed considering the
     average horizontal component of the as-recorded horizontal components
