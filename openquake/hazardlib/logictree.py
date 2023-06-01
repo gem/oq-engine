@@ -1173,6 +1173,7 @@ class FullLogicTree(object):
                 trti = self.trti[src.tectonic_region_type]
             if smr is None and ';' in src.source_id:
                 # assume <base_id>;<smr>
+                # happens in LogicTreeTestCase.test_case_05
                 smr = _get_smr(src.source_id)
             if smr is None:
                 if not hasattr(self, 'sd'):  # cache source_data by source
@@ -1345,18 +1346,6 @@ class FullLogicTree(object):
                               shorten(r.gsim_rlz.lt_path, sh2))
             tups.append((r.ordinal, path, r.weight['weight']))
         return numpy.array(tups, rlz_dt)
-
-    def get_sm_by_grp(self):
-        """
-        :returns: a dictionary trt_smr -> sm_id
-        """
-        dic = {}
-        for sm in self.sm_rlzs:
-            trt_smrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24
-            for trt_smr in trt_smrs:
-                dic[trt_smr] = sm.ordinal
-        return dic
 
     def __repr__(self):
         info_by_model = {}

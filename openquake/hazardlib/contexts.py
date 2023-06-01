@@ -1651,8 +1651,8 @@ def get_cmakers(src_groups, full_lt, oq):
         cmaker.trt_smrs = trt_smrs
         rlzs = numpy.concatenate(
             [list(v) for v in rlzs_by_gsim.values()], dtype=U32)
-        cmaker.gidx = trti * R + rlzs
-        #cmaker.gidx = full_lt.get_gidx(trt_smrs)
+        #cmaker.gidx = trti * R + rlzs
+        cmaker.gidx = full_lt.get_gidx(trt_smrs)
         #print(gidx, cmaker.gidx)
         #import pdb; pdb.set_trace()
         cmaker.grp_id = grp_id
