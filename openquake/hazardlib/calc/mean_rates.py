@@ -53,8 +53,11 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     oq.use_rates = True
     oq.disagg_by_src = False
     L = oq.imtls.size
-    rmap = ProbabilityMap(sitecol.sids, L, full_lt.Gt).fill(0)
     cmakers = get_cmakers(src_groups, full_lt, oq)
+    Gt = sum(len(cm.gsims) for cm in cmakers)
+    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
+                 len(sitecol), oq.imtls.size, Gt)
+    rmap = ProbabilityMap(sitecol.sids, L, Gt).fill(0)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
         G = len(cmaker.gsims)
@@ -99,8 +102,6 @@ def main(job_ini):
         assoc_dist = (oq.region_grid_spacing * 1.414
                       if oq.region_grid_spacing else 5)  # Graeme's 5km
         sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
-    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
-                 len(sitecol), oq.imtls.size, csm.full_lt.Gt)
     rmap, ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
     rates = calc_mean_rates(rmap, csm.full_lt.g_weights, oq.imtls)
     N, M, L1 = rates.shape

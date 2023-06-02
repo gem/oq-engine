@@ -357,16 +357,16 @@ class ProbabilityMap(object):
         return self.new(self.array.reshape(N, M, P))
 
     # used in calc/disagg_test.py
-    def expand(self, full_lt):
+    def expand(self, full_lt, rlzs_by_g):
         """
         Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
         with shape (N, L, R): works only for rates
         """
-        N, L, G = self.array.shape
-        assert G == full_lt.Gt, (G, full_lt.Gt)
+        N, L, Gt = self.array.shape
+        assert Gt == len(rlzs_by_g), (Gt, len(rlzs_by_g))
         R = full_lt.get_num_paths()
         out = ProbabilityMap(range(N), L, R).fill(0.)
-        for g, rlzs in full_lt.rlzs_by_g.items():
+        for g, rlzs in enumerate(rlzs_by_g):
             for sid in range(N):
                 for rlz in rlzs:
                     out.array[sid, :, rlz] += self.array[sid, :, g]
