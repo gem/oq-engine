@@ -631,10 +631,14 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
-    iml3 = rmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # (M, P, Z)
+    rlzs_by_g = [numpy.uint32(rlzs) for cm in cmakers
+                 for rlzs in cm.gsims.values()]
+    iml3 = rmap.expand(reduced_lt, rlzs_by_g).interp4D(
+        oq.imtls, oq.poes)[0]  # (M, P, Z)
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
-    rates2D = calc_mean_rates(rmap, reduced_lt.g_weights, oq.imtls)[0]
+    gws = reduced_lt.g_weights(rlzs_by_g)
+    rates2D = calc_mean_rates(rmap, gws, oq.imtls)[0]
     return source_id, rates5D, rates2D

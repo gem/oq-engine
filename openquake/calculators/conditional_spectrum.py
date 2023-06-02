@@ -92,6 +92,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt'].init()
+        self.rlzs_by_g = self.datastore['rlzs_by_g']['rlzs']
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)
@@ -180,7 +181,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def _apply_weights(self, acc):
         # build conditional spectra for each realization
         outdic = outdict(self.M, self.N, self.P, 0, self.R)
-        for g, rlzs in self.full_lt.rlzs_by_g.items():
+        for g, rlzs in enumerate(self.rlzs_by_g):
             for r in rlzs:
                 outdic[r] += acc[g]
 
