@@ -162,10 +162,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         Gt = sum(len(cm.gsims) for cm in cmakers)
         arr = numpy.zeros(Gt, rlzs_by_g_dt)
         g = 0
+        ws = numpy.array([r.weight['weight']
+                          for r in self.full_lt.get_realizations()])
         for cm in cmakers:
             for rlzs in cm.gsims.values():
                 arr[g]['rlzs'] = U32(rlzs)
-                arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
+                arr[g]['weight'] = ws[rlzs].sum()
                 g += 1
         dset = self.datastore.create_dset(
             'rlzs_by_g', rlzs_by_g_dt, (Gt,), fillvalue=None)
