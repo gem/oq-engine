@@ -894,7 +894,6 @@ class TestProfilesFromSimpleFault(unittest.TestCase):
 
         np.testing.assert_almost_equal(pro[0].coo[-1,0], coo[0][-1], decimal=3)
         np.testing.assert_almost_equal(pro[0].coo[-1,1], coo[1][-1], decimal=3)
-        breakpoint()
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
