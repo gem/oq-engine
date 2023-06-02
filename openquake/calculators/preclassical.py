@@ -146,13 +146,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         else:
             super().init()
             self.full_lt = self.csm.full_lt
-        arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
-        for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
-            arr[g]['rlzs'] = rlzs
-            arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
-        dset = self.datastore.create_dset(
-            'rlzs_by_g', rlzs_by_g_dt, (self.full_lt.Gt,), fillvalue=None)
-        dset[:] = arr
 
     def store(self):
         # store full_lt, toms
@@ -166,6 +159,17 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         cmakers = read_cmakers(self.datastore, csm)
+        Gt = sum(len(cm.gsims) for cm in cmakers)
+        arr = numpy.zeros(Gt, rlzs_by_g_dt)
+        g = 0
+        for cm in cmakers:
+            for rlzs in cm.gsims.values():
+                arr[g]['rlzs'] = U32(rlzs)
+                arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
+                g += 1
+        dset = self.datastore.create_dset(
+            'rlzs_by_g', rlzs_by_g_dt, (Gt,), fillvalue=None)
+        dset[:] = arr
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
