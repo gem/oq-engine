@@ -1071,8 +1071,6 @@ class FullLogicTree(object):
         self.Gt = g
         self.rlzs_by_g = {g: U32(rlzs) for g, rlzs in enumerate(rlzs_by_g)}
         self.weights = [rlz.weight for rlz in self.get_realizations()]
-        ws = numpy.array(self.weights)
-        self.g_weights = [ws[rlzs].sum() for rlzs in rlzs_by_g]
 
         # sanity check on Gt
         if self.num_samples == 0:  # easy formula
@@ -1084,6 +1082,15 @@ class FullLogicTree(object):
             sum(len(rlzs) for rlzs in rlzs_by_g), RT)
 
         return self
+
+    def g_weights(self, rlzs_by_g):
+        """
+        :returns: a list of Gt weights
+        """
+        out = []
+        for g, rlzs in enumerate(rlzs_by_g):
+            out.append(sum(self.weights[r] for r in rlzs))
+        return out
 
     def get_gidx(self, trt_smrs):
         """
