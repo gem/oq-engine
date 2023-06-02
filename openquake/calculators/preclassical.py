@@ -39,8 +39,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO32 = 2 ** 32
 
-rlzs_by_g_dt = numpy.dtype([('rlzs', hdf5.vuint32), ('weight', float)])
-
 
 def source_data(sources):
     data = AccumDict(accum=[])
@@ -160,7 +158,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.store()
         cmakers = read_cmakers(self.datastore, csm)
         Gt = sum(len(cm.gsims) for cm in cmakers)
-        arr = numpy.zeros(Gt, rlzs_by_g_dt)
+        arr = numpy.zeros(Gt, base.rlzs_by_g_dt)
         g = 0
         ws = numpy.array([r.weight['weight']
                           for r in self.full_lt.get_realizations()])
@@ -170,7 +168,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 arr[g]['weight'] = ws[rlzs].sum()
                 g += 1
         dset = self.datastore.create_dset(
-            'rlzs_by_g', rlzs_by_g_dt, (Gt,), fillvalue=None)
+            'rlzs_by_g', base.rlzs_by_g_dt, (Gt,), fillvalue=None)
         dset[:] = arr
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
