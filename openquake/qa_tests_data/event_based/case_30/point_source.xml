@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+    <sourceModel name="swcan best">
+      <pointSource id="VICM" name="VANCOUVER ISLAND COAST MOUNTAINS"
+                   tectonicRegion="Active Shallow Crust">
+        <pointGeometry>
+          <gml:Point>
+            <gml:pos>-124.4300 51.6500</gml:pos>
+          </gml:Point>
+          <upperSeismoDepth>0.0</upperSeismoDepth>
+          <lowerSeismoDepth>20.0</lowerSeismoDepth>
+        </pointGeometry>
+        <magScaleRel>PointMSR</magScaleRel>
+        <ruptAspectRatio>1.0</ruptAspectRatio>
+        <truncGutenbergRichterMFD aValue="2.2572" bValue="0.7418"
+                                  minMag="4.80" maxMag="7.50"/>
+        <nodalPlaneDist>
+          <nodalPlane probability="1.0"
+                      strike="0.0" dip="90.0" rake="0.0" />
+        </nodalPlaneDist>
+        <hypoDepthDist>
+          <hypoDepth probability="0.50" depth="10.0"/>
+          <hypoDepth probability="0.25" depth="5.0"/>
+          <hypoDepth probability="0.25" depth="15.0"/>
+        </hypoDepthDist>
+      </pointSource>
+    </sourceModel>
+</nrml>
