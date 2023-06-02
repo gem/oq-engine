@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed the rupture exporter in presence of GMPETables
   * Fixed severe bug affecting the classical tiling calculator
 
 python3-oq-engine (3.16.3-1~xenial01) xenial; urgency=low
