@@ -113,7 +113,7 @@ def classical(srcs, sitecol, cmaker, monitor):
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
-        result['pnemap'].gidx = cmaker.gidx
+        result['pnemap'].gid = cmaker.gid
         result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
@@ -333,10 +333,10 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
-            pm.gidx = pnemap.gidx
+            pm.gid = pnemap.gid
             pm.trt_smrs = pnemap.trt_smrs
         G = pnemap.array.shape[2]
-        for i, gid in enumerate(pnemap.gidx):
+        for i, gid in enumerate(pnemap.gid):
             self.pmap.multiply_pnes(pnemap, gid, i % G)
         return acc
 

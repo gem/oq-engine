@@ -66,9 +66,9 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
             continue
         rates = to_rates(dic['pmap'].array)
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
-        for i, g in enumerate(cmaker.gidx):
+        for i, gid in enumerate(cmaker.gid):
             # += tested in logictree/case_05
-            rmap.array[:, :, g] += rates[:, :, i % G]
+            rmap.array[:, :, gid] += rates[:, :, i % G]
     return rmap, ctxs, cmakers
 
 
