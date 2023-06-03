@@ -367,7 +367,7 @@ class ProbabilityMap(object):
         assert Gt == len(trt_rlzs), (Gt, len(trt_rlzs))
         R = full_lt.get_num_paths()
         out = ProbabilityMap(range(N), L, R).fill(0.)
-        for g, trts in enumerate(trt_rlzs):
+        for g, trs in enumerate(trt_rlzs):
             for sid in range(N):
                 for rlz in trs % TWO24:
                     out.array[sid, :, rlz] += self.array[sid, :, g]

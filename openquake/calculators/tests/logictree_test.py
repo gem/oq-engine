@@ -69,7 +69,7 @@ class LogicTreeTestCase(CalculatorTestCase):
             csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
-            trs = self.calc.datastore['trt_rlzs']['rlzs']
+            trs = self.calc.datastore['trt_rlzs'][:]
             rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
             mean_rates = calc_mean_rates(
                 rmap, full_lt.g_weights(trs), oq.imtls)

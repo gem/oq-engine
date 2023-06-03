@@ -92,7 +92,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt'].init()
-        self.trt_rlzs = self.datastore['trt_rlzs']['rlzs']
+        self.trt_rlzs = self.datastore['trt_rlzs'][:]
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)

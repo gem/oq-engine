@@ -89,5 +89,5 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
                      meabins, sigbins))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    trt_rlzs = dstore['trt_rlzs']['rlzs']
+    trt_rlzs = dstore['trt_rlzs'][:]
     mrd[:] = combine_mrds(acc, full_lt.g_weights(trt_rlzs))

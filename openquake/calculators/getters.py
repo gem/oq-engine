@@ -150,7 +150,7 @@ class PmapGetter(object):
         self.use_rates = use_rates
         self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.trt_rlzs = dstore['trt_rlzs']['rlzs']
+        self.trt_rlzs = dstore['trt_rlzs'][:]
         self.slices = slices
         self._pmap = {}
 
@@ -223,9 +223,9 @@ class PmapGetter(object):
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in pmap:  # no hazard for sid
             return pc0
-        for g, rlzs in enumerate(self.trt_rlzs):
+        for g, trs in enumerate(self.trt_rlzs):
             probability_map.combine_probs(
-                pc0.array, pmap[sid].array[:, g], rlzs % TWO24)
+                pc0.array, pmap[sid].array[:, g], trs % TWO24)
         return pc0
 
     def get_mean(self):
