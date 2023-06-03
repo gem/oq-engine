@@ -37,6 +37,7 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 
 
@@ -158,17 +159,17 @@ class PreClassicalCalculator(base.HazardCalculator):
         self.store()
         cmakers = read_cmakers(self.datastore, csm)
         Gt = sum(len(cm.gsims) for cm in cmakers)
-        arr = numpy.zeros(Gt, base.rlzs_by_g_dt)
+        arr = numpy.zeros(Gt, base.trt_rlzs_dt)
         g = 0
         ws = numpy.array([r.weight['weight']
                           for r in self.full_lt.get_realizations()])
         for cm in cmakers:
             for rlzs in cm.gsims.values():
-                arr[g]['rlzs'] = U32(rlzs)
+                arr[g]['rlzs'] = U32(rlzs) + cm.trti * TWO24
                 arr[g]['weight'] = ws[rlzs].sum()
                 g += 1
         dset = self.datastore.create_dset(
-            'rlzs_by_g', base.rlzs_by_g_dt, (Gt,), fillvalue=None)
+            'trt_rlzs', base.trt_rlzs_dt, (Gt,), fillvalue=None)
         dset[:] = arr
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:

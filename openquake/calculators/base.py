@@ -60,7 +60,7 @@ F32 = numpy.float32
 TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 
-rlzs_by_g_dt = numpy.dtype([('rlzs', hdf5.vuint32),
+trt_rlzs_dt = numpy.dtype([('rlzs', hdf5.vuint32),
                             ('weight', float)])
 stats_dt = numpy.dtype([('mean', F32), ('std', F32),
                         ('min', F32), ('max', F32),
@@ -579,7 +579,7 @@ class HazardCalculator(BaseCalculator):
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             tup = (U32([[0]]), 1.)
-            self.datastore['rlzs_by_g'] = numpy.array([tup], rlzs_by_g_dt)
+            self.datastore['trt_rlzs'] = numpy.array([tup], trt_rlzs_dt)
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()

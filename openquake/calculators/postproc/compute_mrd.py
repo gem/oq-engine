@@ -51,15 +51,14 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
     return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gidx)}
 
 
-def combine_mrds(acc, rlzs_by_g):
+def combine_mrds(acc, g_weights):
     """
     Sum the mean rates with the right weights
     """
-    weig = rlzs_by_g['weight']
     g = next(iter(acc))  # first key
     out = numpy.zeros(acc[g].shape)  # shape (L1, L1, N)
     for g in acc:
-        out += acc[g] * weig[g]
+        out += acc[g] * g_weights[g]['weight']
     return out
 
 
@@ -71,6 +70,7 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
     """
     crosscorr = getattr(cc, cross_correlation)()
     oq = dstore['oqparam']
+    full_lt = dstore['full_lt'].init()
     N = len(dstore['sitecol'])
     L1 = oq.imtls.size // len(oq.imtls) - 1
     if L1 > 24:
@@ -89,4 +89,5 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
                      meabins, sigbins))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    mrd[:] = combine_mrds(acc, dstore['rlzs_by_g'][:])
+    trt_rlzs = dstore['trt_rlzs']['rlzs']
+    mrd[:] = combine_mrds(acc, full_lt.g_weights(trt_rlzs))

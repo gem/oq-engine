@@ -57,7 +57,7 @@ def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
     """
-    Gt = len(dstore['rlzs_by_g'])
+    Gt = len(dstore['trt_rlzs'])
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
     full_lt = dstore['full_lt']
@@ -486,7 +486,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        Gt = len(self.datastore['rlzs_by_g'])
+        Gt = len(self.datastore['trt_rlzs'])
         nbytes = 8 * len(sitecol) * L * Gt
         logging.info('Allocating %s for the global pmap', humansize(nbytes))
         self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)

@@ -1060,13 +1060,13 @@ class FullLogicTree(object):
         self.weights = [rlz.weight for rlz in self.get_realizations()]
         return self
 
-    def g_weights(self, rlzs_by_g):
+    def g_weights(self, trt_rlzs):
         """
         :returns: a list of Gt weights
         """
         out = []
-        for g, rlzs in enumerate(rlzs_by_g):
-            out.append(sum(self.weights[r] for r in rlzs))
+        for g, trs in enumerate(trt_rlzs):
+            out.append(sum(self.weights[r] for r in trs % TWO24))
         return out
 
     def get_smr_by_ltp(self):
