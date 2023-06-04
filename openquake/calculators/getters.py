@@ -150,7 +150,7 @@ class PmapGetter(object):
         self.use_rates = use_rates
         self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.trt_rlzs = dstore['trt_rlzs'][:]
+        self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.slices = slices
         self._pmap = {}
 

@@ -57,12 +57,11 @@ def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
     """
-    Gt = len(dstore['trt_rlzs'])
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
-    full_lt = dstore['full_lt']
-    full_lt.init()
-    return Gt * N * L * 8 / 1024**3
+    full_lt = dstore['full_lt'].init()
+    trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+    return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs
 
 
 def build_slice_by_sid(sids, offset=0):
@@ -435,7 +434,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req = get_pmaps_gb(self.datastore)
+        req, self.trt_rlzs = get_pmaps_gb(self.datastore)
         self.ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
         if self.ntiles > 1:
             self.execute_seq(maxw)
@@ -486,7 +485,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        Gt = len(self.datastore['trt_rlzs'])
+        Gt = len(self.trt_rlzs)
         nbytes = 8 * len(sitecol) * L * Gt
         logging.info('Allocating %s for the global pmap', humansize(nbytes))
         self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)

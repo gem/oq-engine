@@ -1415,7 +1415,7 @@ def view_mean_perils(token, dstore):
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    return humansize(get_pmaps_gb(dstore))
+    return humansize(get_pmaps_gb(dstore)[0])
 
 
 @view.add('rup_stats')
