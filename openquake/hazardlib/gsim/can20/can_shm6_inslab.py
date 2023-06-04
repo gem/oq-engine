@@ -309,7 +309,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
     REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
-    REQUIRES_DISTANCES = {'rrup'}#,'rhypo'}
+    REQUIRES_DISTANCES = {'rrup'}
     HYPO_DEPTH = 55.
 
     def __init__(self):
@@ -413,8 +413,8 @@ class CanadaSHM6_InSlab_AtkinsonBoore2003SSlabCascadia55(
     MAX_SA_EXTRAP = 10.0
     MIN_SA_EXTRAP = 0.05
     extrapolate_GMM = CanadaSHM6_InSlab_AbrahamsonEtAl2015SSlab55()
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'backarc'))
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     HYPO_DEPTH = 55.
 
     def __init__(self):

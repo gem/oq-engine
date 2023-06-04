@@ -131,9 +131,9 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
     See also header in CanadaSHM6_Interface.py
     """
 
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
     HYPO_DEPTH = 30.
 
@@ -260,8 +260,8 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     """
 
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
