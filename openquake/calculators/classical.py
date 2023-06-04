@@ -60,8 +60,10 @@ def get_pmaps_gb(dstore):
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
     full_lt = dstore['full_lt'].init()
-    trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
-    return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs
+    all_trt_smrs = dstore['trt_smrs'][:]
+    trt_rlzs = full_lt.get_trt_rlzs(all_trt_smrs)
+    gids = full_lt.get_gids(all_trt_smrs)
+    return len(trt_rlzs) * N * L * 8 / 1024**3, trt_rlzs, gids
 
 
 def build_slice_by_sid(sids, offset=0):
@@ -112,7 +114,6 @@ def classical(srcs, sitecol, cmaker, monitor):
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
-        result['pnemap'].gid = cmaker.gid
         result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
@@ -332,10 +333,9 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
-            pm.gid = pnemap.gid
             pm.trt_smrs = pnemap.trt_smrs
         G = pnemap.array.shape[2]
-        for i, gid in enumerate(pnemap.gid):
+        for i, gid in enumerate(self.gids[grp_id]):
             self.pmap.multiply_pnes(pnemap, gid, i % G)
         return acc
 
@@ -434,7 +434,7 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req, self.trt_rlzs = get_pmaps_gb(self.datastore)
+        req, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         self.ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
         if self.ntiles > 1:
             self.execute_seq(maxw)
