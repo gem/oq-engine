@@ -158,11 +158,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         cmakers = read_cmakers(self.datastore, csm)
-        Gt = sum(len(cm.gsims) for cm in cmakers)
-        data = []
-        for cm in cmakers:
-            for rlzs in cm.gsims.values():
-                data.append(U32(rlzs) + cm.trti * TWO24)
+        data = csm.full_lt.get_trt_rlzs([cm.trt_smrs for cm in cmakers])
         self.datastore.hdf5.save_vlen('trt_rlzs', data)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
