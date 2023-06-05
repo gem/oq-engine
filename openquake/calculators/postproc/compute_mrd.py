@@ -48,7 +48,7 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
     G = len(inp.cmaker.gsims)
     mrd = calc_mean_rate_dist(inp.ctx, inp.N, inp.cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
-    return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gidx)}
+    return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gid)}
 
 
 def combine_mrds(acc, g_weights):
