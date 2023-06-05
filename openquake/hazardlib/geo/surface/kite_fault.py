@@ -722,7 +722,7 @@ def get_profiles_from_simple_fault_data(
     """
 
     # Avoids singularity
-    if (dip-90.) < 1e-5:
+    if np.abs(dip-90.) < 1e-5:
         dip = 89.9
 
     # Get simple fault surface
