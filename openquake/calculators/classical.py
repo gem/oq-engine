@@ -57,7 +57,7 @@ def get_pmaps_gb(dstore):
     """
     :returns: memory required on the master node to keep the pmaps
     """
-    Gt = len(dstore['rlzs_by_g'])
+    Gt = len(dstore['trt_rlzs'])
     N = len(dstore['sitecol'])
     L = dstore['oqparam'].imtls.size
     full_lt = dstore['full_lt']
@@ -113,7 +113,7 @@ def classical(srcs, sitecol, cmaker, monitor):
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
-        result['pnemap'].gidx = cmaker.gidx
+        result['pnemap'].gid = cmaker.gid
         result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
@@ -333,10 +333,10 @@ class ClassicalCalculator(base.HazardCalculator):
             # store the poes for the given source
             acc[source_id] = pm
             pm.grp_id = grp_id
-            pm.gidx = pnemap.gidx
+            pm.gid = pnemap.gid
             pm.trt_smrs = pnemap.trt_smrs
         G = pnemap.array.shape[2]
-        for i, gid in enumerate(pnemap.gidx):
+        for i, gid in enumerate(pnemap.gid):
             self.pmap.multiply_pnes(pnemap, gid, i % G)
         return acc
 
@@ -486,7 +486,7 @@ class ClassicalCalculator(base.HazardCalculator):
         acc = {}  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
-        Gt = len(self.datastore['rlzs_by_g'])
+        Gt = len(self.datastore['trt_rlzs'])
         nbytes = 8 * len(sitecol) * L * Gt
         logging.info('Allocating %s for the global pmap', humansize(nbytes))
         self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)

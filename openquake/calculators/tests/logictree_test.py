@@ -69,10 +69,10 @@ class LogicTreeTestCase(CalculatorTestCase):
             csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
-            rlzs = self.calc.datastore['rlzs_by_g']['rlzs']
+            trs = self.calc.datastore['trt_rlzs'][:]
             rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
             mean_rates = calc_mean_rates(
-                rmap, full_lt.g_weights(rlzs), oq.imtls)
+                rmap, full_lt.g_weights(trs), oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=1e-6)
@@ -639,7 +639,7 @@ hazard_uhs-std.csv
         # test with oversampling
         # there are 6 potential paths 1A 1B 1C 2A 2B 2C
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        # trt_rlzs is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
         self.assertEqual(len(self.calc.realizations), 10)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)

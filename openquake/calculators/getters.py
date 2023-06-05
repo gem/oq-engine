@@ -150,7 +150,7 @@ class PmapGetter(object):
         self.use_rates = use_rates
         self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.rlzs_by_g = dstore['rlzs_by_g']['rlzs']
+        self.trt_rlzs = dstore['trt_rlzs'][:]
         self.slices = slices
         self._pmap = {}
 
@@ -186,7 +186,7 @@ class PmapGetter(object):
         """
         if self._pmap:
             return self._pmap
-        G = len(self.rlzs_by_g)
+        G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
                 poes_df = dstore.read_df('_poes', slc=slice(start, stop))
@@ -223,9 +223,9 @@ class PmapGetter(object):
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in pmap:  # no hazard for sid
             return pc0
-        for g, rlzs in enumerate(self.rlzs_by_g):
+        for g, trs in enumerate(self.trt_rlzs):
             probability_map.combine_probs(
-                pc0.array, pmap[sid].array[:, g], rlzs)
+                pc0.array, pmap[sid].array[:, g], trs % TWO24)
         return pc0
 
     def get_mean(self):

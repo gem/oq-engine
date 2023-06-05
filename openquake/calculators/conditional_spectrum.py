@@ -33,7 +33,7 @@ from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-
+TWO24 = 2 ** 24
 
 # helper function to be used when saving the spectra as an array
 def to_spectra(outdic, n, p):
@@ -92,7 +92,7 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt'].init()
-        self.rlzs_by_g = self.datastore['rlzs_by_g']['rlzs']
+        self.trt_rlzs = self.datastore['trt_rlzs'][:]
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)
@@ -181,8 +181,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def _apply_weights(self, acc):
         # build conditional spectra for each realization
         outdic = outdict(self.M, self.N, self.P, 0, self.R)
-        for g, rlzs in enumerate(self.rlzs_by_g):
-            for r in rlzs:
+        for g, trs in enumerate(self.trt_rlzs):
+            for r in trs % TWO24:
                 outdic[r] += acc[g]
 
         # build final conditional mean and std
