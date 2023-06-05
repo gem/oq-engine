@@ -1650,6 +1650,9 @@ def get_cmakers(src_groups, full_lt, oq):
         cmaker.trt_smrs = trt_smrs
         cmaker.grp_id = grp_id
         cmakers.append(cmaker)
+    gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
+    for cm in cmakers:
+        cm.gid = gids[cm.grp_id]
     return cmakers
 
 

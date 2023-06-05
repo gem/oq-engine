@@ -48,7 +48,7 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
     G = len(inp.cmaker.gsims)
     mrd = calc_mean_rate_dist(inp.ctx, inp.N, inp.cmaker, crosscorr,
                               imt1, imt2, meabins, sigbins)
-    return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gidx)}
+    return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gid)}
 
 
 def combine_mrds(acc, g_weights):
@@ -89,5 +89,5 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
                      meabins, sigbins))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    trt_rlzs = dstore['trt_rlzs'][:]
+    trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
     mrd[:] = combine_mrds(acc, full_lt.g_weights(trt_rlzs))
