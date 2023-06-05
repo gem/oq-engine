@@ -1060,6 +1060,28 @@ class FullLogicTree(object):
         self.weights = [rlz.weight for rlz in self.get_realizations()]
         return self
 
+    def get_gids(self, all_trt_smrs):
+        """
+        :returns: list of of arrays of gids, one for each source group
+        """
+        gids = []
+        g = 0
+        for trt_smrs in all_trt_smrs:
+            rbg = self.get_rlzs_by_gsim(trt_smrs)
+            gids.append(numpy.arange(g, g + len(rbg)))
+            g += len(rbg)
+        return gids
+        
+    def get_trt_rlzs(self, all_trt_smrs):
+        """
+        :returns: a list with Gt arrays of dtype uint32
+        """
+        data = []
+        for trt_smrs in all_trt_smrs:
+            for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
+                data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
+        return data
+
     def g_weights(self, trt_rlzs):
         """
         :returns: a list of Gt weights
