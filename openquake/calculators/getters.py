@@ -150,7 +150,10 @@ class PmapGetter(object):
         self.use_rates = use_rates
         self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.trt_rlzs = dstore['trt_rlzs'][:]
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
+        else:
+            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.slices = slices
         self._pmap = {}
 

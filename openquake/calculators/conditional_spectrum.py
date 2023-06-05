@@ -92,7 +92,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt'].init()
-        self.trt_rlzs = self.datastore['trt_rlzs'][:]
+        trt_smrs = self.datastore['trt_smrs'][:]
+        self.trt_rlzs = self.full_lt.get_trt_rlzs(trt_smrs)
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)
@@ -126,9 +127,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         ctx_by_grp = read_ctx_by_grp(dstore)
         self.datastore.swmr_on()
         smap = parallel.Starmap(get_cs_out, h5=self.datastore)
-        for gid, ctx in ctx_by_grp.items():
-            tom = valid.occurrence_model(toms[gid])
-            cmaker = self.cmakers[gid]
+        for grp_id, ctx in ctx_by_grp.items():
+            tom = valid.occurrence_model(toms[grp_id])
+            cmaker = self.cmakers[grp_id]
             smap.submit((cmaker, ctx, imti, self.imls, tom))
         out = smap.reduce()
         
@@ -155,8 +156,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         # Computing standard deviation
         smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
-        for gid, ctx in ctx_by_grp.items():
-            cmaker = self.cmakers[gid]
+        for grp_id, ctx in ctx_by_grp.items():
+            cmaker = self.cmakers[grp_id]
             smap.submit((cmaker, ctx, imti, self.imls, tom, outmean[0]))
         for res in smap:
             for g in res:
