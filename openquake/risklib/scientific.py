@@ -50,7 +50,7 @@ structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins
-reinsurance claim area number
+reinsurance claim area number residents
 structural+business_interruption nonstructural+business_interruption
 contents+business_interruption
 structural+nonstructural+business_interruption

@@ -895,6 +895,7 @@ class OqParam(valid.ParamSet):
         'business_interruption_consequence',
         'structural_vulnerability_retrofitted',
         'occupants_vulnerability',
+        'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
     }
