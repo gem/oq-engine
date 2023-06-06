@@ -351,7 +351,6 @@ def get_conditioned_mean_and_covariance(
     cov_WY_WY_wD_dict = {target_imt.string: None for target_imt in target_imts}
     cov_BY_BY_yD_dict = {target_imt.string: None for target_imt in target_imts}
 
-    # Proceed with each IMT in the target IMTs one by one
     # select the minimal number of IMTs observed at the stations
     # for each target IMT
     for target_imt in target_imts:
