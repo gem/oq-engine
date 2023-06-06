@@ -577,8 +577,7 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     mu_Y = mean_stds[0, 0].reshape((-1, 1))
     # Predicted uncertainty components at the target sites, from GSIM(s)
     tau_Y = mean_stds[2, 0].reshape((-1, 1))
-    phi_Y = mean_stds[3, 0].reshape((-1, 1))
-    Y = numpy.diag(phi_Y.flatten())
+    Y = numpy.diag(mean_stds[3, 0].flatten())
 
     # Compute the mean of the conditional between-event residual B|YD=yD
     # for the target sites
