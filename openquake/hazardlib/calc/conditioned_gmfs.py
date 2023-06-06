@@ -187,22 +187,22 @@ class ConditionedGmfComputer(GmfComputer):
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
         num_events = self.num_events
-        num_gmms = len(rlzs_by_gsim)
-        offsets = numpy.arange(num_events) * num_gmms
-        for g, (gmm, rlzs) in enumerate(rlzs_by_gsim.items()):
+        num_gsims = len(rlzs_by_gsim)
+        offsets = numpy.arange(num_events) * num_gsims
+        for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
             if num_events == 0:  # it may happen
                 continue
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             mean_covs = get_conditioned_mean_and_covariance(
-                self.rupture, gmm, self.station_sitecol, self.station_data,
+                self.rupture, gsim, self.station_sitecol, self.station_data,
                 self.observed_imt_strs, self.target_sitecol, self.imts,
                 self.spatial_correl,
                 self.cross_correl_between, self.cross_correl_within,
                 self.cmaker.maximum_distance)
 
-            array, sig, eps = self.compute(gmm, num_events, mean_covs, rng)
+            array, sig, eps = self.compute(gsim, num_events, mean_covs, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
 
             # manage max_iml
@@ -302,19 +302,20 @@ class ConditionedGmfComputer(GmfComputer):
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
+# tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_conditioned_mean_and_covariance(
-        rupture, gmm, station_sitecol, station_data,
+        rupture, gsim, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
-    if hasattr(gmm, "gmpe"):
-        gmm_name = gmm.gmpe.__class__.__name__
+    if hasattr(gsim, "gmpe"):
+        gsim_name = gsim.gmpe.__class__.__name__
     else:
-        gmm_name = gmm.__class__.__name__
-    if gmm.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-        if not (type(gmm).__name__ == "ModifiableGMPE"
-                and "add_between_within_stds" in gmm.kwargs):
-            raise NoInterIntraStdDevs(gmm)
+        gsim_name = gsim.__class__.__name__
+    if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+        if not (type(gsim).__name__ == "ModifiableGMPE"
+                and "add_between_within_stds" in gsim.kwargs):
+            raise NoInterIntraStdDevs(gsim)
 
     observed_imtls = {imt_str: [0] for imt_str in observed_imt_strs
                       if imt_str not in ["MMI", "PGV"]}
@@ -324,7 +325,7 @@ def get_conditioned_mean_and_covariance(
     # Generate the contexts and calculate the means and 
     # standard deviations at the *station* sites ("_D")
     cmaker_D = ContextMaker(
-        rupture.tectonic_region_type, [gmm],
+        rupture.tectonic_region_type, [gsim],
         dict(truncation_level=0, imtls=observed_imtls,
              maximum_distance=maximum_distance))
 
@@ -416,12 +417,12 @@ def get_conditioned_mean_and_covariance(
             [c_imt.string + "_std" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F") ** 2
 
-        # Predicted mean at the observation points, from GMM(s)
+        # Predicted mean at the observation points, from GSIM(s)
         mu_yD = station_data_filtered[
             [c_imt.string + "_median" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F")
         # Predicted uncertainty components at the observation points
-        # from GMM(s)
+        # from GSIM(s)
         phi_D = station_data_filtered[
             [c_imt.string + "_phi" for c_imt in conditioning_imts]
         ].values.reshape((-1, 1), order="F")
@@ -498,14 +499,14 @@ def get_conditioned_mean_and_covariance(
         # conditional between-event residual mean and standard deviation
         nominal_bias_mean = numpy.mean(mu_BD_yD)
         nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
-        logging.info(
-            "GMM: %s, IMT: %s, Nominal bias mean: %.3f, Nominal bias stddev: %.3f",
-            gmm_name, target_imt.string, nominal_bias_mean, nominal_bias_stddev)
+        logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
+                     "Nominal bias stddev: %.3f",  gsim_name,
+                     target_imt.string, nominal_bias_mean, nominal_bias_stddev)
 
         # Generate the contexts and calculate the means and 
         # standard deviations at the *target* sites ("_Y")
         cmaker_Y = ContextMaker(
-            rupture.tectonic_region_type, [gmm], dict(
+            rupture.tectonic_region_type, [gsim], dict(
                 truncation_level=0, imtls={target_imt.string: [0]},
                 maximum_distance=maximum_distance))
 
@@ -519,9 +520,9 @@ def get_conditioned_mean_and_covariance(
         # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
         # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
 
-        # Predicted mean at the target sites, from GMM(s)
+        # Predicted mean at the target sites, from GSIM(s)
         mu_Y = mean_stds[0, 0].reshape((-1, 1))
-        # Predicted uncertainty components at the target sites, from GMM(s)
+        # Predicted uncertainty components at the target sites, from GSIM(s)
         sigma_Y = mean_stds[1, 0].reshape((-1, 1))
         tau_Y = mean_stds[2, 0].reshape((-1, 1))
         phi_Y = mean_stds[3, 0].reshape((-1, 1))
