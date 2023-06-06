@@ -14,78 +14,112 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This module implements the process for conditioning ground motion
+fields upon recorded strong motion station data or macroseismic
+intensity observations described in Engler et al. (2022)
+Engler, D. T., Worden, C. B., Thompson, E. M., & Jaiswal, K. S. (2022).
+Partitioning Ground Motion Uncertainty When Conditioned on Station Data.
+Bulletin of the Seismological Society of America, 112(2), 1060–1079.
+https://doi.org/10.1785/0120210177
+
+The USGS ShakeMap implementation of Engler et al. (2022) is described
+in detail at: https://usgs.github.io/shakemap/manual4_0/tg_processing.html
+and the bulk of the implementation code resides in the ShakeMap Model module:
+https://github.com/usgs/shakemap/blob/main/shakemap/coremods/model.py
+
+This implementation is intended for generating conditional random
+ground motion fields for downstream use with the OpenQuake scenario
+damage and loss calculators, such that users can provide a station
+data file containing both seismic and macroseismic stations, where
+and specify a list of target IMTs and list of sites for which the
+OpenQuake engine will calculate the conditioned mean and covariance
+of the ground shaking following Engler et al. (2022), and then
+simulate the requested number of ground motion fields
+
+Notation:
+
+_D:
+  subscript refers to the "Data" or observations
+_Y:
+  subscript refers to the target sites
+yD:
+  recorded values at the stations
+var_addon_D:
+  additional sigma for the observations that are uncertain, 
+  which might arise if the values for this particular IMT were not directly
+  recorded, but obtained by conversion equations or cross-correlation functions
+mu_yD:
+  predicted mean intensity at the observation points, from the specified GMM(s)
+phi_D:
+  predicted within-event uncertainty at the observation points, from the 
+  specified GMM(s)
+tau_D:
+  predicted between-event uncertainty at the observation points, from the
+  specified GMM(s)
+zeta_D:
+  raw residuals at the observation points
+cov_WD_WD:
+  station data within-event covariance matrix, with the additional 
+  variance of the residuals for the cases where the station data is uncertain
+cov_WD_WD_inv:
+  (pseudo)-inverse of the station data within-event covariance matrix
+corr_HD_HD:
+  cross-intensity measure correlations for the observed intensity measures 
+mu_HD_yD:
+  posterior mean of the (normalized) between-event residual
+cov_HD_HD_yD:
+  posterior covariance of the (normalized) between-event residual
+mu_BD_yD:
+  posterior mean of the between-event residual
+cov_BD_BD_yD:
+  posterior covariance of the conditional between-event residual
+nominal_bias_mean:
+  mean of mu_BD_yD, useful as a single value measure of the event bias,
+  particularly in the heteroscedastic case
+nominal_bias_stddev:
+  sqrt of the mean of cov_BD_BD_yD
+mu_Y:
+  redicted mean of the intensity at the target sites
+phi_Y:
+  predicted within-event standard deviation of the intensity at the target sites
+tau_Y:
+  predicted between-event standard deviation of the intensity at the target
+  sites
+mu_BY_yD:
+  mean of the conditional between-event residual for the target sites
+cov_WY_WD and cov_WD_WY:
+   within-event covariance matrices for the target sites and observation sites
+cov_WY_WY:
+  apriori within-event covariance matrix for the target sites
+RC:
+  regression coefficient matrix ("RC" = cov_WY_WD × cov_WD_WD_inv)
+C:
+  scaling matrix for the conditioned between-event covariance matrix
+cov_WY_WY_wD:
+  conditioned within-event covariance matrix for the target sites 
+cov_BY_BY_yD:
+  "conditioned between-event" covariance matrix for the target sites
+mu_Y_yD:
+  conditioned mean of the ground motion at the target sites
+cov_Y_Y_yD:
+  conditional covariance of the ground motion at the target sites
+"""
 
 import logging
+import collections
 import numpy
 import pandas
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
-from openquake.hazardlib import correlation, cross_correlation, imt
+from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.gsim.base import ContextMaker
 
 F32 = numpy.float32
-
-# This module implements the process for conditioning ground motion
-# fields upon recorded strong motion station data or macroseismic
-# intensity observations described in Engler et al. (2022)
-# Engler, D. T., Worden, C. B., Thompson, E. M., & Jaiswal, K. S. (2022).
-# Partitioning Ground Motion Uncertainty When Conditioned on Station Data.
-# Bulletin of the Seismological Society of America, 112(2), 1060–1079.
-# https://doi.org/10.1785/0120210177
-#
-# The USGS ShakeMap implementation of Engler et al. (2022) is described
-# in detail at: https://usgs.github.io/shakemap/manual4_0/tg_processing.html
-# and the bulk of the implementation code resides in the ShakeMap Model module:
-# https://github.com/usgs/shakemap/blob/main/shakemap/coremods/model.py
-#
-# This implementation is intended for generating conditional random
-# ground motion fields for downstream use with the OpenQuake scenario
-# damage and loss calculators, such that users can provide a station
-# data file containing both seismic and macroseismic stations, where
-# and specify a list of target IMTs and list of sites for which the
-# OpenQuake engine will calculate the conditioned mean and covariance
-# of the ground shaking following Engler et al. (2022), and then
-# simulate the requested number of ground motion fields
-
-# Notation:
-# _D: subscript refers to the "Data" or observations
-# _Y: subscript refers to the target sites
-# yD: recorded values at the stations
-# var_addon_D: additional sigma for the observations that are uncertain, 
-#   which might arise if the values for this particular IMT were not directly
-#   recorded, but obtained by conversion equations or cross-correlation functions
-# mu_yD: predicted mean intensity at the observation points, from the specified GMM(s)
-# phi_D: predicted within-event uncertainty at the observation points, from the specified GMM(s)
-# tau_D: predicted between-event uncertainty at the observation points, from the specified GMM(s)
-# zeta_D: raw residuals at the observation points
-# cov_WD_WD: station data within-event covariance matrix, with the additional 
-#   variance of the residuals for the cases where the station data is uncertain
-# cov_WD_WD_inv: (pseudo)-inverse of the station data within-event covariance matrix
-# corr_HD_HD: cross-intensity measure correlations for the observed intensity measures 
-# mu_HD_yD: posterior mean of the (normalized) between-event residual
-# cov_HD_HD_yD: posterior covariance of the (normalized) between-event residual
-# mu_BD_yD: posterior mean of the between-event residual
-# cov_BD_BD_yD: posterior covariance of the conditional between-event residual
-# nominal_bias_mean: mean of mu_BD_yD, useful as a single value measure of the event bias,
-#   particularly in the heteroscedastic case
-# nominal_bias_stddev: sqrt of the mean of cov_BD_BD_yD
-# mu_Y: redicted mean of the intensity at the target sites
-# phi_Y: predicted within-event standard deviation of the intensity at the target sites
-# tau_Y: predicted between-event standard deviation of the intensity at the target sites
-# mu_BY_yD: mean of the conditional between-event residual for the target sites
-# cov_WY_WD and cov_WD_WY: within-event covariance matrices for the target sites and observation sites
-# cov_WY_WY: apriori within-event covariance matrix for the target sites
-# RC: regression coefficient matrix ("RC" = cov_WY_WD × cov_WD_WD_inv)
-# C: scaling matrix for the conditioned between-event covariance matrix
-# cov_WY_WY_wD: conditioned within-event covariance matrix for the target sites 
-# cov_BY_BY_yD: "conditioned between-event" covariance matrix for the target sites
-# mu_Y_yD: conditioned mean of the ground motion at the target sites
-# cov_Y_Y_yD: conditional covariance of the ground motion at the target sites
-
-
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
         self.gsim = gsim
@@ -167,7 +201,7 @@ class ConditionedGmfComputer(GmfComputer):
                           for imt_str in observed_imt_strs
                           if imt_str not in ["MMI", "PGV"]}
         self.observed_imts = sorted(
-            [imt.from_string(imt_str) for imt_str in observed_imtls])
+            [from_string(imt_str) for imt_str in observed_imtls])
         self.rupture = rupture
         self.target_sitecol = sitecol
         self.station_sitecol = station_sitecol
@@ -302,20 +336,9 @@ class ConditionedGmfComputer(GmfComputer):
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
-class Output(object):
-    """
-    Four dictionaries keyd by the IMT:
-
-    mu_Y_yD
-    cov_Y_Y_yD
-    cov_WY_WY_wD
-    cov_BY_BY_yD
-    """
-    def __init__(self, imts):
-        self.mu_Y_yD = {imt: None for imt in imts}
-        self.cov_Y_Y_yD = {imt: None for imt in imts}
-        self.cov_WY_WY_wD = {imt: None for imt in imts}
-        self.cov_BY_BY_yD = {imt: None for imt in imts}
+# 4 dictionaries of arrays with different shapes
+MeanCovs = collections.namedtuple(
+    'MeanCovs', 'mu_Y_yD cov_Y_Y_yD cov_WY_WY_wD, cov_BY_BY_yD')
 
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
@@ -324,6 +347,7 @@ def get_conditioned_mean_and_covariance(
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
+
     if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
         if not (type(gsim).__name__ == "ModifiableGMPE"
                 and "add_between_within_stds" in gsim.kwargs):
@@ -331,8 +355,7 @@ def get_conditioned_mean_and_covariance(
 
     observed_imtls = {imt_str: [0] for imt_str in observed_imt_strs
                       if imt_str not in ["MMI", "PGV"]}
-    observed_imts = sorted([imt.from_string(imt_str)
-                            for imt_str in observed_imtls])
+    observed_imts = sorted(from_string(imt_str) for imt_str in observed_imtls)
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *station* sites ("_D")
@@ -341,7 +364,15 @@ def get_conditioned_mean_and_covariance(
         dict(truncation_level=0, imtls=observed_imtls,
              maximum_distance=maximum_distance))
 
+    # Generate the contexts and calculate the means and 
+    # standard deviations at the *target* sites ("_Y")
+    cmaker_Y = ContextMaker(
+        rupture.tectonic_region_type, [gsim], dict(
+            truncation_level=0, imtls={target_imts[0].string: [0]},
+            maximum_distance=maximum_distance))
+
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
+    gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
     # shape (4, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
     # M is the number of IMTs, N the number of sites/distances
@@ -358,28 +389,33 @@ def get_conditioned_mean_and_covariance(
         station_data_filtered[im + "_tau"] = mean_stds[2, i]
         station_data_filtered[im + "_phi"] = mean_stds[3, i]
 
-    out = cond_gmfs(rupture, gsim, maximum_distance,
-                    target_sitecol, target_imts, observed_imts,
-                    station_data_filtered, station_sitecol_filtered, nss,
-                    spatial_correl, cross_correl_within, cross_correl_between)
-    return out.mu_Y_yD, out.cov_Y_Y_yD, out.cov_WY_WY_wD, out.cov_BY_BY_yD
+    meancovs = cond_gmfs(
+        cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
+        station_data_filtered, station_sitecol_filtered, nss,
+        spatial_correl, cross_correl_within, cross_correl_between)
+    return meancovs
 
 
-def cond_gmfs(rupture, gsim, maximum_distance, target_sitecol,
-              target_imts, observed_imts,
+def cond_gmfs(cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
               station_data_filtered, station_sitecol_filtered, nss,
               spatial_correl, cross_correl_within, cross_correl_between):
+    [gsim] = cmaker_Y.gsims
     if hasattr(gsim, "gmpe"):
         gsim_name = gsim.gmpe.__class__.__name__
     else:
         gsim_name = gsim.__class__.__name__
 
-    output = Output([imt.string for imt in target_imts])
+    # build 4 dictionaries keyed by targe IMT
+    dics = [{imt.string: None for imt in target_imts} for _ in range(4)]
+    output = MeanCovs(*dics)
+
     # select the minimal number of IMTs observed at the stations
     # for each target IMT
     for target_imt in target_imts:
-        imt = target_imt.string
         native_data_available = False
+
+        imt = target_imt.string
+        cmaker_Y.imtls = {imt: [0]}
 
         # Handle various cases differently depending on the
         # target IMT in question, and whether it is present
@@ -527,14 +563,6 @@ def cond_gmfs(rupture, gsim, maximum_distance, target_sitecol,
                      "Nominal bias stddev: %.3f",  gsim_name,
                      imt, nominal_bias_mean, nominal_bias_stddev)
 
-        # Generate the contexts and calculate the means and 
-        # standard deviations at the *target* sites ("_Y")
-        cmaker_Y = ContextMaker(
-            rupture.tectonic_region_type, [gsim], dict(
-                truncation_level=0, imtls={imt: [0]},
-                maximum_distance=maximum_distance))
-
-        gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
         mean_stds = cmaker_Y.get_mean_stds([gc_Y.ctx])[:, 0]
         target_sites_filtered = numpy.argwhere(
             numpy.isin(target_sitecol.sids, gc_Y.ctx.sids)).ravel().tolist()
