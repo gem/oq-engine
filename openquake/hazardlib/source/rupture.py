@@ -606,6 +606,12 @@ class PointSurface:
         deps = numpy.full(N, self.hypocenter.z)
         return Mesh(lons, lats, deps)
 
+    def get_min_distance(self, mesh):
+        """
+        :returns: the distance from the hypocenter to the mesh
+        """
+        return self.hypocenter.distance_to_mesh(mesh).min()
+
     def __bool__(self):
         return False
 
