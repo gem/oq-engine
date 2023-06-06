@@ -582,8 +582,7 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
 
     # Compute the mean of the conditional between-event residual B|YD=yD
     # for the target sites
-    mu_HN_yD = mu_HD_yD[0, None]
-    mu_BY_yD = tau_Y @ mu_HN_yD
+    mu_BY_yD = tau_Y @ mu_HD_yD[0, None]
     cov_WY_WD = compute_cov(sitecol, station_sitecol,
                             [target_imt], conditioning_imts, Y, D)
     cov_WD_WY = compute_cov(station_sitecol, sitecol,
