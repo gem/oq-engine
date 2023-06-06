@@ -21,6 +21,7 @@
       <field oq="contents" input="COST_CONTENTS_USD" />
       <field oq="night" input="OCCUPANTS_PER_ASSET" />
       <field oq="occupants_avg" input="AVG_OCCUPANTS" />
+      <field oq="residents" input="RESIDENTS" />
     </exposureFields>
     <occupancyPeriods>night</occupancyPeriods>
     <tagNames>ID_1 NAME_1 ID_2 NAME_2 ID_3 NAME_3 OCCUPANCY NUM_FLOORS COST_PER_AREA_USD</tagNames>

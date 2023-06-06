@@ -100,7 +100,7 @@ class CostCalculator(object):
     def update(self, assetcol):
         for name in assetcol.dtype.names:
             if name.startswith('value-') and not name in (
-                    'value-area', 'value-number'):
+                    'value-area', 'value-number', 'value-residents'):
                 assetcol[name] = self(name[6:], assetcol)
 
     def __call__(self, loss_type, assetcol):
@@ -144,7 +144,7 @@ class CostCalculator(object):
                 unit = 'sqm'
             elif lt == 'number':
                 unit = 'dwellings'
-            elif lt == 'occupants':
+            elif lt in ('occupants', 'residents'):
                 unit = 'people'
             else:
                 unit = self.units[lt]
@@ -955,7 +955,8 @@ class Exposure(object):
             if oq in conv:
                 conv[inp] = conv[oq]
         rename = self.fieldmap.copy()
-        for field in set(self.cost_types['name']) | {'area', 'number'}:
+        vfields = set(self.cost_types['name']) | {'area', 'number', 'residents'}
+        for field in vfields:
             f = revmap.get(field, field)
             conv[f] = float
             rename[f] = 'value-' + field

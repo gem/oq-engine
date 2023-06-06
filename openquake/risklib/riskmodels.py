@@ -38,7 +38,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number'
+LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents'
 RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)' % LTYPE_REGEX)
 
 
@@ -590,25 +590,26 @@ class CompositeRiskModel(collections.abc.Mapping):
 
         # check imt_by_lt has consistent loss types for all taxonomies
         if self._riskmodels:
-            records = [[rm.taxonomy] + list(rm.imt_by_lt)
-                       for rm in self._riskmodels.values()]  # [[tax, lt...]]
-            expected_lts = set(records[0][1:])
-            kind = kinds[0]  # vulnerability or fragility
-            for rec in records[1:]:
-                ltypes = set(rec[1:])
-                if not ltypes & expected_lts:
-                    if not self.tmap:
-                        fname = inputs[rec[1] + '_' + kind]
-                        raise NameError(f'The ID {rec[0]} is in {fname}, not '
-                                        f'in the other {kind} files')
-                elif ltypes != expected_lts:
-                    others = ltypes - expected_lts
-                    lt = expected_lts.pop()
-                    fname = inputs[lt + '_' + kind]
-                    for other in others:
-                        # TODO: should this be an error?
-                        logging.warning(f'The ID {rec[0]} is in {fname} but '
-                                        f'not in the {other}_{kind} file')
+            missing = AccumDict(accum=[])
+            for lt in self.loss_types:
+                rms = []
+                if self.tmap:
+                    for pairs in self.tmap[lt][1:]:
+                        for risk_id, weight in pairs:
+                            rms.append(self._riskmodels[risk_id])
+                else:
+                    rms.extend(self._riskmodels.values())
+                for rm in rms:
+                    try:
+                        rm.imt_by_lt[lt]
+                    except KeyError:
+                        key = '%s/%s' % (kinds[0], lt)
+                        fname = self.oqparam._risk_files[key]
+                        missing[fname].append(rm.taxonomy)
+            if missing:
+                for fname, ids in missing.items():
+                    raise InvalidFile(
+                        '%s: missing %s' % (fname, ' '.join(ids)))
 
     def compute_csq(self, asset, fractions, loss_type):
         """
