@@ -387,6 +387,7 @@ def get_conditioned_mean_and_covariance(
     # Target IMT is not PGA or SA: Currently not supported
     target_imts = [imt for imt in target_imts
                    if imt.period or imt.string == "PGA"]
+
     # build 4 dictionaries keyed by IMT
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
@@ -400,23 +401,10 @@ def get_conditioned_mean_and_covariance(
     return meancovs
 
 
-def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
-                 target_imts, observed_imts,
-                 station_data_filtered, station_sitecol_filtered,
-                 spatial_correl, cross_correl_within, cross_correl_between,
-                 meancovs):
-
-    nss = len(station_sitecol_filtered)  # number of station sites
-    [gsim] = cmaker_Y.gsims
-    if hasattr(gsim, "gmpe"):
-        gsim_name = gsim.gmpe.__class__.__name__
-    else:
-        gsim_name = gsim.__class__.__name__
+def _cbn(target_imt, observed_imts, station_data_filtered):
+    # returns (conditioning_imts, bracketed_imts, native_data_available)
 
     native_data_available = False
-
-    imt = target_imt.string
-    cmaker_Y.imtls = {imt: [0]}
 
     if target_imt in observed_imts:
         # Target IMT is present in the observed IMTs
@@ -427,7 +415,7 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
         # Find where the target IMT falls in the list of observed IMTs
         all_imts = sorted(observed_imts + [target_imt])
         imt_idx = numpy.where(
-            imt == numpy.array(all_imts)[:, 0])[0][0]
+            target_imt.string == numpy.array(all_imts)[:, 0])[0][0]
         if imt_idx == 0:
             # Target IMT is outside the range of the observed IMT periods
             # and its period is lower than the lowest available in the
@@ -453,8 +441,29 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
         if num_null_values:
             raise ValueError(
                 f"The station data contains {num_null_values}"
-                f"null values for {imt}."
+                f"null values for {target_imt.string}."
                 "Please fill or discard these rows.")
+    return conditioning_imts, bracketed_imts, native_data_available
+
+
+def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
+                 target_imts, observed_imts,
+                 station_data_filtered, station_sitecol_filtered,
+                 spatial_correl, cross_correl_within, cross_correl_between,
+                 meancovs):
+
+    nss = len(station_sitecol_filtered)  # number of station sites
+    [gsim] = cmaker_Y.gsims
+    if hasattr(gsim, "gmpe"):
+        gsim_name = gsim.gmpe.__class__.__name__
+    else:
+        gsim_name = gsim.__class__.__name__
+
+    conditioning_imts, bracketed_imts, native_data_available = _cbn(
+        target_imt, observed_imts, station_data_filtered)
+
+    imt = target_imt.string
+    cmaker_Y.imtls = {imt: [0]}
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
@@ -502,12 +511,12 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
         conditioning_imts,
         conditioning_imts,
         spatial_correl,
-        cross_correl_within,
-    )
+        cross_correl_within)
+
     phi_D_flat = phi_D.flatten()
     cov_WD_WD = numpy.linalg.multi_dot(
-        [numpy.diag(phi_D_flat), rho_WD_WD, numpy.diag(phi_D_flat)]
-    )
+        [numpy.diag(phi_D_flat), rho_WD_WD, numpy.diag(phi_D_flat)])
+
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
     numpy.fill_diagonal(cov_WD_WD, numpy.diag(cov_WD_WD) + var_addon_D)
@@ -538,8 +547,8 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
     # H|Y2=y2 is normally distributed with mean and covariance:
     cov_HD_HD_yD = numpy.linalg.pinv(
         numpy.linalg.multi_dot([T_D.T, cov_WD_WD_inv, T_D])
-        + numpy.linalg.pinv(corr_HD_HD)
-    )
+        + numpy.linalg.pinv(corr_HD_HD))
+
     mu_HD_yD = numpy.linalg.multi_dot(
         [cov_HD_HD_yD, T_D.T, cov_WD_WD_inv, zeta_D])
 
@@ -586,11 +595,10 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
         [target_imt],
         conditioning_imts,
         spatial_correl,
-        cross_correl_within,
-    )
+        cross_correl_within)
+
     cov_WY_WD = numpy.linalg.multi_dot(
-        [numpy.diag(phi_Y_flat), rho_WY_WD, numpy.diag(phi_D_flat)]
-    )
+        [numpy.diag(phi_Y_flat), rho_WY_WD, numpy.diag(phi_D_flat)])
 
     rho_WD_WY = compute_spatial_cross_correlation_matrix(
         station_sitecol_filtered,
@@ -598,11 +606,10 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
         conditioning_imts,
         [target_imt],
         spatial_correl,
-        cross_correl_within,
-    )
+        cross_correl_within)
+
     cov_WD_WY = numpy.linalg.multi_dot(
-        [numpy.diag(phi_D_flat), rho_WD_WY, numpy.diag(phi_Y_flat)]
-    )
+        [numpy.diag(phi_D_flat), rho_WD_WY, numpy.diag(phi_Y_flat)])
 
     # Compute the within-event covariance matrix for the
     # target sites (apriori)
@@ -612,11 +619,10 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
         [target_imt],
         [target_imt],
         spatial_correl,
-        cross_correl_within,
-    )
+        cross_correl_within)
+
     cov_WY_WY = numpy.linalg.multi_dot(
-        [numpy.diag(phi_Y_flat), rho_WY_WY, numpy.diag(phi_Y_flat)]
-    )
+        [numpy.diag(phi_Y_flat), rho_WY_WY, numpy.diag(phi_Y_flat)])
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ cov_WD_WD_inv
