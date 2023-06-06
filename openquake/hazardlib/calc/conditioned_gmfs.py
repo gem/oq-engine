@@ -565,7 +565,7 @@ def calc_d(target_imt, cmaker_Y, ctx_Y, sitecol,
     t.corr_HD_HD = cross_correl_between._get_correlation_matrix(
         t.bracketed_imts)
 
-    return d
+    return t
 
 
 def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
