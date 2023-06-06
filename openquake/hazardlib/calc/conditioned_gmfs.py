@@ -186,26 +186,21 @@ class ConditionedGmfComputer(GmfComputer):
             cross_correl=cross_correl_between,
             amplifier=amplifier, sec_perils=sec_perils)
 
-        try:
-            vs30_clustering = ground_motion_correlation_params[
-                "vs30_clustering"]
-        except KeyError:
-            vs30_clustering = True
-        self.spatial_correl = (spatial_correl or correlation.
-                               JB2009CorrelationModel(vs30_clustering))
+        clust = ground_motion_correlation_params.get("vs30_clustering", True)
+        self.spatial_correl = (spatial_correl or
+                               correlation.JB2009CorrelationModel(clust))
         self.cross_correl_between = (
             cross_correl_between or cross_correlation.GodaAtkinson2009())
         self.cross_correl_within = cross_correlation.BakerJayaram2008()
-        observed_imtls = {imt_str: [0]
-                          for imt_str in observed_imt_strs
-                          if imt_str not in ["MMI", "PGV"]}
-        self.observed_imts = sorted(
-            [from_string(imt_str) for imt_str in observed_imtls])
         self.rupture = rupture
         self.sitecol = sitecol
         self.station_sitecol = station_sitecol
         self.station_data = station_data
         self.observed_imt_strs = observed_imt_strs
+        observed_imtls = {imt_str: [0]
+                          for imt_str in observed_imt_strs
+                          if imt_str not in ["MMI", "PGV"]}
+        self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
     def compute_all(self, scenario, sig_eps=None, max_iml=None):
@@ -509,12 +504,9 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, sitecol_filtered,
 
     # Compute the station data within-event covariance matrix
     rho_WD_WD = compute_spatial_cross_correlation_matrix(
-        station_sitecol_filtered,
-        station_sitecol_filtered,
-        conditioning_imts,
-        conditioning_imts,
-        spatial_correl,
-        cross_correl_within)
+        station_sitecol_filtered, station_sitecol_filtered,
+        conditioning_imts, conditioning_imts,
+        spatial_correl, cross_correl_within)
 
     phi_D_flat = phi_D.flatten()
     cov_WD_WD = numpy.linalg.multi_dot(
@@ -541,8 +533,7 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, sitecol_filtered,
     # requiring the computation of the covariance matrix Σ_HD_HD, which is
     # just the matrix of cross-correlations for the observed IMTs, since
     # H is the normalized between-event residual
-    corr_HD_HD = cross_correl_between._get_correlation_matrix(
-        bracketed_imts)
+    corr_HD_HD = cross_correl_between._get_correlation_matrix(bracketed_imts)
 
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
