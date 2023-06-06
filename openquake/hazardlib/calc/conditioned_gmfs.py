@@ -107,7 +107,6 @@ cov_Y_Y_yD:
 """
 
 import logging
-import collections
 import numpy
 import pandas
 from openquake.baselib.python3compat import decode
@@ -336,11 +335,6 @@ class ConditionedGmfComputer(GmfComputer):
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
-# 4 dictionaries of arrays with different shapes
-MeanCovs = collections.namedtuple(
-    'MeanCovs', 'mu_Y_yD cov_Y_Y_yD cov_WY_WY_wD, cov_BY_BY_yD')
-
-
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_conditioned_mean_and_covariance(
         rupture, gsim, station_sitecol, station_data,
@@ -373,6 +367,7 @@ def get_conditioned_mean_and_covariance(
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
+
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
     # shape (4, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
     # M is the number of IMTs, N the number of sites/distances
@@ -381,7 +376,6 @@ def get_conditioned_mean_and_covariance(
         numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
     station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
     station_data_filtered = station_data.iloc[station_locs_filtered].copy()
-    nss = len(station_sitecol_filtered)  # number of station sites
     for i, o_imt in enumerate(observed_imts):
         im = o_imt.string
         station_data_filtered[im + "_median"] = mean_stds[0, i]
@@ -389,25 +383,27 @@ def get_conditioned_mean_and_covariance(
         station_data_filtered[im + "_tau"] = mean_stds[2, i]
         station_data_filtered[im + "_phi"] = mean_stds[3, i]
 
-    meancovs = cond_gmfs(
+    meancovs = calc_meancovs(
         cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
-        station_data_filtered, station_sitecol_filtered, nss,
+        station_data_filtered, station_sitecol_filtered,
         spatial_correl, cross_correl_within, cross_correl_between)
+
     return meancovs
 
 
-def cond_gmfs(cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
-              station_data_filtered, station_sitecol_filtered, nss,
-              spatial_correl, cross_correl_within, cross_correl_between):
+def calc_meancovs(cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
+                  station_data_filtered, station_sitecol_filtered,
+                  spatial_correl, cross_correl_within, cross_correl_between):
+
+    nss = len(station_sitecol_filtered)  # number of station sites
     [gsim] = cmaker_Y.gsims
     if hasattr(gsim, "gmpe"):
         gsim_name = gsim.gmpe.__class__.__name__
     else:
         gsim_name = gsim.__class__.__name__
 
-    # build 4 dictionaries keyed by targe IMT
-    dics = [{imt.string: None for imt in target_imts} for _ in range(4)]
-    output = MeanCovs(*dics)
+    # build 4 dictionaries keyed by IMT
+    meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
 
     # select the minimal number of IMTs observed at the stations
     # for each target IMT
@@ -663,11 +659,11 @@ def cond_gmfs(cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
         # The four arrays below have different dimensions, so
         # unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
-        output.mu_Y_yD[imt] = mu_Y_yD
-        output.cov_Y_Y_yD[imt] = cov_Y_Y_yD
-        output.cov_WY_WY_wD[imt] = cov_WY_WY_wD
-        output.cov_BY_BY_yD[imt] = cov_BY_BY_yD
-    return output
+        meancovs[0][imt] = mu_Y_yD
+        meancovs[1][imt] = cov_Y_Y_yD
+        meancovs[2][imt] = cov_WY_WY_wD
+        meancovs[3][imt] = cov_BY_BY_yD
+    return meancovs
 
 
 def compute_spatial_cross_correlation_matrix(
