@@ -342,6 +342,9 @@ def get_conditioned_mean_and_covariance(
                 and "add_between_within_stds" in gsim.kwargs):
             raise NoInterIntraStdDevs(gsim)
 
+    if hasattr(rupture, 'rupture'):
+        rupture = rupture.rupture
+
     observed_imtls = {imt_str: [0] for imt_str in observed_imt_strs
                       if imt_str not in ["MMI", "PGV"]}
     observed_imts = sorted(from_string(imt_str) for imt_str in observed_imtls)
@@ -360,16 +363,16 @@ def get_conditioned_mean_and_covariance(
             truncation_level=0, imtls={target_imts[0].string: [0]},
             maximum_distance=maximum_distance))
 
-    gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
+    [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
     gc_Y = GmfComputer(rupture, sitecol, cmaker_Y)
 
     gsim_idx = 0  # there is a single gsim
-    mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, gsim_idx]
+    mean_stds = cmaker_D.get_mean_stds([ctx_D])[:, gsim_idx]
     # shape (4, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
     # M is the number of IMTs, N the number of sites/distances
 
     station_locs_filtered = numpy.argwhere(
-        numpy.isin(station_sitecol.sids, gc_D.ctx.sids)).ravel().tolist()
+        numpy.isin(station_sitecol.sids, ctx_D.sids)).ravel().tolist()
     station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
     station_data_filtered = station_data.iloc[station_locs_filtered].copy()
     for i, o_imt in enumerate(observed_imts):
