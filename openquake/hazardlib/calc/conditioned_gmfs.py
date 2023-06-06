@@ -302,16 +302,28 @@ class ConditionedGmfComputer(GmfComputer):
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
+class Output(object):
+    """
+    Four dictionaries keyd by the IMT:
+
+    mu_Y_yD
+    cov_Y_Y_yD
+    cov_WY_WY_wD
+    cov_BY_BY_yD
+    """
+    def __init__(self, imts):
+        self.mu_Y_yD = {imt: None for imt in imts}
+        self.cov_Y_Y_yD = {imt: None for imt in imts}
+        self.cov_WY_WY_wD = {imt: None for imt in imts}
+        self.cov_BY_BY_yD = {imt: None for imt in imts}
+
+
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_conditioned_mean_and_covariance(
         rupture, gsim, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
-    if hasattr(gsim, "gmpe"):
-        gsim_name = gsim.gmpe.__class__.__name__
-    else:
-        gsim_name = gsim.__class__.__name__
     if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
         if not (type(gsim).__name__ == "ModifiableGMPE"
                 and "add_between_within_stds" in gsim.kwargs):
@@ -346,23 +358,36 @@ def get_conditioned_mean_and_covariance(
         station_data_filtered[im + "_tau"] = mean_stds[2, i]
         station_data_filtered[im + "_phi"] = mean_stds[3, i]
 
-    mu_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
-    cov_Y_Y_yD_dict = {target_imt.string: None for target_imt in target_imts}
-    cov_WY_WY_wD_dict = {target_imt.string: None for target_imt in target_imts}
-    cov_BY_BY_yD_dict = {target_imt.string: None for target_imt in target_imts}
+    out = cond_gmfs(rupture, gsim, maximum_distance,
+                    target_sitecol, target_imts, observed_imts,
+                    station_data_filtered, station_sitecol_filtered, nss,
+                    spatial_correl, cross_correl_within, cross_correl_between)
+    return out.mu_Y_yD, out.cov_Y_Y_yD, out.cov_WY_WY_wD, out.cov_BY_BY_yD
 
+
+def cond_gmfs(rupture, gsim, maximum_distance, target_sitecol,
+              target_imts, observed_imts,
+              station_data_filtered, station_sitecol_filtered, nss,
+              spatial_correl, cross_correl_within, cross_correl_between):
+    if hasattr(gsim, "gmpe"):
+        gsim_name = gsim.gmpe.__class__.__name__
+    else:
+        gsim_name = gsim.__class__.__name__
+
+    output = Output([imt.string for imt in target_imts])
     # select the minimal number of IMTs observed at the stations
     # for each target IMT
     for target_imt in target_imts:
+        imt = target_imt.string
         native_data_available = False
 
         # Handle various cases differently depending on the
         # target IMT in question, and whether it is present
         # in the observed IMTs or not
-        if not (target_imt.period or target_imt.string == "PGA"):
+        if not (target_imt.period or imt == "PGA"):
             # Target IMT is not PGA or SA: Currently not supported
             logging.warning("Conditioned gmfs not available for %s",
-                            target_imt.string)
+                            imt)
             continue
         elif target_imt in observed_imts:
             # Target IMT is present in the observed IMTs
@@ -373,7 +398,7 @@ def get_conditioned_mean_and_covariance(
             # Find where the target IMT falls in the list of observed IMTs
             all_imts = sorted(observed_imts + [target_imt])
             imt_idx = numpy.where(
-                target_imt.string == numpy.array(all_imts)[:, 0])[0][0]
+                imt == numpy.array(all_imts)[:, 0])[0][0]
             if imt_idx == 0:
                 # Target IMT is outside the range of the observed IMT periods
                 # and its period is lower than the lowest available in the
@@ -399,7 +424,7 @@ def get_conditioned_mean_and_covariance(
             if num_null_values:
                 raise ValueError(
                     f"The station data contains {num_null_values}"
-                    f"null values for {target_imt.string}."
+                    f"null values for {imt}."
                     "Please fill or discard these rows.")
 
         # Observations (recorded values at the stations)
@@ -500,13 +525,13 @@ def get_conditioned_mean_and_covariance(
         nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
         logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
                      "Nominal bias stddev: %.3f",  gsim_name,
-                     target_imt.string, nominal_bias_mean, nominal_bias_stddev)
+                     imt, nominal_bias_mean, nominal_bias_stddev)
 
         # Generate the contexts and calculate the means and 
         # standard deviations at the *target* sites ("_Y")
         cmaker_Y = ContextMaker(
             rupture.tectonic_region_type, [gsim], dict(
-                truncation_level=0, imtls={target_imt.string: [0]},
+                truncation_level=0, imtls={imt: [0]},
                 maximum_distance=maximum_distance))
 
         gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
@@ -609,14 +634,12 @@ def get_conditioned_mean_and_covariance(
         # Store the results in a dictionary keyed by target IMT
         # The four arrays below have different dimensions, so
         # unlike the regular gsim get_mean_std, a numpy ndarray
-        # won't work well as the 4 components will be non-
-        # homogeneous
-        mu_Y_yD_dict[target_imt.string] = mu_Y_yD
-        cov_Y_Y_yD_dict[target_imt.string] = cov_Y_Y_yD
-        cov_WY_WY_wD_dict[target_imt.string] = cov_WY_WY_wD
-        cov_BY_BY_yD_dict[target_imt.string] = cov_BY_BY_yD
-
-    return mu_Y_yD_dict, cov_Y_Y_yD_dict, cov_WY_WY_wD_dict, cov_BY_BY_yD_dict
+        # won't work well as the 4 components will be non-homogeneous
+        output.mu_Y_yD[imt] = mu_Y_yD
+        output.cov_Y_Y_yD[imt] = cov_Y_Y_yD
+        output.cov_WY_WY_wD[imt] = cov_WY_WY_wD
+        output.cov_BY_BY_yD[imt] = cov_BY_BY_yD
+    return output
 
 
 def compute_spatial_cross_correlation_matrix(
