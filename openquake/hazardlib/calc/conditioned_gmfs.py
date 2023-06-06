@@ -447,13 +447,13 @@ def _cbn(target_imt, observed_imts, station_data_filtered):
     return conditioning_imts, bracketed_imts, native_data_available
 
 
-def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
+def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
                  target_imts, observed_imts,
-                 station_data_filtered, station_sitecol_filtered,
+                 station_data, station_sitecol,
                  spatial_correl, cross_correl_within, cross_correl_between,
                  meancovs):
 
-    nss = len(station_sitecol_filtered)  # number of station sites
+    nss = len(station_sitecol)  # number of station sites
     [gsim] = cmaker_Y.gsims
     if hasattr(gsim, "gmpe"):
         gsim_name = gsim.gmpe.__class__.__name__
@@ -461,14 +461,14 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
         gsim_name = gsim.__class__.__name__
 
     conditioning_imts, bracketed_imts, native_data_available = _cbn(
-        target_imt, observed_imts, station_data_filtered)
+        target_imt, observed_imts, station_data)
 
     imt = target_imt.string
     cmaker_Y.imtls = {imt: [0]}
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
-        station_data_filtered[
+        station_data[
             [c_imt.string + "_mean" for c_imt in conditioning_imts]]
     ).values.reshape((-1, 1), order="F")
 
@@ -476,20 +476,20 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
     # These arise if the values for this particular IMT were not
     # directly recorded, but obtained by conversion equations or
     # cross-correlation functions
-    var_addon_D = station_data_filtered[
+    var_addon_D = station_data[
         [c_imt.string + "_std" for c_imt in conditioning_imts]
     ].values.reshape((-1, 1), order="F") ** 2
 
     # Predicted mean at the observation points, from GSIM(s)
-    mu_yD = station_data_filtered[
+    mu_yD = station_data[
         [c_imt.string + "_median" for c_imt in conditioning_imts]
     ].values.reshape((-1, 1), order="F")
     # Predicted uncertainty components at the observation points
     # from GSIM(s)
-    phi_D = station_data_filtered[
+    phi_D = station_data[
         [c_imt.string + "_phi" for c_imt in conditioning_imts]
     ].values.reshape((-1, 1), order="F")
-    tau_D = station_data_filtered[
+    tau_D = station_data[
         [c_imt.string + "_tau" for c_imt in conditioning_imts]
     ].values.reshape((-1, 1), order="F")
 
@@ -507,7 +507,7 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
 
     # Compute the station data within-event covariance matrix
     rho_WD_WD = compute_spatial_cross_correlation_matrix(
-        station_sitecol_filtered, station_sitecol_filtered,
+        station_sitecol, station_sitecol,
         conditioning_imts, conditioning_imts,
         spatial_correl, cross_correl_within)
 
@@ -563,7 +563,7 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
                  imt, nominal_bias_mean, nominal_bias_stddev)
 
     mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]
-    num_target_sites = len(sitecol_filtered)
+    num_target_sites = len(sitecol)
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
     # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
 
@@ -583,7 +583,7 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
     # Compute the within-event covariance matrix for the
     # target sites and observation sites
     rho_WY_WD = compute_spatial_cross_correlation_matrix(
-        sitecol_filtered, station_sitecol_filtered,
+        sitecol, station_sitecol,
         [target_imt], conditioning_imts,
         spatial_correl, cross_correl_within)
 
@@ -591,7 +591,7 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
         [numpy.diag(phi_Y_flat), rho_WY_WD, numpy.diag(phi_D_flat)])
 
     rho_WD_WY = compute_spatial_cross_correlation_matrix(
-        station_sitecol_filtered, sitecol_filtered,
+        station_sitecol, sitecol,
         conditioning_imts, [target_imt],
         spatial_correl, cross_correl_within)
 
@@ -601,8 +601,7 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
     # Compute the within-event covariance matrix for the
     # target sites (apriori)
     rho_WY_WY = compute_spatial_cross_correlation_matrix(
-        sitecol_filtered, sitecol_filtered,
-        [target_imt], [target_imt],
+        sitecol, sitecol, [target_imt], [target_imt],
         spatial_correl, cross_correl_within)
 
     cov_WY_WY = numpy.linalg.multi_dot(
@@ -620,36 +619,25 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
         T_Y0 = numpy.block([tau_Y, tau_zeros])
     C = T_Y0 - RC @ T_D
 
-    # Compute the conditioned within-event covariance matrix
-    # for the target sites
-    cov_WY_WY_wD = cov_WY_WY - RC @ cov_WD_WY
-
-    # Compute the "conditioned between-event" covariance matrix
-    # for the target sites
-    cov_BY_BY_yD = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T])
-
     # Both conditioned covariance matrices can contain extremely
     # small negative values due to limitations of floating point
     # operations (~ -10^-17 to -10^-15), these are clipped to zero
-    cov_WY_WY_wD = cov_WY_WY_wD.clip(min=0)
-    cov_BY_BY_yD = cov_BY_BY_yD.clip(min=0)
 
-    # Finally, compute the conditioned mean
-    # of the ground motion at the target sites
-    mu_Y_yD = mu_Y + mu_BY_yD + RC @ (zeta_D - mu_BD_yD)
+    # Compute the conditioned within-event covariance matrix
+    # for the target sites clipped to zero
+    tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
 
-    # And compute the conditional covariance
-    # of the ground motion at the target sites
-    cov_Y_Y_yD = cov_WY_WY_wD + cov_BY_BY_yD
+    # Compute the conditioned between-event covariance matrix
+    # for the target sites clipped to zero
+    phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
 
-    # Store the results in a dictionary keyed by target IMT
-    # The four arrays below have different dimensions, so
+    # NB: the four arrays below have different dimensions, so
     # unlike the regular gsim get_mean_std, a numpy ndarray
     # won't work well as the 4 components will be non-homogeneous
-    meancovs[0][imt] = mu_Y_yD
-    meancovs[1][imt] = cov_Y_Y_yD
-    meancovs[2][imt] = cov_WY_WY_wD
-    meancovs[3][imt] = cov_BY_BY_yD
+    meancovs[0][imt] = mu_Y + mu_BY_yD + RC @ (zeta_D - mu_BD_yD)
+    meancovs[1][imt] = tau + phi
+    meancovs[2][imt] = tau
+    meancovs[3][imt] = phi
 
 
 def compute_spatial_cross_correlation_matrix(
