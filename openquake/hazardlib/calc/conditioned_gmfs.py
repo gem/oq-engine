@@ -563,7 +563,6 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
                  imt, nominal_bias_mean, nominal_bias_stddev)
 
     mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]
-    num_target_sites = len(sitecol)
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
     # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
 
@@ -593,7 +592,7 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     if native_data_available:
         C = tau_Y - RC @ T_D
     else:
-        tau_zeros = numpy.zeros((num_target_sites, len(conditioning_imts)))
+        tau_zeros = numpy.zeros((len(sitecol), len(conditioning_imts)))
         C = numpy.block([tau_Y, tau_zeros]) - RC @ T_D
 
     # Both conditioned covariance matrices can contain extremely
