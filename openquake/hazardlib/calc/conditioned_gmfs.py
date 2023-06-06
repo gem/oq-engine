@@ -388,10 +388,8 @@ def get_conditioned_mean_and_covariance(
     target_imts = [imt for imt in target_imts
                    if imt.period or imt.string == "PGA"]
 
-    target_sites_filtered = numpy.argwhere(
-        numpy.isin(target_sitecol.sids, gc_Y.ctx.sids)).ravel().tolist()
-    target_sitecol_filtered = target_sitecol.filtered(
-        target_sites_filtered)
+    target_sitecol_filtered = target_sitecol.filter(
+        numpy.isin(target_sitecol.sids, numpy.unique(gc_Y.ctx.sids)))
 
     # build 4 dictionaries keyed by IMT
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
