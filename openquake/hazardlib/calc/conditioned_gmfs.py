@@ -388,11 +388,16 @@ def get_conditioned_mean_and_covariance(
     target_imts = [imt for imt in target_imts
                    if imt.period or imt.string == "PGA"]
 
+    target_sites_filtered = numpy.argwhere(
+        numpy.isin(target_sitecol.sids, gc_Y.ctx.sids)).ravel().tolist()
+    target_sitecol_filtered = target_sitecol.filtered(
+        target_sites_filtered)
+
     # build 4 dictionaries keyed by IMT
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         set_meancovs(
-            target_imt, cmaker_Y, gc_Y, target_sitecol,
+            target_imt, cmaker_Y, gc_Y, target_sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
             spatial_correl, cross_correl_within, cross_correl_between,
@@ -446,7 +451,7 @@ def _cbn(target_imt, observed_imts, station_data_filtered):
     return conditioning_imts, bracketed_imts, native_data_available
 
 
-def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
+def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol_filtered,
                  target_imts, observed_imts,
                  station_data_filtered, station_sitecol_filtered,
                  spatial_correl, cross_correl_within, cross_correl_between,
@@ -566,10 +571,6 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol,
                  imt, nominal_bias_mean, nominal_bias_stddev)
 
     mean_stds = cmaker_Y.get_mean_stds([gc_Y.ctx])[:, 0]
-    target_sites_filtered = numpy.argwhere(
-        numpy.isin(target_sitecol.sids, gc_Y.ctx.sids)).ravel().tolist()
-    target_sitecol_filtered = target_sitecol.filtered(
-        target_sites_filtered)
     num_target_sites = len(target_sitecol_filtered)
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
     # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
