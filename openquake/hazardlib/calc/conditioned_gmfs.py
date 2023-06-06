@@ -202,7 +202,7 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(
             [from_string(imt_str) for imt_str in observed_imtls])
         self.rupture = rupture
-        self.target_sitecol = sitecol
+        self.sitecol = sitecol
         self.station_sitecol = station_sitecol
         self.station_data = station_data
         self.observed_imt_strs = observed_imt_strs
@@ -214,7 +214,7 @@ class ConditionedGmfComputer(GmfComputer):
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        sids = self.target_sitecol.sids
+        sids = self.sitecol.sids
         eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
@@ -230,7 +230,7 @@ class ConditionedGmfComputer(GmfComputer):
             # it is better to have few calls producing big arrays
             mean_covs = get_conditioned_mean_and_covariance(
                 self.rupture, gsim, self.station_sitecol, self.station_data,
-                self.observed_imt_strs, self.target_sitecol, self.imts,
+                self.observed_imt_strs, self.sitecol, self.imts,
                 self.spatial_correl,
                 self.cross_correl_between, self.cross_correl_within,
                 self.cmaker.maximum_distance)
@@ -338,7 +338,7 @@ class ConditionedGmfComputer(GmfComputer):
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_conditioned_mean_and_covariance(
         rupture, gsim, station_sitecol, station_data,
-        observed_imt_strs, target_sitecol, target_imts,
+        observed_imt_strs, sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
 
@@ -366,7 +366,7 @@ def get_conditioned_mean_and_covariance(
             maximum_distance=maximum_distance))
 
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
-    gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
+    gc_Y = GmfComputer(rupture, sitecol, cmaker_Y)
 
     gsim_idx = 0  # there is a single gsim
     mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, gsim_idx]
@@ -388,14 +388,14 @@ def get_conditioned_mean_and_covariance(
     target_imts = [imt for imt in target_imts
                    if imt.period or imt.string == "PGA"]
 
-    target_sitecol_filtered = target_sitecol.filter(
-        numpy.isin(target_sitecol.sids, numpy.unique(gc_Y.ctx.sids)))
+    sitecol_filtered = sitecol.filter(
+        numpy.isin(sitecol.sids, numpy.unique(gc_Y.ctx.sids)))
 
     # build 4 dictionaries keyed by IMT
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         set_meancovs(
-            target_imt, cmaker_Y, gc_Y, target_sitecol_filtered,
+            target_imt, cmaker_Y, gc_Y, sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
             spatial_correl, cross_correl_within, cross_correl_between,
@@ -449,7 +449,7 @@ def _cbn(target_imt, observed_imts, station_data_filtered):
     return conditioning_imts, bracketed_imts, native_data_available
 
 
-def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol_filtered,
+def set_meancovs(target_imt, cmaker_Y, gc_Y, sitecol_filtered,
                  target_imts, observed_imts,
                  station_data_filtered, station_sitecol_filtered,
                  spatial_correl, cross_correl_within, cross_correl_between,
@@ -569,7 +569,7 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol_filtered,
                  imt, nominal_bias_mean, nominal_bias_stddev)
 
     mean_stds = cmaker_Y.get_mean_stds([gc_Y.ctx])[:, 0]
-    num_target_sites = len(target_sitecol_filtered)
+    num_target_sites = len(sitecol_filtered)
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
     # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
 
@@ -589,23 +589,17 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol_filtered,
     # Compute the within-event covariance matrix for the
     # target sites and observation sites
     rho_WY_WD = compute_spatial_cross_correlation_matrix(
-        target_sitecol_filtered,
-        station_sitecol_filtered,
-        [target_imt],
-        conditioning_imts,
-        spatial_correl,
-        cross_correl_within)
+        sitecol_filtered, station_sitecol_filtered,
+        [target_imt], conditioning_imts,
+        spatial_correl, cross_correl_within)
 
     cov_WY_WD = numpy.linalg.multi_dot(
         [numpy.diag(phi_Y_flat), rho_WY_WD, numpy.diag(phi_D_flat)])
 
     rho_WD_WY = compute_spatial_cross_correlation_matrix(
-        station_sitecol_filtered,
-        target_sitecol_filtered,
-        conditioning_imts,
-        [target_imt],
-        spatial_correl,
-        cross_correl_within)
+        station_sitecol_filtered, sitecol_filtered,
+        conditioning_imts, [target_imt],
+        spatial_correl, cross_correl_within)
 
     cov_WD_WY = numpy.linalg.multi_dot(
         [numpy.diag(phi_D_flat), rho_WD_WY, numpy.diag(phi_Y_flat)])
@@ -613,12 +607,9 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, target_sitecol_filtered,
     # Compute the within-event covariance matrix for the
     # target sites (apriori)
     rho_WY_WY = compute_spatial_cross_correlation_matrix(
-        target_sitecol_filtered,
-        target_sitecol_filtered,
-        [target_imt],
-        [target_imt],
-        spatial_correl,
-        cross_correl_within)
+        sitecol_filtered, sitecol_filtered,
+        [target_imt], [target_imt],
+        spatial_correl, cross_correl_within)
 
     cov_WY_WY = numpy.linalg.multi_dot(
         [numpy.diag(phi_Y_flat), rho_WY_WY, numpy.diag(phi_Y_flat)])
