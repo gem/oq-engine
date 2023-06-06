@@ -389,6 +389,11 @@ def get_conditioned_mean_and_covariance(
     sitecol_filtered = sitecol.filter(
         numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
 
+    def compute_cov(sites1, sites2, imts1, imts2, diag1, diag2):
+        rho = compute_spatial_cross_correlation_matrix(
+            sites1, sites2, imts1, imts2, spatial_correl, cross_correl_within)
+        return numpy.linalg.multi_dot([diag1, rho, diag2])
+
     # build 4 dictionaries keyed by IMT
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
@@ -396,8 +401,7 @@ def get_conditioned_mean_and_covariance(
             target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
-            spatial_correl, cross_correl_within, cross_correl_between,
-            meancovs)
+            compute_cov, cross_correl_between, meancovs)
 
     return meancovs
 
@@ -450,8 +454,7 @@ def _cbn(target_imt, observed_imts, station_data_filtered):
 def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
                  target_imts, observed_imts,
                  station_data, station_sitecol,
-                 spatial_correl, cross_correl_within, cross_correl_between,
-                 meancovs):
+                 compute_cov, cross_correl_between, meancovs):
 
     nss = len(station_sitecol)  # number of station sites
     [gsim] = cmaker_Y.gsims
@@ -506,13 +509,8 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     zD = yD - mu_yD
     D = numpy.diag(phi_D.flatten())
 
-    # Compute the station data within-event covariance matrix
-    rho_WD_WD = compute_spatial_cross_correlation_matrix(
-        station_sitecol, station_sitecol,
-        conditioning_imts, conditioning_imts,
-        spatial_correl, cross_correl_within)
-
-    cov_WD_WD = numpy.linalg.multi_dot([D, rho_WD_WD, D])
+    cov_WD_WD = compute_cov(station_sitecol, station_sitecol,
+                            conditioning_imts, conditioning_imts, D, D)
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
@@ -578,28 +576,11 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     mu_HN_yD = mu_HD_yD[0, None]
     mu_BY_yD = tau_Y @ mu_HN_yD
 
-    # Compute the within-event covariance matrix for the
-    # target sites and observation sites
-    rho_WY_WD = compute_spatial_cross_correlation_matrix(
-        sitecol, station_sitecol, [target_imt], conditioning_imts,
-        spatial_correl, cross_correl_within)
-
-    cov_WY_WD = numpy.linalg.multi_dot([Y, rho_WY_WD, D])
-
-    rho_WD_WY = compute_spatial_cross_correlation_matrix(
-        station_sitecol, sitecol,
-        conditioning_imts, [target_imt],
-        spatial_correl, cross_correl_within)
-
-    cov_WD_WY = numpy.linalg.multi_dot([D, rho_WD_WY, Y])
-
-    # Compute the within-event covariance matrix for the
-    # target sites (apriori)
-    rho_WY_WY = compute_spatial_cross_correlation_matrix(
-        sitecol, sitecol, [target_imt], [target_imt],
-        spatial_correl, cross_correl_within)
-
-    cov_WY_WY = numpy.linalg.multi_dot([Y, rho_WY_WY, Y])
+    cov_WY_WD = compute_cov(sitecol, station_sitecol,
+                            [target_imt], conditioning_imts, Y, D)
+    cov_WD_WY = compute_cov(station_sitecol, sitecol,
+                            conditioning_imts, [target_imt], D, Y)
+    cov_WY_WY = compute_cov(sitecol, sitecol, [target_imt], [target_imt], Y, Y)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ cov_WD_WD_inv
