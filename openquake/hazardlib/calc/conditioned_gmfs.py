@@ -364,7 +364,7 @@ def get_conditioned_mean_and_covariance(
             maximum_distance=maximum_distance))
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
-    gc_Y = GmfComputer(rupture, sitecol, cmaker_Y)
+    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], sitecol)
 
     gsim_idx = 0  # there is a single gsim
     mean_stds = cmaker_D.get_mean_stds([ctx_D])[:, gsim_idx]
@@ -387,13 +387,13 @@ def get_conditioned_mean_and_covariance(
                    if imt.period or imt.string == "PGA"]
 
     sitecol_filtered = sitecol.filter(
-        numpy.isin(sitecol.sids, numpy.unique(gc_Y.ctx.sids)))
+        numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
 
     # build 4 dictionaries keyed by IMT
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         set_meancovs(
-            target_imt, cmaker_Y, gc_Y, sitecol_filtered,
+            target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
             spatial_correl, cross_correl_within, cross_correl_between,
@@ -447,7 +447,7 @@ def _cbn(target_imt, observed_imts, station_data_filtered):
     return conditioning_imts, bracketed_imts, native_data_available
 
 
-def set_meancovs(target_imt, cmaker_Y, gc_Y, sitecol_filtered,
+def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
                  target_imts, observed_imts,
                  station_data_filtered, station_sitecol_filtered,
                  spatial_correl, cross_correl_within, cross_correl_between,
@@ -562,7 +562,7 @@ def set_meancovs(target_imt, cmaker_Y, gc_Y, sitecol_filtered,
                  "Nominal bias stddev: %.3f",  gsim_name,
                  imt, nominal_bias_mean, nominal_bias_stddev)
 
-    mean_stds = cmaker_Y.get_mean_stds([gc_Y.ctx])[:, 0]
+    mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]
     num_target_sites = len(sitecol_filtered)
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
     # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
