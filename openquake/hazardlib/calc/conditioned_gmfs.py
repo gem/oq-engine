@@ -591,6 +591,15 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ cov_WD_WD_inv
 
+    # compute the mean
+    mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (zD - mu_BD_yD)
+
+    # covariance matrices can contain extremely small negative values
+
+    # Compute the conditioned within-event covariance matrix
+    # for the target sites clipped to zero
+    tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
+
     # Compute the scaling matrix "C" for the conditioned between-event
     # covariance matrix
     if native_data_available:
@@ -598,16 +607,6 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     else:
         tau_zeros = numpy.zeros((len(sitecol), len(conditioning_imts)))
         C = numpy.block([tau_Y, tau_zeros]) - RC @ T_D
-
-    mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (zD - mu_BD_yD)
-
-    # Both conditioned covariance matrices can contain extremely
-    # small negative values due to limitations of floating point
-    # operations (~ -10^-17 to -10^-15), these are clipped to zero
-
-    # Compute the conditioned within-event covariance matrix
-    # for the target sites clipped to zero
-    tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
 
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero
