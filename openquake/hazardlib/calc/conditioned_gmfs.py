@@ -331,6 +331,54 @@ class ConditionedGmfComputer(GmfComputer):
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
+def _get_d(target_imt, observed_imts, station_data_filtered):
+    # returns (conditioning_imts, bracketed_imts, native_data_available)
+
+    native_data_available = False
+
+    if target_imt in observed_imts:
+        # Target IMT is present in the observed IMTs
+        conditioning_imts = [target_imt]
+        bracketed_imts = conditioning_imts
+        native_data_available = True
+    else:
+        # Find where the target IMT falls in the list of observed IMTs
+        all_imts = sorted(observed_imts + [target_imt])
+        imt_idx = numpy.where(
+            target_imt.string == numpy.array(all_imts)[:, 0])[0][0]
+        if imt_idx == 0:
+            # Target IMT is outside the range of the observed IMT periods
+            # and its period is lower than the lowest available in the
+            # observed IMTs
+            conditioning_imts = [all_imts[1]]
+        elif imt_idx == len(all_imts) - 1:
+            # Target IMT is outside the range of the observed IMT periods
+            # and its period is higher than the highest available in the
+            # observed IMTs
+            conditioning_imts = [all_imts[-2]]
+        else:
+            # Target IMT is within the range of the observed IMT periods
+            # and its period falls between two periods in the observed IMTs
+            conditioning_imts = [all_imts[imt_idx - 1],
+                                 all_imts[imt_idx + 1]]
+        bracketed_imts = [target_imt] + conditioning_imts
+
+    # Check if the station data for the IMTs shortlisted for conditioning
+    # contains NaNs
+    for conditioning_imt in conditioning_imts:
+        num_null_values = station_data_filtered[
+            conditioning_imt.string + "_mean"].isna().sum()
+        if num_null_values:
+            raise ValueError(
+                f"The station data contains {num_null_values}"
+                f"null values for {target_imt.string}."
+                "Please fill or discard these rows.")
+    d = Data(conditioning_imts=conditioning_imts,
+             bracketed_imts=bracketed_imts,
+             native_data_available=native_data_available)
+    return d
+
+
 def compute_cov(spatial_correl, cross_correl_within, sites1, sites2,
                 imts1, imts2, diag1, diag2):
     rho = compute_spatial_cross_correlation_matrix(
@@ -403,12 +451,16 @@ def get_conditioned_mean_and_covariance(
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         imt = target_imt.string
+        cc = partial(compute_cov, spatial_correl, cross_correl_within)
+        d = calc_d(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
+                   target_imts, observed_imts,
+                   station_data_filtered, station_sitecol_filtered,
+                   cc, cross_correl_between)
         mu, tau, phi = get_meancovs(
             target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
-            partial(compute_cov, spatial_correl, cross_correl_within),
-            cross_correl_between, meancovs)
+            cc, d)
         meancovs[0][imt] = mu
         meancovs[1][imt] = tau + phi
         meancovs[2][imt] = tau
@@ -417,65 +469,18 @@ def get_conditioned_mean_and_covariance(
     return meancovs
 
 
-def _cbn(target_imt, observed_imts, station_data_filtered):
-    # returns (conditioning_imts, bracketed_imts, native_data_available)
-
-    native_data_available = False
-
-    if target_imt in observed_imts:
-        # Target IMT is present in the observed IMTs
-        conditioning_imts = [target_imt]
-        bracketed_imts = conditioning_imts
-        native_data_available = True
-    else:
-        # Find where the target IMT falls in the list of observed IMTs
-        all_imts = sorted(observed_imts + [target_imt])
-        imt_idx = numpy.where(
-            target_imt.string == numpy.array(all_imts)[:, 0])[0][0]
-        if imt_idx == 0:
-            # Target IMT is outside the range of the observed IMT periods
-            # and its period is lower than the lowest available in the
-            # observed IMTs
-            conditioning_imts = [all_imts[1]]
-        elif imt_idx == len(all_imts) - 1:
-            # Target IMT is outside the range of the observed IMT periods
-            # and its period is higher than the highest available in the
-            # observed IMTs
-            conditioning_imts = [all_imts[-2]]
-        else:
-            # Target IMT is within the range of the observed IMT periods
-            # and its period falls between two periods in the observed IMTs
-            conditioning_imts = [all_imts[imt_idx - 1],
-                                 all_imts[imt_idx + 1]]
-        bracketed_imts = [target_imt] + conditioning_imts
-
-    # Check if the station data for the IMTs shortlisted for conditioning
-    # contains NaNs
-    for conditioning_imt in conditioning_imts:
-        num_null_values = station_data_filtered[
-            conditioning_imt.string + "_mean"].isna().sum()
-        if num_null_values:
-            raise ValueError(
-                f"The station data contains {num_null_values}"
-                f"null values for {target_imt.string}."
-                "Please fill or discard these rows.")
-    return conditioning_imts, bracketed_imts, native_data_available
+class Data:
+    def __init__(self, **kw):
+        vars(self).update(kw)
 
 
-def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
-                 target_imts, observed_imts,
-                 station_data, station_sitecol,
-                 compute_cov, cross_correl_between, meancovs):
+def calc_d(target_imt, cmaker_Y, ctx_Y, sitecol,
+           target_imts, observed_imts,
+           station_data, station_sitecol,
+           compute_cov, cross_correl_between):
 
     nss = len(station_sitecol)  # number of station sites
-    [gsim] = cmaker_Y.gsims
-    if hasattr(gsim, "gmpe"):
-        gsim_name = gsim.gmpe.__class__.__name__
-    else:
-        gsim_name = gsim.__class__.__name__
-
-    conditioning_imts, bracketed_imts, native_data_available = _cbn(
-        target_imt, observed_imts, station_data)
+    d = _get_d(target_imt, observed_imts, station_data)
 
     imt = target_imt.string
     cmaker_Y.imtls = {imt: [0]}
@@ -483,7 +488,7 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # Observations (recorded values at the stations)
     yD = numpy.log(
         station_data[
-            [c_imt.string + "_mean" for c_imt in conditioning_imts]]
+            [c_imt.string + "_mean" for c_imt in d.conditioning_imts]]
     ).values.reshape((-1, 1), order="F")
 
     # Additional sigma for the observations that are uncertain
@@ -491,37 +496,37 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # directly recorded, but obtained by conversion equations or
     # cross-correlation functions
     var_addon_D = station_data[
-        [c_imt.string + "_std" for c_imt in conditioning_imts]
+        [c_imt.string + "_std" for c_imt in d.conditioning_imts]
     ].values.reshape((-1, 1), order="F") ** 2
 
     # Predicted mean at the observation points, from GSIM(s)
     mu_yD = station_data[
-        [c_imt.string + "_median" for c_imt in conditioning_imts]
+        [c_imt.string + "_median" for c_imt in d.conditioning_imts]
     ].values.reshape((-1, 1), order="F")
     # Predicted uncertainty components at the observation points
     # from GSIM(s)
     phi_D = station_data[
-        [c_imt.string + "_phi" for c_imt in conditioning_imts]
+        [c_imt.string + "_phi" for c_imt in d.conditioning_imts]
     ].values.reshape((-1, 1), order="F")
     tau_D = station_data[
-        [c_imt.string + "_tau" for c_imt in conditioning_imts]
+        [c_imt.string + "_tau" for c_imt in d.conditioning_imts]
     ].values.reshape((-1, 1), order="F")
 
-    if native_data_available:
-        T_D = tau_D
+    if d.native_data_available:
+        d.T_D = tau_D
     else:
         # s = num_station_sites
-        T_D = numpy.zeros(
-            (len(conditioning_imts) * nss, len(bracketed_imts)))
-        for i in range(len(conditioning_imts)):
-            T_D[i * nss: (i + 1) * nss, i + 1] = tau_D[
+        d.T_D = numpy.zeros(
+            (len(d.conditioning_imts) * nss, len(d.bracketed_imts)))
+        for i in range(len(d.conditioning_imts)):
+            d.T_D[i * nss: (i + 1) * nss, i + 1] = tau_D[
                 i * nss: (i + 1) * nss, 0]
     # The raw residuals
-    zD = yD - mu_yD
-    D = numpy.diag(phi_D.flatten())
+    d.zD = yD - mu_yD
+    d.D = numpy.diag(phi_D.flatten())
 
     cov_WD_WD = compute_cov(station_sitecol, station_sitecol,
-                            conditioning_imts, conditioning_imts, D, D)
+                            d.conditioning_imts, d.conditioning_imts, d.D, d.D)
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
@@ -529,7 +534,7 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
 
     # Get the (pseudo)-inverse of the station data within-event covariance
     # matrix
-    cov_WD_WD_inv = numpy.linalg.pinv(cov_WD_WD)
+    d.cov_WD_WD_inv = numpy.linalg.pinv(cov_WD_WD)
 
     # # The normalized between-event residual and its variance (for the
     # # observation points)
@@ -544,22 +549,38 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # requiring the computation of the covariance matrix Σ_HD_HD, which is
     # just the matrix of cross-correlations for the observed IMTs, since
     # H is the normalized between-event residual
-    corr_HD_HD = cross_correl_between._get_correlation_matrix(bracketed_imts)
+    d.corr_HD_HD = cross_correl_between._get_correlation_matrix(
+        d.bracketed_imts)
+
+    return d
+
+
+def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
+                 target_imts, observed_imts,
+                 station_data, station_sitecol,
+                 compute_cov, d):
+
+    [gsim] = cmaker_Y.gsims
+    if hasattr(gsim, "gmpe"):
+        gsim_name = gsim.gmpe.__class__.__name__
+    else:
+        gsim_name = gsim.__class__.__name__
 
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
     # H|Y2=y2 is normally distributed with mean and covariance:
     cov_HD_HD_yD = numpy.linalg.pinv(
-        numpy.linalg.multi_dot([T_D.T, cov_WD_WD_inv, T_D])
-        + numpy.linalg.pinv(corr_HD_HD))
+        numpy.linalg.multi_dot([d.T_D.T, d.cov_WD_WD_inv, d.T_D])
+        + numpy.linalg.pinv(d.corr_HD_HD))
 
-    mu_HD_yD = numpy.linalg.multi_dot([cov_HD_HD_yD, T_D.T, cov_WD_WD_inv, zD])
+    mu_HD_yD = numpy.linalg.multi_dot(
+        [cov_HD_HD_yD, d.T_D.T, d.cov_WD_WD_inv, d.zD])
 
     # Compute the distribution of the conditional between-event
     # residual B|Y2=y2
-    mu_BD_yD = T_D @ mu_HD_yD
-    cov_BD_BD_yD = numpy.linalg.multi_dot([T_D, cov_HD_HD_yD, T_D.T])
+    mu_BD_yD = d.T_D @ mu_HD_yD
+    cov_BD_BD_yD = numpy.linalg.multi_dot([d.T_D, cov_HD_HD_yD, d.T_D.T])
 
     # Get the nominal bias and its standard deviation as the means of the
     # conditional between-event residual mean and standard deviation
@@ -567,7 +588,7 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
     logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
                  "Nominal bias stddev: %.3f",  gsim_name,
-                 imt, nominal_bias_mean, nominal_bias_stddev)
+                 target_imt, nominal_bias_mean, nominal_bias_stddev)
 
     mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]
     # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
@@ -582,16 +603,17 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # Compute the mean of the conditional between-event residual B|YD=yD
     # for the target sites
     cov_WY_WD = compute_cov(sitecol, station_sitecol,
-                            [target_imt], conditioning_imts, Y, D)
+                            [target_imt], d.conditioning_imts, Y, d.D)
     cov_WD_WY = compute_cov(station_sitecol, sitecol,
-                            conditioning_imts, [target_imt], D, Y)
-    cov_WY_WY = compute_cov(sitecol, sitecol, [target_imt], [target_imt], Y, Y)
+                            d.conditioning_imts, [target_imt], d.D, Y)
+    cov_WY_WY = compute_cov(sitecol, sitecol,
+                            [target_imt], [target_imt], Y, Y)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
-    RC = cov_WY_WD @ cov_WD_WD_inv
+    RC = cov_WY_WD @ d.cov_WD_WD_inv
 
     # compute the mean
-    mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (zD - mu_BD_yD)
+    mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (d.zD - mu_BD_yD)
 
     # covariance matrices can contain extremely small negative values
 
@@ -601,11 +623,11 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
 
     # Compute the scaling matrix "C" for the conditioned between-event
     # covariance matrix
-    if native_data_available:
-        C = tau_Y - RC @ T_D
+    if d.native_data_available:
+        C = tau_Y - RC @ d.T_D
     else:
-        zeros = numpy.zeros((len(sitecol), len(conditioning_imts)))
-        C = numpy.block([tau_Y, zeros]) - RC @ T_D
+        zeros = numpy.zeros((len(sitecol), len(d.conditioning_imts)))
+        C = numpy.block([tau_Y, zeros]) - RC @ d.T_D
 
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero
