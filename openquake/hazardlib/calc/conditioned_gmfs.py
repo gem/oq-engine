@@ -609,11 +609,10 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # Compute the scaling matrix "C" for the conditioned between-event
     # covariance matrix
     if native_data_available:
-        T_Y0 = tau_Y
+        C = tau_Y - RC @ T_D
     else:
         tau_zeros = numpy.zeros((num_target_sites, len(conditioning_imts)))
-        T_Y0 = numpy.block([tau_Y, tau_zeros])
-    C = T_Y0 - RC @ T_D
+        C = numpy.block([tau_Y, tau_zeros]) - RC @ T_D
 
     # Both conditioned covariance matrices can contain extremely
     # small negative values due to limitations of floating point
