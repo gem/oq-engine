@@ -605,8 +605,8 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     if native_data_available:
         C = tau_Y - RC @ T_D
     else:
-        tau_zeros = numpy.zeros((len(sitecol), len(conditioning_imts)))
-        C = numpy.block([tau_Y, tau_zeros]) - RC @ T_D
+        zeros = numpy.zeros((len(sitecol), len(conditioning_imts)))
+        C = numpy.block([tau_Y, zeros]) - RC @ T_D
 
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero
