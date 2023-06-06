@@ -108,6 +108,8 @@ cov_Y_Y_yD:
 
 import logging
 from functools import partial
+from dataclasses import dataclass
+
 import numpy
 import pandas
 from openquake.baselib.python3compat import decode
@@ -469,9 +471,16 @@ def get_conditioned_mean_and_covariance(
     return meancovs
 
 
+@dataclass
 class Data:
-    def __init__(self, **kw):
-        vars(self).update(kw)
+    bracketed_imts: list
+    conditioning_imts: list
+    native_data_available: bool
+    corr_HD_HD: numpy.ndarray = 0
+    cov_WD_WD_inv: numpy.ndarray = 0
+    D: numpy.ndarray = 0
+    T_D: numpy.ndarray = 0
+    zD: numpy.ndarray = 0
 
 
 def calc_d(target_imt, cmaker_Y, ctx_Y, sitecol,
@@ -521,6 +530,7 @@ def calc_d(target_imt, cmaker_Y, ctx_Y, sitecol,
         for i in range(len(d.conditioning_imts)):
             d.T_D[i * nss: (i + 1) * nss, i + 1] = tau_D[
                 i * nss: (i + 1) * nss, 0]
+
     # The raw residuals
     d.zD = yD - mu_yD
     d.D = numpy.diag(phi_D.flatten())
