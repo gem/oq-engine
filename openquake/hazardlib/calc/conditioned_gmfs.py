@@ -107,6 +107,7 @@ cov_Y_Y_yD:
 """
 
 import logging
+from functools import partial
 import numpy
 import pandas
 from openquake.baselib.python3compat import decode
@@ -330,6 +331,13 @@ class ConditionedGmfComputer(GmfComputer):
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
 
+def compute_cov(spatial_correl, cross_correl_within, sites1, sites2,
+                imts1, imts2, diag1, diag2):
+    rho = compute_spatial_cross_correlation_matrix(
+        sites1, sites2, imts1, imts2, spatial_correl, cross_correl_within)
+    return numpy.linalg.multi_dot([diag1, rho, diag2])
+
+
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_conditioned_mean_and_covariance(
         rupture, gsim, station_sitecol, station_data,
@@ -389,11 +397,6 @@ def get_conditioned_mean_and_covariance(
     sitecol_filtered = sitecol.filter(
         numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
 
-    def compute_cov(sites1, sites2, imts1, imts2, diag1, diag2):
-        rho = compute_spatial_cross_correlation_matrix(
-            sites1, sites2, imts1, imts2, spatial_correl, cross_correl_within)
-        return numpy.linalg.multi_dot([diag1, rho, diag2])
-
     # build 4 dictionaries keyed by IMT
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
@@ -401,7 +404,8 @@ def get_conditioned_mean_and_covariance(
             target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
-            compute_cov, cross_correl_between, meancovs)
+            partial(compute_cov, spatial_correl, cross_correl_within),
+            cross_correl_between, meancovs)
 
     return meancovs
 
@@ -566,7 +570,6 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # Predicted mean at the target sites, from GSIM(s)
     mu_Y = mean_stds[0, 0].reshape((-1, 1))
     # Predicted uncertainty components at the target sites, from GSIM(s)
-    sigma_Y = mean_stds[1, 0].reshape((-1, 1))
     tau_Y = mean_stds[2, 0].reshape((-1, 1))
     phi_Y = mean_stds[3, 0].reshape((-1, 1))
     Y = numpy.diag(phi_Y.flatten())
