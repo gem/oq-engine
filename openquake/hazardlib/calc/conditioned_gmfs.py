@@ -573,12 +573,6 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
                  station_data, station_sitecol,
                  compute_cov, t):
 
-    [gsim] = cmaker_Y.gsims
-    if hasattr(gsim, "gmpe"):
-        gsim_name = gsim.gmpe.__class__.__name__
-    else:
-        gsim_name = gsim.__class__.__name__
-
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
     # Engler et al. (2022), eqns B8 and B9 (also B18 and B19),
@@ -599,8 +593,11 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # conditional between-event residual mean and standard deviation
     nominal_bias_mean = numpy.mean(mu_BD_yD)
     nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
+
+    [gsim] = cmaker_Y.gsims
     logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
-                 "Nominal bias stddev: %.3f",  gsim_name,
+                 "Nominal bias stddev: %.3f",
+                 gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
                  target_imt, nominal_bias_mean, nominal_bias_stddev)
 
     mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]
