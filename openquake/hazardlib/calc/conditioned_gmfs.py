@@ -511,9 +511,8 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
         conditioning_imts, conditioning_imts,
         spatial_correl, cross_correl_within)
 
-    phi_D_flat = phi_D.flatten()
-    cov_WD_WD = numpy.linalg.multi_dot(
-        [numpy.diag(phi_D_flat), rho_WD_WD, numpy.diag(phi_D_flat)])
+    D = numpy.diag(phi_D.flatten())
+    cov_WD_WD = numpy.linalg.multi_dot([D, rho_WD_WD, D])
 
     # Add on the additional variance of the residuals
     # for the cases where the station data is uncertain
@@ -573,7 +572,6 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     sigma_Y = mean_stds[1, 0].reshape((-1, 1))
     tau_Y = mean_stds[2, 0].reshape((-1, 1))
     phi_Y = mean_stds[3, 0].reshape((-1, 1))
-    phi_Y_flat = phi_Y.flatten()
 
     # Compute the mean of the conditional between-event residual B|YD=yD
     # for the target sites
@@ -587,16 +585,15 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
         [target_imt], conditioning_imts,
         spatial_correl, cross_correl_within)
 
-    cov_WY_WD = numpy.linalg.multi_dot(
-        [numpy.diag(phi_Y_flat), rho_WY_WD, numpy.diag(phi_D_flat)])
+    Y = numpy.diag(phi_Y.flatten())
+    cov_WY_WD = numpy.linalg.multi_dot([Y, rho_WY_WD, D])
 
     rho_WD_WY = compute_spatial_cross_correlation_matrix(
         station_sitecol, sitecol,
         conditioning_imts, [target_imt],
         spatial_correl, cross_correl_within)
 
-    cov_WD_WY = numpy.linalg.multi_dot(
-        [numpy.diag(phi_D_flat), rho_WD_WY, numpy.diag(phi_Y_flat)])
+    cov_WD_WY = numpy.linalg.multi_dot([D, rho_WD_WY, Y])
 
     # Compute the within-event covariance matrix for the
     # target sites (apriori)
@@ -604,8 +601,7 @@ def set_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
         sitecol, sitecol, [target_imt], [target_imt],
         spatial_correl, cross_correl_within)
 
-    cov_WY_WY = numpy.linalg.multi_dot(
-        [numpy.diag(phi_Y_flat), rho_WY_WY, numpy.diag(phi_Y_flat)])
+    cov_WY_WY = numpy.linalg.multi_dot([Y, rho_WY_WY, Y])
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
     RC = cov_WY_WD @ cov_WD_WD_inv
