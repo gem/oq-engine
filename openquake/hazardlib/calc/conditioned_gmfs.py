@@ -368,7 +368,8 @@ def get_conditioned_mean_and_covariance(
     gc_D = GmfComputer(rupture, station_sitecol, cmaker_D)
     gc_Y = GmfComputer(rupture, target_sitecol, cmaker_Y)
 
-    mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, 0]
+    gsim_idx = 0  # there is a single gsim
+    mean_stds = cmaker_D.get_mean_stds([gc_D.ctx])[:, gsim_idx]
     # shape (4, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
     # M is the number of IMTs, N the number of sites/distances
 
@@ -383,6 +384,9 @@ def get_conditioned_mean_and_covariance(
         station_data_filtered[im + "_tau"] = mean_stds[2, i]
         station_data_filtered[im + "_phi"] = mean_stds[3, i]
 
+    # Target IMT is not PGA or SA: Currently not supported
+    target_imts = [imt for imt in target_imts
+                   if imt.period or imt.string == "PGA"]
     meancovs = calc_meancovs(
         cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
         station_data_filtered, station_sitecol_filtered,
@@ -413,15 +417,7 @@ def calc_meancovs(cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
         imt = target_imt.string
         cmaker_Y.imtls = {imt: [0]}
 
-        # Handle various cases differently depending on the
-        # target IMT in question, and whether it is present
-        # in the observed IMTs or not
-        if not (target_imt.period or imt == "PGA"):
-            # Target IMT is not PGA or SA: Currently not supported
-            logging.warning("Conditioned gmfs not available for %s",
-                            imt)
-            continue
-        elif target_imt in observed_imts:
+        if target_imt in observed_imts:
             # Target IMT is present in the observed IMTs
             conditioning_imts = [target_imt]
             bracketed_imts = conditioning_imts
@@ -462,9 +458,9 @@ def calc_meancovs(cmaker_Y, gc_Y, target_sitecol, target_imts, observed_imts,
         # Observations (recorded values at the stations)
         yD = numpy.log(
             station_data_filtered[
-                [c_imt.string + "_mean" for c_imt in conditioning_imts]
-            ]
+                [c_imt.string + "_mean" for c_imt in conditioning_imts]]
         ).values.reshape((-1, 1), order="F")
+
         # Additional sigma for the observations that are uncertain
         # These arise if the values for this particular IMT were not
         # directly recorded, but obtained by conversion equations or
