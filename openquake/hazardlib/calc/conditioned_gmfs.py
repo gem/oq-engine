@@ -400,7 +400,9 @@ def create_result(target_imt, cmaker_Y, ctx_Y,
                   target_imts, observed_imts,
                   station_data, sitecol, station_sitecol,
                   compute_cov, cross_correl_between):
-
+    """
+    :returns: a TempResult
+    """
     t = _create_result(target_imt, observed_imts, station_data)
 
     imt = target_imt.string
@@ -540,10 +542,13 @@ def get_conditioned_mean_and_covariance(
     # shape (4, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
     # M is the number of IMTs, N the number of sites/distances
 
-    station_locs_filtered = numpy.argwhere(
-        numpy.isin(station_sitecol.sids, ctx_D.sids)).ravel().tolist()
-    station_sitecol_filtered = station_sitecol.filtered(station_locs_filtered)
-    station_data_filtered = station_data.iloc[station_locs_filtered].copy()
+    # filter sites
+    sitecol_filtered = sitecol.filter(
+        numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
+    mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
+    station_sitecol_filtered = station_sitecol.filter(mask)
+    sids, = numpy.where(mask)
+    station_data_filtered = station_data.iloc[sids].copy()
     for i, o_imt in enumerate(observed_imts):
         im = o_imt.string
         station_data_filtered[im + "_median"] = mean_stds[0, i]
@@ -555,9 +560,6 @@ def get_conditioned_mean_and_covariance(
     target_imts = [imt for imt in target_imts
                    if imt.period or imt.string == "PGA"]
 
-    sitecol_filtered = sitecol.filter(
-        numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
-
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
 
@@ -567,16 +569,13 @@ def get_conditioned_mean_and_covariance(
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         imt = target_imt.string
-        result = create_result(target_imt, cmaker_Y, ctx_Y,
-                               target_imts, observed_imts,
-                               station_data_filtered,
-                               sitecol_filtered, station_sitecol_filtered,
-                               compute_cov, cross_correl_between)
-        mu, tau, phi = get_conditioned_meancovs(
-            target_imt, cmaker_Y, ctx_Y,
-            target_imts, observed_imts,
-            station_data_filtered,
-            sitecol_filtered, station_sitecol_filtered,
+        result = create_result(
+            target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
+            station_data_filtered, sitecol_filtered, station_sitecol_filtered,
+            compute_cov, cross_correl_between)
+        mu, tau, phi = get_mu_tau_phi(
+            target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
+            station_data_filtered, sitecol_filtered, station_sitecol_filtered,
             compute_cov, result)
         meancovs[0][imt] = mu
         meancovs[1][imt] = tau + phi
@@ -586,11 +585,9 @@ def get_conditioned_mean_and_covariance(
     return meancovs
 
 
-def get_conditioned_meancovs(
-        target_imt, cmaker_Y, ctx_Y,
-        target_imts, observed_imts,
-        station_data, sitecol, station_sitecol,
-        compute_cov, t):
+def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
+                   target_imts, observed_imts, station_data,
+                   sitecol, station_sitecol, compute_cov, t):
 
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
@@ -619,13 +616,13 @@ def get_conditioned_meancovs(
                  gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
                  target_imt, nominal_bias_mean, nominal_bias_stddev)
 
-    mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]
-    # (4, G, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
-    # StdDev.INTRA_EVENT; G gsims, M IMTs, N sites/distances
+    mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]  # 0=gsim_idx
+    # (4, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
+    # StdDev.INTRA_EVENT; M IMTs, N sites/distances
 
-    # Predicted mean at the target sites, from GSIM(s)
+    # Predicted mean at the target sites, from GSIM
     mu_Y = mean_stds[0, 0].reshape((-1, 1))
-    # Predicted uncertainty components at the target sites, from GSIM(s)
+    # Predicted uncertainty components at the target sites, from GSIM
     tau_Y = mean_stds[2, 0].reshape((-1, 1))
     Y = numpy.diag(mean_stds[3, 0].flatten())
 
@@ -665,10 +662,9 @@ def get_conditioned_meancovs(
 
 
 def _compute_spatial_cross_correlation_matrix(
-        distance_matrix, imt_1, imt_2,
-        spatial_correl, cross_correl_within):
+        distance_matrix, imt_1, imt_2, spatial_correl, cross_correl_within):
     if imt_1 == imt_2:
-        # Since we have a single IMT, no cross-correlation terms to be computed
+        # since we have a single IMT, there are no cross-correlation terms
         spatial_correlation_matrix = spatial_correl._get_correlation_matrix(
             distance_matrix, imt_1
         )
@@ -752,8 +748,8 @@ def corr2cov(corr, std):
     Notes
     -----
     This function does not convert subclasses of ndarrays. This requires
-    that multiplication is defined elementwise. numpy.ma.array are allowed, but
-    not matrices.
+    that multiplication is defined elementwise. numpy.ma.array are allowed,
+    but not matrices.
     """
     corr = numpy.asanyarray(corr)
     std_ = numpy.asanyarray(std)
