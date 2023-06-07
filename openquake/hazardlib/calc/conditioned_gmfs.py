@@ -348,7 +348,7 @@ class TempResult:
     zD: numpy.ndarray = 0
 
 
-def _get_d(target_imt, observed_imts, station_data_filtered):
+def _create_result(target_imt, observed_imts, station_data_filtered):
     # returns (conditioning_imts, bracketed_imts, native_data_available)
 
     native_data_available = False
@@ -396,10 +396,90 @@ def _get_d(target_imt, observed_imts, station_data_filtered):
     return t
 
 
+def create_result(target_imt, cmaker_Y, ctx_Y, sitecol,
+                  target_imts, observed_imts,
+                  station_data, station_sitecol,
+                  compute_cov, cross_correl_between):
+
+    t = _create_result(target_imt, observed_imts, station_data)
+
+    imt = target_imt.string
+    cmaker_Y.imtls = {imt: [0]}
+    nss = len(station_sitecol)  # number of station sites
+
+    # Observations (recorded values at the stations)
+    yD = numpy.log(
+        station_data[
+            [c_imt.string + "_mean" for c_imt in t.conditioning_imts]]
+    ).values.reshape((-1, 1), order="F")
+
+    # Additional sigma for the observations that are uncertain
+    # These arise if the values for this particular IMT were not
+    # directly recorded, but obtained by conversion equations or
+    # cross-correlation functions
+    var_addon_D = station_data[
+        [c_imt.string + "_std" for c_imt in t.conditioning_imts]
+    ].values.reshape((-1, 1), order="F") ** 2
+
+    # Predicted mean at the observation points, from GSIM(s)
+    mu_yD = station_data[
+        [c_imt.string + "_median" for c_imt in t.conditioning_imts]
+    ].values.reshape((-1, 1), order="F")
+    # Predicted uncertainty components at the observation points
+    # from GSIM(s)
+    phi_D = station_data[
+        [c_imt.string + "_phi" for c_imt in t.conditioning_imts]
+    ].values.reshape((-1, 1), order="F")
+    tau_D = station_data[
+        [c_imt.string + "_tau" for c_imt in t.conditioning_imts]
+    ].values.reshape((-1, 1), order="F")
+
+    if t.native_data_available:
+        t.T_D = tau_D
+    else:
+        # s = num_station_sites
+        t.T_D = numpy.zeros(
+            (len(t.conditioning_imts) * nss, len(t.bracketed_imts)))
+        for i in range(len(t.conditioning_imts)):
+            t.T_D[i * nss: (i + 1) * nss, i + 1] = tau_D[
+                i * nss: (i + 1) * nss, 0]
+
+    # The raw residuals
+    t.zD = yD - mu_yD
+    t.D = numpy.diag(phi_D.flatten())
+
+    cov_WD_WD = compute_cov(station_sitecol, station_sitecol,
+                            t.conditioning_imts, t.conditioning_imts, t.D, t.D)
+
+    # Add on the additional variance of the residuals
+    # for the cases where the station data is uncertain
+    numpy.fill_diagonal(cov_WD_WD, numpy.diag(cov_WD_WD) + var_addon_D)
+
+    # Get the (pseudo)-inverse of the station data within-event covariance
+    # matrix
+    t.cov_WD_WD_inv = numpy.linalg.pinv(cov_WD_WD)
+
+    # # The normalized between-event residual and its variance (for the
+    # # observation points)
+    # # Engler et al. (2022) equations 12 and 13; assumes between event
+    # # residuals are perfectly cross-correlated
+    # var_H_y2 = 1.0 / (
+    #     1.0 + numpy.linalg.multi_dot([tau_y2.T, cov_W2_W2_inv, tau_y2])
+    # )
+    # mu_H_y2 = numpy.linalg.multi_dot(
+    #   [tau_y2.T, cov_W2_W2_inv, zeta]) * var_H_y2
+    # The more generic equations B8 and B9 from Appendix B are used instead
+    # requiring the computation of the covariance matrix Σ_HD_HD, which is
+    # just the matrix of cross-correlations for the observed IMTs, since
+    # H is the normalized between-event residual
+    t.corr_HD_HD = cross_correl_between._get_correlation_matrix(
+        t.bracketed_imts)
+    return t
+
+
 def compute_spatial_cross_covariance_matrix(
         spatial_correl, cross_correl_within, sites1, sites2,
         imts1, imts2, diag1, diag2):
-
     # The correlation structure for IMs of differing types at differing
     # locations can be reasonably assumed as Markovian in nature, and we
     # assume here that the correlation between differing IMs at differing
@@ -478,14 +558,15 @@ def get_conditioned_mean_and_covariance(
     sitecol_filtered = sitecol.filter(
         numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
 
+    compute_cov = partial(compute_spatial_cross_covariance_matrix,
+                          spatial_correl, cross_correl_within)
+
     # NB: the four arrays below have different dimensions, so
     # unlike the regular gsim get_mean_std, a numpy ndarray
     # won't work well as the 4 components will be non-homogeneous
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         imt = target_imt.string
-        compute_cov = partial(compute_spatial_cross_covariance_matrix,
-                              spatial_correl, cross_correl_within)
         result = create_result(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
                                target_imts, observed_imts,
                                station_data_filtered, station_sitecol_filtered,
@@ -501,88 +582,6 @@ def get_conditioned_mean_and_covariance(
         meancovs[3][imt] = phi
 
     return meancovs
-
-
-def create_result(target_imt, cmaker_Y, ctx_Y, sitecol,
-           target_imts, observed_imts,
-           station_data, station_sitecol,
-           compute_cov, cross_correl_between):
-
-    nss = len(station_sitecol)  # number of station sites
-    t = _get_d(target_imt, observed_imts, station_data)
-
-    imt = target_imt.string
-    cmaker_Y.imtls = {imt: [0]}
-
-    # Observations (recorded values at the stations)
-    yD = numpy.log(
-        station_data[
-            [c_imt.string + "_mean" for c_imt in t.conditioning_imts]]
-    ).values.reshape((-1, 1), order="F")
-
-    # Additional sigma for the observations that are uncertain
-    # These arise if the values for this particular IMT were not
-    # directly recorded, but obtained by conversion equations or
-    # cross-correlation functions
-    var_addon_D = station_data[
-        [c_imt.string + "_std" for c_imt in t.conditioning_imts]
-    ].values.reshape((-1, 1), order="F") ** 2
-
-    # Predicted mean at the observation points, from GSIM(s)
-    mu_yD = station_data[
-        [c_imt.string + "_median" for c_imt in t.conditioning_imts]
-    ].values.reshape((-1, 1), order="F")
-    # Predicted uncertainty components at the observation points
-    # from GSIM(s)
-    phi_D = station_data[
-        [c_imt.string + "_phi" for c_imt in t.conditioning_imts]
-    ].values.reshape((-1, 1), order="F")
-    tau_D = station_data[
-        [c_imt.string + "_tau" for c_imt in t.conditioning_imts]
-    ].values.reshape((-1, 1), order="F")
-
-    if t.native_data_available:
-        t.T_D = tau_D
-    else:
-        # s = num_station_sites
-        t.T_D = numpy.zeros(
-            (len(t.conditioning_imts) * nss, len(t.bracketed_imts)))
-        for i in range(len(t.conditioning_imts)):
-            t.T_D[i * nss: (i + 1) * nss, i + 1] = tau_D[
-                i * nss: (i + 1) * nss, 0]
-
-    # The raw residuals
-    t.zD = yD - mu_yD
-    t.D = numpy.diag(phi_D.flatten())
-
-    cov_WD_WD = compute_cov(station_sitecol, station_sitecol,
-                            t.conditioning_imts, t.conditioning_imts, t.D, t.D)
-
-    # Add on the additional variance of the residuals
-    # for the cases where the station data is uncertain
-    numpy.fill_diagonal(cov_WD_WD, numpy.diag(cov_WD_WD) + var_addon_D)
-
-    # Get the (pseudo)-inverse of the station data within-event covariance
-    # matrix
-    t.cov_WD_WD_inv = numpy.linalg.pinv(cov_WD_WD)
-
-    # # The normalized between-event residual and its variance (for the
-    # # observation points)
-    # # Engler et al. (2022) equations 12 and 13; assumes between event
-    # # residuals are perfectly cross-correlated
-    # var_H_y2 = 1.0 / (
-    #     1.0 + numpy.linalg.multi_dot([tau_y2.T, cov_W2_W2_inv, tau_y2])
-    # )
-    # mu_H_y2 = numpy.linalg.multi_dot(
-    #   [tau_y2.T, cov_W2_W2_inv, zeta]) * var_H_y2
-    # The more generic equations B8 and B9 from Appendix B are used instead
-    # requiring the computation of the covariance matrix Σ_HD_HD, which is
-    # just the matrix of cross-correlations for the observed IMTs, since
-    # H is the normalized between-event residual
-    t.corr_HD_HD = cross_correl_between._get_correlation_matrix(
-        t.bracketed_imts)
-
-    return t
 
 
 def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
