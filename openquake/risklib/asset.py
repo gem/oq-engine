@@ -140,14 +140,16 @@ class CostCalculator(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            # if lt == 'area':
-            #     unit = 'sqm'
-            # elif lt == 'number':
-            #     unit = 'dwellings'
-            # elif lt in ('occupants', 'residents'):
-            #     unit = 'people'
-            # else:
-            unit = self.units[lt]
+            if lt == 'area':
+                # NOTE: there's currently no trivial way to retrieve the
+                #       actual measurement unit from data (e.g. sqm or sqft)
+                unit = 'area'
+            elif lt == 'number':
+                unit = 'units'
+            elif lt in ('occupants', 'residents'):
+                unit = 'people'
+            else:
+                unit = self.units[lt]
             lst.append(unit)
         return ' '.join(lst)
 
