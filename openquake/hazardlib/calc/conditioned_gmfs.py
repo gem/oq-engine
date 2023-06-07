@@ -334,7 +334,7 @@ class ConditionedGmfComputer(GmfComputer):
 
 
 @dataclass
-class Tmp:
+class TempResult:
     """
     Temporary data structure used inside get_conditioned_mean_and_covariance
     """
@@ -390,9 +390,9 @@ def _get_d(target_imt, observed_imts, station_data_filtered):
                 f"The station data contains {num_null_values}"
                 f"null values for {target_imt.string}."
                 "Please fill or discard these rows.")
-    t = Tmp(conditioning_imts=conditioning_imts,
-            bracketed_imts=bracketed_imts,
-            native_data_available=native_data_available)
+    t = TempResult(conditioning_imts=conditioning_imts,
+                   bracketed_imts=bracketed_imts,
+                   native_data_available=native_data_available)
     return t
 
 
@@ -469,15 +469,15 @@ def get_conditioned_mean_and_covariance(
     for target_imt in target_imts:
         imt = target_imt.string
         cc = partial(compute_cov, spatial_correl, cross_correl_within)
-        d = calc_d(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
-                   target_imts, observed_imts,
-                   station_data_filtered, station_sitecol_filtered,
-                   cc, cross_correl_between)
+        result = create_result(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
+                               target_imts, observed_imts,
+                               station_data_filtered, station_sitecol_filtered,
+                               cc, cross_correl_between)
         mu, tau, phi = get_meancovs(
             target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
-            cc, d)
+            cc, result)
         meancovs[0][imt] = mu
         meancovs[1][imt] = tau + phi
         meancovs[2][imt] = tau
@@ -486,7 +486,7 @@ def get_conditioned_mean_and_covariance(
     return meancovs
 
 
-def calc_d(target_imt, cmaker_Y, ctx_Y, sitecol,
+def create_result(target_imt, cmaker_Y, ctx_Y, sitecol,
            target_imts, observed_imts,
            station_data, station_sitecol,
            compute_cov, cross_correl_between):
