@@ -396,9 +396,9 @@ def _create_result(target_imt, observed_imts, station_data_filtered):
     return t
 
 
-def create_result(target_imt, cmaker_Y, ctx_Y, sitecol,
+def create_result(target_imt, cmaker_Y, ctx_Y,
                   target_imts, observed_imts,
-                  station_data, station_sitecol,
+                  station_data, sitecol, station_sitecol,
                   compute_cov, cross_correl_between):
 
     t = _create_result(target_imt, observed_imts, station_data)
@@ -567,14 +567,16 @@ def get_conditioned_mean_and_covariance(
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         imt = target_imt.string
-        result = create_result(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
+        result = create_result(target_imt, cmaker_Y, ctx_Y,
                                target_imts, observed_imts,
-                               station_data_filtered, station_sitecol_filtered,
+                               station_data_filtered,
+                               sitecol_filtered, station_sitecol_filtered,
                                compute_cov, cross_correl_between)
-        mu, tau, phi = get_meancovs(
-            target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
+        mu, tau, phi = get_conditioned_meancovs(
+            target_imt, cmaker_Y, ctx_Y,
             target_imts, observed_imts,
-            station_data_filtered, station_sitecol_filtered,
+            station_data_filtered,
+            sitecol_filtered, station_sitecol_filtered,
             compute_cov, result)
         meancovs[0][imt] = mu
         meancovs[1][imt] = tau + phi
@@ -584,10 +586,11 @@ def get_conditioned_mean_and_covariance(
     return meancovs
 
 
-def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
-                 target_imts, observed_imts,
-                 station_data, station_sitecol,
-                 compute_cov, t):
+def get_conditioned_meancovs(
+        target_imt, cmaker_Y, ctx_Y,
+        target_imts, observed_imts,
+        station_data, sitecol, station_sitecol,
+        compute_cov, t):
 
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
