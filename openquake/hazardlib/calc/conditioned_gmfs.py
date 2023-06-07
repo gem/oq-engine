@@ -396,8 +396,9 @@ def _get_d(target_imt, observed_imts, station_data_filtered):
     return t
 
 
-def compute_cov(spatial_correl, cross_correl_within, sites1, sites2,
-                imts1, imts2, diag1, diag2):
+def compute_spatial_cross_covariance_matrix(
+        spatial_correl, cross_correl_within, sites1, sites2,
+        imts1, imts2, diag1, diag2):
     rho = compute_spatial_cross_correlation_matrix(
         sites1, sites2, imts1, imts2, spatial_correl, cross_correl_within)
     return numpy.linalg.multi_dot([diag1, rho, diag2])
@@ -468,16 +469,17 @@ def get_conditioned_mean_and_covariance(
     meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
     for target_imt in target_imts:
         imt = target_imt.string
-        cc = partial(compute_cov, spatial_correl, cross_correl_within)
+        compute_cov = partial(compute_spatial_cross_covariance_matrix,
+                              spatial_correl, cross_correl_within)
         result = create_result(target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
                                target_imts, observed_imts,
                                station_data_filtered, station_sitecol_filtered,
-                               cc, cross_correl_between)
+                               compute_cov, cross_correl_between)
         mu, tau, phi = get_meancovs(
             target_imt, cmaker_Y, ctx_Y, sitecol_filtered,
             target_imts, observed_imts,
             station_data_filtered, station_sitecol_filtered,
-            cc, result)
+            compute_cov, result)
         meancovs[0][imt] = mu
         meancovs[1][imt] = tau + phi
         meancovs[2][imt] = tau
