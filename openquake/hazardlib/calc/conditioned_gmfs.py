@@ -399,8 +399,23 @@ def _get_d(target_imt, observed_imts, station_data_filtered):
 def compute_spatial_cross_covariance_matrix(
         spatial_correl, cross_correl_within, sites1, sites2,
         imts1, imts2, diag1, diag2):
-    rho = compute_spatial_cross_correlation_matrix(
-        sites1, sites2, imts1, imts2, spatial_correl, cross_correl_within)
+
+    # The correlation structure for IMs of differing types at differing
+    # locations can be reasonably assumed as Markovian in nature, and we
+    # assume here that the correlation between differing IMs at differing
+    # locations is simply the product of the cross correlation of IMs i and j
+    # at the same location and the spatial correlation due to the distance
+    # between sites m and n. Can be refactored down the line to support direct
+    # spatial cross-correlation models
+    distance_matrix = geodetic_distance(
+        sites1.lons.reshape(sites1.lons.shape + (1,)),
+        sites1.lats.reshape(sites1.lats.shape + (1,)),
+        sites2.lons,
+        sites2.lats)
+    rho = numpy.block([[
+        _compute_spatial_cross_correlation_matrix(
+            distance_matrix, imt_1, imt_2, spatial_correl, cross_correl_within)
+        for imt_2 in imts2] for imt_1 in imts1])
     return numpy.linalg.multi_dot([diag1, rho, diag2])
 
 
@@ -645,29 +660,6 @@ def get_meancovs(target_imt, cmaker_Y, ctx_Y, sitecol,
     # for the target sites clipped to zero
     phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
     return mu, tau, phi
-
-
-def compute_spatial_cross_correlation_matrix(
-        sitecol_1, sitecol_2, imt_list_1, imt_list_2,
-        spatial_correl, cross_correl_within):
-    # The correlation structure for IMs of differing types at differing
-    # locations can be reasonably assumed as Markovian in nature, and we
-    # assume here that the correlation between differing IMs at differing
-    # locations is simply the product of the cross correlation of IMs i and j
-    # at the same location and the spatial correlation due to the distance
-    # between sites m and n. Can be refactored down the line to support direct
-    # spatial cross-correlation models
-    distance_matrix = geodetic_distance(
-        sitecol_1.lons.reshape(sitecol_1.lons.shape + (1,)),
-        sitecol_1.lats.reshape(sitecol_1.lats.shape + (1,)),
-        sitecol_2.lons,
-        sitecol_2.lats,
-    )
-    spatial_cross_correlation_matrix = numpy.block([[
-        _compute_spatial_cross_correlation_matrix(
-            distance_matrix, imt_1, imt_2, spatial_correl, cross_correl_within)
-        for imt_2 in imt_list_2] for imt_1 in imt_list_1])
-    return spatial_cross_correlation_matrix
 
 
 def _compute_spatial_cross_correlation_matrix(
