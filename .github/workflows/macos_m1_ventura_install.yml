@@ -16,7 +16,8 @@ jobs:
     strategy:
       matrix:
         os: [ventura]
-        python-version: [3.9.13, "3.10.9"]
+        #python-version: [3.9.13, "3.10.9"]
+        python-version: [3.9.13]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
