@@ -35,6 +35,7 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib import logictree
 from openquake.hazardlib.gsim.base import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -43,7 +44,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
-from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
+from openquake.commonlib import calc, util, oqvalidation, datastore
 from openquake.calculators import getters
 
 U16 = numpy.uint16
@@ -1528,16 +1529,16 @@ def clusterize(hmaps, rlzs, k):
     :param hmaps: array of shape (R, M, P)
     :param rlzs: composite array of shape R
     :param k: number of clusters to build
-    :returns: (array(K, MP), labels(R))
+    :returns: array of K elements with dtype (rlzs, branch_paths, centroid)
     """
     R, M, P = hmaps.shape
     hmaps = hmaps.transpose(0, 2, 1).reshape(R, M * P)
-    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M*P))]
+    dt = [('rlzs', hdf5.vuint32), ('branch_paths', object),
+          ('centroid', (F32, M*P))]
     centroid, labels = kmeans2(hmaps, k, minit='++')
-    dic = dict(path=rlzs['branch_path'], label=labels)
-    df = pandas.DataFrame(dic)
+    df = pandas.DataFrame(dict(path=rlzs['branch_path'], label=labels))
     tbl = []
     for label, grp in df.groupby('label'):
-        paths = [encode(path) for path in grp['path']]
-        tbl.append((label, logictree.collect_paths(paths), centroid[label]))
-    return numpy.array(tbl, dt), labels
+        paths = logictree.collect_paths(encode(list(grp['path'])))
+        tbl.append((grp.index, paths, centroid[label]))
+    return numpy.array(tbl, dt)

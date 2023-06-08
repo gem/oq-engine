@@ -77,6 +77,7 @@ def make_figure_uhs_cluster(extractors, what):
     k = int(kstr.split('=')[1])
     fig, ax = plt.subplots()
     [ex] = extractors
+    trts = ex.get('full_lt').trts
     hmaps = ex.get('hmaps?kind=rlzs')
     rlzs = ex.get('realizations').array
     labels = []
@@ -88,16 +89,19 @@ def make_figure_uhs_cluster(extractors, what):
     ax.set_xticklabels(labels)
     ax.set_ylabel('IML')
     obs = [getattr(hmaps, 'rlz-%03d' % rlz)[0] for rlz in range(len(rlzs))]
-    arr, cluster = clusterize(numpy.array(obs), rlzs, k)
-    colors = cm.rainbow(numpy.linspace(0, 1, len(arr)))
-    paths = [p.decode('ascii') for p in arr['branch_paths']]
-    for rlz in range(len(rlzs)):
-        # ush-rlz has shape NMP
-        ys = getattr(hmaps, 'rlz-%03d' % rlz)[0].T.flatten()
-        ax.plot(xs, ys, '-', color=colors[cluster[rlz]])
-    for c, curve in enumerate(arr['centroid']):
+    arrK = clusterize(numpy.array(obs), rlzs, k)
+    # arrK of size K <= k, label of size R
+    colors = cm.rainbow(numpy.linspace(0, 1, len(arrK)))  # shape (K, 4)
+    paths = [p.decode('utf-8') for p in arrK['branch_paths']]  # length K
+    for trt in trts:
+        print(trt)
+    for c, curve in enumerate(arrK['centroid']):
+        rlzs = arrK[c]['rlzs']
         lbl = '%s:%s' % (c + 1, paths[c])
-        print(lbl)
+        print(lbl, '(%d rlzs)' % len(rlzs))
+        for rlz in rlzs:
+            ys = getattr(hmaps, 'rlz-%03d' % rlz)[0].T.flatten()
+            ax.plot(xs, ys, '-', color=colors[c])
         ax.plot(xs, curve, '--', color=colors[c], label=lbl)
     ax.grid(True)
     ax.legend()
