@@ -141,9 +141,11 @@ class CostCalculator(object):
             if lt.endswith('_ins'):
                 lt = lt[:-4]
             if lt == 'area':
-                unit = 'sqm'
+                # NOTE: there's currently no trivial way to retrieve the
+                #       actual measurement unit from data (e.g. sqm or sqft)
+                unit = 'area'
             elif lt == 'number':
-                unit = 'dwellings'
+                unit = 'units'
             elif lt in ('occupants', 'residents'):
                 unit = 'people'
             else:
