@@ -67,9 +67,7 @@ def _site_amplification(ctx, C):
     it is given by FS = klog10(V0/800) , where V0 = Vs30 when Vs30 <= 1500
     and V0=1500 otherwise
     """
-    v0 = np.ones_like(ctx.vs30) * 1500.
-    v0[ctx.vs30 < 1500] = ctx.vs30
-    return C['k'] * np.log10(v0/800)
+    return C['k'] * np.log10(np.clip(ctx.vs30, -np.inf, 1500.0) / 800.0)
 
 
 def _gen2ref_rock_scaling(C, vs30, kappa0, imt):
@@ -95,6 +93,7 @@ def _get_mechanism(ctx, C):
     """
     SS, NF, TF = utils.get_fault_type_dummy_variables(ctx)
     return C['f1'] * SS + C['f2'] * TF
+
 
 class LanzanoEtAl2019_RJB_OMO(GMPE):
     """
@@ -421,12 +420,24 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
     COEFFS = LanzanoEtAl2019_RJB_OMO.COEFFS
     COEFFS_SITE = LanzanoEtAl2019_RJB_OMO.COEFFS_SITE
 
+    def __init__(self, **kwargs):
+        """
+        Instantiate the model. When the kappa0 value is provided when
+        initializing the class, this overrides the kappa0 value assigned to
+        the site.
+        """
+        super().__init__(**kwargs)
+        self.kappa0 = kwargs.get('kappa0', None)
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        if self.kappa0 is not None:
+            ctx = ctx.copy()
+            ctx.kappa0 = self.kappa0
         [dist_type] = self.REQUIRES_DISTANCES
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
