@@ -200,7 +200,7 @@ def normalize(key, fnames, base_path):
 
 def update(params, items, base_path):
     """
-    Update a dictionary of parameters with new parameters. Manages
+    Update a dictionary of string parameters with new parameters. Manages
     correctly file parameters.
     """
     for key, value in items:
