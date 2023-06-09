@@ -64,7 +64,7 @@ def _site_amplification(ctx, C):
     """
     Compute the fourth term of the equation 1 :
     The functional form Fs in Eq. (1) represents the site amplification and
-    it is given by FS = klog10(V0/800) , where V0 = Vs30 when Vs30 <= 1500
+    it is given by FS = klog10(V0/800), where V0 = Vs30 when Vs30 <= 1500
     and V0=1500 otherwise
     """
     return C['k'] * np.log10(np.clip(ctx.vs30, -np.inf, 1500.0) / 800.0)
