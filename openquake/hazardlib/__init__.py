@@ -313,6 +313,7 @@ class Input(object):
             for grp in groups:
                 for ebr in grp:
                     ebr.n_occ = ngmfs * num_rlzs
+                    ebr.trt_smrs = (ebr.trt_smr,)
 
         return groups, contexts.get_cmakers(groups, self.full_lt, self.oq)
 

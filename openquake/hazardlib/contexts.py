@@ -593,7 +593,7 @@ class ContextMaker(object):
                 ctxs.extend(self.get_ctx_iter(src, sites))
         return concat(ctxs)
 
-    def make_rctx(self, rup):
+    def make_legacy_ctx(self, rup):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
@@ -648,11 +648,11 @@ class ContextMaker(object):
 
         return ctx
 
-    def get_rctx(self, rup, sites, distances=None):
+    def get_legacy_ctx(self, rup, sites, distances=None):
         """
-        :returns: a RuptureContext (or None if filtered away)
+        :returns: a legacy RuptureContext (or None if filtered away)
         """
-        ctx = self.make_rctx(rup)
+        ctx = self.make_legacy_ctx(rup)
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
 
@@ -855,7 +855,7 @@ class ContextMaker(object):
                 mask = dist <= magdist
                 if mask.any():
                     r_sites = sites.filter(mask)
-                    rctx = self.get_rctx(rup, r_sites, dist[mask])
+                    rctx = self.get_legacy_ctx(rup, r_sites, dist[mask])
                     rctx.src_id = src_id
                     if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id

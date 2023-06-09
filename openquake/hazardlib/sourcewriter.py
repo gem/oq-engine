@@ -740,7 +740,7 @@ def extract_ddict(src_groups):
 
 
 def write_source_model(dest, sources_or_groups, name=None,
-                       investigation_time=None):
+                       investigation_time=None, prefix=''):
     """
     Writes a source model to XML.
 
@@ -750,6 +750,10 @@ def write_source_model(dest, sources_or_groups, name=None,
         Source model in different formats
     :param name:
         Name of the source model (if missing, extracted from the filename)
+    :param investigation_time:
+        Investigation time (for time-dependent sources)
+    :param prefix:
+        Add a prefix to the rupture_idxs, if given
     :returns:
         the list of generated filenames
     """
@@ -792,6 +796,9 @@ def write_source_model(dest, sources_or_groups, name=None,
                                          compression='gzip',
                                          compression_opts=9)
                         h[key][:] = v
+                    elif k == 'rupture_idxs' and prefix:
+                        h[key] =  [' '.join(prefix + r for r in ridxs.split())
+                                   for ridxs in v]
                     else:
                         h[key] = v
         out.append(dest5)

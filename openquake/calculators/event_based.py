@@ -123,17 +123,17 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                         sitemodel=station_sitemodel)
                     stnfilter = SourceFilter(
                         station_sitecol, oqparam.maximum_distance(trt))
-                    stnids = stnfilter.close_sids(proxy, trt)
-                    if len(stnids) < len(station_sites):
+                    stsids = stnfilter.close_sids(proxy, trt)
+                    if len(stsids) < len(station_sites):
                         logging.warning('%d stations filtered away',
-                                        len(station_sites) - len(stnids))
-                    if len(stnids) == 0:  # all stations filtered away
+                                        len(station_sites) - len(stsids))
+                    if len(stsids) == 0:  # all stations filtered away
                         continue
                     try:
                         computer = ConditionedGmfComputer(
                             ebr, srcfilter.sitecol.filtered(sids), 
-                            stnfilter.sitecol.filtered(stnids), 
-                            station_data.loc[stnids], oqparam.observed_imts,
+                            stnfilter.sitecol.filtered(stsids), 
+                            station_data.loc[stsids], oqparam.observed_imts,
                             cmaker, oqparam.correl_model, oqparam.cross_correl,
                             oqparam.ground_motion_correlation_params,
                             oqparam.number_of_ground_motion_fields,

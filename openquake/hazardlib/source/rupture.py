@@ -606,6 +606,12 @@ class PointSurface:
         deps = numpy.full(N, self.hypocenter.z)
         return Mesh(lons, lats, deps)
 
+    def get_min_distance(self, mesh):
+        """
+        :returns: the distance from the hypocenter to the mesh
+        """
+        return self.hypocenter.distance_to_mesh(mesh).min()
+
     def __bool__(self):
         return False
 
@@ -738,11 +744,6 @@ class EBRupture(object):
         self.n_occ = n_occ
         self.id = source_id * TWO30 + id
         self.e0 = e0
-
-    @property
-    def trt_smrs(self):
-        # used only in hazardlib/tests/calc/scenario_test.py
-        return self.trt_smr,
 
     @property
     def tectonic_region_type(self):
