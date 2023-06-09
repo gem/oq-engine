@@ -140,11 +140,6 @@ class CostCalculator(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            if lt == 'area' and lt not in self.units:
-                # the unit might be missing in the exposure model xml
-                # NB: units are split by space afterwards, so we can't replace
-                #     the underscore with a space here
-                unit = 'unspecified_units'
             elif lt == 'number':
                 unit = 'units'
             elif lt in ('occupants', 'residents'):
@@ -639,14 +634,21 @@ def _get_exposure(fname, stop=None):
             cost_types.append(
                 (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     try:
-        # the unit might be missing in the exposure model xml
         conv_area = conversions.area
-        conv_area_unit = conv_area['unit']
-    except (AttributeError, KeyError):
+    except AttributeError as exc:
+        # the <area> tag is not mandatory
         pass
     else:
-        cost_types.append(
-            ('area', valid.cost_type_type(conv_area['type']), conv_area_unit))
+        try:
+            conv_area_unit = conv_area['unit']
+        except KeyError as exc:
+            raise KeyError(
+                "The 'unit' property of the <area> tag is missing in the"
+                " exposure model") from exc
+        else:
+            cost_types.append(
+                ('area', valid.cost_type_type(conv_area['type']),
+                 conv_area_unit))
     if 'occupants' in cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
@@ -951,7 +953,8 @@ class Exposure(object):
                 for field in fields:
                     if field not in strfields:
                         floatfields.add(field)
-                missing = expected_header - header - {'exposure', 'country'}
+                missing = expected_header - header - {'exposure', 'country',
+                                                      'area'}
                 if len(header) < len(fields):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
