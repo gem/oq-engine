@@ -1,3 +1,6 @@
+  [Graeme Wheaterill]
+  * Fixes to bchydro_2016_epistemic, eshm20_craton and lanzano_2019
+
   [Michele Simionato]
   * Extended sensitity analysis to file parameters
   * Introduced new loss type `residents`
