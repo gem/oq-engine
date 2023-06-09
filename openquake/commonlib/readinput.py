@@ -198,7 +198,11 @@ def normalize(key, fnames, base_path):
     return input_type, filenames
 
 
-def _update(params, items, base_path):
+def update(params, items, base_path):
+    """
+    Update a dictionary of string parameters with new parameters. Manages
+    correctly file parameters.
+    """
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'site_model_csv', 'site_model_file',
@@ -295,11 +299,11 @@ def get_params(job_ini, kw={}):
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
         items = list(dic.items())
-    _update(params, items, base_path)
+    update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
-    _update(params, kw.items(), base_path)  # override on demand
+    update(params, kw.items(), base_path)  # override on demand
 
     return params
 
