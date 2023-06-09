@@ -2542,6 +2542,13 @@ have descriptions as follows::
  Multipoint demo {'truncation_level': 2}
  Multipoint demo {'truncation_level': 3}
 
+NB: from version 3.17 the engine is also able to run sensitivity analysis
+on file parameters. For instance if you want to run a ``classical_risk``
+calculation starting from three different hazard inputs you can write::
+
+ sensitivity_analysis = {
+   "hazard_curves_file": ["hazard1.csv", "hazard2.csv", "hazard3.csv"]}
+
 The ``custom_site_id``
 ----------------------
 

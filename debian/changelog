@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended sensitity analysis to file parameters
   * Introduced new loss type `residents`
 
   [Marco Pagani]
