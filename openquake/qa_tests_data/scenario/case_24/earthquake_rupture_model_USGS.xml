@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <multiPlanesRupture>
+        <magnitude>
+            6.90000
+        </magnitude>
+        <rake>
+            172
+        </rake>
+        <hypocenter depth="10.00000" lat="34.53248" lon="134.93118"/>
+        <planarSurface>
+            <topLeft depth="0.00000" lat="34.48307" lon="134.84329"/>
+            <topRight depth="0.00000" lat="34.60866" lon="134.99413"/>
+            <bottomLeft depth="20.00000" lat="34.45780" lon="134.87217"/>
+            <bottomRight depth="20.00000" lat="34.58182" lon="135.01918"/>
+        </planarSurface>
+        <planarSurface>
+            <topLeft depth="0.00000" lat="34.80772" lon="135.35164"/>
+            <topRight depth="0.00000" lat="34.58971" lon="135.01339"/>
+            <bottomLeft depth="20.00000" lat="34.81878" lon="135.33817"/>
+            <bottomRight depth="20.00000" lat="34.60393" lon="134.99798"/>
+        </planarSurface>
+    </multiPlanesRupture>
+</nrml>
+<!-- Rupture XML automatically generated from USGS (usp0006rew).
+Reference: Wald, D. J. (1996). Slip history of the 1995 Kobe, Japan, earthquake determined from strong motion, teleseismic, and geodetic data, J. Phys. Earth 44, 489-503..
+Rake angle defined by JMA. -->
