@@ -99,7 +99,7 @@ class CostCalculator(object):
 
     def update(self, assetcol):
         for name in assetcol.dtype.names:
-            if name.startswith('value-') and not name in (
+            if name.startswith('value-') and name not in (
                     'value-area', 'value-number', 'value-residents'):
                 assetcol[name] = self(name[6:], assetcol)
 
@@ -140,10 +140,6 @@ class CostCalculator(object):
         for lt in loss_types:
             if lt.endswith('_ins'):
                 lt = lt[:-4]
-            if lt == 'area':
-                # NOTE: there's currently no trivial way to retrieve the
-                #       actual measurement unit from data (e.g. sqm or sqft)
-                unit = 'area'
             elif lt == 'number':
                 unit = 'units'
             elif lt in ('occupants', 'residents'):
@@ -637,6 +633,22 @@ def _get_exposure(fname, stop=None):
                 retrofitted = True
             cost_types.append(
                 (ctname, valid.cost_type_type(ct['type']), ct['unit']))
+    try:
+        conv_area = conversions.area
+    except AttributeError:
+        # the <area> tag is not mandatory
+        pass
+    else:
+        try:
+            conv_area_unit = conv_area['unit']
+        except KeyError as exc:
+            raise KeyError(
+                f"The 'unit' property of the <area> tag is missing"
+                f" in {fname}") from exc
+        else:
+            cost_types.append(
+                ('area', valid.cost_type_type(conv_area['type']),
+                 conv_area_unit))
     if 'occupants' in cost_types:
         cost_types.append(('occupants', 'per_area', 'people'))
     cost_types.sort(key=operator.itemgetter(0))
@@ -758,7 +770,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             df['occupants_avg'] = calc_occupants_avg(df)
         if exposure.retrofitted:
             df['retrofitted'] = exposure.cost_calculator(
-                'structural', {'value-structural':df.retrofitted,
+                'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
         df['id'] = asset_prefix + df.id
         dfs.append(df)
@@ -836,7 +848,8 @@ class Exposure(object):
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, by_country=False, errors=None):
         """
-        :returns: an :class:`Exposure` instance keeping all the assets in memory
+        :returns: an :class:`Exposure` instance keeping all the assets in
+            memory
         """
         if by_country:  # E??_ -> countrycode
             prefix2cc = countries.from_exposures(
@@ -888,7 +901,7 @@ class Exposure(object):
         exp.mesh, exp.assets = _get_mesh_assets(
             assets_df, exp.tagcol, exp.cost_calculator, exp.loss_types)
         return exp
-        
+
     @staticmethod
     def read_headers(fnames):
         """
@@ -957,7 +970,8 @@ class Exposure(object):
             if oq in conv:
                 conv[inp] = conv[oq]
         rename = self.fieldmap.copy()
-        vfields = set(self.cost_types['name']) | {'area', 'number', 'residents'}
+        vfields = set(self.cost_types['name']) | {'area', 'number',
+                                                  'residents'}
         for field in vfields:
             f = revmap.get(field, field)
             conv[f] = float
