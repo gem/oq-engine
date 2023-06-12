@@ -88,5 +88,5 @@ class ReasenbergTestCase(unittest.TestCase):
         # Instantiate the declusterer and process the sample catalogue
         dec = Reasenberg()
         vcl, flagvector = dec.decluster(self.cat, config)
-        np.testing.assert_allclose(1-flagvector, self.cat.data['flag'])
+        np.testing.assert_allclose(flagvector, self.cat.data['flag'])
 

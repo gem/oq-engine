@@ -325,6 +325,7 @@ class Reasenberg(BaseCatalogueDecluster):
             ms_id = cluster_ids[biggest_mag_idx]
             msi[ms_id] = 1
             
+        msi = 1 - msi    
         return vcl, msi
 
 
