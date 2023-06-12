@@ -66,6 +66,15 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, exp_mean)
     me[:] = np.log(exp_mean * fa)
     
+    
+def cy14_site_term(ctx, imt, me, si, ta, phi):
+    """
+    This function adds the CY14 site term to GMMs requiring it
+    """
+    C = ChiouYoungs2014.COEFFS[imt]
+    fa = _get_site_term(C, ctx.vs30, me) # mean must be in natural log
+    me[:] = me * fa
+
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """
@@ -162,15 +171,6 @@ def set_total_std_as_tau_plus_delta(ctx, imt, me, si, ta, ph, delta):
         A delta std e.g. a phi SS to be combined with between std, tau.
     """
     si[:] = (ta[2]**2 + np.sign(delta) * delta**2)**0.5
-    
-    
-def cy14_site_term(ctx, imt, me, si, ta, phi):
-    """
-    This function adds the CY14 site term to GMMs requiring it
-    """
-    C = ChiouYoungs2014.COEFFS[imt]
-    fa = _get_site_term(C, ctx.vs30, me)
-    me[:] = me * fa
 
 
 # ################ END OF FUNCTIONS MODIFYING mean_stds ################## #
@@ -288,7 +288,11 @@ class ModifiableGMPE(GMPE):
         if 'nrcan15_site_term' in self.params or 'cy14_site_term' in \
             self.params:
             ctx_copy = ctx.copy()
-            ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
+            if 'nrcan15_site_term' in self.params:
+                rock_vs30 = 760.
+            elif 'cy14_site_term' in self.params:
+                rock_vs30 = 1130.
+            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
         else:
             ctx_copy = ctx
         g = globals()
