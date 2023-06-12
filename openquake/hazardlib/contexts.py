@@ -561,13 +561,11 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 else:
                     val = getattr(ctx, par, numpy.nan)
-
                 if par == 'closest_point':
                     ra['clon'][slc] = val[:, 0]
                     ra['clat'][slc] = val[:, 1]
                 else:
                     getattr(ra, par)[slc] = val
-
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
@@ -1398,7 +1396,7 @@ class SitesContext(BaseContext):
     object.
     """
     # _slots_ is used in hazardlib check_gsim and in the SMTK
-    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5'.split(),
+    def __init__(self, slots='vs30 vs30measured z1pt0 z2pt5 region'.split(),
                  sitecol=None):
         self._slots_ = slots
         if sitecol is not None:
