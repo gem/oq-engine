@@ -40,7 +40,7 @@ class Reasenberg(BaseCatalogueDecluster):
     90(B7), pp.5479-5495.
 
     Declustering code originally converted to MATLAB by A. Allman.
-    Then, highly modified and converted to Python by CG Reyes. Further modified by K Bayliss.
+    Then, highly modified and converted to Python by CG Reyes. 
 
 
     # default_config = dict(taumin=1.0,  # tau(t==0)
@@ -122,18 +122,6 @@ class Reasenberg(BaseCatalogueDecluster):
 
         assert np.all(elapsed[1:] >= elapsed[:-1]), "catalogue needs to be in ascending date order"
 
-        # easy-access variables
-        ### What even is dmethod? This is literally never explained...
-        #if config.get('dmethod', 'gc') == 'gc':
-        #    surf_pos = (catalogue['latitude'], catalogue['longitude'])
-        #    event_distance = event_gc_distance
-
-        #elif config['dmethod'] == 'p2p':
-        #    surf_pos = geodetic_to_ecef(catalogue['latitude'], catalogue['longitude'])  # assumes at surface
-        #    event_distance = event_p2p_distance
-        #else:
-        #    raise ValueError("unknown configuration dmethod. it should be 'gc' or 'p2p'")
-
         mags = catalogue['magnitude']
         if catalogue['depth'].size > 0:
             depth = catalogue.data.get('depth', np.zeros(1))
@@ -183,22 +171,18 @@ class Reasenberg(BaseCatalogueDecluster):
 
             if not_classified:
                 # this event is not associated with a cluster, yet
-                # self.debug_print(i, ' is not in a cluster')
                 look_ahead_days = min_lookahead_days
                 
 
             elif my_mag >= clusmaxmag[my_cluster]:
                 # this is the biggest event  in this cluster, so far (or equal to it).
                 # note, if this is now the biggest, then the cluster range collapses into its radius
-                # self.debug_print(f'{i} is the biggest event of cluster M={my_mag}')
                 clusmaxmag[my_cluster] = my_mag
                 clus_biggest_idx[my_cluster] = i
                 look_ahead_days = min_lookahead_days
-                
                 # time between largest event in cluster and this event is 0, so use min_lookahead_days (rather than 0).
             else:
                 # this event is already tied to a cluster, but is not the largest event
-                #self.debug_print(i, ' is already in cluster, but not biggest')
                 idx_biggest = clus_biggest_idx[my_cluster]
                 days_since_biggest = elapsed[i] - elapsed[idx_biggest]
                 # set new look_ahead_days (function of time from largest event in cluster)
@@ -208,7 +192,7 @@ class Reasenberg(BaseCatalogueDecluster):
                                                              config['xmeff'],
                                                              config['P'])
                 
-                # look_ahead_days should be > min and < max to prevent this running forever...
+                # look_ahead_days should be > min and < max to prevent this running forever.
                 look_ahead_days = np.clip(look_ahead_days, min_lookahead_days, max_lookahead_days)
                 
 
@@ -218,7 +202,6 @@ class Reasenberg(BaseCatalogueDecluster):
             # i + 1 is returning i....
             next_event = i + 1
             # find location of last event between elapsed and max_elapsed
-            # This is just returning the last event though. No wonder my code is confused.
             last_event = bisect_left(elapsed, max_elapsed, lo=next_event)
             
             # range from next event (i+1) to last event (end of the lookahead time)
@@ -271,7 +254,7 @@ class Reasenberg(BaseCatalogueDecluster):
             # if this cluster overlaps with any other cluster, then merge them
             # assign every event in all related clusters to the same (lowest) cluster number
             # set this cluster's maximum magnitude "clusmaxmag" to the largest magnitude of all combined events
-            # set this cluster's clus_biggest_idx to the (most recent ??) largest event of all combined events
+            # set this cluster's clus_biggest_idx to the largest event of all combined events
             # Flag largest event in each cluster
 
             if len(events_in_any_cluster) > 0:
