@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Made sure lon and lat are rounded to 5 digits in the site collection
+
   [Graeme Wheaterill]
   * Fixes to bchydro_2016_epistemic, eshm20_craton and lanzano_2019
 
