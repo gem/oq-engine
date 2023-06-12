@@ -110,23 +110,15 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
                 if "station_data" in oqparam.inputs:
-                    station_sites = dstore.read_df('station_sites')
+                    allsids = dstore['station_sids'][:]
                     station_data = dstore.read_df('station_data')
-                    station_sites = SiteCollection.from_points(
-                        lons=station_sites.lon.values,
-                        lats=station_sites.lat.values)
-                    station_sitemodel = station_sites.assoc(
-                        sitecol, assoc_dist=None)
-                    station_sitecol = SiteCollection.from_points(
-                        lons=station_sites.lon,
-                        lats=station_sites.lat,
-                        sitemodel=station_sitemodel)
+                    station_sitecol = sitecol.filtered(allsids)
                     stnfilter = SourceFilter(
                         station_sitecol, oqparam.maximum_distance(trt))
                     stsids = stnfilter.close_sids(proxy, trt)
-                    if len(stsids) < len(station_sites):
+                    if len(stsids) < len(station_sitecol):
                         logging.warning('%d stations filtered away',
-                                        len(station_sites) - len(stsids))
+                                        len(station_sitecol) - len(stsids))
                     if len(stsids) == 0:  # all stations filtered away
                         continue
                     try:
