@@ -941,7 +941,7 @@ def get_exposure(oqparam, h5=None):
             errors='ignore' if oqparam.ignore_encoding_errors else None)
     return exposure
 
-    
+
 def get_station_data(oqparam, sitecol):
     """
     Read the station data input file and build a list of
@@ -954,6 +954,7 @@ def get_station_data(oqparam, sitecol):
         the hazard site collection
     :returns: station_data, observed_imts
     """
+    # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
