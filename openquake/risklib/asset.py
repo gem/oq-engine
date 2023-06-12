@@ -643,8 +643,8 @@ def _get_exposure(fname, stop=None):
             conv_area_unit = conv_area['unit']
         except KeyError as exc:
             raise KeyError(
-                "The 'unit' property of the <area> tag is missing in the"
-                " exposure model") from exc
+                f"The 'unit' property of the <area> tag is missing"
+                f" in {fname}") from exc
         else:
             cost_types.append(
                 ('area', valid.cost_type_type(conv_area['type']),
