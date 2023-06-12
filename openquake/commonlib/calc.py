@@ -242,6 +242,7 @@ class RuptureImporter(object):
             for args in iterargs:
                 acc += self.get_eid_rlz(*args)
         else:
+            self.datastore.swmr_on()  # before the Starmap
             acc = parallel.Starmap(
                 self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
         i = 0
