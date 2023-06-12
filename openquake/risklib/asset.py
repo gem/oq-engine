@@ -142,6 +142,8 @@ class CostCalculator(object):
                 lt = lt[:-4]
             elif lt == 'number':
                 unit = 'units'
+            elif lt == 'area':
+                unit = 'unknown'
             elif lt in ('occupants', 'residents'):
                 unit = 'people'
             else:
