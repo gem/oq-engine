@@ -556,7 +556,6 @@ def get_site_collection(oqparam, h5=None):
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
-
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -593,6 +592,9 @@ def get_site_collection(oqparam, h5=None):
         sitecol = sitecol.filter(mask)
         assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
+
+    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
+    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
@@ -940,7 +942,7 @@ def get_exposure(oqparam, h5=None):
     return exposure
 
 
-def get_station_data(oqparam):
+def get_station_data(oqparam, sitecol):
     """
     Read the station data input file and build a list of
     ground motion stations and recorded ground motion values
@@ -948,35 +950,31 @@ def get_station_data(oqparam):
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns sd:
-        a Pandas dataframe with station ids and coordinates as the index and
-        IMT names as the first level of column headers and
-        mean, std as the second level of column headers
-    :returns imts:
-        a list of observed intensity measure types
+    :param sitecol:
+        the hazard site collection
+    :returns: station_data, observed_imts
     """
-    if 'station_data' in oqparam.inputs:
-        fname = oqparam.inputs['station_data']
-        sdata = pandas.read_csv(fname)
+    # Read the station data and associate the site ID from longitude, latitude
+    df = pandas.read_csv(oqparam.inputs['station_data'])
+    lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
+    lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
+    sid = {(lon, lat): sid for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
+    sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
 
-        # Identify the columns with IM values
-        # Replace replace() with removesuffix() for pandas ≥ 1.4
-        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace(
-            "_VALUE", "")
-        imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
-        im_cols = [imt + '_' + stat
-                   for imt in imts for stat in ["mean", "std"]]
-        station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
-        cols = []
-        for im in imts:
-            stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
-            cols.append(im + '_VALUE')
-            cols.append(im + '_' + stddev_str)
-        station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
-        station_sites = pandas.DataFrame(
-            sdata[station_cols].values, columns=["station_id", "lon", "lat"]
-        ).astype({"station_id": str, "lon": F64, "lat": F64})
-    return station_data, station_sites, imts
+    # Identify the columns with IM values
+    # Replace replace() with removesuffix() for pandas ≥ 1.4
+    imt_candidates = df.filter(regex="_VALUE$").columns.str.replace(
+        "_VALUE", "")
+    imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
+    im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
+    cols = []
+    for im in imts:
+        stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
+        cols.append(im + '_VALUE')
+        cols.append(im + '_' + stddev_str)
+    station_data = pandas.DataFrame(df[cols].values, columns=im_cols)
+    station_data['site_id'] = sids
+    return station_data, imts
 
 
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
