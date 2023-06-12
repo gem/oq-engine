@@ -376,7 +376,10 @@ def starmap_from_gmfs(task_func, oq, dstore):
     :param dstore: DataStore instance where the GMFs are stored
     :returns: a Starmap object used for event based calculations
     """
-    ds = dstore.parent or dstore
+    if 'gmf_data' in dstore.parent:
+        ds = dstore.parent
+    else:
+        ds = dstore
     data = ds['gmf_data']
     try:
         sbe = data['slice_by_event'][:]
