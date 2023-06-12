@@ -958,7 +958,7 @@ def get_station_data(oqparam, sitecol):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
-    :returns: (station_data, station_sites, imts)
+    :returns: (station_data, station_sids, imts)
     """
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)

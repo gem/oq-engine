@@ -439,7 +439,7 @@ def create_result(target_imt, cmaker_Y, ctx_Y,
     if t.native_data_available:
         t.T_D = tau_D
     else:
-        # s = num_station_sites
+        # s = num_station_sids
         t.T_D = numpy.zeros(
             (len(t.conditioning_imts) * nss, len(t.bracketed_imts)))
         for i in range(len(t.conditioning_imts)):
