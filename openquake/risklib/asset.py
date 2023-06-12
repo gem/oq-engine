@@ -635,7 +635,7 @@ def _get_exposure(fname, stop=None):
                 (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     try:
         conv_area = conversions.area
-    except AttributeError as exc:
+    except AttributeError:
         # the <area> tag is not mandatory
         pass
     else:
@@ -953,8 +953,7 @@ class Exposure(object):
                 for field in fields:
                     if field not in strfields:
                         floatfields.add(field)
-                missing = expected_header - header - {'exposure', 'country',
-                                                      'area'}
+                missing = expected_header - header - {'exposure', 'country'}
                 if len(header) < len(fields):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %
