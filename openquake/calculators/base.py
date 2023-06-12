@@ -490,10 +490,9 @@ class HazardCalculator(BaseCalculator):
         if 'station_data' in oq.inputs:
             logging.info('Reading station data from %s',
                          oq.inputs['station_data'])
-            self.station_data, self.station_sids, self.observed_imts = \
+            self.station_data, self.observed_imts = \
                 readinput.get_station_data(oq, self.sitecol)
             self.datastore.create_df('station_data', self.station_data)
-            self.datastore['station_sids'] = self.station_sids
             oq.observed_imts = self.observed_imts
 
         if (oq.calculation_mode == 'disaggregation' and

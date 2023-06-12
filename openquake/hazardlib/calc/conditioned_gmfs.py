@@ -407,7 +407,6 @@ def create_result(target_imt, cmaker_Y, ctx_Y,
 
     imt = target_imt.string
     cmaker_Y.imtls = {imt: [0]}
-    nss = len(station_sitecol)  # number of station sites
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
@@ -439,7 +438,7 @@ def create_result(target_imt, cmaker_Y, ctx_Y,
     if t.native_data_available:
         t.T_D = tau_D
     else:
-        # s = num_station_sids
+        nss = len(station_sitecol)  # number of station sites
         t.T_D = numpy.zeros(
             (len(t.conditioning_imts) * nss, len(t.bracketed_imts)))
         for i in range(len(t.conditioning_imts)):

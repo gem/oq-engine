@@ -941,12 +941,6 @@ def get_exposure(oqparam, h5=None):
             errors='ignore' if oqparam.ignore_encoding_errors else None)
     return exposure
 
-
-def add_site_id(df, sitecol, lonfield, latfield):
-    sid = {(lon, lat): sid for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
-    sids = [sid[lon, lat]for lon, lat in zip(df[lonfield], df[latfield])]
-    df['site_id'] = sids
-
     
 def get_station_data(oqparam, sitecol):
     """
@@ -958,14 +952,13 @@ def get_station_data(oqparam, sitecol):
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :param sitecol:
         the hazard site collection
-    :returns: (station_data, station_sids, imts)
+    :returns: station_data, observed_imts
     """
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
     sid = {(lon, lat): sid for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
-    sids = [sid[lon, lat] for lon, lat in zip(lons, lats)]
-    df['site_id'] = sids
+    sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
@@ -979,7 +972,8 @@ def get_station_data(oqparam, sitecol):
         cols.append(im + '_VALUE')
         cols.append(im + '_' + stddev_str)
     station_data = pandas.DataFrame(df[cols].values, columns=im_cols)
-    return station_data, df.site_id.to_numpy(), imts
+    station_data['site_id'] = sids
+    return station_data, imts
 
 
 def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):

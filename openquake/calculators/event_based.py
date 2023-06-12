@@ -110,9 +110,8 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
                 if "station_data" in oqparam.inputs:
-                    allsids = dstore['station_sids'][:]
                     station_data = dstore.read_df('station_data')
-                    station_sitecol = sitecol.filtered(allsids)
+                    station_sitecol = sitecol.filtered(station_data.site_id)
                     stnfilter = SourceFilter(
                         station_sitecol, oqparam.maximum_distance(trt))
                     stsids = stnfilter.close_sids(proxy, trt)
