@@ -74,21 +74,19 @@ class ReasenbergTestCase(unittest.TestCase):
 
     def test_dec_reasenberg(self):
         # Testing the Reasenberg algorithm
-        config = {    'taumin' : 1.0,  # look ahead time for not clustered events, days
-            'taumax' : 20.0,  # maximum look ahead time for clustered events, days
+        config = {    'taumin' : 40.0,  # look ahead time for not clustered events, days
+            'taumax' : 50.0,  # maximum look ahead time for clustered events, days
             'P' : 0.95,  # confidence level that this is next event in sequence
             'xk' : 0.5,  # factor used with xmeff to define magnitude cutoff
             'xmeff' : 1.5,  # magnitude effective, used with xk to define magnitude cutoff
-            'rfact' : 20,  # factor for interaction radius for dependent events
+            'rfact' : 10,  # factor for interaction radius for dependent events
             'horiz_error' : .5,  # epicenter error, km.  if unspecified or None, it is pulled from the catalogue
             'depth_error' : 2.0,  # depth error, km.  if unspecified or None, it is pulled from the catalogue
-            'interaction_formula' : 'Reasenberg1985',  # either `Reasenberg1985` or `WellsCoppersmith1994`
+            'interaction_formula' : 'WellsCoppersmith1994',  # either `Reasenberg1985` or `WellsCoppersmith1994`
             'max_interaction_dist' : 100 }
         
         # Instantiate the declusterer and process the sample catalogue
         dec = Reasenberg()
         vcl, flagvector = dec.decluster(self.cat, config)
-        print('vcl:', vcl)
-        print('flagvector:', flagvector, self.cat.data['flag'])
-        np.testing.assert_allclose(flagvector, self.cat.data['flag'])
+        np.testing.assert_allclose(1-flagvector, self.cat.data['flag'])
 

@@ -112,11 +112,8 @@ class Reasenberg(BaseCatalogueDecluster):
 
         self.verbose = config.get('verbose', self.verbose)
         # Get relevant parameters
-        #breakpoint()
         #neq = catalogue.get_number_events()  # Number of earthquakes
         neq = len(catalogue.data['latitude'])
-        print(neq)
-
         min_lookahead_days = config['taumin']
         max_lookahead_days = config['taumax']
 
@@ -138,7 +135,10 @@ class Reasenberg(BaseCatalogueDecluster):
         #    raise ValueError("unknown configuration dmethod. it should be 'gc' or 'p2p'")
 
         mags = catalogue['magnitude']
-        depth = catalogue['depth']
+        if catalogue['depth'].size > 0:
+            depth = catalogue.data.get('depth', np.zeros(1))
+        else: 
+            depth = np.array([0]*neq)
 
         # Errors are determined 1st by the config. If this value doesn't exist or is None, then get the
         # error values from the catalog.  If errors do not exist within the catalog, then set the errors to 0.
@@ -155,9 +155,10 @@ class Reasenberg(BaseCatalogueDecluster):
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int).flatten()
         msi = np.zeros(neq, dtype=int).flatten()
-        ev_id = np.zeros(neq, dtype=int).flatten()
+        #ev_id = np.zeros(neq, dtype=int).flatten()
+        ev_id = np.arange(0, neq)
         # set the interaction zones, in km
-        # Reasenberg 1987 or alternate version: Wells & Coppersmith 1994 / Helmstetter (SRL) 2007
+        # Reasenberg 1987 or alternate version: Wells & Coppersmith 1994 / Helmstetter (SRL) 2007q
         zone_noclust, zone_clust = self.get_zone_distances_per_mag(
             mags=mags,
             rfact=config['rfact'],
@@ -166,13 +167,12 @@ class Reasenberg(BaseCatalogueDecluster):
 
         k = 0  # clusterindex
 
-        # variable to store information whether earthquake is already clustered
+        # variable to store whether earthquake is already clustered
         clusmaxmag = np.array([-np.inf] * neq)
         clus_biggest_idx = np.zeros(neq, dtype=int)
 
         # for every earthquake in catalog, main loop
         for i in range(neq - 1):
-            ev_id[i] = i
             my_mag = mags[i]
 
             # variable needed for distance and timediff
@@ -185,7 +185,7 @@ class Reasenberg(BaseCatalogueDecluster):
                 # this event is not associated with a cluster, yet
                 # self.debug_print(i, ' is not in a cluster')
                 look_ahead_days = min_lookahead_days
-                print("not classified... looking ahead ", look_ahead_days, " days")
+                
 
             elif my_mag >= clusmaxmag[my_cluster]:
                 # this is the biggest event  in this cluster, so far (or equal to it).
@@ -194,7 +194,7 @@ class Reasenberg(BaseCatalogueDecluster):
                 clusmaxmag[my_cluster] = my_mag
                 clus_biggest_idx[my_cluster] = i
                 look_ahead_days = min_lookahead_days
-                print("new largest event ... resetting to min lookahead time - looking ahead ", look_ahead_days, " days")
+                
                 # time between largest event in cluster and this event is 0, so use min_lookahead_days (rather than 0).
             else:
                 # this event is already tied to a cluster, but is not the largest event
@@ -210,31 +210,24 @@ class Reasenberg(BaseCatalogueDecluster):
                 
                 # look_ahead_days should be > min and < max to prevent this running forever...
                 look_ahead_days = np.clip(look_ahead_days, min_lookahead_days, max_lookahead_days)
-                print("event in a cluster... looking ahead ", look_ahead_days, " days")
+                
 
             # extract eqs that fit interaction time window --------------
-            ## OK so it's not classifying any events as clustered :/
 
             max_elapsed = elapsed[i] + look_ahead_days
-            print("max elapsed time ", max_elapsed)
             # i + 1 is returning i....
             next_event = i + 1
             # find location of last event between elapsed and max_elapsed
             # This is just returning the last event though. No wonder my code is confused.
-            #last_event = bisect_left(elapsed, max_elapsed, lo=next_event)
-            events_before_max = elapsed[elapsed < max_elapsed]
-            last_event = events_before_max[i:]
-            print("last event", last_event, "next event", next_event)
-            print("elapsed ", elapsed, "max_elapsed", max_elapsed)
+            last_event = bisect_left(elapsed, max_elapsed, lo=next_event)
+            
             # range from next event (i+1) to last event (end of the lookahead time)
             temporal_evs = np.arange(next_event, last_event)
-            print("temp_ev ", temporal_evs)
             if my_cluster != 0:
                 # If we are in a cluster, consider only events that are not already in the cluster
                 temporal_evs = temporal_evs[vcl[temporal_evs] != my_cluster]
 
             if len(temporal_evs) == 0:
-                print("no events in time window :(")
                 continue
 
             # ------------------------------------
@@ -243,12 +236,11 @@ class Reasenberg(BaseCatalogueDecluster):
             # ------------------------------------
 
             my_biggest_idx = clus_biggest_idx[my_cluster]
-            print("biggest idx:", my_biggest_idx)
             bg_ev_for_dist = i if not_classified else my_biggest_idx
 
             dist_to_recent = distance(catalogue.data['latitude'][i], catalogue.data['longitude'][i], depth[i], catalogue.data['latitude'][temporal_evs], catalogue.data['longitude'][temporal_evs], depth[temporal_evs])
             dist_to_biggest = distance(catalogue.data['latitude'][bg_ev_for_dist], catalogue.data['longitude'][bg_ev_for_dist], depth[bg_ev_for_dist], catalogue.data['latitude'][temporal_evs], catalogue.data['longitude'][temporal_evs], depth[temporal_evs])
-            
+
             if look_ahead_days == min_lookahead_days:
                 l_big = dist_to_biggest == 0  # all false
                 l_recent = dist_to_recent <= zone_noclust[my_mag]
@@ -258,12 +250,7 @@ class Reasenberg(BaseCatalogueDecluster):
                 l_recent = dist_to_recent <= zone_clust[my_mag]
 
             spatial_evs = np.logical_or(l_recent, l_big)
-
             if not any(spatial_evs):
-                print("no spatial_evs, something's gone horribly wrong!")
-                print("recent ", l_recent)
-                print("big ", l_big)
-                # self.debug_print()
                 continue
 
             # ------------------------------------
@@ -278,7 +265,6 @@ class Reasenberg(BaseCatalogueDecluster):
             # so vcl[events_in_any_cluster] is independent from vcl[i]
 
             candidates = temporal_evs[spatial_evs]  # eqs that fit spatial and temporal criterion
-            print("candidate events:",candidates)
             events_in_any_cluster = candidates[vcl[candidates] != 0]  # eqs which are already related with a cluster
             events_in_no_cluster = candidates[vcl[candidates] == 0]  # eqs that are not already in a cluster
 
@@ -327,21 +313,17 @@ class Reasenberg(BaseCatalogueDecluster):
             # attach clustnumber to catalogue yet unrelated to a cluster
             vcl[events_in_no_cluster] = my_cluster
             
-            # set mainshock index for all events not in a cluster to be 1 also
-            # i.e. an independent event counts as a mainshock
-            msi[events_in_no_cluster] = 1
+        # set mainshock index for all events not in a cluster to be 1 also
+        # i.e. an independent event counts as a mainshock
+        msi[vcl == 0] = 1
             
-            # for each cluster, identify mainshock
-            clusters = np.unique(vcl)
-            for cluster_no in clusters:
-                cluster_ids = ev_id[vcl == cluster_no]
-                biggest_mag_idx = np.where(np.max(mags[vcl == cluster_no]))
-                ms_id = cluster_ids[biggest_mag_idx]
-                #ms_id = np.where(mags == biggest_mag, cluster_ids))[-1]
-                #ms_id = np.asarray(np.max(mags[vcl = cluster_no]).nonzero()
-                msi[ms_id] = 1
-
-            print(vcl)
+        # for each cluster, identify mainshock
+        clusters = np.unique(vcl[vcl != 0])
+        for cluster_no in clusters:
+            cluster_ids = ev_id[vcl == cluster_no]
+            biggest_mag_idx = np.where(np.max(mags[vcl == cluster_no]))
+            ms_id = cluster_ids[biggest_mag_idx]
+            msi[ms_id] = 1
             
         return vcl, msi
 
@@ -378,8 +360,6 @@ class Reasenberg(BaseCatalogueDecluster):
         clust_km[clust_km > max_interact_km] = max_interact_km
         zone_noclust = dict(zip(unique_mags, noclust_km))
         zone_clust = dict(zip(unique_mags, clust_km))
-        print("zone_noclust ", zone_noclust)
-        print("zone_clust ", zone_clust)
         return zone_noclust, zone_clust
 
 
