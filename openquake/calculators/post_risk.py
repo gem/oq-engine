@@ -263,6 +263,7 @@ def build_store_agg(dstore, rbe_df, num_events):
     loss_kinds = [col for col in columns if not col.startswith('dmg_')]
     if oq.investigation_time and loss_kinds:  # build aggcurves
         logging.info('Building aggcurves')
+        units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
         items = []
         for (agg_id, rlz_id, loss_id), df in gb:
@@ -275,8 +276,7 @@ def build_store_agg(dstore, rbe_df, num_events):
         fix_dtypes(dic)
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states),
-                         units=dstore['cost_calculator'].get_units(
-                             oq.loss_types))
+                         units=units)
     return aggrisk
 
 
