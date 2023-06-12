@@ -33,7 +33,6 @@ class MultiLine():
     most part, these are used to compute distances according to the GC2
     method.
     """
-
     def __init__(self, lines):
         self.lines = [copy.copy(ln) for ln in lines]
         self.strike_to_east = None
@@ -118,7 +117,6 @@ class MultiLine():
         Computes the coordinate shift for each line in the multiline. This is
         used to compute coordinates in the GC2 system
         """
-
         # If not defined, compute the origin of the multiline
         if self.olon is None:
             _ = self._set_origin()
@@ -130,7 +128,7 @@ class MultiLine():
     def set_tu(self, mesh: Mesh = None):
         """
         Computes the T and U coordinates for the multiline. If a mesh is
-        first we compute the required info.
+        given first we compute the required info.
         """
         if self.shift is None:
             self._set_coordinate_shift()
@@ -209,6 +207,8 @@ class MultiLine():
 
         if self.u_max is None:
             self.set_u_max()
+
+        assert len(self.uut) == len(mesh), (len(self.uut), len(mesh))
 
         ry0 = np.zeros_like(self.uut)
         ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
