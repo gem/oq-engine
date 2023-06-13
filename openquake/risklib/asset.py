@@ -600,9 +600,6 @@ def _get_exposure(fname, stop=None):
         # about pickling dictionaries with empty strings:
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
-    else:
-        logging.warning('The <area> conversion in the exposure is deprecated '
-                        'and will be removed in future versions of the engine')
     try:
         occupancy_periods = exposure.occupancyPeriods.text or ''
     except AttributeError:
