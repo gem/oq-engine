@@ -19,11 +19,12 @@ Module :mod:`openquake.hazardlib.source.non_parametric` defines
 """
 import numpy
 from openquake.baselib.general import block_splitter
+from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.source.rupture import \
-    NonParametricProbabilisticRupture
+    ParametricProbabilisticRupture, NonParametricProbabilisticRupture
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            get_spherical_bounding_box)
 from openquake.hazardlib.geo.mesh import Mesh
@@ -56,13 +57,16 @@ class NonParametricSeismicSource(BaseSeismicSource):
     MODIFICATIONS = set()
 
     def __init__(self, source_id, name, tectonic_region_type, data,
-                 weights=None):
+                 weights=None, investigation_time=0, infer_occur_rates=False):
         super().__init__(source_id, name, tectonic_region_type)
         self.data = data
         if weights is not None:
             assert len(weights) == len(data), (len(weights), len(data))
             for (rup, pmf), weight in zip(data, weights):
                 rup.weight = weight
+        self.infer_occur_rates = infer_occur_rates
+        if infer_occur_rates:
+            self.temporal_occurrence_model = PoissonTOM(investigation_time)
 
     @property
     def rup_weights(self):
@@ -78,11 +82,18 @@ class NonParametricSeismicSource(BaseSeismicSource):
             rupture.NonParametricProbabilisticRupture`.
         """
         step = kwargs.get('step', 1)
-        for rup, pmf in self.data[::step**2]:
-            yield NonParametricProbabilisticRupture(
-                rup.mag, rup.rake, self.tectonic_region_type,
-                rup.hypocenter, rup.surface, pmf,
-                weight=getattr(rup, 'weight', 0.))
+        for i, (rup, pmf) in enumerate(self.data[::step**2]):
+            if self.infer_occur_rates:
+                rate = -numpy.log(rup.probs_occur[0])
+                yield ParametricProbabilisticRupture(
+                    rup.mag, rup.rake, rup.tectonic_region_type,
+                    rup.hypocenter, rup.surface, rate,
+                    self.temporal_occurrence_model)
+            else:
+                yield NonParametricProbabilisticRupture(
+                    rup.mag, rup.rake, self.tectonic_region_type,
+                    rup.hypocenter, rup.surface, pmf,
+                    weight=getattr(rup, 'weight', 0.))
 
     def __iter__(self):
         if len(self.data) == 1:  # there is nothing to split

@@ -1540,7 +1540,9 @@ class RowConverter(SourceConverter):
             node['name'],
             'N',
             node['tectonicRegion'],
-            'Polygon', [nps.polygon.coords], '')
+            'Polygon', [nps.polygon.coords], '',
+            self.investigation_time,
+            self.infer_occur_rates)
 
     def convert_multiFaultSource(self, node):
         mfs = super().convert_multiFaultSource(node)
