@@ -73,9 +73,7 @@ def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
     C = ChiouYoungs2014.COEFFS[imt]
     fa = _get_site_term(C, ctx.vs30, me) # ref mean must be in natural log
-    exp_mean = np.exp(me)
-    exp_fa = np.exp(fa)
-    me[:] = np.log(exp_mean * exp_fa)
+    me[:] += fa
     
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
