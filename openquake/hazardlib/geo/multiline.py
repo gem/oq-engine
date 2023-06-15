@@ -208,8 +208,6 @@ class MultiLine():
         if self.u_max is None:
             self.set_u_max()
 
-        assert len(self.uut) == len(mesh), (len(self.uut), len(mesh))
-
         ry0 = np.zeros_like(self.uut)
         ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
 
