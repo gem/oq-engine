@@ -262,6 +262,7 @@ class ScenarioTestCase(CalculatorTestCase):
             self.run_calc(case_23.__file__, 'job.ini')
 
     def test_case_24(self):
-        # conditioned GMFs with AbrahamsonEtAl2014
-        with self.assertRaises(ValueError):
-            self.run_calc(case_24.__file__, 'job.ini')
+        # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
+        self.run_calc(case_24.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)

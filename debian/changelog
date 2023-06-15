@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed bug in `get_ry0_distance` breaking conditioned GMFs
   * Made sure lon and lat are rounded to 5 digits in the site collection
 
   [Graeme Wheaterill]
