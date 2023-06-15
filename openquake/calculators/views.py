@@ -302,6 +302,7 @@ def view_full_lt(token, dstore):
     num_paths = full_lt.get_num_potential_paths()
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
+    full_lt.get_trt_rlzs(dstore['trt_smrs'][:])  # set _rlzs_by
     header = ['trt_smr', 'gsim', 'rlzs']
     rows = []
     for trt_smr, rbg in full_lt._rlzs_by.items():
