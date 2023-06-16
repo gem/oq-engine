@@ -427,7 +427,7 @@ if numba:
         """
         Compile a function Ahead-Of-Time using the given signature string
         """
-        return numba.njit(sigstr, error_model='numpy')
+        return numba.njit(sigstr, error_model='numpy', cache=True)
 
 else:
 
