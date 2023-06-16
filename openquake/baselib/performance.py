@@ -20,12 +20,15 @@ import os
 import time
 import pstats
 import pickle
+import signal
 import getpass
 import tempfile
 import operator
 import itertools
+import subprocess
 import collections
 from datetime import datetime
+from contextlib import contextmanager
 from decorator import decorator
 import psutil
 import numpy
@@ -56,6 +59,17 @@ I64 = numpy.int64
 
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
+
+
+@contextmanager
+def perf_stat():
+    """
+    Profile the current process by using the linux `perf` command
+    """
+    p = subprocess.Popen(["perf", "stat", "-p", str(os.getpid())])
+    time.sleep(0.5)
+    yield
+    p.send_signal(signal.SIGINT)
 
 
 def get_pstats(pstatfile, n):
@@ -405,7 +419,7 @@ if numba:
 
     def jittable(func):
         """Calls numba.njit with a cache"""
-        jitfunc = numba.njit(func, cache=True)
+        jitfunc = numba.njit(func, error_model='numpy', cache=True)
         jitfunc.jittable = True
         return jitfunc
 
@@ -413,7 +427,7 @@ if numba:
         """
         Compile a function Ahead-Of-Time using the given signature string
         """
-        return numba.njit(sigstr, cache=True)
+        return numba.njit(sigstr, error_model='numpy')
 
 else:
 
