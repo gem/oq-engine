@@ -91,10 +91,9 @@ class AdaptedWarning(UserWarning):
 def _set_poes(mean_std, loglevels, phi_b, out):
     L1 = loglevels.size // len(loglevels)
     for m, levels in enumerate(loglevels):
-        mL1 = m * L1
         mea, std = mean_std[:, m]  # shape N
-        for lvl, iml in enumerate(levels):
-            out[mL1 + lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
+        for lvl, iml in enumerate(levels, m * L1):
+            out[lvl] = truncnorm_sf(phi_b, (iml - mea) / std)
 
 
 def _get_poes(mean_std, loglevels, phi_b):
