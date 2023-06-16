@@ -227,8 +227,9 @@ class PmapGetter(object):
         if sid not in pmap:  # no hazard for sid
             return pc0
         for g, trs in enumerate(self.trt_rlzs):
-            probability_map.combine_probs(
-                pc0.array, pmap[sid].array[:, g], trs % TWO24)
+            rates = - numpy.log(1. - pmap[sid].array[:, g])
+            probability_map.combine_rates(pc0.array, rates, trs % TWO24)
+        pc0.array = 1. - numpy.exp(-pc0.array)  # rates -> poes
         return pc0
 
     def get_mean(self):

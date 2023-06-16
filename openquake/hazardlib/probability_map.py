@@ -41,10 +41,20 @@ if numba:
                 if other[li] != 0.:
                     array[li, ri] = (
                         1. - (1. - array[li, ri]) * (1. - other[li]))
+
+    @compile("void(float64[:, :], float64[:], uint32[:])")
+    def combine_rates(array, other, rlzs):
+        for li in range(len(array)):
+            for ri in rlzs:
+                array[li, ri] += other[li]
 else:
     def combine_probs(array, other, rlzs):
         for r in rlzs:
             array[:, r] = (1. - (1. - array[:, r]) * (1. - other))
+
+    def combine_rates(array, other, rlzs):
+        for r in rlzs:
+            array[:, r] += other
 
 
 def get_mean_curve(dstore, imt, site_id=0):
