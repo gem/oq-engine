@@ -416,6 +416,7 @@ def vectorize_arg(idx):
 
 # numba helpers
 if numba:
+    # NB: without cache=True the tests would take hours!!
 
     def jittable(func):
         """Calls numba.njit with a cache"""
