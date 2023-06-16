@@ -143,6 +143,10 @@ class CostCalculator(object):
             elif lt == 'number':
                 unit = 'units'
             elif lt == 'area' and lt not in self.units:
+                # openquake/calculators/tests/event_based_risk_test.py uses
+                # qa_tests_data/event_based_risk/case_8/Exposure_Singapore.xml
+                # where the the <area> unit is defined, but the unit is 'SQM'.
+                # There is also an occurrence of SQF in oq-risk-tests.
                 unit = 'SQM'
             elif lt in ('occupants', 'residents'):
                 unit = 'people'
