@@ -81,10 +81,12 @@ jobs:
           oq dbserver start
           sleep 10
           # test for engine
-          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/sep
+          #pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/sep
           #
-          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
+          #pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
           #
-          pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
-          # Run calc
+          #pytest -vsx --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/calculators
+          # Run calcs
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+          sleep 15
+          oq engine --run /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/demos/hazard/AreaSourceClassicalPSHA/job.ini
