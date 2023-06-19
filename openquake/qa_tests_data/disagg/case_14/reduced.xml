@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="reduced"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Stable Shallow Crust"
+        >
+            <multiPointSource
+            id="sscn-8033-8013"
+            name="SSCn Craton [1,9,10] (adaptive)-M1"
+            >
+                <multiPointGeometry>
+                    <gml:posList>
+                        -105.69999694824219 39.79999923706055 -105.5999984741211 39.79999923706055
+                    </gml:posList>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        22.0
+                    </lowerSeismoDepth>
+                </multiPointGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <multiMFD
+                kind="incrementalMFD"
+                size="2"
+                >
+                    <bin_width>
+                        0.1
+                    </bin_width>
+                    <min_mag>
+                        4.7
+                    </min_mag>
+                    <occurRates>
+                        4.237767942161044e-05 3.3661787286679366e-05 2.6738508073092296e-05 2.1239151916860372e-05 1.6870858049160545e-05 1.340099889247365e-05 1.064479179380065e-05 8.4554586745772e-06 6.716409562761022e-06 5.335033751673252e-06 4.23776794216108e-06 3.3661787286679625e-06 2.6738508073092533e-06 2.1239151916860533e-06 1.6870858049160698e-06 1.3400998892473756e-06 1.0644791793800737e-06 8.455458674577267e-07 5.373127650208866e-07 4.2680270013386364e-07 4.0718213159997336e-05 3.2343626380507696e-05 2.5691455647410426e-05 2.0407448611904707e-05 1.621021263112078e-05 1.2876229583783415e-05 1.0227952715191271e-05 8.124351625101303e-06 6.45340188464607e-06 5.126119326997272e-06 4.0718213159997674e-06 3.2343626380507975e-06 2.5691455647410647e-06 2.0407448611904865e-06 1.62102126311209e-06 1.2876229583783531e-06 1.0227952715191347e-06 8.124351625101371e-07 5.162721507716898e-07 4.1008954615978507e-07
+                    </occurRates>
+                    <lengths>
+                        20 20
+                    </lengths>
+                </multiMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="0.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="45.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="90.0"/>
+                    <nodalPlane dip="90.0" probability="0.25" rake="0.0" strike="135.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0" probability="1.0"/>
+                </hypoDepthDist>
+            </multiPointSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

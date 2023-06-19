@@ -20,14 +20,14 @@ import re
 import numpy
 from openquake.baselib import hdf5
 from openquake.baselib.general import gettemp
-from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
+from openquake.hazardlib.contexts import read_ctx_by_grp
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -99,14 +99,10 @@ class DisaggregationTestCase(CalculatorTestCase):
 
     def test_case_4(self):
         # a case with number of lon/lat bins different for site 0/site 1
-        # this exercise sampling
+        # this exercises sampling and empty CSV files not being saved
         self.run_calc(case_4.__file__, 'job.ini')
         fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
-        self.assertEqual(len(fnames), 16)
-        # Dist-0 Lon_Lat-0 Lon_Lat_TRT-0 Lon_Lat_TRT-1
-        # Mag-0 Mag_Dist-0 Mag_Dist_Eps-0 Mag_Dist_TRT-0
-        # Mag_Dist_TRT-1 Mag_Dist_TRT_Eps-0 Mag_Dist_TRT_Eps-1
-        # Mag_Lon_Lat-0, TRT-0 TRT-1
+        self.assertEqual(len(fnames), 11)
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:
                 self.assertEqualFiles(
@@ -155,9 +151,9 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqual(len(ctx[0]), 7)  # rlz-0, the closest to the mean
         self.assertEqual(len(ctx[1]), 2)  # rlz-1, the one to discard
 
-        haz = self.calc.datastore['hmap4'][0, 0, :, 0]  # shape NMPZ
+        haz = self.calc.datastore['hmap3'][0, 0]  # shape NMP
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
-        self.assertAlmostEqual(haz[1], 0.1875711524)
+        self.assertAlmostEqual(haz[1], 0.13311564210230828)
 
         # test normal disaggregation
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
@@ -196,6 +192,18 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/Mag-0.csv', f1)
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', f2)
 
+        # extract API
+        aw = extract(self.calc.datastore, 'disagg?kind=Mag&site_id=0&'
+                     'imt=SA(0.1)&poe_id=0&spec=rlzs')
+        self.assertEqual(len(aw.mag), 8)
+        self.assertEqual(aw.shape, (8, 1, 1))
+
+        aw = extract(self.calc.datastore, 'disagg?kind=Mag_Dist_Eps&site_id=0&'
+                     'imt=SA(0.1)&poe_id=0&spec=rlzs')
+        self.assertEqual(len(aw.dist), 60)
+        self.assertEqual(len(aw.eps), 12)
+        self.assertEqual(aw.shape, (8, 60, 12, 1, 1))
+
     def test_case_10(self):
         # test single magnitude
         self.run_calc(case_10.__file__, 'job.ini')
@@ -219,6 +227,11 @@ class DisaggregationTestCase(CalculatorTestCase):
         # check split_by_mag, essential with GMPETable
         self.run_calc(case_13.__file__, 'job.ini')
 
+    def test_case_14(self):
+        # check split_by_mag with NGAEastUSGS, see bug
+        # https://github.com/gem/oq-engine/issues/8780
+        self.run_calc(case_14.__file__, 'job.ini')
+
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree
         self.run_calc(case_master.__file__, 'job.ini')
@@ -226,7 +239,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/mean_disagg.rst', fname)
         os.remove(fname)
 
-        fnames = export(('disagg-rlzs', 'csv'), self.calc.datastore)
+        fnames = export(('disagg-stats', 'csv'), self.calc.datastore)
         self.assertEqual(len(fnames), 22)
         for fname in fnames:
             if 'Mag_Dist' in fname and 'Eps' not in fname:

@@ -87,6 +87,7 @@ def _get_site_scaling_ba14(kind, region, C, pga_rock, sites, period, rjb):
 
     fnl = BA14._get_nonlinear_site_term(C, sites.vs30, pga_rock)
     fbd = BA14._get_basin_depth_term(region, C, sites, period)  # returns 0
+    fbd = 0.0
 
     return flin + fnl + fbd
 
@@ -206,7 +207,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
     """
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

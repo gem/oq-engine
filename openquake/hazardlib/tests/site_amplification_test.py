@@ -153,9 +153,10 @@ class AmplifierTestCase(unittest.TestCase):
                    0.686047], atol=1e-6)
 
         # Amplify GMFs with sigmas
-        numpy.random.seed(42)
-        gmvs = a._amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
-        numpy.testing.assert_allclose(gmvs, [0.005401, 0.010356, 0.016704],
+        rng = numpy.random.default_rng(42)
+        gmvs = a._amplify_gmvs(
+            b'A', numpy.array([.005, .010, .015]), 'PGA', rng)
+        numpy.testing.assert_allclose(gmvs, [0.005298, 0.009463, 0.016876],
                                       atol=1E-5)
 
     def test_double(self):
@@ -183,7 +184,8 @@ class AmplifierTestCase(unittest.TestCase):
         #    poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         # amplify GMFs without sigmas
-        gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
+        rng = numpy.random.default_rng(42)
+        gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)', rng)
         numpy.testing.assert_allclose(gmvs, [.2, .4, .6])
 
     def test_long_code(self):
@@ -246,9 +248,9 @@ class AmplifierTestCase(unittest.TestCase):
         a = Amplifier(imtls, df)
         res = []
         nsim = 10000
-        numpy.random.seed(42)  # must be fixed
+        rng = numpy.random.default_rng(42)
         for i in range(nsim):
-            gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'PGA')
+            gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'PGA', rng)
             res.append(list(gmvs))
         res = numpy.array(res)
         dat = numpy.reshape(numpy.tile([.1, .2, .3], nsim), (nsim, 3))
@@ -264,14 +266,14 @@ class AmplifierTestCase(unittest.TestCase):
         imtls = DictArray({'PGA': [numpy.nan]})
         a = Amplifier(imtls, df)
 
-        numpy.random.seed(42)  # must be fixed
-        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs1, [0.217124, 0.399295, 0.602515], atol=1E-5)
-        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs2, [0.266652, 0.334187, 0.510845], atol=1E-5)
+        rng = numpy.random.default_rng(42)
+        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs1, [0.201073, 0.278387, 0.627798], atol=1E-5)
+        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs2, [0.211233, 0.168165, 0.333235], atol=1E-5)
 
-        numpy.random.seed(43)  # changing the seed the results change a lot
-        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs1, [0.197304, 0.293422, 0.399669], atol=1E-5)
-        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs2, [0.117069, 0.517284, 0.475571], atol=1E-5)
+        rng = numpy.random.default_rng(43)  # new seed, big diff
+        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs1, [0.196267, 0.553508, 0.367905], atol=1E-5)
+        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs2, [0.100813, 0.165443, 0.827468], atol=1E-5)

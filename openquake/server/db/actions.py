@@ -290,9 +290,11 @@ DISPLAY_NAME = {
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
-    'disagg_by_src': 'Disaggregation by Source',
+    'mean_rates_by_src': 'Mean Hazard Rates by Source',
+    'mean_disagg_by_src': 'Mean Disaggregation Rates By Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
+    'event_based_mfd': 'Annual Frequency of Events',
     'avg_losses-rlzs': 'Average Asset Losses',
     'avg_losses-stats': 'Average Asset Losses Statistics',
     'loss_curves-rlzs': 'Asset Loss Curves',
@@ -666,7 +668,6 @@ def get_traceback(db, job_id):
     :param job_id:
         a job ID
     """
-    # strange: understand why the filter returns two lines or zero lines
     log = db("SELECT * FROM log WHERE job_id=?x AND level='CRITICAL'",
              job_id)
     if not log:

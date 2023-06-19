@@ -82,19 +82,6 @@ class SeismicSourceGetAnnOccRatesTestCase(_BaseSeismicSourceTestCase):
         self.assertEqual(rates, [(5, 7)])
 
 
-class GenerateOneRuptureTestCase(unittest.TestCase):
-
-    def test_simple_fault_source(self):
-        d = os.path.dirname(os.path.dirname(__file__))
-        tmps = 'simple-fault-source.xml'
-        source_model = os.path.join(d, 'source_model', tmps)
-        groups = nrml.to_python(source_model, SourceConverter(
-            investigation_time=50., rupture_mesh_spacing=2.))
-        src = groups[0].sources[0]
-        rup = src.get_one_rupture(ses_seed=0)
-        self.assertEqual(rup.mag, 5.2)
-
-
 class RecomputeMmaxTestCase(unittest.TestCase):
 
     def test_mmax_simple_fault_src(self):

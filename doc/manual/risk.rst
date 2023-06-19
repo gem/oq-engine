@@ -66,6 +66,8 @@ options and methodologies can be easily introduced, without affecting
 the overall calculation workflow. Each workflow is described in more
 detail in the following sections.
 
+.. _sec-scenario_damage_assessment:
+
 Scenario Damage Assessment 
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 The scenario damage

@@ -17,15 +17,20 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
+import re
 import abc
 import zlib
 import numpy
 from openquake.baselib import general
 from openquake.hazardlib import mfd
-from openquake.hazardlib.calc.filters import magstr
+from openquake.hazardlib.pmf import PMF
+from openquake.hazardlib.calc.filters import magstr, split_source
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface.planar import build_planar, PlanarSurface
-from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
+from openquake.hazardlib.geo.surface.multi import MultiSurface
+from openquake.hazardlib.source.rupture import (
+    ParametricProbabilisticRupture, NonParametricProbabilisticRupture,
+    EBRupture)
 
 
 def get_code2cls():
@@ -37,6 +42,124 @@ def get_code2cls():
         if hasattr(cls, 'code'):
             dic[cls.code] = cls
     return dic
+
+
+def is_poissonian(src):
+    """
+    :returns: True if the underlying source is poissonian, false otherwise
+    """
+    if src.code == b'F':  # multiFault
+        return hasattr(src, 'occur_rates')
+    elif src.code == b'N':  # nonParametric
+        return False
+    return True
+
+    
+def poisson_sample(src, eff_num_ses, seed):
+    """
+    :param src: a poissonian source
+    :param eff_num_ses: number of stochastic event sets * number of samples
+    :param seed: stochastic seed
+    :yields: triples (rupture, rup_id, num_occurrences)
+    """
+    rng = numpy.random.default_rng(seed)
+    tom = src.temporal_occurrence_model
+    rupids = src.offset + numpy.arange(src.num_ruptures)
+    if not hasattr(src, 'nodal_plane_distribution'):
+        if src.code == b'F':  # multifault
+            s = src.get_sections()
+            for i, rate in enumerate(src.occur_rates):
+                # NB: rng.poisson called inside to save memory
+                num_occ = rng.poisson(rate * tom.time_span * eff_num_ses)
+                if num_occ == 0:  # skip
+                    continue
+                idxs = src.rupture_idxs[i]
+                if len(idxs) == 1:
+                    sfc = s[idxs[0]]
+                else:
+                    sfc = MultiSurface([s[idx] for idx in idxs])
+                hypo = s[idxs[0]].get_middle_point()
+                rup = ParametricProbabilisticRupture(
+                    src.mags[i], src.rakes[i], src.tectonic_region_type,
+                    hypo, sfc, src.occur_rates[i], tom)
+                yield rup, rupids[i], num_occ
+        else:  # simple or complex fault
+            ruptures = list(src.iter_ruptures())
+            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
+            occurs = rng.poisson(rates * tom.time_span * eff_num_ses)
+            for rup, rupid, num_occ in zip(ruptures, rupids, occurs):
+                if num_occ:
+                    yield rup, rupid, num_occ
+        return
+
+    # else (multi)point sources and area sources
+    usd = src.upper_seismogenic_depth
+    lsd = src.lower_seismogenic_depth
+    rup_args = []
+    rates = []
+    for ps in split_source(src):
+        if not hasattr(ps, 'location'):  # unsplit containing a single source
+            [ps] = src
+        lon, lat = ps.location.x, ps.location.y
+        for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
+            for np_prob, np in ps.nodal_plane_distribution.data:
+                for hc_prob, hc_depth in ps.hypocenter_distribution.data:
+                    args = (mag_occ_rate, np_prob, hc_prob,
+                            mag, np, lon, lat, hc_depth, ps)
+                    rup_args.append(args)
+                    rates.append(mag_occ_rate * np_prob * hc_prob)
+    eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
+    occurs = rng.poisson(eff_rates)
+    for num_occ, args, rupid, rate in zip(occurs, rup_args, rupids, rates):
+        if num_occ:
+            _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, ps = args
+            hc = Point(lon, lat, hc_depth)
+            hdd = numpy.array([(1., hc.depth)])
+            [[[planar]]] = build_planar(
+                ps.get_planin([(1., mag)], [(1., np)]), hdd, lon, lat, usd, lsd)
+            rup = ParametricProbabilisticRupture(
+                mag, np.rake, ps.tectonic_region_type, hc,
+                PlanarSurface.from_(planar), rate, tom)
+            yield rup, rupid, num_occ
+
+
+def timedep_sample(src, eff_num_ses, seed):
+    """
+    :param src: a time-dependent source
+    :param eff_num_ses: number of stochastic event sets * number of samples
+    :param seed: stochastic seed
+    :yields: triples (rupture, rup_id, num_occurrences)
+    """
+    rng = numpy.random.default_rng(seed)
+    rupids = src.offset + numpy.arange(src.num_ruptures)
+    if src.code == b'F':  # time-dependent multifault
+        s = src.get_sections()
+        for i, probs in enumerate(src.probs_occur):
+            cdf = numpy.cumsum(probs)
+            num_occ = numpy.digitize(rng.random(eff_num_ses), cdf).sum()
+            if num_occ == 0:  # ignore non-occurring ruptures
+                continue
+            idxs = src.rupture_idxs[i]
+            if len(idxs) == 1:
+                sfc = s[idxs[0]]
+            else:
+                sfc = MultiSurface([s[idx] for idx in idxs])
+            hypo = sfc.get_middle_point()
+            pmf = PMF([(p, o) for o, p in enumerate(probs)])
+            yield (NonParametricProbabilisticRupture(
+                src.mags[i], src.rakes[i], src.tectonic_region_type,
+                hypo, sfc, pmf), rupids[i], num_occ)
+
+    else:  # time-dependent nonparametric
+        mutex_weight = getattr(src, 'mutex_weight', 1)
+        for rup, rupid in zip(src.iter_ruptures(), rupids):
+            occurs = rup.sample_number_of_occurrences(eff_num_ses, rng)
+            if mutex_weight < 1:
+                # consider only the occurrencies below the mutex_weight
+                occurs *= (rng.random(eff_num_ses) < mutex_weight)
+            num_occ = occurs.sum()
+            if num_occ:
+                yield rup, rupid, num_occ
 
 
 class BaseSeismicSource(metaclass=abc.ABCMeta):
@@ -55,7 +178,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
     id = -1  # to be set
     trt_smr = 0  # set by the engine
     nsites = 1  # set when filtering the source
-    min_mag = 0  # set in get_oqparams and CompositeSourceModel.filter
     splittable = True
     checksum = 0  # set in source_reader
     weight = 0.001  # set in contexts
@@ -72,13 +194,14 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :returns: a list of integers (usually of 1 element)
         """
         trt_smr = self.trt_smr
-        return [trt_smr] if isinstance(trt_smr, int) else trt_smr
+        return (trt_smr,) if isinstance(trt_smr, int) else trt_smr
 
     def serial(self, ses_seed):
         """
         :returns: a random seed derived from source_id and ses_seed
         """
-        return zlib.crc32(self.source_id.encode('ascii'), ses_seed)
+        baseid = re.split('!;', self.source_id)[0]
+        return zlib.crc32(baseid.encode('ascii'), ses_seed)
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id
@@ -87,7 +210,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         self.trt_smr = -1  # set by the engine
         self.num_ruptures = 0  # set by the engine
         self.seed = None  # set by the engine
-        self.min_mag = 0  # set by the SourceConverter
 
     def is_gridded(self):
         """
@@ -112,31 +234,16 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :yields: triples (rupture, trt_smr, num_occurrences)
         """
         seed = self.serial(ses_seed)
-        numpy.random.seed(seed)
-        for trt_smr in self.trt_smrs:
-            for rup, num_occ in self._sample_ruptures(eff_num_ses):
-                rup.seed = seed
-                if hasattr(rup, 'occurrence_rate'):
-                    # defined only for poissonian sources
-                    rup.occurrence_rate *= self.smweight
-                seed += 1
-                yield rup, trt_smr, num_occ
-
-    # NB: overridden in MultiFaultSource
-    def _sample_ruptures(self, eff_num_ses):
-        tom = getattr(self, 'temporal_occurrence_model', None)
-        if tom:  # time-independent source
-            yield from self.sample_ruptures_poissonian(eff_num_ses)
-        else:  # time-dependent source (nonparametric)
-            mutex_weight = getattr(self, 'mutex_weight', 1)
-            for rup in self.iter_ruptures():
-                occurs = rup.sample_number_of_occurrences(eff_num_ses)
-                if mutex_weight < 1:
-                    # consider only the occurrencies below the mutex_weight
-                    occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
-                num_occ = occurs.sum()
-                if num_occ:
-                    yield rup, num_occ
+        sample = poisson_sample if is_poissonian(self) else timedep_sample
+        for rup, rupid, num_occ in sample(self, eff_num_ses, seed):
+            if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
+                # defined only for poissonian sources
+                # needed to get convergency of the frequency to the rate
+                # tested only in oq-risk-tests etna0
+                rup.occurrence_rate *= self.smweight
+            ebr = EBRupture(rup, self.id, self.trt_smr, num_occ, rupid)
+            ebr.seed = ebr.id + ses_seed
+            yield ebr
 
     def get_mags(self):
         """
@@ -150,8 +257,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             mags.update(mag for mag in self.mags if mag >= self.min_mag)
         else:  # nonparametric
             for rup, pmf in self.data:
-                if rup.mag >= self.min_mag:
-                    mags.add(rup.mag)
+                mags.add(rup.mag)
         return sorted(mags)
 
     def get_magstrs(self):
@@ -166,57 +272,6 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             mags = {magstr(item[0]) for item in
                     self.get_annual_occurrence_rates()}
         return sorted(mags)
-
-    def sample_ruptures_poissonian(self, eff_num_ses):
-        """
-        :param eff_num_ses: number of stochastic event sets * number of samples
-        :yields: pairs (rupture, num_occurrences[num_samples])
-        """
-        tom = self.temporal_occurrence_model
-        if not hasattr(self, 'nodal_plane_distribution'):  # fault
-            ruptures = list(self.iter_ruptures())
-            rates = numpy.array([rup.occurrence_rate for rup in ruptures])
-            occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
-            for rup, num_occ in zip(ruptures, occurs):
-                if num_occ:
-                    yield rup, num_occ
-            return
-        # else (multi)point sources and area sources
-        usd = self.upper_seismogenic_depth
-        lsd = self.lower_seismogenic_depth
-        rup_args = []
-        rates = []
-        for src in self:
-            lon, lat = src.location.x, src.location.y
-            for mag, mag_occ_rate in src.get_annual_occurrence_rates():
-                if mag < self.min_mag:
-                    continue
-                for np_prob, np in src.nodal_plane_distribution.data:
-                    for hc_prob, hc_depth in src.hypocenter_distribution.data:
-                        args = (mag_occ_rate, np_prob, hc_prob,
-                                mag, np, lon, lat, hc_depth, src)
-                        rup_args.append(args)
-                        rates.append(mag_occ_rate * np_prob * hc_prob)
-        eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-        occurs = numpy.random.poisson(eff_rates)
-        for num_occ, args, rate in zip(occurs, rup_args, rates):
-            if num_occ:
-                _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, src = args
-                hc = Point(lon, lat, hc_depth)
-                hdd = numpy.array([(1., hc.depth)])
-                [[[planar]]] = build_planar(
-                    src.get_planin([(1., mag)], [(1., np)]),
-                    hdd, lon, lat, usd, lsd)
-                rup = ParametricProbabilisticRupture(
-                    mag, np.rake, src.tectonic_region_type, hc,
-                    PlanarSurface.from_(planar), rate, tom)
-                yield rup, num_occ
-
-    @abc.abstractmethod
-    def get_one_rupture(self, ses_seed, rupture_mutex=False):
-        """
-        Yields one random rupture from a source
-        """
 
     def __iter__(self):
         """
@@ -344,41 +399,15 @@ class ParametricSeismicSource(BaseSeismicSource, metaclass=abc.ABCMeta):
         """
         scaling_rate = getattr(self, 'scaling_rate', 1)
         return [(mag, occ_rate * scaling_rate)
-                for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates()
-                if (min_rate is None or occ_rate > min_rate) and
-                mag >= self.min_mag]
+                for mag, occ_rate in self.mfd.get_annual_occurrence_rates()
+                if min_rate is None or occ_rate > min_rate]
 
     def get_min_max_mag(self):
         """
         Get the minimum and maximum magnitudes of the ruptures generated
         by the source from the underlying MFD.
         """
-        min_mag, max_mag = self.mfd.get_min_max_mag()
-        return max(self.min_mag, min_mag), max_mag
-
-    def get_one_rupture(self, ses_seed, rupture_mutex=False):
-        """
-        Yields one random rupture from a source. IMPORTANT: this method
-        does not take into account the frequency of occurrence of the
-        ruptures
-        """
-        # The Mutex case is admitted only for non-parametric ruptures
-        msg = 'Mutually exclusive ruptures are admitted only in case of'
-        msg += ' non-parametric sources'
-        assert (not rupture_mutex), msg
-        # Set random seed and get the number of ruptures
-        num_ruptures = self.count_ruptures()
-        seed = self.serial(ses_seed)
-        numpy.random.seed(seed)
-        idx = numpy.random.choice(num_ruptures)
-        # NOTE Would be nice to have a method generating a rupture given two
-        # indexes, one for magnitude and one setting the position
-        for i, rup in enumerate(self.iter_ruptures()):
-            if i == idx:
-                if hasattr(self, 'rup_id'):
-                    rup.seed = self.seed
-                rup.idx = idx
-                return rup
+        return self.mfd.get_min_max_mag()
 
     def modify_set_msr(self, new_msr):
         """

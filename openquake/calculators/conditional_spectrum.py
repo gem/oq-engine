@@ -22,10 +22,9 @@ Conditional spectrum calculator, inspired by the disaggregation calculator
 import logging
 import numpy
 
-from openquake.baselib import general
+from openquake.baselib import parallel, hdf5
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib.probability_map import (
-    compute_hazard_maps, get_mean_curve)
+from openquake.hazardlib.probability_map import compute_hazard_maps
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib import valid
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
@@ -34,7 +33,7 @@ from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-
+TWO24 = 2 ** 24
 
 # helper function to be used when saving the spectra as an array
 def to_spectra(outdic, n, p):
@@ -52,6 +51,23 @@ def to_spectra(outdic, n, p):
         out[r, :, 0] = numpy.exp(c[:, n, 1, p])  # NB: seems wrong!
         out[r, :, 1] = numpy.sqrt(c[:, n, 2, p])
     return out
+
+
+def store_spectra(dstore, name, R, oq, spectra):
+    """
+    Store the conditional spectra array
+    """
+    N = len(spectra)
+    stats = list(oq.hazard_stats())
+    kind = 'rlz' if 'rlzs' in name else 'stat'
+    dic = dict(shape_descr=['site_id', 'poe', kind, 'period'])
+    dic['site_id'] = numpy.arange(N)
+    dic[kind] = numpy.arange(R) if kind == 'rlz' else stats
+    dic['poe'] = list(oq.poes)
+    dic['period'] = [from_string(imt).period for imt in oq.imtls]
+    hdf5.ArrayWrapper(spectra, dic, ['mea', 'std']).save(name, dstore.hdf5)
+    # NB: the following would segfault
+    # dstore.hdf5[name] = hdf5.ArrayWrapper(spectra, dic, ['mea', 'std'])
 
 
 @base.calculators.add('conditional_spectrum')
@@ -76,10 +92,12 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt'].init()
+        trt_smrs = self.datastore['trt_smrs'][:]
+        self.trt_rlzs = self.full_lt.get_trt_rlzs(trt_smrs)
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)
-        self.M = M = len(self.imts)
+        self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
         totrups = len(dstore['rup/mag'])
@@ -89,36 +107,32 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         rdata['idx'] = numpy.arange(totrups)
         rdata['grp_id'] = dstore['rup/grp_id'][:]
         self.periods = [from_string(imt).period for imt in self.imts]
+
         # extract imls from the "mean" hazard map
-        curve = get_mean_curve(self.datastore, oq.imt_ref)
-        # there is 1 site
-        [self.imls] = compute_hazard_maps(curve, oq.imtls[oq.imt_ref], oq.poes)
-        self.P = P = len(self.imls)
-        self.datastore.create_dset(
-            'cs-rlzs', float, (self.R, M, self.N, 2, self.P))
-        self.datastore.set_shape_descr(
-            'cs-rlzs', rlz_id=self.R, period=self.periods,  sid=self.N,
-            cs=2, poe_id=P)
-        self.datastore.create_dset('cs-stats', float, (1, M, self.N, 2, P))
-        self.datastore.set_shape_descr(
-            'cs-stats', stat='mean', period=self.periods, sid=self.N,
-            cs=['spec', 'std'], poe_id=P)
+        if 'hcurves-stats' in dstore:  # shape (N, S, M, L1)
+            curves = dstore.sel('hcurves-stats', stat='mean', imt=oq.imt_ref)
+        else:  # there is only 1 realization
+            curves = dstore.sel('hcurves-rlzs', rlz_id=0, imt=oq.imt_ref)
+        self.imls = compute_hazard_maps(  # shape (N, L) => (N, P)
+            curves[:, 0, 0, :], oq.imtls[oq.imt_ref], oq.poes)
+        N, self.P = self.imls.shape
         self.cmakers = read_cmakers(self.datastore)
-        # self.datastore.swmr_on()
+
         # IMPORTANT!! we rely on the fact that the classical part
         # of the calculation stores the ruptures in chunks of constant
         # grp_id, therefore it is possible to build (start, stop) slices
-        out = general.AccumDict()  # grp_id => dict
 
         # Computing CS
         toms = decode(dstore['toms'][:])
         ctx_by_grp = read_ctx_by_grp(dstore)
-        for gid, ctx in ctx_by_grp.items():
-            tom = valid.occurrence_model(toms[gid])
-            cmaker = self.cmakers[gid]
-            cmaker.poes = oq.poes
-            out += get_cs_out(cmaker, ctx, imti, self.imls, tom)
-
+        self.datastore.swmr_on()
+        smap = parallel.Starmap(get_cs_out, h5=self.datastore)
+        for grp_id, ctx in ctx_by_grp.items():
+            tom = valid.occurrence_model(toms[grp_id])
+            cmaker = self.cmakers[grp_id]
+            smap.submit((cmaker, ctx, imti, self.imls, tom))
+        out = smap.reduce()
+        
         # Apply weights and get two dictionaries with integer keys
         # (corresponding to the rlz ID) and array values
         # of shape (M, N, 3, P) where:
@@ -128,11 +142,24 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         # P is the the number of IMLs
         outdic, outmean = self._apply_weights(out)
 
+        # sanity check: the mean conditional spectrum must be close to the imls
+        ref_idx = list(oq.imtls).index(oq.imt_ref)
+        mean_cs = numpy.exp(outmean[0][ref_idx, :, 1, :])  # shape (N, P)
+        for n in range(self.N):
+            for p in range(self.P):
+                diff = abs(1. - self.imls[n, p]/ mean_cs[n, p])
+                if diff > .03:
+                    logging.warning('Conditional Spectrum vs mean IML\nfor '
+                                    'site_id=%d, poe=%s, imt=%s: %.5f vs %.5f',
+                                    n, oq.poes[p], oq.imt_ref,
+                                    mean_cs[n, p], self.imls[n, p])
+
         # Computing standard deviation
-        for gid, ctx in ctx_by_grp.items():
-            cmaker = self.cmakers[gid]
-            cmaker.poes = oq.poes
-            res = get_cs_out(cmaker, ctx, imti, self.imls, tom, outmean[0])
+        smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
+        for grp_id, ctx in ctx_by_grp.items():
+            cmaker = self.cmakers[grp_id]
+            smap.submit((cmaker, ctx, imti, self.imls, tom, outmean[0]))
+        for res in smap:
             for g in res:
                 out[g][:, :, 2] += res[g][:, :, 2]  # STDDEV
         return out
@@ -141,14 +168,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         """
         Save the conditional spectra
         """
-        for n in range(self.N):
-            for p in range(self.P):  # shape (R, M, N, 2, P)
-                self.datastore[dsetname][:, :, n, :, p] = to_spectra(
-                    outdic, n, p)  # shape (R, M, 2)
-        attrs = dict(imls=self.imls, periods=self.periods)
-        if self.oqparam.poes:
-            attrs['poes'] = self.oqparam.poes
-        self.datastore.set_attrs(dsetname, **attrs)
+        spe = numpy.array([[to_spectra(outdic, n, p) for p in range(self.P)]
+                           for n in range(self.N)])
+        store_spectra(self.datastore, dsetname, self.R, self.oqparam, spe)
 
     def post_execute(self, acc):
         # apply weights
@@ -160,10 +182,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def _apply_weights(self, acc):
         # build conditional spectra for each realization
         outdic = outdict(self.M, self.N, self.P, 0, self.R)
-        for g, rlzs in self.full_lt.rlzs_by_g.items():
-            for r in rlzs:
+        for g, trs in enumerate(self.trt_rlzs):
+            for r in trs % TWO24:
                 outdic[r] += acc[g]
-        self.convert_and_save('cs-rlzs', outdic)
 
         # build final conditional mean and std
         weights = self.datastore['weights'][:]

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Model %s"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="SSC"
+        >
+            <areaSource
+            id="SSC-AS-001"
+            name=" Area_1"
+            >
+                <areaGeometry>
+                    <gml:Polygon>
+                        <gml:exterior>
+                            <gml:LinearRing>
+                                <gml:posList>
+                                    1.2400366E+02 3.9994960E+01 1.2634715E+02 4.0001420E+01 1.2643753E+02 3.9930400E+01 1.2651500E+02 3.9904580E+01 1.2657956E+02 3.9872300E+01 1.2665703E+02 3.9872300E+01 1.2672098E+02 3.9830490E+01 1.2672159E+02 3.8064650E+01 1.2645659E+02 3.7839310E+01 1.2592875E+02 3.7829470E+01 1.2548206E+02 3.7619190E+01 1.2547837E+02 3.7490990E+01 1.2401657E+02 3.7496530E+01 1.2400366E+02 3.9994960E+01
+                                </gml:posList>
+                            </gml:LinearRing>
+                        </gml:exterior>
+                    </gml:Polygon>
+                    <upperSeismoDepth>
+                        0.0000000E+00
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        2.0000000E+01
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0000000E+00
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="4.2609953E+00" bValue="1.1533864E+00" maxMag="6.8000000E+00" minMag="4.0000000E+00"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="9.0000000E+01" probability="1.7000000E-01" rake="0.0000000E+00" strike="0.0000000E+00"/>
+                    <nodalPlane dip="9.0000000E+01" probability="5.0000000E-01" rake="0.0000000E+00" strike="4.5000000E+01"/>
+                    <nodalPlane dip="9.0000000E+01" probability="1.7000000E-01" rake="0.0000000E+00" strike="9.0000000E+01"/>
+                    <nodalPlane dip="9.0000000E+01" probability="1.6000000E-01" rake="0.0000000E+00" strike="1.3500000E+02"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="5.0000000E+00" probability="1.0000000E-01"/>
+                    <hypoDepth depth="7.5000000E+00" probability="2.0000000E-01"/>
+                    <hypoDepth depth="1.0000000E+01" probability="2.0000000E-01"/>
+                    <hypoDepth depth="1.2500000E+01" probability="2.0000000E-01"/>
+                    <hypoDepth depth="1.5000000E+01" probability="2.0000000E-01"/>
+                    <hypoDepth depth="2.0000000E+01" probability="1.0000000E-01"/>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

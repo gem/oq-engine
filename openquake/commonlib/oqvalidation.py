@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 import re
 import ast
@@ -27,10 +26,11 @@ import functools
 import collections
 import multiprocessing
 import numpy
+import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
-from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.imt import from_string, sort_by_imt
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
 from openquake.hazardlib import valid, InvalidFile, site
@@ -242,6 +242,14 @@ epsilon_star:
   A boolean controlling the typology of disaggregation output to be provided.
   When True disaggregation is perfomed in terms of epsilon* rather then
   epsilon (see Bazzurro and Cornell, 1999)
+  Example: *epsilon_star = true*
+  Default: False
+
+extreme_gmv:
+  A scalar on an IMT-keyed dictionary specifying when a ground motion value is
+  extreme and the engine has to treat is specially.
+  Example: *extreme_gmv = 5.0*
+  Default: {'default': numpy.inf} i.e. no values are extreme
 
 floating_x_step:
   Float, used in rupture generation for kite faults. indicates the fraction
@@ -373,8 +381,8 @@ individual_curves:
   Default: False
 
 infer_occur_rates:
-   If set infer the occurrence rates from the first probs_occur in nonparametric
-   sources.
+   If set infer the occurrence rates from the first probs_occur in
+   nonparametric sources.
    Example: *infer_occur_rates = true*
    Default: False
 
@@ -460,12 +468,12 @@ max_sites_disagg:
   Default: 10
 
 pmap_max_gb:
-   Control the memory used in large classical calculations. The default is .5
-   (meant for people with 2 GB per core or less) but you increase it if you
+   Control the memory used in large classical calculations. The default is .4
+   (meant for people with 2 GB per core or less) but you can increase it if you
    have plenty of memory, thus producing less tiles and making the calculation
-   more efficient. For small calculations it has basically no effect.
+   more efficient. For small calculations it has no effect.
    Example: *pmap_max_gb = 2*
-   Default: .5
+   Default: .4
 
 max_weight:
   INTERNAL
@@ -556,6 +564,19 @@ pointsource_distance:
   Example: *pointsource_distance = 50*.
   Default: {'default': 1000}
 
+postproc_func:
+  Specify a postprocessing function in calculators/postproc.
+  Example: *postproc_func = compute_mrd*
+  Default: '' (no postprocessing)
+
+postproc_args:
+  Specify the arguments to be passed to the postprocessing function
+  Example: *postproc_args = {'imt': 'PGA'}*
+  Default: {} (no arguments)
+
+prefer_global_site_params:
+  INTERNAL. Automatically set by the engine.
+
 ps_grid_spacing:
   Used in classical calculations to grid the point sources. Requires the
   *pointsource_distance* to be set too.
@@ -564,7 +585,7 @@ ps_grid_spacing:
 
 quantiles:
   List of probabilities used to compute the quantiles across realizations.
-  Example: quantiles = 9.15 0.50 0.85
+  Example: quantiles = 0.15 0.50 0.85
   Default: empty list
 
 random_seed:
@@ -745,7 +766,7 @@ time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
   Valid choices are "day", "night", "transit".
   Example: *time_event = day*.
-  Default: None
+  Default: "avg"
 
 time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
@@ -764,7 +785,7 @@ total_losses:
 truncation_level:
   Truncation level used in the GMPEs.
   Example: *truncation_level = 0* to compute median GMFs.
-  Default: 99
+  Default: no default
 
 uniform_hazard_spectra:
   Flag used to generated uniform hazard specta for the given poes
@@ -818,6 +839,12 @@ ALL_CALCULATORS = ['aftershock',
                    'event_based_damage',
                    'scenario_damage']
 
+COST_TYPES = [
+    'structural', 'nonstructural', 'contents', 'business_interruption']
+ALL_COST_TYPES = [
+    '+'.join(s) for l_idx in range(len(COST_TYPES))
+    for s in itertools.combinations(COST_TYPES, l_idx + 1)]
+
 
 def check_same_levels(imtls):
     """
@@ -845,28 +872,33 @@ def check_same_levels(imtls):
 
 class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
-    KNOWN_INPUTS = {'rupture_model', 'exposure', 'site_model',
-                    'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-                    'source_model_logic_tree', 'hazard_curves',
-                    'insurance', 'reinsurance', 'ins_loss',
-                    'sites', 'job_ini', 'multi_peril', 'taxonomy_mapping',
-                    'fragility', 'consequence', 'reqv', 'input_zip',
-                    'reqv_ignore_sources',
-                    'amplification', 'station_data',
-                    'nonstructural_vulnerability',
-                    'nonstructural_fragility',
-                    'nonstructural_consequence',
-                    'structural_vulnerability',
-                    'structural_fragility',
-                    'structural_consequence',
-                    'contents_vulnerability',
-                    'contents_fragility',
-                    'contents_consequence',
-                    'business_interruption_vulnerability',
-                    'business_interruption_fragility',
-                    'business_interruption_consequence',
-                    'structural_vulnerability_retrofitted',
-                    'occupants_vulnerability'}
+
+    KNOWN_INPUTS = {
+        'rupture_model', 'exposure', 'site_model',
+        'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
+        'source_model_logic_tree', 'hazard_curves',
+        'insurance', 'reinsurance', 'ins_loss',
+        'job_ini', 'multi_peril', 'taxonomy_mapping',
+        'fragility', 'consequence', 'reqv', 'input_zip',
+        'reqv_ignore_sources', 'amplification', 'station_data',
+        'nonstructural_vulnerability',
+        'nonstructural_fragility',
+        'nonstructural_consequence',
+        'structural_vulnerability',
+        'structural_fragility',
+        'structural_consequence',
+        'contents_vulnerability',
+        'contents_fragility',
+        'contents_consequence',
+        'business_interruption_vulnerability',
+        'business_interruption_fragility',
+        'business_interruption_consequence',
+        'structural_vulnerability_retrofitted',
+        'occupants_vulnerability',
+        'residents_vulnerability',
+        'area_vulnerability',
+        'number_vulnerability',
+    }
     # old name => new name
     ALIASES = {'individual_curves': 'individual_rlzs',
                'quantile_hazard_curves': 'quantiles',
@@ -917,6 +949,7 @@ class OqParam(valid.ParamSet):
     epsilon_star = valid.Param(valid.boolean, False)
     export_dir = valid.Param(valid.utf8, '.')
     exports = valid.Param(valid.export_formats, ())
+    extreme_gmv = valid.Param(valid.floatdict, {'default': numpy.inf})
     gmf_max_gb = valid.Param(valid.positivefloat, .1)
     ground_motion_correlation_model = valid.Param(
         valid.NoneOr(valid.Choice(*GROUND_MOTION_CORRELATION_MODELS)), None)
@@ -954,7 +987,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_gb = valid.Param(valid.positivefloat, .5)
+    pmap_max_gb = valid.Param(valid.positivefloat, .4)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -970,6 +1003,9 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
+    postproc_func = valid.Param(valid.simple_id, '')
+    postproc_args = valid.Param(valid.dictionary, {})
+    prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
     quantile_hazard_curves = quantiles = valid.Param(valid.probabilities, [])
     random_seed = valid.Param(valid.positiveint, 42)
@@ -1016,15 +1052,10 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    time_event = valid.Param(str, None)
+    time_event = valid.Param(str, 'avg')
     time_per_task = valid.Param(valid.positivefloat, 2000)
-    total_losses = valid.Param(
-        valid.Choice('structural+nonstructural',
-                     'structural+contents',
-                     'nonstructural+contents',
-                     'structural+nonstructural+contents'), None)
-    truncation_level = valid.Param(
-        lambda s: valid.positivefloat(s) or 1E-9, 99.)
+    total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
+    truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
     vs30_tolerance = valid.Param(valid.positiveint, 0)
@@ -1074,19 +1105,29 @@ class OqParam(valid.ParamSet):
         return {key: valid.RjbEquivalent(value)
                 for key, value in self.inputs['reqv'].items()}
 
-    def __init__(self, **names_vals):
-        if '_log' in names_vals:  # called from engine
-            del names_vals['_log']
-
-        # support legacy names
-        for name in list(names_vals):
+    def fix_legacy_names(self, dic):
+        for name in list(dic):
             if name in self.ALIASES:
-                if self.ALIASES[name] in names_vals:
+                if self.ALIASES[name] in dic:
                     # passed both the new (self.ALIASES[name]) and the old name
                     raise NameError('Please remove %s, you should use only %s'
                                     % (name, self.ALIASES[name]))
                 # use the new name instead of the old one
-                names_vals[self.ALIASES[name]] = names_vals.pop(name)
+                dic[self.ALIASES[name]] = dic.pop(name)
+
+        inp = dic.get('inputs', {})
+        if 'sites' in inp:
+            if inp.get('site_model'):
+                raise NameError('Please remove sites, you should use '
+                                'only site_model')
+            inp['site_model'] = [inp.pop('sites')]
+            self.prefer_global_site_params = True
+
+    def __init__(self, **names_vals):
+        if '_log' in names_vals:  # called from engine
+            del names_vals['_log']
+
+        self.fix_legacy_names(names_vals)
         super().__init__(**names_vals)
         if 'job_ini' not in self.inputs:
             self.inputs['job_ini'] = '<in-memory>'
@@ -1144,6 +1185,11 @@ class OqParam(valid.ParamSet):
         if self.collapse_level >= 0:
             self.time_per_task = 1_000_000  # disable task_splitting
 
+        # cut maximum_distance with minimum_magnitude
+        if hasattr(self, 'maximum_distance'):
+            # can be missing in post-calculations
+            self.maximum_distance.cut(self.minimum_magnitude)
+
         # checks for risk
         self._risk_files = get_risk_files(self.inputs)
         if self.risk_files:
@@ -1168,6 +1214,15 @@ class OqParam(valid.ParamSet):
 
         if self.job_type == 'risk':
             self.check_aggregate_by()
+        if ('hazard_curves' not in self.inputs and 'gmfs' not in self.inputs
+                and 'multi_peril' not in self.inputs
+                and self.inputs['job_ini'] != '<in-memory>'
+                and self.calculation_mode != 'scenario'
+                and not self.hazard_calculation_id):
+            if not hasattr(self, 'truncation_level'):
+                raise InvalidFile("Missing truncation_level in %s" %
+                                  self.inputs['job_ini'])
+
         if 'reinsurance' in self.inputs:
             self.check_reinsurance()
 
@@ -1225,7 +1280,8 @@ class OqParam(valid.ParamSet):
                 for k in ('mag_bin_width', 'distance_bin_width',
                           'coordinate_bin_width', 'num_epsilon_bins'):
                     if k not in vars(self):
-                        raise InvalidFile('%s must be set in %s' % (k, job_ini))
+                        raise InvalidFile(
+                            '%s must be set in %s' % (k, job_ini))
             if self.disagg_outputs and not any(
                     'Eps' in out for out in self.disagg_outputs):
                 self.num_epsilon_bins = 1
@@ -1251,8 +1307,8 @@ class OqParam(valid.ParamSet):
 
         # check for GMFs from file
         if (self.inputs.get('gmfs', '').endswith('.csv')
-                and 'sites' not in self.inputs and self.sites is None):
-            raise InvalidFile('%s: You forgot sites|sites_csv'
+                and 'site_model' not in self.inputs and self.sites is None):
+            raise InvalidFile('%s: You forgot to specify a site_model'
                               % job_ini)
         elif self.inputs.get('gmfs', '').endswith('.xml'):
             raise InvalidFile('%s: GMFs in XML are not supported anymore'
@@ -1270,11 +1326,6 @@ class OqParam(valid.ParamSet):
             if self.number_of_logic_tree_samples >= TWO16:
                 raise ValueError('number_of_logic_tree_samples too big: %d' %
                                  self.number_of_logic_tree_samples)
-
-        # check grid + sites
-        if self.region_grid_spacing and ('sites' in self.inputs or self.sites):
-            raise ValueError('You are specifying grid and sites at the same '
-                             'time: which one do you want?')
 
         # check for amplification
         if ('amplification' in self.inputs and self.imtls and
@@ -1301,7 +1352,7 @@ class OqParam(valid.ParamSet):
                 costtypes = set(rt.rsplit('/')[1] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
-        self.all_cost_types = sorted(costtypes)
+        self.all_cost_types = sorted(costtypes)  # including occupants
 
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
@@ -1315,6 +1366,10 @@ class OqParam(valid.ParamSet):
         """
         :param gsims: a sequence of GSIM instances
         """
+        has_sites = self.sites is not None or 'site_model' in self.inputs
+        if not has_sites:
+            return
+
         imts = set()
         for imt in self.imtls:
             im = from_string(imt)
@@ -1402,12 +1457,12 @@ class OqParam(valid.ParamSet):
         levels, if given, or the hazard ones.
         """
         imtls = self.hazard_imtls or self.risk_imtls
-        return DictArray(imtls) if imtls else {}
+        return DictArray(sort_by_imt(imtls)) if imtls else {}
 
     @property
     def min_iml(self):
         """
-        :returns: a dictionary of intensities, one per IMT
+        :returns: a vector of minimum intensities, one per IMT
         """
         mini = self.minimum_intensity
         if mini:
@@ -1420,6 +1475,15 @@ class OqParam(valid.ParamSet):
             del mini['default']
         min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
         return min_iml
+
+    def get_max_iml(self):
+        """
+        :returns: a vector of extreme intensities, one per IMT
+        """
+        max_iml = numpy.zeros(len(self.imtls))
+        for m, imt in enumerate(self.imtls):
+            max_iml[m] = calc.filters.getdefault(self.extreme_gmv, imt)
+        return max_iml
 
     def levels_per_imt(self):
         """
@@ -1735,11 +1799,9 @@ class OqParam(valid.ParamSet):
         if self.calculation_mode in ('preclassical', 'aftershock'):
             return True  # disable the check
         if 'hazard_curves' in self.inputs and (
-                self.sites is not None or 'sites' in self.inputs
-                or 'site_model' in self.inputs):
+                self.sites is not None or 'site_model' in self.inputs):
             return False
-        has_sites = (self.sites is not None or 'sites' in self.inputs
-                     or 'site_model' in self.inputs)
+        has_sites = self.sites is not None or 'site_model' in self.inputs
         if not has_sites and not self.ground_motion_fields:
             # when generating only the ruptures you do not need the sites
             return True
@@ -1749,7 +1811,7 @@ class OqParam(valid.ParamSet):
             return True  # no check on the sites for risk
         flags = dict(
             sites=bool(self.sites),
-            sites_csv=self.inputs.get('sites', 0),
+            site_model_csv=self.inputs.get('site_model', 0),
             hazard_curves_csv=self.inputs.get('hazard_curves', 0),
             gmfs_csv=self.inputs.get('gmfs', 0),
             region=bool(self.region and self.region_grid_spacing))
@@ -1908,12 +1970,17 @@ class OqParam(valid.ParamSet):
         if 'id' in tagset and len(tagset) > 1:
             raise ValueError('aggregate_by = id must contain a single tag')
         elif 'site_id' in tagset and len(tagset) > 1:
-            raise ValueError('aggregate_by = site_id must contain a single tag')
+            raise ValueError(
+                'aggregate_by = site_id must contain a single tag')
         elif 'reinsurance' in self.inputs:
             if not any(['policy'] == aggby for aggby in self.aggregate_by):
-                raise InvalidFile(
-                    '%s: expected aggregate_by=policy; got %s' % (
-                        self.inputs['job_ini'], self.aggregate_by))
+                err_msg = ('The field `aggregate_by = policy` in the %s file'
+                           ' is required for reinsurance calculations.'
+                           % self.inputs['job_ini'])
+                if self.aggregate_by:
+                    err_msg += (' Got `aggregate_by = %s` instead.'
+                                % self.aggregate_by)
+                raise InvalidFile(err_msg)
         return True
 
     def check_reinsurance(self):

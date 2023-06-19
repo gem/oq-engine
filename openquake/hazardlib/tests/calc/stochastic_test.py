@@ -17,8 +17,7 @@ import os
 import unittest
 import numpy
 from openquake.hazardlib import nrml, contexts
-from openquake.hazardlib.calc.stochastic import (
-    stochastic_event_set, sample_ruptures)
+from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.si_midorikawa_1999 import SiMidorikawa1999SInter
 
 aae = numpy.testing.assert_almost_equal
@@ -34,19 +33,16 @@ class StochasticEventSetTestCase(unittest.TestCase):
         for i, src in enumerate(group):
             src.id = i
             src.grp_id = 0
+            src.num_ruptures = src.count_ruptures()
         aae([src.mutex_weight for src in group],
             [0.0125, 0.0125, 0.0125, 0.0125, 0.1625, 0.1625, 0.0125, 0.0125,
              0.025, 0.025, 0.05, 0.05, 0.325, 0.025, 0.1])
         param = dict(ses_per_logic_tree_path=10, ses_seed=42, imtls={})
         cmaker = contexts.ContextMaker('*', [SiMidorikawa1999SInter()], param)
         dic = sum(sample_ruptures(group, cmaker), {})
-        self.assertEqual(len(dic['rup_array']), 8)
+        self.assertEqual(len(dic['rup_array']), 5)
         self.assertEqual(len(dic['source_data']), 6)  # mutex sources
 
-        # test no filtering 1
-        ruptures = list(stochastic_event_set(group))
-        self.assertEqual(len(ruptures), 19)
-
-        # test no filtering 2
+        # test no filtering
         ruptures = sum(sample_ruptures(group, cmaker), {})['rup_array']
-        self.assertEqual(len(ruptures), 8)
+        self.assertEqual(len(ruptures), 5)

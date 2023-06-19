@@ -41,8 +41,9 @@ def zip_all(directory, ini):
     total = sum(os.path.getsize(z) for z in zips)
     if os.path.exists('jobs.zip'):
         os.remove('jobs.zip')
-    general.zipfiles(zips, 'jobs.zip', log=logging.info)
-    logging.info('Generated %s of jobs.zip', general.humansize(total))
+    fname = general.zipfiles(zips, 'jobs.zip', log=logging.info)
+    logging.info('Compressed %s -> %s of jobs.zip', general.humansize(total),
+                 general.humansize(os.path.getsize(fname)))
 
 
 # useful for the demos

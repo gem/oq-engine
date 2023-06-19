@@ -74,6 +74,11 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         self.run_calc(case_12.__file__, 'job_c.ini')
         self.check_damages('c_damage_table.txt', 'c_damages.txt')
 
+        # check aggrisk output
+        fnames = export(('aggrisk', 'csv'), self.calc.datastore)
+        for f in fnames:
+            self.assertEqualFiles('expected/' + strip_calc_id(f), f, delta=1E-5)
+
     def test_case_12d(self):
         # test event_based_damage, aggregate_by=id
         self.run_calc(case_12.__file__, 'job_d.ini')
@@ -125,4 +130,4 @@ class EventBasedDamageTestCase(CalculatorTestCase):
         dic = vars(extract(self.calc.datastore, 'damages-rlzs'))
         self.assertEqual(
             list(dic),
-            ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', '_extra'])
+            ['rlz-000', 'rlz-001', 'rlz-002', 'rlz-003', 'rlz-004', 'extra'])

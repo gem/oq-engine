@@ -27,13 +27,13 @@ import numpy
 from openquake.baselib import hdf5, general, InvalidFile
 from openquake.hazardlib import (
     geo, site, nrml, sourceconverter, gsim_lt, logictree, contexts, valid)
-from openquake.hazardlib.source.rupture import (
-    EBRupture, get_ruptures, _get_rupture)
+from openquake.hazardlib.source.rupture import EBRupture, get_ruptures, get_ebr
 from openquake.hazardlib.calc.filters import IntegrationDistance
 from openquake.hazardlib.source_reader import get_csm
 
 
 bytrt = operator.attrgetter('tectonic_region_type')
+
 
 def _get_site_model(fname, req_site_params):
     sm = hdf5.read_csv(fname, site.site_param_dt).array
@@ -84,6 +84,7 @@ def _rupture_groups(ebruptures):
     return rup_groups
 
 
+# used in hazardlib/tests/gsim/can15/nbcc_aa13_test.py
 def _get_ebruptures(fname, conv=None, ses_seed=None):
     """
     :param fname: path to a rupture file (XML or CSV)
@@ -95,17 +96,16 @@ def _get_ebruptures(fname, conv=None, ses_seed=None):
         [rup_node] = nrml.read(fname)
         rup = conv.convert_node(rup_node)
         rup.tectonic_region_type = '*'  # no TRT for scenario ruptures
-        rup.seed = ses_seed
-        ebrs = [EBRupture(rup, 'NA', 0, id=rup.seed, scenario=True)]
+        ebrs = [EBRupture(rup, 0, 0, id=0)]
+        ebrs[0].seed = ses_seed
         return ebrs
 
     assert fname.endswith('.csv'), fname
     aw = get_ruptures(fname)
     ebrs = []
     for i, rec in enumerate(aw.array):
-        rupture = _get_rupture(rec, aw.geoms[i], aw.trts[rec['trt_smr']])
-        ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
-                        rec['n_occ'], rec['id'], rec['e0'])
+        ebr = get_ebr(rec, aw.geoms[i], aw.trts[rec['trt_smr']])
+        ebr.seed = ebr.id + ses_seed
         ebrs.append(ebr)
     return ebrs
 
@@ -116,7 +116,7 @@ def read_hparams(job_ini):
     :returns: dictionary of hazard parameters
     """
     jobdir = os.path.dirname(job_ini)
-    cp = configparser.ConfigParser()
+    cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf8')
     params = {'inputs': {}}
     for sect in cp.sections():
@@ -148,7 +148,7 @@ def read_hparams(job_ini):
     return params
 
 
-def get_smlt(hparams, branchID=None):
+def get_smlt(hparams, branchID='', sourceID=''):
     """
     :param hparams:
         dictionary of hazard parameters
@@ -158,7 +158,10 @@ def get_smlt(hparams, branchID=None):
     args = (hparams['inputs']['source_model_logic_tree'],
             hparams.get('random_seed', 42),
             hparams.get('number_of_logic_tree_samples', 0),
-            hparams.get('sampling_method', 'early_weights'), False, branchID)
+            hparams.get('sampling_method', 'early_weights'),
+            False,
+            branchID,
+            sourceID)
     smlt = logictree.SourceModelLogicTree(*args)
     if 'discard_trts' in hparams:
         discard_trts = {s.strip() for s in hparams['discard_trts'].split(',')}
@@ -167,7 +170,7 @@ def get_smlt(hparams, branchID=None):
     return smlt
 
 
-def get_flt(hparams, branchID=None):
+def get_flt(hparams, branchID=''):
     """
     :param hparams:
         dictionary of hazard parameters
@@ -310,6 +313,7 @@ class Input(object):
             for grp in groups:
                 for ebr in grp:
                     ebr.n_occ = ngmfs * num_rlzs
+                    ebr.trt_smrs = (ebr.trt_smr,)
 
         return groups, contexts.get_cmakers(groups, self.full_lt, self.oq)
 
@@ -318,7 +322,6 @@ class Input(object):
         if len(self.cmakers) == 1:
             return self.cmakers[0]
         raise ValueError('There are multiple cmakers inside %s' % self.cmakers)
-
 
     @property
     def group(self):

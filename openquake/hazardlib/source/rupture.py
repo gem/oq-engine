@@ -39,9 +39,12 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
 TWO16 = 2 ** 16
+TWO24 = 2 ** 24
+TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 
 pmf_dt = numpy.dtype([
@@ -50,7 +53,7 @@ pmf_dt = numpy.dtype([
 
 events_dt = numpy.dtype([
     ('id', U32),
-    ('rup_id', U32),
+    ('rup_id', I64),
     ('rlz_id', U16)])
 
 rup_dt = numpy.dtype([
@@ -67,9 +70,9 @@ rup_dt = numpy.dtype([
     ('extra', hdf5.vstr)])
 
 rupture_dt = numpy.dtype([
-    ('id', U32),
-    ('seed', U32),
-    ('source_id', '<S16'),
+    ('id', I64),
+    ('seed', I64),
+    ('source_id', U32),
     ('trt_smr', U32),
     ('code', U8),
     ('n_occ', U32),
@@ -87,18 +90,19 @@ rupture_dt = numpy.dtype([
 code2cls = {}
 
 
-def to_csv_array(ruptures):
+def to_csv_array(ebruptures):
     """
-    :param ruptures: a list of ruptures
-    :returns: an array of ruptures suitable for serialization in CSV
+    :param ebruptures: a list of EBRuptures
+    :returns: an array suitable for serialization in CSV
     """
     if not code2cls:
         code2cls.update(BaseRupture.init())
-    arr = numpy.zeros(len(ruptures), rup_dt)
-    for rec, rup in zip(arr, ruptures):
+    arr = numpy.zeros(len(ebruptures), rup_dt)
+    for rec, ebr in zip(arr, ebruptures):
+        rup = ebr.rupture
         # s0=number of multi surfaces, s1=number of rows, s2=number of columns
         arrays = surface_to_arrays(rup.surface)  # shape (s0, 3, s1, s2)
-        rec['seed'] = rup.seed
+        rec['seed'] = ebr.seed
         rec['mag'] = rup.mag
         rec['rake'] = rup.rake
         rec['lon'] = rup.hypocenter.x
@@ -139,14 +143,15 @@ def to_arrays(geom):
     return arrays
 
 
-def _get_rupture(rec, geom=None, trt=None):
+def get_ebr(rec, geom, trt):
+    """
+    Convert a rupture record plus geometry into an EBRupture instance
+    """
     # rec: a dictionary or a record
     # geom: if any, an array of floats32 convertible into a mesh
+    # NB: not implemented: rupture_slip_direction
     if not code2cls:
         code2cls.update(BaseRupture.init())
-    if geom is None:
-        points = F32([rec['lons'], rec['lats'], rec['depths']]).flat
-        geom = numpy.concatenate([[1], [len(rec['lons']), 1], points])
 
     # build surface
     arrays = to_arrays(geom)
@@ -187,9 +192,14 @@ def _get_rupture(rec, geom=None, trt=None):
         rupture.probs_occur = rec['probs_occur']
     except (KeyError, ValueError):  # rec can be a numpy record
         pass
-    rupture.tectonic_region_type = trt or rec['trt']
+    rupture.tectonic_region_type = trt
     rupture.multiplicity = rec['n_occ']
-    return rupture
+
+    # build EBRupture
+    ebr = EBRupture(rupture, rec['source_id'], rec['trt_smr'],
+                    rec['n_occ'], rec['id'] % TWO30, rec['e0'])
+    ebr.seed = rec['seed']
+    return ebr
 
 
 def float5(x):
@@ -250,7 +260,6 @@ class BaseRupture(metaclass=abc.ABCMeta):
     NB: if you want to convert the rupture into XML, you should set the
     attribute surface_nodes to an appropriate value.
     """
-    seed = 0  # set to a value > 0 by the engine
     _code = {}
 
     @classmethod
@@ -303,7 +312,7 @@ class BaseRupture(metaclass=abc.ABCMeta):
         """
         return 1
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         Randomly sample number of occurrences from temporal occurrence model
         probability distribution.
@@ -357,7 +366,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         if weight is not None:
             self.weight = weight
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         See :meth:`superclass method
         <.rupture.BaseRupture.sample_number_of_occurrences>`
@@ -367,7 +376,7 @@ class NonParametricProbabilisticRupture(BaseRupture):
         """
         # compute cdf from pmf
         cdf = numpy.cumsum(self.probs_occur)
-        n_occ = numpy.digitize(numpy.random.random(n), cdf)
+        n_occ = numpy.digitize(rng.random(n), cdf)
         return n_occ
 
 
@@ -420,7 +429,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         rate = self.occurrence_rate
         return tom.get_probability_n_occurrences(rate, 1)
 
-    def sample_number_of_occurrences(self, n=1):
+    def sample_number_of_occurrences(self, n, rng):
         """
         Draw a random sample from the distribution and return a number
         of events to occur as an array of integers of size n.
@@ -430,7 +439,7 @@ class ParametricProbabilisticRupture(BaseRupture):
         of an assigned temporal occurrence model.
         """
         r = self.occurrence_rate * self.temporal_occurrence_model.time_span
-        return numpy.random.poisson(r, n)
+        return rng.poisson(r, n)
 
     def get_dppvalue(self, site):
         """
@@ -597,6 +606,12 @@ class PointSurface:
         deps = numpy.full(N, self.hypocenter.z)
         return Mesh(lons, lats, deps)
 
+    def get_min_distance(self, mesh):
+        """
+        :returns: the distance from the hypocenter to the mesh
+        """
+        return self.hypocenter.distance_to_mesh(mesh).min()
+
     def __bool__(self):
         return False
 
@@ -720,47 +735,37 @@ class EBRupture(object):
     :param int e0: initial event ID (default 0)
     :param bool scenario: True for scenario ruptures, default False
     """
-    def __init__(self, rupture, source_id, trt_smr, n_occ=1,
-                 id=None, e0=0, scenario=False):
-        assert rupture.seed > 0  # sanity check
+    seed = 'NA'  # set by the engine
+
+    def __init__(self, rupture, source_id, trt_smr, n_occ=1, id=None, e0=0):
         self.rupture = rupture
         self.source_id = source_id
         self.trt_smr = trt_smr
         self.n_occ = n_occ
-        self.id = id  # id of the rupture on the DataStore
+        self.id = source_id * TWO30 + id
         self.e0 = e0
-        self.scenario = scenario
 
     @property
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
-    @property
-    def seed(self):
+    def get_eid_rlz(self, rlzs_by_gsim, scenario):
         """
-        Seed of the rupture
+        :param rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :param scenario: if true distribute the rlzs evenly else randomly
+        :returns: an array with fields (eid, rlz)
         """
-        return self.rupture.seed
-
-    def get_eids_by_rlz(self, rlzs_by_gsim):
-        """
-        :params rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :returns: a dictionary rlz index -> eids array
-        """
-        dic = {}
+        out = numpy.zeros(self.n_occ, [('eid', U32), ('rlz', U32)])
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        if self.scenario:
-            all_eids = numpy.arange(self.n_occ, dtype=U32) + self.e0
-            splits = numpy.array_split(all_eids, len(rlzs))
-            for rlz_id, eids in zip(rlzs, splits):
-                dic[rlz_id] = eids
-        else:  # event_based
-            j = 0
-            histo = general.random_histogram(self.n_occ, len(rlzs), self.seed)
-            for rlz, n in zip(rlzs, histo):
-                dic[rlz] = numpy.arange(j, j + n, dtype=U32) + self.e0
-                j += n
-        return dic
+        out['eid'] = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
+        if scenario:
+            # the rlzs are distributed evenly
+            div = self.n_occ // len(rlzs)
+            out['rlz'] = rlzs[numpy.arange(self.n_occ) // div]
+        else:
+            # event_based: the rlzs are distributed randomly
+            out['rlz'] = general.random_choice(rlzs, self.n_occ, 0, self.seed)
+        return out
 
     def get_eids(self):
         """
@@ -770,7 +775,7 @@ class EBRupture(object):
 
     def __repr__(self):
         return '<%s %d[%d]>' % (
-            self.__class__.__name__, self.seed, self.n_occ)
+            self.__class__.__name__, self.id, self.n_occ)
 
 
 class RuptureProxy(object):
@@ -779,9 +784,8 @@ class RuptureProxy(object):
 
     :param rec: a record with the rupture parameters
     """
-    def __init__(self, rec, scenario=False):
+    def __init__(self, rec):
         self.rec = rec
-        self.scenario = scenario
 
     def __getitem__(self, name):
         return self.rec[name]
@@ -791,16 +795,12 @@ class RuptureProxy(object):
         """
         :returns: EBRupture instance associated to the underlying rupture
         """
-        # not implemented: rupture_slip_direction
-        rupture = _get_rupture(self.rec, self.geom, trt)
-        ebr = EBRupture(rupture, self['source_id'], self['trt_smr'],
-                        self['n_occ'], self['id'], self['e0'], self.scenario)
-        return ebr
+        return get_ebr(self.rec, self.geom, trt)
 
     def __repr__(self):
-        src = self['source_id'].decode('ascii')
-        return '<%s#%d[%s], w=%d>' % (self.__class__.__name__,
-                                      self['id'], src, self['n_occ'])
+        return '<%s#%d[%s], w=%d>' % (
+            self.__class__.__name__, self['id'],
+            self['source_id'], self['n_occ'])
 
 
 def get_ruptures(fname_csv):
@@ -843,8 +843,8 @@ def get_ruptures(fname_csv):
         rec['mag'] = row['mag']
         rec['hypo'] = hypo
         rate = dic.get('occurrence_rate', numpy.nan)
-        trt_smr = aw.trts.index(row['trt']) * 2**24
-        tup = (u, row['seed'], 'no-source', trt_smr,
+        trt_smr = aw.trts.index(row['trt']) * TWO24
+        tup = (u, row['seed'], 0, trt_smr,
                code[row['kind']], n_occ, row['mag'], row['rake'], rate,
                minlon, minlat, maxlon, maxlat, hypo, u, 0)
         rups.append(tup)

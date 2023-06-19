@@ -444,10 +444,12 @@ def get_source_attributes(source):
     """
     attrs = {"id": source.source_id, "name": source.name}
     if isinstance(source, NonParametricSeismicSource):
-        if source.data[0][0].weight is not None:
-            weights = []
-            for data in source.data:
-                weights.append(data[0].weight)
+        rup = source.data[0][0]  # from [(rup, pmf), ...] pairs
+        if not hasattr(rup, 'weight'):
+            # happens in test_non_parametric_src
+            return attrs
+        elif rup.weight is not None:
+            weights = [rup.weight for rup, pmf in source.data]
             attrs['rup_weights'] = numpy.array(weights)
     elif isinstance(source, PointSource):
         tom = source.temporal_occurrence_model
@@ -738,7 +740,7 @@ def extract_ddict(src_groups):
 
 
 def write_source_model(dest, sources_or_groups, name=None,
-                       investigation_time=None):
+                       investigation_time=None, prefix=''):
     """
     Writes a source model to XML.
 
@@ -748,6 +750,10 @@ def write_source_model(dest, sources_or_groups, name=None,
         Source model in different formats
     :param name:
         Name of the source model (if missing, extracted from the filename)
+    :param investigation_time:
+        Investigation time (for time-dependent sources)
+    :param prefix:
+        Add a prefix to the rupture_idxs, if given
     :returns:
         the list of generated filenames
     """
@@ -790,6 +796,9 @@ def write_source_model(dest, sources_or_groups, name=None,
                                          compression='gzip',
                                          compression_opts=9)
                         h[key][:] = v
+                    elif k == 'rupture_idxs' and prefix:
+                        h[key] =  [' '.join(prefix + r for r in ridxs.split())
+                                   for ridxs in v]
                     else:
                         h[key] = v
         out.append(dest5)

@@ -40,7 +40,7 @@ from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
 from openquake.baselib.general import groupby, group_array, AccumDict
-from openquake.hazardlib import nrml, InvalidFile, pmf
+from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
     GsimLogicTree, bsnodes, fix_bytes, keyno, abs_paths, ImtWeight)
@@ -96,7 +96,7 @@ TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
 # this is very fast
-def get_trt_by_src(source_model_file):
+def get_trt_by_src(source_model_file, source_id=''):
     """
     :returns: a dictionary source ID -> tectonic region type of the source
     """
@@ -107,10 +107,21 @@ def get_trt_by_src(source_model_file):
         pieces = TRT_REGEX.split(xml.replace("'", '"'))  # fix single quotes
         for text, trt in zip(pieces[2::2], pieces[1::2]):
             for src_id in ID_REGEX.findall(text):
-                trt_by_src[src_id] = trt
+                # disagg/case_12
+                src_id = src_id.split(':')[0]  # colon convention
+                if source_id:
+                    if source_id == src_id:
+                        trt_by_src[src_id] = trt
+                else:
+                    trt_by_src[src_id] = trt
     else:  # parse the XML with ElementTree
         for src in node.fromstring(xml)[0]:
-            trt_by_src[src.attrib['id']] = src.attrib['tectonicRegion']
+            src_id = src.attrib['id'].split(':')[0]  # colon convention
+            if source_id:
+                if source_id == src_id:
+                    trt_by_src[src_id] = src.attrib['tectonicRegion']
+            else:
+                trt_by_src[src_id] = src.attrib['tectonicRegion']
     return trt_by_src
 
 
@@ -179,7 +190,7 @@ def get_eff_rlzs(sm_rlzs, gsim_rlzs):
 Info = collections.namedtuple('Info', 'smpaths h5paths applytosources')
 
 
-def collect_info(smltpath, branchID=None):
+def collect_info(smltpath, branchID=''):
     """
     Given a path to a source model logic tree, collect all of the
     path names to the source models it contains.
@@ -207,12 +218,13 @@ def collect_info(smltpath, branchID=None):
                     if branchID and branchID != br['branchID']:
                         continue
                     with context(smltpath, br):
-                        fnames = unique(br.uncertaintyModel.text.split())
-                        smpaths.update(abs_paths(smltpath, fnames))
+                        fnames = abs_paths(
+                            smltpath, unique(br.uncertaintyModel.text.split()))
+                        smpaths.update(fnames)
                         for fname in fnames:
                             hdf5file = os.path.splitext(fname)[0] + '.hdf5'
                             if os.path.exists(hdf5file):
-                                h5paths.add(os.path.abspath(hdf5file))
+                                h5paths.add(hdf5file)
                     if os.environ.get('OQ_REDUCE'):  # only take first branch
                         break
     return Info(sorted(smpaths), sorted(h5paths), applytosources)
@@ -355,14 +367,14 @@ class SourceModelLogicTree(object):
         dic = dict(filename='fake.xml', seed=0, num_samples=0,
                    sampling_method='early_weights', num_paths=1,
                    is_source_specific=0, source_data=[],
-                   tectonic_region_types=set(),
+                   tectonic_region_types=set(), source_id='', branchID='',
                    bsetdict='{"bs0": {"uncertaintyType": "sourceModel"}}')
         self.__fromh5__(arr, dic)
         return self
 
     def __init__(self, filename, seed=0, num_samples=0,
                  sampling_method='early_weights', test_mode=False,
-                 branchID=None):
+                 branchID='', source_id=''):
         self.filename = filename
         self.basepath = os.path.dirname(filename)
         # NB: converting the random_seed into an integer is needed on Windows
@@ -371,6 +383,7 @@ class SourceModelLogicTree(object):
         self.sampling_method = sampling_method
         self.test_mode = test_mode
         self.branchID = branchID  # used to read only one sourceModel branch
+        self.source_id = source_id
         self.branches = {}  # branch_id -> branch
         self.bsetdict = {}
         self.previous_branches = []
@@ -419,46 +432,14 @@ class SourceModelLogicTree(object):
         else:  # slow algorithm
             self.num_paths = count_paths(self.root_branchset.branches)
 
-    def reduce(self, source_id):
+    def reduce(self, source_id, num_samples=None):
         """
         :returns: a new logic tree reduced to a single source
         """
-        new = copy.deepcopy(self)
-        sd = self.source_data
-        new.source_id = source_id
-        new.source_data = sd[sd['source'] == source_id]
-        okbranches = set(new.source_data['branch'])
-        okpaths = group_array(new.source_data, 'fname')
-        new.tectonic_region_types = set(new.source_data['trt'])
-        for bset, dic in zip(new.branchsets, new.bsetdict.values()):
-            if bset.uncertainty_type in ('sourceModel', 'extendModel'):
-                same = []  # branches with the source, all same contribution
-                zero = []  # branches without the source, all zeros
-                for br in bset.branches:
-                    if br.branch_id in okbranches:
-                        br.value =  ' '.join(p for p in br.value.split()
-                                             if p in okpaths)
-                        same.append(br)
-                    else:
-                        br.value = ''
-                        zero.append(br)
-                newbranches = []
-                if same:
-                    b1 = same[0]
-                    for br in same[1:]:
-                        b1.weight += br.weight
-                    newbranches.append(b1)
-                if zero:
-                    b0 = zero[0]
-                    for br in zero[1:]:
-                        b0.weight += br.weight
-                    newbranches.append(b0)
-                bset.branches = newbranches
-            ats = dic.get('applyToSources')
-            if ats and source_id not in ats:
-                bset.collapse()
-                del dic['applyToSources']
-        new.num_paths = count_paths(new.root_branchset.branches)
+        num_samples = self.num_samples if num_samples is None else num_samples
+        new = self.__class__(self.filename, self.seed, num_samples,
+                             self.sampling_method, self.test_mode,
+                             self.branchID, source_id)
         return new
 
     def parse_tree(self, tree_node):
@@ -470,21 +451,21 @@ class SourceModelLogicTree(object):
         self.info = collect_info(self.filename, self.branchID)
         # the list is populated in collect_source_model_data
         self.source_data = []
-        for depth, blnode in enumerate(tree_node.nodes):
-            [bsnode] = bsnodes(self.filename, blnode)
-            self.parse_branchset(bsnode, depth)
+        for bsno, bnode in enumerate(tree_node.nodes):
+            [bsnode] = bsnodes(self.filename, bnode)
+            self.parse_branchset(bsnode, bsno)
         self.source_data = numpy.array(self.source_data, source_dt)
         unique = numpy.unique(self.source_data['fname'])
         dt = time.time() - t0
-        logging.info('Validated source model logic tree with %d underlying '
-                     'files in %.2f seconds', len(unique), dt)
+        logging.debug('Validated source model logic tree with %d underlying '
+                      'files in %.2f seconds', len(unique), dt)
 
-    def parse_branchset(self, branchset_node, depth):
+    def parse_branchset(self, branchset_node, bsno):
         """
         :param branchset_ node:
             ``etree.Element`` object with tag "logicTreeBranchSet".
-        :param depth:
-            The sequential number of this branching level, based on 0.
+        :param bsno:
+            The sequential number of the branchset, starting from 0.
 
         Enumerates children branchsets and call :meth:`parse_branchset`,
         :meth:`validate_branchset`, :meth:`parse_branches` and finally
@@ -502,6 +483,8 @@ class SourceModelLogicTree(object):
                    if filtername in branchset_node.attrib)
         self.validate_filters(branchset_node, uncertainty_type, dic)
         filters = self.parse_filters(branchset_node, uncertainty_type, dic)
+        if 'applyToSources' in filters and not filters['applyToSources']:
+            return  # ignore the branchset
 
         ordinal = len(self.bsetdict)
         branchset = BranchSet(uncertainty_type, ordinal, filters)
@@ -509,34 +492,46 @@ class SourceModelLogicTree(object):
         if bsid in self.bsetdict:
             raise nrml.DuplicatedID('%s in %s' % (bsid, self.filename))
         self.bsetdict[bsid] = attrs
-        self.validate_branchset(branchset_node, depth, branchset)
+        self.validate_branchset(branchset_node, bsno, branchset)
         self.parse_branches(branchset_node, branchset)
+
         dummies = []  # dummy branches in case of applyToBranches
         if self.root_branchset is None:  # not set yet
             self.root_branchset = branchset
-        else:
-            prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
-            app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
-            if app2brs != prev_ids:
-                branchset.applied = app2brs
-                self.apply_branchset(
-                    app2brs, branchset_node.lineno, branchset)
-                for brid in set(prev_ids.split()) - set(app2brs.split()):
+        if not branchset.branches:
+            del self.bsetdict[bsid]
+            return
+        prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
+        app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
+        '''
+        apply2empty = set()
+        for app2br in app2brs.split():
+            if app2br not in self.branches or self.branches[app2br].value == '':
+                apply2empty.add(app2br)
+        if apply2empty and apply2empty == set(app2brs.split()):
+            # skip branchset (see test_case_12)
+            self.previous_branches = branchset.branches
+            return
+        '''
+        missing = set(prev_ids.split()) - set(app2brs.split())
+        if missing:
+            # apply only to some branches
+            branchset.applied = app2brs
+            self.apply_branchset(
+                app2brs, branchset_node.lineno, branchset)
+            not_applied = set(prev_ids.split()) - set(app2brs.split())
+            for brid in not_applied:
+                if brid in self.branches:
                     self.branches[brid].bset = dummy = dummy_branchset()
                     [dummybranch] = dummy.branches
                     self.branches[dummybranch.branch_id] = dummybranch
                     dummies.append(dummybranch)
-            else:  # apply to all previous branches
-                for branch in self.previous_branches:
-                    branch.bset = branchset
+        else:
+            # apply to all previous branches
+            for branch in self.previous_branches:
+                branch.bset = branchset
         self.previous_branches = branchset.branches + dummies
         self.branchsets.append(branchset)
-
-    def get_num_paths(self):
-        """
-        :returns: the number of paths in the logic tree
-        """
-        return self.num_samples if self.num_samples else self.num_paths
 
     def parse_branches(self, branchset_node, branchset):
         """
@@ -561,36 +556,53 @@ class SourceModelLogicTree(object):
             branches[0].uncertaintyWeight.text = 1.
         values = []
         bsno = len(self.branchsets)
+        zeros = []
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
-            weight_sum += weight
             value_node = node_from_elem(branchnode.uncertaintyModel)
             if value_node.text is not None:
                 values.append(value_node.text.strip())
+            value = parse_uncertainty(branchset.uncertainty_type,
+                                      value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
                 if self.branchID and branchnode['branchID'] != self.branchID:
                     continue
+                vals = []  # filenames with sources in it
                 try:
-                    for fname in value_node.text.strip().split():
+                    for fname in value_node.text.split():
                         if (fname.endswith(('.xml', '.nrml'))
                                 and not self.test_mode):
-                            self.collect_source_model_data(
+                            ok = self.collect_source_model_data(
                                 branchnode['branchID'], fname)
+                            if ok:
+                                vals.append(fname)
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-            value = parse_uncertainty(branchset.uncertainty_type, value_node,
-                                      self.filename)
+                if self.source_id:  # only the files containing source_id
+                    value = ' '.join(vals)
             branch_id = branchnode.attrib.get('branchID')
-            branch = Branch(bs_id, branch_id, weight, value)
             if branch_id in self.branches:
                 raise LogicTreeError(
                     branchnode, self.filename,
                     "branchID '%s' is not unique" % branch_id)
-            self.branches[branch_id] = branch
+            if value == '':
+                # with logic tree reduction a branch can be empty
+                # see case_68_bis
+                zero_id = branch_id
+                zeros.append(weight)
+            else:
+                branch = Branch(bs_id, branch_id, weight, value)
+                self.branches[branch_id] = branch
+                branchset.branches.append(branch)
             self.shortener[branch_id] = keyno(
                 branch_id, bsno, brno, self.filename)
+            weight_sum += weight
+        if zeros:
+            branch = Branch(bs_id, zero_id, sum(zeros), '')
+            self.branches[branch_id] = branch
             branchset.branches.append(branch)
+
         if abs(weight_sum - 1.0) > pmf.PRECISION:
             raise LogicTreeError(
                 branchset_node, self.filename,
@@ -600,6 +612,12 @@ class SourceModelLogicTree(object):
                 branchset_node, self.filename,
                 "there are duplicate values in uncertaintyModel: " +
                 ' '.join(values))
+
+    def get_num_paths(self):
+        """
+        :returns: the number of paths in the logic tree
+        """
+        return self.num_samples if self.num_samples else self.num_paths
 
     def __iter__(self):
         """
@@ -638,7 +656,10 @@ class SourceModelLogicTree(object):
         splitting into lists.
         """
         if 'applyToSources' in filters:
-            filters['applyToSources'] = filters['applyToSources'].split()
+            srcs = filters['applyToSources'].split()
+            if self.source_id:
+                srcs = [src for src in srcs if src == self.source_id]
+            filters['applyToSources'] = srcs
         if 'applyToBranches' in filters:
             filters['applyToBranches'] = filters['applyToBranches'].split()
         return filters
@@ -697,7 +718,12 @@ class SourceModelLogicTree(object):
                     % uncertainty_type)
 
         if 'applyToSources' in f:
-            for source_id in f['applyToSources'].split():
+            if self.source_id:
+                srcids = [s for s in f['applyToSources'].split()
+                          if s == self.source_id]
+            else:
+                srcids = f['applyToSources'].split()
+            for source_id in srcids:
                 branchIDs = {
                     brid for (brid, trt, fname, srcid) in self.source_data
                     if srcid == source_id}
@@ -714,7 +740,7 @@ class SourceModelLogicTree(object):
                         ": applyToBranches"" must be specified together with"
                         " applyToSources")
 
-    def validate_branchset(self, branchset_node, depth, branchset):
+    def validate_branchset(self, branchset_node, bsno, branchset):
         """
         See superclass' method for description and signature specification.
 
@@ -725,7 +751,7 @@ class SourceModelLogicTree(object):
         * All other branchsets must not be of type "sourceModel"
           or "gmpeModel".
         """
-        if depth == 0:
+        if bsno == 0:
             if branchset.uncertainty_type != 'sourceModel':
                 raise LogicTreeError(
                     branchset_node, self.filename,
@@ -772,22 +798,32 @@ class SourceModelLogicTree(object):
         return open(os.path.join(self.basepath, source_model_file),
                     encoding='utf-8')
 
-    def collect_source_model_data(self, branch_id, source_model):
+    def collect_source_model_data(self, branch_id, fname):
         """
         Parse source model file and collect information about source ids,
         source types and tectonic region types available in it. That
         information is used then for :meth:`validate_filters` and
         :meth:`validate_uncertainty_value`.
+
+        :param branch_id: source model logic tree branch ID
+        :param fname: relative filename for the current source model portion
+        :returns: the number of sources in the source model portion
         """
-        with self._get_source_model(source_model) as sm:
-            trt_by_src = get_trt_by_src(sm)
+        with self._get_source_model(fname) as sm:
+            trt_by_src = get_trt_by_src(sm, self.source_id)
         if self.basepath:
             path = sm.name[len(self.basepath) + 1:]
         else:
             path = sm.name
         for src_id, trt in trt_by_src.items():
+            try:
+                valid.source_id(src_id)
+            except ValueError:
+                raise InvalidFile(
+                    '%s: contain invalid ID %s' % (sm.name, src_id))
             self.source_data.append((branch_id, trt, path, src_id))
             self.tectonic_region_types.add(trt)
+        return len(trt_by_src)
 
     def bset_values(self, lt_path):
         """
@@ -839,13 +875,14 @@ class SourceModelLogicTree(object):
             bsnodes.append(Node('logicTreeBranchSet', dic, nodes=brnodes))
         return Node('logicTree', {'logicTreeID': 'lt'}, nodes=bsnodes)
 
-    def get_nontrivial_sources(self):
+    def get_duplicated_sources(self):
         """
         :returns: {src_id: affected branches}
         """
-        sd = self.source_data
-        u, c = numpy.unique(sd['source'], return_counts=1)
-        return {src: sd[sd['source'] == src]['branch'] for src in u[c > 1]}
+        sd = group_array(self.source_data, 'source')
+        u, c = numpy.unique(self.source_data['source'], return_counts=1)
+        # AUS event based was hanging with a slower implementation
+        return {src: sd[src]['branch'] for src in u[c > 1]}
 
     # SourceModelLogicTree
     def __toh5__(self):
@@ -863,6 +900,8 @@ class SourceModelLogicTree(object):
         attrs['filename'] = self.filename
         attrs['num_paths'] = self.num_paths
         attrs['is_source_specific'] = self.is_source_specific
+        attrs['source_id'] = self.source_id
+        attrs['branchID'] = self.branchID
         return numpy.array(tbl, branch_dt), attrs
 
     # SourceModelLogicTree
@@ -871,6 +910,7 @@ class SourceModelLogicTree(object):
         # SerializeSmltTestCase which has a logic tree with 3 branchsets
         # with the form b11[b21[b31, b32], b22[b31, b32]] and 1 x 2 x 2 rlzs
         vars(self).update(attrs)
+        self.test_mode = False
         bsets = []
         self.branches = {}
         self.bsetdict = json.loads(attrs['bsetdict'])
@@ -959,6 +999,13 @@ class LtRealization(object):
         return hash(repr(self))
 
 
+def _get_smr(source_id):
+    # 'src1;0.0' => 0
+    suffix = source_id.split(';')[1]
+    smr = suffix.split('.')[0]
+    return int(smr)
+
+
 class FullLogicTree(object):
     """
     The full logic tree as composition of
@@ -1010,38 +1057,39 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        self.gdict = {}
-        g = 0
-        rlzs_by_g = []
-        for smr in range(self.Re):
-            for trti, trt in enumerate(self.trts):
-                trt_smr = trti * TWO24 + smr
-                rgb = self.get_rlzs_by_gsim(trt_smr)
-                self.gdict[trt_smr] = numpy.arange(g, g + len(rgb)) 
-                for rlzs in rgb.values():
-                    rlzs_by_g.append(rlzs)
-                    g += 1
-        self.Gt = g
-        self.rlzs_by_g = {g: U32(rlzs) for g, rlzs in enumerate(rlzs_by_g)}
         self.weights = [rlz.weight for rlz in self.get_realizations()]
-        ws = numpy.array(self.weights)
-        self.g_weights = [ws[rlzs].sum() for rlzs in rlzs_by_g]
-
-        # sanity check on Gt
-        if self.num_samples == 0:  # easy formula
-            tot_gsims = sum(len(vals) for vals in self.gsim_lt.values.values())
-            assert self.Gt == len(self.sm_rlzs) * tot_gsims
-
-        RT = self.get_num_paths() * len(self.trts)
-        assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT
-
         return self
 
-    def get_gidx(self, trt_smrs):
+    def get_gids(self, all_trt_smrs):
         """
-        :returns: an array of g-indices
+        :returns: list of of arrays of gids, one for each source group
         """
-        return numpy.concatenate([self.gdict[ts] for ts in trt_smrs])
+        gids = []
+        g = 0
+        for trt_smrs in all_trt_smrs:
+            rbg = self.get_rlzs_by_gsim(trt_smrs)
+            gids.append(numpy.arange(g, g + len(rbg)))
+            g += len(rbg)
+        return gids
+        
+    def get_trt_rlzs(self, all_trt_smrs):
+        """
+        :returns: a list with Gt arrays of dtype uint32
+        """
+        data = []
+        for trt_smrs in all_trt_smrs:
+            for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
+                data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
+        return data
+
+    def g_weights(self, trt_rlzs):
+        """
+        :returns: a list of Gt weights
+        """
+        out = []
+        for g, trs in enumerate(trt_rlzs):
+            out.append(sum(self.weights[r] for r in trs % TWO24))
+        return out
 
     def get_smr_by_ltp(self):
         """
@@ -1085,15 +1133,19 @@ class FullLogicTree(object):
         """
         :returns: a tuple of indices trt_smr for the given source
         """
-        if not hasattr(self, 'source_data'):  # fake logic tree
+        try:
+            sd = self.source_model_lt.source_data
+        except AttributeError:  # fake logic tree
             return 0,
-        sd = self.source_model_lt.source_data
         if src_id is None:
             return tuple(trti * TWO24 + sm_rlz.ordinal
                          for sm_rlz in self.sm_rlzs
                          for trti in self.trti)
 
-        sd = sd[sd['source'] == src_id]
+        if not hasattr(self, 'sd'):  # cache source_data by source
+            self.sd = group_array(
+                self.source_model_lt.source_data, 'source')
+        sd = self.sd[src_id]
         trt = sd['trt'][0]  # all same trt
         trti = 0 if trt == '*' else self.trti[trt]
         brids = set(sd['branch'])
@@ -1108,18 +1160,25 @@ class FullLogicTree(object):
         :param srm: source model realization index
         :returns: list of sources with the same base source ID
         """
+        if not self.trti: # empty gsim_lt
+            return srcs
         out = []
-        sd = self.source_model_lt.source_data
         for src in srcs:
-            srcid = re.split('[:;.]', src.source_id)[0]
+            srcid = re.split('[:;!.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
                 trti = 0
             else:
                 trti = self.trti[src.tectonic_region_type]
-            brids = set(sd[sd['source'] == srcid]['branch'])
+            if smr is None and ';' in src.source_id:
+                # assume <base_id>;<smr>
+                smr = _get_smr(src.source_id)
             if smr is None:
+                if not hasattr(self, 'sd'):  # cache source_data by source
+                    self.sd = group_array(
+                        self.source_model_lt.source_data, 'source')
+                brids = set(self.sd[srcid]['branch'])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
@@ -1130,7 +1189,7 @@ class FullLogicTree(object):
             out.append(src)
         return out
 
-    def reduce_groups(self, src_groups, source_id=None):
+    def reduce_groups(self, src_groups, source_id=''):
         """
         Filter the sources and set the tuple .trt_smr
         """
@@ -1286,18 +1345,6 @@ class FullLogicTree(object):
                               shorten(r.gsim_rlz.lt_path, sh2))
             tups.append((r.ordinal, path, r.weight['weight']))
         return numpy.array(tups, rlz_dt)
-
-    def get_sm_by_grp(self):
-        """
-        :returns: a dictionary trt_smr -> sm_id
-        """
-        dic = {}
-        for sm in self.sm_rlzs:
-            trt_smrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24
-            for trt_smr in trt_smrs:
-                dic[trt_smr] = sm.ordinal
-        return dic
 
     def __repr__(self):
         info_by_model = {}

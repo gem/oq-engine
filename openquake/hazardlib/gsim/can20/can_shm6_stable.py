@@ -2,38 +2,32 @@
 # -*- coding: utf-8 -*-
 """
 6th Generation Seismic Hazard Model of Canada (CanadaSHM6) Stable Crust GMMs.
-
 The final documentation for the GMMs is being prepared. The GMMs are subject
 to change up until the release of the documentation.
-
 Preliminary documentation is available in:
-
 Kolaj, M., Halchuk, S., Adams, J., Allen, T.I. (2020): Sixth Generation Seismic
 Hazard Model of Canada: input files to produce values proposed for the 2020
 National Building Code of Canada; Geological Survey of Canada, Open File 8630,
 2020, 15 pages, https://doi.org/10.4095/327322
-
 Kolaj, M., Adams, J., Halchuk, S (2020): The 6th Generation seismic hazard
 model of Canada. 17th World Conference on Earthquake Engineering, Sendai,
 Japan. Paper 1c-0028.
-
 Kolaj, M., Allen, T., Mayfield, R., Adams, J., Halchuk, S (2019): Ground-motion
 models for the 6th Generation Seismic Hazard Model of Canada. 12th Canadian
 Conference on Earthquake Engineering, Quebec City, Canada.
-
 """
 import os
 import io
 import numpy as np
+import pandas as pd
 import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
-
 from scipy import interpolate
 from openquake.hazardlib import const
+from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.gmpe_table import _get_mean, _get_stddev
 from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     BooreAtkinson2008 as BA08
@@ -128,28 +122,23 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
     """
     Implementation of the Atkinson and Adams, 2013 representative suite of
     GMMs for CanadaSHM6 (low, central and high branch).
-
     Site amplification follows that of what was used to derive the NBC 2015
     foundation factors (but as a continous function wrt. to Vs30 rather than
                         discretized step-wise by Site Class.
-
     References:
-
         See header in can_shm6_stable.py
-
         Atkinson, GM, Adams, J (2013): Ground motion prediction equations
         for application to the 2015 Canadian national seismic hazard maps,
         Can. J. Civ. Eng., 40, 988–998, doi: 10.1139/cjce-2012-0544.
     """
-
     AA13_TABLE = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
-    REQUIRES_DISTANCES = set(('rhypo',))
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    REQUIRES_DISTANCES = {'rhypo'}
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def __init__(self, **kwargs):
         """
@@ -172,9 +161,8 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         """
         # Check input imts
         _check_imts(imts)
-
         # Magnitudes
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
 
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, mag)
@@ -185,14 +173,14 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         for m, imt in enumerate(imts):
             key = ('%.2f' % mag, imt.string)
             imls = self.mean_table[key]
-
             # Compute mean on reference conditions
             mean[m] = np.log(_get_mean(self.kind, imls, dst, dists))
 
             # Correct PGV to units of cm/s (tables for PGV are scaled
             # by a factor of g in cm/s)
+
             if imt == PGV():
-                mean[m] = mean[m] - np.log(980.665)
+                mean[m] = mean[m] - np.log(9.81)
 
             # Add site-term
             mean[m] += site_term_aa13(self, mag, ctx, dists, imt)
@@ -204,34 +192,30 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
 # =============================================================================
 
 
-def site_term_NGAE(self, sctx, rctx, dctx, dists, imt, stddev_types):
+def site_term_NGAE(self, ctx, mag, dists, imt, stddev_types):
     """
     Site amplification relative to Vs30 = 3000 m/s following the approach
     adopted for eastern Canada in CanadaSHM6:
-
     Model H. Harmon et al., (2019) L1 (linear) model with the USGS CEUS
                 2019 non-linear term.
-
     Model B. 3000 > Vs30 > 2000: Boore and Campbell (2017)
                 2000 > Vs30 > 760: 2000-760 Atkinson and Adams (2013) factor
                 760 > Vs30: Boore and Atkinson (2008)
-
     For Sa(T) site amplification model is the larger of Model H and B.
     For PGA and PGV it follows Model B.
-
     """
-
-    # PGA on 3000 m/s (for non-linear terms)
-    imls_pga = self._return_tables(rctx.mag, PGA(), "IMLs")
-    PGArock = self._get_mean(imls_pga, dctx, dists)
+    dst = getattr(ctx, self.distance_type)
+    imls_pga = self.mean_table['%.2f' % mag, 'PGA']
+    PGArock = _get_mean(self.kind, imls_pga, dst, dists)
 
     # site term from Model B.
-    B = BA08_BC17(imt, PGArock, dctx, rctx, sctx)
+
+    B = BA08_BC17(self, imt, PGArock, ctx)
 
     # site term from Model H.
     if imt != PGA() and imt != PGV():
-        lin = _Hea19_L1_linear(imt, sctx.vs30)
-        nl = _Fnl_USGS(imt, sctx.vs30, PGArock)
+        lin = _Hea19_L1_linear(self,imt, ctx.vs30)
+        nl = _Fnl_USGS(self, imt, ctx.vs30, PGArock)
         H = lin + nl
     else:
         H = [-999.]*len(B)
@@ -243,12 +227,10 @@ def site_term_NGAE(self, sctx, rctx, dctx, dists, imt, stddev_types):
 def _Hea19_L1_linear(self, imt, vs30):
     """
     L1 (linear) model of Harmon et al., 2019:
-
     Harmon, J., Hashash, Y. M. A., Stewart, J. P., Rathje, E. M., Campbell,
     K. W., Silva, W. J., and Ilhan, O.,2019b. Site Amplification Functions
     for Central and Eastern North America - Part II: Model Development and
     Evaluation, Earthquake Spectra.
-
     """
 
     C = self.COEFFS_HarmonL1[imt]
@@ -272,20 +254,17 @@ def _Fnl_USGS(self, imt, vs30, PGArock):
     """
     Non-linear amplification term used by the USGS for the CEUS 2019 NSHM
     as documented in:
-
         Petersen, MD, Shumway AM, Powers, PM, Mueller, CS, Moschetti, MP,
         Frankel, AD, Rezaeian, S, McNamara, DE, Hoover, SM, Luco, N, Boyd,
         OS, Rukstales, KS, Jaiswal, KS, Thompson, EM, Clayton, B, Field,
         EH, Zeng, Y (2018): Preliminary 2018 Update of the U.S. National
         Seismic Hazard Model: Overview of Model, Changes, and Implications,
         USGS report for public comment, 1-47.
-
         Hashash, Y. M. A., Ilhan, O., Harmon, J. A., Parker, G. A.,
         Stewart, J. P. Rathje, E. M., Campbell, K. W., and Silva, W. J.
         (2019) "Nonlinear site amplification model for ergodic seismic
         hazard analysis in Central and Eastern North America", Earthquake
         Spectra.
-
     """
     Fnl = np.zeros_like(vs30)
     C = self.COEFFS_NGA_USGS[imt]
@@ -305,38 +284,30 @@ def _Fnl_USGS(self, imt, vs30, PGArock):
     return Fnl
 
 
-def BA08_BC17(self, imt, PGArock, dctx, rctx, sctx):
+def BA08_BC17(self, imt, PGArock, ctx):
     """
     Site amplification relative to Vs30 = 3000 m/s following:
-
     3000 > Vs30 > 2000: Boore and Campbell (2017)
     2000 > Vs30 > 760: 2000-760 Atkinson and Adams (2013) factor
     760 > Vs30: Boore and Atkinson (2008)
-
     References:
-
         See header in CanadaSHM6_StableCrust.py
-
         Atkinson, GM, Adams, J (2013): Ground motion prediction equations
         for application to the 2015 Canadian national seismic hazard maps,
         Can. J. Civ. Eng., 40, 988–998, doi: 10.1139/cjce-2012-0544.
-
         Boore, DM, Atkinson, GM (2008): Ground-motion prediction equations
         for the average horizontal component of PGA, PGV, and 5%-damped
         PSA at spectral periods between 0.01 s and 10.0 s, Earthq.
         Spectra, 24(1), 99–138,
-
         Boore, DM, Campbell, KW (2017): Adjusting central and eastern
         North America ground-motion intensity measures between sites with
         different reference-rock site conditions, Bull.Seism. Soc. Am.,
         107(1), 132–148
-
     """
-
-    vs30 = sctx.vs30
+    vs30 = ctx.vs30
     log_vs30 = np.log(vs30)
     F = np.zeros_like(vs30)
-
+    
     # Get indices for various Vs30 ranges
     lte760 = vs30 <= 760.
     lt3000 = vs30 < 3000.
@@ -348,25 +319,25 @@ def BA08_BC17(self, imt, PGArock, dctx, rctx, sctx):
     vs_gt2000 = vs > 2000.
 
     # Repi for AA13 factor
-    Repi_from_Rrup(dctx, rctx.mag, 10.0)  # fixed depth of 10km
+    Repi_from_Rrup(ctx, ctx.mag, 10.0)  # fixed depth of 10km
 
     # log amplification factors for various IMTs at 2000 and 760 m/s
     i = np.zeros(8, dtype=object)
     if imt == PGA() or imt == PGV():
-        F_2000 = np.log(self.BC17_amp(imt, rctx, dctx.rrup[lt3000]))
+        F_2000 = np.log(BC17_amp(self, imt, ctx.mag, ctx.rrup[lt3000]))
         i[[0, 1, 2, 4, 5, 6]] = [vs_gt2000, vs_gt2000, vs == 2000,
                                     vs_lt2000gt760, vs_lt2000gt760, vs_lte760]
     else:
         F_2000 = np.array([np.log(self.COEFFS_BC17[imt]['c'])])
 
     if imt != PGV() and imt.period < 0.025:
-        F_760 = -0.690775 + 0.15*np.log(dctx.repi[lt3000])
+        F_760 = -0.690775 + 0.15*np.log(ctx.repi[lt3000])
         i[[3, 7]] = [vs_lt2000gt760, vs_lte760]
     else:
         F_760 = np.array([np.log(self.COEFFS_AB06[imt]['c'])])
 
     # add amplification for 3000 > Vs30 > 2000:
-    F[lt3000gt2000] += self.interp(log_vs30[lt3000gt2000], np.log(2000.),
+    F[lt3000gt2000] += interp(self, log_vs30[lt3000gt2000], np.log(2000.),
                                     np.log(3000.), F_2000[i[0]],
                                     np.zeros_like(F_2000[i[1]]))
 
@@ -374,7 +345,7 @@ def BA08_BC17(self, imt, PGArock, dctx, rctx, sctx):
     F[vs30 == 2000] = F_2000[i[2]]
 
     # add amplification for 2000 > Vs30 > 760:
-    F[lt2000gt760] += self.interp(log_vs30[lt2000gt760], np.log(760.),
+    F[lt2000gt760] += interp(self, log_vs30[lt2000gt760], np.log(760.),
                                     np.log(2000.), F_760[i[3]]+F_2000[i[4]],
                                     F_2000[i[5]])
 
@@ -383,15 +354,16 @@ def BA08_BC17(self, imt, PGArock, dctx, rctx, sctx):
 
     # remaining amplification for vs30 < 760:
     # calculate PGA at 760 by repeating above process just for PGA
-    C_pga1 = self.BC17_amp(PGA(), rctx, dctx.rrup[lte760])
+    C_pga1 = BC17_amp(self, PGA(), ctx.mag, ctx.rrup[lte760])
     PGA2000 = PGArock[lte760] * C_pga1  # BC17
 
     # Apply distance dependent AA13 factor
-    C_pga = 10**(-0.3 + 0.15*np.log10(dctx.repi[lte760]))
+    C_pga = 10**(-0.3 + 0.15*np.log10(ctx.repi[lte760]))
     PGA760 = PGA2000 * C_pga
 
     # BA08 using the corrected PGA
-    C = AB06.COEFFS_SOIL_RESPONSE[imt]
+    AB06_gmpe = AB06.AtkinsonBoore2006()
+    C = AB06_gmpe.COEFFS_SOIL_RESPONSE[imt]
     nl = AB06._get_site_amplification_non_linear(vs30[lte760], PGA760, C)
     lin = AB06._get_site_amplification_linear(vs30[lte760], C)
     F[lte760] += nl + lin
@@ -407,64 +379,56 @@ def interp(self, x, x0, x1, y0, y1):
     return y0 + (x-x0)*((y1-y0)/(x1-x0))
 
 
-def Repi_from_Rrup(dctx, mag, h):
+def Repi_from_Rrup(ctx, mag, h):
     """
     Epicental distance (Repi) converted from the closest rupture distance
     (Rrup) following:
-
         Atkinson, G (2012): White paper on Proposed Ground-motion
         Prediction Equations (GMPEs) for 2015 National Seismic Hazard Maps.
         https://www.seismotoolbox.ca/GMPEtables2012/r12_GMPEs9b.pdf
-
     """
     W = 10**(-1.01 + 0.32*mag)
     W = 0.6*W
     Dtop = h - 0.5*W
-    Ztor = np.max([Dtop, 0.0])
+    Ztor = np.where(Dtop > 0.0, Dtop, 0.0).max()
 
     L = 10**(-2.44 + 0.59*mag)
     L = 0.6*L
     fac = 0.3*L
-    rrup_temp = np.copy(dctx.rrup)
+    rrup_temp = np.copy(ctx.rrup)
     rrup_temp[rrup_temp < Ztor] = Ztor + 0.001
 
-    dctx.repi = ((rrup_temp**2 - Ztor**2)**0.5) + fac
+    ctx.repi = ((rrup_temp**2 - Ztor**2)**0.5) + fac
 
 
-def BC17_amp(self, imt, rctx, dist):
+def BC17_amp(self, imt, ctx, dist):
     """
     Distance and magnitude dependent amplification factors to convert from
     3000 m/s to 2000 m/s for PGA and PGV following Boore and Campbell 2017.
-
     Boore, DM, Campbell, KW (2017): Adjusting central and eastern
     North America ground-motion intensity measures between sites with
     different reference-rock site conditions, Bull.Seism. Soc. Am.,
     107(1), 132–148
-
     """
-
     if imt == PGA():
-        interpolant_mag = self.f_pga
+        interpolant_mag = f_pga
     elif imt == PGV():
-        interpolant_mag = self.f_pgv
+        interpolant_mag = f_pgv
 
     # clip values outside of BC17 range
     rrup = dist.copy()
     rrup[rrup < 2.] = 2.
     rrup[rrup > 1200.] = 1200.
-    mag = rctx.mag
-    if mag < 3.:
-        mag = 3.
-    elif mag > 8.:
-        mag = 8.
+    # clip any values less than 3 to 3, 
+    # and any values greater than 8 to 8
+    mag = np.clip(ctx, 3., 8.)
 
     rrups = np.array([2., 2.49, 3.11, 3.88, 4.83, 6.03, 7.51, 9.37, 11.68,
                         14.56, 18.16, 22.64, 28.22, 35.19, 43.87, 54.7, 68.2,
                         85.04, 106.02, 132.19, 164.81, 205.49, 256.21,
                         319.44, 398.28, 496.58, 619.14, 771.94, 962.46,
                         1200.])
-
-    BC17 = np.interp(rrup, rrups, interpolant_mag(mag))
+    BC17 = np.interp(rrup, rrups, pd.DataFrame(interpolant_mag(mag)).iloc[:,0])
 
     return np.array(BC17)
 
@@ -474,31 +438,26 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     6th Generation Seismic Hazard Model of Canada (CanadaSHM6) implementation
     of the 13 NGA-East Ground-Motion Models as described in PEER Report No.
     2017/03 with the following modifications:
-
             Added site-amplification term
             Sigma model from CanadaSHM6 / Atkinson and Adams, 2013
-
     Submodel is one of: "01", "02", "03", "04", "05", "06", "07", "08", "09",
                         "10", "11", "12", "13"
     Reference:
-
         See header in CanadaSHM6_StableCrust.py
-
         Goulet, CA, Bozorgnia, Y, Kuehn, N, Al Atik, L, Youngs, RR, Graves,
         RW, Atkinson, GM (2017): PEER 2017/03 -NGA-East ground-motion models
         for the U.S. Geological Survey National Seismic Hazard Maps, in PEER
         Report No. 2017/03.
-
     """
-
+    
     NGA_EAST_TABLE = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
-    REQUIRES_DISTANCES = set(('rhypo',))
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_DISTANCES = {'rhypo'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def __init__(self, **kwargs):
         """
@@ -528,7 +487,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
         _check_imts(imts)
 
         # Magnitudes
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
 
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, mag)
@@ -542,7 +501,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
             imls = self.mean_table[key]
 
             # Compute mean on reference conditions
-            mean[m] = np.log(_get_mean(self.kind, imls, dst, dists))
+            mean[m] = np.log(_get_mean(self.kind, imls, ctx.rrup, dists))
 
             # Correct PGV to units of cm/s (tables for PGV are scaled
             # by a factor of g in cm/s)
@@ -550,71 +509,71 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
                 mean[m] = mean[m] - np.log(980.665)
 
             # Add amplification
-            mean[m] += site_term_aa13(self, mag, ctx, dists, imt)
+            mean[m] += site_term_NGAE(self, ctx, mag, dists, imt,[StdDev.TOTAL])
 
             # Get standard deviations
             sig[m] = _get_stddev(self.sig_table[key], dst, dists, imt)
 
 
-COEFFS_NGA_USGS = CoeffsTable(sa_damping=5, table="""\
-imt  f760i  f760g  f760is  f760gs  c  V1  V2  Vf  sig_vc  sig_l  sig_u  f3  f4  f5  Vc  sig_c
-PGV  0.375  0.297  0.313  0.117  -0.449  331  760  314  0.251  0.306  0.334  0.06089  -0.08344  -0.00667  2257  0.12
-PGA  0.185  0.121  0.434  0.248  -0.29  319  760  345  0.3  0.345  0.48  0.0752  -0.43755  -0.00131  2990  0.12
-0.01  0.185  0.121  0.434  0.248  -0.29  319  760  345  0.3  0.345  0.48  0.0752  -0.43755  -0.00131  2990  0.12
-0.02  0.185  0.031  0.434  0.27  -0.303  319  760  343  0.29  0.336  0.479  0.0566  -0.41511  -0.00098  2990  0.12
-0.03  0.224  0  0.404  0.229  -0.315  319  810  342  0.282  0.327  0.478  0.1036  -0.49871  -0.00127  2990  0.12
-0.04  0.283  0.012  0.39  0.139  -0.331  319  900  340  0.275  0.317  0.477  0.11836  -0.48734  -0.00169  2990  0.12
-0.05  0.337  0.062  0.363  0.093  -0.344  319  1010  338  0.271  0.308  0.476  0.16781  -0.58073  -0.00187  2990  0.12
-0.075  0.475  0.211  0.322  0.102  -0.348  319  1380  334  0.269  0.285  0.473  0.17386  -0.53646  -0.00259  2990  0.12
-0.1  0.674  0.338  0.366  0.088  -0.372  317  1900  319  0.27  0.263  0.47  0.15083  -0.44661  -0.00335  2990  0.12
-0.15  0.586  0.47  0.253  0.066  -0.385  302  1500  317  0.261  0.284  0.402  0.14272  -0.38264  -0.0041  2335  0.12
-0.2  0.419  0.509  0.214  0.053  -0.403  279  1073  314  0.251  0.306  0.334  0.12815  -0.30481  -0.00488  1533  0.12
-0.25  0.332  0.509  0.177  0.052  -0.417  250  945  282  0.238  0.291  0.357  0.13286  -0.27506  -0.00564  1318  0.135
-0.3  0.27  0.498  0.131  0.055  -0.426  225  867  250  0.225  0.276  0.381  0.1307  -0.22825  -0.00655  1152  0.15
-0.4  0.209  0.473  0.112  0.06  -0.452  217  843  250  0.225  0.275  0.381  0.09414  -0.11591  -0.00872  1018  0.15
-0.5  0.175  0.447  0.105  0.067  -0.48  217  822  280  0.225  0.311  0.323  0.09888  -0.07793  -0.01028  939  0.15
-0.75  0.127  0.386  0.138  0.077  -0.51  227  814  280  0.225  0.33  0.31  0.06101  -0.0178  -0.01456  835  0.125
-1  0.095  0.344  0.124  0.078  -0.557  255  790  300  0.225  0.377  0.361  0.04367  -0.00478  -0.01823  951  0.06
-1.5  0.083  0.289  0.112  0.081  -0.574  276  805  300  0.242  0.405  0.375  0.0048  -0.00086  -0.02  882  0.05
-2  0.079  0.258  0.118  0.088  -0.584  296  810  300  0.259  0.413  0.388  0.00164  -0.00236  -0.01296  879  0.04
-3  0.073  0.233  0.111  0.1  -0.588  312  820  313  0.306  0.41  0.551  0.00746  -0.00626  -0.01043  894  0.04
-4  0.066  0.224  0.12  0.109  -0.579  321  821  322  0.34  0.405  0.585  0.00269  -0.00331  -0.01215  875  0.03
-5  0.064  0.22  0.108  0.115  -0.558  324  825  325  0.34  0.409  0.587  0.00242  -0.00256  -0.01325  856  0.02
-7.5  0.056  0.216  0.082  0.13  -0.544  325  820  328  0.345  0.42  0.594  0.04219  -0.00536  -0.01418  832  0.02
-10  0.053  0.218  0.069  0.137  -0.507  325  820  330  0.35  0.44  0.6  0.05329  -0.00631  -0.01403  837  0.02
-        """)
+    COEFFS_NGA_USGS = CoeffsTable(sa_damping=5, table="""\
+    imt  f760i  f760g  f760is  f760gs  c  V1  V2  Vf  sig_vc  sig_l  sig_u  f3  f4  f5  Vc  sig_c
+    PGV  0.375  0.297  0.313  0.117  -0.449  331  760  314  0.251  0.306  0.334  0.06089  -0.08344  -0.00667  2257  0.12
+    PGA  0.185  0.121  0.434  0.248  -0.29  319  760  345  0.3  0.345  0.48  0.0752  -0.43755  -0.00131  2990  0.12
+    0.01  0.185  0.121  0.434  0.248  -0.29  319  760  345  0.3  0.345  0.48  0.0752  -0.43755  -0.00131  2990  0.12
+    0.02  0.185  0.031  0.434  0.27  -0.303  319  760  343  0.29  0.336  0.479  0.0566  -0.41511  -0.00098  2990  0.12
+    0.03  0.224  0  0.404  0.229  -0.315  319  810  342  0.282  0.327  0.478  0.1036  -0.49871  -0.00127  2990  0.12
+    0.04  0.283  0.012  0.39  0.139  -0.331  319  900  340  0.275  0.317  0.477  0.11836  -0.48734  -0.00169  2990  0.12
+    0.05  0.337  0.062  0.363  0.093  -0.344  319  1010  338  0.271  0.308  0.476  0.16781  -0.58073  -0.00187  2990  0.12
+    0.075  0.475  0.211  0.322  0.102  -0.348  319  1380  334  0.269  0.285  0.473  0.17386  -0.53646  -0.00259  2990  0.12
+    0.1  0.674  0.338  0.366  0.088  -0.372  317  1900  319  0.27  0.263  0.47  0.15083  -0.44661  -0.00335  2990  0.12
+    0.15  0.586  0.47  0.253  0.066  -0.385  302  1500  317  0.261  0.284  0.402  0.14272  -0.38264  -0.0041  2335  0.12
+    0.2  0.419  0.509  0.214  0.053  -0.403  279  1073  314  0.251  0.306  0.334  0.12815  -0.30481  -0.00488  1533  0.12
+    0.25  0.332  0.509  0.177  0.052  -0.417  250  945  282  0.238  0.291  0.357  0.13286  -0.27506  -0.00564  1318  0.135
+    0.3  0.27  0.498  0.131  0.055  -0.426  225  867  250  0.225  0.276  0.381  0.1307  -0.22825  -0.00655  1152  0.15
+    0.4  0.209  0.473  0.112  0.06  -0.452  217  843  250  0.225  0.275  0.381  0.09414  -0.11591  -0.00872  1018  0.15
+    0.5  0.175  0.447  0.105  0.067  -0.48  217  822  280  0.225  0.311  0.323  0.09888  -0.07793  -0.01028  939  0.15
+    0.75  0.127  0.386  0.138  0.077  -0.51  227  814  280  0.225  0.33  0.31  0.06101  -0.0178  -0.01456  835  0.125
+    1  0.095  0.344  0.124  0.078  -0.557  255  790  300  0.225  0.377  0.361  0.04367  -0.00478  -0.01823  951  0.06
+    1.5  0.083  0.289  0.112  0.081  -0.574  276  805  300  0.242  0.405  0.375  0.0048  -0.00086  -0.02  882  0.05
+    2  0.079  0.258  0.118  0.088  -0.584  296  810  300  0.259  0.413  0.388  0.00164  -0.00236  -0.01296  879  0.04
+    3  0.073  0.233  0.111  0.1  -0.588  312  820  313  0.306  0.41  0.551  0.00746  -0.00626  -0.01043  894  0.04
+    4  0.066  0.224  0.12  0.109  -0.579  321  821  322  0.34  0.405  0.585  0.00269  -0.00331  -0.01215  875  0.03
+    5  0.064  0.22  0.108  0.115  -0.558  324  825  325  0.34  0.409  0.587  0.00242  -0.00256  -0.01325  856  0.02
+    7.5  0.056  0.216  0.082  0.13  -0.544  325  820  328  0.345  0.42  0.594  0.04219  -0.00536  -0.01418  832  0.02
+    10  0.053  0.218  0.069  0.137  -0.507  325  820  330  0.35  0.44  0.6  0.05329  -0.00631  -0.01403  837  0.02
+            """)
 
-COEFFS_AB06 = CoeffsTable(sa_damping=5, table="""\
-IMT     c
-pgv 1.23
-pga  0.891
-0.05 0.791
-0.1 1.072
-0.2 1.318
-0.3 1.38
-0.5 1.38
-1.0 1.288
-2.0 1.230
-5.0 1.148
-10.0 1.072
-""")
+    COEFFS_AB06 = CoeffsTable(sa_damping=5, table="""\
+    IMT     c
+    pgv 1.23
+    pga  0.891
+    0.05 0.791
+    0.1 1.072
+    0.2 1.318
+    0.3 1.38
+    0.5 1.38
+    1.0 1.288
+    2.0 1.230
+    5.0 1.148
+    10.0 1.072
+    """)
 
-# Interpolated from Table 2 of Boore and Campbell, 2017
-COEFFS_BC17 = CoeffsTable(sa_damping=5, table="""\
-IMT     c
-0.01 1.28
-0.05 1.28
-0.1 1.27
-0.2 1.25
-0.3 1.21
-0.5 1.14
-1.0 1.06
-2.0 1.035
-5.0 1.015
-10.0 1.01
-""")
+    # Interpolated from Table 2 of Boore and Campbell, 2017
+    COEFFS_BC17 = CoeffsTable(sa_damping=5, table="""\
+    IMT     c
+    0.01 1.28
+    0.05 1.28
+    0.1 1.27
+    0.2 1.25
+    0.3 1.21
+    0.5 1.14
+    1.0 1.06
+    2.0 1.035
+    5.0 1.015
+    10.0 1.01
+    """)
 
-COEFFS_HarmonL1 = CoeffsTable(sa_damping=5, table="""\
+    COEFFS_HarmonL1 = CoeffsTable(sa_damping=5, table="""\
             imt 	c1	c2	c3	Vc	VL
             0.001	-0.73744	0	-0.32484	2990	1886.562
             0.006667	-0.7242	0	-0.32453	2990	1886.562

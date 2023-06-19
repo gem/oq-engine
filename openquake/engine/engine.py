@@ -22,6 +22,7 @@ calculations."""
 import os
 import re
 import sys
+import copy
 import json
 import time
 import pickle
@@ -32,6 +33,7 @@ import logging
 import itertools
 import platform
 from os.path import getsize
+from datetime import datetime
 import psutil
 import h5py
 import numpy
@@ -138,8 +140,12 @@ def expose_outputs(dstore, owner=USER, status='complete'):
     if oq.conditional_loss_poes:  # expose loss_maps outputs
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
-    if 'ruptures' in dskeys and 'scenario' in calcmode:
-        exportable.remove('ruptures')  # do not export, as requested by Vitor
+    if 'ruptures' in dskeys:
+        if  'scenario' in calcmode:
+            # do not export, as requested by Vitor
+            exportable.remove('ruptures')
+        else:
+            dskeys.add('event_based_mfd')
     if 'hmaps' in dskeys and not oq.hazard_maps:
         dskeys.remove('hmaps')  # do not export the hazard maps
     if logs.dbcmd('get_job', dstore.calc_id) is None:
@@ -294,7 +300,7 @@ def run_calc(log):
 
 
 def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
-                user_name=USER, hc_id=None, multi=False, host=None):
+                user_name=USER, hc_id=None, multi=True, host=None):
     """
     Create job records on the database.
 
@@ -322,12 +328,12 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
             dic = readinput.get_params(job_ini)
         dic['hazard_calculation_id'] = hc_id
         if 'sensitivity_analysis' in dic:
+            # this part is tested in commands_test and in oq-risk-tests
             analysis = valid.dictionary(dic['sensitivity_analysis'])
             for values in itertools.product(*analysis.values()):
-                jobdic = dic.copy()
-                pars = dict(zip(analysis, values))
-                for param, value in pars.items():
-                    jobdic[param] = str(value)
+                jobdic = copy.deepcopy(dic)
+                pars = dict(zip(analysis, map(str, values)))
+                readinput.update(jobdic, pars.items(), dic['base_path'])
                 jobdic['description'] = '%s %s' % (dic['description'], pars)
                 new = logs.init('job', jobdic, log_level, log_file,
                                 user_name, hc_id, host)
@@ -358,12 +364,14 @@ def cleanup(kind):
         logs.dbcmd('workers_kill', config.zworkers)
 
 
-def run_jobs(jobctxs):
+def run_jobs(jobctxs, concurrent_jobs=3):
     """
     Run jobs using the specified config file and other options.
 
     :param jobctxs:
         List of LogContexts
+    :param concurrent_jobs:
+        How many jobs to run concurrently (default 3)
     """
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     if hc_id:
@@ -388,7 +396,8 @@ def run_jobs(jobctxs):
             logs.dbcmd('finish', job.calc_id, 'aborted')
         return jobctxs
     for job in jobctxs:
-        dic = {'status': 'executing', 'pid': _PID}
+        dic = {'status': 'executing', 'pid': _PID,
+               'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
         if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
@@ -398,7 +407,7 @@ def run_jobs(jobctxs):
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and OQ_DISTRIBUTE != 'no':
-            parallel.multispawn(run_calc, allargs, num_cores=3)
+            parallel.multispawn(run_calc, allargs, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)

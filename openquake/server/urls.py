@@ -53,7 +53,9 @@ if settings.WEBUI:
 
 if settings.LOCKDOWN:
     from django.contrib import admin
-    from django.contrib.auth.views import LoginView, LogoutView
+    from django.contrib.auth.views import (
+        LoginView, LogoutView, PasswordResetView, PasswordResetDoneView,
+        PasswordResetConfirmView, PasswordResetCompleteView)
 
     admin.autodiscover()
     admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
@@ -65,6 +67,21 @@ if settings.LOCKDOWN:
             template_name='account/logout.html'), name="logout"),
         re_path(r'^accounts/ajax_login/$', views.ajax_login),
         re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
+        path('reset_password/',
+             PasswordResetView.as_view(template_name='reset_password.html'),
+             name='reset_password'),
+        path('reset_password_sent/',
+             PasswordResetDoneView.as_view(
+                 template_name='password_reset_sent.html'),
+             name='password_reset_done'),
+        path('reset/<uidb64>/<token>',
+             PasswordResetConfirmView.as_view(
+                 template_name='password_reset_form.html'),
+             name='password_reset_confirm'),
+        path('reset_password_complete/',
+             PasswordResetCompleteView.as_view(
+                 template_name='password_reset_done.html'),
+             name='password_reset_complete'),
     ]
 
 if settings.WEBUI_PATHPREFIX != "":

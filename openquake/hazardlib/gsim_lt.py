@@ -193,7 +193,7 @@ class GsimLogicTree(object):
         self._ltnode = ltnode or nrml.read(fname).logicTree
         self.bsetdict = {}
         self.shortener = {}
-        self.branches = self._build_trts_branches(trts)  # sorted by trt
+        self.branches = self._build_branches(trts)  # sorted by trt
         if trts != ['*']:
             # reduce self.values to the listed TRTs
             values = {}
@@ -303,7 +303,7 @@ class GsimLogicTree(object):
 
     def collapse(self, branchset_ids):
         """
-        Collapse the GsimLogicTree by using AgvGMPE instances if needed
+        Collapse the GsimLogicTree by using AgvPoeGMPE instances if needed
 
         :param branchset_ids: branchset ids to collapse
         :returns: a collapse GsimLogicTree instance
@@ -311,6 +311,7 @@ class GsimLogicTree(object):
         new = object.__new__(self.__class__)
         vars(new).update(vars(self))
         new.branches = []
+        trti = 0
         for trt, grp in itertools.groupby(self.branches, lambda b: b.trt):
             bs_id = self.bsetdict[trt]
             brs = []
@@ -330,10 +331,13 @@ class GsimLogicTree(object):
                 gsim = AvgPoeGMPE(**kwargs)
                 gsim._toml = _toml
                 new.values[trt] = [gsim]
-                branch = BranchTuple(trt, bs_id, gsim, sum(weights), True)
+                br_id = 'gA' + str(trti)
+                new.shortener[br_id] = keyno(br_id, trti, 0, self.filename)
+                branch = BranchTuple(trt, br_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
                 new.branches.append(br)
+            trti += 1
         return new
 
     def get_num_branches(self):
@@ -360,7 +364,7 @@ class GsimLogicTree(object):
                 num *= val
         return num
 
-    def _build_trts_branches(self, tectonic_region_types):
+    def _build_branches(self, tectonic_region_types):
         # do the parsing, called at instantiation time to populate .values
         trts = []
         branches = []
@@ -417,7 +421,8 @@ class GsimLogicTree(object):
                     bt.weight.dic['weight'] = 1.
                     break
             tot = sum(weights)
-            assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
+            assert tot.is_one(), '%s in branchset %s' % (
+                tot, branchset.attrib['branchSetID'])
             if duplicated(branch_ids):
                 raise InvalidLogicTree(
                     'There where duplicated branchIDs in %s' %

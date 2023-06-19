@@ -1,0 +1,5 @@
+#,,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:54:44', checksum=1056964987"
+rlz_id,return_period,retention,claim
+0,5.00000E+01,0.00000E+00,0.00000E+00
+0,1.00000E+02,1.07555E+02,1.07555E+02
+0,2.00000E+02,6.33285E+02,6.33285E+02

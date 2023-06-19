@@ -37,9 +37,8 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-
-rlzs_by_g_dt = numpy.dtype([('rlzs', hdf5.vuint32), ('weight', float)])
 
 
 def source_data(sources):
@@ -58,8 +57,8 @@ def check_maxmag(pointlike):
     for src in pointlike:
         maxmag = src.get_annual_occurrence_rates()[-1][0]
         if maxmag >= 8.:
-            logging.warning('%s %s has maximum magnitude %s',
-                            src.__class__.__name__, src.source_id, maxmag)
+            logging.info('%s %s has maximum magnitude %s',
+                         src.__class__.__name__, src.source_id, maxmag)
 
 
 def collapse_nphc(src):
@@ -118,8 +117,10 @@ def preclassical(srcs, sites, cmaker, monitor):
         dic['after'] = len(split_sources)
         yield dic
     else:
+        cnt = 0
         for msr, block in groupby(split_sources, msr_name).items():
-            dic = grid_point_sources(block, spacing, msr, monitor)
+            dic = grid_point_sources(block, spacing, msr, cnt, monitor)
+            cnt = dic.pop('cnt')
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
@@ -139,23 +140,15 @@ class PreClassicalCalculator(base.HazardCalculator):
     accept_precalc = []
 
     def init(self):
-        super().init()
         if self.oqparam.hazard_calculation_id:
-            self.full_lt = self.datastore.parent['full_lt']
+            self.full_lt = self.datastore.parent['full_lt'].init()
         else:
+            super().init()
             self.full_lt = self.csm.full_lt
-        arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
-        for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
-            arr[g]['rlzs'] = rlzs
-            arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
-        dset = self.datastore.create_dset(
-            'rlzs_by_g', rlzs_by_g_dt, (self.full_lt.Gt,), fillvalue=None)
-        dset[:] = arr
 
     def store(self):
-        # store full_lt, trt_smrs, toms
+        # store full_lt, toms
         self.datastore['full_lt'] = self.csm.full_lt
-        self.datastore['trt_smrs'] = self.csm.get_trt_smrs()
         self.datastore['toms'] = numpy.array(
             [sg.get_tom_toml(self.oqparam.investigation_time)
              for sg in self.csm.src_groups], hdf5.vstr)
@@ -164,7 +157,9 @@ class PreClassicalCalculator(base.HazardCalculator):
         oq = self.oqparam
         csm = self.csm
         self.store()
-        cmakers = read_cmakers(self.datastore, csm.full_lt)
+        cmakers = read_cmakers(self.datastore, csm)
+        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
@@ -196,7 +191,6 @@ class PreClassicalCalculator(base.HazardCalculator):
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
-        self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
@@ -269,13 +263,15 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
+        if not hasattr(self, 'csm'):  # used only for post_process
+            return
         cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
         if os.path.exists(cachepath):
             realpath = os.path.realpath(cachepath)
             logging.info('Copying csm from %s', realpath)
             with h5py.File(realpath, 'r') as cache:  # copy _csm
                 cache.copy(cache['_csm'], self.datastore.hdf5)
-            self.store()  # full_lt, trt_smrs, toms
+            self.store()  # full_lt, toms
         else:
             self.populate_csm()
             try:
@@ -292,5 +288,14 @@ class PreClassicalCalculator(base.HazardCalculator):
 
     def post_execute(self, csm):
         """
-        Do nothing
+        Raise an error if the sources were all discarded
         """
+        if 'source_info' in self.datastore:
+            num_sites = self.datastore['source_info']['num_sites']
+            if (num_sites == 0).all():
+                raise RuntimeError('There are no sources close to the site(s)')
+
+    def post_process(self):
+        if self.oqparam.calculation_mode == 'preclassical':
+            super().post_process()
+        # else do nothing, post_process will be called later on

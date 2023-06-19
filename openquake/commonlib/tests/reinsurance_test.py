@@ -56,7 +56,7 @@ def by_policy_event(agglosses_df, policy_df, treaty_df):
         df = reinsurance.by_policy(agglosses_df, dict(policy), treaty_df)
         dfs.append(df)
     rbp = pandas.concat(dfs)
-    rbe = reinsurance._by_event(rbp, treaty_df)
+    rbe = reinsurance.by_event(rbp, treaty_df)
     return rbp, rbe
 
 
@@ -139,7 +139,7 @@ event_id,policy_id,retention,claim,prop1,prop2,policy_grp
 1,       2,        1500, 5000, 2000.0,1500.0,AB
 1,       3,         600, 3000, 1500.0, 900.0,AB
 1,       4,        1800, 6000, 2400.0,1800.0,AB''')
-        byevent = reinsurance._by_event(bypolicy, treaty_df)
+        byevent = reinsurance.by_event(bypolicy, treaty_df)
         assert_ok(byevent, _df('''\
 event_id,retention,claim,prop1,prop2,over_A
        1,13200.0,26000,5000.0,7800.0,6900'''))
@@ -835,6 +835,30 @@ rur_Ant_1,10000,100,.1,.2''')
         self.assertIn('(row 3): a negative deductible was found',
                       str(ctx.exception))
 
+    def test_empty_liability(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,,100,.1,.2
+VA_region_2,10000,100,.1,.2
+rur_Ant_1,,100,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn('(rows [2, 4]): empty liability values were found',
+                      str(ctx.exception))
+
+    def test_empty_deductible(self):
+        csvfname = general.gettemp('''\
+policy,liability,deductible,qshared,surplus
+VA_region_1,10000,,.1,.2
+VA_region_2,10000,100,.1,.2
+rur_Ant_1,10000,,.1,.2''')
+        xmlfname = general.gettemp(XML_PR.format(csvfname))
+        with self.assertRaises(InvalidFile) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn('(rows [2, 4]): empty deductible values were found',
+                      str(ctx.exception))
+
     def test_nonprop_treaty_non_boolean(self):
         CSV = '''\
 Policy,Limit,Deductible,WXLR_metro,WXLR_rural,CatXL_reg
@@ -921,7 +945,18 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert deductible->positivefloat: "
-                      "float -200.0 < 0, line 11, line 11", str(ctx.exception))
+                      "float -200.0 < 0, line 11", str(ctx.exception))
+
+    def test_deductible_is_empty(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'deductible="200"', 'deductible=""'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert deductible->positivefloat: "
+                      "Got an empty string, line 11",
+                      str(ctx.exception))
 
     def test_deductible_is_not_float(self):
         csvfname = general.gettemp(CSV_NP)
@@ -932,7 +967,7 @@ rur_Ant_1,10000,100,.1,.2''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert deductible->positivefloat: "
                       "could not convert string to float: 'XXX', "
-                      "line 11, line 11", str(ctx.exception))
+                      "line 11", str(ctx.exception))
 
     def test_limit_is_negative(self):
         csvfname = general.gettemp(CSV_NP)
@@ -942,7 +977,18 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert limit->positivefloat: "
-                      "float -5000.0 < 0, line 11, line 11",
+                      "float -5000.0 < 0, line 11",
+                      str(ctx.exception))
+
+    def test_limit_is_empty(self):
+        csvfname = general.gettemp(CSV_NP)
+        xmlfname = general.gettemp(
+            XML_NP.format(csvfname).replace(
+                'limit="5000"', 'limit=""'))
+        with self.assertRaises(ValueError) as ctx:
+            reinsurance.parse(xmlfname, policy_idx)
+        self.assertIn("Could not convert limit->positivefloat: "
+                      "Got an empty string, line 11",
                       str(ctx.exception))
 
     def test_limit_is_not_float(self):
@@ -954,7 +1000,7 @@ rur_Ant_1,10000,100,.1,.2''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert limit->positivefloat: "
                       "could not convert string to float: 'XXX', "
-                      "line 11, line 11", str(ctx.exception))
+                      "line 11", str(ctx.exception))
 
     def test_max_cession_event_is_negative(self):
         csvfname = general.gettemp(CSV_NP)
@@ -964,7 +1010,7 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(ValueError) as ctx:
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert max_cession_event->positivefloat: "
-                      "float -200.0 < 0, line 11, line 11", str(ctx.exception))
+                      "float -200.0 < 0, line 11", str(ctx.exception))
 
     def test_max_cession_event_is_not_float(self):
         csvfname = general.gettemp(CSV_NP)
@@ -975,7 +1021,7 @@ rur_Ant_1,10000,100,.1,.2''')
             reinsurance.parse(xmlfname, policy_idx)
         self.assertIn("Could not convert max_cession_event->positivefloat: "
                       "could not convert string to float: 'XXX', "
-                      "line 11, line 11", str(ctx.exception))
+                      "line 11", str(ctx.exception))
 
     def test_missing_aggregate_by_policy(self):
         with open(self.jobfname, 'w') as job:
@@ -983,8 +1029,9 @@ rur_Ant_1,10000,100,.1,.2''')
                 'aggregate_by = policy\n', ''))
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_oqparam(self.jobfname)
-        self.assertIn('expected aggregate_by=policy; got []',
-                      str(ctx.exception))
+        self.assertIn(
+            "The field `aggregate_by = policy` in the %s file is required for"
+            " reinsurance calculations." % self.jobfname, str(ctx.exception))
 
     def test_correct_aggregate_by_policy_semicolon_taxonomy(self):
         with open(self.jobfname, 'w') as job:
@@ -1010,8 +1057,9 @@ rur_Ant_1,10000,100,.1,.2''')
         with self.assertRaises(InvalidFile) as ctx:
             readinput.get_oqparam(self.jobfname)
         self.assertIn(
-            "expected aggregate_by=policy; got [['policy', 'taxonomy']]",
-            str(ctx.exception))
+            "The field `aggregate_by = policy` in the %s file is required for"
+            " reinsurance calculations. Got `aggregate_by = [['policy',"
+            " 'taxonomy']]` instead." % self.jobfname, str(ctx.exception))
 
     def test_missing_total_losses(self):
         with open(self.jobfname, 'w') as job:

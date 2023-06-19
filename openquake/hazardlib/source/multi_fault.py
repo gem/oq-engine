@@ -101,6 +101,21 @@ class MultiFaultSource(BaseSeismicSource):
         return dict(mag=self.mags, rake=self.rakes,
                     probs_occur=self.probs_occur, rupture_idxs=ridxs)
 
+    def get_sections(self):
+        """
+        :returns: the underlying sections as KiteSurfaces
+        """
+        if self.hdf5path == '':  # in the tests
+            return self.sections
+        with hdf5.File(self.hdf5path, 'r') as f:
+            geoms = f['multi_fault_sections'][:]
+        sections = [geom_to_kite(geom) for geom in geoms]
+        for idx, sec in enumerate(sections):
+            sec.suid = idx
+        return sections
+
+    # used in the tests, where the sections are manually given and not
+    # read from the HDF5 file
     def set_sections(self, sections):
         """
         :param sections: a list of N surfaces
@@ -130,14 +145,7 @@ class MultiFaultSource(BaseSeismicSource):
         # iter on the ruptures
         step = kwargs.get('step', 1)
         n = len(self.mags)
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][:]
-            s = [geom_to_kite(geom) for geom in geoms]
-            for idx, sec in enumerate(s):
-                sec.suid = idx
-        else:
-            s = self.sections
+        s = self.get_sections()
         for i in range(0, n, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
@@ -156,46 +164,6 @@ class MultiFaultSource(BaseSeismicSource):
                 yield NonParametricProbabilisticRupture(
                     self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                     PMF(data))
-
-    def _sample_ruptures(self, eff_num_ses):
-        # yields (rup, num_occur)
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][:]
-            s = [geom_to_kite(geom) for geom in geoms]
-            for idx, sec in enumerate(s):
-                sec.suid = idx
-        else:
-            s = self.sections
-        # NB: np.random.random(eff_num_ses) called inside to save memory
-        # the seed is set before
-        for i, probs in enumerate(self.probs_occur):
-            if self.infer_occur_rates:
-                num_occ = np.random.poisson(
-                    self.occur_rates[i] *
-                    self.temporal_occurrence_model.time_span * eff_num_ses)
-                if num_occ == 0:  # skip
-                    continue
-            idxs = self.rupture_idxs[i]
-            if len(idxs) == 1:
-                sfc = s[idxs[0]]
-            else:
-                sfc = MultiSurface([s[idx] for idx in idxs])
-            hypo = s[idxs[0]].get_middle_point()
-            if self.infer_occur_rates:                
-                yield (ParametricProbabilisticRupture(
-                    self.mags[i], self.rakes[i], self.tectonic_region_type,
-                    hypo, sfc, self.occur_rates[i],
-                    self.temporal_occurrence_model), num_occ)
-                continue
-            cdf = np.cumsum(probs)
-            num_occ = np.digitize(np.random.random(eff_num_ses), cdf).sum()
-            if num_occ == 0:  # ignore non-occurring ruptures
-                continue
-            data = [(p, o) for o, p in enumerate(probs)]
-            yield (NonParametricProbabilisticRupture(
-                self.mags[i], self.rakes[i], self.tectonic_region_type, hypo,
-                sfc, PMF(data)), num_occ)
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
@@ -224,9 +192,6 @@ class MultiFaultSource(BaseSeismicSource):
     def get_min_max_mag(self):
         return np.min(self.mags), np.max(self.mags)
 
-    def get_one_rupture(self, ses_seed, rupture_mutex):
-        raise NotImplementedError
-
     @property
     def data(self):  # compatibility with NonParametricSeismicSource
         for i, rup in enumerate(self.iter_ruptures()):
@@ -240,14 +205,8 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                geoms = f['multi_fault_sections'][:]
-            s = [geom_to_kite(geom) for geom in geoms]
-        else:
-            s = self.sections
         surfaces = []
-        for sec in s:
+        for sec in self.get_sections():
             if isinstance(sec, MultiSurface):
                 surfaces.extend(sec.surfaces)
             else:

@@ -19,45 +19,14 @@ import os
 import gzip
 import logging
 import numpy
-from openquake.baselib import performance, writers, hdf5
+from openquake.baselib import performance, writers, hdf5, general
 from openquake.hazardlib import site, valid
-from openquake.hazardlib.geo.utils import assoc
+from openquake.hazardlib.geo.utils import _GeographicObjects
 from openquake.risklib.asset import Exposure
 from openquake.commonlib import datastore
 
 SQRT2 = 1.414
 vs30_dt = numpy.dtype([('lon', float), ('lat', float), ('vs30', float)])
-
-
-# TODO: equivalents of calculate_z1pt0 and calculate_z2pt5_ngaw2
-# are inside some GSIM implementations, we should avoid duplication
-def calculate_z1pt0(vs30):
-    '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 1.0 km/s velocity horizon (in m)
-    Ref: Chiou & Youngs (2014) California model
-    :param vs30: the shear wave velocity (in m/s) at a depth of 30m
-    '''
-    c1 = 571 ** 4.
-    c2 = 1360.0 ** 4.
-    return numpy.exp((-7.15 / 4.0) * numpy.log((vs30 ** 4. + c1) / (c2 + c1)))
-
-
-def calculate_z2pt5_ngaw2(vs30):
-    '''
-    Reads an array of vs30 values (in m/s) and
-    returns the depth to the 2.5 km/s velocity horizon (in km)
-    Ref: Campbell, K.W. & Bozorgnia, Y., 2014.
-    'NGA-West2 ground motion model for the average horizontal components of
-    PGA, PGV, and 5pct damped linear acceleration response spectra.'
-    Earthquake Spectra, 30(3), pp.1087–1114.
-
-    :param vs30: the shear wave velocity (in m/s) at a depth of 30 m
-    '''
-    c1 = 7.089
-    c2 = -1.144
-    z2pt5 = numpy.exp(c1 + numpy.log(vs30) * c2)
-    return z2pt5
 
 
 def read(fname):
@@ -148,21 +117,19 @@ def main(
         fields.append('vs30measured')
     with performance.Monitor(measuremem=True) as mon:
         if exposure_xml:
-            mesh, assets_by_site = Exposure.read(
-                exposure_xml, check_dupl=False).get_mesh_assets_by_site()
+            exp = Exposure.read_all(exposure_xml, check_dupl=False)
             hdf5['assetcol'] = assetcol = site.SiteCollection.from_points(
-                mesh.lons, mesh.lats, req_site_params=req_site_params)
+                exp.mesh.lons, exp.mesh.lats, req_site_params=req_site_params)
             if grid_spacing:
-                grid = mesh.get_convex_hull().dilate(
+                grid = exp.mesh.get_convex_hull().dilate(
                     grid_spacing).discretize(grid_spacing)
                 haz_sitecol = site.SiteCollection.from_points(
                     grid.lons, grid.lats, req_site_params=req_site_params)
                 logging.info(
                     'Associating exposure grid with %d locations to %d '
-                    'exposure sites', len(haz_sitecol), len(assets_by_site))
-                haz_sitecol, assets_by, discarded = assoc(
-                    assets_by_site, haz_sitecol,
-                    grid_spacing * SQRT2, 'filter')
+                    'exposure sites', len(haz_sitecol), len(exp.mesh))
+                haz_sitecol, discarded = exp.associate(
+                    haz_sitecol, grid_spacing * SQRT2)
                 if len(discarded):
                     logging.info('Discarded %d sites with assets '
                                  '[use oq plot_assets]', len(discarded))
@@ -196,11 +163,11 @@ def main(
                     grid.lons, grid.lats, req_site_params=req_site_params)
         else:
             raise RuntimeError('Missing exposures or missing sites')
-        vs30 = associate(haz_sitecol, vs30_csv, assoc_distance)
+        associate(haz_sitecol, vs30_csv, assoc_distance)
         if z1pt0:
-            haz_sitecol.array['z1pt0'] = calculate_z1pt0(vs30['vs30'])
+            haz_sitecol.calculate_z1pt0()
         if z2pt5:
-            haz_sitecol.array['z2pt5'] = calculate_z2pt5_ngaw2(vs30['vs30'])
+            haz_sitecol.calculate_z2pt5()
         hdf5['sitecol'] = haz_sitecol
         if output:
             writers.write_csv(output, haz_sitecol.array[fields])

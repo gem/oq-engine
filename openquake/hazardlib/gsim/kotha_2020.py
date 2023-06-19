@@ -345,6 +345,7 @@ class KothaEtAl2020(GMPE):
     always being used if defined on input.
     In the core form of the GMPE no site term is included. This is added in the
     subclasses.
+
     :param float sigma_mu_epsilon:
         Parameter to control the source-region scaling as a number of
         standard deviations by which to multiply the source-region to source-

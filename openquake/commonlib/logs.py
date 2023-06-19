@@ -26,7 +26,7 @@ import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, dbapi
+from openquake.commonlib import readinput, dbapi, mosaic
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -35,6 +35,19 @@ LEVELS = {'debug': logging.DEBUG,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
 DATABASE = '%s:%d' % valid.host_port()
+MODELS = []  # to be populated in get_tag
+
+
+def get_tag(job_ini):
+    """
+    :returns: the name of the model if job_ini belongs to the mosaic_dir
+    """
+    if not MODELS:  # first time
+        MODELS.extend(mosaic.MosaicGetter().get_models_list())
+    splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
+    if len(splits) > 3 and splits[-3] in MODELS:
+        return splits[-3]  # EUR
+    return ''
 
 
 def dbcmd(action, *args):
@@ -134,9 +147,10 @@ class LogStreamHandler(logging.StreamHandler):
         super().__init__()
         self.job_id = job_id
 
-    def emit(self, record):  # pylint: disable=E0202
-        _update_log_record(self, record)
-        super().emit(record)
+    def emit(self, record):
+        if record.levelname != 'CRITICAL':
+            _update_log_record(self, record)
+            super().emit(record)
 
 
 class LogFileHandler(logging.FileHandler):
@@ -148,7 +162,7 @@ class LogFileHandler(logging.FileHandler):
         self.job_id = job_id
         self.log_file = log_file
 
-    def emit(self, record):  # pylint: disable=E0202
+    def emit(self, record):
         _update_log_record(self, record)
         super().emit(record)
 
@@ -161,7 +175,7 @@ class LogDatabaseHandler(logging.Handler):
         super().__init__()
         self.job_id = job_id
 
-    def emit(self, record):  # pylint: disable=E0202
+    def emit(self, record):
         dbcmd('log', self.job_id, datetime.utcnow(), record.levelname,
               '%s/%s' % (record.processName, record.process),
               record.getMessage())
@@ -179,11 +193,14 @@ class LogContext:
         self.log_level = log_level
         self.log_file = log_file
         self.user_name = user_name or getpass.getuser()
-        self.tag = tag
         if isinstance(job_ini, dict):  # dictionary of parameters
             self.params = job_ini
         else:  # path to job.ini file
             self.params = readinput.get_params(job_ini)
+        if 'inputs' not in self.params:  # for reaggregate
+            self.tag = tag
+        else:
+            self.tag = tag or get_tag(self.params['inputs']['job_ini'])
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
@@ -216,12 +233,9 @@ class LogContext:
     def __enter__(self):
         if not logging.root.handlers:  # first time
             level = LEVELS.get(self.log_level, self.log_level)
-            logging.basicConfig(level=level)
+            logging.basicConfig(level=level, handlers=[])
         f = '[%(asctime)s #{} {}%(levelname)s] %(message)s'.format(
-            self.calc_id, self.tag)
-        for handler in logging.root.handlers:
-            fmt = logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S')
-            handler.setFormatter(fmt)
+            self.calc_id, self.tag + ' ' if self.tag else '')
         self.handlers = [LogDatabaseHandler(self.calc_id)] \
             if self.usedb else []
         if self.log_file is None:
@@ -232,6 +246,8 @@ class LogContext:
         else:
             self.handlers.append(LogFileHandler(self.calc_id, self.log_file))
         for handler in self.handlers:
+            handler.setFormatter(
+                logging.Formatter(f, datefmt='%Y-%m-%d %H:%M:%S'))
             logging.root.addHandler(handler)
         return self
 

@@ -21,9 +21,10 @@ Master script for running an AELO analysis
 import os
 import sys
 import getpass
+import logging
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid
-from openquake.commonlib import datastore, readinput, mosaic
+from openquake.commonlib import readinput, mosaic
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -38,19 +39,21 @@ def get_params_from(inputs):
     """
     getter = mosaic.MosaicGetter()
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
-    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(
+        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
         params['description'] += ' (%(lon)s, %(lat)s)' % inputs
     params['ps_grid_spacing'] = '0.'
-    params['pointsource_distance'] = '40.'
+    params['pointsource_distance'] = '100.'
     params['disagg_by_src'] = 'true'
-    params['collect_rlzs'] = 'true'
+    params['use_rates'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
+    params['postproc_func'] = 'disagg_by_rel_sources'
     # params['cachedir'] = datastore.get_datadir()
     return params
 
@@ -65,8 +68,8 @@ def main(lon: valid.longitude,
          lat: valid.latitude,
          vs30: valid.positivefloat,
          siteid: valid.simple_id,
-         job_owner_email,
-         outputs_uri,
+         job_owner_email=None,
+         outputs_uri=None,
          jobctx=None,
          callback=trivial_callback,
          ):
@@ -82,23 +85,24 @@ def main(lon: valid.longitude,
         dic = dict(calculation_mode='custom', description='AELO')
         [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
                                       None, getpass.getuser(), None)
-    with jobctx:
-        if not config.directory.mosaic_dir:
-            sys.exit('mosaic_dir is not specified in openquake.cfg')
-        try:
-            jobctx.params.update(get_params_from(inputs))
-        except Exception as exc:
-            # This can happen for instance:
-            # - if no model covers the given coordinates.
-            # - if no ini file was found
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
-            raise exc
-        try:
-            engine.run_jobs([jobctx])
-        except Exception as exc:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
-        else:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs)
+
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    try:
+        jobctx.params.update(get_params_from(inputs))
+        logging.root.handlers = []  # avoid breaking the logs
+    except Exception as exc:
+        # This can happen for instance:
+        # - if no model covers the given coordinates.
+        # - if no ini file was found
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
+        raise exc
+    try:
+        engine.run_jobs([jobctx])
+    except Exception as exc:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
+    else:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs)
 
 
 if __name__ == '__main__':
