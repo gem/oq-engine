@@ -47,7 +47,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     This computes the mean rate density by means of the multivariate
     normal function available in scipy.
 
-    :param ctxt:
+    :param ctx:
         A context array for a single site
     :param cm:
         A ContextMaker
@@ -62,7 +62,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     corrm = crosscorr.get_cross_correlation_mtx(imts)
 
     # Compute mean and standard deviation
-    [mea, sig, _, _] = cm.get_mean_stds([ctxt])
+    [mea, sig, _, _] = cm.get_mean_stds([ctx])
 
     # Get the logarithmic IMLs
     ll1 = numpy.log(cm.imtls[im1])
@@ -74,7 +74,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     # is the number of sites
     trate = 0
     for g, _ in enumerate(cm.gsims):
-        for i, ctx in enumerate(ctxt):
+        for i, ctx in enumerate(ctx):
 
             # Covariance and correlation mtxs
             slc0 = numpy.index_exp[g, :, i]
@@ -211,10 +211,10 @@ def update_mrd_indirect(ctx, cm, corrm, be_mea, be_sig, mrd, monitor=Monitor()):
             mrd[:, :, gid] += arr[R] * partial
 
 
-def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
+def calc_mean_rate_dist(ctx, nsites, cmaker, crosscorr, imt1, imt2,
                         bins_mea, bins_sig, method='indirect', mon=Monitor()):
     """
-    :param ctxt: a sequence of parametric sources
+    :param ctx: a sequence of parametric sources
     :param num_sites: total number of sites (small)
     :param cmaker: a ContextMaker instance
     :param crosscorr: a CrossCorrelation instance
@@ -232,9 +232,9 @@ def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
     for sid in range(nsites):
         if method == 'direct':
             update_mrd(
-                ctxt[ctxt.sids == sid], cmaker, crosscorr, mrd[:, :, sid], mon)
+                ctx[ctx.sids == sid], cmaker, crosscorr, mrd[:, :, sid], mon)
         else:
             update_mrd_indirect(
-                ctxt[ctxt.sids == sid], cmaker, corrm,
+                ctx[ctx.sids == sid], cmaker, corrm,
                 bins_mea, bins_sig, mrd[:, :, sid], mon)
     return mrd
