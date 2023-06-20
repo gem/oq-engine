@@ -487,7 +487,8 @@ class ClassicalCalculator(base.HazardCalculator):
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
         nbytes = 8 * len(sitecol) * L * Gt
-        logging.info('Allocating %s for the global pmap', humansize(nbytes))
+        logging.info(f'Allocating %s for the global pmap ({Gt=})',
+                     humansize(nbytes))
         self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)
         allargs = []
         for cm in self.cmakers:

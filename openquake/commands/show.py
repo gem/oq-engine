@@ -45,9 +45,9 @@ def print_(aw):
     if hasattr(aw, 'shape_descr'):
         print(text_table(aw.to_dframe(), ext='org'))
     elif hasattr(aw, 'array'):
-        if aw.array.dtype.name == 'object':  # array of bytes
-            for i, el in enumerate(aw.array):
-                print(i, el.decode('utf-8'))
+        if aw.array.dtype.name == 'object':  # array of objects
+            for el in aw.array:
+                print(el.decode('utf-8') if isinstance(el, bytes) else el)
         else:  # structured array
             print(text_table(aw.array, ext='org'))
     elif isinstance(aw, numpy.ndarray):
