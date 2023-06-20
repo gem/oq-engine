@@ -250,19 +250,19 @@ class Hazard:
         """
         Store 1-pnes inside the _poes dataset
         """
-        # Physically, an extremely small intensity measure level can have an
-        # extremely large probability of exceedence, however that probability
-        # cannot be exactly 1 unless the level is exactly 0. Numerically, the
-        # PoE can be 1 and this give issues when calculating the damage (there
-        # is a log(0) in
-        # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
-        # Here we solve the issue by replacing the unphysical probabilities 1
-        # with .9999999999999999 (the float64 closest to 1).
         avg_poe = 0
         nsites = 0
+        # store by IMT to save memory
         for imt in self.imtls:
             slc = self.imtls(imt)
             poes = 1. - pnes[:, slc]
+            # Physically, an extremely small intensity measure level can have an
+            # extremely large probability of exceedence,however that probability
+            # cannot be exactly 1 unless the level is exactly 0. Numerically,
+            # the PoE can be 1 and this give issues when calculating the damage:
+            # there is a log(0) in scientific.annual_frequency_of_exceedence.
+            # Here we solve the issue by replacing the unphysical probabilities
+            # 1 with .9999999999999999 (the float64 closest to 1).
             poes[poes == 1.] = .9999999999999999
             # poes[poes < 1E-5] = 0.  # minimum_poe
             idxs, lids, gids = poes.nonzero()
