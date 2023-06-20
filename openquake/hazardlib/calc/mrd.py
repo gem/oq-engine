@@ -42,12 +42,12 @@ def get_uneven_bins_edges(lefts, num_bins):
     return numpy.array(tmp)
 
 
-def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
+def update_mrd(ctxs: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy.
 
-    :param ctx:
+    :param ctxs:
         A context array for a single site
     :param cm:
         A ContextMaker
@@ -62,7 +62,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     corrm = crosscorr.get_cross_correlation_mtx(imts)
 
     # Compute mean and standard deviation
-    [mea, sig, _, _] = cm.get_mean_stds([ctx])
+    [mea, sig, _, _] = cm.get_mean_stds([ctxs])
 
     # Get the logarithmic IMLs
     ll1 = numpy.log(cm.imtls[im1])
@@ -74,7 +74,7 @@ def update_mrd(ctx: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     # is the number of sites
     trate = 0
     for g, _ in enumerate(cm.gsims):
-        for i, ctx in enumerate(ctx):
+        for i, ctx in enumerate(ctxs):
 
             # Covariance and correlation mtxs
             slc0 = numpy.index_exp[g, :, i]
@@ -232,9 +232,9 @@ def calc_mean_rate_dist(ctx, nsites, cmaker, crosscorr, imt1, imt2,
     for sid in range(nsites):
         if method == 'direct':
             update_mrd(
-                ctx[ctx.sids == sid], cmaker, crosscorr, mrd[:, :, sid], mon)
+                ctx[ctx.sids == sid], cm, crosscorr, mrd[:, :, sid], mon)
         else:
             update_mrd_indirect(
-                ctx[ctx.sids == sid], cmaker, corrm,
+                ctx[ctx.sids == sid], cm, corrm,
                 bins_mea, bins_sig, mrd[:, :, sid], mon)
     return mrd
