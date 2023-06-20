@@ -273,6 +273,9 @@ class Hazard:
             hdf5.extend(self.datastore['_poes/gid'], gids)
             hdf5.extend(self.datastore['_poes/lid'], lids + slc.start)
             hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
+
+            # slice_by_sid contains 3x6=18 slices in classical/case_22
+            # which has 6 IMTs each one with 20 levels
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
             self.offset += len(sids)
