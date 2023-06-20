@@ -246,7 +246,7 @@ class Hazard:
                 out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
         return out.reshape((self.N, self.M, self.L1))
 
-    def store_poes(self, pnes, pnes_sids):
+    def store_poes(self, pnes, the_sids):
         """
         Store 1-pnes inside the _poes dataset
         """
@@ -258,23 +258,29 @@ class Hazard:
         # :class:`openquake.risklib.scientific.annual_frequency_of_exceedence`).
         # Here we solve the issue by replacing the unphysical probabilities 1
         # with .9999999999999999 (the float64 closest to 1).
-        poes = 1. - pnes
-        poes[poes == 1.] = .9999999999999999
-        # poes[poes < 1E-5] = 0.  # minimum_poe
-        idxs, lids, gids = poes.nonzero()
-        if len(idxs) == 0:  # happens in case_60
-            return 0
-        sids = pnes_sids[idxs]
-        hdf5.extend(self.datastore['_poes/sid'], sids)
-        hdf5.extend(self.datastore['_poes/gid'], gids)
-        hdf5.extend(self.datastore['_poes/lid'], lids)
-        hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
-        sbs = build_slice_by_sid(sids, self.offset)
-        hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
-        self.offset += len(sids)
-        self.acc['avg_poe'] = poes.mean(axis=(0, 2)) @ self.level_weights
-        self.acc['nsites'] = len(pnes_sids)
-        return len(sids) * 16  # 4 + 2 + 2 + 8 bytes
+        avg_poe = 0
+        nsites = 0
+        for imt in self.imtls:
+            slc = self.imtls(imt)
+            poes = 1. - pnes[:, slc]
+            poes[poes == 1.] = .9999999999999999
+            # poes[poes < 1E-5] = 0.  # minimum_poe
+            idxs, lids, gids = poes.nonzero()
+            if len(idxs) == 0:  # happens in case_60
+                return 0
+            sids = the_sids[idxs]
+            hdf5.extend(self.datastore['_poes/sid'], sids)
+            hdf5.extend(self.datastore['_poes/gid'], gids)
+            hdf5.extend(self.datastore['_poes/lid'], lids + slc.start)
+            hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
+            sbs = build_slice_by_sid(sids, self.offset)
+            hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+            self.offset += len(sids)
+            avg_poe += poes.mean(axis=(0, 2)) @ self.level_weights[slc]
+            nsites += len(the_sids)
+        self.acc['avg_poe'] = avg_poe
+        self.acc['nsites'] = nsites
+        return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
     def store_disagg(self, pmaps):
         """
