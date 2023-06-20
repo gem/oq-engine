@@ -246,9 +246,9 @@ class Hazard:
                 out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
         return out.reshape((self.N, self.M, self.L1))
 
-    def store_poes(self, pnes, pnes_sids):
+    def store_rates(self, pnes, the_sids):
         """
-        Store 1-pnes inside the _poes dataset
+        Store 1-pnes inside the _rates dataset
         """
         # Physically, an extremely small intensity measure level can have an
         # extremely large probability of exceedence, however that probability
@@ -264,16 +264,16 @@ class Hazard:
         idxs, lids, gids = poes.nonzero()
         if len(idxs) == 0:  # happens in case_60
             return 0
-        sids = pnes_sids[idxs]
-        hdf5.extend(self.datastore['_poes/sid'], sids)
-        hdf5.extend(self.datastore['_poes/gid'], gids)
-        hdf5.extend(self.datastore['_poes/lid'], lids)
-        hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
+        sids = the_sids[idxs]
+        hdf5.extend(self.datastore['_rates/sid'], sids)
+        hdf5.extend(self.datastore['_rates/gid'], gids)
+        hdf5.extend(self.datastore['_rates/lid'], lids)
+        hdf5.extend(self.datastore['_rates/poe'], poes[idxs, lids, gids])
         sbs = build_slice_by_sid(sids, self.offset)
-        hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+        hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
         self.offset += len(sids)
         self.acc['avg_poe'] = poes.mean(axis=(0, 2)) @ self.level_weights
-        self.acc['nsites'] = len(pnes_sids)
+        self.acc['nsites'] = len(the_sids)
         return len(sids) * 16  # 4 + 2 + 2 + 8 bytes
 
     def store_disagg(self, pmaps):
@@ -366,12 +366,12 @@ class ClassicalCalculator(base.HazardCalculator):
         # NB: the relevant ruptures are less than the effective ruptures,
         # which are a preclassical concept
 
-    def init_poes(self):
+    def init_rates(self):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_poes', poes_dt.items())
-        self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
+        self.datastore.create_df('_rates', poes_dt.items())
+        self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
         oq = self.oqparam
@@ -421,12 +421,12 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if '_poes' in parent:
+            if '_rates' in parent:
                 self.build_curves_maps()  # repeat post-processing
                 return {}
         else:
             maxw = self.max_weight
-        self.init_poes()
+        self.init_rates()
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         self.source_data = AccumDict(accum=[])
@@ -447,7 +447,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
-        if '_poes' in self.datastore:
+        if '_rates' in self.datastore:
             self.build_curves_maps()
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
@@ -519,7 +519,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing PoEs', measuremem=True):
-            nbytes = self.haz.store_poes(self.pmap.array, self.pmap.sids)
+            nbytes = self.haz.store_rates(self.pmap.array, self.pmap.sids)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
         return acc
@@ -630,7 +630,7 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_curves:  # do nothing
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        poes_gb = self.datastore.getsize('_poes') / 1024**3
+        poes_gb = self.datastore.getsize('_rates') / 1024**3
         if poes_gb < .1:
             ct = 1
         elif poes_gb < 2:
@@ -639,12 +639,12 @@ class ClassicalCalculator(base.HazardCalculator):
             ct = int(poes_gb) + 18  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
-        if '_poes' in set(self.datastore):
+        if '_rates' in set(self.datastore):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
         sites_per_task = int(numpy.ceil(self.N / ct))
-        sbs = dstore['_poes/slice_by_sid'][:]
+        sbs = dstore['_rates/slice_by_sid'][:]
         sbs['sid'] //= sites_per_task
         # NB: there is a genious idea here, to split in tasks by using
         # the formula ``taskno = sites_ids // sites_per_task`` and then
