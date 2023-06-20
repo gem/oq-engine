@@ -37,6 +37,10 @@ class EngineServerReadOnlyModeTestCase(EngineServerTestCase):
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.c = Client()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.wait()
+
     def test_can_not_run_aelo_calc(self):
         params = dict(
             lon=10, lat=45, vs30='800.0', siteid='SITE')
