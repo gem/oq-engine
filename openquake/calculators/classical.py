@@ -251,7 +251,6 @@ class Hazard:
         Store 1-pnes inside the _poes dataset
         """
         avg_poe = 0
-        nsites = 0
         # store by IMT to save memory
         for imt in self.imtls:
             slc = self.imtls(imt)
@@ -264,7 +263,8 @@ class Hazard:
             # Here we solve the issue by replacing the unphysical probabilities
             # 1 with .9999999999999999 (the float64 closest to 1).
             poes[poes == 1.] = .9999999999999999
-            # poes[poes < 1E-5] = 0.  # minimum_poe
+            # the nonzero below uses a lot of memory, however it is useful
+            # to reduce the storage a lot (~3 times for EUR)
             idxs, lids, gids = poes.nonzero()
             if len(idxs) == 0:  # happens in case_60
                 return 0
@@ -277,9 +277,8 @@ class Hazard:
             hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
             self.offset += len(sids)
             avg_poe += poes.mean(axis=(0, 2)) @ self.level_weights[slc]
-            nsites += len(the_sids)
         self.acc['avg_poe'] = avg_poe
-        self.acc['nsites'] = nsites
+        self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
     def store_disagg(self, pmaps):
