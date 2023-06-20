@@ -22,29 +22,11 @@
 #       django.core.exceptions.AppRegistryNotReady: Apps aren't loaded yet.
 
 import os
-import glob
-import sys
-import json
-import tempfile
-import string
-import unittest
-import secrets
-import csv
 
-import django
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
 from openquake.server.dbserver import get_status
 from openquake.server.tests.views_test import EngineServerTestCase
-
-django.setup()
-try:
-    from django.contrib.auth.models import User  # noqa
-except RuntimeError:
-    # Django tests are meant to be run with the command
-    # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
-    # ./openquake/server/manage.py test tests.views_test
-    raise unittest.SkipTest('Use Django to run such tests')
 
 
 class EngineServerReadOnlyModeTestCase(EngineServerTestCase):
@@ -78,4 +60,3 @@ class EngineServerReadOnlyModeTestCase(EngineServerTestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         assert resp.status_code == 404, resp
-
