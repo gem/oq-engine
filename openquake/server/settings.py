@@ -179,6 +179,8 @@ APPLICATION_MODES = ['PUBLIC', 'RESTRICTED', 'AELO']
 # case insensitive
 APPLICATION_MODE = 'public'
 
+SHOW_RUN_CALC_BTN = True
+
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
 

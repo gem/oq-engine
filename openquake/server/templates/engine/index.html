@@ -1,7 +1,7 @@
 {% extends "engine/base.html" %}
 
   {% block nav-items %}
-                {% if not aelo_mode %}
+                {% if show_run_calc_btn %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"

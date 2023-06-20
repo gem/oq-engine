@@ -1,6 +1,7 @@
 import os
 
 APPLICATION_MODE = 'aelo'
+SHOW_RUN_CALC_BTN = False
 
 # # Static Folder
 # STATIC_ROOT = ''
