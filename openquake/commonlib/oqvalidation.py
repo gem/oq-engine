@@ -713,10 +713,11 @@ shift_hypo:
   Default: false
 
 site_effects:
-  Flag used in ShakeMap calculations to turn on GMF amplification based
-  on the vs30 values in the site collection.
-  Example: *site_effects = true*.
-  Default: False
+  Used in ShakeMap calculations to turn on GMF amplification based
+  on the vs30 values in the ShakeMap (site_effects='shakemap') or in the
+  site collection (site_effects='sitecol').
+  Example: *site_effects = 'shakemap'*.
+  Default: 'no'
 
 sites:
   Used to specify a list of sites.
@@ -1042,7 +1043,8 @@ class OqParam(valid.ParamSet):
     shakemap_id = valid.Param(valid.nice_string, None)
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
+    site_effects = valid.Param(
+        valid.Choice('no', 'shakemap', 'sitecol'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
