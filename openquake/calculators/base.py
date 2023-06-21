@@ -1278,7 +1278,7 @@ def store_shakemap(calc, sitecol, shakemap, gmf_dict):
             vs30 = None  # do not amplify
         elif oq.site_effects == 'shakemap':
             vs30 = shakemap['vs30']
-        elif oq.site_effects == 'sitecol':
+        elif oq.site_effects == 'sitemodel':
             vs30 = sitecol.vs30
         imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,

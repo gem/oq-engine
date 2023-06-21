@@ -1044,7 +1044,7 @@ class OqParam(valid.ParamSet):
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
     site_effects = valid.Param(
-        valid.Choice('no', 'shakemap', 'sitecol'), 'no')  # shakemap amplif.
+        valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
