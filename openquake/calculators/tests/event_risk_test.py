@@ -22,7 +22,8 @@ from openquake.commonlib.datastore import read
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
-from openquake.qa_tests_data.gmf_ebrisk import case_1, case_2, case_3, case_4
+from openquake.qa_tests_data.gmf_ebrisk import (
+    case_1, case_2, case_3, case_4, case_5)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_2 as ebr_2)
 
@@ -101,6 +102,12 @@ class GmfEbRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+    def test_case_5(self):
+        # no risk due to small hazard
+        self.run_calc(case_5.__file__, 'job.ini')
+        rbe = self.calc.datastore.read_df('risk_by_event')
+        self.assertEqual(len(rbe), 0)
+        
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
         calc0 = self.calc.datastore  # single file event_based_risk
