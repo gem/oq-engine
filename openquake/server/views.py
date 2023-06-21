@@ -947,9 +947,9 @@ def calc_datastore(request, job_id):
 
 
 def web_engine(request, **kwargs):
-    params = {}
-    if settings.APPLICATION_MODE.upper() == 'AELO':
-        params['aelo_mode'] = True
+    application_mode = settings.APPLICATION_MODE.upper()
+    params = {'application_mode': application_mode}
+    if application_mode == 'AELO':
         params['aelo_form_placeholders'] = AELO_FORM_PLACEHOLDERS
     return render(
         request, "engine/index.html", params)

@@ -139,13 +139,15 @@ class CostCalculator(object):
         lst = []
         for lt in loss_types:
             if lt.endswith('_ins'):
-                lt = lt[:-4]
-            elif lt == 'number':
+                lt = lt[:-4]  # rstrip _ins
+            if lt == 'number':
                 unit = 'units'
-            elif lt == 'area':
-                unit = 'unknown'
             elif lt in ('occupants', 'residents'):
                 unit = 'people'
+            elif lt == 'area':
+                # tested in event_based_risk/case_8
+                # NB: the Global Risk Model use SQM always, hence the default
+                unit = self.units.get(lt, 'SQM')
             else:
                 unit = self.units[lt]
             lst.append(unit)
