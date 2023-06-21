@@ -5,6 +5,7 @@
   * Fixed bug in get_profiles_from_simple_fault_data affecting KiteSurfaces
 
   [Michele Simionato]
+  * GMFs too small to produce losses now give a warning rather than an error
   * Fixed bug in `get_ry0_distance` breaking conditioned GMFs
   * Fixed the rupture exporter in presence of GMPETables
   * Fixed severe bug affecting the classical tiling calculator
