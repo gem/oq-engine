@@ -13,12 +13,12 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
          site_effects: bool = 0, trunclevel: float = 3,
          spatialcorr='yes', crosscorr='yes', cholesky_limit: int = 10_000):
     """
-    Example of usage: oq shakemap2gmfs us2000ar20 site_model.csv -n 10
+    If the site_effects flag is false (the default) the vs30 found in the
+    shakemap is used for amplification;
+    if the site_effects flag is true then the vs30 found in the site collection
+    (user defined) is used instead.
 
-    - if the site_effects flag is false (the default) the vs30 found in the
-      shakemap is used for amplification
-    - if the site_effects flag is true then vs30 found in the site collection
-      (user defined) is used instead
+    Example of usage: oq shakemap2gmfs us2000ar20 site_model.csv -n 10
     """
     assert os.path.exists(site_model)
     fname = '%s.npy' % id
