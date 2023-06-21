@@ -10,13 +10,16 @@ from openquake.calculators.base import calculators, store_shakemap
 
 # see qa_tests_data/scenario/case_21
 def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
-         site_effects: bool = 0, trunclevel: float = 3,
+         site_effects: str = 'no', trunclevel: float = 3,
          spatialcorr='yes', crosscorr='yes', cholesky_limit: int = 10_000):
     """
-    If the site_effects flag is false (the default) the vs30 found in the
-    shakemap is used for amplification;
-    if the site_effects flag is true then the vs30 found in the site collection
-    (user defined) is used instead.
+    Given a shakemap ID and a path to a site_model.csv file build a
+    GMFs array corresponding to num_gmfs events. The user can pass
+    other parameters, the most important one being the string
+    `site_effects`, with default value "no", meaning do not amplify
+    the GMFs. site_effects = "shakemap" means amplify with the vs30
+    from the ShakeMap and sites_effects = "sitemodel" means amplify
+    with the user provided site model.
 
     Example of usage: oq shakemap2gmfs us2000ar20 site_model.csv -n 10
     """
