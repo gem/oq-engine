@@ -1,5 +1,6 @@
   [Michele Simionato]
-  * Changed the behavior of shakemap2gmfs
+  * Changed the behavior of shakemap2gmfs to amplify the GMFs based on
+    user-provided vs30 values or ShakeMap-provided vs30 values
   * Removed sorting of the sections in the multiFaultSource reader to keep
     the rup_idxs consistent with the order in the files
   * GMFs too small to produce losses now give a warning rather than an error
