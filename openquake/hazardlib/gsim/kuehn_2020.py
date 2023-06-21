@@ -757,62 +757,6 @@ class KuehnEtAl2020SInter(GMPE):
     # Coefficients in external file - supplied directly by the author
     COEFFS = CoeffsTable(sa_damping=5, table=open(KUEHN_COEFFS).read())
 
-def t(model, imt, mag, rrup):
-    """
-    Returns the sigma mu adjustment factor for the given scenario set by
-    interpolation from the tables
-
-    :param dict model:
-        Sigma mu model as a dictionary containing the sigma mu tables
-        (as output from _retrieve_sigma_mu_data)
-    :param imt:
-        Intensity measure type
-    :param mag:
-        Magnitude
-    :param rrup:
-        Distances
-
-    :returns:
-        sigma_mu for the scenarios (numpy.ndarray)
-    """
-    from scipy.interpolate import interp1d
-    if not model:
-        return 0.0
-    if imt.string in "PGA PGV":
-        # PGA and PGV are 2D arrays of dimension [nmags, ndists]
-        sigma_mu = model[imt.string]
-        if mag <= model["M"][0]:
-            sigma_mu_m = sigma_mu[0, :]
-        elif mag >= model["M"][-1]:
-            sigma_mu_m = sigma_mu[-1, :]
-        else:
-            intpl1 = interp1d(model["M"], sigma_mu, axis=0)
-            sigma_mu_m = intpl1(mag)
-        # Linear interpolation with distance
-        intpl2 = interp1d(model["R"], sigma_mu_m, bounds_error=False,
-                          fill_value=(sigma_mu_m[0], sigma_mu_m[-1]))
-        return intpl2(rrup)
-    # In the case of SA the array is of dimension [nmags, ndists, nperiods]
-    # Get values for given magnitude
-    if mag <= model["M"][0]:
-        sigma_mu_m = model["SA"][0, :, :]
-    elif mag >= model["M"][-1]:
-        sigma_mu_m = model["SA"][-1, :, :]
-    else:
-        intpl1 = interp1d(model["M"], model["SA"], axis=0)
-        sigma_mu_m = intpl1(mag)
-    # Get values for period - N.B. ln T, linear sigma mu interpolation
-    if imt.period <= model["periods"][0]:
-        sigma_mu_t = sigma_mu_m[:, 0]
-    elif imt.period >= model["periods"][-1]:
-        sigma_mu_t = sigma_mu_m[:, -1]
-    else:
-        intpl2 = interp1d(np.log(model["periods"]), sigma_mu_m, axis=1)
-        sigma_mu_t = intpl2(np.log(imt.period))
-    intpl3 = interp1d(model["R"], sigma_mu_t, bounds_error=False,
-                      fill_value=(sigma_mu_t[0], sigma_mu_t[-1]))
-    return intpl3(rrup)
-
 
 class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
     """
