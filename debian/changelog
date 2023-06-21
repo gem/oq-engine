@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * GMFs too small to produce losses now give a warning rather than an error
   * Fixed bug in `get_ry0_distance` breaking conditioned GMFs
   * Made sure lon and lat are rounded to 5 digits in the site collection
 
