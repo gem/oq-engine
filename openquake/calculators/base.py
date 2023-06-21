@@ -1267,14 +1267,15 @@ def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
         dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
 
 
-def save_shakemap(calc, sitecol, shakemap, gmf_dict):
+def store_shakemap(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
     with calc.monitor('building/saving GMFs'):
-        imts, gmfs = to_gmfs(shakemap, gmf_dict, oq.site_effects,
+        vs30 = sitecol.vs30 if oq.site_effects else shakemap['vs30']
+        imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
@@ -1350,7 +1351,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    save_shakemap(calc, sitecol, shakemap, gmf_dict)
+    store_shakemap(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
 
 

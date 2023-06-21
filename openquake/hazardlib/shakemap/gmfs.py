@@ -244,13 +244,13 @@ def calculate_gmfs_mmi(kind, shakemap, imts, Z, mu):
     return (Z.T * sig).T + mu
 
 
-def to_gmfs(shakemap, gmf_dict, site_effects, truncation_level,
+def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
             num_gmfs, seed, imts=None):
     """
     :param shakemap: site coordinates with shakemap values
-    :param gmf_dict: dictionary with info about the gmf calculation method
+    :param gmf_dict: a dictionary key -> arrays
+    :param vs30: an array of vs30 values used to amplify or None
     :param truncation_level: truncation level (float)
-    :param site_effects: whether to apply site effects or not
     :param num_gmfs: E, amount of gmfs to generate
     :param seed: seed for generating numbers
     :param imts: list of IMT-strings for which gmfs are generated
@@ -282,8 +282,9 @@ def to_gmfs(shakemap, gmf_dict, site_effects, truncation_level,
     gmfs = calculate_gmfs(gmf_dict.pop('kind'), **gmf_dict)
 
     # apply site effects
-    if site_effects:
-        gmfs = amplify_gmfs(imts, shakemap['vs30'], gmfs)
+    if vs30 is not None:
+        assert len(vs30) == len(shakemap), (len(vs30), len(shakemap))
+        gmfs = amplify_gmfs(imts, vs30, gmfs)
     if gmfs.max() > MAX_GMV:
         logging.warning('There are suspiciously large GMVs of %.2fg',
                         gmfs.max())

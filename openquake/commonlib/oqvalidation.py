@@ -713,7 +713,8 @@ shift_hypo:
   Default: false
 
 site_effects:
-  Flag used in ShakeMap calculations to turn out GMF amplification
+  Flag used in ShakeMap calculations to turn on GMF amplification based
+  on the vs30 values in the site collection.
   Example: *site_effects = true*.
   Default: False
 
