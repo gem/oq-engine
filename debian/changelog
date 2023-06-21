@@ -5,6 +5,8 @@
   * Fixed bug in get_profiles_from_simple_fault_data affecting KiteSurfaces
 
   [Michele Simionato]
+  * Removed sorting of the sections in the multiFaultSource reader to keep
+    the rup_idxs consistent with the order in the files
   * GMFs too small to produce losses now give a warning rather than an error
   * Fixed bug in `get_ry0_distance` breaking conditioned GMFs
   * Fixed the rupture exporter in presence of GMPETables
