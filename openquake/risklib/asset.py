@@ -146,6 +146,7 @@ class CostCalculator(object):
                 unit = 'people'
             elif lt == 'area':
                 # tested in event_based_risk/case_8
+                # NB: the Global Risk Model use SQM always, hence the default
                 unit = self.units.get(lt, 'SQM')
             else:
                 unit = self.units[lt]
