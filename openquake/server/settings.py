@@ -174,7 +174,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 1
 # confusion between different installations when the WebUI is used
 SERVER_NAME = socket.gethostname()
 
-APPLICATION_MODES = ['PUBLIC', 'RESTRICTED', 'AELO']
+APPLICATION_MODES = ['PUBLIC', 'RESTRICTED', 'AELO', 'READ_ONLY']
 
 # case insensitive
 APPLICATION_MODE = 'public'
