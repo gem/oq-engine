@@ -1225,14 +1225,14 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
-    n = 0 if data is None else len(data['sid'])
-    items = [('sid', U32 if n == 0 else data['sid']),
-             ('eid', U32 if n == 0 else data['eid'])]
+    N = 0 if data is None else data['sid'].max() + 1
+    items = [('sid', U32 if N == 0 else data['sid']),
+             ('eid', U32 if N == 0 else data['eid'])]
     for m in range(M):
         col = f'gmv_{m}'
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
-        items.append((str(imt), F32 if n == 0 else data[imt]))
+        items.append((str(imt), F32 if N == 0 else data[imt]))
     if oq.investigation_time:
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
@@ -1242,9 +1242,9 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
                      imts=' '.join(map(str, prim_imts)),
                      effective_time=eff_time)
     if data is not None:
-        df = pandas.DataFrame(dict(items))
-        avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
-        for sid, df in df.groupby(df.sid):
+        _df = pandas.DataFrame(dict(items))
+        avg_gmf = numpy.zeros((2, N, M + len(sec_imts)), F32)
+        for sid, df in _df.groupby(_df.sid):
             df.pop('eid')
             df.pop('sid')
             avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
