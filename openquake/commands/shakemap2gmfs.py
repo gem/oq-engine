@@ -35,6 +35,7 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                  truncation_level=str(trunclevel),
                  calculation_mode='scenario',
                  random_seed=str(random_seed),
+                 site_effects=site_effects,
                  inputs={'job_ini': '<memory>',
                          'site_model': [os.path.abspath(site_model)]})
     with logs.init("job", param) as log:
@@ -56,6 +57,8 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                       'crosscorr': crosscorr,
                       'cholesky_limit': cholesky_limit}
             store_shakemap(calc, sitecol, shakemap, gmfdic)
+    gmv_0 = calc.datastore.read_df('gmf_data').gmv_0.max()
+    print(f'Maximum {gmv_0=}')
     print('See the output with silx view %s' % calc.datastore.filename)
 
 

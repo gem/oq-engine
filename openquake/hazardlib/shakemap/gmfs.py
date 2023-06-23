@@ -284,6 +284,7 @@ def to_gmfs(shakemap, gmf_dict, vs30, truncation_level,
     # apply site effects
     if vs30 is not None:
         assert len(vs30) == len(shakemap), (len(vs30), len(shakemap))
+        logging.info('Amplifying GMFs')
         gmfs = amplify_gmfs(imts, vs30, gmfs)
     if gmfs.max() > MAX_GMV:
         logging.warning('There are suspiciously large GMVs of %.2fg',
