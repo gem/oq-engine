@@ -15,10 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import io
 import os
 import re
 import sys
 import unittest.mock as mock
+from contextlib import redirect_stdout
 import shutil
 import zipfile
 import tempfile
@@ -28,7 +31,7 @@ import numpy
 from pathlib import Path
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import gettemp, chdir
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
 from openquake.hazardlib import tests
@@ -46,6 +49,7 @@ from openquake.qa_tests_data.scenario import case_4
 from openquake.qa_tests_data.event_based import case_5, case_16, case_21
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
+from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server.tests import data as test_data
@@ -558,6 +562,20 @@ Source Loss Table'''.splitlines())
         dic['calculation_mode'] = 'event_based_damage'
         run_jobs(create_jobs([dic], 'error', hc_id=job.id))
         shutil.rmtree(tempdir)
+
+    def test_shakemap2gmfs(self):
+        # test shakemap2gmfs with sitemodel with a filtered sitecol
+        # and three choices of site_effects
+        effects = ['no', 'shakemap', 'sitemodel']
+        expected = [0.2555, 0.31813407, 0.25332582]
+        with chdir(os.path.dirname(case_25.__file__)):
+            for eff, exp in zip(effects, expected):
+                with redirect_stdout(io.StringIO()) as out:
+                    sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
+                                'site_model_uniform_grid_rock.csv -n 1 -t 0 '
+                                f'--spatialcorr no -c no --site-effects={eff}')
+                got = out.getvalue()
+                assert f'gmv_0={exp}' in got
 
 
 class CheckInputTestCase(unittest.TestCase):
