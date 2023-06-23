@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed shakemap calculations to take the risk IMTs and not the hazard IMTs
   * Extended shakemap2gmfs to amplify the GMFs based on user-provided vs30
     values
   * Removed sorting of the sections in the multiFaultSource reader to keep
