@@ -63,10 +63,6 @@ def get_sitecol_shapefile(uridict, required_imts, sitecol=None,
         return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
 
     sitecol = apply_bounding_box(sitecol, bbox)
-
-    logging.info('Associating {:_d} GMVs to {:_d} sites'.format(
-        len(shakemap), len(sitecol)))
-
     return geo.utils.assoc_to_polygons(polygons, shakemap, sitecol, mode)
 
 
@@ -97,10 +93,6 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
         return site.SiteCollection.from_usgs_shakemap(shakemap), shakemap, []
 
     sitecol = apply_bounding_box(sitecol, bbox)
-
-    logging.info('Associating {:_d} GMVs to {:_d} sites'.format(
-        len(shakemap), len(sitecol)))
-
     return geo.utils.assoc(shakemap, sitecol, assoc_dist, mode)
 
 
