@@ -1385,7 +1385,7 @@ class OqParam(valid.ParamSet):
 
         Set the attribute risk_imtls.
         """
-        imtls = AccumDict(accum=[])  # imt -> imls
+        risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
             if not hasattr(rf, 'imt') or rf.kind.endswith('_retrofitted'):
                 # for consequence or retrofitted
@@ -1396,10 +1396,9 @@ class OqParam(valid.ParamSet):
                               self.steps_per_interval)
                 risklist[i] = rf
             from_string(rf.imt)  # make sure it is a valid IMT
-            imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
+            risk_imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
         suggested = ['\nintensity_measure_types_and_levels = {']
-        risk_imtls = self.risk_imtls.copy()
-        for imt, imls in imtls.items():
+        for imt, imls in risk_imtls.items():
             risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))

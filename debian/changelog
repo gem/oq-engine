@@ -1,10 +1,11 @@
-  [Graeme Wheaterill]
+  [Graeme Weatherill]
   * Fixes to bchydro_2016_epistemic, eshm20_craton and lanzano_2019
 
   [Marco Pagani]
   * Fixed bug in get_profiles_from_simple_fault_data affecting KiteSurfaces
 
   [Michele Simionato]
+  * Fixed shakemap calculations to take the risk IMTs and not the hazard IMTs
   * Removed sorting of the sections in the multiFaultSource reader to keep
     the rup_idxs consistent with the order in the files
   * GMFs too small to produce losses now give a warning rather than an error
