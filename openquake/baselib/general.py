@@ -38,6 +38,7 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
 import pandas
@@ -1560,6 +1561,20 @@ def sqrscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.sqrt(x_max - x_min) / (n - 1)
     return x_min + (delta * numpy.arange(n))**2
+
+
+# NB: there is something like this in contextlib in Python 3.11
+@contextmanager
+def chdir(path):
+    """
+    Context manager to temporarily change the CWD
+    """
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
