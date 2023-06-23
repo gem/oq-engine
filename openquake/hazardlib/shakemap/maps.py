@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import numpy
 
 from openquake.baselib.general import CallableDict
@@ -83,7 +82,6 @@ def get_sitecol_usgs(uridict, required_imts, sitecol=None,
 
     bbox = (shakemap['lon'].min(), shakemap['lat'].min(),
             shakemap['lon'].max(), shakemap['lat'].max())
-
     check_required_imts(required_imts, available_imts)
 
     # build a copy of the ShakeMap with only the relevant IMTs
