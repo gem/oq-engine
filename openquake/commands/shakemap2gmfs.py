@@ -45,6 +45,7 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
         if not os.path.exists(fname):
             numpy.save(fname, shakemap)
             logging.info('Saved %s', fname)
+        logging.info('Got %s', sitecol)
         if len(disc):
             logging.warning('%d sites discarded', len(disc))
         calc.datastore['sitecol'] = sitecol
