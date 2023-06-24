@@ -156,8 +156,8 @@ class ConditionedGmfComputer(GmfComputer):
     :param rupture:
         Rupture to calculate ground motion fields radiated from.
 
-    :param :class:`openquake.hazardlib.site.SiteCollection` sitecol:
-        a complete SiteCollection
+    :param :class:`openquake.hazardlib.site.SiteCollection` target_sitecol:
+        the hazard sites excluding the stations
 
     :param cmaker:
         a :class:`openquake.hazardlib.gsim.base.ContextMaker` instance
@@ -215,7 +215,6 @@ class ConditionedGmfComputer(GmfComputer):
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        sids = self.sitecol.sids
         eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
@@ -227,15 +226,18 @@ class ConditionedGmfComputer(GmfComputer):
             if num_events == 0:  # it may happen
                 continue
             # NB: mean_covs is a list of 4 dicts keyed by IMT
-            mean_covs = get_conditioned_mean_and_covariance(
+            mean_covs, sids = get_conditioned_mean_and_covariance(
                 self.rupture, gsim, self.station_sitecol, self.station_data,
                 self.observed_imt_strs, self.sitecol, self.imts,
                 self.spatial_correl,
                 self.cross_correl_between, self.cross_correl_within,
                 self.cmaker.maximum_distance)
+            # mean['PGA'] has shape (N, 1) where N is the number of sites
+            # excluding the stations
 
             array, sig, eps = self.compute(gsim, num_events, mean_covs, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
+            assert len(sids) == N, (len(sids), N)
 
             # manage max_iml
             if max_iml is not None:
@@ -580,7 +582,7 @@ def get_conditioned_mean_and_covariance(
         meancovs[2][imt] = tau
         meancovs[3][imt] = phi
 
-    return meancovs
+    return meancovs, sitecol_filtered.sids
 
 """
 In scenario/case_21 one has
