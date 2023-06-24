@@ -30,6 +30,8 @@ from openquake.hazardlib.calc.conditioned_gmfs import \
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
+aac = numpy.testing.assert_allclose
+
 
 class SetUSGSTestCase(unittest.TestCase):
     def test_case_01(self):
@@ -52,10 +54,11 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        numpy.testing.assert_allclose(numpy.zeros_like(mu), mu)
+        aac(numpy.zeros_like(mu), mu)
         numpy.testing.assert_almost_equal(numpy.min(sig), 0)
         assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
         
     def test_case_02(self):
         case_name = "test_case_02"
@@ -77,12 +80,13 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        numpy.testing.assert_allclose(numpy.min(mu), -1, rtol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(mu), 1, rtol=1e-4)
-        numpy.testing.assert_allclose(numpy.min(numpy.abs(mu)), 0, atol=1e-4)
-        numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.min(mu), -1, rtol=1e-4)
+        aac(numpy.max(mu), 1, rtol=1e-4)
+        aac(numpy.min(numpy.abs(mu)), 0, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=1e-4)
         assert numpy.max(sig) > 0.8 and numpy.max(sig) < 1.0
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
     def test_case_03(self):
         case_name = "test_case_03"
@@ -104,11 +108,12 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        numpy.testing.assert_allclose(numpy.min(mu), 0.36, rtol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(mu), 1, rtol=1e-4)
-        numpy.testing.assert_allclose(numpy.min(sig), 0, rtol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        aac(numpy.min(mu), 0.36, rtol=1e-4)
+        aac(numpy.max(mu), 1, rtol=1e-4)
+        aac(numpy.min(sig), 0, rtol=1e-4)
+        aac(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
     def test_case_04(self):
         case_name = "test_case_04"
@@ -130,11 +135,12 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        numpy.testing.assert_allclose(numpy.min(mu), 0.36, rtol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(mu), 1)
-        numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        aac(numpy.min(mu), 0.36, rtol=1e-4)
+        aac(numpy.max(mu), 1)
+        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
     def test_case_04b(self):
         case_name = "test_case_04b"
@@ -156,11 +162,12 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        numpy.testing.assert_allclose(numpy.min(mu), 0.52970, rtol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(mu), 1)
-        numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(sig), 0.89955, rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        aac(numpy.min(mu), 0.52970, rtol=1e-4)
+        aac(numpy.max(mu), 1)
+        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.max(sig), 0.89955, rtol=1e-4)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
     def test_case_05(self):
         case_name = "test_case_05"
@@ -182,10 +189,11 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        numpy.testing.assert_allclose(numpy.zeros_like(mu), mu, atol=1e-4)
-        numpy.testing.assert_allclose(numpy.min(sig), 0, atol=1e-4)
-        numpy.testing.assert_allclose(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        aac(numpy.zeros_like(mu), mu, atol=1e-4)
+        aac(numpy.min(sig), 0, atol=1e-4)
+        aac(numpy.max(sig), numpy.sqrt(0.8704), rtol=1e-4)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
     def test_case_06(self):
         case_name = "test_case_06"
@@ -207,7 +215,8 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
     def test_case_07(self):
         case_name = "test_case_07"
@@ -230,7 +239,7 @@ class SetUSGSTestCase(unittest.TestCase):
         mu = [mu[0][0] for mu in mean_covs[0].values()]
         sig = numpy.sqrt([var[0][0] for var in mean_covs[1].values()])
         periods = [imt.period for imt in target_imts]
-        # plot_test_results_spectra(periods, mu, sig, case_name)
+        plot_test_results_spectra(periods, mu, sig, case_name)
 
     def test_case_08(self):
         case_name = "test_case_08"
@@ -260,13 +269,14 @@ class SetUSGSTestCase(unittest.TestCase):
                 maximum_distance)
             mu = mean_covs[0][target_imts[0].string].flatten()
             sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-            numpy.testing.assert_allclose(numpy.min(mu), bias_mean[i], rtol=1e-4)
-            numpy.testing.assert_allclose(numpy.max(mu), conditioned_mean_obs[i], rtol=1e-4)
-            numpy.testing.assert_allclose(numpy.min(sig), conditioned_std_obs[i], rtol=1e-4)
-            numpy.testing.assert_allclose(numpy.max(sig), conditioned_std_far[i], rtol=1e-4)
+            aac(numpy.min(mu), bias_mean[i], rtol=1e-4)
+            aac(numpy.max(mu), conditioned_mean_obs[i], rtol=1e-4)
+            aac(numpy.min(sig), conditioned_std_obs[i], rtol=1e-4)
+            aac(numpy.max(sig), conditioned_std_far[i], rtol=1e-4)
             mus.append(mu)
             sigs.append(sig)
-        # plot_test_results_multi(target_sitecol.lons, mus, sigs, std_addon_d, target_imts[0].string, case_name)
+        plot_test_results_multi(target_sitecol.lons, mus, sigs, std_addon_d,
+                                target_imts[0].string, case_name)
 
     def test_case_09(self):
         case_name = "test_case_09"
@@ -288,7 +298,8 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
     def test_case_10(self):
         case_name = "test_case_10"
@@ -310,7 +321,8 @@ class SetUSGSTestCase(unittest.TestCase):
             maximum_distance)
         mu = mean_covs[0][target_imts[0].string].flatten()
         sig = numpy.sqrt(numpy.diag(mean_covs[1][target_imts[0].string]))
-        # plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string, case_name)
+        plot_test_results(target_sitecol.lons, mu, sig, target_imts[0].string,
+                          case_name)
 
 
 # Functions useful for debugging purposes. Recreates the plots on
@@ -321,6 +333,7 @@ class SetUSGSTestCase(unittest.TestCase):
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_spectra.py
 # https://github.com/usgs/shakemap/blob/main/shakemap/coremods/xtestplot_multi.py
 def plot_test_results(lons, means, stds, target_imt, case_name):
+    return  # remove the return to enable debug plotting
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
@@ -341,7 +354,9 @@ def plot_test_results(lons, means, stds, target_imt, case_name):
     ax[1].set_ylim(bottom=0)
     plt.show()
 
+
 def plot_test_results_spectra(periods, means, stds, case_name):
+    return  # remove the return to show the plot
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
     plt.subplots_adjust(hspace=0.1)
@@ -352,8 +367,8 @@ def plot_test_results_spectra(periods, means, stds, case_name):
     ax[0].semilogx(periods, means - stds, "--b")
     ax[1].semilogx(periods, stds, "-.r", label="stddev")
     plt.xlabel("Period (s)")
-    ax[0].set_ylabel(f"Mean ln(SA) (g)")
-    ax[1].set_ylabel(f"Stddev ln(SA) (g)")
+    ax[0].set_ylabel("Mean ln(SA) (g)")
+    ax[1].set_ylabel("Stddev ln(SA) (g)")
     ax[0].legend(loc="best")
     ax[1].legend(loc="best")
     ax[0].set_title(case_name)
@@ -362,7 +377,10 @@ def plot_test_results_spectra(periods, means, stds, case_name):
     ax[1].set_ylim(bottom=0)
     plt.show()
 
-def plot_test_results_multi(lons, means_list, stds_list, std_addon, target_imt, case_name):
+
+def plot_test_results_multi(lons, means_list, stds_list, std_addon, target_imt,
+                            case_name):
+    return  # remove the return to show the plot
     import matplotlib.pyplot as plt
     colors = ["k", "b", "g", "r", "c", "m"]
     fig, ax = plt.subplots(2, sharex=True, figsize=(10, 8))
@@ -370,8 +388,10 @@ def plot_test_results_multi(lons, means_list, stds_list, std_addon, target_imt, 
     for i in range(len(means_list)):
         means = means_list[i]
         stds = stds_list[i]
-        ax[0].plot(lons, means, color=colors[i], label=r"$\sigma_\epsilon = %.2f$" % std_addon[i])
-        ax[1].plot(lons, stds, "-.", color=colors[i], label=r"$\sigma_\epsilon = %.2f$" % std_addon[i])
+        ax[0].plot(lons, means, color=colors[i],
+                   label=r"$\sigma_\epsilon = %.2f$" % std_addon[i])
+        ax[1].plot(lons, stds, "-.", color=colors[i],
+                   label=r"$\sigma_\epsilon = %.2f$" % std_addon[i])
     plt.xlabel("Longitude")
     ax[0].set_ylabel(f"Mean ln({target_imt}) (g)")
     ax[1].set_ylabel(f"Stddev ln({target_imt}) (g)")
