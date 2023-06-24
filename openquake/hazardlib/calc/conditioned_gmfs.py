@@ -151,7 +151,7 @@ class ConditionedGmfComputer(GmfComputer):
     between-event terms have been conditioned upon the observations.
 
     NB: using truncation_level = 0 totally disables the random part
-    and the generated GMF become deterministic.
+    and the generated GMFs become deterministic (equal for all events).
 
     :param rupture:
         Rupture to calculate ground motion fields radiated from.
