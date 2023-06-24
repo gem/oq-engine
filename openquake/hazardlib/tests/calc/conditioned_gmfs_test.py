@@ -47,7 +47,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -73,7 +73,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -101,7 +101,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -128,7 +128,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -155,7 +155,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -182,7 +182,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -208,7 +208,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -231,7 +231,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -262,7 +262,7 @@ class SetUSGSTestCase(unittest.TestCase):
         mus = []
         sigs = []
         for i, station_data in enumerate(station_data_list):
-            mean_covs = get_conditioned_mean_and_covariance(
+            mean_covs, sids = get_conditioned_mean_and_covariance(
                 rupture, gmm, station_sitecol, station_data,
                 observed_imt_strs, target_sitecol, target_imts,
                 spatial_correl, cross_correl_between, cross_correl_within,
@@ -291,7 +291,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -314,7 +314,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs = get_conditioned_mean_and_covariance(
+        mean_covs, sids = get_conditioned_mean_and_covariance(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
