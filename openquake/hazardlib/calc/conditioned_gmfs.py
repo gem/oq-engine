@@ -226,9 +226,7 @@ class ConditionedGmfComputer(GmfComputer):
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
             if num_events == 0:  # it may happen
                 continue
-            # NB: the trick for performance is to keep the call to
-            # .compute outside of the loop over the realizations;
-            # it is better to have few calls producing big arrays
+            # NB: mean_covs is a list of 4 dicts keyed by IMT
             mean_covs = get_conditioned_mean_and_covariance(
                 self.rupture, gsim, self.station_sitecol, self.station_data,
                 self.observed_imt_strs, self.sitecol, self.imts,
