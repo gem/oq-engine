@@ -503,7 +503,7 @@ def compute_spatial_cross_covariance_matrix(
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_conditioned_mean_and_covariance(
         rupture, gsim, station_sitecol, station_data,
-        observed_imt_strs, sitecol, target_imts,
+        observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
 
@@ -534,7 +534,7 @@ def get_conditioned_mean_and_covariance(
             maximum_distance=maximum_distance))
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
-    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], sitecol)
+    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
 
     gsim_idx = 0  # there is a single gsim
     mean_stds = cmaker_D.get_mean_stds([ctx_D])[:, gsim_idx]
@@ -542,12 +542,11 @@ def get_conditioned_mean_and_covariance(
     # M is the number of IMTs, N the number of sites/distances
 
     # filter sites
-    sitecol_filtered = sitecol.filter(
-        numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
+    sitecol_filtered = target_sitecol.filter(
+        numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
     mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
     station_sitecol_filtered = station_sitecol.filter(mask)
-    sids, = numpy.where(mask)
-    station_data_filtered = station_data.iloc[sids].copy()
+    station_data_filtered = station_data[mask].copy()
     for i, o_imt in enumerate(observed_imts):
         im = o_imt.string
         station_data_filtered[im + "_median"] = mean_stds[0, i]
@@ -586,7 +585,7 @@ def get_conditioned_mean_and_covariance(
 
 def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
                    target_imts, observed_imts, station_data,
-                   sitecol, station_sitecol, compute_cov, t):
+                   target_sitecol, station_sitecol, compute_cov, t):
 
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
@@ -627,11 +626,11 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
 
     # Compute the mean of the conditional between-event residual B|YD=yD
     # for the target sites
-    cov_WY_WD = compute_cov(sitecol, station_sitecol,
+    cov_WY_WD = compute_cov(target_sitecol, station_sitecol,
                             [target_imt], t.conditioning_imts, Y, t.D)
-    cov_WD_WY = compute_cov(station_sitecol, sitecol,
+    cov_WD_WY = compute_cov(station_sitecol, target_sitecol,
                             t.conditioning_imts, [target_imt], t.D, Y)
-    cov_WY_WY = compute_cov(sitecol, sitecol,
+    cov_WY_WY = compute_cov(target_sitecol, target_sitecol,
                             [target_imt], [target_imt], Y, Y)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
@@ -651,7 +650,7 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     if t.native_data_available:
         C = tau_Y - RC @ t.T_D
     else:
-        zeros = numpy.zeros((len(sitecol), len(t.conditioning_imts)))
+        zeros = numpy.zeros((len(target_sitecol), len(t.conditioning_imts)))
         C = numpy.block([tau_Y, zeros]) - RC @ t.T_D
 
     # Compute the conditioned between-event covariance matrix

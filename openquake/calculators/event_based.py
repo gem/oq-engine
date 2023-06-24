@@ -75,6 +75,30 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
+def get_computer(cmaker, oqparam, proxy, sids, sitecol,
+                 station_sitecol, station_data):
+    trt = cmaker.trt
+    ebr = proxy.to_ebr(trt)
+    if station_sitecol:
+        stnfilter = SourceFilter(station_sitecol, oqparam.maximum_distance(trt))
+        stsids = stnfilter.close_sids(proxy, trt)
+        if len(stsids):
+            # if there are stations close, use them 
+            return ConditionedGmfComputer(
+                ebr, sitecol.filtered(sids), 
+                stnfilter.sitecol.filtered(stsids), 
+                station_data.loc[stsids], oqparam.observed_imts,
+                cmaker, oqparam.correl_model, oqparam.cross_correl,
+                oqparam.ground_motion_correlation_params,
+                oqparam.number_of_ground_motion_fields,
+                oqparam._amplifier, oqparam._sec_perils)
+
+    return GmfComputer(
+        ebr, sitecol.filtered(sids), cmaker,
+        oqparam.correl_model, oqparam.cross_correl,
+        oqparam._amplifier, oqparam._sec_perils)
+
+            
 def event_based(proxies, full_lt, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
@@ -93,12 +117,17 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
         trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
         extra = sitecol.array.dtype.names
-        srcfilter = SourceFilter(
-            sitecol, oqparam.maximum_distance(trt))
+        srcfilter = SourceFilter(sitecol, oqparam.maximum_distance(trt))
         rupgeoms = dstore['rupgeoms']
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
+        if "station_data" in oqparam.inputs:
+            station_data = dstore.read_df('station_data')
+            station_sitecol = sitecol.filtered(station_data.site_id)
+        else:
+            station_data = None
+            station_sitecol = None
         for proxy in proxies:
             t0 = time.time()
             with fmon:
@@ -108,43 +137,17 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                 if len(sids) == 0:  # filtered away
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
-                ebr = proxy.to_ebr(cmaker.trt)  # after the geometry is set
-                if "station_data" in oqparam.inputs:
-                    station_data = dstore.read_df('station_data')
-                    station_sitecol = sitecol.filtered(station_data.site_id)
-                    stnfilter = SourceFilter(
-                        station_sitecol, oqparam.maximum_distance(trt))
-                    stsids = stnfilter.close_sids(proxy, trt)
-                    if len(stsids) < len(station_sitecol):
-                        logging.warning('%d stations filtered away',
-                                        len(station_sitecol) - len(stsids))
-                    if len(stsids) == 0:  # all stations filtered away
-                        continue
-                    try:
-                        computer = ConditionedGmfComputer(
-                            ebr, srcfilter.sitecol.filtered(sids), 
-                            stnfilter.sitecol.filtered(stsids), 
-                            station_data.loc[stsids], oqparam.observed_imts,
-                            cmaker, oqparam.correl_model, oqparam.cross_correl,
-                            oqparam.ground_motion_correlation_params,
-                            oqparam.number_of_ground_motion_fields,
-                            oqparam._amplifier, oqparam._sec_perils)
-                    except FarAwayRupture:
-                        # skip this rupture
-                        continue
-                else:
-                    try:
-                        computer = GmfComputer(
-                            ebr, srcfilter.sitecol.filtered(sids), cmaker,
-                            oqparam.correl_model, oqparam.cross_correl,
-                            oqparam._amplifier, oqparam._sec_perils)
-                    except FarAwayRupture:
-                        # skip this rupture
-                        continue
+                try:
+                    computer = get_computer(
+                        cmaker, oqparam, proxy, sids, sitecol,
+                        station_sitecol, station_data)
+                except FarAwayRupture:
+                    # skip this rupture
+                    continue
             with cmon:
                 df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
-            times.append((ebr.id, len(computer.ctx.sids),
+            times.append((proxy['id'], len(computer.ctx.sids),
                           computer.ctx.rrup.min(), dt))
             for key in df.columns:
                 alldata[key].extend(df[key])
