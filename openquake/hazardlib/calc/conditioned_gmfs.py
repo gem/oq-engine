@@ -148,7 +148,10 @@ class ConditionedGmfComputer(GmfComputer):
     recording station data, the conditioned ground motion field computer
     computes ground shaking over a set of sites, by randomly sampling a
     ground shaking intensity model whose mean and within-event and
-    between-event terms have been conditioned upon the observations
+    between-event terms have been conditioned upon the observations.
+
+    NB: using truncation_level = 0 totally disables the random part
+    and the generated GMFs become deterministic (equal for all events).
 
     :param rupture:
         Rupture to calculate ground motion fields radiated from.
@@ -223,9 +226,7 @@ class ConditionedGmfComputer(GmfComputer):
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
             if num_events == 0:  # it may happen
                 continue
-            # NB: the trick for performance is to keep the call to
-            # .compute outside of the loop over the realizations;
-            # it is better to have few calls producing big arrays
+            # NB: mean_covs is a list of 4 dicts keyed by IMT
             mean_covs = get_conditioned_mean_and_covariance(
                 self.rupture, gsim, self.station_sitecol, self.station_data,
                 self.observed_imt_strs, self.sitecol, self.imts,
@@ -294,7 +295,6 @@ class ConditionedGmfComputer(GmfComputer):
         result = numpy.zeros((M, num_sids, num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
-        numpy.random.seed(self.seed)
 
         for m, im in enumerate(self.imts):
             mu_Y_yD = mean_covs[0][im.string]
@@ -503,7 +503,7 @@ def compute_spatial_cross_covariance_matrix(
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_conditioned_mean_and_covariance(
         rupture, gsim, station_sitecol, station_data,
-        observed_imt_strs, sitecol, target_imts,
+        observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
 
@@ -534,7 +534,7 @@ def get_conditioned_mean_and_covariance(
             maximum_distance=maximum_distance))
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
-    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], sitecol)
+    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
 
     gsim_idx = 0  # there is a single gsim
     mean_stds = cmaker_D.get_mean_stds([ctx_D])[:, gsim_idx]
@@ -542,12 +542,11 @@ def get_conditioned_mean_and_covariance(
     # M is the number of IMTs, N the number of sites/distances
 
     # filter sites
-    sitecol_filtered = sitecol.filter(
-        numpy.isin(sitecol.sids, numpy.unique(ctx_Y.sids)))
+    sitecol_filtered = target_sitecol.filter(
+        numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
     mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
     station_sitecol_filtered = station_sitecol.filter(mask)
-    sids, = numpy.where(mask)
-    station_data_filtered = station_data.iloc[sids].copy()
+    station_data_filtered = station_data[mask].copy()
     for i, o_imt in enumerate(observed_imts):
         im = o_imt.string
         station_data_filtered[im + "_median"] = mean_stds[0, i]
@@ -583,10 +582,17 @@ def get_conditioned_mean_and_covariance(
 
     return meancovs
 
-
+"""
+In scenario/case_21 one has
+target_imt = PGA = target_imts = observed_imts
+ctx_Y with 571 elements, like target_sitecol
+station_data has 140 elements like station_sitecol
+18 sites are discarded
+the total sitecol has 571 + 140 + 18 = 729 sites
+"""
 def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
                    target_imts, observed_imts, station_data,
-                   sitecol, station_sitecol, compute_cov, t):
+                   target_sitecol, station_sitecol, compute_cov, t):
 
     # Using Bayes rule, compute the posterior distribution of the
     # normalized between-event residual H|YD=yD, employing
@@ -626,24 +632,25 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     Y = numpy.diag(mean_stds[3, 0].flatten())
 
     # Compute the mean of the conditional between-event residual B|YD=yD
-    # for the target sites
-    cov_WY_WD = compute_cov(sitecol, station_sitecol,
+    # for the target sites; the shapes are (nsites, nstations),
+    # (nstations, nsites), (nsites, nsites) respectively
+    cov_WY_WD = compute_cov(target_sitecol, station_sitecol,
                             [target_imt], t.conditioning_imts, Y, t.D)
-    cov_WD_WY = compute_cov(station_sitecol, sitecol,
+    cov_WD_WY = compute_cov(station_sitecol, target_sitecol,
                             t.conditioning_imts, [target_imt], t.D, Y)
-    cov_WY_WY = compute_cov(sitecol, sitecol,
+    cov_WY_WY = compute_cov(target_sitecol, target_sitecol,
                             [target_imt], [target_imt], Y, Y)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
-    RC = cov_WY_WD @ t.cov_WD_WD_inv
+    RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
 
-    # compute the mean
+    # compute the mean, shape (nsites, 1)
     mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zD - mu_BD_yD)
 
     # covariance matrices can contain extremely small negative values
 
     # Compute the conditioned within-event covariance matrix
-    # for the target sites clipped to zero
+    # for the target sites clipped to zero, shape (nsites, nsites)
     tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
 
     # Compute the scaling matrix "C" for the conditioned between-event
@@ -651,12 +658,13 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     if t.native_data_available:
         C = tau_Y - RC @ t.T_D
     else:
-        zeros = numpy.zeros((len(sitecol), len(t.conditioning_imts)))
+        zeros = numpy.zeros((len(target_sitecol), len(t.conditioning_imts)))
         C = numpy.block([tau_Y, zeros]) - RC @ t.T_D
 
     # Compute the conditioned between-event covariance matrix
-    # for the target sites clipped to zero
+    # for the target sites clipped to zero, shape (nsites, nsites)
     phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
+
     return mu, tau, phi
 
 
