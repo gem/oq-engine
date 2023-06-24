@@ -582,7 +582,14 @@ def get_conditioned_mean_and_covariance(
 
     return meancovs
 
-
+"""
+In scenario/case_21 one has
+target_imt = PGA = target_imts = observed_imts
+ctx_Y with 571 elements, like target_sitecol
+station_data has 140 elements like station_sitecol
+18 sites are discarded
+the total sitecol has 571 + 140 + 18 = 729 sites
+"""
 def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
                    target_imts, observed_imts, station_data,
                    target_sitecol, station_sitecol, compute_cov, t):
@@ -625,7 +632,8 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     Y = numpy.diag(mean_stds[3, 0].flatten())
 
     # Compute the mean of the conditional between-event residual B|YD=yD
-    # for the target sites
+    # for the target sites; the shapes are (nsites, nstations),
+    # (nstations, nsites), (nsites, nsites) respectively
     cov_WY_WD = compute_cov(target_sitecol, station_sitecol,
                             [target_imt], t.conditioning_imts, Y, t.D)
     cov_WD_WY = compute_cov(station_sitecol, target_sitecol,
@@ -634,15 +642,15 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
                             [target_imt], [target_imt], Y, Y)
 
     # Compute the regression coefficient matrix [cov_WY_WD × cov_WD_WD_inv]
-    RC = cov_WY_WD @ t.cov_WD_WD_inv
+    RC = cov_WY_WD @ t.cov_WD_WD_inv  # shape (nsites, nstations)
 
-    # compute the mean
+    # compute the mean, shape (nsites, 1)
     mu = mu_Y + tau_Y @ mu_HD_yD[0, None] + RC @ (t.zD - mu_BD_yD)
 
     # covariance matrices can contain extremely small negative values
 
     # Compute the conditioned within-event covariance matrix
-    # for the target sites clipped to zero
+    # for the target sites clipped to zero, shape (nsites, nsites)
     tau = (cov_WY_WY - RC @ cov_WD_WY).clip(min=0)
 
     # Compute the scaling matrix "C" for the conditioned between-event
@@ -654,8 +662,9 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
         C = numpy.block([tau_Y, zeros]) - RC @ t.T_D
 
     # Compute the conditioned between-event covariance matrix
-    # for the target sites clipped to zero
+    # for the target sites clipped to zero, shape (nsites, nsites)
     phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
+
     return mu, tau, phi
 
 
