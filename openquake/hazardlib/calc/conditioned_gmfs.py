@@ -148,7 +148,10 @@ class ConditionedGmfComputer(GmfComputer):
     recording station data, the conditioned ground motion field computer
     computes ground shaking over a set of sites, by randomly sampling a
     ground shaking intensity model whose mean and within-event and
-    between-event terms have been conditioned upon the observations
+    between-event terms have been conditioned upon the observations.
+
+    NB: using truncation_level = 0 totally disables the random part
+    and the generated GMF become deterministic.
 
     :param rupture:
         Rupture to calculate ground motion fields radiated from.
@@ -294,7 +297,6 @@ class ConditionedGmfComputer(GmfComputer):
         result = numpy.zeros((M, num_sids, num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
-        numpy.random.seed(self.seed)
 
         for m, im in enumerate(self.imts):
             mu_Y_yD = mean_covs[0][im.string]
