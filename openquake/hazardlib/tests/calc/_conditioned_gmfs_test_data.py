@@ -27,7 +27,8 @@ import pandas
 
 from openquake.hazardlib import const
 from openquake.hazardlib.correlation import BaseCorrelationModel
-from openquake.hazardlib.cross_correlation import CrossCorrelation, CrossCorrelationBetween
+from openquake.hazardlib.cross_correlation import (
+    CrossCorrelation, CrossCorrelationBetween)
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.imt import IMT, PGA, SA
@@ -158,7 +159,8 @@ CASE01_TARGET_SITECOL = SiteCollection(
     [
         Site(location=Point(lon, lat), vs30=VS30)
         for (lon, lat) in list(
-            zip(numpy.round(numpy.linspace(-122.5, -121.5, 241), 5), numpy.repeat(38.0, 241))
+            zip(numpy.round(numpy.linspace(-122.5, -121.5, 241), 5),
+                numpy.repeat(38.0, 241))
         )
     ]
 )
@@ -166,7 +168,8 @@ CASE02_TARGET_SITECOL = SiteCollection(
     [
         Site(location=Point(lon, lat), vs30=VS30)
         for (lon, lat) in list(
-            zip(numpy.round(numpy.linspace(-123, -121, 481), 5), numpy.repeat(38.0, 481))
+            zip(numpy.round(numpy.linspace(-123, -121, 481), 5),
+                numpy.repeat(38.0, 481))
         )
     ]
 )
@@ -205,20 +208,33 @@ CASE08_TARGET_IMTS = [PGA()]
 CASE09_TARGET_IMTS = [PGA()]
 CASE10_TARGET_IMTS = [PGA()]
 
-CASE01_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([0, 0]), "PGA_std": [0, 0]})
-CASE02_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1, -1]), "PGA_std": [0, 0]})
-CASE03_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1]), "PGA_std": [0]})
-CASE04_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1, 1]), "PGA_std": [0, 0]})
-CASE05_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1, -1]), "PGA_std": [0, 0]})
-CASE06_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1] * 40), "PGA_std": [0] * 40})
-CASE07_STATION_DATA = pandas.DataFrame({"SA(1.0)_mean": numpy.exp([1]), "SA(1.0)_std": [0]})
-CASE08A_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1]), "PGA_std": [0]})
-CASE08B_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1]), "PGA_std": [0.75]})
-CASE08C_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1]), "PGA_std": [1.5]})
-CASE08D_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1]), "PGA_std": [3.0]})
-CASE08E_STATION_DATA = pandas.DataFrame({"PGA_mean": numpy.exp([1]), "PGA_std": [6.0]})
-CASE08_STATION_DATA_LIST = [CASE08A_STATION_DATA, CASE08B_STATION_DATA, CASE08C_STATION_DATA,
-                            CASE08D_STATION_DATA, CASE08E_STATION_DATA]
+CASE01_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([0, 0]), "PGA_std": [0, 0]})
+CASE02_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1, -1]), "PGA_std": [0, 0]})
+CASE03_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1]), "PGA_std": [0]})
+CASE04_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1, 1]), "PGA_std": [0, 0]})
+CASE05_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1, -1]), "PGA_std": [0, 0]})
+CASE06_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1] * 40), "PGA_std": [0] * 40})
+CASE07_STATION_DATA = pandas.DataFrame(
+    {"SA(1.0)_mean": numpy.exp([1]), "SA(1.0)_std": [0]})
+CASE08A_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1]), "PGA_std": [0]})
+CASE08B_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1]), "PGA_std": [0.75]})
+CASE08C_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1]), "PGA_std": [1.5]})
+CASE08D_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1]), "PGA_std": [3.0]})
+CASE08E_STATION_DATA = pandas.DataFrame(
+    {"PGA_mean": numpy.exp([1]), "PGA_std": [6.0]})
+CASE08_STATION_DATA_LIST = [
+    CASE08A_STATION_DATA, CASE08B_STATION_DATA, CASE08C_STATION_DATA,
+    CASE08D_STATION_DATA, CASE08E_STATION_DATA]
 CASE09_STATION_DATA = CASE10_STATION_DATA = pandas.DataFrame(
     {"PGA_mean": numpy.exp([1, 1, 0.75, 1, 1]), "PGA_std": [0.2] * 5}
 )
@@ -229,19 +245,31 @@ CASE08_OBS = 1
 CASE08_MU = 0
 CASE08_TAU = 0.6
 CASE08_PHI = 0.8
-CASE08_VAR_HD_YD = 1.0 / (1.0 + CASE08_TAU ** 2 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
-CASE08_MU_HD_YD = CASE08_TAU / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D) * (CASE08_OBS - CASE08_MU) * CASE08_VAR_HD_YD
+CASE08_VAR_HD_YD = 1.0 / (1.0 + CASE08_TAU ** 2 / (
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
+CASE08_MU_HD_YD = CASE08_TAU / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D) * (
+    CASE08_OBS - CASE08_MU) * CASE08_VAR_HD_YD
 CASE08_BD_YD = CASE08_MU_HD_YD * CASE08_TAU
-CASE08_MU_YD_OBS = CASE08_MU + CASE08_BD_YD + CASE08_PHI ** 2 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D) * (CASE08_OBS - CASE08_MU - CASE08_BD_YD)
-CASE08_MU_YD_FAR = CASE08_MU + CASE08_BD_YD + 0 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D) * (CASE08_OBS - CASE08_MU - CASE08_BD_YD)
-CASE08_C_OBS = CASE08_TAU * (1.0 - CASE08_PHI ** 2 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
+CASE08_MU_YD_OBS = CASE08_MU + CASE08_BD_YD + CASE08_PHI ** 2 / (
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D) * (
+        CASE08_OBS - CASE08_MU - CASE08_BD_YD)
+CASE08_MU_YD_FAR = CASE08_MU + CASE08_BD_YD + 0 / (
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D) * (
+        CASE08_OBS - CASE08_MU - CASE08_BD_YD)
+CASE08_C_OBS = CASE08_TAU * (1.0 - CASE08_PHI ** 2 / (
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
 CASE08_C_FAR = CASE08_TAU * (1.0 - 0 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D))
-CASE08_COV_WY_WY_WD_OBS = CASE08_PHI ** 2 * (1.0 - CASE08_PHI ** 2 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D)) 
-CASE08_COV_WY_WY_WD_FAR = CASE08_PHI ** 2 * (1.0 - 0 / (CASE08_PHI ** 2 + CASE08_VAR_ADDON_D)) 
-CASE08_COV_Y_Y_YD_OBS = CASE08_COV_WY_WY_WD_OBS + CASE08_C_OBS ** 2 * CASE08_VAR_HD_YD
-CASE08_COV_Y_Y_YD_FAR = CASE08_COV_WY_WY_WD_FAR + CASE08_C_FAR ** 2 * CASE08_VAR_HD_YD
+CASE08_COV_WY_WY_WD_OBS = CASE08_PHI ** 2 * (1.0 - CASE08_PHI ** 2 / (
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D)) 
+CASE08_COV_WY_WY_WD_FAR = CASE08_PHI ** 2 * (1.0 - 0 / (
+    CASE08_PHI ** 2 + CASE08_VAR_ADDON_D)) 
+CASE08_COV_Y_Y_YD_OBS = (
+    CASE08_COV_WY_WY_WD_OBS + CASE08_C_OBS ** 2 * CASE08_VAR_HD_YD)
+CASE08_COV_Y_Y_YD_FAR = (
+    CASE08_COV_WY_WY_WD_FAR + CASE08_C_FAR ** 2 * CASE08_VAR_HD_YD)
 CASE08_SIG_YD_OBS = numpy.sqrt(CASE08_COV_Y_Y_YD_OBS)
 CASE08_SIG_YD_FAR = numpy.sqrt(CASE08_COV_Y_Y_YD_FAR)
+
 
 class ZeroMeanGMM(GMPE):
     """
@@ -287,18 +315,17 @@ class ZeroMeanGMM(GMPE):
 
     def compute(self, ctx: numpy.recarray, imts, mean, sig, tau, phi):
         """
-        :param ctx: a RuptureContext object or a numpy recarray of size N
+        :param ctx: a numpy recarray of size N
         :param imts: a list of M Intensity Measure Types
         :param mean: an array of shape (M, N) for the means
         :param sig: an array of shape (M, N) for the TOTAL stddevs
         :param tau: an array of shape (M, N) for the INTER_EVENT stddevs
         :param phi: an array of shape (M, N) for the INTRA_EVENT stddevs
         """
-        for m, _ in enumerate(imts):
-            mean[m] = 0.0
-            sig[m] = 1.0
-            tau[m] = 0.6
-            phi[m] = 0.8
+        mean[:] = 0.0
+        sig[:] = 1.0
+        tau[:] = 0.6
+        phi[:] = 0.8
 
 
 class DummySpatialCorrelationModel(BaseCorrelationModel):
@@ -312,8 +339,7 @@ class DummySpatialCorrelationModel(BaseCorrelationModel):
     def __init__(self):
         self.cache = {}  # imt -> correlation model
 
-    def _get_correlation_matrix(self, distance_matrix, imt):
-        
+    def _get_correlation_matrix(self, distance_matrix, imt):        
         return numpy.exp(-0.1 * distance_matrix)
 
 
@@ -324,7 +350,6 @@ class DummyCrossCorrelationWithin(CrossCorrelation):
     (that is, Ts/Tl where Ts is the smaller period and Tl is the larger).
     *Not* meant to be used in real calculations.
     """
-
     cache = {}  # periods -> correlation matrix
 
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
