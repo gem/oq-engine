@@ -77,17 +77,22 @@ def strip_zeros(gmf_df):
 
 def get_computer(cmaker, oqparam, proxy, sids, sitecol,
                  station_sitecol, station_data):
+    """
+    :returns: GmfComputer or ConditionedGmfComputer
+    """
     trt = cmaker.trt
     ebr = proxy.to_ebr(trt)
     if station_sitecol:
-        stnfilter = SourceFilter(station_sitecol, oqparam.maximum_distance(trt))
-        stsids = stnfilter.close_sids(proxy, trt)
-        if len(stsids):
-            # if there are stations close, use them 
+        stations = numpy.isin(sids, station_sitecol.sids)
+        if stations.any():
+            # if there are stations close, use them
+            station_sids = sids[stations]
+            target_sids = sids[~stations]
             return ConditionedGmfComputer(
-                ebr, sitecol.filtered(sids), 
-                stnfilter.sitecol.filtered(stsids), 
-                station_data.loc[stsids], oqparam.observed_imts,
+                ebr, sitecol.filtered(target_sids),
+                sitecol.filtered(station_sids),
+                station_data.loc[station_sids],
+                oqparam.observed_imts,
                 cmaker, oqparam.correl_model, oqparam.cross_correl,
                 oqparam.ground_motion_correlation_params,
                 oqparam.number_of_ground_motion_fields,
@@ -123,8 +128,8 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
         cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
         if "station_data" in oqparam.inputs:
-            station_data = dstore.read_df('station_data')
-            station_sitecol = sitecol.filtered(station_data.site_id)
+            station_data = dstore.read_df('station_data', 'site_id')
+            station_sitecol = sitecol.filtered(station_data.index)
         else:
             station_data = None
             station_sitecol = None
