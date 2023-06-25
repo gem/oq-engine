@@ -182,7 +182,6 @@ class ConditionedGmfComputer(GmfComputer):
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        sids = self.target_sitecol.sids
         eids_by_rlz = self.ebrupture.get_eids_by_rlz(rlzs_by_gsim)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
@@ -196,7 +195,7 @@ class ConditionedGmfComputer(GmfComputer):
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
-            mean_covs = get_conditioned_mean_and_covariance(
+            mean_covs, sids = get_conditioned_mean_and_covariance(
                 self.rupture, gmm, self.station_sitecol, self.station_data,
                 self.observed_imt_strs, self.target_sitecol, self.imts,
                 self.spatial_correl,
@@ -602,7 +601,9 @@ def get_conditioned_mean_and_covariance(
         cov_WY_WY_wD_dict[target_imt.string] = cov_WY_WY_wD
         cov_BY_BY_yD_dict[target_imt.string] = cov_BY_BY_yD
 
-    return mu_Y_yD_dict, cov_Y_Y_yD_dict, cov_WY_WY_wD_dict, cov_BY_BY_yD_dict
+    return [
+        (mu_Y_yD_dict, cov_Y_Y_yD_dict, cov_WY_WY_wD_dict, cov_BY_BY_yD_dict),
+        target_sitecol_filtered.sids]
 
 
 def compute_spatial_cross_correlation_matrix(
