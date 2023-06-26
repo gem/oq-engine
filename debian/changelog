@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed tau-phi inversion in LanzanoLuzi2019
+
   [Claudio Schill]
   * Fixed sorting bug in the sigma_mu adjustment factor in
     the Kuehn et al. (2020) GMM
