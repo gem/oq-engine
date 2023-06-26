@@ -9,6 +9,7 @@
   * Fixed bug in get_profiles_from_simple_fault_data affecting KiteSurfaces
 
   [Michele Simionato]
+  * Fixed tau-phi inversion in LanzanoLuzi2019
   * Fixed shakemap calculations to take the risk IMTs and not the hazard IMTs
   * Removed sorting of the sections in the multiFaultSource reader to keep
     the rup_idxs consistent with the order in the files
