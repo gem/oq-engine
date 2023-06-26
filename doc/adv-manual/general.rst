@@ -129,7 +129,10 @@ magnitudes between 5 and 6 (the maximum distance in this magnitude
 range will vary linearly between 0 and 100), keep ruptures up to 200
 km for magnitudes between 6 and 7 (with `maximum_distance` increasing
 linearly from 100 to 200 km from magnitude 6 to magnitude 7), keep
-ruptures up to 300 km for magnitudes over 7.
+ruptures up to 300 km for magnitudes between 7 and 8 (with
+`maximum_distance` increasing linearly from 200 to 300 km from
+magnitude 7 to magnitude 8) and discard ruptures for magnitudes
+over 8.
 
 You can have both trt-dependent and mag-dependent maximum distance::
 
