@@ -827,8 +827,7 @@ How the parallelization works in the engine
 The engine builds on top of existing parallelization libraries.
 Specifically, on a single machine it is based on multiprocessing,
 which is part of the Python standard library, while on a cluster
-it is based on the combination celery/rabbitmq, which are well-known
-and maintained tools.
+it is based on zeromq, which is a well-known and maintained library.
 
 While the parallelization used by the engine may look trivial in theory
 (it only addresses embarrassingly parallel problems, not true concurrency)
@@ -839,14 +838,13 @@ without affecting other calculations that may be running concurrently.
 Because of this requirement, we abandoned `concurrent.futures`, which is also
 in the standard library, but is lacking the ability to kill the pool of
 processes, which is instead available in multiprocessing with the
-`Pool.shutdown` method. For the same reason, we discarded `dask`, which
-is a lot more powerful than `celery` but lacks the revoke functionality.
+`Pool.shutdown` method. For the same reason, we discarded `dask`.
 
 Using a real cluster scheduling mechanism (like SLURM) would be of course
 better, but we do not want to impose on our users a specific cluster
-architecture. celery/rabbitmq have the advantage of being simple to install
+architecture. Zeromq has the advantage of being simple to install
 and manage. Still, the architecture of the engine parallelization library
-is such that it is very simple to replace celery/rabbitmq with other
+is such that it is very simple to replace zeromq with other
 parallelization mechanisms: people interested in doing so should just
 contact us.
 
@@ -898,20 +896,14 @@ hazard curves, because the algorithm is considering one rupture at the time
 and it is not accumulating ruptures in memory, differently from what happens
 when sampling the ruptures in event based.
 
-If you have ever coded in celery, you will see that the OpenQuake engine
-concept of task is different: there is no ``@task`` decorator and while at the
-end engine tasks will become celery tasks this is hidden to the developer.
-The reason is that we needed a celery-independent abstraction layer to make
-it possible to use different kinds of parallelization frameworks/
-
 From the point of view of the coder, in the engine there is no difference
-between a task running on a cluster using celery and a task running locally
+between a task running on a cluster using zeromq and a task running locally
 using ``multiprocessing.Pool``: they are coded the same, but depending
-on a configuration parameter in openquake.cfg (``distribute=celery``
+on a configuration parameter in openquake.cfg (``distribute=zmq``
 or ``distribute=processpool``) the engine will treat them differently.
 You can also set an environment variable ``OQ_DISTRIBUTE``, which takes
 the precedence over openquake.cfg, to specify which kind of distribution
-you want to use (``celery`` or ``processpool``): this is mostly used
+you want to use (``zmq`` or ``processpool``): this is mostly used
 when debugging, when you typically insert a breakpoint in the task
 and then run the calculation with
 
@@ -949,20 +941,19 @@ a single writer). This approach bypasses all the limitations of the
 SWMR mode in HDF5 and did not require a large refactoring of our
 existing code.
 
-Another tricky point in cluster situations is that rabbitmq is not good
-at transferring gigabytes of data: it was meant to manage lots of small
-messages, but here we are perverting it to manage huge messages, i.e.
-the large arrays coming from a scientific calculations.
-
-Hence, since recent versions of the engine we are no longer returning
-data from the tasks via celery/rabbitmq: instead, we use zeromq.  This
+Another tricky point in cluster situations is that we need
+to transfer gigabytes of data, i.e. the large arrays coming from
+scientific calculations, rather than lots of small
+messages. Hence, since recent versions of the engine, we are returning
+data from the tasks via zeromq instead of using celery/rabbitmq as we
+did in the past. This
 is hidden from the user, but internally the engine keeps track of all
 tasks that were submitted and waits until they send the message that
 they finished. If one task runs out of memory badly and never sends
 the message that it finished, the engine may hang, waiting for the
-results of a task that does not exist anymore.  You have to be
+results of a task that does not exist anymore. You have to be
 careful. What we did in our cluster is to set some memory limit on the
-celery user with the cgroups technology, so that an out of memory task
+zmq user with the cgroups technology, so that an out of memory task
 normally fails in a clean way with a Python MemoryError, sends the
 message that it finished and nothing particularly bad happens.  Still,
 in situations of very heavy load the OOM killer may enter in action
@@ -1487,20 +1478,20 @@ to use them.
 
 You can see the full list of commands by running `oq --help`::
 
-   $ oq --help
-   usage: oq [--version]
-             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
-             ...
+  $ oq --help
+  usage: oq [-h] [-v]
+            {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+            ...
 
-   positional arguments:
-     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
-                           available subcommands; use oq <subcmd> --help
+  positional arguments:
+    {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+                          available subcommands; use oq <subcmd> --help
 
-   optional arguments:
-     -h, --help            show this help message and exit
-     -v, --version         show program's version number and exit
+  options:
+    -h, --help            show this help message and exit
+    -v, --version         show program's version number and exit
 
-This is the output that you get at the present time (engine 3.11); depending
+This is the output that you get at the present time (engine 3.17); depending
 on your version of the engine you may get a different output. As you see, there
 are several commands, like `purge`, `show_attrs`, `export`, `restore`, ...
 You can get information about each command with `oq <command> --help`;
