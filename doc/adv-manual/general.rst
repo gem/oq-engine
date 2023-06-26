@@ -981,7 +981,7 @@ Suppose you want to code a character-counting algorithm, which is a textbook
 exercise in parallel computing and suppose that you want to store information
 about the performance of the algorithm. Then you should use the OpenQuake
 ``Monitor`` class, as well as the utility
-``openquake.baselib.commonlib.hdf5new`` that build an empty datastore
+``openquake.baselib.commonlib.hdf5new`` that builds an empty datastore
 for you. Having done that, the ``openquake.baselib.parallel.Starmap``
 class can take care of the parallelization for you as in the following
 example:
@@ -989,7 +989,7 @@ example:
 .. include:: char_count_par.py
    :code: python
 
-The name ``Starmap`` was chosen it looks very similar to
+The name ``Starmap`` was chosen because it looks very similar to how
 ``multiprocessing.Pool.starmap`` works, the only apparent difference
 being in the additional monitor argument::
 
@@ -997,8 +997,8 @@ being in the additional monitor argument::
 
 In reality the ``Starmap`` has a few other differences:
 
-1. it does not use the multiprocessing mechanism to returns back the results,
-   it uses zmq instead;
+1. it does not use the multiprocessing mechanism to return back the results;
+   it uses zmq instead
 2. thanks to that, it can be extended to generator functions and can yield
    partial results, thus overcoming the limitations of multiprocessing
 3. the ``Starmap`` has a ``.submit`` method and it is actually more similar to
@@ -1031,7 +1031,7 @@ parallelizing complex situations where it is expensive to use a single
 starmap. However, there is limit on the number of starmaps that can be
 alive at the same moment.
 
-Moreover the ``Starmap`` has a ``.shutdown`` methods that allows to
+Moreover the ``Starmap`` has a ``.shutdown`` method that allows to
 shutdown the underlying pool.
 
 The idea is to submit the text of each file - here I am considering .rst files,
