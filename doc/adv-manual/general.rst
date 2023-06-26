@@ -818,8 +818,8 @@ same as testability: it is essential to have a suite of tests checking
 that the calculators are providing the expected outputs against a set
 of predefined inputs. Currently we have thousands of tests which are
 run multiple times per day in our Continuous Integration environments
-r(avis, GitLab, Jenkins), split into unit tests, end-to-end tests and
-long running tests.
+(GitHub Actions, GitLab Pipelines), split into unit
+tests, end-to-end tests and long running tests.
 
 How the parallelization works in the engine
 ===========================================
@@ -850,7 +850,7 @@ is such that it is very simple to replace celery/rabbitmq with other
 parallelization mechanisms: people interested in doing so should just
 contact us.
 
-Another tricky aspects of parallelizing large scientific calculations is
+Another tricky aspect of parallelizing large scientific calculations is
 that the amount of data returned can exceed the 4 GB limit of Python pickles:
 in this case one gets ugly runtime errors. The solution we found is to make
 it possible to yield partial results from a task: in this way instead of
