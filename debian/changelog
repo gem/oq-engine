@@ -1,5 +1,5 @@
   [Claudio Schill]
-  * Fixed minor sigma_mu adjustment factor bug in
+  * Fixed sorting bug in the sigma_mu adjustment factor in
     the Kuehn et al. (2020) GMM
 
   [Michele Simionato]
