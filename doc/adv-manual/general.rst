@@ -1050,7 +1050,7 @@ However, sometimes you *must* be tech-savvy: for instance if you want to
 post-process hundreds of GB of ground motion fields produced by an event
 based calculation, you should *not* use the CSV output, at least
 if you care about efficiency. To manage this case (huge amounts of data)
-there a specific solution, which is also able to manage the case of data
+there is a specific solution, which is also able to manage the case of data
 lacking a predefined exporter: the ``Extractor`` API.
 
 There are actually two different kind of extractors: the simple
@@ -1097,7 +1097,7 @@ or even all realizations:
  >> dic = vars(extractor.get('hcurves?kind=rlzs'))
 
 Here is an example of using the `WebExtractor` to retrieve hazard maps.
-Here we assumes that there is available in a remote machine where there is
+Here we assume that in a remote machine there is
 a WebAPI server running, a.k.a. the Engine Server. The first thing to is to
 set up the credentials to access the WebAPI. There are two cases:
 
