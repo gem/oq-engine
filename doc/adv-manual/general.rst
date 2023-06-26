@@ -858,7 +858,7 @@ returning say 40 GB from one task, one can yield 40 times partial results
 of 1 GB each, thus bypassing the 4 GB limit. It is up to the implementor
 to code the task carefully. In order to do so, it is essential to have
 in place some monitoring mechanism measuring how much data is returned
-back from a task, as well as other essential informations like how much
+back from a task, as well as other essential information like how much
 memory is allocated and how long it takes to run a task.
 
 To this aim the OpenQuake engine offers a ``Monitor`` class
@@ -958,7 +958,7 @@ Hence, since recent versions of the engine we are no longer returning
 data from the tasks via celery/rabbitmq: instead, we use zeromq.  This
 is hidden from the user, but internally the engine keeps track of all
 tasks that were submitted and waits until they send the message that
-they finished. If one tasks runs out of memory badly and never sends
+they finished. If one task runs out of memory badly and never sends
 the message that it finished, the engine may hang, waiting for the
 results of a task that does not exist anymore.  You have to be
 careful. What we did in our cluster is to set some memory limit on the
