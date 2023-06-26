@@ -547,7 +547,7 @@ The ``ContextMaker`` takes care of the maximum_distance filtering, so in
 general the number of contexts is lower than the total number of ruptures,
 since some ruptures are normally discarded, being distant from the sites.
 
-The contexts contains all the rupture, site and distance parameters.
+The contexts contain all the rupture, site and distance parameters.
 
 Then you have
 
@@ -560,7 +560,7 @@ Then you have
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
 parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``
-but in general the contexts contains also arrays of site parameters.
+but in general the contexts contain also arrays of site parameters.
 There is also an array of indices telling which are the sites affected
 by the rupture associated to the context:
 
