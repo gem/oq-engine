@@ -1148,7 +1148,7 @@ Here are three examples of use::
     $ oq plot 'hmaps?kind=mean&imt=PGA' <calc_id>
     $ oq plot 'uhs?kind=mean&site_id=0' <calc_id>
 
-The ``site_id`` is optional; if missing only the first site (``site_id=0``)
+The ``site_id`` is optional; if missing, only the first site (``site_id=0``)
 will be plotted. If you want to plot all the realizations you can do::
 
     $ oq plot 'hcurves?kind=rlzs&imt=PGA' <calc_id>
@@ -1162,7 +1162,7 @@ realizations and also the mean the command to give is::
 
     $ oq plot 'hcurves?kind=rlzs&kind=mean&imt=PGA' <calc_id>
 
-If you want to plot the mean and the median the command is::
+If you want to plot the median and the mean the command is::
 
     $ oq plot 'hcurves?kind=quantile-0.5&kind=mean&imt=PGA' <calc_id>
 
@@ -1178,7 +1178,7 @@ specifying a kind that is not available you will get an error.
 Extracting disaggregation outputs
 ---------------------------------
 
-Disaggregation outputs are particularly complex and they are stored in
+Disaggregation outputs are particularly complex and they are stored in the
 datastore in different ways depending on the engine version. Here we will
 give a few examples for the Disaggregation Demo, which has the flag
 ``individual_rlzs`` set. If you run the demos with a recent enough version
