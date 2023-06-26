@@ -362,7 +362,7 @@ Understanding the engine
 -------------------------
 
 Once you have the engine installed you can run calculations. We recommend
-starting from the demos directory which contains example of hazard and
+starting from the demos directory which contains examples of hazard and
 risk calculations. For instance you could run the area source demo with the
 following command::
 
