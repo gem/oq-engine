@@ -369,7 +369,7 @@ following command::
  $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini
 
 You should notice that we used here the command ``oq run`` while the engine
-manual recommend the usage of ``oq engine --run``. There is no contradiction.
+manual recommends the usage of ``oq engine --run``. There is no contradiction.
 The command ``oq engine --run`` is meant for production usage,
 but here we are doing development, so the recommended command is ``oq run``
 which will will be easier to debug thanks to the
@@ -390,7 +390,7 @@ For that one can understand the bottlenecks of a calculation and, with
 experience, he can understand which part of the engine he needs to optimize.
 Also, it is very useful to play with the parameters of the calculation
 (like the maximum distance, the area discretization, the magnitude binning,
-etc etc) and see how the performance change. There is also a command to
+etc etc) and see how the performance changes. There is also a command to
 plot hazard curves and a command to compare hazard curves between different
 calculations: it is common to be able to get big speedups simply by changing
 the input parameters in the `job.ini` of the model, without changing much the
