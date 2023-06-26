@@ -615,9 +615,9 @@ table has a structure like this::
  2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
  ...
 
-The columns starting with ``rup_`` contains rupture parameters (the
+The columns starting with ``rup_`` contain rupture parameters (the
 magnitude in this example) while the columns starting with ``dist_``
-contains distance parameters. The column ``result_type`` is a string
+contain distance parameters. The column ``result_type`` is a string
 in the set {"MEAN", "INTER_EVENT_STDDEV", "INTRA_EVENT_STDDEV",
 "TOTAL_STDDEV"}. The remaining columns are the expected results for
 each intensity measure type; in the the example the IMTs are PGV, PGA,
