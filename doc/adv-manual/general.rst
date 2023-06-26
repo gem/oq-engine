@@ -662,7 +662,7 @@ code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/g
 Running the engine tests
 ----------------------------------
 
-If you are a hazard scientists contributing a bug fix to a GMPE (or any
+If you are a hazard scientist contributing a bug fix to a GMPE (or any
 other kind of bug fix) you may need to run the engine tests and possibly
 change the expected files if there is a change in the numbers. The way to
 do it is to start the dbserver and then run the tests from the repository root::
@@ -687,7 +687,7 @@ Architecture of the OpenQuake engine
 The engine is structured as a regular scientific application: we try
 to perform calculations as much as possible in memory and when it is
 not possible intermediate results are stored in HDF5 format.
-We try work as much as possible in terms of arrays which are
+We try to work as much as possible in terms of arrays which are
 efficiently manipulated at C/Fortran speed with a stack of well
 established scientific libraries (numpy/scipy).
 
