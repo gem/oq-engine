@@ -1522,7 +1522,7 @@ features.
 logic tree of the calculation.
 
 2. When invoked with the `--report` option, it produces a `.rst` report with
-several important informations about the computation. It is ESSENTIAL in the
+important information about the computation. It is ESSENTIAL in the
 case of large calculations, since it will give you an idea of the feasibility
 of the computation without running it. Here is an example of usage::
 
@@ -1530,7 +1530,7 @@ of the computation without running it. Here is an example of usage::
   Generated /tmp/report_1644.rst
   <Monitor info, duration=10.910529613494873s, memory=60.16 MB>
 
-You can open `/tmp/report_1644.rst` and read the informations listed there
+You can open `/tmp/report_1644.rst` and read the information listed there
 (`1644` is the calculation ID, the number will be different each time).
 
 3. It can be invoked without a `job.ini` file, and it that case it provides
@@ -1569,7 +1569,7 @@ The list of available exports (i.e. the datastore keys and the available export
 formats) can be extracted with the `oq info exports`
 command; the number of exporters defined changes at each version::
 
-  $ oq info exports$ oq info exports
+  $ oq info exports
   ? "aggregate_by" ['csv']
   ? "disagg_traditional" ['csv']
   ? "loss_curves" ['csv']
@@ -1618,7 +1618,7 @@ a specific realization (say the first one), you can use::
 
 but currently this only works for `csv` and `xml`. The exporters are one of
 the most time-consuming parts on the engine, mostly because of the sheer number
-of them; the are more than fifty exporters and they are always increasing.
+of them; there are more than fifty exporters and they are always increasing.
 If you need new exports, please [add an issue on GitHub](https://github.com/gem/oq-engine/issues).
 
 oq zip
