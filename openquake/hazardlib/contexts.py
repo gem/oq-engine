@@ -1068,7 +1068,8 @@ class ContextMaker(object):
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
             assert len(recarrays) == 1, len(recarrays)
-            recarrays = split_array(recarrays[0], U32(recarrays[0].mag*100))
+            recarrays = split_array(
+                recarrays[0], U32(numpy.round(recarrays[0].mag*100.)))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
