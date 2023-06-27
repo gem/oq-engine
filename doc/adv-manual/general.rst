@@ -953,7 +953,7 @@ they finished. If one task runs out of memory badly and never sends
 the message that it finished, the engine may hang, waiting for the
 results of a task that does not exist anymore. You have to be
 careful. What we did in our cluster is to set some memory limit on the
-zmq user with the cgroups technology, so that an out of memory task
+openquake user with the cgroups technology, so that an out of memory task
 normally fails in a clean way with a Python MemoryError, sends the
 message that it finished and nothing particularly bad happens.  Still,
 in situations of very heavy load the OOM killer may enter in action
