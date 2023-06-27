@@ -1619,7 +1619,8 @@ a specific realization (say the first one), you can use::
 but currently this only works for `csv` and `xml`. The exporters are one of
 the most time-consuming parts on the engine, mostly because of the sheer number
 of them; there are more than fifty exporters and they are always increasing.
-If you need new exports, please [add an issue on GitHub](https://github.com/gem/oq-engine/issues).
+If you need new exports,
+please `add an issue on GitHub <https://github.com/gem/oq-engine/issues>`_.
 
 oq zip
 ------
