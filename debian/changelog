@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Fixed another bug with conditioned GMFs appearing as the error
+    `array[m, n, bad] = exp(mean_covs[0, g, m, n], im)
+     TypeError: list indices must be integers or slices, not tuple`
+
   [Claudio Schill]
   * Fixed sorting bug in the sigma_mu adjustment factor in
     the Kuehn et al. (2020) GMM
