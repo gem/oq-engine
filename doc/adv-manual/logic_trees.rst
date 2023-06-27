@@ -496,7 +496,7 @@ a `job.ini` file. If you run
 all the files will be parsed and the full logic tree of the computation
 will be generated. This is very fast, it runs in exactly 1 minute on my
 laptop, which is impressive, since the XML of the SHARE source models
-is larger than 250 MB. Such speed come with a price: all the sources
+is larger than 250 MB. Such speed comes with a price: all the sources
 are parsed, but they are not filtered, so you will get the complete
 logic tree, not the one used by your computation, which will likely be
 reduced because filtering will likely remove some tectonic region types.
@@ -751,7 +751,7 @@ and ``number_of_logic_tree_samples =100``, we generate effectively 1
 source model realization and not 100 equivalent source model
 realizations, as we did in past (actually in the engine version 1.3).
 The engine keeps track of how many times a model has been sampled (say
-`Ns`) and in the event based case it produce ruptures (*with different
+`Ns`) and in the event based case it produces ruptures (*with different
 seeds*) by calling the appropriate hazardlib function `Ns` times. This
 is done inside the worker nodes. In the classical case, all the
 ruptures are identical and there are no seeds, so the computation is
@@ -779,22 +779,22 @@ full logic tree of the calculation. The precise why the random extraction
 works depends on the sampling method.
 
 early_weights
-  With this sampling method, the engine randomly choose branches depending
+  With this sampling method, the engine randomly chooses branches depending
   on the weights in the logic tree; having done that, the hazard curve
   statistics (mean and quantiles) are computed with equal weights.
 
 late_weights
-  With this sampling method, the engine randomly choose branches ignoring
+  With this sampling method, the engine randomly chooses branches ignoring
   the weights in the logic tree; however, the hazard curve
   statistics are computed by taking into account the weights.
 
 early_latin
-  With this sampling method, the engine randomly choose branches depending
+  With this sampling method, the engine randomly chooses branches depending
   on the weights in the logic tree by using an hypercube latin sampling;
   having done that, the hazard curve statistics are computed with equal weights.
 
 late_latin
-  Wit this sampling method, the engine randomly choose branches ignoring
+  Wit this sampling method, the engine randomly chooses branches ignoring
   the weights in the logic tree, but still using an hypercube sampling;
   then, the hazard curve statistics are computed by taking into account
   the weights.
