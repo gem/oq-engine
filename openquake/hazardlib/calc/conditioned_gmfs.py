@@ -245,8 +245,8 @@ class ConditionedGmfComputer(GmfComputer):
                     if (array[m] > max_iml[m]).any():
                         for n in range(N):
                             bad = array[m, n] > max_iml[m]  # shape E
-                            mean = mean_covs[0][im]
-                            array[m, n, bad] = exp(mean[n, g], im)
+                            mean = mean_covs[0][im]  # shape (N, 1)
+                            array[m, n, bad] = exp(mean[n, 0], im)
 
             # manage min_iml
             for n in range(N):
