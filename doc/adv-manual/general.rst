@@ -1285,7 +1285,7 @@ Example: how many events per magnitude?
 
 When analyzing an event based calculation, users are often interested in
 checking the magnitude-frequency distribution, i.e. to count how many
-events of a given magnitude present in the stochastic event set for
+events of a given magnitude are present in the stochastic event set for
 a fixed investigation time and a fixed ``ses_per_logic_tree_path``.
 You can do that with code like the following:
 
@@ -1302,7 +1302,7 @@ You can do that with code like the following:
      for mag, grp in events.groupby(['mag']):
          print(mag, len(grp))   # number of events per group
 
-If you want to now the number of events per realization and per stochastic
+If you want to know the number of events per realization and per stochastic
 event set you can just refine the `groupby` clause, using the list
 ``['mag', 'rlz_id', 'ses_id']`` instead of simply ``['mag']``.
 
