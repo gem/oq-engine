@@ -129,7 +129,10 @@ magnitudes between 5 and 6 (the maximum distance in this magnitude
 range will vary linearly between 0 and 100), keep ruptures up to 200
 km for magnitudes between 6 and 7 (with `maximum_distance` increasing
 linearly from 100 to 200 km from magnitude 6 to magnitude 7), keep
-ruptures up to 300 km for magnitudes over 7.
+ruptures up to 300 km for magnitudes between 7 and 8 (with
+`maximum_distance` increasing linearly from 200 to 300 km from
+magnitude 7 to magnitude 8) and discard ruptures for magnitudes
+over 8.
 
 You can have both trt-dependent and mag-dependent maximum distance::
 
@@ -315,7 +318,7 @@ to know git and the tools of Open Source development in
 general, in particular about testing. If this is not the
 case, you should do some study on your own and come back later. There
 is a huge amount of resources on the net about these topics. This
-manual will focus solely on the OpenQuake engine and it assume that
+manual will focus solely on the OpenQuake engine and it assumes that
 you already know how to use it, i.e. you have read the User Manual
 first.
 
@@ -359,14 +362,14 @@ Understanding the engine
 -------------------------
 
 Once you have the engine installed you can run calculations. We recommend
-starting from the demos directory which contains example of hazard and
+starting from the demos directory which contains examples of hazard and
 risk calculations. For instance you could run the area source demo with the
 following command::
 
  $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini
 
 You should notice that we used here the command ``oq run`` while the engine
-manual recommend the usage of ``oq engine --run``. There is no contradiction.
+manual recommends the usage of ``oq engine --run``. There is no contradiction.
 The command ``oq engine --run`` is meant for production usage,
 but here we are doing development, so the recommended command is ``oq run``
 which will will be easier to debug thanks to the
@@ -387,7 +390,7 @@ For that one can understand the bottlenecks of a calculation and, with
 experience, he can understand which part of the engine he needs to optimize.
 Also, it is very useful to play with the parameters of the calculation
 (like the maximum distance, the area discretization, the magnitude binning,
-etc etc) and see how the performance change. There is also a command to
+etc etc) and see how the performance changes. There is also a command to
 plot hazard curves and a command to compare hazard curves between different
 calculations: it is common to be able to get big speedups simply by changing
 the input parameters in the `job.ini` of the model, without changing much the
@@ -544,7 +547,7 @@ The ``ContextMaker`` takes care of the maximum_distance filtering, so in
 general the number of contexts is lower than the total number of ruptures,
 since some ruptures are normally discarded, being distant from the sites.
 
-The contexts contains all the rupture, site and distance parameters.
+The contexts contain all the rupture, site and distance parameters.
 
 Then you have
 
@@ -557,7 +560,7 @@ Then you have
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
 parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``
-but in general the contexts contains also arrays of site parameters.
+but in general the contexts contain also arrays of site parameters.
 There is also an array of indices telling which are the sites affected
 by the rupture associated to the context:
 
@@ -612,9 +615,9 @@ table has a structure like this::
  2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
  ...
 
-The columns starting with ``rup_`` contains rupture parameters (the
+The columns starting with ``rup_`` contain rupture parameters (the
 magnitude in this example) while the columns starting with ``dist_``
-contains distance parameters. The column ``result_type`` is a string
+contain distance parameters. The column ``result_type`` is a string
 in the set {"MEAN", "INTER_EVENT_STDDEV", "INTRA_EVENT_STDDEV",
 "TOTAL_STDDEV"}. The remaining columns are the expected results for
 each intensity measure type; in the the example the IMTs are PGV, PGA,
@@ -659,7 +662,7 @@ code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/g
 Running the engine tests
 ----------------------------------
 
-If you are a hazard scientists contributing a bug fix to a GMPE (or any
+If you are a hazard scientist contributing a bug fix to a GMPE (or any
 other kind of bug fix) you may need to run the engine tests and possibly
 change the expected files if there is a change in the numbers. The way to
 do it is to start the dbserver and then run the tests from the repository root::
@@ -684,7 +687,7 @@ Architecture of the OpenQuake engine
 The engine is structured as a regular scientific application: we try
 to perform calculations as much as possible in memory and when it is
 not possible intermediate results are stored in HDF5 format.
-We try work as much as possible in terms of arrays which are
+We try to work as much as possible in terms of arrays which are
 efficiently manipulated at C/Fortran speed with a stack of well
 established scientific libraries (numpy/scipy).
 
@@ -815,8 +818,8 @@ same as testability: it is essential to have a suite of tests checking
 that the calculators are providing the expected outputs against a set
 of predefined inputs. Currently we have thousands of tests which are
 run multiple times per day in our Continuous Integration environments
-r(avis, GitLab, Jenkins), split into unit tests, end-to-end tests and
-long running tests.
+(GitHub Actions, GitLab Pipelines), split into unit
+tests, end-to-end tests and long running tests.
 
 How the parallelization works in the engine
 ===========================================
@@ -824,8 +827,7 @@ How the parallelization works in the engine
 The engine builds on top of existing parallelization libraries.
 Specifically, on a single machine it is based on multiprocessing,
 which is part of the Python standard library, while on a cluster
-it is based on the combination celery/rabbitmq, which are well-known
-and maintained tools.
+it is based on zeromq, which is a well-known and maintained library.
 
 While the parallelization used by the engine may look trivial in theory
 (it only addresses embarrassingly parallel problems, not true concurrency)
@@ -836,18 +838,17 @@ without affecting other calculations that may be running concurrently.
 Because of this requirement, we abandoned `concurrent.futures`, which is also
 in the standard library, but is lacking the ability to kill the pool of
 processes, which is instead available in multiprocessing with the
-`Pool.shutdown` method. For the same reason, we discarded `dask`, which
-is a lot more powerful than `celery` but lacks the revoke functionality.
+`Pool.shutdown` method. For the same reason, we discarded `dask`.
 
 Using a real cluster scheduling mechanism (like SLURM) would be of course
 better, but we do not want to impose on our users a specific cluster
-architecture. celery/rabbitmq have the advantage of being simple to install
+architecture. Zeromq has the advantage of being simple to install
 and manage. Still, the architecture of the engine parallelization library
-is such that it is very simple to replace celery/rabbitmq with other
+is such that it is very simple to replace zeromq with other
 parallelization mechanisms: people interested in doing so should just
 contact us.
 
-Another tricky aspects of parallelizing large scientific calculations is
+Another tricky aspect of parallelizing large scientific calculations is
 that the amount of data returned can exceed the 4 GB limit of Python pickles:
 in this case one gets ugly runtime errors. The solution we found is to make
 it possible to yield partial results from a task: in this way instead of
@@ -855,7 +856,7 @@ returning say 40 GB from one task, one can yield 40 times partial results
 of 1 GB each, thus bypassing the 4 GB limit. It is up to the implementor
 to code the task carefully. In order to do so, it is essential to have
 in place some monitoring mechanism measuring how much data is returned
-back from a task, as well as other essential informations like how much
+back from a task, as well as other essential information like how much
 memory is allocated and how long it takes to run a task.
 
 To this aim the OpenQuake engine offers a ``Monitor`` class
@@ -895,20 +896,14 @@ hazard curves, because the algorithm is considering one rupture at the time
 and it is not accumulating ruptures in memory, differently from what happens
 when sampling the ruptures in event based.
 
-If you have ever coded in celery, you will see that the OpenQuake engine
-concept of task is different: there is no ``@task`` decorator and while at the
-end engine tasks will become celery tasks this is hidden to the developer.
-The reason is that we needed a celery-independent abstraction layer to make
-it possible to use different kinds of parallelization frameworks/
-
 From the point of view of the coder, in the engine there is no difference
-between a task running on a cluster using celery and a task running locally
+between a task running on a cluster using zeromq and a task running locally
 using ``multiprocessing.Pool``: they are coded the same, but depending
-on a configuration parameter in openquake.cfg (``distribute=celery``
+on a configuration parameter in openquake.cfg (``distribute=zmq``
 or ``distribute=processpool``) the engine will treat them differently.
 You can also set an environment variable ``OQ_DISTRIBUTE``, which takes
 the precedence over openquake.cfg, to specify which kind of distribution
-you want to use (``celery`` or ``processpool``): this is mostly used
+you want to use (``zmq`` or ``processpool``): this is mostly used
 when debugging, when you typically insert a breakpoint in the task
 and then run the calculation with
 
@@ -946,20 +941,19 @@ a single writer). This approach bypasses all the limitations of the
 SWMR mode in HDF5 and did not require a large refactoring of our
 existing code.
 
-Another tricky point in cluster situations is that rabbitmq is not good
-at transferring gigabytes of data: it was meant to manage lots of small
-messages, but here we are perverting it to manage huge messages, i.e.
-the large arrays coming from a scientific calculations.
-
-Hence, since recent versions of the engine we are no longer returning
-data from the tasks via celery/rabbitmq: instead, we use zeromq.  This
+Another tricky point in cluster situations is that we need
+to transfer gigabytes of data, i.e. the large arrays coming from
+scientific calculations, rather than lots of small
+messages. Hence, since recent versions of the engine, we are returning
+data from the tasks via zeromq instead of using celery/rabbitmq as we
+did in the past. This
 is hidden from the user, but internally the engine keeps track of all
 tasks that were submitted and waits until they send the message that
-they finished. If one tasks runs out of memory badly and never sends
+they finished. If one task runs out of memory badly and never sends
 the message that it finished, the engine may hang, waiting for the
-results of a task that does not exist anymore.  You have to be
+results of a task that does not exist anymore. You have to be
 careful. What we did in our cluster is to set some memory limit on the
-celery user with the cgroups technology, so that an out of memory task
+openquake user with the cgroups technology, so that an out of memory task
 normally fails in a clean way with a Python MemoryError, sends the
 message that it finished and nothing particularly bad happens.  Still,
 in situations of very heavy load the OOM killer may enter in action
@@ -978,7 +972,7 @@ Suppose you want to code a character-counting algorithm, which is a textbook
 exercise in parallel computing and suppose that you want to store information
 about the performance of the algorithm. Then you should use the OpenQuake
 ``Monitor`` class, as well as the utility
-``openquake.baselib.commonlib.hdf5new`` that build an empty datastore
+``openquake.baselib.commonlib.hdf5new`` that builds an empty datastore
 for you. Having done that, the ``openquake.baselib.parallel.Starmap``
 class can take care of the parallelization for you as in the following
 example:
@@ -986,7 +980,7 @@ example:
 .. include:: char_count_par.py
    :code: python
 
-The name ``Starmap`` was chosen it looks very similar to
+The name ``Starmap`` was chosen because it looks very similar to how
 ``multiprocessing.Pool.starmap`` works, the only apparent difference
 being in the additional monitor argument::
 
@@ -994,8 +988,8 @@ being in the additional monitor argument::
 
 In reality the ``Starmap`` has a few other differences:
 
-1. it does not use the multiprocessing mechanism to returns back the results,
-   it uses zmq instead;
+1. it does not use the multiprocessing mechanism to return back the results;
+   it uses zmq instead
 2. thanks to that, it can be extended to generator functions and can yield
    partial results, thus overcoming the limitations of multiprocessing
 3. the ``Starmap`` has a ``.submit`` method and it is actually more similar to
@@ -1028,7 +1022,7 @@ parallelizing complex situations where it is expensive to use a single
 starmap. However, there is limit on the number of starmaps that can be
 alive at the same moment.
 
-Moreover the ``Starmap`` has a ``.shutdown`` methods that allows to
+Moreover the ``Starmap`` has a ``.shutdown`` method that allows to
 shutdown the underlying pool.
 
 The idea is to submit the text of each file - here I am considering .rst files,
@@ -1047,7 +1041,7 @@ However, sometimes you *must* be tech-savvy: for instance if you want to
 post-process hundreds of GB of ground motion fields produced by an event
 based calculation, you should *not* use the CSV output, at least
 if you care about efficiency. To manage this case (huge amounts of data)
-there a specific solution, which is also able to manage the case of data
+there is a specific solution, which is also able to manage the case of data
 lacking a predefined exporter: the ``Extractor`` API.
 
 There are actually two different kind of extractors: the simple
@@ -1094,7 +1088,7 @@ or even all realizations:
  >> dic = vars(extractor.get('hcurves?kind=rlzs'))
 
 Here is an example of using the `WebExtractor` to retrieve hazard maps.
-Here we assumes that there is available in a remote machine where there is
+Here we assume that in a remote machine there is
 a WebAPI server running, a.k.a. the Engine Server. The first thing to is to
 set up the credentials to access the WebAPI. There are two cases:
 
@@ -1145,7 +1139,7 @@ Here are three examples of use::
     $ oq plot 'hmaps?kind=mean&imt=PGA' <calc_id>
     $ oq plot 'uhs?kind=mean&site_id=0' <calc_id>
 
-The ``site_id`` is optional; if missing only the first site (``site_id=0``)
+The ``site_id`` is optional; if missing, only the first site (``site_id=0``)
 will be plotted. If you want to plot all the realizations you can do::
 
     $ oq plot 'hcurves?kind=rlzs&imt=PGA' <calc_id>
@@ -1159,7 +1153,7 @@ realizations and also the mean the command to give is::
 
     $ oq plot 'hcurves?kind=rlzs&kind=mean&imt=PGA' <calc_id>
 
-If you want to plot the mean and the median the command is::
+If you want to plot the median and the mean the command is::
 
     $ oq plot 'hcurves?kind=quantile-0.5&kind=mean&imt=PGA' <calc_id>
 
@@ -1175,7 +1169,7 @@ specifying a kind that is not available you will get an error.
 Extracting disaggregation outputs
 ---------------------------------
 
-Disaggregation outputs are particularly complex and they are stored in
+Disaggregation outputs are particularly complex and they are stored in the
 datastore in different ways depending on the engine version. Here we will
 give a few examples for the Disaggregation Demo, which has the flag
 ``individual_rlzs`` set. If you run the demos with a recent enough version
@@ -1291,7 +1285,7 @@ Example: how many events per magnitude?
 
 When analyzing an event based calculation, users are often interested in
 checking the magnitude-frequency distribution, i.e. to count how many
-events of a given magnitude present in the stochastic event set for
+events of a given magnitude are present in the stochastic event set for
 a fixed investigation time and a fixed ``ses_per_logic_tree_path``.
 You can do that with code like the following:
 
@@ -1308,7 +1302,7 @@ You can do that with code like the following:
      for mag, grp in events.groupby(['mag']):
          print(mag, len(grp))   # number of events per group
 
-If you want to now the number of events per realization and per stochastic
+If you want to know the number of events per realization and per stochastic
 event set you can just refine the `groupby` clause, using the list
 ``['mag', 'rlz_id', 'ses_id']`` instead of simply ``['mag']``.
 
@@ -1484,20 +1478,20 @@ to use them.
 
 You can see the full list of commands by running `oq --help`::
 
-   $ oq --help
-   usage: oq [--version]
-             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
-             ...
+  $ oq --help
+  usage: oq [-h] [-v]
+            {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+            ...
 
-   positional arguments:
-     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
-                           available subcommands; use oq <subcmd> --help
+  positional arguments:
+    {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+                          available subcommands; use oq <subcmd> --help
 
-   optional arguments:
-     -h, --help            show this help message and exit
-     -v, --version         show program's version number and exit
+  options:
+    -h, --help            show this help message and exit
+    -v, --version         show program's version number and exit
 
-This is the output that you get at the present time (engine 3.11); depending
+This is the output that you get at the present time (engine 3.17); depending
 on your version of the engine you may get a different output. As you see, there
 are several commands, like `purge`, `show_attrs`, `export`, `restore`, ...
 You can get information about each command with `oq <command> --help`;
@@ -1528,7 +1522,7 @@ features.
 logic tree of the calculation.
 
 2. When invoked with the `--report` option, it produces a `.rst` report with
-several important informations about the computation. It is ESSENTIAL in the
+important information about the computation. It is ESSENTIAL in the
 case of large calculations, since it will give you an idea of the feasibility
 of the computation without running it. Here is an example of usage::
 
@@ -1536,7 +1530,7 @@ of the computation without running it. Here is an example of usage::
   Generated /tmp/report_1644.rst
   <Monitor info, duration=10.910529613494873s, memory=60.16 MB>
 
-You can open `/tmp/report_1644.rst` and read the informations listed there
+You can open `/tmp/report_1644.rst` and read the information listed there
 (`1644` is the calculation ID, the number will be different each time).
 
 3. It can be invoked without a `job.ini` file, and it that case it provides
@@ -1575,7 +1569,7 @@ The list of available exports (i.e. the datastore keys and the available export
 formats) can be extracted with the `oq info exports`
 command; the number of exporters defined changes at each version::
 
-  $ oq info exports$ oq info exports
+  $ oq info exports
   ? "aggregate_by" ['csv']
   ? "disagg_traditional" ['csv']
   ? "loss_curves" ['csv']
@@ -1624,8 +1618,9 @@ a specific realization (say the first one), you can use::
 
 but currently this only works for `csv` and `xml`. The exporters are one of
 the most time-consuming parts on the engine, mostly because of the sheer number
-of them; the are more than fifty exporters and they are always increasing.
-If you need new exports, please [add an issue on GitHub](https://github.com/gem/oq-engine/issues).
+of them; there are more than fifty exporters and they are always increasing.
+If you need new exports,
+please `add an issue on GitHub <https://github.com/gem/oq-engine/issues>`_.
 
 oq zip
 ------
