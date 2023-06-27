@@ -110,7 +110,7 @@ sites, so it could be that in the complete calculation some sites
 will have different hazard. But that's life. If you want absolute
 certitude you will need to run the full calculation and to wait.
 Still, the reduced calculation is useful, because if you see that
-are already big differences there, you can immediately assess that
+there are already big differences there, you can immediately assess that
 doubling the ``area_source_discretization`` parameter is a no go and
 you can try other strategies, like for instance doubling the
 ``width_of_mfd_bin`` parameter.
@@ -138,7 +138,7 @@ This is an example with 6 hazard maps, for poe = .5, .1, .05, .02, .01
 and .005 respectively. Here the only site that shows some discrepancy
 if the site number 767. If that site is in Greenland where nobody lives
 one can decide that the approximation is good anyway ;-)
-The engine also report the RMS-differences by considering all the sites,
+The engine also reports the RMS-differences by considering all the sites,
 i.e.
 
    rms-diff = sqrt<(hmap1 - hmap2)^2>  # mediating on all the sites
@@ -150,7 +150,7 @@ more sites, so the RMS difference will likely be even smaller.
 If you can check the few outlier sites and convince yourself that
 they are not important, you have succeeded in doubling the speed
 on your computation. And then you can start to work on the other
-quadratic and linear parameter and to get an ever bigger speedup!
+quadratic and linear parameters and to get an ever bigger speedup!
 
 Collapsing the GMPE logic tree
 ---------------------------------------
