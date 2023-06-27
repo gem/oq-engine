@@ -79,7 +79,7 @@ For instance the command::
   $ OQ_REDUCE=.01 oq engine --run job.ini
 
 will reduce the number of sites by 100 times by random sampling, as well
-a reducing to 1 the number of IMTs and realizations. As a result the
+as reducing to 1 the number of IMTs and realizations. As a result the
 calculation will be very fast (say 1 hour instead of 4 days) and it
 will possible to re-run it multiple times with different parameters.
 For instance, you can test the impact of the area source discretization
@@ -94,7 +94,7 @@ for instance::
 
 will compare the hazard maps for PGA for the original
 (ID=-2, area_source_discretization=10 km) and the new calculation
-(ID=-2, area_source_discretization=20 km) on all sites, printing out
+(ID=-1, area_source_discretization=20 km) on all sites, printing out
 the sites where the hazard values are different more than .01 g
 (``--atol`` means absolute tolerence). You can use ``oq compare --help``
 to see what other options are available.
