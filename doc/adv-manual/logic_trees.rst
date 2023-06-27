@@ -80,10 +80,10 @@ and the 6 possible paths can be extracted as follows:
 
 The empty square brackets means that the branchset should be applied to all
 branches in the previous branchset and correspond to the ``applyToBranches``
-tag in the XML version of the logic tree. If ``applyToBranches`` is missing
+tag in the XML version of the logic tree. If ``applyToBranches`` is missing,
 the logic tree is multiplicative and the total number of paths can be
 obtained simply by multiplying the number of paths in each branchset.
-When ``applyToBranches`` is used the logic tree becomes additive and the
+When ``applyToBranches`` is used, the logic tree becomes additive and the
 total number of paths can be obtained by summing the number of paths in
 the different subtrees. For instance, let us extend the previous example
 by adding another ``extendModel`` branchset and by using ``applyToBranches``:
@@ -262,7 +262,7 @@ export it, you will get a CSV file with the following structure::
   323,ACCCC~BB,3.1111853e-03
 
 For each realization there is a ``branch_path`` string which is split in
-two parts separated by a tilde. The left part describe the branches of
+two parts separated by a tilde. The left part describes the branches of
 the source model logic tree and the right part the branches of the gmpe
 logic tree. In past versions of the engine the branch path was using
 directly the branch IDs, so it was easy to assess the correspondence
