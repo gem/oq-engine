@@ -23,12 +23,14 @@ from openquake.baselib import general, hdf5
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, to_arrays)
+    BaseRupture, RuptureProxy, EBRupture, get_ebr)
 from openquake.commonlib import datastore
 
 U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
+TWO24 = 2 ** 24
 by_taxonomy = operator.attrgetter('taxonomy')
 code2cls = BaseRupture.init()
 weight = operator.itemgetter('n_occ')
@@ -85,7 +87,7 @@ class HcurvesGetter(object):
     def __init__(self, dstore):
         self.dstore = dstore
         self.imtls = dstore['oqparam'].imtls
-        self.full_lt = dstore['full_lt']
+        self.full_lt = dstore['full_lt'].init()
         self.sslt = self.full_lt.source_model_lt.decompose()
         self.source_info = dstore['source_info'][:]
 
@@ -148,7 +150,10 @@ class PmapGetter(object):
         self.use_rates = use_rates
         self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.rlzs_by_g = full_lt.rlzs_by_g
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
+        else:
+            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.slices = slices
         self._pmap = {}
 
@@ -184,7 +189,7 @@ class PmapGetter(object):
         """
         if self._pmap:
             return self._pmap
-        G = len(self.rlzs_by_g)
+        G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
                 poes_df = dstore.read_df('_poes', slc=slice(start, stop))
@@ -221,9 +226,9 @@ class PmapGetter(object):
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in pmap:  # no hazard for sid
             return pc0
-        for g, rlzs in self.rlzs_by_g.items():
+        for g, trs in enumerate(self.trt_rlzs):
             probability_map.combine_probs(
-                pc0.array, pmap[sid].array[:, g], rlzs)
+                pc0.array, pmap[sid].array[:, g], trs % TWO24)
         return pc0
 
     def get_mean(self):
@@ -252,23 +257,18 @@ class PmapGetter(object):
         return pmap
 
 
-time_dt = numpy.dtype(
-    [('rup_id', U32), ('nsites', U16), ('time', F32), ('task_no', U16)])
-
-
-def get_rupture_getters(dstore, ct=0, slc=slice(None), srcfilter=None):
+def get_rupture_getters(dstore, ct=0, srcfilter=None):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
     :returns: a list of RuptureGetters
     """
-    full_lt = dstore['full_lt']
-    rup_array = dstore['ruptures'][slc]
+    full_lt = dstore['full_lt'].init()
+    rup_array = dstore['ruptures'][:]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
     rup_array.sort(order=['trt_smr', 'n_occ', 'seed'])
-    scenario = 'scenario' in dstore['oqparam'].calculation_mode
-    proxies = [RuptureProxy(rec, scenario) for rec in rup_array]
+    proxies = [RuptureProxy(rec) for rec in rup_array]
     maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
     rgetters = []
     for block in general.block_splitter(
@@ -309,6 +309,25 @@ def multiline(array3RC):
     return lines
 
 
+def get_ebrupture(dstore, rup_id):  # used in show rupture
+    """
+    This is EXTREMELY inefficient, so it must be used only when you are
+    interested in a single rupture.
+    """
+    rups = dstore['ruptures'][:]  # read everything in memory
+    rupgeoms = dstore['rupgeoms']  # do not read everything in memory
+    idx = numpy.searchsorted(rups['id'], rup_id)
+    if idx == len(rups):
+        raise ValueError(f"Missing {rup_id=}")
+    rec = rups[idx]
+    if rec['id'] != rup_id:
+        raise ValueError(f"Missing {rup_id=}")
+    trts = dstore.getitem('full_lt').attrs['trts']
+    trt = trts[rec['trt_smr'] // TWO24]
+    geom = rupgeoms[rec['geom_id']]
+    return get_ebr(rec, geom, trt)
+
+
 # this is never called directly; get_rupture_getters is used instead
 class RuptureGetter(object):
     """
@@ -339,31 +358,6 @@ class RuptureGetter(object):
     @property
     def seeds(self):
         return [p['seed'] for p in self.proxies]
-
-    def get_rupdict(self):  # used in extract_event_info and show rupture
-        """
-        :returns: a dictionary with the parameters of the rupture
-        """
-        assert len(self.proxies) == 1, 'Please specify a slice of length 1'
-        dic = {'trt': self.trt}
-        with datastore.read(self.filename) as dstore:
-            rupgeoms = dstore['rupgeoms']
-            rec = self.proxies[0].rec
-            geom = rupgeoms[rec['id']]
-            arrays = to_arrays(geom)  # one array per surface
-            for a, array in enumerate(arrays):
-                dic['surface_%d' % a] = multiline(array)
-            rupclass, surclass = code2cls[rec['code']]
-            dic['rupture_class'] = rupclass.__name__
-            dic['surface_class'] = surclass.__name__
-            dic['hypo'] = rec['hypo']
-            dic['occurrence_rate'] = rec['occurrence_rate']
-            dic['trt_smr'] = rec['trt_smr']
-            dic['n_occ'] = rec['n_occ']
-            dic['seed'] = rec['seed']
-            dic['mag'] = rec['mag']
-            dic['srcid'] = rec['source_id']
-        return dic
 
     def get_proxies(self, min_mag=0):
         """

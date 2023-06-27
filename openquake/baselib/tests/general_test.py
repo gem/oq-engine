@@ -26,7 +26,8 @@ from operator import attrgetter
 from collections import namedtuple
 from openquake.baselib.general import (
     block_splitter, split_in_blocks, assert_close, rmsdiff,
-    deprecated, DeprecationWarning, cached_property, compress, decompress)
+    deprecated, DeprecationWarning, cached_property,
+    compress, decompress, random_choice)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -213,3 +214,15 @@ class RmsDiffTestCase(unittest.TestCase):
                          [1.1, 1.21, 1.31]])
         rms, index = rmsdiff(a, b)
         print(rms, index)
+
+
+class RandomChoiceTestCase(unittest.TestCase):
+    def test_advance(self):
+        chars = numpy.array(list('ABCDEFGHIJK'))
+        ch1 = random_choice(chars, 1_000_000, 0)
+        ch2 = random_choice(chars, 2_000_000, 1_000_000)
+        ch3 = random_choice(chars, 3_000_000, 3_000_000)
+
+        ch_tot = numpy.concatenate([ch1, ch2, ch3])
+        ch6 = random_choice(chars, 6_000_000, 0)
+        numpy.testing.assert_equal(ch_tot, ch6)

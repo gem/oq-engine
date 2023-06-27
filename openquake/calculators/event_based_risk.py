@@ -29,7 +29,7 @@ from openquake.baselib import (
     hdf5, performance, parallel, general, python3compat)
 from openquake.hazardlib import stats, InvalidFile
 from openquake.hazardlib.source.rupture import RuptureProxy
-from openquake.commonlib.calc import starmap_from_gmfs
+from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
@@ -94,7 +94,7 @@ def debugprint(ln, asset_loss_table, adf):
         print(df)
 
 
-def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
+def aggreg(outputs, crmodel, ARK, aggids, rlz_id, ideduc, monitor):
     """
     :returns: (avg_losses, agg_loss_table)
     """
@@ -114,7 +114,6 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
             if ln not in out or len(out[ln]) == 0:
                 continue
             alt = out[ln]
-            # debugprint(ln, alt, adf)
             if oq.avg_losses:
                 with mon_avg:
                     coo = average_losses(
@@ -150,7 +149,7 @@ def aggreg(outputs, crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor):
 
 def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     """
-    :param slice_by_event:
+    :param slice_by_event: composite array with fields 'start', 'stop'
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
@@ -189,25 +188,6 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             yield event_based_risk, df[s0:s1], oqparam
 
 
-def outputs(taxo_assets, df, crmodel, rng, monitor):
-    mon_risk = monitor('computing risk', measuremem=True)
-    fil_mon = monitor('filtering GMFs', measuremem=False)
-    for s0, s1 in performance.split_slices(df.eid.to_numpy(), 250_000):
-        grp = df[s0:s1]
-        for taxo, adf in taxo_assets:
-            with fil_mon:
-                # *crucial* for the performance
-                # of the next step, 'computing risk'
-                gmf_df = grp[numpy.isin(
-                    grp.sid.to_numpy(), adf.site_id.to_numpy())]
-            if len(gmf_df) == 0:
-                continue
-            with mon_risk:  # this is using a lot of memory
-                out = crmodel.get_output(
-                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-            yield out
-
-
 def event_based_risk(df, oqparam, monitor):
     """
     :param df: a DataFrame of GMFs with fields sid, eid, gmv_X, ...
@@ -215,28 +195,56 @@ def event_based_risk(df, oqparam, monitor):
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    with monitor('reading assets/crmodel', measuremem=True):
-        # can aggregate millions of asset by using few GBs of RAM
-        adf = monitor.read('assets')
-        ideduc = adf.ideductible.any()
-        items = adf.groupby('taxonomy')
-        taxo_assets = [(t, a.set_index('ordinal')) for t, a in items]
-        aggids = monitor.read('aggids')
+    with monitor('reading crmodel', measuremem=True):
         crmodel = monitor.read('crmodel')
+        ideduc = monitor.read('assets/ideductible')
+        aggids = monitor.read('aggids')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (sum(len(assets) for taxo, assets in taxo_assets),
-           len(weights), oqparam.K)
+    ARK = (oqparam.A, len(weights), oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
         rng = MultiEventRNG(oqparam.master_seed, df.eid.unique(),
                             int(oqparam.asset_correlation))
 
-    avg, alt = aggreg(outputs(taxo_assets, df, crmodel, rng, monitor),
-                      crmodel, ARK, aggids, rlz_id, adf, ideduc, monitor)
+    outs = gen_outputs(df, crmodel, rng, monitor)
+    avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
+                      monitor)
     return dict(avg=avg, alt=alt)
+
+
+def gen_outputs(df, crmodel, rng, monitor):
+    """
+    :param df: GMF dataframe (a slice of events)
+    :param crmodel: CompositeRiskModel instance
+    :param rng: random number generator
+    :param monitor: Monitor instance
+    :yields: one output per taxonomy and slice of events
+    """
+    mon_risk = monitor('computing risk', measuremem=False)
+    fil_mon = monitor('filtering GMFs', measuremem=False)
+    ass_mon = monitor('reading assets', measuremem=False)
+    slices = performance.split_slices(df.eid.to_numpy(), 1_000_000)
+    for s0, s1 in monitor.read('start-stop'):
+        with ass_mon:
+            assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
+        taxos = assets.taxonomy.unique()
+        for taxo in taxos:
+            adf = assets[assets.taxonomy == taxo]
+            for start, stop in slices:
+                gdf = df[start:stop]
+                with fil_mon:
+                    # *crucial* for the performance of the next step
+                    gmf_df = gdf[numpy.isin(gdf.sid.to_numpy(),
+                                            adf.site_id.to_numpy())]
+                if len(gmf_df) == 0:  # common enough
+                    continue
+                with mon_risk:
+                    out = crmodel.get_output(
+                        adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+                yield out
 
 
 def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
@@ -270,7 +278,13 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         monitor.save('sids', self.sitecol.sids)
-        monitor.save('assets', self.assetcol.to_dframe())
+        adf = self.assetcol.to_dframe().sort_values('taxonomy')
+        del adf['id']
+        monitor.save('assets', adf)
+        tss = performance.idx_start_stop(adf.taxonomy.to_numpy())
+        # storing start-stop indices in a smart way, so that the assets are
+        # read from the workers in chunks of at most 1 million elements
+        monitor.save('start-stop', compactify3(tss))
         monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
@@ -336,6 +350,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.M = len(oq.all_imts())
         oq.N = self.N
         oq.K = K
+        oq.A = self.assetcol['ordinal'].max() + 1
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
@@ -401,8 +416,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
             srcfilter = self.src_filter()
-            scenario = 'scenario' in oq.calculation_mode
-            proxies = [RuptureProxy(rec, scenario)
+            proxies = [RuptureProxy(rec)
                        for rec in self.datastore['ruptures'][:]]
             full_lt = self.datastore['full_lt']
             self.datastore.swmr_on()  # must come before the Starmap

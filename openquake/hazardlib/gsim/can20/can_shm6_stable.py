@@ -23,12 +23,11 @@ import pandas as pd
 import openquake.hazardlib.gsim.atkinson_boore_2006 as AB06
 from scipy import interpolate
 from openquake.hazardlib import const
-from openquake.hazardlib.const import TRT, StdDev
+from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.gsim.base import CoeffsTable
 from openquake.hazardlib.gsim.gmpe_table import GMPETable
 from openquake.hazardlib.gsim.can20.can_shm6_active_crust import _check_imts
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
 from openquake.hazardlib.gsim.gmpe_table import _get_mean, _get_stddev
 from openquake.hazardlib.gsim.boore_atkinson_2008 import \
     BooreAtkinson2008 as BA08
@@ -132,15 +131,14 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         for application to the 2015 Canadian national seismic hazard maps,
         Can. J. Civ. Eng., 40, 988–998, doi: 10.1139/cjce-2012-0544.
     """
-
     AA13_TABLE = ""
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
-    REQUIRES_DISTANCES = set(('rhypo',))
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    REQUIRES_DISTANCES = {'rhypo'}
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def __init__(self, **kwargs):
         """
@@ -164,7 +162,7 @@ class CanadaSHM6_StableCrust_AA13(GMPETable):
         # Check input imts
         _check_imts(imts)
         # Magnitudes
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
 
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, mag)
@@ -421,7 +419,7 @@ def BC17_amp(self, imt, ctx, dist):
     rrup = dist.copy()
     rrup[rrup < 2.] = 2.
     rrup[rrup > 1200.] = 1200.
-    ##clip any values less than 3 to 3, 
+    # clip any values less than 3 to 3, 
     # and any values greater than 8 to 8
     mag = np.clip(ctx, 3., 8.)
 
@@ -456,10 +454,10 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
     DEFINED_FOR_TECTONIC_REGION_TYPE = "Stable Shallow Crust"
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = set((const.StdDev.TOTAL,))
-    REQUIRES_SITES_PARAMETERS = set(('vs30',))
-    REQUIRES_DISTANCES = set(('rhypo',))
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag',))
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    REQUIRES_SITES_PARAMETERS = {'vs30'}
+    REQUIRES_DISTANCES = {'rhypo'}
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     def __init__(self, **kwargs):
         """
@@ -489,7 +487,7 @@ class CanadaSHM6_StableCrust_NGAEast(GMPETable):
         _check_imts(imts)
 
         # Magnitudes
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
 
         # Get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, mag)

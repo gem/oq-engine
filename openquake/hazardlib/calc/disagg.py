@@ -49,6 +49,7 @@ from openquake.hazardlib.calc.mean_rates import (
 
 BIN_NAMES = 'mag', 'dist', 'lon', 'lat', 'eps', 'trt'
 BinData = collections.namedtuple('BinData', 'dists, lons, lats, pnes')
+TWO24 = 2 ** 24
 
 
 def assert_same_shape(arrays):
@@ -625,16 +626,20 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     :returns: source_id, rates(Ma, D, E, M, P), rates(M, L1)
     """
     assert len(sitecol) == 1, sitecol
-    if not hasattr(reduced_lt, 'rlzs_by_g'):
+    if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
     rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
-    iml3 = rmap.expand(reduced_lt).interp4D(oq.imtls, oq.poes)[0]  # (M, P, Z)
+    trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
+                 for rlzs in cm.gsims.values()]
+    iml3 = rmap.expand(reduced_lt, trt_rlzs).interp4D(
+        oq.imtls, oq.poes)[0]  # (M, P, Z)
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
         rates5D += dis.disagg_mag_dist_eps(iml3, ws)
-    rates2D = calc_mean_rates(rmap, reduced_lt.g_weights, oq.imtls)[0]
+    gws = reduced_lt.g_weights(trt_rlzs)
+    rates2D = calc_mean_rates(rmap, gws, oq.imtls)[0]
     return source_id, rates5D, rates2D

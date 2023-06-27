@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-import pandas
 from openquake.baselib import sap
 from openquake.hazardlib.contexts import read_cmaker
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.commonlib.datastore import read
-from openquake.calculators.extract import read_ebrupture
+from openquake.calculators.getters import get_ebrupture
 
 
 def max_gmv0(calc_id: int, rup_id: int):
     dstore = read(calc_id)
     sitecol = dstore['sitecol']
-    ebr = read_ebrupture(dstore, rup_id)
+    ebr = get_ebrupture(dstore, rup_id)
     cmaker = read_cmaker(dstore, ebr.trt_smr)
-    dic, dt = GmfComputer(ebr, sitecol, cmaker).compute_all()
-    df = pandas.DataFrame(dic).sort_values('gmv_0').groupby('sid').head(1)
-    return df
+    df = GmfComputer(ebr, sitecol, cmaker).compute_all(scenario=False)
+    return df.sort_values('gmv_0').groupby('sid').head(1)
 
 
 if __name__ == '__main__':

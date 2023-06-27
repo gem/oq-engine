@@ -433,17 +433,32 @@ If you do not set the ``aggregate_by`` parameter
 you will still be able to compute the total loss curve 
 (for the entire portfolio of assets), and the total average losses.
 
+.. _aggregating_by_multiple_tags:
+
 Aggregating by multiple tags
 ----------------------------
 
-The engine also supports aggregation my multiple tags. For instance
-the second event based risk demo (the file ``job_eb.ini``) has a line
+The engine also supports aggregation by multiple tags. 
+Multiple tags can be indicated as multi-tag and/or various single-tag aggregations:
 
-   ``aggregate_by = NAME_1, taxonomy``
+``aggregate_by = NAME_1, taxonomy``
+
+or
+
+``aggregate_by = NAME_1; taxonomy``
+
+Comma ``,`` separated values will generate keys for all the possible 
+combinations of the indicated tag values, while semicolon ``;`` 
+will generate keys for the single tags.
+
+For instance the second event based risk demo 
+(the file ``job_eb.ini``) has a line
+
+``aggregate_by = NAME_1, taxonomy``
 
 and it is able to aggregate both on geographic region (``NAME_1``) and
-on taxonomy. There are 25 possible combinations, that you can see with
-the command::
+on ``taxonomy``. There are 25 possible combinations, that you can see with
+the command `oq show agg_keys`::
 
    $ oq show agg_keys
    | NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
@@ -516,6 +531,15 @@ used. In the case of the demo actually only 20,877 rows are nonzero::
           event_id  agg_id  loss_id           loss      variance
    ...
    [20877 rows x 5 columns]
+
+It is also possible to perform the aggregation by various single-tag aggregations,
+using the ``;`` separator instead of ``,``. For example, a line like
+
+   ``aggregate_by = NAME_1; taxonomy``
+
+would produce first the aggregation by geographic region (``NAME_1``), then
+by ``taxonomy``. In this case, instead of producing 5 x 5 combinations, only
+5 + 5 outputs would be obtained.
 
 
 Rupture sampling: how does it work?
@@ -686,8 +710,8 @@ Rupture sampling: how to get it wrong
 
 Rupture samplings is *much more complex than one could expect* and in
 many respects *surprising*. In the many years of existence of the
-engine, multiple approached were tried and you can expect some
-detail of the rupture sampling mechanism to be different nearly at every
+engine, multiple approached were tried and you can expect the
+details of the rupture sampling mechanism to be different nearly at every
 version of the engine.
 
 Here we will discuss some tricky points that may help you understand
@@ -697,8 +721,10 @@ rupture sampling is nontrivial.
 
 We will start with the first subtlety, the *interaction between
 sampling and filtering*. The short version is that you should *first
-sample and then filter*. Here is the long version. Consider the
-following code emulating rupture sampling for poissonian ruptures:
+sample and then filter*.
+
+Here is the long version. Consider the following code emulating
+rupture sampling for poissonian ruptures:
 
 .. code-block::
   
@@ -732,7 +758,7 @@ feature and it is able to discard ruptures below the minimum magnitude.
 But how should it work? The natural approach to follow, for performance-oriented
 applications, would be to first discard the low magnitudes and then perform
 the sampling. However, that would have effects that would be surprising
-for many users. Consider the following two alternative:
+for most users. Consider the following two alternative:
 
 .. code-block::
   
@@ -767,17 +793,12 @@ are consistent with the no-filtering case:
     >> calc_n_occ_before_filtering(fake_ruptures, eff_time, seed, min_mag)
     [ 9  6 13  7  6  6 10]
 
-Historically the engine followed the filter-early approach and it is in
-the process of transiting to the filter-late approach. The transition is
-extremely tricky and error prone, since the minimum magnitude feature is
-spread across many modules, and it could easily go on for years.
-
 The problem with the filtering is absolutely general and not restricted
 only to the magnitude filtering: it is exactly the same also for distance
 filtering. Suppose you have a ``maximum_distance`` of 300 km and than
 you decide that you want to increase it to 301 km. One would expect this
-change to have a minor impact; instead, the occupation numbers will be
-completely different and you sample a very different set of ruptures.
+change to have a minor impact; instead, you may end up sampling a very
+different set of ruptures.
 
 It is true that average quantities like the hazard curves obtained from
 the ground motion fields will converge for long enough effective time,
@@ -785,12 +806,13 @@ however in practice you are always in situations were
 
 1. you cannot perform the calculation for a long enough effective time
    since it would be computationally prohibitive
-2. you are interested on quantities which are strongly sensitive to a
-   change in the sampling, like the Maximum Probable Loss at some return period
+2. you are interested on quantities which are strongly sensitive to aany
+   change, like the Maximum Probable Loss at some return period
 
 In such situations changing the site collection (or changing
-the maximum distance which is akin to changing the site collection) can change
-the sampling of the ruptures significantly.
+the maximum distance which is akin to changing the site collection)
+can change the sampling of the ruptures significantly, at least for
+engine versions lower than 3.17.
 
 Users wanting to compare the GMFs or the risk on different site collections
 should be aware of this effect; the solution is to first sample the
@@ -2036,9 +2058,16 @@ calculations::
 
 **Additional comments:**
 
-- ``aggregate_by``: it is possible to define multiple aggregation keys.
+- ``aggregate_by``: it is possible to define multiple aggregation keys
+  (see :ref:`aggregating_by_multiple_tags`).
   However, for reinsurance calculations the ``policy`` key must be present,
   otherwise an error message will be raised.
+  In the following example, multiple aggregation keys are used:
+
+      ``aggregate_by = policy; tag1``
+
+  In this case, aggregated loss curves will be produced also for ``tag1`` and ``policy``,
+  while reinsurance outputs will only be produced for the policy.
 
 - ``reinsurance_file``: This dictionary associates the reinsurance information
   to a given the loss_type (the engine supports structural, nonstructural, 
@@ -2511,6 +2540,13 @@ have descriptions as follows::
  Multipoint demo {'truncation_level': 2}
  Multipoint demo {'truncation_level': 3}
 
+NB: from version 3.17 the engine is also able to run sensitivity analysis
+on file parameters. For instance if you want to run a ``classical_risk``
+calculation starting from three different hazard inputs you can write::
+
+ sensitivity_analysis = {
+   "hazard_curves_file": ["hazard1.csv", "hazard2.csv", "hazard3.csv"]}
+
 The ``custom_site_id``
 ----------------------
 
@@ -2557,7 +2593,7 @@ engine with time-honored Fortran codes using the same approximation.
 
 You can enable it in the engine by adding a ``[reqv]`` section to the
 job.ini, like in our example in
-openquake/qa_tests_data/classical/case_2/job.ini::
+openquake/qa_tests_data/logictree/case_02/job.ini::
 
   reqv_hdf5 = {'active shallow crust': 'lookup_asc.hdf5',
                'stable shallow crust': 'lookup_sta.hdf5'}
@@ -2572,7 +2608,7 @@ there are 26 magnitudes ranging from 6.05 to 8.55) and N is the
 number of epicenter distances (in the examples ranging from 1 km to 1000 km).
 
 Depending on the tectonic region type and rupture magnitude, the
-engine converts the epicentral distance ``repi` into an equivalent
+engine converts the epicentral distance ``repi`` into an equivalent
 distance by looking at the lookup table and use it to determine the
 ``rjb`` and ``rrup`` distances, instead of the regular routines. This
 means that within this approximation ruptures are treated as

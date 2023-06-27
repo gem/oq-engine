@@ -281,6 +281,7 @@ def get_num_distances(gsims):
     return len(dists)
 
 
+# NB: minimum_magnitude is ignored
 def _interp(param, name, trt):
     try:
         mdd = param[name]
@@ -289,7 +290,11 @@ def _interp(param, name, trt):
     if isinstance(mdd, IntegrationDistance):
         return mdd(trt)
     elif isinstance(mdd, dict):
-        return magdepdist(getdefault(mdd, trt))
+        if mdd:
+            magdist = getdefault(mdd, trt)
+        else:
+            magdist = [(MINMAG, 1000), (MAXMAG, 1000)]
+        return magdepdist(magdist)
     return mdd
 
 
@@ -362,7 +367,7 @@ class ContextMaker(object):
         self.oq = oq
         for gsim in gsims:
             if hasattr(gsim, 'set_tables'):
-                if not self.mags and not is_modifiable(gsim):
+                if len(self.mags) == 0 and not is_modifiable(gsim):
                     raise ValueError(
                         'You must supply a list of magnitudes as 2-digit '
                         'strings, like mags=["6.00", "6.10", "6.20"]')
@@ -588,7 +593,7 @@ class ContextMaker(object):
                 ctxs.extend(self.get_ctx_iter(src, sites))
         return concat(ctxs)
 
-    def make_rctx(self, rup):
+    def make_legacy_ctx(self, rup):
         """
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
@@ -643,11 +648,11 @@ class ContextMaker(object):
 
         return ctx
 
-    def get_rctx(self, rup, sites, distances=None):
+    def get_legacy_ctx(self, rup, sites, distances=None):
         """
-        :returns: a RuptureContext (or None if filtered away)
+        :returns: a legacy RuptureContext (or None if filtered away)
         """
-        ctx = self.make_rctx(rup)
+        ctx = self.make_legacy_ctx(rup)
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
 
@@ -850,7 +855,7 @@ class ContextMaker(object):
                 mask = dist <= magdist
                 if mask.any():
                     r_sites = sites.filter(mask)
-                    rctx = self.get_rctx(rup, r_sites, dist[mask])
+                    rctx = self.get_legacy_ctx(rup, r_sites, dist[mask])
                     rctx.src_id = src_id
                     if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id
@@ -973,6 +978,7 @@ class ContextMaker(object):
         :param rup_indep: rupture flag (false for mutex ruptures)
         :yields: poes, ctxt, invs with poes of shape (N, L, G)
         """
+        ctx.flags.writeable = True
         ctx.mag = numpy.round(ctx.mag, 3)
         for mag in numpy.unique(ctx.mag):
             ctxt = ctx[ctx.mag == mag]
@@ -1019,6 +1025,7 @@ class ContextMaker(object):
         for ctx in ctxs:
             for poes, ctxt, invs in self.gen_poes(ctx, rup_indep):
                 with self.pne_mon:
+                    ctxt.flags.writeable = True  # avoid numba type error
                     pmap.update(poes, invs, ctxt, itime, rup_mutex)
 
     # called by gen_poes and by the GmfComputer
@@ -1038,14 +1045,17 @@ class ContextMaker(object):
         else:  # vectorize the contexts
             recarrays = [self.recarray(ctxs)]
         if split_by_mag:
-            recarr = numpy.concatenate(recarrays).view(numpy.recarray)
-            recarrays = split_array(recarr, U32(recarr.mag*100))
+            recarr = numpy.concatenate(
+                recarrays, dtype=recarrays[0].dtype).view(numpy.recarray)
+            recarrays = split_array(recarr, U32(numpy.round(recarr.mag*100)))
         self.adj = {gsim: [] for gsim in self.gsims}  # NSHM2014P adjustments
         for g, gsim in enumerate(self.gsims):
             compute = gsim.__class__.compute
             start = 0
             for ctx in recarrays:
                 slc = slice(start, start + len(ctx))
+                # make the context immutable
+                ctx.flags.writeable = False
                 adj = compute(gsim, ctx, self.imts, *out[:, g, :, slc])
                 if adj is not None:
                     self.adj[gsim].append(adj)
@@ -1638,9 +1648,11 @@ def get_cmakers(src_groups, full_lt, oq):
         cmaker = ContextMaker(trts[trti], rlzs_by_gsim, oq)
         cmaker.trti = trti
         cmaker.trt_smrs = trt_smrs
-        cmaker.gidx = full_lt.get_gidx(trt_smrs)
         cmaker.grp_id = grp_id
         cmakers.append(cmaker)
+    gids = full_lt.get_gids(cm.trt_smrs for cm in cmakers)
+    for cm in cmakers:
+        cm.gid = gids[cm.grp_id]
     return cmakers
 
 

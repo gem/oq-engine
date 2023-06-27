@@ -63,9 +63,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
         for spec of input and result values.
                 CanadaSHM6 edits: Added PGV
                           Limited GMM to the CSHM6 range of 0.05 - 10s.
-
         """
-
         # Checking the IMTs used to compute ground-motion
         _check_imts(imts)
 
@@ -123,7 +121,7 @@ class CanadaSHM6_Interface_AbrahamsonEtAl2015SInter(AbrahamsonEtAl2015SInter):
 
 
 class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
-                                CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
+        CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55):
     """
     Zhao et al., 2006 Interface with Cascadia adjustment at a fixed hypo depth
     of 30 km, extrapolated to 0.05 - 10s and with modifications to the site
@@ -133,16 +131,14 @@ class CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia(
     See also header in CanadaSHM6_Interface.py
     """
 
-    REQUIRES_RUPTURE_PARAMETERS = set(('mag', 'rake'))
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'rake'}
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
     extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
     HYPO_DEPTH = 30.
 
     def __init__(self):
-        super(CanadaSHM6_Interface_ZhaoEtAl2006SInterCascadia,
-              self).__init__()
-
+        super().__init__()
         self.COEFFS_SINTER = CoeffsTable_CanadaSHM6(self.COEFFS_SINTER,
                                                     self.MAX_SA, self.MIN_SA,
                                                     self.MAX_SA_EXTRAP,
@@ -264,8 +260,8 @@ class CanadaSHM6_Interface_AtkinsonMacias2009(AtkinsonMacias2009):
     """
 
     REQUIRES_DISTANCES = {'rrup', 'rjb'}
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'z1pt0'))
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([PGA, PGV, SA])
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z1pt0'}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, PGV, SA}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -338,7 +334,7 @@ def _set_extrapolation(imt, model):
 
 
 class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
-                                                GhofraniAtkinson2014Cascadia):
+        GhofraniAtkinson2014Cascadia):
     """
     Ghofrani and Atkinson 2014 Interface GMM with Cascadia adjustment,
     extrapolated to 0.05 - 10s and modifications to the site term as
@@ -354,9 +350,7 @@ class CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia(
     extrapolate_GMM = CanadaSHM6_Interface_AbrahamsonEtAl2015SInter()
 
     def __init__(self):
-
-        super(CanadaSHM6_Interface_GhofraniAtkinson2014Cascadia,
-              self).__init__()
+        super().__init__()
 
         # Need to use new CoeffsTable to be able to handle extrapolation
         self.COEFFS = CoeffsTable_CanadaSHM6(

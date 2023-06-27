@@ -457,8 +457,8 @@ class SourceModelLogicTree(object):
         self.source_data = numpy.array(self.source_data, source_dt)
         unique = numpy.unique(self.source_data['fname'])
         dt = time.time() - t0
-        logging.info('Validated source model logic tree with %d underlying '
-                     'files in %.2f seconds', len(unique), dt)
+        logging.debug('Validated source model logic tree with %d underlying '
+                      'files in %.2f seconds', len(unique), dt)
 
     def parse_branchset(self, branchset_node, bsno):
         """
@@ -1057,39 +1057,39 @@ class FullLogicTree(object):
         assert self.Re <= TWO24, len(self.sm_rlzs)
         self.trti = {trt: i for i, trt in enumerate(self.gsim_lt.values)}
         self.trts = list(self.gsim_lt.values)
-        self.gdict = {}
-        g = 0
-        rlzs_by_g = []
-        for smr in range(self.Re):
-            for trti, trt in enumerate(self.trts):
-                trt_smr = trti * TWO24 + smr
-                rgb = self.get_rlzs_by_gsim(trt_smr)
-                self.gdict[trt_smr] = numpy.arange(g, g + len(rgb)) 
-                for rlzs in rgb.values():
-                    rlzs_by_g.append(rlzs)
-                    g += 1
-        self.Gt = g
-        self.rlzs_by_g = {g: U32(rlzs) for g, rlzs in enumerate(rlzs_by_g)}
         self.weights = [rlz.weight for rlz in self.get_realizations()]
-        ws = numpy.array(self.weights)
-        self.g_weights = [ws[rlzs].sum() for rlzs in rlzs_by_g]
-
-        # sanity check on Gt
-        if self.num_samples == 0:  # easy formula
-            tot_gsims = sum(len(vals) for vals in self.gsim_lt.values.values())
-            assert self.Gt == len(self.sm_rlzs) * tot_gsims
-
-        RT = self.get_num_paths() * len(self.trts)
-        assert sum(len(rlzs) for rlzs in rlzs_by_g) == RT, (
-            sum(len(rlzs) for rlzs in rlzs_by_g), RT)
-
         return self
 
-    def get_gidx(self, trt_smrs):
+    def get_gids(self, all_trt_smrs):
         """
-        :returns: an array of g-indices
+        :returns: list of of arrays of gids, one for each source group
         """
-        return numpy.concatenate([self.gdict[ts] for ts in trt_smrs])
+        gids = []
+        g = 0
+        for trt_smrs in all_trt_smrs:
+            rbg = self.get_rlzs_by_gsim(trt_smrs)
+            gids.append(numpy.arange(g, g + len(rbg)))
+            g += len(rbg)
+        return gids
+        
+    def get_trt_rlzs(self, all_trt_smrs):
+        """
+        :returns: a list with Gt arrays of dtype uint32
+        """
+        data = []
+        for trt_smrs in all_trt_smrs:
+            for rlzs in self.get_rlzs_by_gsim(trt_smrs).values():
+                data.append(U32(rlzs) + TWO24 * (trt_smrs[0] // TWO24))
+        return data
+
+    def g_weights(self, trt_rlzs):
+        """
+        :returns: a list of Gt weights
+        """
+        out = []
+        for g, trs in enumerate(trt_rlzs):
+            out.append(sum(self.weights[r] for r in trs % TWO24))
+        return out
 
     def get_smr_by_ltp(self):
         """
@@ -1345,18 +1345,6 @@ class FullLogicTree(object):
                               shorten(r.gsim_rlz.lt_path, sh2))
             tups.append((r.ordinal, path, r.weight['weight']))
         return numpy.array(tups, rlz_dt)
-
-    def get_sm_by_grp(self):
-        """
-        :returns: a dictionary trt_smr -> sm_id
-        """
-        dic = {}
-        for sm in self.sm_rlzs:
-            trt_smrs = sm.ordinal + numpy.arange(
-                len(self.gsim_lt.values)) * TWO24
-            for trt_smr in trt_smrs:
-                dic[trt_smr] = sm.ordinal
-        return dic
 
     def __repr__(self):
         info_by_model = {}

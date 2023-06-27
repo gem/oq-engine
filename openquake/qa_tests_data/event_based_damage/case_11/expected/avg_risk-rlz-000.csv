@@ -1,9 +1,9 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.17.0-gitc4d3047c05', start_date='2023-04-21T07:34:09', checksum=572001388, investigation_time=1.0, risk_investigation_time=1.0"
+#,,,,,,,,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:52:51', checksum=572001388, investigation_time=1.0, risk_investigation_time=1.0"
 asset_id,city,county,state,taxonomy,tract,zip,lon,lat,structural~losses
 a3,Novato,Marin,California,tax1,102203,94945,-122.57000,38.11300,1.882223E+01
-a2,Benicia,Solano,California,tax2,252102,94510,-122.11400,38.11300,3.882869E+01
+a2,Benicia,Solano,California,tax2,252102,94510,-122.11400,38.11300,1.776466E+01
 a5,Walnut Creek,Contra Costa,California,tax1,338302,94598,-122.00000,37.91000,1.882223E+01
-a4,Concord,Contra Costa,California,tax3,355200,94519,-122.00000,38.00000,1.577681E+02
-a1,Suisun,Solano,California,tax1,252702,94585,-122.00000,38.11300,4.687719E+01
-a6,Suisun,Solano,California,tax2,252702,94585,-122.00000,38.22500,2.118474E+01
+a4,Concord,Contra Costa,California,tax3,355200,94519,-122.00000,38.00000,1.215473E+01
+a1,Suisun,Solano,California,tax1,252702,94585,-122.00000,38.11300,2.828152E+01
+a6,Suisun,Solano,California,tax2,252702,94585,-122.00000,38.22500,1.818520E+01
 a7,Birds Landing,Solano,California,tax1,253500,94512,-121.88600,38.11300,8.783706E+00

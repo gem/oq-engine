@@ -18,7 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from openquake.baselib import sap, hdf5, datastore
-from openquake.calculators.getters import ProbabilityMapGetter
+from openquake.calculators.getters import PmapGetter
 
 
 def combine_mean_curves(calc_big: int, calc_small: int):

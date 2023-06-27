@@ -53,8 +53,12 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     oq.use_rates = True
     oq.disagg_by_src = False
     L = oq.imtls.size
-    rmap = ProbabilityMap(sitecol.sids, L, full_lt.Gt).fill(0)
     cmakers = get_cmakers(src_groups, full_lt, oq)
+    gids = full_lt.get_gids([cm.trt_smrs for cm in cmakers])
+    Gt = sum(len(cm.gsims) for cm in cmakers)
+    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
+                 len(sitecol), oq.imtls.size, Gt)
+    rmap = ProbabilityMap(sitecol.sids, L, Gt).fill(0)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
         G = len(cmaker.gsims)
@@ -63,9 +67,9 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
             continue
         rates = to_rates(dic['pmap'].array)
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
-        for i, g in enumerate(cmaker.gidx):
+        for i, gid in enumerate(gids[cmaker.grp_id]):
             # += tested in logictree/case_05
-            rmap.array[:, :, g] += rates[:, :, i % G]
+            rmap.array[:, :, gid] += rates[:, :, i % G]
     return rmap, ctxs, cmakers
 
 
@@ -99,8 +103,6 @@ def main(job_ini):
         assoc_dist = (oq.region_grid_spacing * 1.414
                       if oq.region_grid_spacing else 5)  # Graeme's 5km
         sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
-    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
-                 len(sitecol), oq.imtls.size, csm.full_lt.Gt)
     rmap, ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
     rates = calc_mean_rates(rmap, csm.full_lt.g_weights, oq.imtls)
     N, M, L1 = rates.shape

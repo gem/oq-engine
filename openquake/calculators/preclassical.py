@@ -37,9 +37,8 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-
-rlzs_by_g_dt = numpy.dtype([('rlzs', hdf5.vuint32), ('weight', float)])
 
 
 def source_data(sources):
@@ -141,18 +140,11 @@ class PreClassicalCalculator(base.HazardCalculator):
     accept_precalc = []
 
     def init(self):
-        super().init()
         if self.oqparam.hazard_calculation_id:
-            self.full_lt = self.datastore.parent['full_lt']
+            self.full_lt = self.datastore.parent['full_lt'].init()
         else:
+            super().init()
             self.full_lt = self.csm.full_lt
-        arr = numpy.zeros(self.full_lt.Gt, rlzs_by_g_dt)
-        for g, rlzs in enumerate(self.full_lt.rlzs_by_g.values()):
-            arr[g]['rlzs'] = rlzs
-            arr[g]['weight'] = self.full_lt.g_weights[g]['weight']
-        dset = self.datastore.create_dset(
-            'rlzs_by_g', rlzs_by_g_dt, (self.full_lt.Gt,), fillvalue=None)
-        dset[:] = arr
 
     def store(self):
         # store full_lt, toms
@@ -166,6 +158,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         csm = self.csm
         self.store()
         cmakers = read_cmakers(self.datastore, csm)
+        trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
+        self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
         if sites is None:
             logging.warning('No sites??')
@@ -269,6 +263,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         parallelizing on the sources according to their weight and
         tectonic region type.
         """
+        if not hasattr(self, 'csm'):  # used only for post_process
+            return
         cachepath = readinput.get_cache_path(self.oqparam, self.datastore.hdf5)
         if os.path.exists(cachepath):
             realpath = os.path.realpath(cachepath)
@@ -300,5 +296,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                 raise RuntimeError('There are no sources close to the site(s)')
 
     def post_process(self):
-        # needed, otherwise the parent method would be called too early
-        pass
+        if self.oqparam.calculation_mode == 'preclassical':
+            super().post_process()
+        # else do nothing, post_process will be called later on

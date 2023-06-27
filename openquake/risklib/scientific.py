@@ -50,7 +50,25 @@ structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins
-reinsurance claim'''.split())
+reinsurance claim area number residents
+structural+business_interruption nonstructural+business_interruption
+contents+business_interruption
+structural+nonstructural+business_interruption
+structural+contents+business_interruption
+nonstructural+contents+business_interruption
+structural+nonstructural+contents+business_interruption
+contents_ins business_interruption_ins
+structural_ins+nonstructural_ins structural_ins+contents_ins
+structural_ins+business_interruption_ins nonstructural_ins+contents_ins
+nonstructural_ins+business_interruption_ins
+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins
+structural_ins+nonstructural_ins+business_interruption_ins
+structural_ins+contents_ins+business_interruption_ins
+nonstructural_ins+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+'''.split())
+
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
@@ -967,7 +985,7 @@ def classical_damage(
     :param steps_per_interval:
         steps per interval
     :returns:
-        an array of M probabilities of occurrence where M is the numbers
+        an array of D probabilities of occurrence where D is the numbers
         of damage states.
     """
     if steps_per_interval > 1:  # interpolate
@@ -1170,8 +1188,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         lims = j.insurance_limit.to_numpy() * values
         ids_of_invalid_assets = aids[deds > lims]
         if len(ids_of_invalid_assets):
-            invalid_assets = set(asset_df['id'][aid].decode('utf8')
-                                 for aid in ids_of_invalid_assets)
+            invalid_assets = set(ids_of_invalid_assets)
             raise ValueError(
                 f"Please check deductible values. Values larger than the"
                 f" insurance limit were found for asset(s) {invalid_assets}.")
@@ -1634,7 +1651,7 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     elif consequence == 'fatalities':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_night']
+        return dmgdist @ coeffs * asset['occupants_avg']
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype):

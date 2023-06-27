@@ -88,7 +88,7 @@ def main(what, force=False):
         purge(['failed'], '1 days', force)
         return
     elif what == 'old':
-        purge('complete failed'.split(), '30 days', force)
+        purge('complete failed deleted'.split(), '30 days', force)
         return
     calc_id = int(what)
     if calc_id < 0:

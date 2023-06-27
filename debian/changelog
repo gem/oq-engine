@@ -1,7 +1,91 @@
   [Michele Simionato]
-  * Internal: added command `oq plot event_based_mfd?`
+  * Fixed tau-phi inversion in LanzanoLuzi2019
+  * Fixed another bug with conditioned GMFs appearing as the error
+    `array[m, n, bad] = exp(mean_covs[0, g, m, n], im)
+     TypeError: list indices must be integers or slices, not tuple`
+
+  [Claudio Schill]
+  * Fixed sorting bug in the sigma_mu adjustment factor in
+    the Kuehn et al. (2020) GMM
+
+  [Michele Simionato]
+  * Fixed a subtle filtering bug in conditioned GMFs
+  * Fixed shakemap calculations to take the risk IMTs and not the hazard IMTs
+  * Extended shakemap2gmfs to amplify the GMFs based on user-provided vs30
+    values
+  * Removed sorting of the sections in the multiFaultSource reader to keep
+    the rup_idxs consistent with the order in the files
+  * GMFs too small to produce losses now give a warning rather than an error
+  * Fixed bug in `get_ry0_distance` breaking conditioned GMFs
+  * Made sure lon and lat are rounded to 5 digits in the site collection
+
+  [Graeme Wheaterill]
+  * Fixes to bchydro_2016_epistemic, eshm20_craton and lanzano_2019
+
+  [Michele Simionato]
+  * Extended sensitity analysis to file parameters
+  * Introduced new loss type `residents`
+
+  [Marco Pagani]
+  * Fixed bug in get_profiles_from_simple_fault_data affecting KiteSurfaces
+
+  [Michele Simionato]
+  * Fixed the rupture exporter in presence of GMPETables
+  * Optimized the postclassical phase
+  * Fixed a serious issue in the classical calculator with tiles
+  * Vectorized the association assets <-> hazard sites (up to 32x speedup)
+  * Fixed bug in disaggregation calculations associated to an error
+    in the line `[mag] = np.unique(np.round(ctx.mag, 6))`
+  * Optimized the calculation of geohashes by using numba
+
+  [Paolo Tormene]
+  * Extended total_losses to include business_interruption
+
+  [Michele Simionato]
+  * Recognized `occupants_avg` field in the exposure
+  * Optimized reading the exposure (both speed and memory)
+  * Optimized the rupture sampling for MultiFaultSources and improved
+    the parallelization for MultiFaultSources and MultiPointSources
+  * Made the parameter `truncation_level` mandatory
+  * Fixed the damage state header in the aggrisk outputs
+  * Changed the order of the IMTs to be by period and not lexicographic
+  * Fixed the realizations extractor for scenario calculations reading
+    ruptures with multiple different tectonic region types
+
+  [Kendra Johnson]
+  * Fixed a bug in disaggregation by Lon-Lat-TRT when there are multifault
+    ruptures and multiple sites
+
+  [Michele Simionato]
+  * Deprecated the <area> conversion in the exposure
+  * Added new loss types "area" and "number" for usage in risk calculations
+  * Made the contexts immutable and fixed mutability bugs potentially
+    affecting the modules akkar_bommer_2010, bindi_2011_ipe, can_shm6_inslab,
+    lanzano_2019, youd_etal_2002, zhang_zhao_2005, cauzzi_faccioli_2008_swiss,
+    chiou_youngs_2008_swiss campbell_bozorgnia_2014
+  * Changed the disaggregation algorithm (see manual)
+  * Added a view `risk_by_rup`
+  * Internal: added command `oq compare med_gmv <imt>`
+  * Extended extract/ruptures to extract a single rupture given the `rup_id`
+  * Fixed a bug in classical_damage causing a ValueError: could not broadcast
+    input array from shape (X,Y) into shape (X,)
+  * Added check for missing site parameters
+
+  [Paolo Tormene]
+  * Internal: reduced the size of the gsim column in the view
+    required_params_per_trt in the .rst report
+
+  [Michele Simionato]
+  * Optimized the generation of events
+  * Fixed the GMFs CSV importer so that it can import exported GMFs even in
+    the presence of a `custom_site_id`
+  * Implemented sampling for mutex sources with grp_probability
+  * Introduced `extreme_gmv` parameter in the job.ini
+  * Introduced a new output "Annual Frequency of Events" and refined the command
+    `oq plot event_based_mfd?`
   * Moved the minimum magnitude filtering after the rupture sampling
-  * Changed the internals of rupture sampling again (trt_smr)
+  * Changed the internals of rupture sampling and fixed the generated MFD
+    in the case of a same source appearing in multiple logic tree branches
   * Fixed a bug in scenario calculations causing a mysterious IndexError in the
     line rctx.clon = c.lons[rctx.sids]
   * Changed the disaggregation exporter to add a column with the IML

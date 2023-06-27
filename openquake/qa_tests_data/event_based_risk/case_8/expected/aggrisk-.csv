@@ -1,3 +1,6 @@
-#,,"generated_by='OpenQuake engine 3.15.0-gitfac2d314a9', start_date='2022-07-13T07:19:02', checksum=3767906108, investigation_time=None, risk_investigation_time=1.0"
+#,,"generated_by='OpenQuake engine 3.17.0-git10f73a82f1', start_date='2023-06-08T10:11:04', checksum=1670099579, investigation_time=1.0, risk_investigation_time=1.0"
 loss_type,loss_value,loss_ratio
-structural,2.79090E+03,3.05786E-05
+occupants_avg,1.65029E-04,6.60116E-07
+area,1.31186E+02,1.92601E-03
+number,9.02985E+01,1.09453E-03
+residents,3.41670E-02,1.36668E-04

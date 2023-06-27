@@ -87,7 +87,7 @@ def build_rup_mutex(src_groups):
     """
     lst = []
     dtlist = [('grp_id', numpy.uint16), ('src_id', numpy.uint32),
-              ('rup_id', numpy.uint32), ('weight', numpy.float64)]
+              ('rup_id', numpy.int64), ('weight', numpy.float64)]
     for sg in src_groups:
         if sg.rup_interdep == 'mutex':
             for src in sg:
@@ -144,8 +144,8 @@ def read_source_model(fname, converter, monitor):
     [sm] = nrml.read_source_models([fname], converter)
     return {fname: sm}
 
-
-# NB: called after the .checksum has been stored in reduce_sources
+# NB: in classical this is called after reduce_sources, so ";" is not
+# added if the same source appears multiple times, len(srcs) == 1
 def _fix_dupl_ids(src_groups):
     sources = general.AccumDict(accum=[])
     for sg in src_groups:
@@ -153,7 +153,6 @@ def _fix_dupl_ids(src_groups):
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
-            # # logic tree variations of the same source
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
@@ -202,7 +201,7 @@ def get_csm(oq, full_lt, dstore=None):
     if changes:
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
-    is_event_based = oq.calculation_mode.startswith('event_based')
+    is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     return _get_csm(full_lt, groups, is_event_based)
 
 
@@ -274,14 +273,13 @@ def fix_geometry_sections(smdict, dstore):
         sections.update(gmod.sections)
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    s2i = {suid: i for i, suid in enumerate(sorted(sections))}
-    sections = [sections[suid] for suid in sorted(sections)]
-    for idx, sec in enumerate(sections):
+    s2i = {suid: i for i, suid in enumerate(sections)}
+    for idx, sec in enumerate(sections.values()):
         sec.suid = idx
     if dstore and sections:
         with hdf5.File(dstore.tempname, 'w') as h5:
             h5.save_vlen('multi_fault_sections',
-                         [kite_to_geom(sec) for sec in sections])
+                         [kite_to_geom(sec) for sec in sections.values()])
 
     # fix the MultiFaultSources
     section_idxs = []
@@ -482,15 +480,20 @@ class CompositeSourceModel:
             sources.add(basename(src, '!;:.'))
         return sorted(sources)
 
-    def get_mags_by_trt(self):
+    def get_mags_by_trt(self, maximum_distance):
         """
+        :param maximum_distance: dictionary trt -> magdist interpolator
         :returns: a dictionary trt -> magnitudes in the sources as strings
         """
         mags = general.AccumDict(accum=set())  # trt -> mags
         for sg in self.src_groups:
             for src in sg:
                 mags[sg.trt].update(src.get_magstrs())
-        return {trt: sorted(mags[trt]) for trt in mags}
+        out = {}
+        for trt in mags:
+            minmag = maximum_distance(trt).x[0]
+            out[trt] = sorted(m for m in mags[trt] if float(m) >= minmag)
+        return out
 
     def get_floating_spinning_factors(self):
         """

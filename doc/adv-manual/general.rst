@@ -2,13 +2,13 @@ General
 =======================================
 
 This manual is for advanced users, i.e.  people who already know how to use the
-engine and have already read the official manual cover-to-cover. 
+engine and have already read the official manual cover-to-cover.
 If you have just started on your journey of using and working with the
 OpenQuake engine, this manual is probably NOT for you. Beginners should study
 the `official manual
 <https://www.globalquakemodel.org/single-post/OpenQuake-Engine-Manual>`_ first.
 This manual is intended for users who are either running *large* calculations
-or those who are interested in programatically interacting with the datastore. 
+or those who are interested in programatically interacting with the datastore.
 
 For the purposes of this manual a calculation is large if it cannot be run,
 i.e. if it runs out of memory, it fails with strange errors
@@ -35,7 +35,7 @@ The single most important parameter in the report is the
 distance and magnitude filtering. For instance your report could
 contain numbers like the following::
 
-#eff_ruptures 239,556  
+#eff_ruptures 239,556
 #tot_ruptures 8,454,592
 
 This is an example of a computation which is potentially large - there
@@ -71,7 +71,7 @@ are really important. Here is a list of parameters relevant for all
 calculators:
 
 maximum_distance:
-   The larger the maximum_distance, the more sources and ruptures will be 
+   The larger the maximum_distance, the more sources and ruptures will be
    considered; the effect is quadratic, i.e. a calculation with
    ``maximum_distance=500`` km could take up to 6.25 times more time than a
    calculation with ``maximum_distance=200`` km.
@@ -104,7 +104,7 @@ complex_fault_mesh_spacing:
   The same as the ``rupture_mesh_spacing``, but for complex fault sources.
   If not specified, the value of ``rupture_mesh_spacing`` will be used.
   This is a common cause of problems; if you have performance issue you
-  should consider using a larger ``complex_fault_mesh_spacing``. For instance, 
+  should consider using a larger ``complex_fault_mesh_spacing``. For instance,
   if you use a ``rupture_mesh_spacing=2`` for simple fault sources but
   ``complex_fault_mesh_spacing=10`` for complex fault sources, your computation
   can become up to 25 times faster, assuming the complex fault sources
@@ -129,7 +129,10 @@ magnitudes between 5 and 6 (the maximum distance in this magnitude
 range will vary linearly between 0 and 100), keep ruptures up to 200
 km for magnitudes between 6 and 7 (with `maximum_distance` increasing
 linearly from 100 to 200 km from magnitude 6 to magnitude 7), keep
-ruptures up to 300 km for magnitudes over 7.
+ruptures up to 300 km for magnitudes between 7 and 8 (with
+`maximum_distance` increasing linearly from 200 to 300 km from
+magnitude 7 to magnitude 8) and discard ruptures for magnitudes
+over 8.
 
 You can have both trt-dependent and mag-dependent maximum distance::
 
@@ -142,7 +145,7 @@ the engine will ignore all sites over the maximum distance ``md(trt, mag)``.
 The precise value is given via linear interpolation of the values listed
 in the job.ini; you can determine the distance as follows:
 
->>> from openquake.hazardlib.calc.filters import IntegrationDistance 
+>>> from openquake.hazardlib.calc.filters import IntegrationDistance
 >>> idist = IntegrationDistance.new('[(4, 0), (6, 100), (7, 200), (8.5, 300)]')
 >>> interp = idist('TRT')
 >>> interp([4.5, 5.5, 6.5, 7.5, 8])
@@ -315,7 +318,7 @@ to know git and the tools of Open Source development in
 general, in particular about testing. If this is not the
 case, you should do some study on your own and come back later. There
 is a huge amount of resources on the net about these topics. This
-manual will focus solely on the OpenQuake engine and it assume that
+manual will focus solely on the OpenQuake engine and it assumes that
 you already know how to use it, i.e. you have read the User Manual
 first.
 
@@ -359,15 +362,15 @@ Understanding the engine
 -------------------------
 
 Once you have the engine installed you can run calculations. We recommend
-starting from the demos directory which contains example of hazard and
+starting from the demos directory which contains examples of hazard and
 risk calculations. For instance you could run the area source demo with the
 following command::
 
- $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini 
+ $ oq run demos/hazard/AreaSourceClassicalPSHA/job.ini
 
 You should notice that we used here the command ``oq run`` while the engine
-manual recommend the usage of ``oq engine --run``. There is no contradiction.
-The command ``oq engine --run`` is meant for production usage, 
+manual recommends the usage of ``oq engine --run``. There is no contradiction.
+The command ``oq engine --run`` is meant for production usage,
 but here we are doing development, so the recommended command is ``oq run``
 which will will be easier to debug thanks to the
 flag ``--pdb``, which will start the python debugger
@@ -387,7 +390,7 @@ For that one can understand the bottlenecks of a calculation and, with
 experience, he can understand which part of the engine he needs to optimize.
 Also, it is very useful to play with the parameters of the calculation
 (like the maximum distance, the area discretization, the magnitude binning,
-etc etc) and see how the performance change. There is also a command to
+etc etc) and see how the performance changes. There is also a command to
 plot hazard curves and a command to compare hazard curves between different
 calculations: it is common to be able to get big speedups simply by changing
 the input parameters in the `job.ini` of the model, without changing much the
@@ -442,6 +445,7 @@ Ground Accelation (PGA) of 0.1g by using the ToroEtAl2002SHARE GMPE:
 ... intensity_measure_types_and_levels="{'PGA': [0.1]}",
 ... investigation_time='50.0',
 ... gsim='ToroEtAl2002SHARE',
+... truncation_level='99.0',
 ... maximum_distance='200.0'))
 
 Then we need to specify the source:
@@ -543,7 +547,7 @@ The ``ContextMaker`` takes care of the maximum_distance filtering, so in
 general the number of contexts is lower than the total number of ruptures,
 since some ruptures are normally discarded, being distant from the sites.
 
-The contexts contains all the rupture, site and distance parameters.
+The contexts contain all the rupture, site and distance parameters.
 
 Then you have
 
@@ -556,7 +560,7 @@ Then you have
 
 In this example, the GMPE ``ToroEtAl2002SHARE`` does not require site
 parameters, so calling ``ctx.vs30`` will raise an ``AttributeError``
-but in general the contexts contains also arrays of site parameters.
+but in general the contexts contain also arrays of site parameters.
 There is also an array of indices telling which are the sites affected
 by the rupture associated to the context:
 
@@ -611,9 +615,9 @@ table has a structure like this::
  2.0,5.0,MEAN,6.43850933e-03,3.61047741e-04,4.57949482e-04,7.24558049e-04,9.44495571e-04,5.11252304e-04,2.21076069e-04,4.73435138e-05
  ...
 
-The columns starting with ``rup_`` contains rupture parameters (the
+The columns starting with ``rup_`` contain rupture parameters (the
 magnitude in this example) while the columns starting with ``dist_``
-contains distance parameters. The column ``result_type`` is a string
+contain distance parameters. The column ``result_type`` is a string
 in the set {"MEAN", "INTER_EVENT_STDDEV", "INTRA_EVENT_STDDEV",
 "TOTAL_STDDEV"}. The remaining columns are the expected results for
 each intensity measure type; in the the example the IMTs are PGV, PGA,
@@ -658,7 +662,7 @@ code in https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/tests/g
 Running the engine tests
 ----------------------------------
 
-If you are a hazard scientists contributing a bug fix to a GMPE (or any
+If you are a hazard scientist contributing a bug fix to a GMPE (or any
 other kind of bug fix) you may need to run the engine tests and possibly
 change the expected files if there is a change in the numbers. The way to
 do it is to start the dbserver and then run the tests from the repository root::
@@ -683,7 +687,7 @@ Architecture of the OpenQuake engine
 The engine is structured as a regular scientific application: we try
 to perform calculations as much as possible in memory and when it is
 not possible intermediate results are stored in HDF5 format.
-We try work as much as possible in terms of arrays which are
+We try to work as much as possible in terms of arrays which are
 efficiently manipulated at C/Fortran speed with a stack of well
 established scientific libraries (numpy/scipy).
 
@@ -814,8 +818,8 @@ same as testability: it is essential to have a suite of tests checking
 that the calculators are providing the expected outputs against a set
 of predefined inputs. Currently we have thousands of tests which are
 run multiple times per day in our Continuous Integration environments
-r(avis, GitLab, Jenkins), split into unit tests, end-to-end tests and
-long running tests.
+(GitHub Actions, GitLab Pipelines), split into unit
+tests, end-to-end tests and long running tests.
 
 How the parallelization works in the engine
 ===========================================
@@ -823,8 +827,7 @@ How the parallelization works in the engine
 The engine builds on top of existing parallelization libraries.
 Specifically, on a single machine it is based on multiprocessing,
 which is part of the Python standard library, while on a cluster
-it is based on the combination celery/rabbitmq, which are well-known
-and maintained tools.
+it is based on zeromq, which is a well-known and maintained library.
 
 While the parallelization used by the engine may look trivial in theory
 (it only addresses embarrassingly parallel problems, not true concurrency)
@@ -835,18 +838,17 @@ without affecting other calculations that may be running concurrently.
 Because of this requirement, we abandoned `concurrent.futures`, which is also
 in the standard library, but is lacking the ability to kill the pool of
 processes, which is instead available in multiprocessing with the
-`Pool.shutdown` method. For the same reason, we discarded `dask`, which
-is a lot more powerful than `celery` but lacks the revoke functionality.
+`Pool.shutdown` method. For the same reason, we discarded `dask`.
 
 Using a real cluster scheduling mechanism (like SLURM) would be of course
 better, but we do not want to impose on our users a specific cluster
-architecture. celery/rabbitmq have the advantage of being simple to install
+architecture. Zeromq has the advantage of being simple to install
 and manage. Still, the architecture of the engine parallelization library
-is such that it is very simple to replace celery/rabbitmq with other
+is such that it is very simple to replace zeromq with other
 parallelization mechanisms: people interested in doing so should just
 contact us.
 
-Another tricky aspects of parallelizing large scientific calculations is
+Another tricky aspect of parallelizing large scientific calculations is
 that the amount of data returned can exceed the 4 GB limit of Python pickles:
 in this case one gets ugly runtime errors. The solution we found is to make
 it possible to yield partial results from a task: in this way instead of
@@ -854,7 +856,7 @@ returning say 40 GB from one task, one can yield 40 times partial results
 of 1 GB each, thus bypassing the 4 GB limit. It is up to the implementor
 to code the task carefully. In order to do so, it is essential to have
 in place some monitoring mechanism measuring how much data is returned
-back from a task, as well as other essential informations like how much
+back from a task, as well as other essential information like how much
 memory is allocated and how long it takes to run a task.
 
 To this aim the OpenQuake engine offers a ``Monitor`` class
@@ -894,20 +896,14 @@ hazard curves, because the algorithm is considering one rupture at the time
 and it is not accumulating ruptures in memory, differently from what happens
 when sampling the ruptures in event based.
 
-If you have ever coded in celery, you will see that the OpenQuake engine
-concept of task is different: there is no ``@task`` decorator and while at the
-end engine tasks will become celery tasks this is hidden to the developer.
-The reason is that we needed a celery-independent abstraction layer to make
-it possible to use different kinds of parallelization frameworks/
-
 From the point of view of the coder, in the engine there is no difference
-between a task running on a cluster using celery and a task running locally
+between a task running on a cluster using zeromq and a task running locally
 using ``multiprocessing.Pool``: they are coded the same, but depending
-on a configuration parameter in openquake.cfg (``distribute=celery``
+on a configuration parameter in openquake.cfg (``distribute=zmq``
 or ``distribute=processpool``) the engine will treat them differently.
 You can also set an environment variable ``OQ_DISTRIBUTE``, which takes
 the precedence over openquake.cfg, to specify which kind of distribution
-you want to use (``celery`` or ``processpool``): this is mostly used
+you want to use (``zmq`` or ``processpool``): this is mostly used
 when debugging, when you typically insert a breakpoint in the task
 and then run the calculation with
 
@@ -945,20 +941,19 @@ a single writer). This approach bypasses all the limitations of the
 SWMR mode in HDF5 and did not require a large refactoring of our
 existing code.
 
-Another tricky point in cluster situations is that rabbitmq is not good
-at transferring gigabytes of data: it was meant to manage lots of small
-messages, but here we are perverting it to manage huge messages, i.e.
-the large arrays coming from a scientific calculations.
-
-Hence, since recent versions of the engine we are no longer returning
-data from the tasks via celery/rabbitmq: instead, we use zeromq.  This
+Another tricky point in cluster situations is that we need
+to transfer gigabytes of data, i.e. the large arrays coming from
+scientific calculations, rather than lots of small
+messages. Hence, since recent versions of the engine, we are returning
+data from the tasks via zeromq instead of using celery/rabbitmq as we
+did in the past. This
 is hidden from the user, but internally the engine keeps track of all
 tasks that were submitted and waits until they send the message that
-they finished. If one tasks runs out of memory badly and never sends
+they finished. If one task runs out of memory badly and never sends
 the message that it finished, the engine may hang, waiting for the
-results of a task that does not exist anymore.  You have to be
+results of a task that does not exist anymore. You have to be
 careful. What we did in our cluster is to set some memory limit on the
-celery user with the cgroups technology, so that an out of memory task
+openquake user with the cgroups technology, so that an out of memory task
 normally fails in a clean way with a Python MemoryError, sends the
 message that it finished and nothing particularly bad happens.  Still,
 in situations of very heavy load the OOM killer may enter in action
@@ -977,7 +972,7 @@ Suppose you want to code a character-counting algorithm, which is a textbook
 exercise in parallel computing and suppose that you want to store information
 about the performance of the algorithm. Then you should use the OpenQuake
 ``Monitor`` class, as well as the utility
-``openquake.baselib.commonlib.hdf5new`` that build an empty datastore
+``openquake.baselib.commonlib.hdf5new`` that builds an empty datastore
 for you. Having done that, the ``openquake.baselib.parallel.Starmap``
 class can take care of the parallelization for you as in the following
 example:
@@ -985,7 +980,7 @@ example:
 .. include:: char_count_par.py
    :code: python
 
-The name ``Starmap`` was chosen it looks very similar to
+The name ``Starmap`` was chosen because it looks very similar to how
 ``multiprocessing.Pool.starmap`` works, the only apparent difference
 being in the additional monitor argument::
 
@@ -993,8 +988,8 @@ being in the additional monitor argument::
 
 In reality the ``Starmap`` has a few other differences:
 
-1. it does not use the multiprocessing mechanism to returns back the results,
-   it uses zmq instead;
+1. it does not use the multiprocessing mechanism to return back the results;
+   it uses zmq instead
 2. thanks to that, it can be extended to generator functions and can yield
    partial results, thus overcoming the limitations of multiprocessing
 3. the ``Starmap`` has a ``.submit`` method and it is actually more similar to
@@ -1027,7 +1022,7 @@ parallelizing complex situations where it is expensive to use a single
 starmap. However, there is limit on the number of starmaps that can be
 alive at the same moment.
 
-Moreover the ``Starmap`` has a ``.shutdown`` methods that allows to
+Moreover the ``Starmap`` has a ``.shutdown`` method that allows to
 shutdown the underlying pool.
 
 The idea is to submit the text of each file - here I am considering .rst files,
@@ -1046,7 +1041,7 @@ However, sometimes you *must* be tech-savvy: for instance if you want to
 post-process hundreds of GB of ground motion fields produced by an event
 based calculation, you should *not* use the CSV output, at least
 if you care about efficiency. To manage this case (huge amounts of data)
-there a specific solution, which is also able to manage the case of data
+there is a specific solution, which is also able to manage the case of data
 lacking a predefined exporter: the ``Extractor`` API.
 
 There are actually two different kind of extractors: the simple
@@ -1093,7 +1088,7 @@ or even all realizations:
  >> dic = vars(extractor.get('hcurves?kind=rlzs'))
 
 Here is an example of using the `WebExtractor` to retrieve hazard maps.
-Here we assumes that there is available in a remote machine where there is
+Here we assume that in a remote machine there is
 a WebAPI server running, a.k.a. the Engine Server. The first thing to is to
 set up the credentials to access the WebAPI. There are two cases:
 
@@ -1102,7 +1097,7 @@ set up the credentials to access the WebAPI. There are two cases:
 
 In both case you need to create a file called ``openquake.cfg`` with the
 following format::
-  
+
   [webapi]
   server = http(s)://the-url-of-the-server(:port)
   username = my-username
@@ -1144,7 +1139,7 @@ Here are three examples of use::
     $ oq plot 'hmaps?kind=mean&imt=PGA' <calc_id>
     $ oq plot 'uhs?kind=mean&site_id=0' <calc_id>
 
-The ``site_id`` is optional; if missing only the first site (``site_id=0``)
+The ``site_id`` is optional; if missing, only the first site (``site_id=0``)
 will be plotted. If you want to plot all the realizations you can do::
 
     $ oq plot 'hcurves?kind=rlzs&imt=PGA' <calc_id>
@@ -1158,7 +1153,7 @@ realizations and also the mean the command to give is::
 
     $ oq plot 'hcurves?kind=rlzs&kind=mean&imt=PGA' <calc_id>
 
-If you want to plot the mean and the median the command is::
+If you want to plot the median and the mean the command is::
 
     $ oq plot 'hcurves?kind=quantile-0.5&kind=mean&imt=PGA' <calc_id>
 
@@ -1174,7 +1169,7 @@ specifying a kind that is not available you will get an error.
 Extracting disaggregation outputs
 ---------------------------------
 
-Disaggregation outputs are particularly complex and they are stored in
+Disaggregation outputs are particularly complex and they are stored in the
 datastore in different ways depending on the engine version. Here we will
 give a few examples for the Disaggregation Demo, which has the flag
 ``individual_rlzs`` set. If you run the demos with a recent enough version
@@ -1228,7 +1223,7 @@ Here is an example for the event based demo::
   In [3]: aw = extractor.get('rupture_info?min_mag=5')
   In [4]: aw
   Out[4]: <ArrayWrapper(1511,)>
-  In [5]: aw.array                                                   
+  In [5]: aw.array
   Out[5]:
   array([(   0, 1, 5.05, 0.08456118,  0.15503392, 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
          (   1, 1, 5.05, 0.08456119,  0.15503392, 5., b'Active Shallow Crust', 4.4999969e+01, 90.      , 0.),
@@ -1237,7 +1232,7 @@ Here is an example for the event based demo::
          (1508, 2, 6.15, 0.26448786, -0.7442877 , 5., b'Active Shallow Crust', 0.0000000e+00, 90.      , 0.),
          (1509, 1, 6.15, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 2.2499924e+02, 50.000004, 0.),
          (1510, 1, 6.85, 0.26448786, -0.74428767, 5., b'Active Shallow Crust', 4.9094699e-04, 50.000046, 0.)],
-        dtype=[('rup_id', '<u4'), ('multiplicity', '<u2'), ('mag', '<f4'), ('centroid_lon', '<f4'),
+        dtype=[('rup_id', '<i8'), ('multiplicity', '<u2'), ('mag', '<f4'), ('centroid_lon', '<f4'),
                ('centroid_lat', '<f4'), ('centroid_depth', '<f4'), ('trt', 'S50'), ('strike', '<f4'),
                ('dip', '<f4'), ('rake', '<f4')])
   In [6]: extractor.close()
@@ -1259,7 +1254,7 @@ then you can process the hazard curves as follows:
   >> df = dstore.read_df('hcurves-stats', index='lvl',
   ..                     sel=dict(imt='PGA', stat='mean', site_id=0))
        site_id stat     imt     value
-  lvl                                
+  lvl
   0      0  b'mean'  b'PGA'  0.999982
   1      0  b'mean'  b'PGA'  0.999949
   2      0  b'mean'  b'PGA'  0.999850
@@ -1290,12 +1285,12 @@ Example: how many events per magnitude?
 
 When analyzing an event based calculation, users are often interested in
 checking the magnitude-frequency distribution, i.e. to count how many
-events of a given magnitude present in the stochastic event set for
+events of a given magnitude are present in the stochastic event set for
 a fixed investigation time and a fixed ``ses_per_logic_tree_path``.
 You can do that with code like the following:
 
 .. code-block:: python
-                
+
  def print_events_by_mag(calc_id):
      # open the DataStore for the current calculation
      dstore = datastore.read(calc_id)
@@ -1307,7 +1302,7 @@ You can do that with code like the following:
      for mag, grp in events.groupby(['mag']):
          print(mag, len(grp))   # number of events per group
 
-If you want to now the number of events per realization and per stochastic
+If you want to know the number of events per realization and per stochastic
 event set you can just refine the `groupby` clause, using the list
 ``['mag', 'rlz_id', 'ses_id']`` instead of simply ``['mag']``.
 
@@ -1322,7 +1317,7 @@ the ``gmf_data`` table indexed by event ID, i.e. the ``eid`` field:
    >> gmf_data = dstore.read_df('gmf_data', index='eid') # engine>3.11
    >> gmf_data.loc[eid]
         sid     gmv_0
-   eid               
+   eid
    20    93   0.113241
    20   102   0.114756
    20   121   0.242828
@@ -1337,7 +1332,7 @@ from the ground motion values by using the function `gmvs_to_poes`,
 available since engine 3.10:
 
 .. code-block::
-   
+
    >> from openquake.commonlib.calc import gmvs_to_poes
    >> gmf_data = dstore.read_df('gmf_data', index='sid')
    >> df = gmf_data.loc[0]  # first site
@@ -1367,23 +1362,23 @@ it is an expensive operation, it is done only for small calculations.
 Limitations of Floating-point Arithmetic
 ========================================
 
-Most practitioners of numeric calculations are aware that addition 
+Most practitioners of numeric calculations are aware that addition
 of floating-point numbers is non-associative; for instance
 
->>> (.1 + .2) + .3                                                          
+>>> (.1 + .2) + .3
 0.6000000000000001
 
 is not identical to
 
->>> .1 + (.2 + .3)                                                         
+>>> .1 + (.2 + .3)
 0.6
 
 Other floating-point operations, such as multiplication,
-are also non-associative. The order in which operations are performed plays 
+are also non-associative. The order in which operations are performed plays
 a role in the results of a calculation.
 
 Single-precision floating-point variables are able to represent integers
-between [-16777216, 16777216] exactly, but start losing precision 
+between [-16777216, 16777216] exactly, but start losing precision
 beyond that range; for instance:
 
 >>> numpy.float32(16777216)
@@ -1405,45 +1400,45 @@ for numerical reproducibility of scientific computations, particularly
 in a parallel or distributed computing environment.
 
 For the purposes of this discussion, let us define numerical reproducibility
-as obtaining bit-wise identical results for different runs of the 
+as obtaining bit-wise identical results for different runs of the
 same computation on either the same machine or different machines.
 
-Given that the OpenQuake engine works by parallelizing calculations, 
-numerical reproducibility cannot be fully guaranteed, even for 
+Given that the OpenQuake engine works by parallelizing calculations,
+numerical reproducibility cannot be fully guaranteed, even for
 different runs on the same machine (unless the computation is run
 using the --no-distribute or --nd flag).
 
 Consider the following strategies for distributing the
 calculation of the asset losses for a set of events, followed by
-aggregation of the results for the portfolio due to all of the events. 
+aggregation of the results for the portfolio due to all of the events.
 The assets could be split into blocks with each task computing the
 losses for a particular block of assets and for all events, and the partial
 losses coming in from each task is aggregated at the end.
 Alternatively, the assets could be kept as a single block, splitting
-the set of events/ruptures into blocks instead; once again the engine has to 
-aggregate partial losses coming in from each of the tasks. 
-The order of the tasks is arbitrary, because it is impossible to know 
+the set of events/ruptures into blocks instead; once again the engine has to
+aggregate partial losses coming in from each of the tasks.
+The order of the tasks is arbitrary, because it is impossible to know
 how long each task will take before the computation actually begins.
 
 For instance, suppose there are 3 tasks, the first one producing a partial
 loss of 0.1 billion, the second one of 0.2 billion, and the third one of 0.3 billion.
-If we run the calculation and the order in which the results are received 
+If we run the calculation and the order in which the results are received
 is 1-2-3, we will compute a total loss of (.1 + .2) + .3 = 0.6000000000000001 billion.
 On the other hand, if for some reason the order in which the results arrive is
 2-3-1, say for instance, if the first core is particularly hot and the
 operating system decides to enable some throttling on it, then the
-aggregation will be (.2 + .3) + .1 = 0.6 billion, which is different 
-from the previous value by 1.11E-7 units. This example assumes the use of 
+aggregation will be (.2 + .3) + .1 = 0.6 billion, which is different
+from the previous value by 1.11E-7 units. This example assumes the use of
 Python's IEEE-754 “double precision” 64-bit floats.
 
 However, the engine uses single-precision 32-bit floats rather than
 double-precision 64-bit floats in a tradeoff necessary for reducing the
-memory demand (both RAM and disk space) for large computations, 
-so the precision of results is less than in the above example. 
-64-bit floats have 53 bits of precision, and this why the relative error 
-in the example above was around 1.11E-16 (i.e. 2^-53). 32-bit floats 
-have only 24 bits of precision, so we should expect a relative error of 
-around 6E-8 (i.e. 2^-24), which for the example above would be around 60 units. 
+memory demand (both RAM and disk space) for large computations,
+so the precision of results is less than in the above example.
+64-bit floats have 53 bits of precision, and this why the relative error
+in the example above was around 1.11E-16 (i.e. 2^-53). 32-bit floats
+have only 24 bits of precision, so we should expect a relative error of
+around 6E-8 (i.e. 2^-24), which for the example above would be around 60 units.
 Loss of precision in representing and storing large numbers is a factor
 that *must* be considered when running large computations.
 
@@ -1452,12 +1447,12 @@ small differences may accumulate when there are hundreds or even thousands
 of tasks handling different parts of the overall computation and sending
 back results for aggregation.
 
-Anticipating these issues, some adjustments can be made to the input models 
+Anticipating these issues, some adjustments can be made to the input models
 in order to circumvent or at least minimize surprises arising from floating-point
-arithmetic. Representing asset values in the exposure using thousands of dollars 
-as the unit instead of dollars could be one such defensive measure. 
+arithmetic. Representing asset values in the exposure using thousands of dollars
+as the unit instead of dollars could be one such defensive measure.
 
-This is why, as an aid to the interested user, 
+This is why, as an aid to the interested user,
 starting from version 3.9, the engine logs a warning if it finds
 inconsistencies beyond a tolerance level in the aggregated loss results.
 
@@ -1483,20 +1478,20 @@ to use them.
 
 You can see the full list of commands by running `oq --help`::
 
-   $ oq --help
-   usage: oq [--version]
-             {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
-             ...
-   
-   positional arguments:
-     {workerpool,webui,dbserver,info,ltcsv,dump,export,celery,plot_losses,restore,plot_assets,reduce_sm,check_input,plot_ac,upgrade_nrml,shell,plot_pyro,nrml_to,postzip,show,workers,abort,engine,reaggregate,db,compare,renumber_sm,download_shakemap,importcalc,purge,tidy,zip,checksum,to_hdf5,extract,reset,run,show_attrs,prepare_site_model,sample,plot}
-                           available subcommands; use oq <subcmd> --help
-   
-   optional arguments:
-     -h, --help            show this help message and exit
-     -v, --version         show program's version number and exit
+  $ oq --help
+  usage: oq [-h] [-v]
+            {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+            ...
 
-This is the output that you get at the present time (engine 3.11); depending
+  positional arguments:
+    {shell,upgrade_nrml,reduce_smlt,show_attrs,prepare_site_model,nrml_from,shakemap2gmfs,importcalc,run,show,purge,renumber_sm,workers,postzip,plot_assets,db,dbserver,tidy,extract,sample,to_hdf5,ltcsv,reaggregate,restore,mosaic,check_input,dump,info,zip,abort,nrml_to,engine,reset,checksum,export,webui,compare,plot,reduce_sm}
+                          available subcommands; use oq <subcmd> --help
+
+  options:
+    -h, --help            show this help message and exit
+    -v, --version         show program's version number and exit
+
+This is the output that you get at the present time (engine 3.17); depending
 on your version of the engine you may get a different output. As you see, there
 are several commands, like `purge`, `show_attrs`, `export`, `restore`, ...
 You can get information about each command with `oq <command> --help`;
@@ -1507,14 +1502,14 @@ for instance, here is the help for `purge`::
 
   Remove the given calculation. If you want to remove all calculations, use oq
   reset.
-  
+
   positional arguments:
     calc_id      calculation ID
-  
+
   optional arguments:
     -h, --help   show this help message and exit
     -f, --force  ignore dependent calculations
-  
+
 Some of these commands are highly experimental and may disappear; others are
 meant for debugging and are not meant to be used by end-users. Here I will
 document only the commands that are useful for the general public and
@@ -1527,7 +1522,7 @@ features.
 logic tree of the calculation.
 
 2. When invoked with the `--report` option, it produces a `.rst` report with
-several important informations about the computation. It is ESSENTIAL in the
+important information about the computation. It is ESSENTIAL in the
 case of large calculations, since it will give you an idea of the feasibility
 of the computation without running it. Here is an example of usage::
 
@@ -1535,7 +1530,7 @@ of the computation without running it. Here is an example of usage::
   Generated /tmp/report_1644.rst
   <Monitor info, duration=10.910529613494873s, memory=60.16 MB>
 
-You can open `/tmp/report_1644.rst` and read the informations listed there
+You can open `/tmp/report_1644.rst` and read the information listed there
 (`1644` is the calculation ID, the number will be different each time).
 
 3. It can be invoked without a `job.ini` file, and it that case it provides
@@ -1574,7 +1569,7 @@ The list of available exports (i.e. the datastore keys and the available export
 formats) can be extracted with the `oq info exports`
 command; the number of exporters defined changes at each version::
 
-  $ oq info exports$ oq info exports
+  $ oq info exports
   ? "aggregate_by" ['csv']
   ? "disagg_traditional" ['csv']
   ? "loss_curves" ['csv']
@@ -1611,9 +1606,9 @@ command; the number of exporters defined changes at each version::
   Uniform Hazard Spectra "uhs" ['csv', 'xml', 'npz']
   There are 44 exporters defined.
 
-At the present the supported export types are `xml`, `csv`, `rst`, `npz` and 
-`hdf5`. `xml` has been deprecated for some outputs and is not the recommended 
-format for large exports. For large exports, the recommended formats are `npz` 
+At the present the supported export types are `xml`, `csv`, `rst`, `npz` and
+`hdf5`. `xml` has been deprecated for some outputs and is not the recommended
+format for large exports. For large exports, the recommended formats are `npz`
 (which is a binary format for numpy arrays) and `hdf5`. If you want the data for
 a specific realization (say the first one), you can use::
 
@@ -1623,8 +1618,9 @@ a specific realization (say the first one), you can use::
 
 but currently this only works for `csv` and `xml`. The exporters are one of
 the most time-consuming parts on the engine, mostly because of the sheer number
-of them; the are more than fifty exporters and they are always increasing.
-If you need new exports, please [add an issue on GitHub](https://github.com/gem/oq-engine/issues).
+of them; there are more than fifty exporters and they are always increasing.
+If you need new exports,
+please `add an issue on GitHub <https://github.com/gem/oq-engine/issues>`_.
 
 oq zip
 ------
@@ -1634,11 +1630,11 @@ to a computation from a machine to another is `oq zip`::
 
   $ oq zip --help
   usage: oq zip [-h] [-r] what [archive_zip]
-  
+
   positional arguments:
     what               path to a job.ini, a ssmLT.xml file, or an exposure.xml
     archive_zip        path to a non-existing .zip file [default: '']
-  
+
   optional arguments:
     -h, --help         show this help message and exit
     -r , --risk-file   optional file for risk
@@ -1697,12 +1693,12 @@ exposure used in a calculation together with the hazard sites::
 
   $ oq plot_assets --help
   usage: oq plot_assets [-h] [calc_id]
-  
+
   Plot the sites and the assets
-  
+
   positional arguments:
     calc_id     a computation id [default: -1]
-  
+
   optional arguments:
     -h, --help  show this help message and exit
 
@@ -1715,13 +1711,13 @@ the sources into .gpkg format and use QGIS to plot them::
 
   $ oq nrml_to --help
   usage: oq nrml_to [-h] [-o .] [-c] {csv,gpkg} fnames [fnames ...]
-  
+
   Convert source models into CSV files or a geopackage.
-  
+
   positional arguments:
     {csv,gpkg}        csv or gpkg
     fnames            source model files in XML
-  
+
   optional arguments:
     -h, --help        show this help message and exit
     -o ., --outdir .  output directory
@@ -1746,10 +1742,10 @@ prepare_site_model
 ------------------
 
 The command `oq prepare_site_model`, introduced in engine 3.3, is quite useful
-if you have a vs30 file with fields lon, lat, vs30 and you want to generate a 
-site model from it. Normally this feature is used for risk calculations: 
-given an exposure, one wants to generate a collection of hazard sites covering 
-the exposure and with vs30 values extracted from the vs30 file with a nearest 
+if you have a vs30 file with fields lon, lat, vs30 and you want to generate a
+site model from it. Normally this feature is used for risk calculations:
+given an exposure, one wants to generate a collection of hazard sites covering
+the exposure and with vs30 values extracted from the vs30 file with a nearest
 neighbour algorithm::
 
   $ oq prepare_site_model -h
@@ -1757,16 +1753,16 @@ neighbour algorithm::
                                [-e [EXPOSURE_XML [EXPOSURE_XML ...]]]
                                [-s SITES_CSV] [-g 0] [-a 5] [-o site_model.csv]
                                vs30_csv [vs30_csv ...]
-  
+
   Prepare a site_model.csv file from exposure xml files/site csv files, vs30 csv
   files and a grid spacing which can be 0 (meaning no grid). For each site the
   closest vs30 parameter is used. The command can also generate (on demand) the
   additional fields z1pt0, z2pt5 and vs30measured which may be needed by your
   hazard model, depending on the required GSIMs.
-  
+
   positional arguments:
     vs30_csv              files with lon,lat,vs30 and no header
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -1, --z1pt0
@@ -1790,7 +1786,7 @@ from the closest vs30 record is taken. In the second case, when a
 exposure is built and the points with assets are associated to the
 vs30 records. In both cases if the closest vs30 record is
 over the `site_param_distance` - which by default is 5 km - a warning
-is printed. 
+is printed.
 
 In large risk calculations, it is quite preferable *to use the gridded mode*
 because with a well spaced grid,
@@ -1798,7 +1794,7 @@ because with a well spaced grid,
 1) the results are the nearly the same than without the grid and
 2) the calculation is a lot faster and uses a lot less memory.
 
-Gridding of the exposure makes large calculations more manageable. 
+Gridding of the exposure makes large calculations more manageable.
 The command is able to manage multiple Vs30 files at once. Here is an example
 of usage::
 
@@ -1825,13 +1821,13 @@ to the original ones.
 
   $ oq reduce_sm -h
   usage: oq reduce_sm [-h] calc_id
-  
+
   Reduce the source model of the given (pre)calculation by discarding all
   sources that do not contribute to the hazard.
-  
+
   positional arguments:
     calc_id     calculation ID
-  
+
   optional arguments:
     -h, --help  show this help message and exit
 
@@ -1845,13 +1841,13 @@ the engine version. Here are a few examples::
 
   $ oq compare hcurves --help
   usage: oq compare hcurves [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
-  
+
   Compare the hazard curves of two or more calculations.
-  
+
   positional arguments:
     imt                   intensity measure type to compare
     calc_ids              calculation IDs
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
@@ -1859,16 +1855,16 @@ the engine version. Here are a few examples::
     -r 0, --rtol 0        relative tolerance
     -a 0.001, --atol 0.001
                           absolute tolerance
-  
+
   $ oq compare hmaps --help
   usage: oq compare hmaps [-h] [-f] [-s] [-r 0] [-a 0.001] imt calc_ids [calc_ids ...]
-  
+
   Compare the hazard maps of two or more calculations.
-  
+
   positional arguments:
     imt                   intensity measure type to compare
     calc_ids              calculation IDs
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
@@ -1876,15 +1872,15 @@ the engine version. Here are a few examples::
     -r 0, --rtol 0        relative tolerance
     -a 0.001, --atol 0.001
                           absolute tolerance
-  
+
   $ oq compare uhs --help
   usage: oq compare uhs [-h] [-f] [-s] [-r 0] [-a 0.001] calc_ids [calc_ids ...]
-  
+
   Compare the uniform hazard spectra of two or more calculations.
-  
+
   positional arguments:
     calc_ids              calculation IDs
-  
+
   optional arguments:
     -h, --help            show this help message and exit
     -f, --files           write the results in multiple files
@@ -1895,3 +1891,122 @@ the engine version. Here are a few examples::
 
 Notice the ``compare uhs`` is able to compare all IMTs at once, so it
 is the most convenient to use if there are many IMTs.
+
+Showing calculation attributes
+------------------------------
+
+The command `oq show_attrs` offers a convenient way to retrieve
+the attributes of a calculation without needing to open the
+datastore with any external tools::
+
+  $ oq show_attrs -h
+  usage: oq show_attrs [-h] key [calc_id]
+
+  Show the attributes of a HDF5 dataset in the datastore.
+
+  positional arguments:
+    key         key of the datastore
+    calc_id     calculation ID [default: -1]
+
+  options:
+    -h, --help  show this help message and exit
+
+If the key `/` is requested, the root attributes are retrieved.
+For instance::
+
+  $ oq show_attrs / 4
+
+  checksum32 1572793419
+  date 2023-04-25T08:19:33
+  engine_version 3.17.0-gitcae0748
+  input_size 4021
+
+If the calculation id is not specified, the value of the
+requested key is retrieved for the latest calculation.
+
+Mosaic-related commands
+-----------------------
+
+Mosaic-related commands are defined as subcommands of the `oq mosaic` command::
+
+  $ oq mosaic -h
+  usage: oq mosaic [-h] {run_site,sample_rups,sample_gmfs} ...
+
+  positional arguments:
+    {run_site,sample_rups,sample_gmfs}
+                          available subcommands; use oq mosaic <subcmd> --help
+
+  options:
+    -h, --help            show this help message and exit
+
+Running a PSHA analysis
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The `oq mosaic run_site` subcommand gives the possibility to run a PSHA
+analysis for a site on the given longitude and latitude, or for multiple sites
+specified in a CSV file::
+
+  $ oq mosaic run_site -h
+  usage: oq mosaic run_site [-h] [--hc HC] [-s SLOWEST] [-c 8] lonlat_or_fname
+
+  Run a PSHA analysis on the given lon, lat
+
+  positional arguments:
+    lonlat_or_fname       lon,lat of the site to analyze or CSV file
+
+  options:
+    -h, --help            show this help message and exit
+    --hc HC               previous calculation ID
+    -s SLOWEST, --slowest SLOWEST
+                          profile and show the slowest operations
+    -c 8, --concurrent-jobs 8
+                          maximum number of concurrent jobs
+
+If a CSV file is provided, it must contain in each row a site identifier
+starting with the 3-character code of the mosaic model that covers it, and the
+longitude and latitude of the site, separated by commas.
+
+Sampling ruptures
+^^^^^^^^^^^^^^^^^
+
+The `oq mosaic sample_rups` subcommand gives the possibility to sample the
+ruptures of the given model in the mosaic with an effective investigation time
+of 100,000 years::
+
+  $ oq mosaic sample_rups -h
+  usage: oq mosaic sample_rups [-h] [-s SLOWEST] model
+
+  Sample the ruptures of the given model in the mosaic with an effective investigation time of 100,000 years
+
+  positional arguments:
+    model                 3-letter name of the model
+
+  options:
+    -h, --help            show this help message and exit
+    -s SLOWEST, --slowest SLOWEST
+                          profile and show the slowest operations
+
+Sampling ground motion fields
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The `oq mosaic sample_gmfs` subcommand gives the possiblity to sample the gmfs of the given model in the mosaic with an effective investigation time of 100,000 years::
+
+  $ oq mosaic sample_gmfs -h
+  usage: oq mosaic sample_gmfs [-h] [-t -1] [-m 0.0] [-e 1000.0] [--hc HC] [-s SLOWEST] model
+
+  Sample the gmfs of the given model in the mosaic with an effective investigation time of 100,000 years
+
+  positional arguments:
+    model                 3-letter name of the model
+
+  options:
+    -h, --help            show this help message and exit
+    -t -1, --trunclevel -1
+                          truncation level (default: the one in job_vs30.ini)
+    -m 0.0, --mindist 0.0
+                          minimum_distance (default: 0)
+    -e 1000.0, --extreme-gmv 1000.0
+                          threshold above which a GMV is extreme
+    --hc HC               previous hazard calculation
+    -s SLOWEST, --slowest SLOWEST
+                          profile and show the slowest operations

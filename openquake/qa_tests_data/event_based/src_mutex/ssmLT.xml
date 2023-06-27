@@ -7,7 +7,11 @@
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
                     <uncertaintyModel>source_model.xml</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                    <uncertaintyWeight>0.2</uncertaintyWeight>
+                </logicTreeBranch>
+                <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>ssm.xml</uncertaintyModel>
+                    <uncertaintyWeight>0.8</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>

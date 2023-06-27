@@ -55,21 +55,22 @@ def is_poissonian(src):
     return True
 
     
-def poisson_sample(src, eff_num_ses):
+def poisson_sample(src, eff_num_ses, seed):
     """
     :param src: a poissonian source
     :param eff_num_ses: number of stochastic event sets * number of samples
+    :param seed: stochastic seed
     :yields: triples (rupture, rup_id, num_occurrences)
     """
+    rng = numpy.random.default_rng(seed)
     tom = src.temporal_occurrence_model
     rupids = src.offset + numpy.arange(src.num_ruptures)
     if not hasattr(src, 'nodal_plane_distribution'):
         if src.code == b'F':  # multifault
             s = src.get_sections()
             for i, rate in enumerate(src.occur_rates):
-                # NB: random.poisson called inside to save memory
-                num_occ = numpy.random.poisson(
-                    rate * tom.time_span * eff_num_ses)
+                # NB: rng.poisson called inside to save memory
+                num_occ = rng.poisson(rate * tom.time_span * eff_num_ses)
                 if num_occ == 0:  # skip
                     continue
                 idxs = src.rupture_idxs[i]
@@ -85,7 +86,7 @@ def poisson_sample(src, eff_num_ses):
         else:  # simple or complex fault
             ruptures = list(src.iter_ruptures())
             rates = numpy.array([rup.occurrence_rate for rup in ruptures])
-            occurs = numpy.random.poisson(rates * tom.time_span * eff_num_ses)
+            occurs = rng.poisson(rates * tom.time_span * eff_num_ses)
             for rup, rupid, num_occ in zip(ruptures, rupids, occurs):
                 if num_occ:
                     yield rup, rupid, num_occ
@@ -97,6 +98,8 @@ def poisson_sample(src, eff_num_ses):
     rup_args = []
     rates = []
     for ps in split_source(src):
+        if not hasattr(ps, 'location'):  # unsplit containing a single source
+            [ps] = src
         lon, lat = ps.location.x, ps.location.y
         for mag, mag_occ_rate in ps.get_annual_occurrence_rates():
             for np_prob, np in ps.nodal_plane_distribution.data:
@@ -106,7 +109,7 @@ def poisson_sample(src, eff_num_ses):
                     rup_args.append(args)
                     rates.append(mag_occ_rate * np_prob * hc_prob)
     eff_rates = numpy.array(rates) * tom.time_span * eff_num_ses
-    occurs = numpy.random.poisson(eff_rates)
+    occurs = rng.poisson(eff_rates)
     for num_occ, args, rupid, rate in zip(occurs, rup_args, rupids, rates):
         if num_occ:
             _, np_prob, hc_prob, mag, np, lon, lat, hc_depth, ps = args
@@ -120,39 +123,40 @@ def poisson_sample(src, eff_num_ses):
             yield rup, rupid, num_occ
 
 
-def timedep_sample(src, eff_num_ses):
+def timedep_sample(src, eff_num_ses, seed):
     """
     :param src: a time-dependent source
     :param eff_num_ses: number of stochastic event sets * number of samples
+    :param seed: stochastic seed
     :yields: triples (rupture, rup_id, num_occurrences)
     """
+    rng = numpy.random.default_rng(seed)
     rupids = src.offset + numpy.arange(src.num_ruptures)
     if src.code == b'F':  # time-dependent multifault
         s = src.get_sections()
         for i, probs in enumerate(src.probs_occur):
+            cdf = numpy.cumsum(probs)
+            num_occ = numpy.digitize(rng.random(eff_num_ses), cdf).sum()
+            if num_occ == 0:  # ignore non-occurring ruptures
+                continue
             idxs = src.rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = s[idxs[0]]
             else:
                 sfc = MultiSurface([s[idx] for idx in idxs])
-            hypo = s[idxs[0]].get_middle_point()
-            cdf = numpy.cumsum(probs)
-            num_occ = numpy.digitize(
-                numpy.random.random(eff_num_ses), cdf).sum()
-            if num_occ == 0:  # ignore non-occurring ruptures
-                continue
-            data = [(p, o) for o, p in enumerate(probs)]
+            hypo = sfc.get_middle_point()
+            pmf = PMF([(p, o) for o, p in enumerate(probs)])
             yield (NonParametricProbabilisticRupture(
                 src.mags[i], src.rakes[i], src.tectonic_region_type,
-                hypo, sfc, PMF(data)), rupids[i], num_occ)
+                hypo, sfc, pmf), rupids[i], num_occ)
 
     else:  # time-dependent nonparametric
         mutex_weight = getattr(src, 'mutex_weight', 1)
         for rup, rupid in zip(src.iter_ruptures(), rupids):
-            occurs = rup.sample_number_of_occurrences(eff_num_ses)
+            occurs = rup.sample_number_of_occurrences(eff_num_ses, rng)
             if mutex_weight < 1:
                 # consider only the occurrencies below the mutex_weight
-                occurs *= (numpy.random.random(eff_num_ses) < mutex_weight)
+                occurs *= (rng.random(eff_num_ses) < mutex_weight)
             num_occ = occurs.sum()
             if num_occ:
                 yield rup, rupid, num_occ
@@ -230,9 +234,8 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         :yields: triples (rupture, trt_smr, num_occurrences)
         """
         seed = self.serial(ses_seed)
-        numpy.random.seed(seed)  # TODO: replace this with a rng
         sample = poisson_sample if is_poissonian(self) else timedep_sample
-        for rup, rupid, num_occ in sample(self, eff_num_ses):
+        for rup, rupid, num_occ in sample(self, eff_num_ses, seed):
             if self.smweight < 1 and hasattr(rup, 'occurrence_rate'):
                 # defined only for poissonian sources
                 # needed to get convergency of the frequency to the rate
