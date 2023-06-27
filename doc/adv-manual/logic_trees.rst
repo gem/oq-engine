@@ -322,8 +322,7 @@ and then, using the correspondence table ``abbrev->uvalue``, to::
   "[ChiouYoungs2008]" "[ToroEtAl2002]"
 
 For convenience, the engine provides a simple command to display the content
-of a realization, given the realization number, thus answering the
-FAQ::
+of a realization, given the realization number::
 
  $ oq show rlz:322
  | uncertainty_type         | uvalue            |
@@ -402,7 +401,7 @@ Reduction of the logic tree
 The simplest case of logic tree reduction is when the actual
 sources do not span the full range of tectonic region types in the
 GMPE logic tree file. This happens very often.
-FOr instance, in the SHARE calculation for Europe
+For instance, in the SHARE calculation for Europe
 the GMPE logic tree potentially contains 1280 realizations
 coming from 7 different tectonic region types:
 
