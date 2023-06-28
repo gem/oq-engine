@@ -34,13 +34,14 @@ def analysis(dstore):
         )
     ).set_index("id")
 
-    # # Need to check.It is giving error when this is not done.
+    # # Need to check. It is giving error when this is not done.
     if 'weights' in exposure_df.columns:
         exposure_df['weights'] = exposure_df['weights'].astype(float)
 
     # Classifying the nodes accodingly to compute performance indicator in
     # global and local scale
 
+    # TAZ stands for traffic analysis zone
     # user can write both as well
     TAZ_nodes = exposure_df.loc[(exposure_df.supply_or_demand == "TAZ") | (
         exposure_df.supply_or_demand == "both")].index.to_list()
