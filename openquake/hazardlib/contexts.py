@@ -401,6 +401,13 @@ class ContextMaker(object):
                     reqset.update(gsim.gmpe.REQUIRES_SITES_PARAMETERS)
                     if 'apply_swiss_amplification' in gsim.params:
                         reqset.add('amplfactor')
+                    if ('apply_swiss_amplification_sa' in gsim.params):
+                        reqset.add('ch_ampl03')
+                        reqset.add('ch_ampl06')
+                        reqset.add('ch_phis2s03')
+                        reqset.add('ch_phis2s06')
+                        reqset.add('ch_phiss03')
+                        reqset.add('ch_phiss06')
             setattr(self, 'REQUIRES_' + req, reqset)
         try:
             self.min_iml = param['min_iml']

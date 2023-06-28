@@ -173,6 +173,12 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
     'amplfactor': numpy.float64,
+    'ch_ampl03': numpy.float64,
+    'ch_ampl06': numpy.float64,
+    'ch_phis2s03': numpy.float64,
+    'ch_phis2s06': numpy.float64,
+    'ch_phiss03': numpy.float64,
+    'ch_phiss06': numpy.float64,
     'fpeak': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
     'THV': numpy.float64,
@@ -333,7 +339,7 @@ class SiteCollection(object):
             self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
         if 'backarc' in req_site_params:
             self._set('backarc', oq.reference_backarc)
-        
+
     def filtered(self, indices):
         """
         :param indices:
@@ -573,8 +579,8 @@ class SiteCollection(object):
                 continue
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
-                raise ValueError('The site parameter %s is always zero: please '
-                                 'check the site model' % param)
+                raise ValueError('The site parameter %s is always zero: please'
+                                 ' check the site model' % param)
         return site_model
 
     def within(self, region):
