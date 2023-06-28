@@ -112,7 +112,7 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     M = len(cmaker.imtls)
 
     # This is the output dictionary as explained above
-    out = outdict(M, N, P, cmaker.gidx.min(), cmaker.gidx.max() + 1)
+    out = outdict(M, N, P, cmaker.gid.min(), cmaker.gid.max() + 1)
     imt_ref = cmaker.imts[imti]
     rho = numpy.array([cmaker.cross_correl.get_correlation(imt_ref, imt)
                        for imt in cmaker.imts])
@@ -131,7 +131,7 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
             probs = tom.get_probability_one_or_more_occurrences(
                 ctx.occurrence_rate)  # shape U
         # For every GMM
-        for c, g in enumerate(cmaker.gidx):
+        for c, g in enumerate(cmaker.gid):
             i = c % len(cmaker.gsims)
             _cs_out(mean_stds[:, i], probs, rho, imti, imls, cmaker.poes,
                     cmaker.phi_b, cmaker.investigation_time,

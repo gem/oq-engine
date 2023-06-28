@@ -1,6 +1,7 @@
 {% extends "engine/base.html" %}
 
   {% block nav-items %}
+                {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -11,6 +12,7 @@
                     <input type="hidden" name="database" value="openquake2"/>
                   </form>
                 </li>
+                {% endif %}
   {% endblock nav-items %}
 
   {% block main %}
@@ -20,7 +22,7 @@
         <div id="oq-body-wrapper">
           <div id="new-release-box" class="alert alert-warning">
           </div>
-          {% if aelo_mode %}
+          {% if application_mode == 'AELO' %}
           <div>
             <h2>Run an AELO calculation</h2>
             {% if not user.email %}
@@ -30,15 +32,15 @@
             {% endif %}
             <form id="aelo_run_form" method="post">
               {% csrf_token %}
-              <!-- <label for"lon">Longitude:</label> -->
-              <input type="text" id="lon" name="lon" placeholder="Longitude"/>
               <!-- <label for"lat">Latitude:</label> -->
-              <input type="text" id="lat" name="lat" placeholder="Latitude"/>
+              <input type="text" id="lat" name="lat" placeholder="{{ aelo_form_placeholders.lat }}"/>
+              <!-- <label for"lon">Longitude:</label> -->
+              <input type="text" id="lon" name="lon" placeholder="{{ aelo_form_placeholders.lon }}"/>
               <!-- <label for"vs30">Vs30:</label> -->
-              <input type="text" id="vs30" name="vs30" placeholder="vs30"/>
+              <input type="text" id="vs30" name="vs30" placeholder="{{ aelo_form_placeholders.vs30 }}"/>
               <!-- <label for"siteid">Site ID:</label> -->
-              <input type="text" id="siteid" name="siteid" placeholder="Site ID"/>
-              <button type="submit" class="btn">Submit</button>
+              <input type="text" id="siteid" name="siteid" placeholder="{{ aelo_form_placeholders.siteid }}"/>
+              <button id="submit_aelo_calc" type="submit" class="btn">Submit</button>
               <!-- <input type="submit"> -->
             </form>
           </div>
@@ -85,6 +87,7 @@
             <% if (calc.get('status') != 'created') { %>
               <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
+                {% if application_mode != 'READ_ONLY' %}
                 <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
                 <!-- confirm_modal -->
                 <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
@@ -105,8 +108,10 @@
                 </div>
                 </div>
                 <!-- end confirm_modal -->
+                {% endif %}
                 <% if (calc.get('status') == 'complete') { %>
                   <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
+                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -116,10 +121,12 @@
                   </div>
                   <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
                   </form>
+                  {% endif %}
                 <% } else { %>
                   <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
+              {% if application_mode != 'READ_ONLY' %}
               <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Abort</a>
               <!-- confirm_modal -->
               <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
@@ -140,6 +147,7 @@
               </div>
               </div>
               <!-- end confirm_modal -->
+              {% endif %}
             <% } %>
           <% } %>
           </td>
@@ -154,31 +162,4 @@
   {% block extra_script %}
   {{ block.super }}
   <script type="text/javascript" src="{{ STATIC_URL }}js/engine.js"></script>
-  {% if aelo_mode %}
-  <script>
-    $(document).ready(function () {
-      $("#aelo_run_form").submit(function (event) {
-        var formData = {
-          lon: $("#lon").val(),
-          lat: $("#lat").val(),
-          vs30: $("#vs30").val(),
-          siteid: $("#siteid").val(),
-        };
-        $.ajax({
-          type: "POST",
-          url: "{{ oq_engine_server_url }}/v1/calc/aelo_run",
-          data: formData,
-          dataType: "json",
-          encode: true,
-        }).done(function (data) {
-          // console.log(data);
-        }).error(function (data) {
-          // TODO: replace with a better looking modal dialog with title
-          window.alert(data.responseText);
-        });
-        event.preventDefault();
-      });
-    });
-  </script>
-  {% endif %}
   {% endblock extra_script %}

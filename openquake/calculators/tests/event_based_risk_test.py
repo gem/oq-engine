@@ -97,12 +97,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.assertEqual(str(agg_id), '''\
        policy taxonomy
 agg_id                
-0           B       RM
-1           B        W
-2           B       RC
-3           A       RM
-4           A        W
-5           A       RC''')
+0           A       RC
+1           A       RM
+2           A        W
+3           B       RC
+4           B       RM
+5           B        W''')
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
@@ -110,7 +110,7 @@ agg_id
 
         aw = extract(self.calc.datastore, 'agg_losses/structural')
         self.assertEqual(aw.stats, ['mean'])
-        numpy.testing.assert_allclose(aw.array, [880.4989], atol=.001)
+        numpy.testing.assert_allclose(aw.array, [870.47925], atol=.001)
 
         fnames = export(('aggrisk', 'csv'), self.calc.datastore)
         for fname in fnames:
@@ -161,7 +161,7 @@ agg_id
                           insurance_csv="{'structural': 'policy_ins_ko.csv'}")
         self.assertIn(
             "Please check deductible values. Values larger than the insurance"
-            " limit were found for asset(s) {'a3'}.",
+            " limit were found for asset(s) {3}.",
             str(ctx.exception))
 
     def test_case_1f(self):
@@ -210,7 +210,7 @@ agg_id
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                               delta=1E-5)
-        self.assertEqual(len(self.calc.datastore['events']), 22)
+        self.assertEqual(len(self.calc.datastore['events']), 21)
 
         losses0 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
         losses1 = self.calc.datastore['avg_losses-stats/structural'][:, 0]
@@ -256,6 +256,11 @@ agg_id
             ('aggregate_by/avg_losses?tag=taxonomy&kind=rlz-0&'
              'loss_type=structural', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/losses_by_taxo.csv', fname, delta=1E-5)
+
+        # losses by rupture
+        df = view('risk_by_rup:structural', self.calc.datastore)
+        tmp = gettemp(text_table(df, ext='org'))
+        self.assertEqualFiles('expected/risk_by_rup.org', tmp)
 
     def test_missing_taxonomy(self):
         with self.assertRaises(RuntimeError) as ctx:
@@ -372,9 +377,9 @@ agg_id
 
         # test the view gsim_for_event
         gsim = view('gsim_for_event:0', self.calc.datastore)
-        self.assertEqual(str(gsim), "[BooreAtkinson2008]")
-        gsim = view('gsim_for_event:10', self.calc.datastore)
         self.assertEqual(str(gsim), "[ChiouYoungs2008]")
+        gsim = view('gsim_for_event:10', self.calc.datastore)
+        self.assertEqual(str(gsim), "[AkkarBommer2010]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',
@@ -395,7 +400,7 @@ agg_id
         # multi-tag aggregations
         arr = extract(dstore, 'aggregate/avg_losses?'
                       'tag=taxonomy&tag=occupancy&kind=quantile-0.5')
-        self.assertEqual(len(arr.to_dframe()), 0)
+        self.assertEqual(len(arr.to_dframe()), 4)
 
         # aggregate by all loss types
         fnames = export(
@@ -458,10 +463,15 @@ agg_id
         [fname, _sigeps, _sitefile] = out['gmf_data', 'csv']
         self.assertEqualFiles('expected/gmf-data.csv', fname, delta=5E-5)
 
+        # check rup_ids are consistent
+        rup_ids = self.calc.datastore['ruptures']['id']
+        aw = extract(self.calc.datastore, 'rupture_info')
+        numpy.testing.assert_equal(aw.array['rup_id'], rup_ids)
+
     def test_case_4b(self):
         # case with site collection extracted from site_model.xml
         self.run_calc(case_4a.__file__, 'job.ini')
-        self.assertEqual(len(self.calc.datastore['events']), 3)
+        self.assertEqual(len(self.calc.datastore['events']), 5)
 
     def test_case_6c(self):
         # case with asset_correlation=1
@@ -534,7 +544,7 @@ agg_id
                             minimum_asset_loss='100')
         _tot, fname = out['aggcurves', 'csv']
         # very sensitive to shapely version
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=.01)
 
         curves = self.calc.datastore.read_df('aggcurves')
         self.assertEqual(len(curves), 18)  # (2 tags + 1 total) x 6 periods
@@ -544,7 +554,7 @@ agg_id
             case_6c.__file__, 'job_eb.ini', exports='csv',
             hazard_calculation_id=str(self.calc.datastore.calc_id))
         _tot, fname = out['aggcurves', 'csv']
-        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=2E-3)
+        self.assertEqualFiles('expected/aggcurves_eb.csv', fname, delta=.02)
 
     def test_recompute(self):
         # test recomputing aggregate loss curves with post_risk

@@ -22,7 +22,6 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
-import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -75,7 +74,7 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        ctx = copy.copy(ctx)
+        ctx = ctx.copy()
         ctx.vs30 = 700 * np.ones(len(ctx.vs30))
         super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tauC'

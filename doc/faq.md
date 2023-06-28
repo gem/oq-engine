@@ -74,11 +74,58 @@ You can also limit the number of parallel threads as explained
 before (i.e. disable hyperthreading, reduce num_cores) or disable
 parallelism altogether by giving the command
 
+```
 $ oq engine --run job.ini --no-distribute
+```
 
 or by setting `concurrent_tasks = 0` in the job.ini file.
 If you still run out of memory, then you must reduce your calculation or
 upgrade your system.
+
+### Help! Is it possible to configure multiple installations of the engine to run independently on the same computer?
+
+Yes, it is possible, as long as their virtual environments are stored in
+different directories and the ports used by their dbservers are different.
+
+When you install the engine using the `install.py` script,
+you may specify the `--venv` parameter to choose in which directory the engine
+virtual environment must be stored. On an existing installation of the engine,
+you can run the command
+
+```
+$ oq info venv
+```
+
+to retrieve the path of its virtual environment.
+
+Another parameter accepted by the `install.py` script is `--dbport`, that
+specifies the port number used by the engine dbserver. By default, the port is
+set to 1907 for server installations or 1908 for user installations. The port
+can be customized through the attribute `port` of section `[dbserver]` in the
+configuration file `openquake.cfg`, placed inside the virtual environment
+directory, e.g.:
+
+```
+[dbserver]
+    port = 1907
+```
+
+#### Can two installations of the engine share the same `oqdata` directory?
+
+The `oqdata` directory, that stores calculation data, can safely be shared
+between two different instances of the engine working on a same computer. Each
+HDF5 dataset is independent from all others in the datastore and it has a unique
+identifier. It is possible to determine the version of the engine that produced
+each HDF5 file (`calc_<calc_id>.hdf5`) using the command
+
+```
+$ oq show_attrs / <calc_id>
+```
+
+where `/` indicates the root attributes (date, engine_version, etc.)
+and `<calc_id>` (an integer number) is the
+calculation identifier. In case the calculation id is not specified, the
+attributes are retrieved for the latest calculation.
 
 ******
 

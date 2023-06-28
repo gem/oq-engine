@@ -38,8 +38,10 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
+import pandas
 from decorator import decorator
 from openquake.baselib import __version__
 from openquake.baselib.python3compat import decode
@@ -762,12 +764,12 @@ class DictArray(Mapping):
         self.L1 = len(levels)
         self.size = self.M * self.L1
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
-                               for imt, imls in sorted(imtls.items())])
+                               for imt, imls in imtls.items()])
         self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
         self.mdic = {}
-        for m, (imt, imls) in enumerate(sorted(imtls.items())):
+        for m, (imt, imls) in enumerate(imtls.items()):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))
@@ -1168,11 +1170,37 @@ def random_filter(objects, reduction_factor, seed=42):
     if reduction_factor == 1:  # do not reduce
         return objects
     rnd = random.Random(seed)
+    if isinstance(objects, pandas.DataFrame):
+        name = objects.index.name
+        df = objects.reset_index()
+        df = pandas.DataFrame({
+            col: random_filter(df[col], reduction_factor, seed)
+            for col in df.columns})
+        return df.set_index(name)
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:
             out.append(obj)
     return out
+
+
+def random_choice(array, num_samples, offset=0, seed=42):
+    """
+    Extract num_samples from an array. It has the fundamental property
+    of splittability, i.e. if the seed is the same and `||` means
+    array concatenation:
+
+    choice(a, N) = choice(a, n, 0) || choice(a, N-n, n)
+
+    This property makes `random_choice` suitable to be parallelized,
+    while `random.choice` is not. It as also absurdly fast.
+    """
+    rng = numpy.random.default_rng(seed)
+    rng.bit_generator.advance(offset)
+    N = len(array)
+    cumsum = numpy.repeat(1./N, N).cumsum()
+    choices = numpy.searchsorted(cumsum, rng.random(num_samples))
+    return array[choices]
 
 
 def random_histogram(counts, nbins_or_binweights, seed):
@@ -1533,6 +1561,20 @@ def sqrscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.sqrt(x_max - x_min) / (n - 1)
     return x_min + (delta * numpy.arange(n))**2
+
+
+# NB: there is something like this in contextlib in Python 3.11
+@contextmanager
+def chdir(path):
+    """
+    Context manager to temporarily change the CWD
+    """
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 

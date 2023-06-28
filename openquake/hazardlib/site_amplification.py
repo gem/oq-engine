@@ -371,10 +371,10 @@ class Amplifier(object):
             ialpha = numpy.interp(imls, alpha.index, alpha)  # shape E
         return ialpha, isigma
 
-    def _amplify_gmvs(self, ampl_code, gmvs, imt_str):
+    def _amplify_gmvs(self, ampl_code, gmvs, imt_str, rng):
         # gmvs is an array of shape E
         ialpha, isigma = self._interp(ampl_code, imt_str, gmvs)
-        uncert = numpy.random.normal(numpy.zeros_like(gmvs), isigma)
+        uncert = rng.normal(numpy.zeros_like(gmvs), isigma)
         return numpy.exp(numpy.log(ialpha * gmvs) + uncert)
 
     def amplify_gmfs(self, ampcodes, gmvs, imts, seed=0):
@@ -386,10 +386,10 @@ class Amplifier(object):
         :param imts: intensity measure types
         :param seed: seed used when adding the uncertainty
         """
-        numpy.random.seed(seed)
+        rng = numpy.random.default_rng(seed)
         for m, imt in enumerate(imts):
             for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
-                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))
+                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt), rng)
 
 
 def get_poes_site(mean_std, cmaker, ctx):

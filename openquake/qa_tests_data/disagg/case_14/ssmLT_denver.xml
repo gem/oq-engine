@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5"
+      xmlns:gml="http://www.opengis.net/gml">
+  <logicTree
+      logicTreeID="US18_all_excl_cali">
+    <logicTreeBranchSet
+        branchSetID="compressional" uncertaintyType="sourceModel">
+      <logicTreeBranch branchID="model">
+	<uncertaintyModel>reduced.xml CEUSFaultSources.xml</uncertaintyModel>
+	<uncertaintyWeight>1.0</uncertaintyWeight>
+      </logicTreeBranch>
+    </logicTreeBranchSet>
+    </logicTree>
+</nrml>

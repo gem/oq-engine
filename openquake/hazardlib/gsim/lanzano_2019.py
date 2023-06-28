@@ -64,12 +64,10 @@ def _site_amplification(ctx, C):
     """
     Compute the fourth term of the equation 1 :
     The functional form Fs in Eq. (1) represents the site amplification and
-    it is given by FS = klog10(V0/800) , where V0 = Vs30 when Vs30 <= 1500
+    it is given by FS = klog10(V0/800), where V0 = Vs30 when Vs30 <= 1500
     and V0=1500 otherwise
     """
-    v0 = np.ones_like(ctx.vs30) * 1500.
-    v0[ctx.vs30 < 1500] = ctx.vs30
-    return C['k'] * np.log10(v0/800)
+    return C['k'] * np.log10(np.clip(ctx.vs30, -np.inf, 1500.0) / 800.0)
 
 
 def _gen2ref_rock_scaling(C, vs30, kappa0, imt):
@@ -438,6 +436,7 @@ class LanzanoEtAl2019_RJB_OMO_RefRock(GMPE):
         for spec of input and result values.
         """
         if self.kappa0 is not None:
+            ctx = ctx.copy()
             ctx.kappa0 = self.kappa0
         [dist_type] = self.REQUIRES_DISTANCES
         for m, imt in enumerate(imts):

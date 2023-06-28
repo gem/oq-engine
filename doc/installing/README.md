@@ -14,7 +14,7 @@ large range of use cases it can be installed in several different ways.
 * [Installing the Long Term Support (LTS) version](#installing-the-long-term-support-lts-version)
 * [Installing the latest version](#installing-the-latest-version)
 * [Changing the OpenQuake Engine version](#changing-the-openquake-engine-version)
-* [Other installation methods](#other-installtion-methods)
+* [Other installation methods](#other-installation-methods)
 * [Getting help](#getting-help)
 
 
@@ -37,7 +37,7 @@ Check more advanced [hardware suggestions here](./hardware-suggestions.md).
 
 **On Windows**
 
-  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.2-1.exe .
+  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.3-1.exe .
   Then follow the wizard on screen.
   > **Warning**:
   > Administrator level access may be required.

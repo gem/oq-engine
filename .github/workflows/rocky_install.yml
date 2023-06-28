@@ -45,7 +45,7 @@ jobs:
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
-        dnf install -y git git-lfs
+        dnf install -y git git-lfs nc
         pip3 -V
         python3 -c "import sys; print(sys.version)"
         #
@@ -53,6 +53,7 @@ jobs:
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
+        set -x 
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
@@ -65,13 +66,64 @@ jobs:
         else
           python3 install.py devel_server
         fi
+    - name: Run webui test
+      run: |
+        set -x
+        source /opt/openquake/venv/bin/activate
+        mkdir /var/log/oq-engine/
+        chown -R openquake /var/log/oq-engine/
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
+        # Wait the DbServer to come up
+        echo "Waiting DBServer up on port 1907...."
+        while ! nc -z localhost 1907; do
+          sleep 2 # wait for 1/10 of the second before check again
+        done
+        sleep 1
+        echo "Add settings for login and logging on webui before to start"
+        cd /__w/oq-engine/oq-engine/
+        ls -lrt
+        cd openquake/server
+        cat > local_settings.py << EOF
+        LOCKDOWN = True
+        #
+        WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
+        EOF
+        echo "DISPLAY content of local_settings"
+        cat local_settings.py
+        # START WEBUI
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+        echo "Waiting WEBUI up on port 8800...."
+        while ! nc -z localhost 8800; do
+          sleep 2 # wait for 1/10 of the second before check again
+        done
+        ls -lrt /var/log/oq-engine/
+        sleep 1
+        # Perform migration after setup local_settings
+        cd /__w/oq-engine/oq-engine/openquake/engine/
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
+        sleep 1
+        curl -L -I -X GET http://127.0.0.1:8800/accounts/login/
+        echo -n "TEST DJANGO LOGIN "
+        LOGIN_URL=http://127.0.0.1:8800/accounts/login/
+        YOUR_USER='username'
+        YOUR_PASS='password'
+        COOKIES=cookies.txt
+        CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+        echo -n "Django Auth: get csrftoken ..."
+        $CURL_BIN $LOGIN_URL > /dev/null
+        DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
+        echo " perform login ..."
+        $CURL_BIN \
+            -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
+            -X POST $LOGIN_URL > /dev/null 
+        echo "--------------------"
+        echo "display log of webui"
+        echo "--------------------"
+        cat /var/log/oq-engine/webui-access.log
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
         pip install pytest
-        echo "list installed wheels and other"
-        pip list
-        pip freeze
         runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
         export PYTEST_ADDOPTS="--color=yes"
         # set owner to openquake to run test and create cache for pytest

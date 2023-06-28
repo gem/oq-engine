@@ -1,4 +1,4 @@
-name: Upgrade procedure for engine from 3.11 to Latest Release
+name: Upgrade procedure for engine from 3.16 to Latest Release
 
 on:
   workflow_dispatch:
@@ -50,7 +50,7 @@ jobs:
       run: |
         sudo env "PATH=$PATH" python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
         sleep 2
-        sudo env "PATH=$PATH" python install.py server --version=3.11.5
+        sudo env "PATH=$PATH" python install.py server 
       shell: bash
     - name: Run demos to test installation
       run: |

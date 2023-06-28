@@ -35,6 +35,7 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib import logictree
 from openquake.hazardlib.gsim.base import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -43,13 +44,15 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
-from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
+from openquake.commonlib import calc, util, oqvalidation, datastore
 from openquake.calculators import getters
 
 U16 = numpy.uint16
 U32 = numpy.uint32
+I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
+TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
@@ -230,20 +233,21 @@ def extract_realizations(dstore, dummy):
     dt = [('rlz_id', U32), ('branch_path', '<S100'), ('weight', F32)]
     oq = dstore['oqparam']
     scenario = 'scenario' in oq.calculation_mode
-    rlzs = dstore['full_lt'].rlzs
+    full_lt = dstore['full_lt']
+    rlzs = full_lt.rlzs
     # NB: branch_path cannot be of type hdf5.vstr otherwise the conversion
     # to .npz (needed by the plugin) would fail
     arr = numpy.zeros(len(rlzs), dt)
     arr['rlz_id'] = rlzs['ordinal']
     arr['weight'] = rlzs['weight']
-    if scenario:
+    if scenario and len(full_lt.trts) == 1:  # only one TRT
         gsims = dstore.getitem('full_lt/gsim_lt')['uncertainty']
         if 'shakemap' in oq.inputs:
             gsims = ["[FromShakeMap]"]
         # NOTE: repr(gsim) has a form like "b'[ChiouYoungs2008]'"
         arr['branch_path'] = ['"%s"' % repr(gsim)[2:-1].replace('"', '""')
                               for gsim in gsims]  # quotes Excel-friendly
-    else:
+    else:  # use the compact representation for the branch paths
         arr['branch_path'] = encode(rlzs['branch_path'])
     return arr
 
@@ -280,8 +284,8 @@ def extract_exposure_metadata(dstore, what):
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
     dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
-                    if name.startswith(('value-', 'number', 'occupants'))
-                    and name != 'value-occupants']
+                    if name.startswith(('value-', 'occupants'))
+                    and name != 'occupants_avg']
     return ArrayWrapper((), dict(json=hdf5.dumps(dic)))
 
 
@@ -524,7 +528,7 @@ def extract_rup_ids(dstore, what):
     http://127.0.0.1:8800/v1/calc/30/extract/rup_ids
     """
     n = len(dstore['rup/grp_id'])
-    data = numpy.zeros(n, [('src_id', U32), ('rup_id', U32)])
+    data = numpy.zeros(n, [('src_id', U32), ('rup_id', I64)])
     data['src_id'] = dstore['rup/src_id'][:]
     data['rup_id'] = dstore['rup/rup_id'][:]
     data = numpy.unique(data)
@@ -550,7 +554,7 @@ def extract_mean_by_rup(dstore, what):
             axis=(0, 1))
         out.extend(zip(ctx.src_id, ctx.rup_id, means))
     out.sort(key=operator.itemgetter(0, 1))
-    return numpy.array(out, [('src_id', U32), ('rup_id', U32), ('mean', F64)])
+    return numpy.array(out, [('src_id', U32), ('rup_id', I64), ('mean', F64)])
 
 
 @extract.add('source_data')
@@ -1055,42 +1059,6 @@ def extract_relevant_events(dstore, dummy=None):
     return events
 
 
-@extract.add('event_info')
-def extract_event_info(dstore, eidx):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/event_info/0
-    """
-    event = dstore['events'][int(eidx)]
-    ridx = event['rup_id']
-    [getter] = getters.get_rupture_getters(dstore, slc=slice(ridx, ridx + 1))
-    rupdict = getter.get_rupdict()
-    rlzi = event['rlz_id']
-    full_lt = dstore['full_lt']
-    rlz = full_lt.get_realizations()[rlzi]
-    gsim = full_lt.gsim_by_trt(rlz)[rupdict['trt']]
-    for key, val in rupdict.items():
-        yield key, val
-    yield 'rlzi', rlzi
-    yield 'gsim', repr(gsim)
-
-
-@extract.add('extreme_event')
-def extract_extreme_event(dstore, eidx):
-    """
-    Extract information about the given event index.
-    Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/extreme_event
-    """
-    arr = dstore['gmf_data/gmv_0'][()]
-    idx = arr.argmax()
-    eid = dstore['gmf_data/eid'][idx]
-    dic = dict(extract_event_info(dstore, eid))
-    dic['gmv'] = arr[idx]
-    return dic
-
-
 @extract.add('ruptures_within')
 def get_ruptures_within(dstore, bbox):
     """
@@ -1158,8 +1126,15 @@ def extract_disagg(dstore, what):
     for k, ax in zip(disag_tup, axis):
         attrs[k.lower()] = ax
     attrs['imt'] = qdict['imt'] if 'imt' in qdict else imts
+    imt = attrs['imt'][0]
     if len(oq.poes) == 0:
-        attrs['poe'] = [numpy.nan]
+        mean_curve = dstore.sel(
+            'hcurves-stats', imt=imt, stat='mean')[sid, 0, 0]
+        # using loglog interpolation like in compute_hazard_maps
+        attrs['poe'] = numpy.exp(
+            numpy.interp(numpy.log(oq.iml_disagg[imt]),
+                         numpy.log(oq.imtls[imt]),
+                         numpy.log(mean_curve.reshape(-1))))
     elif 'poe_id' in qdict:
         attrs['poe'] = [oq.poes[p] for p in poei]
     else:
@@ -1199,16 +1174,16 @@ def norm(qdict, params):
     return dic
 
 
-@extract.add('rates_by_src')
-def extract_rates_by_src(dstore, what):
+@extract.add('mean_rates_by_src')
+def extract_mean_rates_by_src(dstore, what):
     """
-    Extract the rates_by_src information.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/rates_by_src?site_id=0&imt=PGA&poe=.001
+    Extract the mean_rates_by_src information.
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/mean_rates_by_src?site_id=0&imt=PGA&poe=.001
     """
     qdict = parse(what)
-    dset = dstore['rates_by_src/array']
+    dset = dstore['mean_rates_by_src/array']
     oq = dstore['oqparam']
-    src_id = dstore['rates_by_src/src_id'][:]
+    src_id = dstore['mean_rates_by_src/src_id'][:]
     [imt] = qdict['imt']
     [poe] = qdict['poe']
     [site_id] = qdict.get('site_id', ['0'])
@@ -1247,7 +1222,7 @@ def extract_disagg_layer(dstore, what):
     edges, shapedic = disagg.get_edges_shapedic(oq, sitecol, len(realizations))
     dt = _disagg_output_dt(shapedic, kinds, oq.imtls, poes_disagg)
     out = numpy.zeros(len(sitecol), dt)
-    hmap4 = dstore['hmap4'][:]
+    hmap3 = dstore['hmap3'][:]  # shape (N, M, P)
     best_rlzs = dstore['best_rlzs'][:]
     arr = {kind: dstore['disagg-rlzs/' + kind][:] for kind in kinds}
     for sid, lon, lat, rec in zip(
@@ -1265,7 +1240,7 @@ def extract_disagg_layer(dstore, what):
                 for kind in kinds:
                     key = '%s-%s-%s' % (kind, imt, poe)
                     rec[key] = arr[kind][sid, ..., m, p, :] @ ws
-                rec['iml-%s-%s' % (imt, poe)] = hmap4[sid, m, p]
+                rec['iml-%s-%s' % (imt, poe)] = hmap3[sid, m, p]
     return ArrayWrapper(out, dict(mag=edges[0], dist=edges[1], eps=edges[-2],
                                   trt=numpy.array(encode(edges[-1]))))
 
@@ -1277,13 +1252,13 @@ class RuptureData(object):
     Container for information about the ruptures of a given
     tectonic region type.
     """
-    def __init__(self, trt, gsims):
+    def __init__(self, trt, gsims, mags):
         self.trt = trt
-        self.cmaker = ContextMaker(trt, gsims, {'imtls': {}})
+        self.cmaker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': mags})
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
-            ('rup_id', U32), ('source_id', SOURCE_ID), ('multiplicity', U32),
+            ('rup_id', I64), ('source_id', SOURCE_ID), ('multiplicity', U32),
             ('occurrence_rate', F64),
             ('mag', F32), ('lon', F32), ('lat', F32), ('depth', F32),
             ('strike', F32), ('dip', F32), ('rake', F32),
@@ -1298,7 +1273,7 @@ class RuptureData(object):
         for proxy in proxies:
             ebr = proxy.to_ebr(self.trt)
             rup = ebr.rupture
-            ctx = self.cmaker.make_rctx(rup)
+            ctx = self.cmaker.make_legacy_ctx(rup)
             ruptparams = tuple(getattr(ctx, param) for param in self.params)
             point = rup.surface.get_middle_point()
             boundaries = rup.surface.get_surface_boundaries_3d()
@@ -1313,6 +1288,7 @@ class RuptureData(object):
         return numpy.array(data, self.dt)
 
 
+# used in the rupture exporter and in the plugin
 @extract.add('rupture_info')
 def extract_rupture_info(dstore, what):
     """
@@ -1326,7 +1302,7 @@ def extract_rupture_info(dstore, what):
     else:
         min_mag = 0
     oq = dstore['oqparam']
-    dtlist = [('rup_id', U32), ('multiplicity', U32), ('mag', F32),
+    dtlist = [('rup_id', I64), ('multiplicity', U32), ('mag', F32),
               ('centroid_lon', F32), ('centroid_lat', F32),
               ('centroid_depth', F32), ('trt', '<S50'),
               ('strike', F32), ('dip', F32), ('rake', F32)]
@@ -1334,8 +1310,10 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        rup_data = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim)
-        for r in rup_data.to_array(proxies):
+        mags = dstore[f'source_mags/{rgetter.trt}'][:]
+        rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
+        arr = rdata.to_array(proxies)
+        for r in arr:
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
             if len(coordset) < 4:   # degenerate to line
@@ -1357,28 +1335,29 @@ def extract_ruptures(dstore, what):
     """
     Extract the ruptures with their geometry as a big CSV string
     Example:
-    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?min_mag=6
+    http://127.0.0.1:8800/v1/calc/30/extract/ruptures?rup_id=6
     """
+    oq = dstore['oqparam']
+    trts = list(dstore.getitem('full_lt').attrs['trts'])
+    comment = dict(trts=trts, ses_seed=oq.ses_seed)
     qdict = parse(what)
     if 'min_mag' in qdict:
         [min_mag] = qdict['min_mag']
     else:
         min_mag = 0
+    if 'rup_id' in qdict:
+        rup_id = int(qdict['rup_id'][0])
+        ebrups = [getters.get_ebrupture(dstore, rup_id)]
+        info = dstore['source_info'][rup_id // TWO30]
+        comment['source_id'] = info['source_id'].decode('utf8')
+    else:
+        ebrups = []
+        for rgetter in getters.get_rupture_getters(dstore):
+            ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
+                          for proxy in rgetter.get_proxies(min_mag))
     bio = io.StringIO()
-    first = True
-    trts = list(dstore.getitem('full_lt').attrs['trts'])
-    for rgetter in getters.get_rupture_getters(dstore):
-        rups = [rupture._get_rupture(proxy.rec, proxy.geom, rgetter.trt)
-                for proxy in rgetter.get_proxies(min_mag)]
-        arr = rupture.to_csv_array(rups)
-        if first:
-            header = None
-            comment = dict(trts=trts)
-            first = False
-        else:
-            header = 'no-header'
-            comment = None
-        writers.write_csv(bio, arr, header=header, comment=comment)
+    arr = rupture.to_csv_array(ebrups)
+    writers.write_csv(bio, arr, comment=comment)
     return bio.getvalue()
 
 
@@ -1414,6 +1393,13 @@ def extract_risk_stats(dstore, what):
     weights = dstore['weights'][:]
     return calc_stats(df, kfields, stats, weights)
 
+
+@extract.add('med_gmv')
+def extract_med_gmv(dstore, what):
+    """
+    Extract med_gmv array for the given source
+    """
+    return extract_(dstore, 'med_gmv/' + what)
 
 # #####################  extraction from the WebAPI ###################### #
 
@@ -1543,28 +1529,16 @@ def clusterize(hmaps, rlzs, k):
     :param hmaps: array of shape (R, M, P)
     :param rlzs: composite array of shape R
     :param k: number of clusters to build
-    :returns: (array(K, MP), labels(R))
+    :returns: array of K elements with dtype (rlzs, branch_paths, centroid)
     """
     R, M, P = hmaps.shape
     hmaps = hmaps.transpose(0, 2, 1).reshape(R, M * P)
-    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M*P))]
+    dt = [('rlzs', hdf5.vuint32), ('branch_paths', object),
+          ('centroid', (F32, M*P))]
     centroid, labels = kmeans2(hmaps, k, minit='++')
-    dic = dict(path=rlzs['branch_path'], label=labels)
-    df = pandas.DataFrame(dic)
+    df = pandas.DataFrame(dict(path=rlzs['branch_path'], label=labels))
     tbl = []
     for label, grp in df.groupby('label'):
-        paths = [encode(path) for path in grp['path']]
-        tbl.append((label, logictree.collect_paths(paths), centroid[label]))
-    return numpy.array(tbl, dt), labels
-
-
-def read_ebrupture(dstore, rup_id):
-    """
-    :param dstore: a DataStore instance
-    :param rup_id: an integer rupture ID
-    :returns: an EBRupture instance
-    """
-    [getter] = getters.get_rupture_getters(
-        dstore, slc=slice(rup_id, rup_id + 1))
-    [proxy] = getter.get_proxies()
-    return proxy.to_ebr(getter.trt)
+        paths = logictree.collect_paths(encode(list(grp['path'])))
+        tbl.append((grp.index, paths, centroid[label]))
+    return numpy.array(tbl, dt)

@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import functools
 from unittest.mock import Mock
 import numpy
 
@@ -121,7 +122,7 @@ def gmvs_to_poes(df, imtls, ses_per_logic_tree_path):
 
 # ################## utilities for classical calculators ################ #
 
-# TODO: see if it can be simplified, in terms of compute_hmap4
+# TODO: see if it can be simplified
 def make_hmaps(pmaps, imtls, poes):
     """
     Compute the hazard maps associated to the passed probability maps.
@@ -172,6 +173,7 @@ class RuptureImporter(object):
     def __init__(self, dstore):
         self.datastore = dstore
         self.oqparam = dstore['oqparam']
+        self.scenario = 'scenario' in self.oqparam.calculation_mode
         try:
             self.N = len(dstore['sitecol'])
         except KeyError:  # missing sitecol
@@ -186,12 +188,10 @@ class RuptureImporter(object):
             srcid, rupid = divmod(int(rup['id']), TWO30)
             ebr = EBRupture(
                 Mock(), rup['source_id'],
-                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'],
-                scenario='scenario' in self.oqparam.calculation_mode)
+                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'])
             ebr.seed = rup['seed']
-            for rlz_id, eids in ebr.get_eids_by_rlz(rlzs_by_gsim).items():
-                for eid in eids:
-                    eid_rlz.append((eid, rup['id'], rlz_id))
+            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim, self.scenario):
+                eid_rlz.append((eid, rup['id'], rlz))
         return {ordinal: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
@@ -242,6 +242,7 @@ class RuptureImporter(object):
             for args in iterargs:
                 acc += self.get_eid_rlz(*args)
         else:
+            self.datastore.swmr_on()  # before the Starmap
             acc = parallel.Starmap(
                 self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
         i = 0
@@ -260,12 +261,11 @@ class RuptureImporter(object):
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
 
-        # TODO: use default_rng here
-        numpy.random.seed(self.oqparam.ses_seed)
+        rng = numpy.random.default_rng(self.oqparam.ses_seed)
         if self.oqparam.investigation_time:
             itime = int(self.oqparam.investigation_time)
-            extra['year'] = numpy.random.choice(itime, len(events)) + 1
-        extra['ses_id'] = numpy.random.choice(nses, len(events)) + 1
+            extra['year'] = rng.choice(itime, len(events)) + 1
+        extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
         cumsum = self.datastore['ruptures']['n_occ'].cumsum()
         rup_array['e0'][1:] = cumsum[:-1]
@@ -304,6 +304,53 @@ class RuptureImporter(object):
                     (oq.calculation_mode, max_[var], var, num_[var]))
 
 
+def _concat(acc, slc2):
+    if len(acc) == 0:
+        return [slc2]
+    slc1 = acc[-1]  # last slice
+    if slc2[0] == slc1[1]:
+        new = numpy.array([slc1[0], slc2[1]])
+        return acc[:-1] + [new]
+    return acc + [slc2]
+
+
+def compactify(arrayN2):
+    """
+    :param arrayN2: an array with columns (start, stop)
+    :returns: a shorter array with the same structure
+
+    Here is how it works in an example where the first three slices
+    are compactified into one while the last slice stays as it is:
+
+    >>> arr = numpy.array([[84384702, 84385520],
+    ...                    [84385520, 84385770],
+    ...                    [84385770, 84386062],
+    ...                    [84387636, 84388028]])
+    >>> compactify(arr)
+    array([[84384702, 84386062],
+           [84387636, 84388028]])
+    """
+    if len(arrayN2) == 1:
+        # nothing to compactify
+        return arrayN2
+    out = numpy.array(functools.reduce(_concat, arrayN2, []))
+    return out
+
+
+# used in event_based_risk
+def compactify3(arrayN3, maxsize=1_000_000):
+    """
+    :param arrayN3: an array with columns (idx, start, stop)
+    :returns: a shorter array with columns (start, stop)
+    """
+    out = []
+    for rows in general.block_splitter(
+            arrayN3, maxsize, weight=lambda row: row[2]-row[1]):
+        arr = numpy.vstack(rows)[:, 1:]
+        out.append(compactify(arr))
+    return numpy.concatenate(out)
+
+
 ##############################################################
 # logic for building the GMF slices used in event_based_risk #
 ##############################################################
@@ -329,16 +376,19 @@ def starmap_from_gmfs(task_func, oq, dstore):
     :param dstore: DataStore instance where the GMFs are stored
     :returns: a Starmap object used for event based calculations
     """
-    data = dstore['gmf_data']
+    if 'gmf_data' in dstore.parent:
+        ds = dstore.parent
+    else:
+        ds = dstore
+    data = ds['gmf_data']
     try:
         sbe = data['slice_by_event'][:]
     except KeyError:
         sbe = build_slice_by_event(data['eid'][:])
     nrows = sbe[-1]['stop'] - sbe[0]['start']
     maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
-    dstore.swmr_on()  # before the Starmap
     smap = parallel.Starmap.apply(
-        task_func, (sbe, oq, dstore),
+        task_func, (sbe, oq, ds),
         weight=lambda rec: rec['stop']-rec['start'],
         maxweight=numpy.clip(maxweight, 1000, 10_000_000),
         h5=dstore.hdf5)

@@ -33,7 +33,7 @@ from openquake.calculators import base
 
 U16 = numpy.uint16
 U32 = numpy.uint32
-
+TWO24 = 2 ** 24
 
 # helper function to be used when saving the spectra as an array
 def to_spectra(outdic, n, p):
@@ -92,6 +92,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         oq = self.oqparam
         self.full_lt = self.datastore['full_lt'].init()
+        trt_smrs = self.datastore['trt_smrs'][:]
+        self.trt_rlzs = self.full_lt.get_trt_rlzs(trt_smrs)
         self.trts = list(self.full_lt.gsim_lt.values)
         self.imts = list(oq.imtls)
         imti = self.imts.index(oq.imt_ref)
@@ -125,9 +127,9 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
         ctx_by_grp = read_ctx_by_grp(dstore)
         self.datastore.swmr_on()
         smap = parallel.Starmap(get_cs_out, h5=self.datastore)
-        for gid, ctx in ctx_by_grp.items():
-            tom = valid.occurrence_model(toms[gid])
-            cmaker = self.cmakers[gid]
+        for grp_id, ctx in ctx_by_grp.items():
+            tom = valid.occurrence_model(toms[grp_id])
+            cmaker = self.cmakers[grp_id]
             smap.submit((cmaker, ctx, imti, self.imls, tom))
         out = smap.reduce()
         
@@ -154,8 +156,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
 
         # Computing standard deviation
         smap = parallel.Starmap(get_cs_out, h5=self.datastore.hdf5)
-        for gid, ctx in ctx_by_grp.items():
-            cmaker = self.cmakers[gid]
+        for grp_id, ctx in ctx_by_grp.items():
+            cmaker = self.cmakers[grp_id]
             smap.submit((cmaker, ctx, imti, self.imls, tom, outmean[0]))
         for res in smap:
             for g in res:
@@ -180,8 +182,8 @@ class ConditionalSpectrumCalculator(base.HazardCalculator):
     def _apply_weights(self, acc):
         # build conditional spectra for each realization
         outdic = outdict(self.M, self.N, self.P, 0, self.R)
-        for g, rlzs in self.full_lt.rlzs_by_g.items():
-            for r in rlzs:
+        for g, trs in enumerate(self.trt_rlzs):
+            for r in trs % TWO24:
                 outdic[r] += acc[g]
 
         # build final conditional mean and std

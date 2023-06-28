@@ -149,6 +149,7 @@ def _extract(array_or_float, indices):
 # dtype of each valid site parameter
 site_param_dt = {
     'sids': numpy.uint32,
+    'site_id': numpy.uint32,
     'lon': numpy.float64,
     'lat': numpy.float64,
     'depth': numpy.float64,
@@ -294,16 +295,7 @@ class SiteCollection(object):
         if sitemodel is None:
             pass
         elif hasattr(sitemodel, 'reference_vs30_value'):
-            # sitemodel is actually an OqParam instance
-            self._set('vs30', sitemodel.reference_vs30_value)
-            self._set('vs30measured',
-                      sitemodel.reference_vs30_type == 'measured')
-            if 'z1pt0' in req_site_params:
-                self._set('z1pt0', sitemodel.reference_depth_to_1pt0km_per_sec)
-            if 'z2pt5' in req_site_params:
-                self._set('z2pt5', sitemodel.reference_depth_to_2pt5km_per_sec)
-            if 'backarc' in req_site_params:
-                self._set('backarc', sitemodel.reference_backarc)
+            self.set_global_params(sitemodel, req_site_params)
         else:
             for name in sitemodel.dtype.names:
                 if name not in ('lon', 'lat'):
@@ -326,6 +318,22 @@ class SiteCollection(object):
 
     xyz = Mesh.xyz
 
+    def set_global_params(
+            self, oq, req_site_params=('z1pt0', 'z2pt5', 'backarc')):
+        """
+        Set the global site parameters
+        (vs30, vs30measured, z1pt0, z2pt5, backarc)
+        """
+        self._set('vs30', oq.reference_vs30_value)
+        self._set('vs30measured',
+                  oq.reference_vs30_type == 'measured')
+        if 'z1pt0' in req_site_params:
+            self._set('z1pt0', oq.reference_depth_to_1pt0km_per_sec)
+        if 'z2pt5' in req_site_params:
+            self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
+        if 'backarc' in req_site_params:
+            self._set('backarc', oq.reference_backarc)
+        
     def filtered(self, indices):
         """
         :param indices:
@@ -480,6 +488,8 @@ class SiteCollection(object):
         """
         Split a SiteCollection into a set of tiles with contiguous site IDs
         """
+        if hint > len(self):
+            hint = len(self)
         tiles = []
         for sids in numpy.array_split(self.sids, hint):
             assert len(sids), 'Cannot split %s in %d tiles' % (self, hint)
@@ -598,9 +608,9 @@ class SiteCollection(object):
         :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
-        lst = [geohash(lon, lat, length)
-               for lon, lat in zip(self['lon'], self['lat'])]
-        return numpy.array(lst, (numpy.string_, length))
+        l = numpy.uint8(length)
+        arr = geohash(self['lon'], self['lat'], l)
+        return [row.tobytes() for row in arr]
 
     def num_geohashes(self, length):
         """

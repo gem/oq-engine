@@ -25,7 +25,8 @@ from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import distance
 from openquake.hazardlib.geo.surface.kite_fault import (
-    KiteSurface, kite_to_geom, geom_to_kite)
+    KiteSurface, kite_to_geom, geom_to_kite,
+    get_profiles_from_simple_fault_data)
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.sourceconverter import SourceConverter
 
@@ -861,6 +862,40 @@ class TestNarrowSurface(unittest.TestCase):
         aae(smsh.mesh.depths, expected_deps)
 
 
+class TestProfilesFromSimpleFault(unittest.TestCase):
+
+    def test_from_simple_geometry(self):
+
+        # Fault is dipping SE with azimuth toward NE
+        trace = Line([Point(10, 45.), Point(10.2, 45.2)])
+        usd = 0
+        lsd = 10.
+        dip = 60.0
+        rup_mesh_spacing = 1.0
+
+        pro = get_profiles_from_simple_fault_data(trace, usd, lsd, dip,
+                                                  rup_mesh_spacing)
+
+        from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
+
+        # This is the initial width
+        width = (lsd - usd) / np.sin(np.radians(dip))
+        np.testing.assert_array_almost_equal(width, 11.547, decimal=3)
+
+        # This is the rounded width
+        width_round = width // rup_mesh_spacing
+
+        delta_x = width_round * np.cos(np.radians(dip))
+        delta_h = width_round * np.sin(np.radians(dip))
+        azim = azimuth(trace[0].longitude, trace[0].latitude,
+                       trace[-1].longitude, trace[-1].latitude)
+        coo = npoints_towards(trace[0].longitude, trace[0].latitude, 0.0,
+                              azim + 90.0, delta_x, delta_h, 2)
+
+        np.testing.assert_almost_equal(pro[0].coo[-1,0], coo[0][-1], decimal=3)
+        np.testing.assert_almost_equal(pro[0].coo[-1,1], coo[1][-1], decimal=3)
+
+
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
     """
     Reads a set of files each one containing a profile
@@ -900,3 +935,6 @@ def _read_profile(filename: str) -> Line:
                                 float(aa[1]),
                                 float(aa[2])))
     return Line(points)
+
+
+
