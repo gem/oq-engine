@@ -236,15 +236,15 @@ def update(params, items, base_path):
             params[key] = value
 
 
-def _warn_about_duplicates(cp):
+def check_params(cp, fname):
     params_sets = [
         set(cp.options(section)) for section in cp.sections()]
     for pair in itertools.combinations(params_sets, 2):
         params_intersection = sorted(set.intersection(*pair))
         if params_intersection:
-            logging.warning(
-                f'Parameter(s) {params_intersection} is(are) defined in'
-                f' multiple sections')
+            raise InvalidFile(
+                f'{fname}: parameter(s) {params_intersection} is(are) defined'
+                ' in multiple sections')
 
 
 # NB: this function must NOT log, since it is called when the logging
@@ -286,7 +286,7 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
-    _warn_about_duplicates(cp)
+    check_params(cp, job_ini)
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
