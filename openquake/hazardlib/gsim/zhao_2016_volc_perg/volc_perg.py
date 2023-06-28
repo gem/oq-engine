@@ -17,69 +17,11 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-import pandas as pd
-import fiona
-
 from collections import OrderedDict
-from openquake.hazardlib.geo import Point
+
 from openquake.hazardlib.geo import polygon as pgn
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
 
-
-def get_volc_zones(volc_polygons):
-    """
-    Construct polygons from the vertex coordinates provided for each volcanic
-    zone and assign the associated zone id
-    :param volc_polygons:
-        volc_polygons: Coordinates of volcanic zone polygon
-        vertices and associated zone id per polygon
-    """
-    # Get the volc zone polygons
-    with fiona.open(volc_polygons,'r') as inp:
-        volc_zone_id = {}
-        polygon_per_volc_zone_lon = {}
-        polygon_per_volc_zone_lat = {}
-        for idx, f in enumerate(inp):
-
-            # Get zone_id
-            tmp_props_per_zone = pd.Series(f['properties'])
-            volc_zone_id[idx] = tmp_props_per_zone[0]
-
-            # Per zone get lat and lon of each polygon vertices
-            for idx_coord, coord in enumerate(f['geometry']['coordinates'][0]):
-                polygon_per_volc_zone_lon[
-                    volc_zone_id[idx], idx_coord] = f['geometry'][
-                        'coordinates'][0][idx_coord][0]
-                polygon_per_volc_zone_lat[
-                    volc_zone_id[idx], idx_coord] = f['geometry'][
-                        'coordinates'][0][idx_coord][1]
-
-    # Store all required info in dict
-    volc_pgn_store = {'volc_zone': volc_zone_id,
-                      'lons_per_zone': polygon_per_volc_zone_lon,
-                      'lats_per_zone': polygon_per_volc_zone_lat}
-
-    # Set dict for volcanic zones
-    zone_dict = OrderedDict([(volc_pgn_store['volc_zone'][zone], {}
-                              ) for zone in volc_pgn_store['volc_zone']])
-
-    # Get polygon per zone
-    pnts_per_zone = zone_dict
-    polygon_per_zone = zone_dict
-    for zone in volc_pgn_store['volc_zone']:
-        zone_id = volc_pgn_store['volc_zone'][zone]
-        for coord_idx, coord in enumerate(volc_pgn_store['lons_per_zone']):
-            if zone_id in coord:
-                pnts_per_zone[zone_id][coord_idx] = Point(volc_pgn_store[
-                    'lons_per_zone'][zone_id, coord[1]],
-                          volc_pgn_store['lats_per_zone'][zone_id, coord[1]])
-            else:
-                pass
-        pnts_list_per_zone = []
-        for idx, coordinates in enumerate(pnts_per_zone[zone_id]):
-            pnts_list_per_zone.append(pnts_per_zone[zone_id][coordinates])
-        polygon_per_zone[zone_id] =  pgn.Polygon(pnts_list_per_zone)
-    return volc_pgn_store, polygon_per_zone
 
 def discretise_lines(ctx):
     """
@@ -114,7 +56,9 @@ def discretise_lines(ctx):
         mesh_lons = dsct_line[0]
         mesh_lats = dsct_line[1]
         line_mesh[idx_path] = pgn.Mesh(mesh_lons, mesh_lats)
+        
     return line_mesh
+
 
 def get_dist_traversed_per_zone(line_mesh, volc_pgn_store, polygon_per_zone,
                                 ctx):
@@ -170,7 +114,9 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store, polygon_per_zone,
                     in_zone_lats.append(mesh_lats[idx_pnt])
             in_zone_coo_per_zone_per_path[idx_path][zone_id] = [
                 in_zone_lons, in_zone_lats]
+            
     return dist_per_volc_zone_per_path, in_zone_coo_per_zone_per_path
+
 
 def get_total_rvolc_per_path(dist_per_volc_zone_per_path, volc_pgn_store):
     """
@@ -202,23 +148,24 @@ def get_total_rvolc_per_path(dist_per_volc_zone_per_path, volc_pgn_store):
     rvolc_per_path[np.logical_and(rvolc_per_path > 0.0,
                                   rvolc_per_path <= 12.0)] = 12.0
     rvolc_per_path[rvolc_per_path >= 80.0] = 80.0
+    
     return rvolc_per_path
 
-def get_rvolcs(ctx, volc_polygons):
+
+def get_rvolcs(ctx, volc_pgn_store, polygon_per_zone):
     """
     Get total distance per travel path through anelastically attenuating
     volcanic zones (rvolc) as described within the Zhao et al. 2016 GMMs.
     The rvolc value is computed for each rupture to each site stored within
     each ground-motion computation context
     :param ctx:
-        ctx: Context of ruptures and sites to compute ground-motions for
-    :param volc_polygons:
-        volc_polygons: Fiona collection of coordinates of volcanic zone polygon
-        vertices and associated zone id per polygon
+        ctx: Context of ruptures and sites to compute ground-motions for    
+    :param volc_pgn_store:
+        volc_pgn_store: Dict of zone ids + latitude and longitude of vertices
+        used to construct each polygon
+    :param polygon_per_zone:
+        polygon_per_zone: Polygon for each zone
     """
-    # Read in volcanic zones and get polygons with att. rates
-    volc_pgn_store, polygon_per_zone  = get_volc_zones(volc_polygons)
-
     # Discretise the line from closest pnt on each rup to each site
     line_mesh = discretise_lines(ctx)
 
@@ -232,4 +179,5 @@ def get_rvolcs(ctx, volc_polygons):
     # GMMs
     rvolc_per_path = get_total_rvolc_per_path(dist_per_volc_zone_per_path,
                                               volc_pgn_store)
+    
     return rvolc_per_path

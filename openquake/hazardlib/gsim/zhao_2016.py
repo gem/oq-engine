@@ -28,11 +28,16 @@ Module exports :class:`ZhaoEtAl2016Asc`,
 """
 import copy
 import numpy as np
+import pandas as pd
+import fiona
+from collections import OrderedDict
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import polygon as pgn
 from openquake.hazardlib.gsim.zhao_2016_volc_perg import volc_perg
 
 
@@ -267,7 +272,8 @@ get_distance_term = CallableDict()
 
 
 @get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_distance_term_asc(trt, C, ctx, volc_arc_file=None):
+def get_distance_term_asc(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+                          pgn_per_zone = None):
     """
     Returns the distance scaling term defined in equation 3
     """
@@ -291,7 +297,8 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_file=None):
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
-def get_distance_term_um(trt, C, ctx, volc_arc_file=None):
+def get_distance_term_um(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+                         pgn_per_zone = None):
     """
     Returns the distance attenuation term
     """
@@ -311,7 +318,8 @@ def get_distance_term_um(trt, C, ctx, volc_arc_file=None):
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_distance_term_SInter(trt, C, ctx, volc_arc_file=None):
+def get_distance_term_SInter(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+                             pgn_per_zone = None):
     """
     Returns distance scaling term, dependent on top of rupture depth,
     as described in equation 6
@@ -333,7 +341,8 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_file=None):
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
+def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+                            pgn_per_zone = None):
     """
     Returns the distance scaling term in equation 2a
 
@@ -348,7 +357,7 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None):
         # greater than 80km, and set to 12 km if zones are traversed but the
         # total distance is less than 12 km. This min/max constraint to rvolc
         # is detailed within the publications for the Zhao et al. 2016 GMMs
-        r_volc = volc_perg.get_rvolcs(ctx, volc_arc_file)     
+        r_volc = volc_perg.get_rvolcs(ctx, pgn_store, pgn_per_zone)     
         cctx.rvolc = r_volc
         
     x_ij = cctx.rrup
@@ -502,6 +511,63 @@ def _get_site_classification(vs30):
     return site_class, idx
 
 
+def get_volc_zones(volc_polygons):
+    """
+    Construct polygons from the vertex coordinates provided for each volcanic
+    zone and assign the associated zone id
+    :param volc_polygons:
+        volc_polygons: Fiona collection of coordinates of volcanic zone polygon
+        vertices and associated zone id per polygon
+    """
+    # Get the volc zone polygons
+    with fiona.open(volc_polygons,'r') as inp:
+        volc_zone_id = {}
+        polygon_per_volc_zone_lon = {}
+        polygon_per_volc_zone_lat = {}
+        for idx, f in enumerate(inp):
+
+            # Get zone_id
+            tmp_props_per_zone = pd.Series(f['properties'])
+            volc_zone_id[idx] = tmp_props_per_zone[0]
+
+            # Per zone get lat and lon of each polygon vertices
+            for idx_coord, coord in enumerate(f['geometry']['coordinates'][0]):
+                polygon_per_volc_zone_lon[
+                    volc_zone_id[idx], idx_coord] = f['geometry'][
+                        'coordinates'][0][idx_coord][0]
+                polygon_per_volc_zone_lat[
+                    volc_zone_id[idx], idx_coord] = f['geometry'][
+                        'coordinates'][0][idx_coord][1]
+
+    # Store all required info in dict
+    volc_pgn_store = {'volc_zone': volc_zone_id,
+                      'lons_per_zone': polygon_per_volc_zone_lon,
+                      'lats_per_zone': polygon_per_volc_zone_lat}
+
+    # Set dict for volcanic zones
+    zone_dict = OrderedDict([(volc_pgn_store['volc_zone'][zone], {}
+                              ) for zone in volc_pgn_store['volc_zone']])
+
+    # Get polygon per zone
+    pnts_per_zone = zone_dict
+    polygon_per_zone = zone_dict
+    for zone in volc_pgn_store['volc_zone']:
+        zone_id = volc_pgn_store['volc_zone'][zone]
+        for coord_idx, coord in enumerate(volc_pgn_store['lons_per_zone']):
+            if zone_id in coord:
+                pnts_per_zone[zone_id][coord_idx] = Point(volc_pgn_store[
+                    'lons_per_zone'][zone_id, coord[1]],
+                          volc_pgn_store['lats_per_zone'][zone_id, coord[1]])
+            else:
+                pass
+        pnts_list_per_zone = []
+        for idx, coordinates in enumerate(pnts_per_zone[zone_id]):
+            pnts_list_per_zone.append(pnts_per_zone[zone_id][coordinates])
+        polygon_per_zone[zone_id] =  pgn.Polygon(pnts_list_per_zone)
+        
+    return volc_pgn_store, polygon_per_zone
+
+
 class ZhaoEtAl2016Asc(GMPE):
     """
     Implements the GMPE of Zhao et al (2016a) for shallow crustal and upper
@@ -549,8 +615,12 @@ class ZhaoEtAl2016Asc(GMPE):
         if volc_arc_file is not None:
             with open(volc_arc_file, 'rb') as fle:
                 self.volc_arc_file = fle.read().decode('utf-8')
+            self.pgn_store, self.pgn_per_zone = get_volc_zones(
+                self.volc_arc_file)
         else:
             self.volc_arc_file = None
+            self.pgn_store = None
+            self.pgn_per_zone = None
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -564,10 +634,13 @@ class ZhaoEtAl2016Asc(GMPE):
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
             s_c, idx = _get_site_classification(ctx.vs30)
             volc_arc_file = self.volc_arc_file
+            pgn_store = self.pgn_store
+            pgn_per_zone = self.pgn_per_zone
             sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
                        get_sof_term(trt, C, ctx) +
                        get_depth_term(trt, C, ctx) +
-                       get_distance_term(trt, C, ctx, volc_arc_file))
+                       get_distance_term(trt, C, ctx, volc_arc_file, pgn_store,
+                                         pgn_per_zone))
             mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
             
             if self.__class__.__name__.endswith('SiteSigma'):
