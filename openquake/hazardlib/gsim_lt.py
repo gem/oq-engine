@@ -410,7 +410,8 @@ class GsimLogicTree(object):
                     bt.weight.dic['weight'] = 1.
                     break
             tot = sum(weights)
-            assert tot.is_one(), '%s in branch %s' % (tot, branch_id)
+            assert tot.is_one(), '%s in branchset %s' % (
+                tot, branchset.attrib['branchSetID'])
             if duplicated(branch_ids):
                 raise InvalidLogicTree(
                     'There where duplicated branchIDs in %s' %

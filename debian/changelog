@@ -23,6 +23,7 @@
   * Fixed severe bug affecting the classical tiling calculator
   * Fixed rounding bug in disaggregation (in the line
     `[mag] = np.unique(np.round(ctx.mag, 6))`)
+  * Fixed the error message for wrong weights in the gsim logic tree file
 
 python3-oq-engine (3.16.3-1~xenial01) xenial; urgency=low
 
