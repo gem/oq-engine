@@ -160,19 +160,10 @@ foo = bar
 bar = foo
 aggregate_by = taxonomy, policy
 """)
-        with self.assertLogs() as captured:
+        with self.assertRaises(InvalidFile) as ctx:
             readinput.get_params(job_config, {})
-        warning_general_bar = (
-            "Parameter(s) ['aggregate_by', 'foo'] is(are) defined in"
-            " multiple sections")
-        warning_foo_bar = ("Parameter(s) ['bar'] is(are) defined in"
-                           " multiple sections")
-        self.assertEqual(captured.records[0].levelname, 'WARNING')
-        self.assertEqual(
-            captured.records[0].getMessage(), warning_general_bar)
-        self.assertEqual(captured.records[1].levelname, 'WARNING')
-        self.assertEqual(
-            captured.records[1].getMessage(), warning_foo_bar)
+        msg = "['aggregate_by', 'foo'] is(are) defined in multiple sections"
+        self.assertIn(msg, str(ctx.exception))
 
 
 def sitemodel():
