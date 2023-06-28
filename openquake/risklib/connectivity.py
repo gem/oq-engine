@@ -14,7 +14,6 @@
 import pandas as pd
 import numpy as np
 import networkx as nx
-from openquake.commonlib.datastore import read
 
 
 def analysis(dstore):
