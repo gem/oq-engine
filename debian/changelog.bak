@@ -10,7 +10,7 @@
   * Added ch_ampl03, ch_ampl06, ch_phis2s03, ch_phis2s06,
     ch_phisss03, ch_phis2s06 site parameters to the site.py file.
     These parameters are required by the apply_swiss_amplification_sa method.
-
+  
   [Michele Simionato]
   * Fixed another bug with conditioned GMFs appearing as the error
     `array[m, n, bad] = exp(mean_covs[0, g, m, n], im)
