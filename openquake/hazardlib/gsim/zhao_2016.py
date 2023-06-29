@@ -515,9 +515,6 @@ def get_volc_zones(volc_polygons):
     """
     Construct polygons from the vertex coordinates provided for each volcanic
     zone and assign the associated zone id
-    :param volc_polygons:
-        volc_polygons: Fiona collection of coordinates of volcanic zone polygon
-        vertices and associated zone id per polygon
     """
     # Get the volc zone polygons
     with fiona.open(volc_polygons,'r') as inp:
