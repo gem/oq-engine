@@ -90,11 +90,11 @@ def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
     Adjust Swiss GMPEs to add amplification and correct intra-event residuals
     """
 
-    if imt == from_string('SA(0.3)'):
+    if imt.period == 0.3:
         phis2s = ctx.ch_phis2s03
         phiss = ctx.ch_phiss03
         me[:] += ctx.ch_ampl03
-    elif imt == from_string('SA(0.6)'):
+    elif imt.period == 0.6:
         phis2s = ctx.ch_phis2s06
         phiss = ctx.ch_phiss06
         me[:] += ctx.ch_ampl06
