@@ -2075,10 +2075,10 @@ class OqParam(valid.ParamSet):
                 else:
                     dd[name] = ast.literal_eval(literal)
             vars(self).update(dd)
-
-        # for version >= 3.12
-        vars(self).update(json.loads(python3compat.decode(array)))
-        Idist = calc.filters.IntegrationDistance
-        if hasattr(self, 'maximum_distance') and not isinstance(
-                self.maximum_distance, Idist):
-            self.maximum_distance = Idist(**self.maximum_distance)
+        else:
+            # for version >= 3.12
+            vars(self).update(json.loads(python3compat.decode(array)))
+            Idist = calc.filters.IntegrationDistance
+            if hasattr(self, 'maximum_distance') and not isinstance(
+                    self.maximum_distance, Idist):
+                self.maximum_distance = Idist(**self.maximum_distance)
