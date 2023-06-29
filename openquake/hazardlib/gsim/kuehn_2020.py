@@ -484,18 +484,31 @@ def _retrieve_sigma_mu_data(trt, region):
         Dictionary of magnitudes, distance, periods and sigma_mu values for
         the supported imts
     """
-    fname = REGION_TERMS_IF[region]["file_unc"] if\
-        trt == const.TRT.SUBDUCTION_INTERFACE else \
-        REGION_TERMS_SLAB[region]["file_unc"]
-    fle = h5py.File(os.path.join(BASE_PATH, fname), "r")
-    sigma_mu = {
-        "M": fle["M"][:],
-        "R": fle["R"][:],
-        "periods": fle["T"][:],
-        "PGA":  fle["PGA"][:],
-        "PGV": fle["PGV"][:],
-        "SA": fle["SA"][:]}
-    fle.close()
+    fname = os.path.join(BASE_PATH, REGION_TERMS_IF[region]["file_unc"]
+                         if trt == const.TRT.SUBDUCTION_INTERFACE
+                         else REGION_TERMS_SLAB[region]["file_unc"])
+    with h5py.File(fname, "r") as fle:
+        mag = fle["M"][:]
+        rrup = fle["R"][:]
+        periods = fle["T"][:]
+        pga = fle["PGA"][:]
+        pgv = fle["PGV"][:]
+        sa = fle["SA"][:]
+
+        # Order of the tables is not guaranteed
+        # Get indices to perform sorting
+        mag_idx = np.argsort(mag)
+        rrup_idx = np.argsort(rrup)
+        periods_idx = np.argsort(periods)
+
+        sigma_mu = {
+            "M": mag[mag_idx],
+            "R": rrup[rrup_idx],
+            "periods": periods[periods_idx],
+            "PGA":  pga[mag_idx, :][:, rrup_idx],
+            "PGV": pgv[mag_idx, :][:, rrup_idx],
+            "SA": sa[mag_idx, :, :][:, rrup_idx, :][:, :, periods_idx]}
+
     return sigma_mu
 
 

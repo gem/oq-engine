@@ -710,8 +710,8 @@ Rupture sampling: how to get it wrong
 
 Rupture samplings is *much more complex than one could expect* and in
 many respects *surprising*. In the many years of existence of the
-engine, multiple approached were tried and you can expect some
-detail of the rupture sampling mechanism to be different nearly at every
+engine, multiple approached were tried and you can expect the
+details of the rupture sampling mechanism to be different nearly at every
 version of the engine.
 
 Here we will discuss some tricky points that may help you understand
@@ -721,8 +721,10 @@ rupture sampling is nontrivial.
 
 We will start with the first subtlety, the *interaction between
 sampling and filtering*. The short version is that you should *first
-sample and then filter*. Here is the long version. Consider the
-following code emulating rupture sampling for poissonian ruptures:
+sample and then filter*.
+
+Here is the long version. Consider the following code emulating
+rupture sampling for poissonian ruptures:
 
 .. code-block::
   
@@ -756,7 +758,7 @@ feature and it is able to discard ruptures below the minimum magnitude.
 But how should it work? The natural approach to follow, for performance-oriented
 applications, would be to first discard the low magnitudes and then perform
 the sampling. However, that would have effects that would be surprising
-for many users. Consider the following two alternative:
+for most users. Consider the following two alternative:
 
 .. code-block::
   
@@ -791,17 +793,12 @@ are consistent with the no-filtering case:
     >> calc_n_occ_before_filtering(fake_ruptures, eff_time, seed, min_mag)
     [ 9  6 13  7  6  6 10]
 
-Historically the engine followed the filter-early approach and it is in
-the process of transiting to the filter-late approach. The transition is
-extremely tricky and error prone, since the minimum magnitude feature is
-spread across many modules, and it could easily go on for years.
-
 The problem with the filtering is absolutely general and not restricted
 only to the magnitude filtering: it is exactly the same also for distance
 filtering. Suppose you have a ``maximum_distance`` of 300 km and than
 you decide that you want to increase it to 301 km. One would expect this
-change to have a minor impact; instead, the occupation numbers will be
-completely different and you sample a very different set of ruptures.
+change to have a minor impact; instead, you may end up sampling a very
+different set of ruptures.
 
 It is true that average quantities like the hazard curves obtained from
 the ground motion fields will converge for long enough effective time,
@@ -809,12 +806,13 @@ however in practice you are always in situations were
 
 1. you cannot perform the calculation for a long enough effective time
    since it would be computationally prohibitive
-2. you are interested on quantities which are strongly sensitive to a
-   change in the sampling, like the Maximum Probable Loss at some return period
+2. you are interested on quantities which are strongly sensitive to aany
+   change, like the Maximum Probable Loss at some return period
 
 In such situations changing the site collection (or changing
-the maximum distance which is akin to changing the site collection) can change
-the sampling of the ruptures significantly.
+the maximum distance which is akin to changing the site collection)
+can change the sampling of the ruptures significantly, at least for
+engine versions lower than 3.17.
 
 Users wanting to compare the GMFs or the risk on different site collections
 should be aware of this effect; the solution is to first sample the

@@ -436,7 +436,9 @@ class PostRiskCalculator(base.RiskCalculator):
         K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
         rbe_df = self.datastore.read_df('risk_by_event')
         if len(rbe_df) == 0:
-            raise SystemExit('The risk_by_event table is empty!')
+            logging.warning('The risk_by_event table is empty, perhaps the '
+                            'hazard is too small?')
+            return 0
         if self.reaggreate:
             idxs = numpy.concatenate([
                 reagg_idxs(self.num_tags, oq.aggregate_by),
@@ -449,10 +451,12 @@ class PostRiskCalculator(base.RiskCalculator):
             build_reinsurance(self.datastore, self.num_events)
         return 1
 
-    def post_execute(self, dummy):
+    def post_execute(self, ok):
         """
         Sanity checks and save agg_curves-stats
         """
+        if not ok:  # the hazard is to small
+            return
         oq = self.oqparam
         # logging.info('Total portfolio loss\n' +
         #              views.view('portfolio_loss', self.datastore))

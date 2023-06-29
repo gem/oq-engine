@@ -80,10 +80,10 @@ and the 6 possible paths can be extracted as follows:
 
 The empty square brackets means that the branchset should be applied to all
 branches in the previous branchset and correspond to the ``applyToBranches``
-tag in the XML version of the logic tree. If ``applyToBranches`` is missing
+tag in the XML version of the logic tree. If ``applyToBranches`` is missing,
 the logic tree is multiplicative and the total number of paths can be
 obtained simply by multiplying the number of paths in each branchset.
-When ``applyToBranches`` is used the logic tree becomes additive and the
+When ``applyToBranches`` is used, the logic tree becomes additive and the
 total number of paths can be obtained by summing the number of paths in
 the different subtrees. For instance, let us extend the previous example
 by adding another ``extendModel`` branchset and by using ``applyToBranches``:
@@ -262,7 +262,7 @@ export it, you will get a CSV file with the following structure::
   323,ACCCC~BB,3.1111853e-03
 
 For each realization there is a ``branch_path`` string which is split in
-two parts separated by a tilde. The left part describe the branches of
+two parts separated by a tilde. The left part describes the branches of
 the source model logic tree and the right part the branches of the gmpe
 logic tree. In past versions of the engine the branch path was using
 directly the branch IDs, so it was easy to assess the correspondence
@@ -322,8 +322,7 @@ and then, using the correspondence table ``abbrev->uvalue``, to::
   "[ChiouYoungs2008]" "[ToroEtAl2002]"
 
 For convenience, the engine provides a simple command to display the content
-of a realization, given the realization number, thus answering the
-FAQ::
+of a realization, given the realization number::
 
  $ oq show rlz:322
  | uncertainty_type         | uvalue            |
@@ -402,7 +401,7 @@ Reduction of the logic tree
 The simplest case of logic tree reduction is when the actual
 sources do not span the full range of tectonic region types in the
 GMPE logic tree file. This happens very often.
-FOr instance, in the SHARE calculation for Europe
+For instance, in the SHARE calculation for Europe
 the GMPE logic tree potentially contains 1280 realizations
 coming from 7 different tectonic region types:
 

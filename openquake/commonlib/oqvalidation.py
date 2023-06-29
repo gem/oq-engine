@@ -364,10 +364,10 @@ iml_disagg:
   Default: no default
 
 imt_ref:
-  Reference intensity measure type usedto compute the conditional spectrum.
+  Reference intensity measure type used to compute the conditional spectrum.
   The imt_ref must belong to the list of IMTs of the calculation.
   Example: *imt_ref = SA(0.15)*.
-  Default: no default
+  Default: empty string
 
 individual_rlzs:
   When set, store the individual hazard curves and/or individual risk curves
@@ -713,9 +713,11 @@ shift_hypo:
   Default: false
 
 site_effects:
-  Flag used in ShakeMap calculations to turn out GMF amplification
-  Example: *site_effects = true*.
-  Default: False
+  Used in ShakeMap calculations to turn on GMF amplification based
+  on the vs30 values in the ShakeMap (site_effects='shakemap') or in the
+  site collection (site_effects='sitecol').
+  Example: *site_effects = 'shakemap'*.
+  Default: 'no'
 
 sites:
   Used to specify a list of sites.
@@ -835,7 +837,6 @@ ALL_CALCULATORS = ['aftershock',
                    'multi_risk',
                    'classical_bcr',
                    'preclassical',
-                   'conditional_spectrum',
                    'event_based_damage',
                    'scenario_damage']
 
@@ -964,7 +965,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    imt_ref = valid.Param(valid.intensity_measure_type)
+    imt_ref = valid.Param(valid.intensity_measure_type, '')
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
@@ -1041,7 +1042,8 @@ class OqParam(valid.ParamSet):
     shakemap_id = valid.Param(valid.nice_string, None)
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
+    site_effects = valid.Param(
+        valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
@@ -1289,13 +1291,6 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
 
-        # checks for conditional_spectrum
-        if self.calculation_mode == 'conditional_spectrum':
-            if not self.poes:
-                raise InvalidFile("%s: you must specify the poes" % job_ini)
-            elif list(self.hazard_stats()) != ['mean']:
-                raise InvalidFile('%s: only the mean is supported' % job_ini)
-
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
             if self.conditional_loss_poes:
@@ -1498,7 +1493,7 @@ class OqParam(valid.ParamSet):
 
         Set the attribute risk_imtls.
         """
-        imtls = AccumDict(accum=[])  # imt -> imls
+        risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
             if not hasattr(rf, 'imt') or rf.kind.endswith('_retrofitted'):
                 # for consequence or retrofitted
@@ -1509,10 +1504,9 @@ class OqParam(valid.ParamSet):
                               self.steps_per_interval)
                 risklist[i] = rf
             from_string(rf.imt)  # make sure it is a valid IMT
-            imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
+            risk_imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
         suggested = ['\nintensity_measure_types_and_levels = {']
-        risk_imtls = self.risk_imtls.copy()
-        for imt, imls in imtls.items():
+        for imt, imls in risk_imtls.items():
             risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))
@@ -2060,7 +2054,9 @@ class OqParam(valid.ParamSet):
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
-        if isinstance(array, numpy.ndarray):  # old format <= 3.11
+        if isinstance(array, numpy.ndarray):
+            # old format <= 3.11, tested in read_old_data,
+            # used to read old GMFs
             dd = collections.defaultdict(dict)
             for (name_, literal_) in array:
                 name = python3compat.decode(name_)
@@ -2071,5 +2067,11 @@ class OqParam(valid.ParamSet):
                 else:
                     dd[name] = ast.literal_eval(literal)
             vars(self).update(dd)
-        else:  # new format >= 3.12
+        else:
+            # for version >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))
+
+        Idist = calc.filters.IntegrationDistance
+        if hasattr(self, 'maximum_distance') and not isinstance(
+                self.maximum_distance, Idist):
+            self.maximum_distance = Idist(**self.maximum_distance)

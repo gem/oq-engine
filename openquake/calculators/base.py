@@ -1225,14 +1225,14 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
-    n = 0 if data is None else len(data['sid'])
-    items = [('sid', U32 if n == 0 else data['sid']),
-             ('eid', U32 if n == 0 else data['eid'])]
+    N = 0 if data is None else data['sid'].max() + 1
+    items = [('sid', U32 if N == 0 else data['sid']),
+             ('eid', U32 if N == 0 else data['eid'])]
     for m in range(M):
         col = f'gmv_{m}'
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
-        items.append((str(imt), F32 if n == 0 else data[imt]))
+        items.append((str(imt), F32 if N == 0 else data[imt]))
     if oq.investigation_time:
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
@@ -1242,9 +1242,9 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
                      imts=' '.join(map(str, prim_imts)),
                      effective_time=eff_time)
     if data is not None:
-        df = pandas.DataFrame(dict(items))
-        avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
-        for sid, df in df.groupby(df.sid):
+        _df = pandas.DataFrame(dict(items))
+        avg_gmf = numpy.zeros((2, N, M + len(sec_imts)), F32)
+        for sid, df in _df.groupby(_df.sid):
             df.pop('eid')
             df.pop('sid')
             avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
@@ -1267,14 +1267,20 @@ def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
         dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
 
 
-def save_shakemap(calc, sitecol, shakemap, gmf_dict):
+def store_shakemap(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
     with calc.monitor('building/saving GMFs'):
-        imts, gmfs = to_gmfs(shakemap, gmf_dict, oq.site_effects,
+        if oq.site_effects == 'no':
+            vs30 = None  # do not amplify
+        elif oq.site_effects == 'shakemap':
+            vs30 = shakemap['vs30']
+        elif oq.site_effects == 'sitemodel':
+            vs30 = sitecol.vs30
+        imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
@@ -1315,7 +1321,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             uridict = oq.shakemap_uri
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.imtls, haz_sitecol,
+            uridict, oq.risk_imtls, haz_sitecol,
             oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
@@ -1350,7 +1356,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    save_shakemap(calc, sitecol, shakemap, gmf_dict)
+    store_shakemap(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
 
 
