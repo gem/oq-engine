@@ -43,7 +43,7 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
     :param str imt1: the second Intensity Measure Type
     :param meabins: bins for the means
     :param sigbins: bins for the sigmas
-    :param method: a string 'direct' or 'indirect'
+    :param method: string 'direct' or 'indirect'
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
     G = len(inp.cmaker.gsims)

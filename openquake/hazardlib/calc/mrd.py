@@ -42,12 +42,12 @@ def get_uneven_bins_edges(lefts, num_bins):
     return numpy.array(tmp)
 
 
-def update_mrd(ctxs: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
+def update_mrd(ctxt: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy.
 
-    :param ctxs:
+    :param ctxt:
         A context array for a single site
     :param cm:
         A ContextMaker
@@ -62,7 +62,7 @@ def update_mrd(ctxs: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     corrm = crosscorr.get_cross_correlation_mtx(imts)
 
     # Compute mean and standard deviation
-    [mea, sig, _, _] = cm.get_mean_stds([ctxs])
+    [mea, sig, _, _] = cm.get_mean_stds([ctxt])
 
     # Get the logarithmic IMLs
     ll1 = numpy.log(cm.imtls[im1])
@@ -74,7 +74,7 @@ def update_mrd(ctxs: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     # is the number of sites
     trate = 0
     for g, _ in enumerate(cm.gsims):
-        for i, ctx in enumerate(ctxs):
+        for i, ctx in enumerate(ctxt):
 
             # Covariance and correlation mtxs
             slc0 = numpy.index_exp[g, :, i]
