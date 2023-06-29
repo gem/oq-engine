@@ -1,3 +1,6 @@
+  [Marco Pagani, Michele Simionato]
+  * Added support for the "direct" method in MRD calculations
+
   [Michele Simionato]
   * Reimplemented the conditional_spectrum calculator as a post-processor
 
