@@ -18,12 +18,10 @@
 
 import os
 import re
-import ast
 import json
 import inspect
 import logging
 import functools
-import collections
 import multiprocessing
 import numpy
 import itertools
@@ -837,7 +835,6 @@ ALL_CALCULATORS = ['aftershock',
                    'multi_risk',
                    'classical_bcr',
                    'preclassical',
-                   'conditional_spectrum',
                    'event_based_damage',
                    'scenario_damage']
 
@@ -1291,13 +1288,6 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
-
-        # checks for conditional_spectrum
-        if self.calculation_mode == 'conditional_spectrum':
-            if not self.poes:
-                raise InvalidFile("%s: you must specify the poes" % job_ini)
-            elif list(self.hazard_stats()) != ['mean']:
-                raise InvalidFile('%s: only the mean is supported' % job_ini)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
@@ -2062,16 +2052,8 @@ class OqParam(valid.ParamSet):
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
-        if isinstance(array, numpy.ndarray):  # old format <= 3.11
-            dd = collections.defaultdict(dict)
-            for (name_, literal_) in array:
-                name = python3compat.decode(name_)
-                literal = python3compat.decode(literal_)
-                if '.' in name:
-                    k1, k2 = name.split('.', 1)
-                    dd[k1][k2] = ast.literal_eval(literal)
-                else:
-                    dd[name] = ast.literal_eval(literal)
-            vars(self).update(dd)
-        else:  # new format >= 3.12
-            vars(self).update(json.loads(python3compat.decode(array)))
+        # works for version >= 3.12
+        vars(self).update(json.loads(python3compat.decode(array)))
+        Idist = calc.filters.IntegrationDistance
+        if not isinstance(self.maximum_distance, Idist):
+            self.maximum_distance = Idist(**self.maximum_distance)
