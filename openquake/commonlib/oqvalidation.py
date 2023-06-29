@@ -2062,7 +2062,9 @@ class OqParam(valid.ParamSet):
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
-        if isinstance(array, numpy.ndarray):  # old format <= 3.11
+        if isinstance(array, numpy.ndarray):
+            # old format <= 3.11, tested in read_old_data,
+            # used to read old GMFs
             dd = collections.defaultdict(dict)
             for (name_, literal_) in array:
                 name = python3compat.decode(name_)
@@ -2073,5 +2075,11 @@ class OqParam(valid.ParamSet):
                 else:
                     dd[name] = ast.literal_eval(literal)
             vars(self).update(dd)
-        else:  # new format >= 3.12
+        else:
+            # for version >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))
+
+        Idist = calc.filters.IntegrationDistance
+        if hasattr(self, 'maximum_distance') and not isinstance(
+                self.maximum_distance, Idist):
+            self.maximum_distance = Idist(**self.maximum_distance)
