@@ -96,10 +96,6 @@ def compute_cs(dstore, oq, N, M, P):
     N, P = imls.shape
     cmakers = read_cmakers(dstore)
 
-    # IMPORTANT!! we rely on the fact that the classical part
-    # of the calculation stores the ruptures in chunks of constant
-    # grp_id, therefore it is possible to build (start, stop) slices
-
     # Computing CS
     toms = decode(dstore['toms'][:])
     ctx_by_grp = read_ctx_by_grp(dstore)
