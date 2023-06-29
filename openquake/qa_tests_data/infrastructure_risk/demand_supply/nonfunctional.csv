@@ -1,0 +1,7 @@
+﻿taxonomy,consequence,loss_type,slight,moderate,extensive,complete
+tank,collapsed,structural,0,1,1,1
+tank1,collapsed,structural,0,1,1,1
+pipe,collapsed,structural,0,1,1,1
+pipe1,collapsed,structural,0,1,1,1
+demand,collapsed,structural,0,1,1,1
+connection,collapsed,structural,0,1,1,1

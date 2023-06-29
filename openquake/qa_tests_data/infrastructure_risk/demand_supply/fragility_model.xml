@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="WSS" lossCategory="structural">
+		<description>Pumping Stations: From HAZUS  8-16, Pumping station 1:Medium pumping plants with unanchored components:Pumpingstations2:small plant with anchored component 
+Wells: HAZUS, Pipelines:HAZUS, without any factorial that differentiate breaks and leaks just for the demo
+</description>
+		<limitStates>slight moderate extensive complete</limitStates>
+		<fragilityFunction id="connection" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0</poes>
+			<poes ls="complete">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="demand" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0</poes>
+			<poes ls="complete">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="pipe1" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0.01 0.011 0.0018</poes>
+			<poes ls="extensive">0 0.8 0.8 0.8</poes>
+			<poes ls="complete">0 0.9 0.9 0.9</poes>
+		</fragilityFunction>
+		<fragilityFunction id="pipe" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0</poes>
+			<poes ls="complete">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="tank" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0</poes>
+			<poes ls="complete">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="tank1" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0.01 0.011 0.0018</poes>
+			<poes ls="extensive">0 0.8 0.8 0.8</poes>
+			<poes ls="complete">0 0.9 0.9 0.9</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

@@ -1864,7 +1864,7 @@ class OqParam(valid.ParamSet):
         """
         if self.ground_motion_correlation_model:
             for imt in self.imtls:
-                if not (imt.startswith('SA') or imt == 'PGA' or imt == 'PGV'):
+                if not (imt.startswith('SA') or imt in ['PGA', 'PGV']):
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
