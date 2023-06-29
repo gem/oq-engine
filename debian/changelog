@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Reimplemented the conditional_spectrum calculator as a post-processor
+
   [Paolo Tormene, Michele Simionato]
   * Raise an error when the same parameter is set in different sections
     of the job.ini file

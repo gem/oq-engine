@@ -975,15 +975,19 @@ NB: ``disagg_by_src`` can be set to true only if the
 not in the original source model, thus breaking the connection between
 the values of the matrix and the original sources.
 
-The conditional spectrum calculator
+The conditional spectrum post-processor
 ========================================
 
-The ``conditional_spectrum`` calculator is an experimental calculator
-introduced in version 3.13, which is able to compute the conditional
-spectrum in the sense of Baker.
+Since version 3.17 the engine includes an experimental post-processor
+which is able to compute the conditional spectrum.
+
+The implementation was adapted from the paper *Conditional Spectrum
+Computation Incorporating Multiple Causal Earthquakes and
+Ground-Motion Prediction Models* by Ting Lin, Stephen C. Harmsen,
+Jack W. Baker, and Nicolas Luco (http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf) and it is rather sophisticated.
 
 In order to perform a conditional spectrum calculation you need to
-specify (on top of the usual parameter of a classical calculation):
+specify, in addition to the usual parameter of a classical calculation:
 
 1. a reference intensity measure type (i.e. ``imt_ref = SA(0.2)``)
 2. a cross correlation model (i.e. ``cross_correlation = BakerJayaram2008``)
@@ -1033,15 +1037,3 @@ standard deviations.
 
 Conditional spectra for individual realizations are also computed and stored
 for debugging purposes, but they are not exportable.
-
-The implementation was adapted from the paper *Conditional Spectrum
-Computation Incorporating Multiple Causal Earthquakes and
-Ground-Motion Prediction Models* by Ting Lin, Stephen C. Harmsen,
-Jack W. Baker, and Nicolas Luco (http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.845.163&rep=rep1&type=pdf) and it is rather sophisticated.
-The core formula is implemented in the method
-`openquake.hazardlib.contexts.get_cs_contrib`.
-
-The ``conditional_spectrum`` calculator, like the disaggregation calculator,
-is a kind of post-calculator, i.e. you can run a regular classical calculation
-and then compute the  ``conditional_spectrum`` in post-processing by using
-the ``--hc`` option.
