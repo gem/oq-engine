@@ -326,7 +326,7 @@ jobs:
           echo "Upload OpenQuakeforAdvancedUsers (PDF)"
           rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/"
 
-          ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuakeforAdvancedUsers.pdf\" \"OpenQuake for Advanced Users ${PDF_VER}.pdf\" .'"
+          ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuakeforAdvancedUsers.pdf\" \"OpenQuake for Advanced Users ${PDF_VER}.pdf\"'"
 
           echo "Make Advanced Manual (HTML)"
           cd ../adv-manual && make clean && make html
