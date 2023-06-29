@@ -362,10 +362,10 @@ iml_disagg:
   Default: no default
 
 imt_ref:
-  Reference intensity measure type usedto compute the conditional spectrum.
+  Reference intensity measure type used to compute the conditional spectrum.
   The imt_ref must belong to the list of IMTs of the calculation.
   Example: *imt_ref = SA(0.15)*.
-  Default: no default
+  Default: empty string
 
 individual_rlzs:
   When set, store the individual hazard curves and/or individual risk curves
@@ -963,7 +963,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    imt_ref = valid.Param(valid.intensity_measure_type)
+    imt_ref = valid.Param(valid.intensity_measure_type, '')
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
@@ -2054,6 +2054,6 @@ class OqParam(valid.ParamSet):
     def __fromh5__(self, array, attrs):
         # works for version >= 3.12
         vars(self).update(json.loads(python3compat.decode(array)))
-        Idist = calc.filters.IntegrationDistance
-        if not isinstance(self.maximum_distance, Idist):
-            self.maximum_distance = Idist(**self.maximum_distance)
+        #Idist = calc.filters.IntegrationDistance
+        #if not isinstance(self.maximum_distance, Idist):
+        #    self.maximum_distance = Idist(**self.maximum_distance)
