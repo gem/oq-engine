@@ -450,7 +450,7 @@ Infrastructure Risk Analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Rationale
-"""""""""
+=========
 
 Critical infrastructures, whose components are interconnected and behave as a
 system, are vital for the functioning of the society. Unlike the portfolio of
@@ -471,7 +471,7 @@ critical infrastructures including water supply systems, electric power networks
 transporation systems, natural gas, etc.
 
 Specification of the Input Model
-""""""""""""""""""""""""""""""""
+================================
 
 Critical infrastructures are represented as graph-like components consisting of
 nodes/vertices connected by edges/links. The graph can be simple undirected,
@@ -498,6 +498,7 @@ and :numref:`fig:infrastructure-edges`.
     :alt: Example of the exposure model of edges of the infrastructure
     :name: fig:infrastructure-edges
     :width: 95%
+
     Example of the exposure model of edges of the infrastructure
 
 If the weights are to be added, there should be a column name **weights**, and
@@ -520,18 +521,20 @@ As of now, only the binary state is considered i.e "functional/operational" or
 
 .. figure:: figures/risk/infrastructure-consequence-model.png
    :alt: Example of the consequence model
-   :name: fig:infrastructure-consequence-model.png
+   :name: fig:infrastructure-consequence-model
    :width: 95%
 
    Example of the consequence model (*Note: 0 implies still functional and 1 implies non-functional*)
 
 Calculation Steps
-"""""""""""""""""
+=================
 1. Preparation of input models, which includes:
+
   * Exposure model
   * Hazard model
   * Fragility model
   * Consequence model
+
 2. Computation of the specific damage states and assignment of
    functionality/operationality to each component
 3. Creation of original network from the exposure model
@@ -541,6 +544,7 @@ Calculation Steps
 5. Network analysis based on the original and updated infrastructure network
 6. Computation of the following performance metrics, based on connectivity
    analysis:
+
   * Complete Connectivity Loss (CCL)
   * Partial Connectivity Loss (PCL)
   * Weighted Connectivity Loss (WCL)
@@ -558,7 +562,7 @@ in :numref:`fig:infrastructure-io`.
    Input models required, and output obtained in OpenQuake for infrastructure risk assessment at connectivity level
 
 Specification of the Outputs Obtained
-"""""""""""""""""""""""""""""""""""""
+=====================================
 
 * For the classic generic case where "demand" and "supply" are explicity
   mentioned in the column **demand_or_supply**, all four metrics are computed
@@ -573,7 +577,7 @@ Specification of the Outputs Obtained
   **demand_or_supply**, only EFL is computed for overall network. Also, at
   nodal level, for all the nodes, EFL only is computed.
 
-For the simplification, :numref:`infrastructure-output-by-nodes-func` has been added to understand what
+For the simplification, :numref:`fig:infrastructure-output-by-nodes-func` has been added to understand what
 can be obtained by various specifications.
 
 .. figure:: figures/risk/infrastructure-output-by-nodes-func.png
@@ -589,7 +593,7 @@ and Pitilakis 2023. Also, much concept during the implementation has been drawn
 from Pitilakis et al. 2014.
 
 References
-""""""""""
+==========
 1. Aric A. Hagberg, Daniel A. Schult and Pieter J. Swart (2008) Exploring
    network structure, dynamics, and function using NetworkX, in Proceedings of
    the 7th Python in Science Conference (SciPy2008), Gäel Varoquaux, Travis
@@ -607,7 +611,7 @@ References
    DOI: https://doi.org/10.1007/978-94-017-8835-9
 
 Acknowledgements
-""""""""""""""""
+================
 The present work has been done in the framework of grant agreement No. 813137
 funded by the European Commission ITN-Marie Sklodowska-Curie project “New
 Challenges for Urban Engineering Seismology (URBASIS-EU)” by Astha Poudel, ESR
