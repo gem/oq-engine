@@ -1022,6 +1022,30 @@ contains the Mean Rate Distribution as an array of shape L1 x L1 x N
 where L1 is the number of levels per IMT minus 1 and N the number of
 sites (normally 1).
 
+While the postprocessing part for VPSHA calculations is computationally
+very heavy, it is much more common to have a light postprocessing, a
+lot faster than the classical calculation it depends on. In such
+situations the postprocessing framework really shines, since it is
+possible to reuse the original calculation via the standard ``--hc``
+switch, i.e. you can avoid repeating multiple times the same classical
+calculation if you are interested in running the postprocessor with
+different parameters. In that situation the ``main`` function will
+get passed a DataStore instance with an attribute ``parent`` corresponding
+to the DataStore of the original calculation.
+
+The postprocessing framework also integrates very well with interactive
+development (think of Jupyter notebooks). The following lines are all
+you need to create a child datastore where the postprocessing function
+can store its results after reading the data from the calculation datastore:
+
+.. code-block::
+
+  >> from openquake.commonlib.datastore import read, build_dstore_log
+  >> from openquake.calculators.postproc import mypostproc
+  >> dstore, log = build_dstore_log(parent=read(calc_id))
+  >> with log:
+  ..     mypostproc.main(dstore)
+
 The conditional spectrum post-processor
 ---------------------------------------
 
