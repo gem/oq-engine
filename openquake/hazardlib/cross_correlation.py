@@ -101,7 +101,8 @@ class CrossCorrelationBetween(ABC):
         if truncation_level < 1E-9:
             truncation_level = 1E-9
         self.truncation_level = truncation_level
-        self.distribution = stats.truncnorm(-truncation_level, truncation_level)
+        self.distribution = stats.truncnorm(-truncation_level,
+                                            truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
@@ -177,11 +178,11 @@ class GodaAtkinson2009(CrossCorrelationBetween):
 class Bradley2012(CrossCorrelationBetween):
     """
     Implements the correlation model for total residuals
-    between Peak Ground Velocity and Spectrum-Based 
-    Intensity Measures from Bradley, B. A. (2012).     
+    between Peak Ground Velocity and Spectrum-Based
+    Intensity Measures from Bradley, B. A. (2012).
     'Empirical correlations between peak ground velocity
     and spectrum-based intensity measures.'
-    Earthquake Spectra, 28(1), 17–35. 
+    Earthquake Spectra, 28(1), 17–35.
     https://doi.org/10.1193/1.3675582
     """
     cache = {}  # periods -> correlation matrix
@@ -200,7 +201,7 @@ class Bradley2012(CrossCorrelationBetween):
             T = to_imt.period
         else:
             T = from_imt.period
-        
+
         if T < 0.01:
             return 0.733
         elif T < 0.1:
@@ -226,13 +227,14 @@ class Bradley2012(CrossCorrelationBetween):
 
         return ((a + b) / 2 - (a - b) / 2 * np.tanh(d * np.log(T / c)))
 
-    def get_inter_eps(self, imts, num_events):
+    def get_inter_eps(self, imts, num_events, rng):
         """
         :param imts: a list of M intensity measure types
         :param num_events: the number of events to consider (E)
+        :param rng: random number generator
         :returns: a correlated matrix of epsilons of shape (M, E)
 
-        NB: the user must specify the random seed first
+        FIXME: probably rng should be used also in this class
         """
         corma = self._get_correlation_matrix(imts)
         return np.random.multivariate_normal(
