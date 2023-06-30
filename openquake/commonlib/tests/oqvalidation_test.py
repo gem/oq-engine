@@ -178,8 +178,7 @@ class OqParamTestCase(unittest.TestCase):
                       'directory', str(ctx.exception))
 
     def test_invalid_imt(self):
-        # FIXME
-        imt = 'FIXME'
+        imt = 'PGD'
         imtls = '{"%s": [0.4, 0.5, 0.6]}' % imt
         with self.assertRaises(ValueError) as ctx:
             OqParam(
