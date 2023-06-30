@@ -178,6 +178,9 @@ class OqParamTestCase(unittest.TestCase):
                       'directory', str(ctx.exception))
 
     def test_invalid_imt(self):
+        # FIXME
+        imt = 'FIXME'
+        imtls = '{"%s": [0.4, 0.5, 0.6]}' % imt
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='event_based', inputs=fakeinputs,
@@ -185,11 +188,11 @@ class OqParamTestCase(unittest.TestCase):
                 maximum_distance='400',
                 truncation_level='3',
                 ground_motion_correlation_model='JB2009',
-                intensity_measure_types_and_levels='{"PGV": [0.4, 0.5, 0.6]}',
+                intensity_measure_types_and_levels=imtls,
             ).validate()
         self.assertEqual(
             str(ctx.exception),
-            'Correlation model JB2009 does not accept IMT=PGV')
+            f'Correlation model JB2009 does not accept IMT={imt}')
 
     def test_duplicated_levels(self):
         with self.assertRaises(ValueError) as ctx:

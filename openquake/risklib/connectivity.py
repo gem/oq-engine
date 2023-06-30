@@ -148,6 +148,9 @@ def analysis(dstore):
             avg_connectivity_loss_wcl))
         print("The mean of the Global Efficiency Loss: {}".format(
             avg_connectivity_loss_eff))
+        dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
+        dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
+        dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
 
         # Storing the connectivity loss at global level for each event
         # TODO: Save performance metrics for each event in datastore and make
@@ -155,11 +158,16 @@ def analysis(dstore):
         # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
         # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
         # event_connectivity_loss_eff.to_csv("efl_event.csv")
+        dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
+        dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
+        dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
         # Storing the connectivity loss at nodal level
         # TODO: Save taz_cl in datastore and make it exportable
         # taz_cl.to_csv("taz.csv")
+        dstore.create_df('taz_cl', taz_cl)
         # TODO: Save node_el in datastore and make it exportable
         # node_el.to_csv("node_el.csv")
+        dstore.create_df('node_el', node_el)
 
     # This is the classic and mostly used when supply/source and demand/sink is
     # explicity mentioned to the nodes of interest
@@ -210,6 +218,10 @@ def analysis(dstore):
             avg_connectivity_loss_wcl))
         print("The mean of the Global Efficiency Loss: {}".format(
             avg_connectivity_loss_eff))
+        dstore['avg_connectivity_loss_ccl'] = avg_connectivity_loss_ccl
+        dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
+        dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
+        dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
 
         # Storing the connectivity loss at global level for each event
         # TODO: Save performance metrics in datastore and make it exportable
@@ -217,12 +229,18 @@ def analysis(dstore):
         # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
         # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
         # event_connectivity_loss_eff.to_csv("efl_event.csv")
+        dstore['event_connectivity_loss_ccl'] = event_connectivity_loss_ccl
+        dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
+        dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
+        dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
 
         # Storing the connectivity loss at nodal level
         # TODO: Save dem_cl in datastore and make it exportable
         # dem_cl.to_csv("dem_cl.csv")
+        dstore.create_df('dem_cl', dem_cl)
         # TODO: Save node_el in datastore and make it exportable
         # node_el.to_csv("node_el.csv")
+        dstore.create_df('node_el', node_el)
 
     # if nothing is mentioned incase of scarce data or every node is important
     # and no distinction can be made
@@ -246,14 +264,17 @@ def analysis(dstore):
 
         print("The mean of the Global Efficiency Loss: {}".format(
             avg_connectivity_loss_eff))
+        dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
 
         # Storing the connectivity loss at global level for each event
         # TODO: Save event_connectivity_loss_eff in datastore and make it
         #       exportable
         # event_connectivity_loss_eff.to_csv("efl_event.csv")
+        dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
         # Storing the connectivity loss at nodal level
         # TODO: Save node_el in datastore and make it exportable
         # node_el.to_csv("node_el.csv")
+        dstore.create_df('node_el', node_el)
 
     # The output gives efficiency loss even if it say average connectivity loss
     # in the output. It has to be modified in

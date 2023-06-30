@@ -29,53 +29,191 @@ aac = numpy.testing.assert_allclose
 
 class ScenarioDamageTestCase(CalculatorTestCase):
 
-    # def assert_ok(self, pkg, job_ini, exports='csv', kind='damages'):
-    #     test_dir = os.path.dirname(pkg.__file__)
-    #     out = self.run_calc(test_dir, job_ini, exports=exports)
-    #     try:
-    #         got = out['%s-rlzs' % kind, exports]
-    #     except KeyError:  # in case_5a
-    #         got = out['%s-stats' % kind, exports]
-    #     expected_dir = os.path.join(test_dir, 'expected')
-    #     expected = sorted(f for f in os.listdir(expected_dir)
-    #                       if f.endswith(exports) and 'by_taxon' not in f)
-    #     self.assertEqual(len(got), len(expected))
-    #     for fname, actual in zip(expected, got):
-    #         self.assertEqualFiles('expected/%s' % fname, actual, delta=1E-5)
-
     def test_case_15(self):
         self.run_calc(case_15.__file__, 'job.ini')
         nodes = self.calc.datastore.read_df('functional_demand_nodes')
-        got = dict(zip(nodes.id, nodes.number))
-        expected = {'D1': 32, 'D10': 12, 'D11': 12, 'D12': 12, 'D2': 32,
-                    'D3': 35, 'D4': 35, 'D5': 34, 'D6': 35, 'D7': 12,
-                    'D8': 12, 'D9': 12}
-        self.assertEqual(got, expected)
+        ids = list(nodes.id)
+        expected_ids = [
+            'D1', 'D10', 'D11', 'D12', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
+            'D8', 'D9', 'E18a', 'E18b', 'E18c', 'E20a', 'E20b', 'E20c', 'P1',
+            'P2', 'P3', 'W1', 'W2']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.45544827586206926, 0.5793014268727713, 0.5733459357277877,
+            0.5768746061751727, 0.48184873949579826, 0.42961538461538445,
+            0.3932336448598129, 0.5183054003724399, 0.4915661592505851,
+            0.575451843043996, 0.5289210577108661, 0.522733063115228, 0.0,
+            0.7005583955957531, 0.0, 0.0, 0.6988079777365492, 0.0,
+            0.7545867098865477, 0.7081277533039649, 0.7987959183673469,
+            0.7617334360554696, 0.835219136835062]
+        aac(eff_loss, expected_eff_loss)
 
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_ccl'][()],
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.0,
+             0.2964959568733154,
+             0.3333333333333333,
+             0.5202279202279202,
+            ])
+        # TODO: also check:
+        #       'dem_cl', 'event_connectivity_loss_ccl',
+        #       'event _connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'node_el'
 
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.19123965855782582,
+             0.25,
+             0.2777777777777778,
+            ])
+        # TODO: also check:
+        #       'avg_connectivity_loss_eff', 'avg_connectivity_loss_pcl',
+        #       'avg_connectivity_loss_wcl', 'event_connectivity_loss_eff',
+        #       'event_connectivity_loss_pcl', 'event_connectivity_loss_wcl',
+        #       'node_el', 'taz_cl'
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_eff'][()],
+            ],
+            [
+             0.2603130360205833,
+            ])
+        # TODO: also check:
+        #       'event_connectivity_loss_eff','functional_demand_nodes',
+        #       'node_el'
 
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_ccl'][()],
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.25,
+             0.13959390862944165,
+             0.25,
+             0.25,
+            ])
+        # TODO: also check:
+        #       'dem_cl', 'event_connectivity_loss_ccl',
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
+        #       'node_el'
 
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_ccl'][()],
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.5,
+             0.127906976744186,
+             0.5,
+             0.5
+            ])
+        # TODO: also check:
+        #       'dem_cl', 'event_connectivity_loss_ccl',
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
+        #       'node_el'
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_ccl'][()],
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.0,
+             0.032774739543551985,
+             0.0,
+             0.07777777777777778,
+            ])
+        # TODO: also check:
+        #       'dem_cl', 'event_connectivity_loss_ccl',
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
+        #       'node_el',
 
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.032774739543551985,
+             0.0,
+             0.03437796771130103,
+            ])
+        # TODO: also check:
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
+        #       'node_el', 'taz_cl'
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.06562726613488049,
+             0.0,
+             0.0753968253968254,
+            ])
+        # TODO: check also:
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
+        #       'node_el', 'taz_cl'
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
-
+        ds = self.calc.datastore
+        aac([
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.0870745160085263,
+             0.0,
+             0.0977366255144033,
+            ])
+        # TODO: check also:
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
+        #       'node_el', 'taz_cl',
