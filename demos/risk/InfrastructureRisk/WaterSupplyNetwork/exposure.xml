@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
 	<exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
-		<description>WSS-Demo</description>
+		<description>Water Supply Network Demo</description>
 		<conversions>
 			<costTypes>
 			</costTypes>
