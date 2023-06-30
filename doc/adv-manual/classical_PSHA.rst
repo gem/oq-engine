@@ -851,84 +851,74 @@ are the same.
 disagg_by_src
 =======================================
 
-Given a system of various sources affecting a specific site,
-one very common question to ask is: what are the more relevant sources,
-i.e. which sources contribute the most to the mean hazard curve?
-The engine is able to answer such question by setting the ``disagg_by_src``
-flag in the job.ini file. When doing that, the engine saves in
-the datastore a 5-dimensional array called ``disagg_by_src`` with
-dimensions (site ID, realization ID, intensity measure type,
-intensity measure level, source ID). For that it is possible to extract
-the contribution of each source to the mean hazard curve (interested
-people should look at the code in the function ``check_disagg_by_src``).
-The array ``disagg_by_src`` can also be read as a pandas DataFrame,
-then getting something like the following::
+Given a system of various sources affecting a specific site, one very
+common question to ask is: what are the more relevant sources,
+i.e. which sources contribute the most to the mean hazard curve?  The
+engine is able to answer such question by setting the
+``disagg_by_src`` flag in the job.ini file. When doing that, the
+engine saves in the datastore a 4-dimensional ArrayWrapper called
+``mean_rates_by_src`` with dimensions (site ID, intensity measure
+type, intensity measure level, source ID). From that it is possible to
+extract the contribution of each source to the mean hazard curve
+(interested people should look at the code in the function
+``check_disagg_by_src``).  The ArrayWrapper ``mean_rates_by_src`` can also be
+converted into a pandas DataFrame, then getting something like the
+following::
 
- >> dstore.read_df('disagg_by_src', index='src_id')
-                site_id  rlz_id  imt  lvl         value
- ASCTRAS407           0       0  PGA    0  9.703749e-02
- IF-CFS-GRID03        0       0  PGA    0  3.720510e-02
- ASCTRAS407           0       0  PGA    1  6.735009e-02
- IF-CFS-GRID03        0       0  PGA    1  2.851081e-02
- ASCTRAS407           0       0  PGA    2  4.546237e-02
- ...                ...     ...  ...  ...           ...
- IF-CFS-GRID03        0      31  PGA   17  6.830692e-05
- ASCTRAS407           0      31  PGA   18  1.072884e-06
- IF-CFS-GRID03        0      31  PGA   18  1.275539e-05
- ASCTRAS407           0      31  PGA   19  1.192093e-07
- IF-CFS-GRID03        0      31  PGA   19  5.960464e-07
+ >> dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
+                site_id  imt  lvl         value
+ ASCTRAS407           0  PGA    0  9.703749e-02
+ IF-CFS-GRID03        0  PGA    0  3.720510e-02
+ ASCTRAS407           0  PGA    1  6.735009e-02
+ IF-CFS-GRID03        0  PGA    1  2.851081e-02
+ ASCTRAS407           0  PGA    2  4.546237e-02
+ ...                ...  ...  ...           ...
+ IF-CFS-GRID03        0  PGA   17  6.830692e-05
+ ASCTRAS407           0  PGA   18  1.072884e-06
+ IF-CFS-GRID03        0  PGA   18  1.275539e-05
+ ASCTRAS407           0  PGA   19  1.192093e-07
+ IF-CFS-GRID03        0  PGA   19  5.960464e-07
 
 The ``value`` field here is the probability of exceedence in the hazard
 curve. The ``lvl`` field is an integer corresponding to the intensity
 measure level in the hazard curve.
 
-There is a consistency check comparing the mean hazard curves
-with the value obtained by composing the probabilities in the
-disagg_by_src` array, for the heighest level of each intensity measure type.
+In engine 3.15 we introduced the so-called "colon convention" on
+source IDs: if you have many sources that for some reason should be
+collected together - for instance because they all account for
+seismicity in the same tectonic region, or because they are components
+of a same source but are split into separate sources by magnitude -
+you can tell the engine to collect them into one source in the
+``mean_rates_by_src`` matrix. The trick is to use IDs with the same
+prefix, a colon, and then a numeric index. For instance, if you had 3
+sources with IDs ``src_mag_6.65``, ``src_mag_6.75``, ``src_mag_6.85``,
+fragments of the same source with different magnitudes, you could
+change their IDs to something like ``src:0``, ``src:1``, ``src:2`` and
+that would reduce the size of the matrix ``mean_rates_by_src`` by 3
+times by collecting together the contributions of each source. There
+is no restriction on the numeric indices to start from 0, so using the
+names ``src:665``, ``src:675``, ``src:685`` would work too and would
+be clearer: the IDs should be unique, however.
 
-It should be noticed that many hazard models contain thousands of
-sources and as a consequence the ``disagg_by_src`` matrix can be
-impossible to compute without running out of memory. Even if you have
-enough memory, having a very large ``disagg_by_src`` matrix is a bad
-idea, so there is a limit on the size of the matrix, hard-coded to 4
-GB. The way to circumvent the limit is to reduce the number of
-sources: for instance you could convert point sources in multipoint
-sources.
+If the IDs are not unique and the engine determines that the
+underlying sources are different, then an extension "semicolon +
+incremental index" is automatically added. This is useful when the
+hazard modeler wants to define a model where the more than one version
+of the same source appears in one source model, having changed some of
+the parameters, or when varied versions of a source appear in each
+branch of a logic tree. In that case, the modeler should use always
+the exact same ID (i.e. without the colon and numeric index): the
+engine will automatically distinguish the sources during the
+calculation of the hazard curves and consider them the same when
+saving the array ``mean_rates_by_src``: you can see an example in the
+test ``qa_tests_data/classical/case_20/job_bis.ini`` in the engine
+code base. In that case the ``source_info`` dataset will list 7
+sources ``CHAR1;0 CHAR1;1 CHAR1;2 COMFLT1;0 COMFLT1;1 SFLT1;0
+SFLT1;1`` but the matrix ``mean_rates_by_src`` will see only three
+sources ``CHAR1 COMFLT1 SFLT1`` obtained by composing together the
+versions of the underlying sources.
 
-In engine 3.15 we also introduced the so-called "colon convention" on source
-IDs: if you have many sources that for some reason should be collected
-together - for instance because they all account for seismicity in the same 
-tectonic region, or because they are components of a same source but are split
-into separate sources by magnitude - you
-can tell the engine to collect them into one source in the ``disagg_by_src``
-matrix. The trick is to use IDs with the same prefix, a colon, and then a
-numeric index. For instance, if you had 3 sources with IDs ``src_mag_6.65``,
-``src_mag_6.75``, ``src_mag_6.85``, fragments of the same source with
-different magnitudes, you could change their IDs to something like
-``src:0``, ``src:1``, ``src:2`` and that would reduce the size of the
-matrix ``disagg_by_src`` by 3 times by collecting together the contributions
-of each source. There is no restriction on the numeric indices to start
-from 0, so using the names ``src:665``, ``src:675``, ``src:685`` would
-work too and would be clearer: the IDs should be unique, however.
-
-If the IDs are not unique and the engine determines that the underlying
-sources are different, then an extension "semicolon + incremental index"
-is automatically added. This is useful when the hazard modeler wants
-to define a model where the more than one version of the same source appears
-in one source model, having changed some of the parameters, or when varied
-versions of a source appear in each branch of a logic tree. In that case, 
-the modeler should use always the exact same ID (i.e. without the colon and 
-numeric index): the engine will automatically distinguish the
-sources during the calculation of the hazard curves and consider them the same
-when saving the array ``disagg_by_src``: you can see an example in the
-test ``qa_tests_data/classical/case_79`` in the engine code base. In that
-case the ``source_info`` dataset will list 6 sources 
-``ASCTRAS407;0``, ``ASCTRAS407;1``, ``ASCTRAS407;2``, ``ASCTRAS407;3``,
-``IF-CFS-GRID03;0``, ``IF-CFS-GRID03;1`` but the matrix ``disagg_by_src``
-will see only two sources ``ASCTRAS407`` and ``IF-CFS-GRID03`` obtained
-by composing together the versions of the underlying sources.
-
-In version 3.15 ``disagg_by_src`` was extended to work with mutually
+In version 3.15 ``mean_rates_by_src`` was extended to work with mutually
 exclusive sources, i.e. for the Japan model. You can see an example in
 the test ``qa_tests_data/classical/case_27``. However, the case of
 mutually exclusive ruptures - an example is the New Madrid cluster
@@ -975,8 +965,65 @@ NB: ``disagg_by_src`` can be set to true only if the
 not in the original source model, thus breaking the connection between
 the values of the matrix and the original sources.
 
+The post-processing framework and Vector-valued PSHA
+====================================================
+
+Since version 3.17 the OpenQuake engine has special support for
+custom post-processors. A postprocessor is a Python module located
+in the directory ``openquake/calculators/postproc`` and containing
+a ``main`` function with signature::
+
+.. code-block::
+
+   def main(dstore, [csm], ...):
+       ...
+
+In version 3.17 post-processors work only after classical or
+preclassical calculations; the ``dstore`` parameter is a DataStore
+instance corresponding to the current calculation, while the ``csm``
+parameter is a CompositeSourceModel instance (it can be omitted if not
+needed).
+
+The ``main`` function is automatically called when the user sets in
+the job.ini file the parameters ``postproc_mod`` and
+``postproc_args``. ``postproc_mod`` is the name of the postprocessing
+module and ``postproc_args`` is a dictionary of literal arguments that
+get passed to the ``main`` function; if not specified the empty
+dictionary is passed. This happens for istance for the conditional
+spectrum post-processor since it does not require additional arguments
+with respect to the ones in ``dstore['oqparam']``.
+
+The post-processing framework was put in place in order to run
+VPSHA calculations. The user can find an example in
+https://github.com/gem/oq-engine/blob/engine-3.17/openquake/qa_tests_data/postproc/case_mrd. In the job.ini file there are the lines::
+
+ postproc_mod = compute_mrd
+ postproc_args = {
+   'imt1': 'PGA',
+   'imt2': 'SA(0.05)',
+   'cross_correlation': 'BakerJayaram2008',
+   'seed': 42,
+   'meabins': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6],
+   'sigbins': [0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+   'method': 'indirect'}
+
+while the postprocessor module ``openquake.calculators.postproc.compute_mrd``
+contains the function
+
+.. code-block:
+ 
+ # in openquake.calculators.postproc.compute_mrd
+ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
+          method='indirect'):
+     ...
+
+Inside ``main`` there is code to create the dataset ``mrd`` which
+contains the Mean Rate Distribution as an array of shape L1 x L1 x N
+where L1 is the number of levels per IMT minus 1 and N the number of
+sites (normally 1).
+
 The conditional spectrum post-processor
-========================================
+---------------------------------------
 
 Since version 3.17 the engine includes an experimental post-processor
 which is able to compute the conditional spectrum.

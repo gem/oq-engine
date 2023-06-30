@@ -566,7 +566,7 @@ pointsource_distance:
 
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
-  Example: *postproc_func = compute_mrd*
+  Example: *postproc_func = compute_mrd.main*
   Default: '' (no postprocessing)
 
 postproc_args:
@@ -1004,7 +1004,7 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
-    postproc_func = valid.Param(valid.simple_id, '')
+    postproc_func = valid.Param(valid.mod_func, 'dummy.main')
     postproc_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
