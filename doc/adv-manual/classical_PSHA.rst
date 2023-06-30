@@ -965,39 +965,41 @@ NB: ``disagg_by_src`` can be set to true only if the
 not in the original source model, thus breaking the connection between
 the values of the matrix and the original sources.
 
-The post-processing framework and Vector-valued PSHA
-====================================================
+The post-processing framework and Vector-valued PSHA calculations
+=================================================================
 
 Since version 3.17 the OpenQuake engine has special support for
-custom post-processors. A postprocessor is a Python module located
+custom postprocessors. A postprocessor is a Python module located
 in the directory ``openquake/calculators/postproc`` and containing
-a ``main`` function with signature::
+a ``main`` function with signature:
 
 .. code-block::
 
    def main(dstore, [csm], ...):
        ...
 
-In version 3.17 post-processors work only after classical or
-preclassical calculations; the ``dstore`` parameter is a DataStore
-instance corresponding to the current calculation, while the ``csm``
+Post-processors are called after a classical or
+preclassical calculation: the ``dstore`` parameter is a DataStore
+instance corresponding to the calculation, while the ``csm``
 parameter is a CompositeSourceModel instance (it can be omitted if not
 needed).
 
-The ``main`` function is automatically called when the user sets in
-the job.ini file the parameters ``postproc_mod`` and
-``postproc_args``. ``postproc_mod`` is the name of the postprocessing
-module and ``postproc_args`` is a dictionary of literal arguments that
-get passed to the ``main`` function; if not specified the empty
-dictionary is passed. This happens for istance for the conditional
-spectrum post-processor since it does not require additional arguments
-with respect to the ones in ``dstore['oqparam']``.
+The ``main`` function is called when the user sets in
+the job.ini file the parameters ``postproc_func`` and
+``postproc_args``. ``postproc_func`` is the dotted name of the
+postprocessing function (in the form ``modulename.funcname``
+where ``funcname`` is normally ``main``) and
+``postproc_args`` is a dictionary of literal arguments that get passed
+to the function; if not specified the empty dictionary is
+passed. This happens for istance for the conditional spectrum
+post-processor since it does not require additional arguments with
+respect to the ones in ``dstore['oqparam']``.
 
 The post-processing framework was put in place in order to run
 VPSHA calculations. The user can find an example in
-https://github.com/gem/oq-engine/blob/engine-3.17/openquake/qa_tests_data/postproc/case_mrd. In the job.ini file there are the lines::
+``qa_tests_data/postproc/case_mrd``. In the job.ini file there are the lines::
 
- postproc_mod = compute_mrd
+ postproc_func = compute_mrd.main
  postproc_args = {
    'imt1': 'PGA',
    'imt2': 'SA(0.05)',
@@ -1012,7 +1014,7 @@ contains the function
 
 .. code-block::
  
- # in openquake.calculators.postproc.compute_mrd
+ # inside openquake.calculators.postproc.compute_mrd
  def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
           method='indirect'):
      ...
@@ -1023,14 +1025,14 @@ where L1 is the number of levels per IMT minus 1 and N the number of
 sites (normally 1).
 
 While the postprocessing part for VPSHA calculations is computationally
-very heavy, it is much more common to have a light postprocessing, a
-lot faster than the classical calculation it depends on. In such
+intensive, it is much more common to have a light postprocessing, i.e.
+faster than the classical calculation it depends on. In such
 situations the postprocessing framework really shines, since it is
 possible to reuse the original calculation via the standard ``--hc``
 switch, i.e. you can avoid repeating multiple times the same classical
 calculation if you are interested in running the postprocessor with
 different parameters. In that situation the ``main`` function will
-get passed a DataStore instance with an attribute ``parent`` corresponding
+get a DataStore instance with an attribute ``parent`` corresponding
 to the DataStore of the original calculation.
 
 The postprocessing framework also integrates very well with interactive
