@@ -1010,7 +1010,7 @@ https://github.com/gem/oq-engine/blob/engine-3.17/openquake/qa_tests_data/postpr
 while the postprocessor module ``openquake.calculators.postproc.compute_mrd``
 contains the function
 
-.. code-block:
+.. code-block::
  
  # in openquake.calculators.postproc.compute_mrd
  def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
