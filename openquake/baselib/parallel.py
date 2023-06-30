@@ -213,6 +213,16 @@ submit = CallableDict()
 GB = 1024 ** 3
 host_cores = config.zworkers.host_cores.split(',')
 
+# see https://scicomp.aalto.fi/triton/tut/array
+SLURM_BATCH = '''\
+#!/bin/sh
+#SBATCH --array=1-{num_tasks}
+#SBATCH --time=01:00:00
+#SBATCH --mem=1G
+module load miniconda3
+sbatch python -m openquake.baselib.parallel \
+{mon.filename} {mon.backurl} {mon.calc_id} $SLURM_ARRAY_TASK_ID
+'''
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
@@ -250,7 +260,7 @@ def oq_distribute(task=None):
     :returns: the value of OQ_DISTRIBUTE or config.distribution.oq_distribute
     """
     dist = os.environ.get('OQ_DISTRIBUTE', config.distribution.oq_distribute)
-    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp'):
+    if dist not in ('no', 'processpool', 'threadpool', 'zmq', 'ipp', 'slurm'):
         raise ValueError('Invalid oq_distribute=%s' % dist)
     return dist
 
@@ -880,7 +890,18 @@ class Starmap(object):
 
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
-        if self.task_queue:
+        if self.distribute == 'slurm':
+            calc_dir = os.path.dirname(self.h5.filename)
+            for task_no, func_args)in enumerate(self.task_queue, 1):
+                with open(calc_dir + '/%d.pik' % task_no) as f:
+                    pickle.dump(f, func_args, pickle.HIGHEST_PROTOCOL)
+            # subprocess.run('sbatch')
+            sb = SLURM_BATCH.format(
+                mon=self.monitor, num_tasks=len(self.task_queue))
+            print(sb)
+            return ()
+                
+        elif self.task_queue:
             first_args = self.task_queue[:self.CT]
             self.task_queue[:] = self.task_queue[self.CT:]
             for func, args in first_args:
@@ -1026,3 +1047,16 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
         for finished in wait(procs):
             procs[finished].join()
             del procs[finished]
+
+
+if __name__ == '__main__':
+    # invoked by SLURM_BATCH
+    hdf5path, backurl, calc_id, task_id = sys.argv[1:]
+    calc_dir = hdf5path.rsplit('.')[0]
+    with open(calc_dir + '/' + task_id) as f:
+        func, args = pickle.load(f)
+    os.remove(f.filename)
+    monitor = Monitor(func.__name__)
+    monitor.filename = hdf5path
+    monitor.calc_id = int(calc_id)
+    safely_call(func, args, int(task_id) - 1, monitor)
