@@ -33,7 +33,7 @@ class Input(object):
 
 
 def compute_mrd(inp, crosscorr, imt1, imt2,
-                meabins, sigbins, monitor):
+                meabins, sigbins, method, monitor):
     """
     :param inp: an Input object (contexts, contextm maker, num_sites)
     :param N: the total number of sites
@@ -43,11 +43,12 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
     :param str imt1: the second Intensity Measure Type
     :param meabins: bins for the means
     :param sigbins: bins for the sigmas
+    :param method: string 'direct' or 'indirect'
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
     G = len(inp.cmaker.gsims)
     mrd = calc_mean_rate_dist(inp.ctx, inp.N, inp.cmaker, crosscorr,
-                              imt1, imt2, meabins, sigbins)
+                              imt1, imt2, meabins, sigbins, method)
     return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gid)}
 
 
@@ -62,7 +63,8 @@ def combine_mrds(acc, g_weights):
     return out
 
 
-def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
+def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
+         method='indirect'):
     """
     :param dstore: datastore with the classical calculation
 
@@ -86,7 +88,7 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
         # NB: a trivial splitting of the contexts would case task-dependency!
         cmaker = cmakers[grp_id]
         smap.submit((Input(ctx, cmaker, N), crosscorr, imt1, imt2,
-                     meabins, sigbins))
+                     meabins, sigbins, method))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
     trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
