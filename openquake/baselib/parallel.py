@@ -216,13 +216,22 @@ host_cores = config.zworkers.host_cores.split(',')
 # see https://scicomp.aalto.fi/triton/tut/array
 SLURM_BATCH = '''\
 #!/bin/sh
-#SBATCH --array=1-{num_tasks}
+#SBATCH --array=1-{mon.task_no}
 #SBATCH --time=01:00:00
 #SBATCH --mem=1G
 module load miniconda3
 sbatch python -m openquake.baselib.parallel \
 {mon.filename} {mon.backurl} {mon.calc_id} $SLURM_ARRAY_TASK_ID
 '''
+
+def fake_slurm_start(calc_dir, num_tasks):
+    pool = mp_context.Pool()
+    assert num_tasks < 30
+    for task_id in range(1, num_tasks + 1):
+        pool.apply_async(main, (calc_dir, str(task_id)))
+    pool.close()
+    pool.join()
+
 
 @submit.add('no')
 def no_submit(self, func, args, monitor):
@@ -253,6 +262,17 @@ def zmq_submit(self, func, args, monitor):
 @submit.add('ipp')
 def ipp_submit(self, func, args, monitor):
     self.executor.submit(safely_call, func, args, self.task_no, monitor)
+
+
+@submit.add('slurm')
+def slurm_submit(self, func, args, monitor):
+    calc_dir = monitor.filename.rsplit('.', 1)[0]  # $HOME/oqdata/calc_XXX
+    if not os.path.exists(calc_dir):
+        os.mkdir(calc_dir)
+    pikname = str(self.task_no + 1) + '.pik'
+    with open(os.path.join(calc_dir, pikname), 'wb') as f:
+        pickle.dump((func, args, monitor), f, pickle.HIGHEST_PROTOCOL)
+    print('saved', os.path.join(calc_dir, pikname))
 
 
 def oq_distribute(task=None):
@@ -890,22 +910,22 @@ class Starmap(object):
 
     def _loop(self):
         self.busytime = AccumDict(accum=[])  # pid -> time
-        if self.distribute == 'slurm':
-            calc_dir = os.path.dirname(self.h5.filename)
-            for task_no, func_args)in enumerate(self.task_queue, 1):
-                with open(calc_dir + '/%d.pik' % task_no) as f:
-                    pickle.dump(f, func_args, pickle.HIGHEST_PROTOCOL)
+        dist = 'no' if self.num_tasks == 1 else self.distribute
+        if dist == 'slurm':
+            for func, args in self.task_queue:
+                self.submit(args, func=func)
+            self.task_queue.clear()
             # subprocess.run('sbatch')
-            sb = SLURM_BATCH.format(
-                mon=self.monitor, num_tasks=len(self.task_queue))
+            sb = SLURM_BATCH.format(mon=self.monitor)
             print(sb)
-            return ()
+            fake_slurm_start(self.monitor.filename.rsplit('.', 1)[0], self.task_no)
                 
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]
             self.task_queue[:] = self.task_queue[self.CT:]
             for func, args in first_args:
                 self.submit(args, func=func)
+
         if not hasattr(self, 'socket'):  # no submit was ever made
             return ()
 
@@ -1049,14 +1069,13 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
             del procs[finished]
 
 
+def main(calc_dir: str, task_id: str):
+    with open(calc_dir + '/' + task_id + '.pik', 'rb') as f:
+        func, args, mon = pickle.load(f)
+    os.remove(f.name)
+    safely_call(func, args, int(task_id) - 1, mon)
+
+    
 if __name__ == '__main__':
     # invoked by SLURM_BATCH
-    hdf5path, backurl, calc_id, task_id = sys.argv[1:]
-    calc_dir = hdf5path.rsplit('.')[0]
-    with open(calc_dir + '/' + task_id) as f:
-        func, args = pickle.load(f)
-    os.remove(f.filename)
-    monitor = Monitor(func.__name__)
-    monitor.filename = hdf5path
-    monitor.calc_id = int(calc_id)
-    safely_call(func, args, int(task_id) - 1, monitor)
+    main(*sys.argv[1:])
