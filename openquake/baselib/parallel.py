@@ -223,7 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
-sbatch $HOME/openquake/bin/python -m openquake.baselib.parallel {mon.calc_dir} $SLURM_ARRAY_TASK_ID
+/apps/miniconda3/bin/python -m openquake.baselib.parallel {mon.calc_dir}
 '''
 
 def fake_slurm_start(mon):
@@ -1073,7 +1073,8 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
             del procs[finished]
 
 
-def main(calc_dir: str, task_id: str):
+def main(calc_dir: str):
+    task_id = os.environ['SLURM_ARRAY_TASK_ID']
     with open(calc_dir + '/' + task_id + '.pik', 'rb') as f:
         func, args, mon = pickle.load(f)
     os.remove(f.name)
@@ -1082,4 +1083,4 @@ def main(calc_dir: str, task_id: str):
     
 if __name__ == '__main__':
     # invoked by SLURM_BATCH
-    main(*sys.argv[1:])
+    main(sys.argv[1])
