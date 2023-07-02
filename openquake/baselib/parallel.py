@@ -913,6 +913,7 @@ class Starmap(object):
             for func, args in self.task_queue:
                 self.submit(args, func=func)
             self.task_queue.clear()
+            self.monitor.task_no = self.task_no
             sb = SLURM_BATCH.format(mon=self.monitor)
             logging.debug(sb)
             subprocess.run('sbatch', input=sb.encode('utf8'))
