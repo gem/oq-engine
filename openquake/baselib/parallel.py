@@ -190,6 +190,7 @@ import inspect
 import logging
 import operator
 import traceback
+import subprocess
 import collections
 from unittest import mock
 import multiprocessing.dummy
@@ -218,17 +219,14 @@ SLURM_BATCH = '''\
 #!/bin/sh
 #SBATCH --array=1-{mon.task_no}
 #SBATCH --time=01:00:00
-#SBATCH --mem=1G
-module load miniconda3
-sbatch python -m openquake.baselib.parallel \
-{mon.filename} {mon.backurl} {mon.calc_id} $SLURM_ARRAY_TASK_ID
+#SBATCH --mem_per_cpu=1G
+sbatch $HOME/openquake/bin/python -m openquake.baselib.parallel {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 '''
 
-def fake_slurm_start(calc_dir, num_tasks):
+def fake_slurm_start(mon):
     pool = mp_context.Pool()
-    assert num_tasks < 30
-    for task_id in range(1, num_tasks + 1):
-        pool.apply_async(main, (calc_dir, str(task_id)))
+    for task_id in range(1, mon.task_no + 1):
+        pool.apply_async(main, (mon.calc_dir, str(task_id)))
     pool.close()
     pool.join()
 
@@ -915,10 +913,10 @@ class Starmap(object):
             for func, args in self.task_queue:
                 self.submit(args, func=func)
             self.task_queue.clear()
-            # subprocess.run('sbatch')
             sb = SLURM_BATCH.format(mon=self.monitor)
-            print(sb)
-            fake_slurm_start(self.monitor.filename.rsplit('.', 1)[0], self.task_no)
+            logging.debug(sb)
+            subprocess.run('sbatch', input=sb.encode('utf8'))
+            #fake_slurm_start(self.monitor)
                 
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]

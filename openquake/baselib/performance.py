@@ -218,6 +218,11 @@ class Monitor(object):
         self.task_no = -1  # overridden in parallel
 
     @property
+    def calc_dir(self):
+        """Calculation directory $HOME/oqdata/calc_XXX"""
+        return self.h5.filename.rsplit('.', 1)[0]
+
+    @property
     def mem(self):
         """Mean memory allocation"""
         return self._mem / (self.counts or 1)
