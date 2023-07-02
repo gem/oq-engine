@@ -182,6 +182,7 @@ import os
 import re
 import ast
 import sys
+import stat
 import time
 import socket
 import signal
@@ -216,10 +217,12 @@ host_cores = config.zworkers.host_cores.split(',')
 
 # see https://scicomp.aalto.fi/triton/tut/array
 SLURM_BATCH = '''\
-#!/bin/sh
+#!/bin/bash
 #SBATCH --array=1-{mon.task_no}
 #SBATCH --time=01:00:00
-#SBATCH --mem_per_cpu=1G
+#SBATCH --mem-per-cpu=1G
+#SBATCH --output={mon.calc_dir}/%a.out
+#SBATCH --error={mon.calc_dir}/%a.err
 sbatch $HOME/openquake/bin/python -m openquake.baselib.parallel {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 '''
 
@@ -914,9 +917,11 @@ class Starmap(object):
                 self.submit(args, func=func)
             self.task_queue.clear()
             self.monitor.task_no = self.task_no
-            sb = SLURM_BATCH.format(mon=self.monitor)
-            logging.debug(sb)
-            subprocess.run('sbatch', input=sb.encode('utf8'))
+            path = os.path.join(self.monitor.calc_dir, self.name + '.sh')
+            with open(path, 'w') as f:
+                f.write(SLURM_BATCH.format(mon=self.monitor))
+            os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
+            subprocess.run(['sbatch', path])
             #fake_slurm_start(self.monitor)
                 
         elif self.task_queue:
