@@ -299,52 +299,86 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
     return node_el, avg_connectivity_loss_eff
 
 
+def cleanup_graph(G_original, event_damage_df, g_type):
+    # Making a copy of original graph for each event for the analysis
+    G = G_original.copy()
+
+    nodes_damage_df = event_damage_df.loc[
+        event_damage_df.type == "node"].droplevel(level=0)
+    edges_damage_df = event_damage_df.loc[
+        event_damage_df.type == "edge"].droplevel(level=0)
+
+    # Updating the graph to remove damaged edges and nodes
+    nonfunctional_edges_df = edges_damage_df.loc[
+        ~edges_damage_df.is_functional]
+    nonfunctional_nodes_df = nodes_damage_df.loc[
+        ~nodes_damage_df.is_functional]
+
+    # This is done to handle the the multi graph where more that one edge
+    # is possible between two nodes.
+    # If it is a multi graph then every edge has a key value
+
+    if g_type == "MultiGraph" or g_type == "MultiDiGraph":
+        edges_to_remove = [
+            (u, v, key)
+            for (u, v, key, data) in G.edges(keys=True, data=True)
+            if data['id'] in nonfunctional_edges_df.index.to_list()]
+    else:
+        edges_to_remove = [
+            (u, v) for (u, v, data) in G.edges(data=True)
+            if data['id'] in nonfunctional_edges_df.index.to_list()]
+
+    # nonfunctional_edge_tuples = list(
+    #     zip(nonfunctional_edges_df.start_node,
+    #         nonfunctional_edges_df.end_node)
+    # )
+
+    G.remove_edges_from(edges_to_remove)
+    # G.remove_edges_from(nonfunctional_edge_tuples)
+    G.remove_nodes_from(nonfunctional_nodes_df.index.to_list())
+
+    return G
+
+
 def analysis(dstore):
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode
     assert calculation_mode in ("event_based_damage", "scenario_damage")
-
     exposure_df = get_exposure_df(dstore)
 
     (TAZ_nodes, source_nodes,
      demand_nodes, eff_nodes) = classify_nodes(exposure_df)
 
     g_type = get_graph_type(exposure_df)
-
     exposure_df['id'] = exposure_df.index
-
     G_original = create_original_graph(exposure_df, g_type)
-
     damage_df = get_damage_df(dstore, exposure_df)
 
     # Calling the function according to the specification of the node type
-    # if the nodes acts as both supply or demand (for example: traffic analysis
-    # zone in transportation network)
 
     # FIXME: what happens if we have more than one node class? Shouldn't we
     # consider all separate groups instead of e.g. just TAZ_nodes, when
     # present?
 
     if TAZ_nodes:
+        # if the nodes acts as both supply or demand (for example: traffic
+        # analysis zone in transportation network)
         node_el, avg_connectivity_loss_eff = analyze_taz_nodes(
             dstore, exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df,
             g_type, calculation_mode)
-
-    # This is the classic and mostly used when supply/source and demand/sink is
-    # explicity mentioned to the nodes of interest
     elif demand_nodes:
+        # This is the classic and mostly used when supply/source and
+        # demand/sink is explicity mentioned to the nodes of interest
         node_el, avg_connectivity_loss_eff = analyze_demand_nodes(
             dstore, exposure_df, G_original, eff_nodes, demand_nodes,
             source_nodes, damage_df, g_type, calculation_mode)
-
-    # if nothing is mentioned in case of scarce data or every node is important
-    # and no distinction can be made
     else:
+        # if nothing is mentioned in case of scarce data or every node is
+        # important and no distinction can be made
         node_el, avg_connectivity_loss_eff = analyze_generic_nodes(
             dstore, exposure_df, G_original, eff_nodes, damage_df, g_type,
             calculation_mode)
-
-    # FIXME
+    # FIXME:
     # The output gives efficiency loss even if it say average connectivity loss
     # in the output. It has to be modified in
     # openquake/calculators/event_based_damage.py
@@ -438,49 +472,12 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
 
     # Now we check for every event after earthquake
     for event_id, event_damage_df in damage_df.groupby("event_id"):
-        # Making a copy of original graph for each event for the analysis
-        G = G_original.copy()
+        G = cleanup_graph(G_original, event_damage_df, g_type)
 
-        nodes_damage_df = event_damage_df.loc[
-            event_damage_df.type == "node"].droplevel(level=0)
-        edges_damage_df = event_damage_df.loc[
-            event_damage_df.type == "edge"].droplevel(level=0)
-
-        # Updating the graph to remove damaged edges and nodes
-        nonfunctional_edges_df = edges_damage_df.loc[
-            ~edges_damage_df.is_functional]
-        nonfunctional_nodes_df = nodes_damage_df.loc[
-            ~nodes_damage_df.is_functional]
-
-        # This is done to handle the the multi graph where more that one edge
-        # is possible between two nodes.
-        # If it is a multi graph then every edge has a key value
-
-        if g_type == "MultiGraph" or g_type == "MultiDiGraph":
-            edges_to_remove = [
-                (u, v, key)
-                for (u, v, key, data) in G.edges(keys=True, data=True)
-                if data['id'] in nonfunctional_edges_df.index.to_list()]
-        else:
-            edges_to_remove = [
-                (u, v) for (u, v, data) in G.edges(data=True)
-                if data['id'] in nonfunctional_edges_df.index.to_list()]
-
-        # nonfunctional_edge_tuples = list(
-        #     zip(nonfunctional_edges_df.start_node,
-        #         nonfunctional_edges_df.end_node)
-        # )
-
-        G.remove_edges_from(edges_to_remove)
-        G.remove_nodes_from(nonfunctional_nodes_df.index.to_list())
-
-        # Now we start to check if there is a path between any souce to each
-        # demand node
-
+        # Checking if there is a path between any souce to each demand node.
         # Some demand nodes and source nodes may have been eliminated from
         # the network due to damage, so we do not need to check their
         # functionalities
-
         extant_source_nodes = set(source_nodes) & set(G.nodes)
         extant_demand_nodes = sorted(set(demand_nodes) & set(G.nodes))
         extant_eff_nodes = sorted(set(eff_nodes) & set(G.nodes))
@@ -676,35 +673,9 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
         eff_table.at[node, 'Eff0'] = eff_node
 
     for event_id, event_damage_df in damage_df.groupby("event_id"):
-        G = G_original.copy()
-        nodes_damage_df = event_damage_df.loc[
-            event_damage_df.type == "node"].droplevel(level=0)
-        edges_damage_df = event_damage_df.loc[
-            event_damage_df.type == "edge"].droplevel(level=0)
+        G = cleanup_graph(G_original, event_damage_df, g_type)
 
-        # Updating the graph to remove damaged edges and nodes
-        nonfunctional_edges_df = edges_damage_df.loc[
-            ~edges_damage_df.is_functional]
-        nonfunctional_nodes_df = nodes_damage_df.loc[
-            ~nodes_damage_df.is_functional]
-
-        # This is done to handle the the multi graph where more that one edge
-        # is possible between two nodes.
-        # If it is a multi graph then every edge has a key value
-        if g_type == "MultiGraph" or g_type == "MultiDiGraph":
-            edges_to_remove = [
-                (u, v, key)
-                for (u, v, key, data) in G.edges(keys=True, data=True)
-                if data['id'] in nonfunctional_edges_df.index.to_list()]
-        else:
-            edges_to_remove = [
-                (u, v) for (u, v, data) in G.edges(data=True)
-                if data['id'] in nonfunctional_edges_df.index.to_list()]
-
-        G.remove_edges_from(edges_to_remove)
-        G.remove_nodes_from(nonfunctional_nodes_df.index.to_list())
-
-        # Checking if there is a path between any souce to each demand node
+        # Checking if there is a path between any souce to each demand node.
         # Some demand nodes and source nodes may have been eliminated from
         # the network due to damage, so we do not need to check their
         # functionalities
@@ -837,36 +808,9 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
 
     # After eathquake
     for event_id, event_damage_df in damage_df.groupby("event_id"):
-        G = G_original.copy()
-        nodes_damage_df = event_damage_df.loc[
-            event_damage_df.type == "node"].droplevel(level=0)
-        edges_damage_df = event_damage_df.loc[
-            event_damage_df.type == "edge"].droplevel(level=0)
+        G = cleanup_graph(G_original, event_damage_df, g_type)
 
-        # Updating the graph to remove damaged edges and nodes
-        nonfunctional_edges_df = edges_damage_df.loc[
-            ~edges_damage_df.is_functional]
-        nonfunctional_nodes_df = nodes_damage_df.loc[
-            ~nodes_damage_df.is_functional]
-        # nonfunctional_edge_tuples = list(
-        #     zip(nonfunctional_edges_df.start_node,
-        #         nonfunctional_edges_df.end_node)
-        # )
-        if g_type == "MultiGraph" or g_type == "MultiDiGraph":
-            edges_to_remove = [
-                (u, v, key)
-                for (u, v, key, data) in G.edges(keys=True, data=True)
-                if data['id'] in nonfunctional_edges_df.index.to_list()]
-        else:
-            edges_to_remove = [
-                (u, v) for (u, v, data) in G.edges(data=True)
-                if data['id'] in nonfunctional_edges_df.index.to_list()]
-
-        G.remove_edges_from(edges_to_remove)
-        # G.remove_edges_from(nonfunctional_edge_tuples)
-        G.remove_nodes_from(nonfunctional_nodes_df.index.to_list())
-
-        # Checking if there is a path between any souce to each demand node
+        # Checking if there is a path between any souce to each demand node.
         # Some demand nodes and source nodes may have been eliminated from
         # the network due to damage, so we do not need to check their
         # functionalities
