@@ -52,6 +52,15 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.1273885350318472, 0.13953488372093012, 0.23076923076923073, 1.0,
+            0.23076923076923073, 0.13953488372093012, 0.1273885350318472]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_ccl'][()],
              ds['avg_connectivity_loss_eff'][()],
@@ -72,6 +81,15 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.5, 0.04774535809018569, 0.3164724576271186,
+            0.11955593509820671, 0.0]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_eff'][()],
              ds['avg_connectivity_loss_pcl'][()],
@@ -83,14 +101,21 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.2777777777777778,
             ])
         # TODO: also check:
-        #       'avg_connectivity_loss_eff', 'avg_connectivity_loss_pcl',
-        #       'avg_connectivity_loss_wcl', 'event_connectivity_loss_eff',
-        #       'event_connectivity_loss_pcl', 'event_connectivity_loss_wcl',
-        #       'node_el', 'taz_cl'
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.09602352640327334, 0.10010409437890358, 0.15322580645161288,
+            0.09355742296918781, 0.35130718954248374, 0.41342779580215844, 1.0]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_eff'][()],
             ],
@@ -98,12 +123,18 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.2603130360205833,
             ])
         # TODO: also check:
-        #       'event_connectivity_loss_eff','functional_demand_nodes',
-        #       'node_el'
+        #       'event_connectivity_loss_eff', 'node_el'
 
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [0.41044776119402987, 0.0, 0.0, 0.0, 0.0]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_ccl'][()],
              ds['avg_connectivity_loss_eff'][()],
@@ -119,12 +150,18 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # TODO: also check:
         #       'dem_cl', 'event_connectivity_loss_ccl',
         #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
-        #       'node_el'
+        #       'event_connectivity_loss_wcl', 'node_el'
 
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [0.3235294117647059, 0.0, 0.0, 0.0, 0.0]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_ccl'][()],
              ds['avg_connectivity_loss_eff'][()],
@@ -140,12 +177,20 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # TODO: also check:
         #       'dem_cl', 'event_connectivity_loss_ccl',
         #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
-        #       'node_el'
+        #       'event_connectivity_loss_wcl', 'node_el'
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.12209523809523799, 0.0, 0.03353416313559312,
+            0.011058923996584154, 0.0]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_ccl'][()],
              ds['avg_connectivity_loss_eff'][()],
@@ -161,12 +206,20 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # TODO: also check:
         #       'dem_cl', 'event_connectivity_loss_ccl',
         #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
-        #       'node_el',
+        #       'event_connectivity_loss_wcl', 'node_el'
 
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.12209523809523799, 0.0, 0.03353416313559312,
+            0.011058923996584154, 0.0]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_eff'][()],
              ds['avg_connectivity_loss_pcl'][()],
@@ -179,12 +232,20 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             ])
         # TODO: also check:
         #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
-        #       'node_el', 'taz_cl'
+        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.1929637526652452, 0.03571428571428573, 0.0, 0.008403361344537863,
+            0.10588235294117648]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_eff'][()],
              ds['avg_connectivity_loss_pcl'][()],
@@ -197,12 +258,20 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             ])
         # TODO: check also:
         #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
-        #       'node_el', 'taz_cl'
+        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
         ds = self.calc.datastore
+        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ids = list(nodes.id)
+        expected_ids = ['A', 'B', 'C', 'D', 'E']
+        self.assertEqual(ids, expected_ids)
+        eff_loss = list(nodes.Eff_loss)
+        expected_eff_loss = [
+            0.2560250694579053, 0.04629629629629628, 0.0, 0.008403361344537863,
+            0.14438502673796794]
+        aac(eff_loss, expected_eff_loss)
         aac([
              ds['avg_connectivity_loss_eff'][()],
              ds['avg_connectivity_loss_pcl'][()],
@@ -215,5 +284,4 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             ])
         # TODO: check also:
         #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'functional_demand_nodes',
-        #       'node_el', 'taz_cl',
+        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
