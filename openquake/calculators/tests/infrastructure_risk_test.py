@@ -31,7 +31,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
     def test_case_15(self):
         self.run_calc(case_15.__file__, 'job.ini')
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        ds = self.calc.datastore
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = [
             'D1', 'D10', 'D11', 'D12', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
@@ -48,11 +49,27 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             0.7545867098865477, 0.7081277533039649, 0.7987959183673469,
             0.7617334360554696, 0.835219136835062]
         aac(eff_loss, expected_eff_loss)
+        aac([
+             ds['avg_connectivity_loss_ccl'][()],
+             ds['avg_connectivity_loss_eff'][()],
+             ds['avg_connectivity_loss_pcl'][()],
+             ds['avg_connectivity_loss_wcl'][()],
+            ],
+            [
+             0.7708333333333335,
+             0.5792736375574525,
+             0.8479166666666668,
+             0.8927160714285713,
+            ])
+        # TODO: also check:
+        #       'dem_cl', 'event_connectivity_loss_ccl',
+        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
+        #       'event_connectivity_loss_wcl', 'node_el'
 
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
         self.assertEqual(ids, expected_ids)
@@ -81,7 +98,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E']
         self.assertEqual(ids, expected_ids)
@@ -107,7 +124,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E', 'F', 'G']
         self.assertEqual(ids, expected_ids)
@@ -128,7 +145,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E']
         self.assertEqual(ids, expected_ids)
@@ -155,7 +172,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E']
         self.assertEqual(ids, expected_ids)
@@ -182,7 +199,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E']
         self.assertEqual(ids, expected_ids)
@@ -211,7 +228,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E']
         self.assertEqual(ids, expected_ids)
@@ -237,7 +254,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E']
         self.assertEqual(ids, expected_ids)
@@ -263,7 +280,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
         ds = self.calc.datastore
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
+        nodes = ds.read_df('functional_demand_nodes')
         ids = list(nodes.id)
         expected_ids = ['A', 'B', 'C', 'D', 'E']
         self.assertEqual(ids, expected_ids)
