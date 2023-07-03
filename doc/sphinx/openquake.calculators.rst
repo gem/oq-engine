@@ -104,14 +104,6 @@ reportwriter module
     :undoc-members:
     :show-inheritance:
 
-conditional_spectrum module
---------------------------------------------
-
-.. automodule:: openquake.calculators.conditional_spectrum
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 views module
 ----------------------------------
 

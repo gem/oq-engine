@@ -364,10 +364,10 @@ iml_disagg:
   Default: no default
 
 imt_ref:
-  Reference intensity measure type usedto compute the conditional spectrum.
+  Reference intensity measure type used to compute the conditional spectrum.
   The imt_ref must belong to the list of IMTs of the calculation.
   Example: *imt_ref = SA(0.15)*.
-  Default: no default
+  Default: empty string
 
 individual_rlzs:
   When set, store the individual hazard curves and/or individual risk curves
@@ -566,7 +566,7 @@ pointsource_distance:
 
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
-  Example: *postproc_func = compute_mrd*
+  Example: *postproc_func = compute_mrd.main*
   Default: '' (no postprocessing)
 
 postproc_args:
@@ -837,7 +837,6 @@ ALL_CALCULATORS = ['aftershock',
                    'multi_risk',
                    'classical_bcr',
                    'preclassical',
-                   'conditional_spectrum',
                    'event_based_damage',
                    'scenario_damage']
 
@@ -966,7 +965,7 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    imt_ref = valid.Param(valid.intensity_measure_type)
+    imt_ref = valid.Param(valid.intensity_measure_type, '')
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
@@ -1005,7 +1004,7 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
-    postproc_func = valid.Param(valid.simple_id, '')
+    postproc_func = valid.Param(valid.mod_func, 'dummy.main')
     postproc_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
@@ -1291,13 +1290,6 @@ class OqParam(valid.ParamSet):
             if self.rlz_index is not None and self.num_rlzs_disagg != 1:
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
-
-        # checks for conditional_spectrum
-        if self.calculation_mode == 'conditional_spectrum':
-            if not self.poes:
-                raise InvalidFile("%s: you must specify the poes" % job_ini)
-            elif list(self.hazard_stats()) != ['mean']:
-                raise InvalidFile('%s: only the mean is supported' % job_ini)
 
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
@@ -2062,7 +2054,9 @@ class OqParam(valid.ParamSet):
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
-        if isinstance(array, numpy.ndarray):  # old format <= 3.11
+        if isinstance(array, numpy.ndarray):
+            # old format <= 3.11, tested in read_old_data,
+            # used to read old GMFs
             dd = collections.defaultdict(dict)
             for (name_, literal_) in array:
                 name = python3compat.decode(name_)
@@ -2073,5 +2067,11 @@ class OqParam(valid.ParamSet):
                 else:
                     dd[name] = ast.literal_eval(literal)
             vars(self).update(dd)
-        else:  # new format >= 3.12
+        else:
+            # for version >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))
+
+        Idist = calc.filters.IntegrationDistance
+        if hasattr(self, 'maximum_distance') and not isinstance(
+                self.maximum_distance, Idist):
+            self.maximum_distance = Idist(**self.maximum_distance)

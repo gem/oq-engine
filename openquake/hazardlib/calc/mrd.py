@@ -42,7 +42,7 @@ def get_uneven_bins_edges(lefts, num_bins):
     return numpy.array(tmp)
 
 
-def update_mrd(ctxt: numpy.recarray, cm, crosscorr, mrd):
+def update_mrd(ctxt: numpy.recarray, cm, crosscorr, mrd, monitor=Monitor()):
     """
     This computes the mean rate density by means of the multivariate
     normal function available in scipy.
@@ -85,7 +85,8 @@ def update_mrd(ctxt: numpy.recarray, cm, crosscorr, mrd):
 
             # Compute the MRD for the current rupture
             mvn  = sts.multivariate_normal(mea[slc0], comtx)
-            partial = get_mrd(mvn, grids)
+            with monitor:  # this is ultra-slow!
+                partial = get_mrd(mvn, grids)
 
             # Check
             msg = f'{numpy.max(partial):.8f}'
@@ -210,10 +211,10 @@ def update_mrd_indirect(ctx, cm, corrm, be_mea, be_sig, mrd, monitor=Monitor()):
             mrd[:, :, gid] += arr[R] * partial
 
 
-def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
-                        bins_mea, bins_sig, mon=Monitor()):
+def calc_mean_rate_dist(ctx, nsites, cmaker, crosscorr, imt1, imt2,
+                        bins_mea, bins_sig, method='indirect', mon=Monitor()):
     """
-    :param ctxt: a sequence of parametric sources
+    :param ctx: a sequence of parametric sources
     :param num_sites: total number of sites (small)
     :param cmaker: a ContextMaker instance
     :param crosscorr: a CrossCorrelation instance
@@ -221,6 +222,7 @@ def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
     :param str imt2: second IMT to consider (must be inside cmaker.imtls)
     :param bins_mea: bins for the mean
     :param bins_sig: bins for the standard deviation
+    :param method: a string 'direct' or 'indirect'
     """
     cm = cmaker.restrict([imt1, imt2])
     G = len(cm.gsims)
@@ -228,7 +230,11 @@ def calc_mean_rate_dist(ctxt, nsites, cmaker, crosscorr, imt1, imt2,
     corrm = crosscorr.get_cross_correlation_mtx(cm.imts)
     mrd = numpy.zeros((len1, len1, nsites, G))
     for sid in range(nsites):
-        update_mrd_indirect(
-            ctxt[ctxt.sids == sid], cm, corrm,
-            bins_mea, bins_sig, mrd[:, :, sid], mon)
+        if method == 'direct':
+            update_mrd(
+                ctx[ctx.sids == sid], cm, crosscorr, mrd[:, :, sid], mon)
+        else:
+            update_mrd_indirect(
+                ctx[ctx.sids == sid], cm, corrm,
+                bins_mea, bins_sig, mrd[:, :, sid], mon)
     return mrd

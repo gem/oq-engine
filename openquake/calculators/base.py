@@ -997,7 +997,9 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         if oq.postproc_func:
-            func = getattr(postproc, oq.postproc_func).main
+            modname, funcname = oq.postproc_func.rsplit('.', 1)
+            mod = getattr(postproc, modname)
+            func = getattr(mod, funcname)
             if 'csm' in inspect.getargspec(func).args:
                 if hasattr(self, 'csm'):  # already there
                     csm = self.csm
