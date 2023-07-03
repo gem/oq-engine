@@ -273,7 +273,7 @@ def slurm_submit(self, func, args, monitor):
     inpname = str(self.task_no + 1) + '.inp'
     with open(os.path.join(calc_dir, inpname), 'wb') as f:
         pickle.dump((func, args, monitor), f, pickle.HIGHEST_PROTOCOL)
-    print('saved', os.path.join(calc_dir, inpname))
+    logging.debug('saved %s', os.path.join(calc_dir, inpname))
 
 
 def oq_distribute(task=None):
