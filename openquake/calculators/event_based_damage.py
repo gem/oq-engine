@@ -290,4 +290,3 @@ class DamageCalculator(EventBasedRiskCalculator):
             demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
             self.datastore.create_df('functional_demand_nodes', demand_nodes)
             logging.info('Stored functional_demand_nodes')
-
