@@ -223,7 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
-srun /apps/miniconda3/bin/python -m openquake.baselib.parallel {mon.calc_dir} $SLURM_ARRAY_TASK_ID
+srun ~/.conda/envs/openquake/bin/python -m openquake.baselib.parallel {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 '''
 
 def fake_slurm_start(mon):
