@@ -223,7 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
-srun ~/.conda/envs/openquake/bin/python -m openquake.baselib.parallel {mon.calc_dir} $SLURM_ARRAY_TASK_ID
+srun ~/.conda/envs/openquake/bin/python -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 '''
 
 def fake_slurm_start(mon):
@@ -1078,8 +1078,3 @@ def main(calc_dir: str, task_id: str):
         func, args, mon = pickle.load(f)
     # os.remove(f.name)
     safely_call(func, args, int(task_id) - 1, mon)
-
-    
-if __name__ == '__main__':
-    # invoked by SLURM_BATCH
-    main(*sys.argv[1:])
