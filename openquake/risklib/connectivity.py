@@ -381,9 +381,9 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes,
 
         # Updating the graph to remove damaged edges and nodes
         nonfunctional_edges_df = edges_damage_df.loc[
-            edges_damage_df.is_functional == False]
+            ~edges_damage_df.is_functional]
         nonfunctional_nodes_df = nodes_damage_df.loc[
-            nodes_damage_df.is_functional == False]
+            ~nodes_damage_df.is_functional]
 
         # This is done to handle the the multi graph where more that one edge
         # is possible between two nodes.
@@ -619,9 +619,9 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
 
         # Updating the graph to remove damaged edges and nodes
         nonfunctional_edges_df = edges_damage_df.loc[
-            edges_damage_df.is_functional == False]
+            ~edges_damage_df.is_functional]
         nonfunctional_nodes_df = nodes_damage_df.loc[
-            nodes_damage_df.is_functional == False]
+            ~nodes_damage_df.is_functional]
 
         # This is done to handle the the multi graph where more that one edge
         # is possible between two nodes.
@@ -781,9 +781,9 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df,
 
         # Updating the graph to remove damaged edges and nodes
         nonfunctional_edges_df = edges_damage_df.loc[
-            edges_damage_df.is_functional == False]
+            ~edges_damage_df.is_functional]
         nonfunctional_nodes_df = nodes_damage_df.loc[
-            nodes_damage_df.is_functional == False]
+            ~nodes_damage_df.is_functional]
         # nonfunctional_edge_tuples = list(
         #     zip(nonfunctional_edges_df.start_node,
         #         nonfunctional_edges_df.end_node)
