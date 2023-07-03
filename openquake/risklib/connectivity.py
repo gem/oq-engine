@@ -16,10 +16,7 @@ import numpy as np
 import networkx as nx
 
 
-def analysis(dstore):
-    oq = dstore["oqparam"]
-    calculation_mode = oq.calculation_mode
-    assert calculation_mode in ("event_based_damage", "scenario_damage")
+def get_exposure_df(dstore):
     assetcol = dstore["assetcol"]
     tagnames = sorted(tn for tn in assetcol.tagnames if tn != "id")
     tags = {t: getattr(assetcol.tagcol, t) for t in tagnames}
@@ -33,14 +30,18 @@ def analysis(dstore):
         )
     ).set_index("id")
 
-    # TODO: Needs to be checked. It gives an error if this is not done.
+    # FIXME: Needs to be checked. It gives an error if this is not done.
     if 'weights' in exposure_df.columns:
         exposure_df['weights'] = exposure_df['weights'].astype(float)
 
+    return exposure_df
+
+
+def classify_nodes(exposure_df):
     # Classifying the nodes accodingly to compute performance indicator in
     # global and local scale
 
-    # TAZ stands for traffic analysis zone
+    # TAZ is the acronym of "Traffic Analysis Zone"
     # user can write both as well
     TAZ_nodes = exposure_df.loc[(exposure_df.supply_or_demand == "TAZ") | (
         exposure_df.supply_or_demand == "both")].index.to_list()
@@ -55,6 +56,10 @@ def analysis(dstore):
         exposure_df.supply_or_demand == "demand"].index.to_list()
     eff_nodes = exposure_df.loc[exposure_df.type == "node"].index.to_list()
 
+    return TAZ_nodes, source_nodes, demand_nodes, eff_nodes
+
+
+def get_graph_type(exposure_df):
     # This is to handle different type of graph. If nothing is provided, OQ
     # will assume as simple undirected graph
     # If there is a column name "graphtype" they can specify the type in any
@@ -71,8 +76,10 @@ def analysis(dstore):
     else:
         g_type = "Graph"
 
-    exposure_df['id'] = exposure_df.index
+    return g_type
 
+
+def create_original_graph(exposure_df, g_type):
     # Create the original graph and add edge and node attributes.
     G_original = nx.from_pandas_edgelist(
         exposure_df.loc[exposure_df.type == "edge"],
@@ -91,6 +98,10 @@ def analysis(dstore):
             exposure_df.type == "node"].to_dict("index")
     )
 
+    return G_original
+
+
+def get_damage_df(dstore, exposure_df):
     # Extractung the damage data from component level analysis
     agg_keys = pd.DataFrame({"id": [key.decode()
                                     for key in dstore["agg_keys"][:]]})
@@ -106,9 +117,34 @@ def analysis(dstore):
         .assign(is_functional=lambda x: x.collapsed == 0)
     )[["type", "start_node", "end_node", "is_functional", "taxonomy"]]
 
+    return damage_df
+
+
+def analysis(dstore):
+    oq = dstore["oqparam"]
+    calculation_mode = oq.calculation_mode
+    assert calculation_mode in ("event_based_damage", "scenario_damage")
+
+    exposure_df = get_exposure_df(dstore)
+
+    (TAZ_nodes, source_nodes,
+     demand_nodes, eff_nodes) = classify_nodes(exposure_df)
+
+    g_type = get_graph_type(exposure_df)
+
+    exposure_df['id'] = exposure_df.index
+
+    G_original = create_original_graph(exposure_df, g_type)
+
+    damage_df = get_damage_df(dstore, exposure_df)
+
     # Calling the function according to the specification of the node type
     # if the nodes acts as both supply or demand (for example: traffic analysis
     # zone in transportation network)
+
+    # FIXME: what happens if we have more than one node class? Shouldn't we
+    # consider all separate groups instead of e.g. just TAZ_nodes, when
+    # present?
 
     if TAZ_nodes:
         (taz_cl, node_el,
