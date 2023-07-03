@@ -10,13 +10,13 @@ Homepage: http://github.com/gem/oq-engine
 Package: python3-oq-engine
 Architecture: amd64
 X-Python-Version: >= 3.6
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, ${dist:Depends}, python3-oq-libs (>=3.8.0~)
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, ${dist:Depends}, python3-oq-libs (>=3.8.1~)
 Conflicts: python-noq, python-oq, python-nhlib
 Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine (<< ${binary:Version})
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks
 Breaks: python-oq-risklib, python-oq-hazardlib, python-oq-engine (<< ${binary:Version})
 Recommends: ${dist:Recommends}
-Suggests: python3-oq-libs-extra (>=3.8.0~)
+Suggests: python3-oq-libs-extra (>=3.8.1~)
 Description: computes seismic hazard and physical risk
  based on the hazard and risk libraries developed by the GEM foundation
  (http://www.globalquakemodel.org/)

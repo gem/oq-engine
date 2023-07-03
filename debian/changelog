@@ -1,3 +1,4 @@
+
   [Athanasios Papadopoulos]
   * Adjusted the Swiss-specific implementations of the GMPEs used
     in the Swiss national seismic hazard (SUIhaz15) and risk (ERM-CH23) models.
@@ -11,7 +12,18 @@
     ch_phisss03, ch_phis2s06 site parameters to the site.py file.
     These parameters are required by the apply_swiss_amplification_sa method.
 
+  [Marco Pagani, Michele Simionato]
+  * Added support for the "direct" method in MRD calculations
+
   [Michele Simionato]
+  * Reimplemented the conditional_spectrum calculator as a post-processor
+
+  [Paolo Tormene, Michele Simionato]
+  * Raise an error when the same parameter is set in different sections
+    of the job.ini file
+
+  [Michele Simionato]
+  * Fixed tau-phi inversion in LanzanoLuzi2019
   * Fixed another bug with conditioned GMFs appearing as the error
     `array[m, n, bad] = exp(mean_covs[0, g, m, n], im)
      TypeError: list indices must be integers or slices, not tuple`
