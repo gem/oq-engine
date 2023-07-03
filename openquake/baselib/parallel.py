@@ -230,7 +230,7 @@ srun ~/.conda/envs/openquake/bin/python -m openquake.baselib.slurm {mon.calc_dir
 def fake_slurm_start(mon):
     pool = mp_context.Pool()
     for task_id in range(1, mon.task_no + 1):
-        pool.apply_async(main, (mon.calc_dir, str(task_id)))
+        pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
     pool.close()
     pool.join()
 
@@ -479,7 +479,7 @@ dummy_mon.backurl = None
 DEBUG = False
 
 
-def sendback(res, zsocket, sentbytes):
+def sendback(res, zsocket):
     """
     Send back to the master node the result by using the zsocket.
 
@@ -490,7 +490,7 @@ def sendback(res, zsocket, sentbytes):
     nbytes = len(res.pik)
     # avoid output congestion by waiting a bit
     wait = config.performance.slowdown_rate * nbytes
-    time.sleep(wait * numpy.random.random())
+    time.sleep(wait)
     try:
         zsocket.send(res)
         if DEBUG:
@@ -505,7 +505,7 @@ def sendback(res, zsocket, sentbytes):
             dblog('ERROR', calc_id, task_no, tb_str)
         res = Result(exc, res.mon, tb_str)
         zsocket.send(res)
-    return sentbytes + nbytes
+    return nbytes
 
 
 def safely_call(func, args, task_no=0, mon=dummy_mon):
@@ -550,12 +550,12 @@ def safely_call(func, args, task_no=0, mon=dummy_mon):
                 if res.msg == 'TASK_ENDED':
                     zsocket.send(res)
                     break
-                sentbytes = sendback(res, zsocket, sentbytes)
+                sentbytes += sendback(res, zsocket)
     else:
         res = Result.new(func, args, mon)
         # send back a single result and a TASK_ENDED
         with Socket(mon.backurl, zmq.PUSH, 'connect') as zsocket:
-            sentbytes = sendback(res, zsocket, sentbytes)
+            sentbytes += sendback(res, zsocket)
             end = Result(None, mon, msg='TASK_ENDED')
             end.pik = FakePickle(sentbytes)
             zsocket.send(end)
