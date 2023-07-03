@@ -1078,5 +1078,5 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
 def main(calc_dir: str, task_id: str):
     with open(calc_dir + '/' + task_id + '.inp', 'rb') as f:
         func, args, mon = pickle.load(f)
-    # os.remove(f.name)
     safely_call(func, args, int(task_id) - 1, mon)
+    os.remove(f.name)
