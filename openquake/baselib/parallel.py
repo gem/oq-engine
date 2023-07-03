@@ -810,6 +810,7 @@ class Starmap(object):
         else:  # zmq returns data to the receiver_host
             self.return_ip = socket.gethostbyname(
                 config.dbserver.receiver_host or socket.gethostname())
+            logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
         self.task_no = 0
