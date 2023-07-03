@@ -493,6 +493,8 @@ def sendback(res, zsocket):
     time.sleep(wait)
     try:
         zsocket.send(res)
+        if wait > 1:
+            time.sleep(.1)
         if DEBUG:
             from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
