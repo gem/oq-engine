@@ -33,7 +33,7 @@ def analysis(dstore):
         )
     ).set_index("id")
 
-    # # Need to check. It is giving error when this is not done.
+    # TODO: Needs to be checked. It gives an error if this is not done.
     if 'weights' in exposure_df.columns:
         exposure_df['weights'] = exposure_df['weights'].astype(float)
 
@@ -114,7 +114,8 @@ def analysis(dstore):
         (taz_cl, node_el,
          event_connectivity_loss_pcl,
          event_connectivity_loss_wcl,
-         event_connectivity_loss_eff) = EFLWCLPCLloss_TAZ(**locals())
+         event_connectivity_loss_eff) = EFLWCLPCLloss_TAZ(
+            exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df, g_type)
         sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
         sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
         sum_connectivity_loss_eff = event_connectivity_loss_eff[
@@ -174,7 +175,9 @@ def analysis(dstore):
     elif demand_nodes:
         (dem_cl, node_el, event_connectivity_loss_ccl,
          event_connectivity_loss_pcl, event_connectivity_loss_wcl,
-         event_connectivity_loss_eff) = EFLWCLPCLCCL_demand(**locals())
+         event_connectivity_loss_eff) = EFLWCLPCLCCL_demand(
+            exposure_df, G_original, eff_nodes, demand_nodes, source_nodes,
+            damage_df, g_type)
         sum_connectivity_loss_ccl = event_connectivity_loss_ccl['CCL'].sum()
         sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
         sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
@@ -245,7 +248,8 @@ def analysis(dstore):
     # if nothing is mentioned incase of scarce data or every node is important
     # and no distinction can be made
     else:
-        node_el, event_connectivity_loss_eff = EFL_node(**locals())
+        node_el, event_connectivity_loss_eff = EFL_node(
+            exposure_df, G_original, eff_nodes, damage_df, g_type)
         sum_connectivity_loss_eff = event_connectivity_loss_eff[
             'EFFLoss'].sum()
 
@@ -293,9 +297,8 @@ def analysis(dstore):
 # for each node is also calculated
 
 
-def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes,
-                        demand_nodes, source_nodes, damage_df,
-                        calculation_mode, g_type, **kwargs):
+def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
+                        source_nodes, damage_df, g_type):
 
     # To store the information of the performance indicators at connectivity
     # level
@@ -537,8 +540,7 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes,
 # connectivity loss (SCL) doesnt make any sense in this case
 
 def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
-                      eff_nodes, damage_df, calculation_mode,
-                      g_type, **kwargs):
+                      eff_nodes, damage_df, g_type):
 
     # To store the information of the performance indicators at connectivity
     # level
@@ -742,8 +744,7 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
 
 # when no information about supply or demand is given or known,
 # only efficiency loss is calculated for all nodes
-def EFL_node(exposure_df, G_original, eff_nodes, damage_df,
-             calculation_mode, g_type, **kwargs):
+def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
 
     # To store the information of the performance indicators at connectivity
     # level
