@@ -220,7 +220,7 @@ SLURM_BATCH = '''\
 #!/bin/bash
 #SBATCH --array=1-{mon.task_no}
 #SBATCH --ntasks-per-core=2
-#SBATCH --time=01:00:00
+#SBATCH --time=10:00:00
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
