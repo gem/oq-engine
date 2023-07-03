@@ -223,7 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
-/apps/miniconda3/bin/python -m openquake.baselib.parallel {mon.calc_dir}
+srun /apps/miniconda3/bin/python -m openquake.baselib.parallel {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 '''
 
 def fake_slurm_start(mon):
@@ -270,10 +270,10 @@ def slurm_submit(self, func, args, monitor):
     calc_dir = monitor.filename.rsplit('.', 1)[0]  # $HOME/oqdata/calc_XXX
     if not os.path.exists(calc_dir):
         os.mkdir(calc_dir)
-    pikname = str(self.task_no + 1) + '.pik'
-    with open(os.path.join(calc_dir, pikname), 'wb') as f:
+    inpname = str(self.task_no + 1) + '.inp'
+    with open(os.path.join(calc_dir, inpname), 'wb') as f:
         pickle.dump((func, args, monitor), f, pickle.HIGHEST_PROTOCOL)
-    print('saved', os.path.join(calc_dir, pikname))
+    print('saved', os.path.join(calc_dir, inpname))
 
 
 def oq_distribute(task=None):
@@ -1073,14 +1073,13 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
             del procs[finished]
 
 
-def main(calc_dir: str):
-    task_id = os.environ['SLURM_ARRAY_TASK_ID']
-    with open(calc_dir + '/' + task_id + '.pik', 'rb') as f:
+def main(calc_dir: str, task_id: str):
+    with open(calc_dir + '/' + task_id + '.inp', 'rb') as f:
         func, args, mon = pickle.load(f)
-    os.remove(f.name)
+    # os.remove(f.name)
     safely_call(func, args, int(task_id) - 1, mon)
 
     
 if __name__ == '__main__':
     # invoked by SLURM_BATCH
-    main(sys.argv[1])
+    main(*sys.argv[1:])

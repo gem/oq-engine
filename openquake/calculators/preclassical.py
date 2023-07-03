@@ -191,7 +191,7 @@ class PreClassicalCalculator(base.HazardCalculator):
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
-        smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        allargs = []
         for grp_id, srcs in sources_by_key.items():
             pointsources, pointlike, others = [], [], []
             for src in srcs:
@@ -200,22 +200,24 @@ class PreClassicalCalculator(base.HazardCalculator):
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
                 elif src.code in b'CFN':  # send the heavy sources
-                    smap.submit(([src], sites, cmakers[grp_id]))
+                    allargs.append(([src], sites, cmakers[grp_id]))
                 else:
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
                 if oq.ps_grid_spacing:
                     # do not split the pointsources
-                    smap.submit(
+                    allargs.append(
                         (pointsources + pointlike, sites, cmakers[grp_id]))
                 else:
                     for block in block_splitter(pointsources, 1000):
-                        smap.submit((block, sites, cmakers[grp_id]))
+                        allargs.append((block, sites, cmakers[grp_id]))
                     others.extend(pointlike)
             for block in block_splitter(others, 20):
-                smap.submit((block, sites, cmakers[grp_id]))
-        normal = smap.reduce()
+                allargs.append((block, sites, cmakers[grp_id]))
+        normal = parallel.Starmap(
+            preclassical, allargs, h5=self.datastore.hdf5
+        ).reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
             atomic = AccumDict({'before': n, 'after': n})
