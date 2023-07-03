@@ -120,6 +120,185 @@ def get_damage_df(dstore, exposure_df):
     return damage_df
 
 
+def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
+                      damage_df, g_type, calculation_mode):
+    (taz_cl, node_el,
+        event_connectivity_loss_pcl,
+        event_connectivity_loss_wcl,
+        event_connectivity_loss_eff) = EFLWCLPCLloss_TAZ(
+        exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df, g_type)
+    sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
+    sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
+    sum_connectivity_loss_eff = event_connectivity_loss_eff[
+        'EFFLoss'].sum()
+
+    if calculation_mode == "event_based_damage":
+        inv_time = dstore["oqparam"].investigation_time
+        ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
+        num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
+        eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
+        avg_connectivity_loss_pcl = (
+            sum_connectivity_loss_pcl / eff_inv_time)
+        avg_connectivity_loss_wcl = sum_connectivity_loss_wcl/eff_inv_time
+        avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
+
+    elif calculation_mode == "scenario_damage":
+        num_events = len(damage_df.reset_index().event_id.unique())
+        avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
+        avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
+        avg_connectivity_loss_eff = sum_connectivity_loss_eff / num_events
+        taz_cl.loc[:, "PCL_node"] = taz_cl["PCL_node"].apply(
+            lambda x: x/num_events)
+        taz_cl.loc[:, "WCL_node"] = taz_cl["WCL_node"].apply(
+            lambda x: x/num_events)
+        node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
+            lambda x: x/num_events)
+
+    print("The mean of the Partial Connectivity Loss: {}".format(
+        avg_connectivity_loss_pcl))
+    print("The mean of the Weighted Connectivity Loss: {}".format(
+        avg_connectivity_loss_wcl))
+    print("The mean of the Global Efficiency Loss: {}".format(
+        avg_connectivity_loss_eff))
+    dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
+    dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
+    dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
+
+    # Storing the connectivity loss at global level for each event
+    # TODO: Save performance metrics for each event in datastore and make
+    #       it exportable
+    # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
+    # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
+    # event_connectivity_loss_eff.to_csv("efl_event.csv")
+    dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
+    dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
+    dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
+    # Storing the connectivity loss at nodal level
+    # TODO: Save taz_cl in datastore and make it exportable
+    # taz_cl.to_csv("taz.csv")
+    dstore.create_df('taz_cl', taz_cl)
+    # TODO: Save node_el in datastore and make it exportable
+    # node_el.to_csv("node_el.csv")
+    dstore.create_df('node_el', node_el)
+
+    return node_el, avg_connectivity_loss_eff
+
+
+def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
+                         demand_nodes, source_nodes, damage_df, g_type,
+                         calculation_mode):
+    (dem_cl, node_el, event_connectivity_loss_ccl,
+        event_connectivity_loss_pcl, event_connectivity_loss_wcl,
+        event_connectivity_loss_eff) = EFLWCLPCLCCL_demand(
+        exposure_df, G_original, eff_nodes, demand_nodes, source_nodes,
+        damage_df, g_type)
+    sum_connectivity_loss_ccl = event_connectivity_loss_ccl['CCL'].sum()
+    sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
+    sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
+    sum_connectivity_loss_eff = event_connectivity_loss_eff[
+        'EFFLoss'].sum()
+
+    if calculation_mode == "event_based_damage":
+        inv_time = dstore["oqparam"].investigation_time
+        ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
+        num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
+        eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
+        avg_connectivity_loss_ccl = (
+            sum_connectivity_loss_ccl / eff_inv_time)
+        avg_connectivity_loss_pcl = (
+            sum_connectivity_loss_pcl / eff_inv_time)
+        avg_connectivity_loss_wcl = (
+            sum_connectivity_loss_wcl / eff_inv_time)
+        avg_connectivity_loss_eff = (
+            sum_connectivity_loss_eff / eff_inv_time)
+
+    elif calculation_mode == "scenario_damage":
+        num_events = len(damage_df.reset_index().event_id.unique())
+        avg_connectivity_loss_ccl = sum_connectivity_loss_ccl / num_events
+        avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
+        avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
+        avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
+        dem_cl.loc[:, "CCL_node"] = dem_cl["CCL_node"].apply(
+            lambda x: x/num_events)
+        dem_cl.loc[:, "PCL_node"] = dem_cl["PCL_node"].apply(
+            lambda x: x/num_events)
+        dem_cl.loc[:, "WCL_node"] = dem_cl["WCL_node"].apply(
+            lambda x: x/num_events)
+        node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
+            lambda x: x/num_events)
+
+    print("The mean of the Complete Connectivity Loss: {}".format(
+        avg_connectivity_loss_ccl))
+    print("The mean of the Partial Connectivity Loss: {}".format(
+        avg_connectivity_loss_pcl))
+    print("The mean of the Weighted Connectivity Loss: {}".format(
+        avg_connectivity_loss_wcl))
+    print("The mean of the Global Efficiency Loss: {}".format(
+        avg_connectivity_loss_eff))
+    dstore['avg_connectivity_loss_ccl'] = avg_connectivity_loss_ccl
+    dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
+    dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
+    dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
+
+    # Storing the connectivity loss at global level for each event
+    # TODO: Save performance metrics in datastore and make it exportable
+    # event_connectivity_loss_ccl.to_csv("ccl_event.csv")
+    # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
+    # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
+    # event_connectivity_loss_eff.to_csv("efl_event.csv")
+    dstore['event_connectivity_loss_ccl'] = event_connectivity_loss_ccl
+    dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
+    dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
+    dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
+
+    # Storing the connectivity loss at nodal level
+    # TODO: Save dem_cl in datastore and make it exportable
+    # dem_cl.to_csv("dem_cl.csv")
+    dstore.create_df('dem_cl', dem_cl)
+    # TODO: Save node_el in datastore and make it exportable
+    # node_el.to_csv("node_el.csv")
+    dstore.create_df('node_el', node_el)
+
+    return node_el, avg_connectivity_loss_eff
+
+
+def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
+                          damage_df, g_type, calculation_mode):
+    node_el, event_connectivity_loss_eff = EFL_node(
+        exposure_df, G_original, eff_nodes, damage_df, g_type)
+    sum_connectivity_loss_eff = event_connectivity_loss_eff[
+        'EFFLoss'].sum()
+
+    if calculation_mode == "event_based_damage":
+        inv_time = dstore["oqparam"].investigation_time
+        ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
+        num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
+        eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
+        avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
+
+    elif calculation_mode == "scenario_damage":
+        num_events = len(damage_df.reset_index().event_id.unique())
+        avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
+        node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
+            lambda x: x/num_events)
+
+    print("The mean of the Global Efficiency Loss: {}".format(
+        avg_connectivity_loss_eff))
+    dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
+
+    # Storing the connectivity loss at global level for each event
+    # TODO: Save event_connectivity_loss_eff in datastore and make it
+    #       exportable
+    # event_connectivity_loss_eff.to_csv("efl_event.csv")
+    dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
+    # Storing the connectivity loss at nodal level
+    # TODO: Save node_el in datastore and make it exportable
+    # node_el.to_csv("node_el.csv")
+    dstore.create_df('node_el', node_el)
+
+    return node_el, avg_connectivity_loss_eff
+
+
 def analysis(dstore):
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode
@@ -147,175 +326,25 @@ def analysis(dstore):
     # present?
 
     if TAZ_nodes:
-        (taz_cl, node_el,
-         event_connectivity_loss_pcl,
-         event_connectivity_loss_wcl,
-         event_connectivity_loss_eff) = EFLWCLPCLloss_TAZ(
-            exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df, g_type)
-        sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
-        sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
-        sum_connectivity_loss_eff = event_connectivity_loss_eff[
-            'EFFLoss'].sum()
-
-        if calculation_mode == "event_based_damage":
-            inv_time = dstore["oqparam"].investigation_time
-            ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
-            num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
-            eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
-            avg_connectivity_loss_pcl = (
-                sum_connectivity_loss_pcl / eff_inv_time)
-            avg_connectivity_loss_wcl = sum_connectivity_loss_wcl/eff_inv_time
-            avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
-
-        elif calculation_mode == "scenario_damage":
-            num_events = len(damage_df.reset_index().event_id.unique())
-            avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
-            avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
-            avg_connectivity_loss_eff = sum_connectivity_loss_eff / num_events
-            taz_cl.loc[:, "PCL_node"] = taz_cl["PCL_node"].apply(
-                lambda x: x/num_events)
-            taz_cl.loc[:, "WCL_node"] = taz_cl["WCL_node"].apply(
-                lambda x: x/num_events)
-            node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
-                lambda x: x/num_events)
-
-        print("The mean of the Partial Connectivity Loss: {}".format(
-            avg_connectivity_loss_pcl))
-        print("The mean of the Weighted Connectivity Loss: {}".format(
-            avg_connectivity_loss_wcl))
-        print("The mean of the Global Efficiency Loss: {}".format(
-            avg_connectivity_loss_eff))
-        dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
-        dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
-        dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
-
-        # Storing the connectivity loss at global level for each event
-        # TODO: Save performance metrics for each event in datastore and make
-        #       it exportable
-        # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
-        # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
-        # event_connectivity_loss_eff.to_csv("efl_event.csv")
-        dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
-        dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
-        dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
-        # Storing the connectivity loss at nodal level
-        # TODO: Save taz_cl in datastore and make it exportable
-        # taz_cl.to_csv("taz.csv")
-        dstore.create_df('taz_cl', taz_cl)
-        # TODO: Save node_el in datastore and make it exportable
-        # node_el.to_csv("node_el.csv")
-        dstore.create_df('node_el', node_el)
+        node_el, avg_connectivity_loss_eff = analyze_taz_nodes(
+            dstore, exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df,
+            g_type, calculation_mode)
 
     # This is the classic and mostly used when supply/source and demand/sink is
     # explicity mentioned to the nodes of interest
     elif demand_nodes:
-        (dem_cl, node_el, event_connectivity_loss_ccl,
-         event_connectivity_loss_pcl, event_connectivity_loss_wcl,
-         event_connectivity_loss_eff) = EFLWCLPCLCCL_demand(
-            exposure_df, G_original, eff_nodes, demand_nodes, source_nodes,
-            damage_df, g_type)
-        sum_connectivity_loss_ccl = event_connectivity_loss_ccl['CCL'].sum()
-        sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
-        sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
-        sum_connectivity_loss_eff = event_connectivity_loss_eff[
-            'EFFLoss'].sum()
+        node_el, avg_connectivity_loss_eff = analyze_demand_nodes(
+            dstore, exposure_df, G_original, eff_nodes, demand_nodes,
+            source_nodes, damage_df, g_type, calculation_mode)
 
-        if calculation_mode == "event_based_damage":
-            inv_time = dstore["oqparam"].investigation_time
-            ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
-            num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
-            eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
-            avg_connectivity_loss_ccl = (
-                sum_connectivity_loss_ccl / eff_inv_time)
-            avg_connectivity_loss_pcl = (
-                sum_connectivity_loss_pcl / eff_inv_time)
-            avg_connectivity_loss_wcl = (
-                sum_connectivity_loss_wcl / eff_inv_time)
-            avg_connectivity_loss_eff = (
-                sum_connectivity_loss_eff / eff_inv_time)
-
-        elif calculation_mode == "scenario_damage":
-            num_events = len(damage_df.reset_index().event_id.unique())
-            avg_connectivity_loss_ccl = sum_connectivity_loss_ccl / num_events
-            avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
-            avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
-            avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
-            dem_cl.loc[:, "CCL_node"] = dem_cl["CCL_node"].apply(
-                lambda x: x/num_events)
-            dem_cl.loc[:, "PCL_node"] = dem_cl["PCL_node"].apply(
-                lambda x: x/num_events)
-            dem_cl.loc[:, "WCL_node"] = dem_cl["WCL_node"].apply(
-                lambda x: x/num_events)
-            node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
-                lambda x: x/num_events)
-
-        print("The mean of the Complete Connectivity Loss: {}".format(
-            avg_connectivity_loss_ccl))
-        print("The mean of the Partial Connectivity Loss: {}".format(
-            avg_connectivity_loss_pcl))
-        print("The mean of the Weighted Connectivity Loss: {}".format(
-            avg_connectivity_loss_wcl))
-        print("The mean of the Global Efficiency Loss: {}".format(
-            avg_connectivity_loss_eff))
-        dstore['avg_connectivity_loss_ccl'] = avg_connectivity_loss_ccl
-        dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
-        dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
-        dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
-
-        # Storing the connectivity loss at global level for each event
-        # TODO: Save performance metrics in datastore and make it exportable
-        # event_connectivity_loss_ccl.to_csv("ccl_event.csv")
-        # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
-        # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
-        # event_connectivity_loss_eff.to_csv("efl_event.csv")
-        dstore['event_connectivity_loss_ccl'] = event_connectivity_loss_ccl
-        dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
-        dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
-        dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
-
-        # Storing the connectivity loss at nodal level
-        # TODO: Save dem_cl in datastore and make it exportable
-        # dem_cl.to_csv("dem_cl.csv")
-        dstore.create_df('dem_cl', dem_cl)
-        # TODO: Save node_el in datastore and make it exportable
-        # node_el.to_csv("node_el.csv")
-        dstore.create_df('node_el', node_el)
-
-    # if nothing is mentioned incase of scarce data or every node is important
+    # if nothing is mentioned in case of scarce data or every node is important
     # and no distinction can be made
     else:
-        node_el, event_connectivity_loss_eff = EFL_node(
-            exposure_df, G_original, eff_nodes, damage_df, g_type)
-        sum_connectivity_loss_eff = event_connectivity_loss_eff[
-            'EFFLoss'].sum()
+        node_el, avg_connectivity_loss_eff = analyze_generic_nodes(
+            dstore, exposure_df, G_original, eff_nodes, damage_df, g_type,
+            calculation_mode)
 
-        if calculation_mode == "event_based_damage":
-            inv_time = dstore["oqparam"].investigation_time
-            ses_per_ltp = dstore["oqparam"].ses_per_logic_tree_path
-            num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
-            eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
-            avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
-
-        elif calculation_mode == "scenario_damage":
-            num_events = len(damage_df.reset_index().event_id.unique())
-            avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
-            node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
-                lambda x: x/num_events)
-
-        print("The mean of the Global Efficiency Loss: {}".format(
-            avg_connectivity_loss_eff))
-        dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
-
-        # Storing the connectivity loss at global level for each event
-        # TODO: Save event_connectivity_loss_eff in datastore and make it
-        #       exportable
-        # event_connectivity_loss_eff.to_csv("efl_event.csv")
-        dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
-        # Storing the connectivity loss at nodal level
-        # TODO: Save node_el in datastore and make it exportable
-        # node_el.to_csv("node_el.csv")
-        dstore.create_df('node_el', node_el)
-
+    # FIXME
     # The output gives efficiency loss even if it say average connectivity loss
     # in the output. It has to be modified in
     # openquake/calculators/event_based_damage.py
@@ -325,16 +354,15 @@ def analysis(dstore):
 
     return node_el, avg_connectivity_loss_eff
 
-# Classic one where particular nodes are divided as supply or demand and the
-# main interest is to check the serviceability of supply to demand nodes. This
-# calculates, complete connectivity loss (CCL), weighted connectivity loss
-# (WCL), partial connectivity loss(PCL) considering the demand and supply nodes
-# provided at nodal and global level. Additionly, efficiency loss globally and
-# for each node is also calculated
-
 
 def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
                         source_nodes, damage_df, g_type):
+    # Classic one where particular nodes are divided as supply or demand and
+    # the main interest is to check the serviceability of supply to demand
+    # nodes. This calculates, complete connectivity loss (CCL), weighted
+    # connectivity loss (WCL), partial connectivity loss(PCL) considering the
+    # demand and supply nodes provided at nodal and global level. Additionly,
+    # efficiency loss globally and for each node is also calculated
 
     # To store the information of the performance indicators at connectivity
     # level
@@ -569,14 +597,13 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
             event_connectivity_loss_eff)
 
 
-# When the nodes acts as both demand and supply.
-# For example, traffic analysis zone in transportation network. This
-# calculates, efficiency loss (EFL),
-# weighted connectivity loss (WCL),partial connectivity loss(PCL).Simple
-# connectivity loss (SCL) doesnt make any sense in this case
-
 def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
                       eff_nodes, damage_df, g_type):
+    # When the nodes acts as both demand and supply.
+    # For example, traffic analysis zone in transportation network. This
+    # calculates, efficiency loss (EFL),
+    # weighted connectivity loss (WCL),partial connectivity loss(PCL).
+    # Simple connectivity loss (SCL) doesnt make any sense in this case.
 
     # To store the information of the performance indicators at connectivity
     # level
@@ -778,9 +805,9 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
             event_connectivity_loss_wcl, event_connectivity_loss_eff)
 
 
-# when no information about supply or demand is given or known,
-# only efficiency loss is calculated for all nodes
 def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
+    # when no information about supply or demand is given or known,
+    # only efficiency loss is calculated for all nodes
 
     # To store the information of the performance indicators at connectivity
     # level
