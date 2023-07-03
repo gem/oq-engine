@@ -340,6 +340,50 @@ def cleanup_graph(G_original, event_damage_df, g_type):
     return G
 
 
+def FIXME_for_calculating_weighted_connectivity_loss(
+        G_original, nodes_from, nodes_to, wcl_table, pcl_table):
+    # For calculating weighted connectivity loss
+    # Important: if the weights is not provided, then the weights of each edges
+    # is considered to be one.
+    att = nx.get_edge_attributes(G_original, 'weights')
+    for i in nodes_to:
+        if not att:
+            path_lengths = [
+                nx.shortest_path_length(G_original, j, i)
+                for j in nodes_from if nx.has_path(G_original, j, i)]
+            countw = sum(
+                [1/path_length for path_length in path_lengths
+                 if path_length != 0])
+        else:
+            path_lengths = [
+                nx.shortest_path_length(G_original, j, i, weight='weights')
+                for j in nodes_from if nx.has_path(G_original, j, i)]
+            countw = sum(
+                [1/path_length for path_length in path_lengths
+                 if path_length != 0])
+        wcl_table.at[i, 'WS0'] = countw * pcl_table.at[i, 'NS0']
+
+
+def FIXME_for_calculating_efficiency(G_original, eff_table):
+    # For calculating efficiency
+    # Important: If the weights is not provided, then the weights of each edges
+    # is considered to be one.
+    N = len(G_original)
+    att = nx.get_edge_attributes(G_original, 'weights')
+    for node in G_original:
+        if not att:
+            lengths = nx.single_source_shortest_path_length(G_original, node)
+            inv = [1/x for x in lengths.values() if x != 0]
+            eff_node = (sum(inv))/(N-1)
+        else:
+            lengths = nx.single_source_dijkstra_path_length(
+                G_original, node, weight="weights")
+            inv = [1/x for x in lengths.values() if x != 0]
+            eff_node = (sum(inv))/(N-1)
+        eff_table.at[node, 'Eff0'] = eff_node
+    return att
+
+
 def analysis(dstore):
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode
@@ -423,52 +467,20 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EFFLoss'])
 
     # To check the the values for each node before the earthquake event
-    # For calculating complete connectivity Loss
 
+    # For calculating complete connectivity Loss
     ccl_table['CNO'] = [1 if any(nx.has_path(G_original, j, i)
                         for j in source_nodes) else 0 for i in demand_nodes]
 
-    # For calculating partialy connectivity loss
+    # For calculating partial connectivity loss
     pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i)
                         for j in source_nodes) for i in demand_nodes]
 
-    # For calculating weighted connectivity loss
-    # Important: If the weights is not provided, then the weights of each edges
-    # is considered to be one
-    att = nx.get_edge_attributes(G_original, 'weights')
-
-    for i in demand_nodes:
-        if not att:
-            path_lengths = [nx.shortest_path_length(G_original, j, i)
-                            for j in source_nodes
-                            if nx.has_path(G_original, j, i)]
-            countw = sum([1/path_length for path_length in path_lengths
-                          if path_length != 0])
-        else:
-            path_lengths = [
-                nx.shortest_path_length(G_original, j, i, weight='weights')
-                for j in source_nodes if nx.has_path(G_original, j, i)]
-            countw = sum([1/path_length for path_length in path_lengths
-                         if path_length != 0])
-        wcl_table.at[i, 'WS0'] = countw * pcl_table.at[i, 'NS0']
-
-    # For calculating efficiency
-    # Important: If the weights is not provided, then the weights of each edges
-    # is considered to be one.
+    FIXME_for_calculating_weighted_connectivity_loss(
+        G_original, source_nodes, demand_nodes, wcl_table, pcl_table)
 
     N = len(G_original)
-    att = nx.get_edge_attributes(G_original, 'weights')
-    for node in G_original:
-        if not att:
-            lengths = nx.single_source_shortest_path_length(G_original, node)
-            inv = [1/x for x in lengths.values() if x != 0]
-            eff_node = (sum(inv))/(N-1)
-        else:
-            lengths = nx.single_source_dijkstra_path_length(
-                G_original, node, weight="weights")
-            inv = [1/x for x in lengths.values() if x != 0]
-            eff_node = (sum(inv))/(N-1)
-        eff_table.at[node, 'Eff0'] = eff_node
+    att = FIXME_for_calculating_efficiency(G_original, eff_table)
 
     # Now we check for every event after earthquake
     for event_id, event_damage_df in damage_df.groupby("event_id"):
@@ -621,7 +633,8 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EFFLoss'])
 
     # To check the the values for each node before the earthquake event
-    # For calculating partialy connectivity loss
+
+    # For calculating partial connectivity loss
     for i in TAZ_nodes:
         count = 0
         for j in TAZ_nodes:
@@ -637,40 +650,11 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     # pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i) for j in TAZ_nodes)
     # for i in TAZ_nodes]
 
-    # For calculating weighted connectivity loss
-    # If the weights is not provided, then the weights of each edges is
-    # considered to be one.
-    att = nx.get_edge_attributes(G_original, 'weights')
-    for i in TAZ_nodes:
-        if not att:
-            path_lengths = [
-                nx.shortest_path_length(G_original, j, i)
-                for j in TAZ_nodes if nx.has_path(G_original, j, i)]
-            countw = sum(
-                [1/path_length for path_length in path_lengths
-                 if path_length != 0])
-        else:
-            path_lengths = [
-                nx.shortest_path_length(G_original, j, i, weight='weights')
-                for j in TAZ_nodes if nx.has_path(G_original, j, i)]
-            countw = sum(
-                [1/path_length for path_length in path_lengths
-                 if path_length != 0])
-        wcl_table.at[i, 'WS0'] = countw * pcl_table.at[i, 'NS0']
-    # For calculating efficiency loss
+    FIXME_for_calculating_weighted_connectivity_loss(
+        G_original, TAZ_nodes, TAZ_nodes, wcl_table, pcl_table)
+
     N = len(G_original)
-    att = nx.get_edge_attributes(G_original, 'weights')
-    for node in G_original:
-        if not att:
-            lengths = nx.single_source_shortest_path_length(G_original, node)
-            inv = [1/x for x in lengths.values() if x != 0]
-            eff_node = (sum(inv))/(N-1)
-        else:
-            lengths = nx.single_source_dijkstra_path_length(
-                G_original, node, weight="weights")
-            inv = [1/x for x in lengths.values() if x != 0]
-            eff_node = (sum(inv))/(N-1)
-        eff_table.at[node, 'Eff0'] = eff_node
+    att = FIXME_for_calculating_efficiency(G_original, eff_table)
 
     for event_id, event_damage_df in damage_df.groupby("event_id"):
         G = cleanup_graph(G_original, event_damage_df, g_type)
@@ -791,20 +775,9 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
     event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EFFLoss'])
 
     # To check the the values for each node before the earthquake event
-    # For calculating efficiency
+
     N = len(G_original)
-    att = nx.get_edge_attributes(G_original, 'weights')
-    for node in G_original:
-        if not att:
-            lengths = nx.single_source_shortest_path_length(G_original, node)
-            inv = [1/x for x in lengths.values() if x != 0]
-            eff_node = (sum(inv))/(N-1)
-        else:
-            lengths = nx.single_source_dijkstra_path_length(
-                G_original, node, weight="weights")
-            inv = [1/x for x in lengths.values() if x != 0]
-            eff_node = (sum(inv))/(N-1)
-        eff_table.at[node, 'Eff0'] = eff_node
+    att = FIXME_for_calculating_efficiency(G_original, eff_table)
 
     # After eathquake
     for event_id, event_damage_df in damage_df.groupby("event_id"):
