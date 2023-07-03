@@ -490,7 +490,7 @@ def sendback(res, zsocket, sentbytes):
     nbytes = len(res.pik)
     # avoid output congestion by waiting a bit
     wait = config.performance.slowdown_rate * nbytes
-    time.sleep(wait)
+    time.sleep(wait * numpy.random.random())
     try:
         zsocket.send(res)
         if DEBUG:
