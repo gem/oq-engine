@@ -170,9 +170,12 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
     # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
     # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
     # event_connectivity_loss_eff.to_csv("efl_event.csv")
-    dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
-    dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
-    dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
+    dstore.create_df('event_connectivity_loss_pcl',
+                     event_connectivity_loss_pcl)
+    dstore.create_df('event_connectivity_loss_wcl',
+                     event_connectivity_loss_wcl)
+    dstore.create_df('event_connectivity_loss_eff',
+                     event_connectivity_loss_eff)
     # Storing the connectivity loss at nodal level
     # TODO: Save taz_cl in datastore and make it exportable
     # taz_cl.to_csv("taz.csv")
@@ -246,10 +249,14 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
     # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
     # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
     # event_connectivity_loss_eff.to_csv("efl_event.csv")
-    dstore['event_connectivity_loss_ccl'] = event_connectivity_loss_ccl
-    dstore['event_connectivity_loss_pcl'] = event_connectivity_loss_pcl
-    dstore['event_connectivity_loss_wcl'] = event_connectivity_loss_wcl
-    dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
+    dstore.create_df('event_connectivity_loss_ccl',
+                     event_connectivity_loss_ccl)
+    dstore.create_df('event_connectivity_loss_pcl',
+                     event_connectivity_loss_pcl)
+    dstore.create_df('event_connectivity_loss_wcl',
+                     event_connectivity_loss_wcl)
+    dstore.create_df('event_connectivity_loss_eff',
+                     event_connectivity_loss_eff)
 
     # Storing the connectivity loss at nodal level
     # TODO: Save dem_cl in datastore and make it exportable
@@ -290,7 +297,8 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
     # TODO: Save event_connectivity_loss_eff in datastore and make it
     #       exportable
     # event_connectivity_loss_eff.to_csv("efl_event.csv")
-    dstore['event_connectivity_loss_eff'] = event_connectivity_loss_eff
+    dstore.create_df('event_connectivity_loss_eff',
+                     event_connectivity_loss_eff)
     # Storing the connectivity loss at nodal level
     # TODO: Save node_el in datastore and make it exportable
     # node_el.to_csv("node_el.csv")
