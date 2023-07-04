@@ -218,6 +218,7 @@ host_cores = config.zworkers.host_cores.split(',')
 # see https://scicomp.aalto.fi/triton/tut/array
 SLURM_BATCH = '''\
 #!/bin/bash
+#SBATCH --job-name={mon.operation}
 #SBATCH --array=1-{mon.task_no}
 #SBATCH --ntasks-per-core=2
 #SBATCH --time=10:00:00
@@ -227,7 +228,21 @@ SLURM_BATCH = '''\
 srun ~/.conda/envs/openquake/bin/python -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 '''
 
-def fake_slurm_start(mon):
+def sbatch(mon):
+    """
+    Start a SLURM script via sbatch
+    """
+    path = os.path.join(mon.calc_dir, 'slurm.sh')
+    with open(path, 'w') as f:
+        f.write(SLURM_BATCH.format(mon=mon))
+    os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
+    sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
+    if sbatch:
+        subprocess.run(['sbatch', path])
+        return
+
+    # if SLURM is not installed, fake it
+    logging.info(f'Faking SLURM for {mon.operation}')
     pool = mp_context.Pool()
     for task_id in range(1, mon.task_no + 1):
         pool.apply_async(slurm_task, (mon.calc_dir, str(task_id)))
@@ -887,6 +902,11 @@ class Starmap(object):
         else:  # build a task queue in advance
             self.task_queue = [(self.task_func, args)
                                for args in self.task_args]
+        dist = 'no' if self.num_tasks == 1 else self.distribute
+        if dist == 'slurm':
+            for func, args in self.task_queue:
+                self.submit(args, func=func)
+            self.task_queue.clear()
         return self.get_results()
 
     def get_results(self):
@@ -917,16 +937,8 @@ class Starmap(object):
         self.busytime = AccumDict(accum=[])  # pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
-            for func, args in self.task_queue:
-                self.submit(args, func=func)
-            self.task_queue.clear()
             self.monitor.task_no = self.task_no
-            path = os.path.join(self.monitor.calc_dir, self.name + '.sh')
-            with open(path, 'w') as f:
-                f.write(SLURM_BATCH.format(mon=self.monitor))
-            os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
-            subprocess.run(['sbatch', path])
-            #fake_slurm_start(self.monitor)
+            sbatch(self.monitor)
                 
         elif self.task_queue:
             first_args = self.task_queue[:self.CT]
