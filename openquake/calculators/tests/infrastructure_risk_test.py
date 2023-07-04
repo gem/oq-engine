@@ -61,10 +61,87 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.8479166666666668,
              0.8927160714285713,
             ])
-        # TODO: also check:
-        #       'dem_cl', 'event_connectivity_loss_ccl',
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el'
+        # FIXME: the following check is very long. We might remove it.
+        aac([
+             list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+             list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+             list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+             list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            ],
+            [
+             [1.0, 1.0, 1.0, 0.0, 0.5, 1.0, 0.5, 0.0, 0.0, 0.5, 1.0,
+              0.6666666666666667, 0.0, 1.0, 0.5833333333333333, 1.0, 1.0,
+              0.5, 1.0, 0.0, 1.0, 0.6666666666666667, 1.0, 1.0, 1.0, 1.0,
+              0.5, 0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0,
+              0.5, 0.5, 0.6666666666666667, 0.5, 1.0, 1.0, 1.0, 1.0, 0.5,
+              0.0, 1.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 0.5, 1.0, 0.0,
+              1.0, 0.5, 1.0, 1.0, 0.0, 0.5, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0,
+              1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+              1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 0.0, 1.0, 1.0, 1.0, 0.5, 1.0,
+              1.0, 1.0, 1.0, 1.0, 1.0],
+             [0.7632961260669732, 0.8483256730137886, 0.3896257386736706, 0.0,
+              0.4555810899540382, 0.6035784635587658, 0.5578463558765595,
+              0.10305318450426784, 0.10305318450426784, 0.5387721602101118,
+              0.4300722258699936, 0.7226198292843072, 0.3369993434011818,
+              0.2942547603414314, 0.607715036112935, 0.8690085357846357,
+              0.7564018384766908, 0.4555810899540382, 0.7564018384766908,
+              0.0, 0.6093237032173343, 0.697800393959291,
+              0.6483913328956009, 0.25695994747209444, 0.7564018384766908,
+              0.3896257386736706, 0.4555810899540382, 0.4555810899540382,
+              0.4555810899540382, 0.8207485226526593, 0.25695994747209444,
+              0.4555810899540382, 0.7564018384766908, 0.8345370978332239,
+              0.6125410374261326, 0.7724885095206828, 0.3896257386736706,
+              0.7632961260669732, 0.6125410374261326, 0.4555810899540382,
+              0.7072225869993436, 0.4555810899540382, 0.7426132632961261,
+              0.7288246881155616, 0.8046618516086672, 0.3896257386736706,
+              0.4754432042022326, 0.21520026263952707, 0.7770847012475378,
+              0.3896257386736706, 0.7564018384766908, 0.10305318450426784,
+              0.3243598161523309, 0.7770847012475378, 0.3896257386736706,
+              0.7564018384766908, 0.6061063690085359, 0.7564018384766908,
+              0.34251477347340764, 0.7564018384766908, 0.5578463558765595,
+              0.8483256730137886, 0.4270847012475379, 0.10305318450426784,
+              0.6061063690085359, 0.4555810899540382, 0.8253447143795142,
+              0.7564018384766908, 0.3896257386736706, 0.3896257386736706,
+              0.3896257386736706, 0.7564018384766908, 0.7564018384766908,
+              0.7632961260669732, 0.7655942219304006, 0.1995732107682205,
+              0.7770847012475378, 0.7793827971109654, 0.7564018384766908,
+              0.7564018384766908, 0.7564018384766908, 0.7564018384766908,
+              0.8276428102429416, 0.6483913328956009, 0.7724885095206829,
+              0.6621799080761656, 0.7564018384766908, 0.6125410374261326,
+              0.7564018384766908, 0.18742613263296115, 0.7564018384766908,
+              0.7426132632961261, 0.7564018384766908, 0.5136736703873934,
+              0.7724885095206828, 0.6621799080761656, 0.723768877216021,
+              0.7564018384766908, 0.7564018384766908, 0.3896257386736706],
+             [1.0, 1.0, 1.0, 0.0, 0.5, 1.0, 0.75, 0.5, 0.5, 0.75, 1.0,
+              0.8333333333333334, 0.5, 1.0, 0.7916666666666666, 1.0, 1.0,
+              0.5, 1.0, 0.0, 1.0, 0.8333333333333334, 1.0, 1.0, 1.0, 1.0,
+              0.5, 0.5, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0,
+              0.75, 0.5, 0.8333333333333334, 0.5, 1.0, 1.0, 1.0, 1.0, 0.5,
+              0.5, 1.0, 1.0, 1.0, 0.5, 0.5, 1.0, 1.0, 1.0, 0.75, 1.0, 0.5,
+              1.0, 0.75, 1.0, 1.0, 0.5, 0.75, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0,
+              1.0, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+              1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 0.5, 1.0, 1.0, 1.0, 0.5, 1.0,
+              1.0, 1.0, 1.0, 1.0, 1.0],
+             [1.0, 1.0, 1.0, 0.0, 0.5213541666666667, 1.0, 0.8933035714285714,
+              0.8127480158730158, 0.8127480158730158, 0.8673735119047619,
+              1.0, 0.9260416666666665, 0.7216964285714287, 1.0,
+              0.9089285714285714, 1.0, 1.0, 0.5213541666666667, 1.0, 0.0,
+              1.0, 0.9119047619047619, 1.0, 1.0, 1.0, 1.0,
+              0.5213541666666667, 0.5213541666666667, 0.5213541666666667,
+              1.0, 1.0, 0.5213541666666667, 1.0, 1.0, 0.8673735119047619,
+              1.0, 1.0, 1.0, 0.8673735119047619, 0.5213541666666667,
+              0.9392857142857144, 0.5213541666666667, 1.0, 1.0, 1.0, 1.0,
+              0.5343749999999999, 0.8196924603174603, 1.0, 1.0, 1.0,
+              0.8127480158730158, 0.7216964285714287, 1.0, 1.0, 1.0,
+              0.8933035714285714, 1.0, 0.7272519841269842, 1.0,
+              0.8933035714285714, 1.0, 1.0, 0.8127480158730158,
+              0.8933035714285714, 0.5213541666666667, 1.0, 1.0, 1.0, 1.0,
+              1.0, 1.0, 1.0, 1.0, 1.0, 0.8127480158730158, 1.0, 1.0, 1.0,
+              1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.8673735119047619,
+              1.0, 0.7216964285714287, 1.0, 1.0, 1.0, 0.5404017857142857,
+              1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+            ])
+        # TODO: also check: 'dem_cl', 'node_el'
 
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
@@ -90,10 +167,19 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.3333333333333333,
              0.5202279202279202,
             ])
-        # TODO: also check:
-        #       'dem_cl', 'event_connectivity_loss_ccl',
-        #       'event _connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el'
+        aac([
+             list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+             list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+             list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+             list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            ],
+            [
+             [0.],
+             [0.29649596],
+             [0.33333333],
+             [0.52022792],
+            ])
+        # TODO: also check: 'dem_cl', 'node_el'
 
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
@@ -117,9 +203,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.25,
              0.2777777777777778,
             ])
-        # TODO: also check:
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+            [0.0, 0.38247931711565164])
+        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+            [0.0, 0.5])
+        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            [0.0, 0.5555555555555556])
+        # TODO: also check: 'node_el', 'taz_cl'
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
@@ -133,14 +223,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             0.09602352640327334, 0.10010409437890358, 0.15322580645161288,
             0.09355742296918781, 0.35130718954248374, 0.41342779580215844, 1.0]
         aac(eff_loss, expected_eff_loss)
-        aac([
-             ds['avg_connectivity_loss_eff'][()],
-            ],
-            [
-             0.2603130360205833,
-            ])
-        # TODO: also check:
-        #       'event_connectivity_loss_eff', 'node_el'
+        aac(ds['avg_connectivity_loss_eff'][()], 0.2603130360205833)
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+            [0.2603130360205833])
+        # TODO: also check: 'node_el'
 
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
@@ -164,10 +250,15 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.25,
              0.25,
             ])
-        # TODO: also check:
-        #       'dem_cl', 'event_connectivity_loss_ccl',
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el'
+        aac(list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+            [0.0, 0.5])
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+            [0.0, 0.2791878172588833])
+        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+            [0.0, 0.5])
+        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            [0.0, 0.5])
+        # TODO: also check: 'dem_cl', 'node_el'
 
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
@@ -191,10 +282,15 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.5,
              0.5
             ])
-        # TODO: also check:
-        #       'dem_cl', 'event_connectivity_loss_ccl',
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el'
+        aac(list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+            [0.0, 1.0])
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+            [0.0, 0.255813953488372])
+        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+            [0.0, 1.0])
+        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            [0.0, 1.0])
+        # TODO: also check: 'dem_cl', 'node_el'
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
@@ -220,10 +316,15 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.0,
              0.07777777777777778,
             ])
-        # TODO: also check:
-        #       'dem_cl', 'event_connectivity_loss_ccl',
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el'
+        aac(list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+            [0.0, 0.0])
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+            [0.0, 0.06554947908710397])
+        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+            [0.0, 0.0])
+        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            [0.0, 0.15555555555555556])
+        # TODO: also check: 'dem_cl', 'node_el'
 
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
@@ -247,9 +348,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.0,
              0.03437796771130103,
             ])
-        # TODO: also check:
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+             [0.0, 0.06554947908710397])
+        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+             [0.0, 0.0])
+        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+             [0.0, 0.06875593542260205])
+        # TODO: also check: 'node_el', 'taz_cl'
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
@@ -273,9 +378,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.0,
              0.0753968253968254,
             ])
-        # TODO: check also:
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+            [0.0, 0.13125453226976097])
+        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+            [0.0, 0.0])
+        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            [0.0, 0.1507936507936508])
+        # TODO: check also: 'node_el', 'taz_cl'
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
@@ -299,6 +408,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.0,
              0.0977366255144033,
             ])
-        # TODO: check also:
-        #       'event_connectivity_loss_eff', 'event_connectivity_loss_pcl',
-        #       'event_connectivity_loss_wcl', 'node_el', 'taz_cl'
+        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+            [0.0, 0.1741490320170526])
+        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+            [0.0, 0.0])
+        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+            [0.0, 0.1954732510288066])
+        # TODO: check also: 'node_el', 'taz_cl'
