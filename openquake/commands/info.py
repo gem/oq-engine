@@ -89,7 +89,8 @@ def do_build_reports(directory):
                     logging.error(str(e))
 
 
-choices = ['calculators', 'gsims', 'imts', 'views', 'exports', 'disagg',
+choices = ['calculators', 'cfg', 'consequences',
+           'gsims', 'imts', 'views', 'exports', 'disagg',
            'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 
