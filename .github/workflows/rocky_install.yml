@@ -84,13 +84,13 @@ jobs:
         while ! nc -z localhost 8800; do
           sleep 2 # wait for 1/10 of the second before check again
         done
-        curl -L -I -X GET http://127.0.0.1:8800/
+        curl --fail -L -I -X GET http://127.0.0.1:8800/
         sleep 1
-        curl -L -I -X GET http://127.0.0.1:8800/ipt
+        curl --fail -L -I -X GET http://127.0.0.1:8800/ipt
         sleep 1
-        curl -L -I -X GET http://127.0.0.1:8800/taxtweb
+        curl --fail -L -I -X GET http://127.0.0.1:8800/taxtweb
         sleep 1
-        curl -L -I -X GET http://127.0.0.1:8800/taxonomy
+        curl --fail -L -I -X GET http://127.0.0.1:8800/taxonomy
         sleep 1
         echo "Add settings for login and logging on webui before to start"
         cd /__w/oq-engine/oq-engine/
@@ -104,9 +104,9 @@ jobs:
         echo "DISPLAY content of local_settings"
         cat local_settings.py
         # START WEBUI
-        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
-        echo "Waiting WEBUI up on port 8800...."
-        while ! nc -z localhost 8800; do
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8888 -s &'
+        echo "Waiting WEBUI up on port 8888...."
+        while ! nc -z localhost 8888; do
           sleep 2 # wait for 1/10 of the second before check again
         done
         ls -lrt /var/log/oq-engine/
@@ -115,13 +115,13 @@ jobs:
         cd /__w/oq-engine/oq-engine/openquake/engine/
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
         sleep 1
-        curl -L -I -X GET http://127.0.0.1:8800/accounts/login/
+        curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
         echo -n "TEST DJANGO LOGIN "
         LOGIN_URL=http://127.0.0.1:8800/accounts/login/
         YOUR_USER='username'
         YOUR_PASS='password'
         COOKIES=cookies.txt
-        CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+        CURL_BIN="curl --fail -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
         echo -n "Django Auth: get csrftoken ..."
         $CURL_BIN $LOGIN_URL > /dev/null
         DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
