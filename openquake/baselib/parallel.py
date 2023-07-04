@@ -187,6 +187,7 @@ import time
 import socket
 import signal
 import pickle
+import shutil
 import inspect
 import logging
 import operator
@@ -993,6 +994,8 @@ class Starmap(object):
         self.log_percent()
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
+        if dist == 'slurm':
+            shutil.rmtree(self.monitor.calc_dir)
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
             logging.info(
@@ -1095,4 +1098,3 @@ def slurm_task(calc_dir: str, task_id: str):
     with open(calc_dir + '/' + task_id + '.inp', 'rb') as f:
         func, args, mon = pickle.load(f)
     safely_call(func, args, int(task_id) - 1, mon)
-    os.remove(f.name)
