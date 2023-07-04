@@ -53,7 +53,7 @@ jobs:
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        set -x 
+        set -x
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
@@ -78,6 +78,14 @@ jobs:
         while ! nc -z localhost 1907; do
           sleep 2 # wait for 1/10 of the second before check again
         done
+        echo "test WebUI before to modify for django login"
+        curl -L -I -X GET http://127.0.0.1:8800/
+        sleep 1
+        curl -L -I -X GET http://127.0.0.1:8800/ipt
+        sleep 1
+        curl -L -I -X GET http://127.0.0.1:8800/taxtweb
+        sleep 1
+        curl -L -I -X GET http://127.0.0.1:8800/taxonomy
         sleep 1
         echo "Add settings for login and logging on webui before to start"
         cd /__w/oq-engine/oq-engine/
@@ -115,7 +123,7 @@ jobs:
         echo " perform login ..."
         $CURL_BIN \
             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-            -X POST $LOGIN_URL > /dev/null 
+            -X POST $LOGIN_URL > /dev/null
         echo "--------------------"
         echo "display log of webui"
         echo "--------------------"
