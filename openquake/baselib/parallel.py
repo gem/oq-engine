@@ -187,7 +187,6 @@ import time
 import socket
 import signal
 import pickle
-import shutil
 import inspect
 import logging
 import operator
@@ -995,7 +994,8 @@ class Starmap(object):
         self.socket.__exit__(None, None, None)
         self.tasks.clear()
         if dist == 'slurm':
-            shutil.rmtree(self.monitor.calc_dir)
+            for fname in os.listdir(self.monitor.calc_dir):
+                os.remove(os.path.join(self.monitor.calc_dir, fname))
         if len(self.busytime) > 1:
             times = numpy.array(list(self.busytime.values()))
             logging.info(
