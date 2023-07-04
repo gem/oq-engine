@@ -79,6 +79,11 @@ jobs:
           sleep 2 # wait for 1/10 of the second before check again
         done
         echo "test WebUI before to modify for django login"
+        # START WEBUI
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+        while ! nc -z localhost 8800; do
+          sleep 2 # wait for 1/10 of the second before check again
+        done
         curl -L -I -X GET http://127.0.0.1:8800/
         sleep 1
         curl -L -I -X GET http://127.0.0.1:8800/ipt
