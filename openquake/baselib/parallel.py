@@ -220,7 +220,6 @@ SLURM_BATCH = '''\
 #!/bin/bash
 #SBATCH --job-name={mon.operation}
 #SBATCH --array=1-{mon.task_no}
-#SBATCH --ntasks-per-core=2
 #SBATCH --time=10:00:00
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
@@ -937,7 +936,7 @@ class Starmap(object):
         self.busytime = AccumDict(accum=[])  # pid -> time
         dist = 'no' if self.num_tasks == 1 else self.distribute
         if dist == 'slurm':
-            self.monitor.task_no = self.task_no
+            self.monitor.task_no = self.task_no  # total number of tasks
             sbatch(self.monitor)
                 
         elif self.task_queue:
