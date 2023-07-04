@@ -238,8 +238,8 @@ def sbatch(mon):
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
-        subprocess.run(['sbatch', path])
-        return
+        subprocess.run(['sbatch', path], capture_output=True)
+        return  # TODO: return the SLURM job ID
 
     # if SLURM is not installed, fake it
     logging.info(f'Faking SLURM for {mon.operation}')
