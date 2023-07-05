@@ -448,7 +448,6 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        logging.info('Required %.3f GB total for the Pmaps', req_gb)
         self.ntiles = 1 + int(req_gb / oq.pmap_max_mb)  # 50 GB
         if self.ntiles > 1:
             self.execute_seq(maxw)
