@@ -59,7 +59,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.8927160714285713,
             ])
 
-        # FIXME: the following check is very long. We might remove it.
+        # FIXME: the following check is very long. We should export to csv and
+        # compare with it
         aac([
              list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
              list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
@@ -231,7 +232,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         aac(list(ds.read_df('node_el')['Eff_loss']),
             [0.5, 0.04774535809018569, 0.3164724576271186, 0.11955593509820671,
              0.0])
-        # TODO: also check: 'taz_cl'
+
+        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+                         ['A', 'B', 'C'])
+        aac(list(ds.read_df('taz_cl')['PCL_node']),
+            [0.0, 0.5, 0.25])
+        aac(list(ds.read_df('taz_cl')['WCL_node']),
+            [0.0, 0.5, 0.33333333333333337])
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
@@ -322,14 +329,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             [0.3235294117647059, 0.0, 0.0, 0.0, 0.0])
         self.assertEqual(list(ds.read_df('dem_cl')['id']), ['B'])
 
-        aac(list(ds.read_df('dem_cl')['CN']),
-            [0.0])
-        aac(list(ds.read_df('dem_cl')['CCL_node']),
-            [0.5])
-        aac(list(ds.read_df('dem_cl')['PCL_node']),
-            [0.5])
-        aac(list(ds.read_df('dem_cl')['WCL_node']),
-            [0.5])
+        aac(list(ds.read_df('dem_cl')['CN']), [0.0])
+        aac(list(ds.read_df('dem_cl')['CCL_node']), [0.5])
+        aac(list(ds.read_df('dem_cl')['PCL_node']), [0.5])
+        aac(list(ds.read_df('dem_cl')['WCL_node']), [0.5])
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
@@ -400,7 +403,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         aac(list(ds.read_df('node_el')['Eff_loss']),
             [0.12209523809523799, 0.0, 0.03353416313559312,
              0.011058923996584154, 0.0])
-        # TODO: also check: 'taz_cl'
+
+        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+                         ['A', 'B', 'C'])
+        aac(list(ds.read_df('taz_cl')['PCL_node']),
+            [0.0, 0.0, 0.0])
+        aac(list(ds.read_df('taz_cl')['WCL_node']),
+            [0.0, 0.08461538461538454, 0.018518518518518545])
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
@@ -429,7 +438,13 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         aac(list(ds.read_df('node_el')['Eff_loss']),
             [0.1929637526652452, 0.03571428571428573, 0.0,
              0.008403361344537863, 0.10588235294117648])
-        # TODO: check also: 'taz_cl'
+
+        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+                         ['A', 'B', 'C'])
+        aac(list(ds.read_df('taz_cl')['PCL_node']),
+            [0.0, 0.0, 0.0])
+        aac(list(ds.read_df('taz_cl')['WCL_node']),
+            [0.11904761904761907, 0.10714285714285715, 0.0])
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
@@ -458,4 +473,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         aac(list(ds.read_df('node_el')['Eff_loss']),
             [0.2560250694579053, 0.04629629629629628, 0.0,
              0.008403361344537863, 0.14438502673796794])
-        # TODO: check also: 'taz_cl'
+
+        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+                         ['A', 'B', 'C'])
+        aac(list(ds.read_df('taz_cl')['PCL_node']),
+            [0.0, 0.0, 0.0])
+        aac(list(ds.read_df('taz_cl')['WCL_node']),
+            [0.154320987654321, 0.1388888888888889, 0.0])
