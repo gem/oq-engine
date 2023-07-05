@@ -323,7 +323,14 @@ DISPLAY_NAME = {
     'realizations': 'Realizations',
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
-    'input': 'Input Files'
+    'input': 'Input Files',
+    'node_el': 'FIXME_node_el',
+    'taz_cl': 'FIXME_taz_cl',
+    'dem_cl': 'FIXME_dem_cl',
+    'event_connectivity_loss_ccl': 'FIXME_ecl_ccl',
+    'event_connectivity_loss_pcl': 'FIXME_ecl_pcl',
+    'event_connectivity_loss_wcl': 'FIXME_ecl_wcl',
+    'event_connectivity_loss_eff': 'FIXME_ecl_eff',
 }
 
 

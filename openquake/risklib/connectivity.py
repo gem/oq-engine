@@ -182,6 +182,8 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
     dstore.create_df('taz_cl', taz_cl)
     # TODO: Save node_el in datastore and make it exportable
     # node_el.to_csv("node_el.csv")
+
+    # FIXME: node_el.drop(columns=['ordinal'])
     dstore.create_df('node_el', node_el)
 
     return node_el, avg_connectivity_loss_eff
@@ -264,6 +266,8 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
     dstore.create_df('dem_cl', dem_cl)
     # TODO: Save node_el in datastore and make it exportable
     # node_el.to_csv("node_el.csv")
+
+    # FIXME: node_el.drop(columns=['ordinal'])
     dstore.create_df('node_el', node_el)
 
     return node_el, avg_connectivity_loss_eff
@@ -302,6 +306,8 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
     # Storing the connectivity loss at nodal level
     # TODO: Save node_el in datastore and make it exportable
     # node_el.to_csv("node_el.csv")
+
+    # FIXME: node_el.drop(columns=['ordinal'])
     dstore.create_df('node_el', node_el)
 
     return node_el, avg_connectivity_loss_eff
