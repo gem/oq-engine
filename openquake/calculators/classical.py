@@ -449,9 +449,9 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        logging.info('Required %s total for the Pmaps', humansize(req))
-        self.ntiles = 1 + int(req / oq.pmap_max_mb)  # 40 GB
+        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
+        logging.info('Required %s GB total for the Pmaps', req_gb)
+        self.ntiles = 1 + int(req_gb / oq.pmap_max_mb)  # 40 GB
         if self.ntiles > 1:
             self.execute_seq(maxw)
         else:  # regular case
