@@ -411,8 +411,6 @@ class ClassicalCalculator(base.HazardCalculator):
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
         size = max_gs * N * L * 8
-        logging.info('ProbabilityMap(G=%d,N=%d,L=%d) %s per core',
-                     max_gs, N, L, humansize(size))
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
