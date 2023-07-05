@@ -469,9 +469,9 @@ max_sites_disagg:
 
 pmap_max_mb:
    Control the size of the returned pmaps in classical calculations.
-   The default is 40 MB; you can reduce it if zmq cannot keep up.
-   Example: *pmap_max_mb = 20*
-   Default: 40
+   The default is 50 MB; you can reduce it if zmq cannot keep up.
+   Example: *pmap_max_mb = 25*
+   Default: 50
 
 max_weight:
   INTERNAL
@@ -986,7 +986,7 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_mb = valid.Param(valid.positivefloat, 40.)
+    pmap_max_mb = valid.Param(valid.positivefloat, 50.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
