@@ -504,8 +504,6 @@ def sendback(res, zsocket):
     nbytes = len(res.pik)
     try:
         zsocket.send(res)
-        if wait > 1:
-            time.sleep(.1)
         if DEBUG:
             from openquake.commonlib.logs import dblog
             if calc_id:  # None when building the png maps
