@@ -109,7 +109,14 @@ def classical(srcs, sitecol, cmaker, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    for sites in sitecol.split_in_tiles(cmaker.itiles):
+    
+    # maximum size of the pmap array in GB
+    size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
+    itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
+
+    # NB: disagg_by_src is disabled in case of tiling
+    assert not (itiles > 1 and cmaker.disagg_by_src)
+    for sites in sitecol.split_in_tiles(itiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
@@ -443,7 +450,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        self.ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
+        self.ntiles = 1 + int(req / (oq.pmap_max_mb * 1024))  # 40 GB
         if self.ntiles > 1:
             self.execute_seq(maxw)
         else:  # regular case
@@ -500,18 +507,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)
         allargs = []
         for cm in self.cmakers:
-            G = len(cm.gsims)
+            cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
-
-            # maximum size of the pmap array in GB
-            size_gb = G * L * len(sitecol) * 8 / 1024**3
-            itiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
-            # NB: disagg_by_src is disabled in case of tiling
-            assert not (itiles > 1 and oq.disagg_by_src)
-            cm.itiles = itiles
-            if itiles > 1:
-                logging.debug('Producing %d inner tiles', itiles)
-
             if oq.disagg_by_src:  # possible only with a single tile
                 blks = groupby(sg, basename).values()
             elif sg.atomic or sg.weight <= maxw:
