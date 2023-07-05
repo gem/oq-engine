@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Solved hanging of classical calculations due to large zmq packets
+  * Solved the hanging of classical calculations due to large zmq packets
 
   [Marco Pagani, Michele Simionato]
   * Added support for the "direct" method in MRD calculations
