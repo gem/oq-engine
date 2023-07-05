@@ -109,8 +109,7 @@ def read(*paths, **validators):
 # NB: duplicated in commands/engine.py!!
 config.read = read
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            serialize_jobs=positiveint, strict=positiveint, code=exec,
-            slowdown_rate=float)
+            serialize_jobs=positiveint, strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
