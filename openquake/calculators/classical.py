@@ -450,7 +450,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        self.ntiles = 1 + int(req / (oq.pmap_max_mb * 1024))  # 40 GB
+        self.ntiles = 1 + int(req / (oq.pmap_max_mb / 10.))  # 40 GB
         if self.ntiles > 1:
             self.execute_seq(maxw)
         else:  # regular case
