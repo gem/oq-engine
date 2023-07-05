@@ -1,5 +1,7 @@
   [Michele Simionato]
+  * Internal: added dbserver.user in openquake.cfg
   * Solved the hanging of classical calculations due to large zmq packets
+    and reduced memory occupation
 
   [Marco Pagani, Michele Simionato]
   * Added support for the "direct" method in MRD calculations
