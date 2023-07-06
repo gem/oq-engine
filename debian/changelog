@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Raise an early error if the user disable both realizations and statistics
   * Internal: added dbserver.user in openquake.cfg
   * Solved the hanging of classical calculations due to large zmq packets
     and reduced memory occupation

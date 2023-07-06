@@ -445,6 +445,12 @@ class ClassicalTestCase(CalculatorTestCase):
                                "hazard_curve-rlz-003-SA(0.5).csv"],
                               case_54.__file__)
 
+        # check that disabling the stats causes an error
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_54.__file__, 'job.ini',
+                          individual_rlzs='false')
+        self.assertIn('you disabled all statistics', str(ctx.exception))
+
     def test_case_55(self):
         # test with amplification function == 1
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_55.__file__)
