@@ -246,7 +246,7 @@ of the rupture (magnitude, number of occurrences and hypocenter).
 rup_id
 52076478464016  3.091906e+12  6.60      9  128.401993  27.496000   68.199997
 52037823758352  2.223281e+12  6.60      9  128.501999  27.596001   70.000000
-``
+```
 We changed the (re)insurance calculator to read the deductible
 field from the exposure: this gives a speedup of multiple orders of
 magnitude in cases where you have thousands of assets all with the same
