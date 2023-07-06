@@ -13,14 +13,14 @@ A summary is given below.
 
 The disaggregation calculator has been deeply revised, by changing the
 underlying algorithms and by making it possible to compute the average
-disaggregation directly.  For the first time it is possible to compute
+disaggregation directly. For the first time it is possible to compute
 the mean disaggregation for large models like the one for Europe (with
 10,000 realizations) without running out of memory and in a
-surprisingly small amount of time (minutes on a cluster).  The game
+surprisingly small amount of time (minutes on a cluster). The game
 changer was computing the mean disaggregation in terms the rates and
 not probabilities, since rates are additive and therefore the mean
 calculation can be parallelized cleanly without the need to keep all
-realizations in memory.  This is why now the only statistics supported
+realizations in memory. This is why now the only statistics supported
 in disaggregation is the mean and you cannot compute the quantiles.
 Computing the standard deviation is possible with a memory-efficient
 algorithm so that could be added in the future.
@@ -28,15 +28,15 @@ algorithm so that could be added in the future.
 The changes have touched all kinds of disaggregation, including
 epsilon_star disaggregation, disaggregation over multiple sites and
 disaggregation by source. The disaggregation outputs are stored in a
-different way and the exporters have been updated and optimized.  The
-CSV outputs have an additional column iml.  We also renamed the "by
-TRT" disaggregation outputs and added a new output `TRT_Mag`.  Models
+different way and the exporters have been updated and optimized. The
+CSV outputs have an additional column iml. We also renamed the "by
+TRT" disaggregation outputs and added a new output `TRT_Mag`. Models
 with mutually exclusive sources (i.e. Japan) can now be disaggregated,
 as well as models using the NegativeBinomialTOM temporal occurrence
 model (i.e. the New Zealand model).
 
 The disaggregation using the `poes_disagg` parameter has been unified
-with the disaggregation based on the `iml_disagg` parameter.  We fixed
+with the disaggregation based on the `iml_disagg` parameter. We fixed
 a few bugs (for instance the disaggregation sometimes failed when
 using the NGAEast GMPEs) and changed the binning algorithm for LonLat
 bins. Since the algorithms have changed you will get (slightly)
@@ -62,7 +62,7 @@ to implement the ability to reduce a full logic tree to a specific
 source. That was hard and difficult to do and may require further
 work in the future.
 
-Finally we changed the task distribution to reduce data transfer in
+Finally, we changed the task distribution to reduce data transfer in
 disaggregation and ensure optimal performance in all cases.
 
 # Classical PSHA
@@ -89,7 +89,7 @@ instead the closest vs30 parameters are used for the specified sites
 and the zpt site parameters are recomputed. The change was required
 in the context of the AELO project.
 
-Finally, we need a new feature to support the 2018 USA model.  In that
+Finally, we needed a new feature to support the 2018 USA model. In that
 model some multipoint sources use the equivalent distance
 approximation, while others do not. To manage such situations we added
 a new parameter in the job.ini, `reqv_ignore_sources`, which is a list
@@ -108,8 +108,8 @@ order was more efficient but it was making it impossible to define a
 meaningful rupture ID. The problem is documented in detail in
 https://docs.openquake.org/oq-engine/advanced/3.17/event_based.html#rupture-sampling-how-to-get-it-wrong
 
-Here we will just notice that previous versions of the engine has a
-sequential rupture ID, present exported in the file ruptures.csv, but was
+Here we will just note that previous versions of the engine had a
+sequential rupture ID, presently exported in the file ruptures.csv, but was
 not usable, because by changing by a little the minimum magnitude or
 the maximum distance the ID would refer to totally different
 ruptures. Moreover, there was no easy way to export a rupture given
@@ -122,15 +122,15 @@ The command to extract a single rupture is as simple as
 
 `oq extract ruptures?rup_id=XXX`
 
-and there is an associate HTTP API.
+and there is an associated HTTP API.
 
 The new rupture ID is a 60 bit integer, with the
 first 30 bits referring to the index of the source generating the
 rupture and the second 30 bits referring to the index of the rupture
-inside the source. Sources containing more than 2**30=1,073,741,824
+inside the source. Sources containing more than 2^30=1,073,741,824
 ruptures are now rejected. Notice that this is not a limitation, since
 you can always split a large source. Also, in the entire GEM mosaic
-there is not a single source with more than 2**30 ruptures, so we did
+there is not a single source with more than 2^30 ruptures, so we did
 not break any model.
 
 We fixed sampling of the ruptures both in the case of
@@ -143,12 +143,12 @@ time to sample the Japan model correctly.
 There was some work to improve the performance of multiFault sampling
 by splitting the sources and thus parallelizing the sampling: the
 improvement was spectacular in the USA model (over 100x on a machine
-with 120 cores). Moreover we strongly optimized the generation of
+with 120 cores). Moreover, we strongly optimized the generation of
 events from the ruptures, which now can be dozens of times faster than
 before.
 
 We improved the view `extreme_gmvs` to display the largest ground motion
-values and we added a new parameter `extreme_gmv` (a dictionary IMT->threshold)
+values, and we added a new parameter `extreme_gmv` (a dictionary IMT->threshold)
 to discard the largest GMVs on demand. This a feature to use with care and
 not recommended: in presence of extreme GMVs one should fix the GMPE instead.
 
@@ -160,7 +160,7 @@ distribution.
 # Additions to hazardlib
 
 The most important event in hazardlib was the porting of the GMPEs
-requires to run the Canada SHM6 model. The porting from the GMPEs used
+required to run the Canada SHM6 model. The porting from the GMPEs used
 in engine 3.11 was long and difficult, since there are many complex
 GMPEs. In the process we discovered and fixed many subtle bugs. The
 support for the Canada SHM6 is still considered experimental and you
@@ -203,7 +203,7 @@ disaggregation by `Mag_Dist_Eps` and disaggregation by relevant
 sources for each site in the world. The calculator automatically
 determine the model to use from the coordinates of the site and
 recompute the site parameters to use starting from the user-provided
-vs30.  The performance has been tuned so much that a machine with only
+vs30. The performance has been tuned so much that a machine with only
 16 GB and 4 cores is enough to run such calculations.
 
 The WebUI was extended to log information on login/logout so that
@@ -222,11 +222,11 @@ calculations).
 
 # Risk
 
-We have a new features in the risk calculators too.
+We have a few new features in the risk calculators too.
 
 The first one is the introduction of three new loss types and
-vulnerability functions: `area`, `number` and `residents`.  It is
-enough to specify the correspodning vulnerability functions in the
+vulnerability functions: `area`, `number` and `residents`. It is
+enough to specify the corresponding vulnerability functions in the
 job.ini file and the outputs relative to the new loss types will appear are
 new columns in the loss outputs CSV files.
 
@@ -236,7 +236,7 @@ to the field `avg_occupants` in the exposure; if missing, it is
 automatically computed as the mean of night, day and transit
 occupants.
 
-The second importante new feature is disaggregation by rupture. The
+The second important new feature is disaggregation by rupture. The
 command to give is simply `$ oq show risk_by_rup:structural <calc_id>`
 which will return a DataFrame keyed by the rupture ID and with fields
 including the total loss generated by the rupture and the parameters
@@ -260,9 +260,9 @@ At user request, we extended the
 we improved the error handling for reinsurance calculations.
 
 There was also a major performance improvement when reading the
-exposure.  The issue was that we could not read the USA exposure (22
-milions of assets) without running out of memory; now we can and the
-exposure processor is three times faster.  We also improved the event
+exposure. The issue was that we could not read the USA exposure (22
+million assets) without running out of memory; now we can and the
+exposure processor is three times faster. We also improved the event
 based risk calculator to use very little memory on the workers even in
 presence of a huge exposure.
 
@@ -292,7 +292,7 @@ mag-dependent-distance filter, which can also be used to implement a
 that kept creeping in.
 
 The engine was rounding longitude and latitude to 5 digits everywhere, except 
-when generating a grid from a region: this has been fixed and we have full
+when generating a grid from a region; this has been fixed, and we have full
 consistency now.
 
 The `truncation_level` parameter is now mandatory in classical and
@@ -310,7 +310,7 @@ and the parameter is not set in the job.ini either, now a clear
 error is used instead of using incorrectly a NaN value.
 
 The New Zealand model uses the `CScalingMSR`
-magnitude-scaling-relationship.  That caused a surprising error when
+magnitude-scaling-relationship. That caused a surprising error when
 using the `ps_grid_spacing` approximation due to the way the names of
 the CollapsedPointSources were generated. This is now fixed since the
 name does not contain anymore the name of the MSR.
@@ -336,7 +336,7 @@ If a calculation ID is already taken in the database, now
 We enhanced the command `oq sample` which is now able to sample
 MultiPointSources too.
 
-We extended the command `oq shakemap2gmfs`: on demand it can amplifies
+We extended the command `oq shakemap2gmfs`: on demand it can amplify
 the generated GMFs depending on the ShakeMap vs30 or on the site model
 vs30. See the `--help` message for more.
 
@@ -370,8 +370,8 @@ for instance, you can provide multiple different logic tree files to study
 the sensitivity from the logic tree.
 
 There was a lot of work on documentation, both on the manuals (fully documented
-aggregate_by and ideductible and maximum_distance/min_max_mag) and the FAQs
-(how configure multiple engine installations). We improved the
+aggregate_by and ideductible and maximum_distance/min_max_mag), and the FAQs
+(how configure multiple engine installations). We also improved the
 installation instructions.
 
 The full report output has been revised and now a compact
