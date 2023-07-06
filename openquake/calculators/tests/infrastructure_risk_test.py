@@ -33,11 +33,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(case_15.__file__, 'job.ini')
         ds = self.calc.datastore
         self.assertEqual(
-            list(ds.read_df('node_el')['id']),
+            list(ds.read_df('infra-node_el')['id']),
             ['D1', 'D10', 'D11', 'D12', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
              'D8', 'D9', 'E18a', 'E18b', 'E18c', 'E20a', 'E20b', 'E20c', 'P1',
              'P2', 'P3', 'W1', 'W2'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.45544827586206926, 0.5793014268727713, 0.5733459357277877,
              0.5768746061751727, 0.48184873949579826, 0.42961538461538445,
              0.3932336448598129, 0.5183054003724399, 0.4915661592505851,
@@ -47,10 +47,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.7617334360554696, 0.835219136835062])
 
         aac([
-             ds['avg_connectivity_loss_ccl'][()],
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_ccl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.7708333333333335,
@@ -62,10 +62,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # FIXME: the following check is very long. We should export to csv and
         # compare with it
         aac([
-             list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
-             list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
-             list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
-             list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+             list(ds.read_df('infra-event_ccl')['CCL'].values),
+             list(ds.read_df('infra-event_efl')['EFFLoss'].values),
+             list(ds.read_df('infra-event_pcl')['PCL'].values),
+             list(ds.read_df('infra-event_wcl')['WCL'].values),
             ],
             [
              [1.0, 1.0, 1.0, 0.0, 0.5, 1.0, 0.5, 0.0, 0.0, 0.5, 1.0,
@@ -142,18 +142,18 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             ])
 
         self.assertEqual(
-            list(ds.read_df('dem_cl')['id']),
+            list(ds.read_df('infra-dem_cl')['id']),
             ['D1', 'D10', 'D11', 'D12', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7',
              'D8', 'D9'])
-        aac(list(ds.read_df('dem_cl')['CN']),
+        aac(list(ds.read_df('infra-dem_cl')['CN']),
             [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-        aac(list(ds.read_df('dem_cl')['CCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['CCL_node']),
             [0.88, 0.68, 0.88, 0.88, 0.88, 0.65, 0.68, 0.65, 0.88, 0.65, 0.66,
              0.88])
-        aac(list(ds.read_df('dem_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['PCL_node']),
             [0.775, 0.93, 0.93, 0.93, 0.775, 0.76, 0.76, 0.765, 0.76, 0.93,
              0.93, 0.93])
-        aac(list(ds.read_df('dem_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['WCL_node']),
             [0.8363333333333334, 0.9570000000000001, 0.9566666666666666,
              0.9566666666666666, 0.84625, 0.8157142857142857, 0.82,
              0.82547619047619, 0.827485714285714, 0.9570000000000001,
@@ -164,10 +164,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_ccl'][()],
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_ccl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.0,
@@ -177,10 +177,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             ])
 
         aac([
-             list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
-             list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
-             list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
-             list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+             list(ds.read_df('infra-event_ccl')['CCL'].values),
+             list(ds.read_df('infra-event_efl')['EFFLoss'].values),
+             list(ds.read_df('infra-event_pcl')['PCL'].values),
+             list(ds.read_df('infra-event_wcl')['WCL'].values),
             ],
             [
              [0.],
@@ -189,20 +189,21 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              [0.52022792],
             ])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E', 'F', 'G'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.1273885350318472, 0.13953488372093012, 0.23076923076923073, 1.0,
              0.23076923076923073, 0.13953488372093012, 0.1273885350318472])
 
-        self.assertEqual(list(ds.read_df('dem_cl')['id']), ['A', 'E', 'G'])
-        aac(list(ds.read_df('dem_cl')['CN']),
+        self.assertEqual(list(ds.read_df('infra-dem_cl')['id']),
+                         ['A', 'E', 'G'])
+        aac(list(ds.read_df('infra-dem_cl')['CN']),
             [0.0, 0.0, 0.0])
-        aac(list(ds.read_df('dem_cl')['CCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['CCL_node']),
             [0.0, 0.0, 0.0])
-        aac(list(ds.read_df('dem_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['PCL_node']),
             [0.33333333333333337, 0.33333333333333337, 0.33333333333333337])
-        aac(list(ds.read_df('dem_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['WCL_node']),
             [0.5384615384615384, 0.5555555555555556, 0.4666666666666667])
 
     def test_directed(self):
@@ -210,9 +211,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.19123965855782582,
@@ -220,38 +221,38 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.2777777777777778,
             ])
 
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.0, 0.38247931711565164])
-        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+        aac(list(ds.read_df('infra-event_pcl')['PCL'].values),
             [0.0, 0.5])
-        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+        aac(list(ds.read_df('infra-event_wcl')['WCL'].values),
             [0.0, 0.5555555555555556])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.5, 0.04774535809018569, 0.3164724576271186, 0.11955593509820671,
              0.0])
 
-        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+        self.assertEqual(list(ds.read_df('infra-taz_cl')['id']),
                          ['A', 'B', 'C'])
-        aac(list(ds.read_df('taz_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['PCL_node']),
             [0.0, 0.5, 0.25])
-        aac(list(ds.read_df('taz_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['WCL_node']),
             [0.0, 0.5, 0.33333333333333337])
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        aac(ds['avg_connectivity_loss_eff'][()], 0.2603130360205833)
+        aac(ds['infra-avg_efl'][()], 0.2603130360205833)
 
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.2603130360205833])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E', 'F', 'G'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.09602352640327334, 0.10010409437890358, 0.15322580645161288,
              0.09355742296918781, 0.35130718954248374, 0.41342779580215844,
              1.0])
@@ -261,10 +262,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_ccl'][()],
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_ccl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.25,
@@ -273,28 +274,28 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.25,
             ])
 
-        aac(list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+        aac(list(ds.read_df('infra-event_ccl')['CCL'].values),
             [0.0, 0.5])
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.0, 0.2791878172588833])
-        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+        aac(list(ds.read_df('infra-event_pcl')['PCL'].values),
             [0.0, 0.5])
-        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+        aac(list(ds.read_df('infra-event_wcl')['WCL'].values),
             [0.0, 0.5])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.41044776119402987, 0.0, 0.0, 0.0, 0.0])
 
-        self.assertEqual(list(ds.read_df('dem_cl')['id']), ['B', 'C'])
-        aac(list(ds.read_df('dem_cl')['CN']),
+        self.assertEqual(list(ds.read_df('infra-dem_cl')['id']), ['B', 'C'])
+        aac(list(ds.read_df('infra-dem_cl')['CN']),
             [0.0, 0.0])
-        aac(list(ds.read_df('dem_cl')['CCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['CCL_node']),
             [0.5, 0.0])
-        aac(list(ds.read_df('dem_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['PCL_node']),
             [0.5, 0.0])
-        aac(list(ds.read_df('dem_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['WCL_node']),
             [0.5, 0.0])
 
     def test_five_nodes_demsup_directedunweighted(self):
@@ -302,10 +303,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_ccl'][()],
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_ccl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.5,
@@ -314,35 +315,35 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.5
             ])
 
-        aac(list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+        aac(list(ds.read_df('infra-event_ccl')['CCL'].values),
             [0.0, 1.0])
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.0, 0.255813953488372])
-        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+        aac(list(ds.read_df('infra-event_pcl')['PCL'].values),
             [0.0, 1.0])
-        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+        aac(list(ds.read_df('infra-event_wcl')['WCL'].values),
             [0.0, 1.0])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.3235294117647059, 0.0, 0.0, 0.0, 0.0])
-        self.assertEqual(list(ds.read_df('dem_cl')['id']), ['B'])
+        self.assertEqual(list(ds.read_df('infra-dem_cl')['id']), ['B'])
 
-        aac(list(ds.read_df('dem_cl')['CN']), [0.0])
-        aac(list(ds.read_df('dem_cl')['CCL_node']), [0.5])
-        aac(list(ds.read_df('dem_cl')['PCL_node']), [0.5])
-        aac(list(ds.read_df('dem_cl')['WCL_node']), [0.5])
+        aac(list(ds.read_df('infra-dem_cl')['CN']), [0.0])
+        aac(list(ds.read_df('infra-dem_cl')['CCL_node']), [0.5])
+        aac(list(ds.read_df('infra-dem_cl')['PCL_node']), [0.5])
+        aac(list(ds.read_df('infra-dem_cl')['WCL_node']), [0.5])
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_ccl'][()],
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_ccl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.0,
@@ -351,29 +352,29 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.07777777777777778,
             ])
 
-        aac(list(ds.read_df('event_connectivity_loss_ccl')['CCL'].values),
+        aac(list(ds.read_df('infra-event_ccl')['CCL'].values),
             [0.0, 0.0])
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.0, 0.06554947908710397])
-        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+        aac(list(ds.read_df('infra-event_pcl')['PCL'].values),
             [0.0, 0.0])
-        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+        aac(list(ds.read_df('infra-event_wcl')['WCL'].values),
             [0.0, 0.15555555555555556])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.12209523809523799, 0.0, 0.03353416313559312,
              0.011058923996584154, 0.0])
 
-        self.assertEqual(list(ds.read_df('dem_cl')['id']), ['B', 'C'])
-        aac(list(ds.read_df('dem_cl')['CN']),
+        self.assertEqual(list(ds.read_df('infra-dem_cl')['id']), ['B', 'C'])
+        aac(list(ds.read_df('infra-dem_cl')['CN']),
             [0.0, 0.0])
-        aac(list(ds.read_df('dem_cl')['CCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['CCL_node']),
             [0.0, 0.0])
-        aac(list(ds.read_df('dem_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['PCL_node']),
             [0.0, 0.0])
-        aac(list(ds.read_df('dem_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-dem_cl')['WCL_node']),
             [0.09999999999999998, 0.05555555555555558])
 
     def test_multidirected(self):
@@ -381,9 +382,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.032774739543551985,
@@ -391,24 +392,24 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.03437796771130103,
             ])
 
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.0, 0.06554947908710397])
-        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+        aac(list(ds.read_df('infra-event_pcl')['PCL'].values),
             [0.0, 0.0])
-        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+        aac(list(ds.read_df('infra-event_wcl')['WCL'].values),
             [0.0, 0.06875593542260205])
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E'])
 
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.12209523809523799, 0.0, 0.03353416313559312,
              0.011058923996584154, 0.0])
 
-        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+        self.assertEqual(list(ds.read_df('infra-taz_cl')['id']),
                          ['A', 'B', 'C'])
-        aac(list(ds.read_df('taz_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['PCL_node']),
             [0.0, 0.0, 0.0])
-        aac(list(ds.read_df('taz_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['WCL_node']),
             [0.0, 0.08461538461538454, 0.018518518518518545])
 
     def test_multigraph(self):
@@ -416,9 +417,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.06562726613488049,
@@ -426,24 +427,24 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.0753968253968254,
             ])
 
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.0, 0.13125453226976097])
-        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+        aac(list(ds.read_df('infra-event_pcl')['PCL'].values),
             [0.0, 0.0])
-        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+        aac(list(ds.read_df('infra-event_wcl')['WCL'].values),
             [0.0, 0.1507936507936508])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.1929637526652452, 0.03571428571428573, 0.0,
              0.008403361344537863, 0.10588235294117648])
 
-        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+        self.assertEqual(list(ds.read_df('infra-taz_cl')['id']),
                          ['A', 'B', 'C'])
-        aac(list(ds.read_df('taz_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['PCL_node']),
             [0.0, 0.0, 0.0])
-        aac(list(ds.read_df('taz_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['WCL_node']),
             [0.11904761904761907, 0.10714285714285715, 0.0])
 
     def test_undirected(self):
@@ -451,9 +452,9 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['avg_connectivity_loss_eff'][()],
-             ds['avg_connectivity_loss_pcl'][()],
-             ds['avg_connectivity_loss_wcl'][()],
+             ds['infra-avg_efl'][()],
+             ds['infra-avg_pcl'][()],
+             ds['infra-avg_wcl'][()],
             ],
             [
              0.0870745160085263,
@@ -461,22 +462,22 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.0977366255144033,
             ])
 
-        aac(list(ds.read_df('event_connectivity_loss_eff')['EFFLoss'].values),
+        aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.0, 0.1741490320170526])
-        aac(list(ds.read_df('event_connectivity_loss_pcl')['PCL'].values),
+        aac(list(ds.read_df('infra-event_pcl')['PCL'].values),
             [0.0, 0.0])
-        aac(list(ds.read_df('event_connectivity_loss_wcl')['WCL'].values),
+        aac(list(ds.read_df('infra-event_wcl')['WCL'].values),
             [0.0, 0.1954732510288066])
 
-        self.assertEqual(list(ds.read_df('node_el')['id']),
+        self.assertEqual(list(ds.read_df('infra-node_el')['id']),
                          ['A', 'B', 'C', 'D', 'E'])
-        aac(list(ds.read_df('node_el')['Eff_loss']),
+        aac(list(ds.read_df('infra-node_el')['Eff_loss']),
             [0.2560250694579053, 0.04629629629629628, 0.0,
              0.008403361344537863, 0.14438502673796794])
 
-        self.assertEqual(list(ds.read_df('taz_cl')['id']),
+        self.assertEqual(list(ds.read_df('infra-taz_cl')['id']),
                          ['A', 'B', 'C'])
-        aac(list(ds.read_df('taz_cl')['PCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['PCL_node']),
             [0.0, 0.0, 0.0])
-        aac(list(ds.read_df('taz_cl')['WCL_node']),
+        aac(list(ds.read_df('infra-taz_cl')['WCL_node']),
             [0.154320987654321, 0.1388888888888889, 0.0])

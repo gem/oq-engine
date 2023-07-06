@@ -324,13 +324,13 @@ DISPLAY_NAME = {
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files',
-    'node_el': 'FIXME_node_el',
-    'taz_cl': 'FIXME_taz_cl',
-    'dem_cl': 'FIXME_dem_cl',
-    'event_connectivity_loss_ccl': 'FIXME_ecl_ccl',
-    'event_connectivity_loss_pcl': 'FIXME_ecl_pcl',
-    'event_connectivity_loss_wcl': 'FIXME_ecl_wcl',
-    'event_connectivity_loss_eff': 'FIXME_ecl_eff',
+    'infra-node_el': 'Efficiency Loss Of Nodes',
+    'infra-taz_cl': 'Connectivity Loss Of TAZ Nodes',
+    'infra-dem_cl': 'Connectivity Loss Of Demand Nodes',
+    'infra-event_ccl': 'Complete Connectivity Loss By Event',
+    'infra-event_pcl': 'Partial Connectivity Loss By Event',
+    'infra-event_wcl': 'Weighted Connectivity Loss By Event',
+    'infra-event_efl': 'Efficiency Loss by Event',
 }
 
 

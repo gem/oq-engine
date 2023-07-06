@@ -287,6 +287,80 @@ class DamageCalculator(EventBasedRiskCalculator):
 
         fields = self.assetcol.array.dtype.names
         if 'supply_or_demand' in fields:
-            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
-            self.datastore.create_df('functional_demand_nodes', demand_nodes)
-            logging.info('Stored functional_demand_nodes')
+            conn_results = connectivity.analysis(self.datastore)
+            self._store_connectivity_analysis_results(conn_results)
+
+    def _store_connectivity_analysis_results(self, conn_results):
+        # TODO: group avg items and event items in the datastore
+        if 'avg_connectivity_loss_eff' in conn_results:
+            self.datastore['infra-avg_efl'] = conn_results[
+                'avg_connectivity_loss_eff']
+            logging.info(
+                'Stored avarage efficiency loss (infra-avg_efl)')
+        if 'avg_connectivity_loss_pcl' in conn_results:
+            self.datastore['infra-avg_pcl'] = conn_results[
+                'avg_connectivity_loss_pcl']
+            logging.info(
+                'Stored avarage partial connectivity loss (infra-avg_pcl)')
+        if 'avg_connectivity_loss_wcl' in conn_results:
+            self.datastore['infra-avg_wcl'] = conn_results[
+                'avg_connectivity_loss_wcl']
+            logging.info(
+                'Stored avarage weighted connectivity loss (infra-avg_wcl)')
+        if 'avg_connectivity_loss_ccl' in conn_results:
+            self.datastore['infra-avg_ccl'] = conn_results[
+                'avg_connectivity_loss_ccl']
+            logging.info(
+                'Stored avarage complete connectivity loss (infra-avg_ccl)')
+        # Storing the connectivity loss at global level for each event
+        # event_connectivity_loss_ccl.to_csv("ccl_event.csv")
+        # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
+        # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
+        # event_connectivity_loss_eff.to_csv("efl_event.csv")
+        if 'event_connectivity_loss_eff' in conn_results:
+            self.datastore.create_df(
+                'infra-event_efl',
+                conn_results['event_connectivity_loss_eff'])
+            logging.info(
+                'Stored efficiency loss by event (infra-event_efl)')
+        if 'event_connectivity_loss_pcl' in conn_results:
+            self.datastore.create_df(
+                'infra-event_pcl',
+                conn_results['event_connectivity_loss_pcl'])
+            logging.info(
+                'Stored partial connectivity loss by event (infra-event_pcl)')
+        if 'event_connectivity_loss_wcl' in conn_results:
+            self.datastore.create_df(
+                'infra-event_wcl',
+                conn_results['event_connectivity_loss_wcl'])
+            logging.info(
+                'Stored weighted connectivity loss by event (infra-event_wcl)')
+        if 'event_connectivity_loss_ccl' in conn_results:
+            self.datastore.create_df(
+                'infra-event_ccl',
+                conn_results['event_connectivity_loss_ccl'])
+            logging.info(
+                'Stored complete connectivity loss by event (infra-event_ccl)')
+        # Storing the connectivity loss at nodal level
+        # taz_cl.to_csv("taz.csv")
+        if 'taz_cl' in conn_results:
+            self.datastore.create_df(
+                'infra-taz_cl',
+                conn_results['taz_cl'])
+            logging.info(
+                'Stored connectivity loss of TAZ nodes (taz_cl)')
+        # Storing the connectivity loss at nodal level
+        # dem_cl.to_csv("dem_cl.csv")
+        if 'dem_cl' in conn_results:
+            self.datastore.create_df(
+                'infra-dem_cl',
+                conn_results['dem_cl'])
+            logging.info(
+                'Stored connectivity loss of demand nodes (dem_cl)')
+        # node_el.to_csv("node_el.csv")
+        if 'node_el' in conn_results:
+            self.datastore.create_df(
+                'infra-node_el',
+                conn_results['node_el'])
+            logging.info(
+                'Stored efficiency loss of nodes (node_el)')

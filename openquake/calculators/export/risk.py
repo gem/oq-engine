@@ -641,17 +641,16 @@ def export_reinsurance(ekey, dstore):
     return [dest]
 
 
-@export.add(('node_el', 'csv'),
-            ('taz_cl', 'csv'),
-            ('dem_cl', 'csv'),
-            ('event_connectivity_loss_ccl', 'csv'),
-            ('event_connectivity_loss_pcl', 'csv'),
-            ('event_connectivity_loss_wcl', 'csv'),
-            ('event_connectivity_loss_eff', 'csv'))
+@export.add(('infra-node_el', 'csv'),
+            ('infra-taz_cl', 'csv'),
+            ('infra-dem_cl', 'csv'),
+            ('infra-event_ccl', 'csv'),
+            ('infra-event_pcl', 'csv'),
+            ('infra-event_wcl', 'csv'),
+            ('infra-event_efl', 'csv'))
 def export_node_el(ekey, dstore):
     dest = dstore.export_path('%s.%s' % ekey)
     df = dstore.read_df(ekey[0])
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, dest, comment=dstore.metadata)
-    # return [dest]
     return writer.getsaved()

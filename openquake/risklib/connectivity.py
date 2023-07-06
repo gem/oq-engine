@@ -56,6 +56,13 @@ def classify_nodes(exposure_df):
         exposure_df.supply_or_demand == "demand"].index.to_list()
     eff_nodes = exposure_df.loc[exposure_df.type == "node"].index.to_list()
 
+    # We should raise an error if the exposure nodes contain at the same time
+    # taz/both and demand/supply
+    if TAZ_nodes and demand_nodes:
+        raise ValueError(
+            'The exposure can contain either taz/both nodes or'
+            ' demand/supply nodes, but not both kinds at the same time.')
+
     return TAZ_nodes, source_nodes, demand_nodes, eff_nodes
 
 
@@ -122,6 +129,7 @@ def get_damage_df(dstore, exposure_df):
 
 def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
                       damage_df, g_type, calculation_mode):
+    taz_nodes_analysis_results = {}
     (taz_cl, node_el,
         event_connectivity_loss_pcl,
         event_connectivity_loss_wcl,
@@ -154,44 +162,24 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
         node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
             lambda x: x/num_events)
 
-    print("The mean of the Partial Connectivity Loss: {}".format(
-        avg_connectivity_loss_pcl))
-    print("The mean of the Weighted Connectivity Loss: {}".format(
-        avg_connectivity_loss_wcl))
-    print("The mean of the Global Efficiency Loss: {}".format(
-        avg_connectivity_loss_eff))
-    dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
-    dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
-    dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
+    taz_cl.drop(columns=['ordinal'], inplace=True)
+    node_el.drop(columns=['ordinal'], inplace=True)
 
-    # Storing the connectivity loss at global level for each event
-    # TODO: Save performance metrics for each event in datastore and make
-    #       it exportable
-    # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
-    # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
-    # event_connectivity_loss_eff.to_csv("efl_event.csv")
-    dstore.create_df('event_connectivity_loss_pcl',
-                     event_connectivity_loss_pcl)
-    dstore.create_df('event_connectivity_loss_wcl',
-                     event_connectivity_loss_wcl)
-    dstore.create_df('event_connectivity_loss_eff',
-                     event_connectivity_loss_eff)
-    # Storing the connectivity loss at nodal level
-    # TODO: Save taz_cl in datastore and make it exportable
-    # taz_cl.to_csv("taz.csv")
-    dstore.create_df('taz_cl', taz_cl)
-    # TODO: Save node_el in datastore and make it exportable
-    # node_el.to_csv("node_el.csv")
+    for result in [
+            'avg_connectivity_loss_pcl', 'avg_connectivity_loss_wcl',
+            'avg_connectivity_loss_eff',
+            'event_connectivity_loss_pcl', 'event_connectivity_loss_wcl',
+            'event_connectivity_loss_eff',
+            'taz_cl', 'node_el']:
+        taz_nodes_analysis_results[result] = locals()[result]
 
-    # FIXME: node_el.drop(columns=['ordinal'])
-    dstore.create_df('node_el', node_el)
-
-    return node_el, avg_connectivity_loss_eff
+    return taz_nodes_analysis_results
 
 
 def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
                          demand_nodes, source_nodes, damage_df, g_type,
                          calculation_mode):
+    demand_nodes_analysis_results = {}
     (dem_cl, node_el, event_connectivity_loss_ccl,
         event_connectivity_loss_pcl, event_connectivity_loss_wcl,
         event_connectivity_loss_eff) = EFLWCLPCLCCL_demand(
@@ -232,49 +220,23 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
         node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
             lambda x: x/num_events)
 
-    print("The mean of the Complete Connectivity Loss: {}".format(
-        avg_connectivity_loss_ccl))
-    print("The mean of the Partial Connectivity Loss: {}".format(
-        avg_connectivity_loss_pcl))
-    print("The mean of the Weighted Connectivity Loss: {}".format(
-        avg_connectivity_loss_wcl))
-    print("The mean of the Global Efficiency Loss: {}".format(
-        avg_connectivity_loss_eff))
-    dstore['avg_connectivity_loss_ccl'] = avg_connectivity_loss_ccl
-    dstore['avg_connectivity_loss_pcl'] = avg_connectivity_loss_pcl
-    dstore['avg_connectivity_loss_wcl'] = avg_connectivity_loss_wcl
-    dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
+    dem_cl.drop(columns=['ordinal'], inplace=True)
+    node_el.drop(columns=['ordinal'], inplace=True)
 
-    # Storing the connectivity loss at global level for each event
-    # TODO: Save performance metrics in datastore and make it exportable
-    # event_connectivity_loss_ccl.to_csv("ccl_event.csv")
-    # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
-    # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
-    # event_connectivity_loss_eff.to_csv("efl_event.csv")
-    dstore.create_df('event_connectivity_loss_ccl',
-                     event_connectivity_loss_ccl)
-    dstore.create_df('event_connectivity_loss_pcl',
-                     event_connectivity_loss_pcl)
-    dstore.create_df('event_connectivity_loss_wcl',
-                     event_connectivity_loss_wcl)
-    dstore.create_df('event_connectivity_loss_eff',
-                     event_connectivity_loss_eff)
+    for result in [
+            'avg_connectivity_loss_ccl', 'avg_connectivity_loss_pcl',
+            'avg_connectivity_loss_wcl', 'avg_connectivity_loss_eff',
+            'event_connectivity_loss_ccl', 'event_connectivity_loss_pcl',
+            'event_connectivity_loss_wcl', 'event_connectivity_loss_eff',
+            'dem_cl', 'node_el']:
+        demand_nodes_analysis_results[result] = locals()[result]
 
-    # Storing the connectivity loss at nodal level
-    # TODO: Save dem_cl in datastore and make it exportable
-    # dem_cl.to_csv("dem_cl.csv")
-    dstore.create_df('dem_cl', dem_cl)
-    # TODO: Save node_el in datastore and make it exportable
-    # node_el.to_csv("node_el.csv")
-
-    # FIXME: node_el.drop(columns=['ordinal'])
-    dstore.create_df('node_el', node_el)
-
-    return node_el, avg_connectivity_loss_eff
+    return demand_nodes_analysis_results
 
 
 def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
                           damage_df, g_type, calculation_mode):
+    generic_nodes_analysis_results = {}
     node_el, event_connectivity_loss_eff = EFL_node(
         exposure_df, G_original, eff_nodes, damage_df, g_type)
     sum_connectivity_loss_eff = event_connectivity_loss_eff[
@@ -293,24 +255,15 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
         node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
             lambda x: x/num_events)
 
-    print("The mean of the Global Efficiency Loss: {}".format(
-        avg_connectivity_loss_eff))
-    dstore['avg_connectivity_loss_eff'] = avg_connectivity_loss_eff
+    node_el.drop(columns=['ordinal'], inplace=True)
 
-    # Storing the connectivity loss at global level for each event
-    # TODO: Save event_connectivity_loss_eff in datastore and make it
-    #       exportable
-    # event_connectivity_loss_eff.to_csv("efl_event.csv")
-    dstore.create_df('event_connectivity_loss_eff',
-                     event_connectivity_loss_eff)
-    # Storing the connectivity loss at nodal level
-    # TODO: Save node_el in datastore and make it exportable
-    # node_el.to_csv("node_el.csv")
+    for result in [
+            'avg_connectivity_loss_eff',
+            'event_connectivity_loss_eff',
+            'node_el']:
+        generic_nodes_analysis_results[result] = locals()[result]
 
-    # FIXME: node_el.drop(columns=['ordinal'])
-    dstore.create_df('node_el', node_el)
-
-    return node_el, avg_connectivity_loss_eff
+    return generic_nodes_analysis_results
 
 
 def cleanup_graph(G_original, event_damage_df, g_type):
@@ -399,6 +352,7 @@ def calc_efficiency(G_original, eff_table):
 
 
 def analysis(dstore):
+    connectivity_results = {}
     oq = dstore["oqparam"]
     calculation_mode = oq.calculation_mode
     assert calculation_mode in ("event_based_damage", "scenario_damage")
@@ -413,40 +367,29 @@ def analysis(dstore):
     damage_df = get_damage_df(dstore, exposure_df)
 
     # Calling the function according to the specification of the node type
-
-    # FIXME: what happens if we have more than one node class? Shouldn't we
-    # consider all separate groups instead of e.g. just TAZ_nodes, when
-    # present?
-    # We should raise an error if the exposure nodes contain at the same time
-    # taz/both and demand/supply
-
     if TAZ_nodes:
         # if the nodes acts as both supply or demand (for example: traffic
         # analysis zone in transportation network)
-        node_el, avg_connectivity_loss_eff = analyze_taz_nodes(
+        taz_nodes_analysis_results = analyze_taz_nodes(
             dstore, exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df,
             g_type, calculation_mode)
+        connectivity_results.update(taz_nodes_analysis_results)
     elif demand_nodes:
         # This is the classic and mostly used when supply/source and
         # demand/sink is explicity mentioned to the nodes of interest
-        node_el, avg_connectivity_loss_eff = analyze_demand_nodes(
+        demand_nodes_analysis_results = analyze_demand_nodes(
             dstore, exposure_df, G_original, eff_nodes, demand_nodes,
             source_nodes, damage_df, g_type, calculation_mode)
+        connectivity_results.update(demand_nodes_analysis_results)
     else:
         # if nothing is mentioned in case of scarce data or every node is
         # important and no distinction can be made
-        node_el, avg_connectivity_loss_eff = analyze_generic_nodes(
+        generic_nodes_analysis_results = analyze_generic_nodes(
             dstore, exposure_df, G_original, eff_nodes, damage_df, g_type,
             calculation_mode)
-    # FIXME:
-    # The output gives efficiency loss even if it say average connectivity loss
-    # in the output. It has to be modified in
-    # openquake/calculators/event_based_damage.py
-    # from line number 290 -293.
-    # node_el and avg_connectivity_loss_eff has been retuned now to avoid the
-    # error since this is calculated in every scenario.
+        connectivity_results.update(generic_nodes_analysis_results)
 
-    return node_el, avg_connectivity_loss_eff
+    return connectivity_results
 
 
 def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
