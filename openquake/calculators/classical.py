@@ -32,6 +32,7 @@ from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -445,6 +446,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        rlzs = self.haz.R == 1 or oq.individual_rlzs
+        if not rlzs and not oq.hazard_stats():
+            raise InvalidFile('%(job_ini)s: you disabled all statistics',
+                              oq.inputs)
         self.source_data = AccumDict(accum=[])
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')

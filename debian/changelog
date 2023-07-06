@@ -1,6 +1,5 @@
   [Michele Simionato]
-  * Accidentally disabling the computation of the statistics was causing
-    the generation of all individual curves
+  * Raise an early error if the user disable both realizations and statistics
   * Internal: added dbserver.user in openquake.cfg
   * Solved the hanging of classical calculations due to large zmq packets
     and reduced memory occupation
