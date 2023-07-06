@@ -354,7 +354,7 @@ def cleanup_graph(G_original, event_damage_df, g_type):
     return G
 
 
-def FIXME_for_calculating_weighted_connectivity_loss(
+def calc_weighted_connectivity_loss(
         G_original, nodes_from, nodes_to, wcl_table, pcl_table):
     # For calculating weighted connectivity loss
     # Important: if the weights is not provided, then the weights of each edges
@@ -378,7 +378,7 @@ def FIXME_for_calculating_weighted_connectivity_loss(
         wcl_table.at[i, 'WS0'] = countw * pcl_table.at[i, 'NS0']
 
 
-def FIXME_for_calculating_efficiency(G_original, eff_table):
+def calc_efficiency(G_original, eff_table):
     # For calculating efficiency
     # Important: If the weights is not provided, then the weights of each edges
     # is considered to be one.
@@ -417,6 +417,8 @@ def analysis(dstore):
     # FIXME: what happens if we have more than one node class? Shouldn't we
     # consider all separate groups instead of e.g. just TAZ_nodes, when
     # present?
+    # We should raise an error if the exposure nodes contain at the same time
+    # taz/both and demand/supply
 
     if TAZ_nodes:
         # if the nodes acts as both supply or demand (for example: traffic
@@ -490,11 +492,11 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i)
                         for j in source_nodes) for i in demand_nodes]
 
-    FIXME_for_calculating_weighted_connectivity_loss(
+    calc_weighted_connectivity_loss(
         G_original, source_nodes, demand_nodes, wcl_table, pcl_table)
 
     N = len(G_original)
-    att = FIXME_for_calculating_efficiency(G_original, eff_table)
+    att = calc_efficiency(G_original, eff_table)
 
     # Now we check for every event after earthquake
     for event_id, event_damage_df in damage_df.groupby("event_id"):
@@ -664,11 +666,11 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     # pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i) for j in TAZ_nodes)
     # for i in TAZ_nodes]
 
-    FIXME_for_calculating_weighted_connectivity_loss(
+    calc_weighted_connectivity_loss(
         G_original, TAZ_nodes, TAZ_nodes, wcl_table, pcl_table)
 
     N = len(G_original)
-    att = FIXME_for_calculating_efficiency(G_original, eff_table)
+    att = calc_efficiency(G_original, eff_table)
 
     for event_id, event_damage_df in damage_df.groupby("event_id"):
         G = cleanup_graph(G_original, event_damage_df, g_type)
@@ -791,7 +793,7 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
     # To check the the values for each node before the earthquake event
 
     N = len(G_original)
-    att = FIXME_for_calculating_efficiency(G_original, eff_table)
+    att = calc_efficiency(G_original, eff_table)
 
     # After eathquake
     for event_id, event_damage_df in damage_df.groupby("event_id"):
