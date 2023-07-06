@@ -77,22 +77,8 @@ jobs:
         # Wait the DbServer to come up
         echo "Waiting DBServer up on port 1907...."
         while ! nc -z localhost 1907; do
-          sleep 2 # wait for 1/10 of the second before check again
+          sleep 5 # wait 
         done
-        echo "test WebUI before to modify for django login"
-        # START WEBUI
-        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
-        while ! nc -z localhost 8800; do
-          sleep 2 # wait for 1/10 of the second before check again
-        done
-        curl --fail -L -I -X GET http://127.0.0.1:8800/
-        sleep 1
-        curl --fail -L -I -X GET http://127.0.0.1:8800/ipt
-        sleep 1
-        curl --fail -L -I -X GET http://127.0.0.1:8800/taxtweb
-        sleep 1
-        curl --fail -L -I -X GET http://127.0.0.1:8800/taxonomy
-        sleep 1
         echo "Add settings for login and logging on webui before to start"
         cd /__w/oq-engine/oq-engine/
         ls -lrt
@@ -105,9 +91,9 @@ jobs:
         echo "DISPLAY content of local_settings"
         cat local_settings.py
         # START WEBUI
-        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8888 -s &'
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
         echo "Waiting WEBUI up on port 8888...."
-        while ! nc -z localhost 8888; do
+        while ! nc -z localhost 8800; do
           sleep 2 # wait for 1/10 of the second before check again
         done
         ls -lrt /var/log/oq-engine/
@@ -134,6 +120,15 @@ jobs:
         echo "display log of webui"
         echo "--------------------"
         cat /var/log/oq-engine/webui-access.log
+        echo "test WebUI tools"
+        sleep 5
+        curl --fail -L -I -X GET http://127.0.0.1:8800/
+        sleep 1
+        curl --fail -L -I -X GET http://127.0.0.1:8800/taxtweb
+        sleep 1
+        curl --fail -L -I -X GET http://127.0.0.1:8800/taxonomy
+        sleep 1
+        curl --fail -L -I -X GET http://127.0.0.1:8800/ipt
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
