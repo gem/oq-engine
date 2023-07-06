@@ -165,6 +165,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
             ProbabilityMap(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
+    hmaps_mon = monitor('make_hmaps', measuremem=False)
     sidx = ProbabilityMap(sids, 1, 1).fill(0).sidx
     for sid in sids:
         idx = sidx[sid]
@@ -187,12 +188,14 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                     arr = sc.array.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
-    if poes and (R > 1 and individual_rlzs or not hstats):
-        pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
-            pmap_by_kind['hcurves-rlzs'], imtls, poes)
+    if poes and R > 1 and individual_rlzs:
+        with hmaps_mon:
+            pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-rlzs'], imtls, poes)
     if poes and hstats:
-        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-            pmap_by_kind['hcurves-stats'], imtls, poes)
+        with hmaps_mon:
+            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-stats'], imtls, poes)
     return pmap_by_kind
 
 
@@ -678,8 +681,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
-        logging.info('Producing %s of hazard curves and %s of hazard maps',
-                     humansize(hcbytes), humansize(hmbytes))
+        if hcbytes:
+            logging.info('Producing %s of hazard curves', humansize(hcbytes))
+        if hmbytes:
+            logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
         if 'delta_rates' in self.datastore.parent:
