@@ -640,7 +640,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
             # maximum size of the pmap array in GB
             size_gb = G * L * len(sitecol) * 8 / 1024**3
-            ntiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
+            ntiles = int(numpy.ceil(10 * size_gb / oq.pmap_max_gb))
             # NB: disagg_by_src is disabled in case of tiling
             assert not (ntiles > 1 and oq.disagg_by_src)
             cm.ntiles = ntiles
