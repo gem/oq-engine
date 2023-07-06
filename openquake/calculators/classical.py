@@ -157,7 +157,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
-    if R > 1 and individual_rlzs or not hstats:
+    if R == 1 or individual_rlzs:
         pmap_by_kind['hcurves-rlzs'] = [
             ProbabilityMap(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
@@ -177,7 +177,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
         if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:
-            if R > 1 and individual_rlzs or not hstats:
+            if R == 1 or individual_rlzs:
                 for r in range(R):
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc.array[:, r].reshape(M, L1))
@@ -188,7 +188,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                     arr = sc.array.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
-    if poes and R > 1 and individual_rlzs:
+    if poes and (R == 1 or individual_rlzs):
         with hmaps_mon:
             pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
                 pmap_by_kind['hcurves-rlzs'], imtls, poes)
@@ -605,7 +605,7 @@ class ClassicalCalculator(base.HazardCalculator):
             L = oq.imtls.size
         L1 = self.L1 = L // M
         S = len(hstats)
-        if R > 1 and individual_rlzs or not hstats:
+        if R == 1 or individual_rlzs:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
