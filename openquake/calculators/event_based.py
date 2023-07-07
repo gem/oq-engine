@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, parallel
-from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.general import AccumDict, humansize, groupby
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -103,7 +103,7 @@ def get_computer(cmaker, oqparam, proxy, sids, sitecol,
         oqparam._amplifier, oqparam._sec_perils)
 
             
-def event_based(proxies, full_lt, oqparam, dstore, monitor):
+def event_based(sitecol, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -111,70 +111,81 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
     sig_eps = []
     times = []  # rup_id, nsites, dt
     hcurves = {}  # key -> poes
-    trt_smr = proxies[0]['trt_smr']
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
-    full_lt.init()
-    max_iml = oqparam.get_max_iml()
-    scenario = 'scenario' in oqparam.calculation_mode
     with dstore:
-        trt = full_lt.trts[trt_smr // TWO24]
-        sitecol = dstore['sitecol']
-        extra = sitecol.array.dtype.names
-        srcfilter = SourceFilter(sitecol, oqparam.maximum_distance(trt))
-        rupgeoms = dstore['rupgeoms']
-        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oqparam, extraparams=extra)
-        cmaker.min_mag = getdefault(oqparam.minimum_magnitude, trt)
-        if "station_data" in oqparam.inputs:
-            station_data = dstore.read_df('station_data', 'site_id')
-            station_sitecol = sitecol.filtered(station_data.index)
-        else:
-            station_data = None
-            station_sitecol = None
-        for proxy in proxies:
-            t0 = time.time()
-            with fmon:
-                if proxy['mag'] < cmaker.min_mag:
-                    continue
-                sids = srcfilter.close_sids(proxy, trt)
-                if len(sids) == 0:  # filtered away
-                    continue
-                proxy.geom = rupgeoms[proxy['geom_id']]
-                try:
-                    computer = get_computer(
-                        cmaker, oqparam, proxy, sids, sitecol,
-                        station_sitecol, station_data)
-                except FarAwayRupture:
-                    # skip this rupture
-                    continue
-            with cmon:
-                df = computer.compute_all(scenario, sig_eps, max_iml)
-            dt = time.time() - t0
-            times.append((proxy['id'], len(computer.ctx.sids),
-                          computer.ctx.rrup.min(), dt))
-            for key in df.columns:
-                alldata[key].extend(df[key])
+        oq = dstore['oqparam']
+        max_iml = oq.get_max_iml()
+        scenario = 'scenario' in oq.calculation_mode
+        full_lt = dstore['full_lt'].init()
+        allproxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
+        if "station_data" in oq.inputs:
+            # this is meant to be used in conditioned scenario calculations with
+            # a single rupture; we are taking the first copy of the rupture
+            # (remember: _read_scenario_ruptures makes num_gmfs copies to 
+            # parallelize, but the conditioning process is computationally 
+            # expensive, so we want to avoid repeating it num_gmfs times)
+            # TODO: this is ugly and must be improved upon!
+            allproxies = allproxies[0:1]
+
+        for trt_smr, proxies in groupby(
+                allproxies, operator.attrgetter('trt_smr')).items():
+            trt = full_lt.trts[trt_smr // TWO24]
+            extra = sitecol.array.dtype.names
+            srcfilter = SourceFilter(sitecol, oq.maximum_distance(trt))
+            rupgeoms = dstore['rupgeoms']
+            rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
+            cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
+            cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+            if "station_data" in oq.inputs:
+                station_data = dstore.read_df('station_data', 'site_id')
+                station_sitecol = sitecol.filtered(station_data.index)
+            else:
+                station_data = None
+                station_sitecol = None
+            for proxy in proxies:
+                t0 = time.time()
+                with fmon:
+                    if proxy['mag'] < cmaker.min_mag:
+                        continue
+                    sids = srcfilter.close_sids(proxy, trt)
+                    if len(sids) == 0:  # filtered away
+                        continue
+                    proxy.geom = rupgeoms[proxy['geom_id']]
+                    try:
+                        computer = get_computer(
+                            cmaker, oq, proxy, sids, sitecol,
+                            station_sitecol, station_data)
+                    except FarAwayRupture:
+                        # skip this rupture
+                        continue
+                with cmon:
+                    df = computer.compute_all(scenario, sig_eps, max_iml)
+                dt = time.time() - t0
+                times.append((proxy['id'], len(computer.ctx.sids),
+                              computer.ctx.rrup.min(), dt))
+                for key in df.columns:
+                    alldata[key].extend(df[key])
     for key, val in sorted(alldata.items()):
         if key in 'eid sid rlz':
             alldata[key] = U32(alldata[key])
         else:
             alldata[key] = F32(alldata[key])
     gmfdata = strip_zeros(pandas.DataFrame(alldata))
-    if len(gmfdata) and oqparam.hazard_curves_from_gmfs:
+    if len(gmfdata) and oq.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
             with hc_mon:
                 poes = calc.gmvs_to_poes(
-                    df, oqparam.imtls, oqparam.ses_per_logic_tree_path)
-                for m, imt in enumerate(oqparam.imtls):
+                    df, oq.imtls, oq.ses_per_logic_tree_path)
+                for m, imt in enumerate(oq.imtls):
                     hcurves[rsi2str(rlz, sid, imt)] = poes[m]
     times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
-    if not oqparam.ground_motion_fields:
+    if not oq.ground_motion_fields:
         gmfdata = ()
     return dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
-                sig_eps=numpy.array(sig_eps, sig_eps_dt(oqparam.imtls)))
+                sig_eps=numpy.array(sig_eps, sig_eps_dt(oq.imtls)))
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
@@ -435,25 +446,11 @@ class EventBasedCalculator(base.HazardCalculator):
         # event_based in parallel
         nr = len(dstore['ruptures'])
         logging.info('Reading {:_d} ruptures'.format(nr))
-        proxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
-        if "station_data" in oq.inputs:
-            # this is meant to be used in conditioned scenario calculations with
-            # a single rupture; we are taking the first copy of the rupture
-            # (remember: _read_scenario_ruptures makes num_gmfs copies to 
-            # parallelize, but the conditioning process is computationally 
-            # expensive, so we want to avoid repeating it num_gmfs times)
-            # TODO: this is ugly and must be improved upon!
-            proxies = proxies[0:1]
         dstore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap.apply_split(
-            self.core_task.__func__,
-            (proxies, self.full_lt, oq, self.datastore),
-            key=operator.itemgetter('trt_smr'),
-            weight=operator.itemgetter('n_occ'),
-            h5=dstore.hdf5,
-            concurrent_tasks=oq.concurrent_tasks or 1,
-            duration=oq.time_per_task,
-            outs_per_task=oq.outs_per_task)
+        allargs = [(sites, dstore) for sites in self.sitecol.split(
+            oq.concurrent_tasks / 2)]
+        smap = parallel.Starmap(
+            self.core_task.__func__, allargs, h5=dstore.hdf5)
         if oq.hazard_curves_from_gmfs:
             self.L = oq.imtls.size
             acc0 = {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
