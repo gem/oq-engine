@@ -304,6 +304,10 @@ default value of 99 was used, most likely not what the users wanted.
 If the same parameter is present in different sections of the job.ini
 file, now the engine raises an error.
 
+If the user by mistake disable the statistics and does not specify
+`individual_rlzs=true`, now gets an early error; before, the engine
+was computing the individual realizations (which was an error).
+
 If the exposure contains empty asset IDs, now the engine raises a clear
 error.
 
