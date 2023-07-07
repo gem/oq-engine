@@ -32,6 +32,7 @@ from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat, workerpool as w)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -109,7 +110,14 @@ def classical(srcs, sitecol, cmaker, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    for sites in sitecol.split_in_tiles(cmaker.itiles):
+    
+    # maximum size of the pmap array in GB
+    size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
+    itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
+
+    # NB: disagg_by_src is disabled in case of tiling
+    assert not (itiles > 1 and cmaker.disagg_by_src)
+    for sites in sitecol.split_in_tiles(itiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
@@ -150,7 +158,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     R = len(weights)
     S = len(hstats)
     pmap_by_kind = {}
-    if R > 1 and individual_rlzs or not hstats:
+    if R == 1 or individual_rlzs:
         pmap_by_kind['hcurves-rlzs'] = [
             ProbabilityMap(sids, M, L1).fill(0) for r in range(R)]
     if hstats:
@@ -158,6 +166,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
             ProbabilityMap(sids, M, L1).fill(0) for r in range(S)]
     combine_mon = monitor('combine pmaps', measuremem=False)
     compute_mon = monitor('compute stats', measuremem=False)
+    hmaps_mon = monitor('make_hmaps', measuremem=False)
     sidx = ProbabilityMap(sids, 1, 1).fill(0).sidx
     for sid in sids:
         idx = sidx[sid]
@@ -169,7 +178,7 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
         if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:
-            if R > 1 and individual_rlzs or not hstats:
+            if R == 1 or individual_rlzs:
                 for r in range(R):
                     pmap_by_kind['hcurves-rlzs'][r].array[idx] = (
                         pc.array[:, r].reshape(M, L1))
@@ -180,12 +189,14 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
                     arr = sc.array.reshape(M, L1)
                     pmap_by_kind['hcurves-stats'][s].array[idx] = arr
 
-    if poes and (R > 1 and individual_rlzs or not hstats):
-        pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
-            pmap_by_kind['hcurves-rlzs'], imtls, poes)
+    if poes and (R == 1 or individual_rlzs):
+        with hmaps_mon:
+            pmap_by_kind['hmaps-rlzs'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-rlzs'], imtls, poes)
     if poes and hstats:
-        pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
-            pmap_by_kind['hcurves-stats'], imtls, poes)
+        with hmaps_mon:
+            pmap_by_kind['hmaps-stats'] = calc.make_hmaps(
+                pmap_by_kind['hcurves-stats'], imtls, poes)
     return pmap_by_kind
 
 
@@ -404,8 +415,6 @@ class ClassicalCalculator(base.HazardCalculator):
         maxsize = get_maxsize(len(self.oqparam.imtls), max_gs)
         logging.info('Considering {:_d} contexts at once'.format(maxsize))
         size = max_gs * N * L * 8
-        logging.info('ProbabilityMap(G=%d,N=%d,L=%d) %s per core',
-                     max_gs, N, L, humansize(size))
         avail = min(psutil.virtual_memory().available, config.memory.limit)
         if avail < size:
             raise MemoryError(
@@ -437,13 +446,17 @@ class ClassicalCalculator(base.HazardCalculator):
         self.init_poes()
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        rlzs = self.haz.R == 1 or oq.individual_rlzs
+        if not rlzs and not oq.hazard_stats():
+            raise InvalidFile('%(job_ini)s: you disabled all statistics',
+                              oq.inputs)
         self.source_data = AccumDict(accum=[])
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        self.ntiles = 1 + int(req / (oq.pmap_max_gb * 100))  # 40 GB
+        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
+        self.ntiles = 1 + int(req_gb / oq.pmap_max_mb)  # 50 GB
         if self.ntiles > 1:
             self.execute_seq(maxw)
         else:  # regular case
@@ -500,18 +513,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)
         allargs = []
         for cm in self.cmakers:
-            G = len(cm.gsims)
+            cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
-
-            # maximum size of the pmap array in GB
-            size_gb = G * L * len(sitecol) * 8 / 1024**3
-            itiles = int(numpy.ceil(size_gb / oq.pmap_max_gb))
-            # NB: disagg_by_src is disabled in case of tiling
-            assert not (itiles > 1 and oq.disagg_by_src)
-            cm.itiles = itiles
-            if itiles > 1:
-                logging.debug('Producing %d inner tiles', itiles)
-
             if oq.disagg_by_src:  # possible only with a single tile
                 blks = groupby(sg, basename).values()
             elif sg.atomic or sg.weight <= maxw:
@@ -607,7 +610,7 @@ class ClassicalCalculator(base.HazardCalculator):
             L = oq.imtls.size
         L1 = self.L1 = L // M
         S = len(hstats)
-        if R > 1 and individual_rlzs or not hstats:
+        if R == 1 or individual_rlzs:
             self.datastore.create_dset('hcurves-rlzs', F32, (N, R, M, L1))
             self.datastore.set_shape_descr(
                 'hcurves-rlzs', site_id=N, rlz_id=R, imt=imts, lvl=L1)
@@ -683,8 +686,10 @@ class ClassicalCalculator(base.HazardCalculator):
         self.hazard = {}  # kind -> array
         hcbytes = 8 * N * S * M * L1
         hmbytes = 8 * N * S * M * P if oq.poes else 0
-        logging.info('Producing %s of hazard curves and %s of hazard maps',
-                     humansize(hcbytes), humansize(hmbytes))
+        if hcbytes:
+            logging.info('Producing %s of hazard curves', humansize(hcbytes))
+        if hmbytes:
+            logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
         if 'delta_rates' in self.datastore.parent:

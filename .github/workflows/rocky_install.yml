@@ -53,7 +53,7 @@ jobs:
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
-        set -x 
+        set -x
         export PIP_DEFAULT_TIMEOUT=100
         #
         pip3 install --default-timeout=100 -U pip wheel setuptools
@@ -76,12 +76,10 @@ jobs:
         # Wait the DbServer to come up
         echo "Waiting DBServer up on port 1907...."
         while ! nc -z localhost 1907; do
-          sleep 2 # wait for 1/10 of the second before check again
+          sleep 5 # wait 
         done
-        sleep 1
         echo "Add settings for login and logging on webui before to start"
         cd /__w/oq-engine/oq-engine/
-        ls -lrt
         cd openquake/server
         cat > local_settings.py << EOF
         LOCKDOWN = True
@@ -94,7 +92,7 @@ jobs:
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
         echo "Waiting WEBUI up on port 8800...."
         while ! nc -z localhost 8800; do
-          sleep 2 # wait for 1/10 of the second before check again
+          sleep 5 
         done
         ls -lrt /var/log/oq-engine/
         sleep 1
@@ -102,24 +100,44 @@ jobs:
         cd /__w/oq-engine/oq-engine/openquake/engine/
         runuser -l openquake -c '/opt/openquake/venv/bin/oq webui migrate'
         sleep 1
-        curl -L -I -X GET http://127.0.0.1:8800/accounts/login/
+        curl --fail -L -I -X GET http://127.0.0.1:8800/accounts/login/
         echo -n "TEST DJANGO LOGIN "
         LOGIN_URL=http://127.0.0.1:8800/accounts/login/
         YOUR_USER='username'
         YOUR_PASS='password'
         COOKIES=cookies.txt
-        CURL_BIN="curl -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
+        CURL_BIN="curl --fail -s -c $COOKIES -b $COOKIES -e $LOGIN_URL"
         echo -n "Django Auth: get csrftoken ..."
         $CURL_BIN $LOGIN_URL > /dev/null
         DJANGO_TOKEN="csrfmiddlewaretoken=$(grep csrftoken $COOKIES | sed 's/^.*csrftoken\s*//')"
         echo " perform login ..."
         $CURL_BIN \
             -d "$DJANGO_TOKEN&username=$YOUR_USER&password=$YOUR_PASS" \
-            -X POST $LOGIN_URL > /dev/null 
+            -X POST $LOGIN_URL > /dev/null
         echo "--------------------"
         echo "display log of webui"
         echo "--------------------"
         cat /var/log/oq-engine/webui-access.log
+        echo "test WebUI tools"
+        sleep 5
+        cd /__w/oq-engine/oq-engine/
+        cd openquake/server
+        cat > local_settings.py 
+        echo "DISPLAY content of local_settings"
+        cat local_settings.py
+        # START WEBUI
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8888 -s &'
+        echo "Waiting WEBUI up on port 8888...."
+        while ! nc -z localhost 8888; do
+          sleep 5 
+        done
+        curl --fail -I -L -X GET http://127.0.0.1:8888/
+        sleep 1
+        curl --fail -I -L -X GET http://127.0.0.1:8888/taxtweb
+        sleep 1
+        curl --fail -I -L -X GET http://127.0.0.1:8888/taxonomy
+        sleep 1
+        curl --fail -I -L -X GET http://127.0.0.1:8888/ipt
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
