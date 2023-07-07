@@ -1,4 +1,4 @@
-Version 3.17 is the culmination of 4 months of work involving around 470
+Version 3.17 is the culmination of 5 months of work involving around 470
 pull requests. It is aimed to users wanting the latest features
 and maximum performance. Users valuing stability may want to stay with
 the LTS release instead (currently at version 3.16.4).
@@ -14,7 +14,7 @@ A summary is given below.
 The disaggregation calculator has been deeply revised, by changing the
 underlying algorithms and by making it possible to compute the average
 disaggregation directly. For the first time it is possible to compute
-the mean disaggregation for large models like the one for Europe (with
+the mean disaggregation for large models like Europe (with
 10,000 realizations) without running out of memory and in a
 surprisingly small amount of time (minutes on a cluster). The game
 changer was computing the mean disaggregation in terms the rates and
@@ -29,7 +29,7 @@ The changes have touched all kinds of disaggregation, including
 epsilon_star disaggregation, disaggregation over multiple sites and
 disaggregation by source. The disaggregation outputs are stored in a
 different way and the exporters have been updated and optimized. The
-CSV outputs have an additional column iml. We also renamed the "by
+CSV outputs have an additional column `iml`. We renamed the "by
 TRT" disaggregation outputs and added a new output `TRT_Mag`. Models
 with mutually exclusive sources (i.e. Japan) can now be disaggregated,
 as well as models using the NegativeBinomialTOM temporal occurrence
@@ -44,7 +44,7 @@ different results. Also, now the default behavior is to compute the
 mean disaggregation while before it was to compute the disaggregation
 only for the realization closest to the mean hazard curve.
 
-We also substantially changed the `disagg_by_src` feature. The pandas
+Moreover, we substantially changed the `disagg_by_src` feature. The pandas
 dataframe stored under the name `disagg_by_src` has been replaced by
 an `ArrayWrapper` called `mean_rates_by_src` and the documentation
 changed accordingly. The new structure contains less information than
@@ -54,12 +54,12 @@ relevant sources and it can be actually stored for all hazard models
 in the mosaic, since it requires a lot less storage (like 10,000 times
 less storage for the EUR model).
 
-The AELO project required the ability to store disaggregation
-by relevant source results. This is why we added a new output
+The AELO project required the ability to store disaggregation results
+by source. This is why we added a new output
 `mean_disagg_by_src` with its own CSV exporter. The AELO project
 als required a deep refactoring of the logic tree processor,
 to implement the ability to reduce a full logic tree to a specific
-source. That was hard and difficult to do and may require further
+source. That was hard and time-consuming and may require further
 work in the future.
 
 Finally, we changed the task distribution to reduce data transfer in
@@ -73,14 +73,14 @@ https://docs.openquake.org/oq-engine/advanced/3.17/classical_PSHA.html#the-post-
 
 We took advantages of this feature to reimplement the conditional
 spectrum calculator as a post-processor. Vector PSHA is also
-implemented as a post-processor, and so the AELO disaggregations.
+implemented as a post-processor, and so the AELO disaggregations by source.
 Users can easily implement custom postprocessors by following the
 examples in
 https://github.com/gem/oq-engine/tree/engine-3.17/openquake/calculators/postproc
 
 Apart from post-processors, we kept working on the calculator to make
 sure that even the largest model on the GEM mosaic can run with a
-limited amount of RAM. We changed the internal `_poes` storage to
+limited amount of RAM. We also changed the internal `_poes` storage to
 reduce the disk space occupation.
 
 It is now possible to set at the same time both the `sites` parameter
@@ -109,9 +109,9 @@ meaningful rupture ID. The problem is documented in detail in
 https://docs.openquake.org/oq-engine/advanced/3.17/event_based.html#rupture-sampling-how-to-get-it-wrong
 
 Here we will just note that previous versions of the engine had a
-sequential rupture ID, presently exported in the file ruptures.csv, but was
+sequential rupture ID, exported in the file `ruptures.csv`, but was
 not usable, because by changing by a little the minimum magnitude or
-the maximum distance the ID would refer to totally different
+the maximum distance the IDs would refer to totally different
 ruptures. Moreover, there was no easy way to export a rupture given
 the rupture ID. All this has changed now, and the rupture ID does not
 depend on the details of the filtering anymore; as a consequence it is
@@ -162,12 +162,13 @@ distribution.
 The most important event in hazardlib was the porting of the GMPEs
 required to run the Canada SHM6 model. The porting from the GMPEs used
 in engine 3.11 was long and difficult, since there are many complex
-GMPEs. In the process we discovered and fixed many subtle bugs. The
+GMPEs. In the process we discovered and fixed several subtle bugs. The
 support for the Canada SHM6 is still considered experimental and you
 should report any suspicious discrepancy with respect with a
 calculation performed with engine 3.11.
 
-The GEM 2023 mosaic models were computed by converting all GMPEs with
+Moreover there was work for supporting the release of the GEM 2023 Global
+Hazard Mosaic. All the models were computed by converting the GMPEs with
 nontrivial horizontal components to use the geometric average. That
 involved specifying `horiz_comp_to_geom_mean = true` in the job.ini
 file and required to fix a few GMPEs by adding the missing
@@ -202,15 +203,16 @@ possible to run single-site classical calculations including
 disaggregation by `Mag_Dist_Eps` and disaggregation by relevant
 sources for each site in the world. The calculator automatically
 determine the model to use from the coordinates of the site and
-recompute the site parameters to use starting from the user-provided
+recompute the site parameters starting from the user-provided
 vs30. The performance has been tuned so much that a machine with only
 16 GB and 4 cores is enough to run such calculations.
 
 The WebUI was extended to log information on login/logout so that
-tools like fail2ban can be used to detect and stop denial-of-service
-attacks. We also worked on the password-reset facility.
+tools like [fail2ban](https://github.com/fail2ban/fail2ban) can be
+used to detect and stop denial-of-service attacks. We also worked on
+the password-reset facility.
 
-We also fixed the method /v1/ini_defaults returning a JSON with the
+We also fixed the method `/v1/ini_defaults` returning a JSON with the
 defaults used in the job.ini file. The issue was that it was
 returning NaNs for some site parameters, i.e. not a valid JSON.
 The solution was to not return anything for such parameters.
@@ -286,10 +288,10 @@ to debug.
 
 # Bug fixes and new checks
 
-We reimplemented the `minimum_magnitude` filter` in terms of the
+We reimplemented the `minimum_magnitude` filter in terms of the
 mag-dependent-distance filter, which can also be used to implement a
-`maximum_magnitude`. The change eliminated a bunch of bugs and corner cases
-that kept creeping in.
+`maximum_magnitude` filter. The change eliminated a bunch of bugs and
+corner cases that kept creeping in.
 
 The engine was rounding longitude and latitude to 5 digits everywhere, except 
 when generating a grid from a region; this has been fixed, and we have full
@@ -365,12 +367,12 @@ two subcommands:
 
 # Other
 
-We extended the `sensitivity_analysis` feature to work also on file parameters:
-for instance, you can provide multiple different logic tree files to study
-the sensitivity from the logic tree.
+We extended the `sensitivity_analysis` feature to work also on file
+parameters: for instance, you can provide multiple different logic
+tree files to study the sensitivity from the logic tree.
 
 There was a lot of work on documentation, both on the manuals (fully documented
-aggregate_by and ideductible and maximum_distance/min_max_mag), and the FAQs
+`aggregate_by` and `ideductible` and `maximum_distance`), and the FAQs
 (how configure multiple engine installations). We also improved the
 installation instructions.
 
