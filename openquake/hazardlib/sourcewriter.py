@@ -740,7 +740,7 @@ def extract_ddict(src_groups):
 
 
 def write_source_model(dest, sources_or_groups, name=None,
-                       investigation_time=None, prefix=''):
+                       investigation_time=None, prefix='', to_hdf5=True):
     """
     Writes a source model to XML.
 
@@ -754,6 +754,8 @@ def write_source_model(dest, sources_or_groups, name=None,
         Investigation time (for time-dependent sources)
     :param prefix:
         Add a prefix to the rupture_idxs, if given
+    :param to_hdf5:
+        FIXME: add description
     :returns:
         the list of generated filenames
     """
@@ -777,9 +779,10 @@ def write_source_model(dest, sources_or_groups, name=None,
     if attrs['investigation_time'] is None:
         del attrs['investigation_time']
     nodes = list(map(obj_to_node, groups))
-    ddict = extract_ddict(groups)
+    if to_hdf5:
+        ddict = extract_ddict(groups)
     out = [dest]
-    if ddict:
+    if to_hdf5 and ddict:
         # remove duplicate content from nodes
         for grp_node in nodes:
             for src_node in grp_node:
@@ -797,8 +800,8 @@ def write_source_model(dest, sources_or_groups, name=None,
                                          compression_opts=9)
                         h[key][:] = v
                     elif k == 'rupture_idxs' and prefix:
-                        h[key] =  [' '.join(prefix + r for r in ridxs.split())
-                                   for ridxs in v]
+                        h[key] = [' '.join(prefix + r for r in ridxs.split())
+                                  for ridxs in v]
                     else:
                         h[key] = v
         out.append(dest5)
