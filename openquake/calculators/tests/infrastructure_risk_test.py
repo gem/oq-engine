@@ -47,16 +47,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
              0.7617334360554696, 0.835219136835062])
 
         aac([
-             ds['infra-avg_ccl'][()],
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['ccl'].values),
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.7708333333333335,
-             0.5792736375574525,
-             0.8479166666666668,
-             0.8927160714285713,
+             [0.7708333333333335],
+             [0.5792736375574525],
+             [0.8479166666666668],
+             [0.8927160714285713],
             ])
 
         # FIXME: the following check is very long. We should export to csv and
@@ -164,16 +164,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_ccl'][()],
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['ccl'].values),
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.0,
-             0.2964959568733154,
-             0.3333333333333333,
-             0.5202279202279202,
+             [0.0],
+             [0.2964959568733154],
+             [0.3333333333333333],
+             [0.5202279202279202],
             ])
 
         aac([
@@ -211,14 +211,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.19123965855782582,
-             0.25,
-             0.2777777777777778,
+             [0.19123965855782582],
+             [0.25],
+             [0.2777777777777778],
             ])
 
         aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
@@ -245,7 +245,8 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        aac(ds['infra-avg_efl'][()], 0.2603130360205833)
+        aac(list(ds.read_df('infra-avg_loss')['efl'].values),
+            [0.2603130360205833])
 
         aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
             [0.2603130360205833])
@@ -262,16 +263,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_ccl'][()],
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['ccl'].values),
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.25,
-             0.13959390862944165,
-             0.25,
-             0.25,
+             [0.25],
+             [0.13959390862944165],
+             [0.25],
+             [0.25],
             ])
 
         aac(list(ds.read_df('infra-event_ccl')['CCL'].values),
@@ -303,16 +304,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_ccl'][()],
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['ccl'].values),
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.5,
-             0.127906976744186,
-             0.5,
-             0.5
+             [0.5],
+             [0.127906976744186],
+             [0.5],
+             [0.5],
             ])
 
         aac(list(ds.read_df('infra-event_ccl')['CCL'].values),
@@ -340,16 +341,16 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_ccl'][()],
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['ccl'].values),
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.0,
-             0.032774739543551985,
-             0.0,
-             0.07777777777777778,
+             [0.0],
+             [0.032774739543551985],
+             [0.0],
+             [0.07777777777777778],
             ])
 
         aac(list(ds.read_df('infra-event_ccl')['CCL'].values),
@@ -382,14 +383,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.032774739543551985,
-             0.0,
-             0.03437796771130103,
+             [0.032774739543551985],
+             [0.0],
+             [0.03437796771130103],
             ])
 
         aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
@@ -417,14 +418,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.06562726613488049,
-             0.0,
-             0.0753968253968254,
+             [0.06562726613488049],
+             [0.0],
+             [0.0753968253968254],
             ])
 
         aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),
@@ -452,14 +453,14 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         ds = self.calc.datastore
 
         aac([
-             ds['infra-avg_efl'][()],
-             ds['infra-avg_pcl'][()],
-             ds['infra-avg_wcl'][()],
+             list(ds.read_df('infra-avg_loss')['efl'].values),
+             list(ds.read_df('infra-avg_loss')['pcl'].values),
+             list(ds.read_df('infra-avg_loss')['wcl'].values),
             ],
             [
-             0.0870745160085263,
-             0.0,
-             0.0977366255144033,
+             [0.0870745160085263],
+             [0.0],
+             [0.0977366255144033],
             ])
 
         aac(list(ds.read_df('infra-event_efl')['EFFLoss'].values),

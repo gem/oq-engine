@@ -291,27 +291,21 @@ class DamageCalculator(EventBasedRiskCalculator):
             self._store_connectivity_analysis_results(conn_results)
 
     def _store_connectivity_analysis_results(self, conn_results):
-        # TODO: group avg items and event items in the datastore
+        avg_dict = {}
         if 'avg_connectivity_loss_eff' in conn_results:
-            self.datastore['infra-avg_efl'] = conn_results[
-                'avg_connectivity_loss_eff']
-            logging.info(
-                'Stored avarage efficiency loss (infra-avg_efl)')
+            avg_dict['efl'] = [conn_results['avg_connectivity_loss_eff']]
         if 'avg_connectivity_loss_pcl' in conn_results:
-            self.datastore['infra-avg_pcl'] = conn_results[
-                'avg_connectivity_loss_pcl']
-            logging.info(
-                'Stored avarage partial connectivity loss (infra-avg_pcl)')
+            avg_dict['pcl'] = [conn_results['avg_connectivity_loss_pcl']]
         if 'avg_connectivity_loss_wcl' in conn_results:
-            self.datastore['infra-avg_wcl'] = conn_results[
-                'avg_connectivity_loss_wcl']
-            logging.info(
-                'Stored avarage weighted connectivity loss (infra-avg_wcl)')
+            avg_dict['wcl'] = [conn_results['avg_connectivity_loss_wcl']]
         if 'avg_connectivity_loss_ccl' in conn_results:
-            self.datastore['infra-avg_ccl'] = conn_results[
-                'avg_connectivity_loss_ccl']
+            avg_dict['ccl'] = [conn_results['avg_connectivity_loss_ccl']]
+        if avg_dict:
+            avg_df = pandas.DataFrame(data=avg_dict)
+            self.datastore.create_df('infra-avg_loss', avg_df)
             logging.info(
-                'Stored avarage complete connectivity loss (infra-avg_ccl)')
+                'Stored avarage connectivity loss (infra-avg_loss)')
+        # TODO: group event items in the datastore
         # Storing the connectivity loss at global level for each event
         # event_connectivity_loss_ccl.to_csv("ccl_event.csv")
         # event_connectivity_loss_pcl.to_csv("pcl_event.csv")

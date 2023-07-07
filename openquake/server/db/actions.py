@@ -324,6 +324,7 @@ DISPLAY_NAME = {
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files',
+    'infra-avg_loss': 'Average Infrastructure Loss',
     'infra-node_el': 'Efficiency Loss Of Nodes',
     'infra-taz_cl': 'Connectivity Loss Of TAZ Nodes',
     'infra-dem_cl': 'Connectivity Loss Of Demand Nodes',

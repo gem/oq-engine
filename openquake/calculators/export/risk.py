@@ -641,7 +641,8 @@ def export_reinsurance(ekey, dstore):
     return [dest]
 
 
-@export.add(('infra-node_el', 'csv'),
+@export.add(('infra-avg_loss', 'csv'),
+            ('infra-node_el', 'csv'),
             ('infra-taz_cl', 'csv'),
             ('infra-dem_cl', 'csv'),
             ('infra-event_ccl', 'csv'),
