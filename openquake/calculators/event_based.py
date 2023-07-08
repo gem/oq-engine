@@ -23,7 +23,7 @@ import operator
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -392,6 +392,10 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
+        oq.mags_by_trt = {
+            trt: python3compat.decode(dset[:])
+            for trt, dset in self.datastore['source_mags'].items()}
+
         dstore = self.datastore
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
