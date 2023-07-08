@@ -24,7 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib import hdf5, parallel, python3compat
-from openquake.baselib.general import AccumDict, humansize
+from openquake.baselib.general import AccumDict, humansize, block_splitter
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -103,20 +103,14 @@ def get_computer(cmaker, oqparam, proxy, sids, sitecol,
         oqparam._amplifier, oqparam._sec_perils)
 
             
-def event_based(proxies, full_lt, oqparam, dstore, monitor):
+def build_computers(proxies, full_lt, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    alldata = AccumDict(accum=[])
-    sig_eps = []
-    times = []  # rup_id, nsites, dt
-    hcurves = {}  # key -> poes
     trt_smr = proxies[0]['trt_smr']
     fmon = monitor('filtering ruptures', measuremem=False)
-    cmon = monitor('computing gmfs', measuremem=False)
     full_lt.init()
-    max_iml = oqparam.get_max_iml()
-    scenario = 'scenario' in oqparam.calculation_mode
+    computers = []
     with dstore:
         trt = full_lt.trts[trt_smr // TWO24]
         sitecol = dstore['sitecol']
@@ -133,7 +127,6 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
             station_data = None
             station_sitecol = None
         for proxy in proxies:
-            t0 = time.time()
             with fmon:
                 if proxy['mag'] < cmaker.min_mag:
                     continue
@@ -145,16 +138,31 @@ def event_based(proxies, full_lt, oqparam, dstore, monitor):
                     computer = get_computer(
                         cmaker, oqparam, proxy, sids, sitecol,
                         station_sitecol, station_data)
+                    computer.id = proxy['id']
+                    computers.append(computer)
                 except FarAwayRupture:
                     # skip this rupture
                     continue
-            with cmon:
-                df = computer.compute_all(scenario, sig_eps, max_iml)
-            dt = time.time() - t0
-            times.append((proxy['id'], len(computer.ctx.sids),
-                          computer.ctx.rrup.min(), dt))
-            for key in df.columns:
-                alldata[key].extend(df[key])
+    for block in block_splitter(computers, 1_000_000, lambda c: len(c.ctx)):
+        yield event_based, block, oqparam
+
+def event_based(computers, oqparam, monitor):
+    alldata = AccumDict(accum=[])
+    sig_eps = []
+    times = []  # rup_id, nsites, dt
+    hcurves = {}  # key -> poes
+    max_iml = oqparam.get_max_iml()
+    scenario = 'scenario' in oqparam.calculation_mode
+    cmon = monitor('computing gmfs', measuremem=False)
+    for computer in computers:
+        t0 = time.time()
+        with cmon:
+            df = computer.compute_all(scenario, sig_eps, max_iml)
+        dt = time.time() - t0
+        times.append((computer.id, len(computer.ctx.sids),
+                      computer.ctx.rrup.min(), dt))
+        for key in df.columns:
+            alldata[key].extend(df[key])
     for key, val in sorted(alldata.items()):
         if key in 'eid sid rlz':
             alldata[key] = U32(alldata[key])
@@ -447,15 +455,11 @@ class EventBasedCalculator(base.HazardCalculator):
             # TODO: this is ugly and must be improved upon!
             proxies = proxies[0:1]
         dstore.swmr_on()  # must come before the Starmap
-        smap = parallel.Starmap.apply_split(
-            self.core_task.__func__,
-            (proxies, self.full_lt, oq, self.datastore),
+        smap = parallel.Starmap.apply(
+            build_computers, (proxies, self.full_lt, oq, self.datastore),
             key=operator.itemgetter('trt_smr'),
-            weight=operator.itemgetter('n_occ'),
             h5=dstore.hdf5,
-            concurrent_tasks=oq.concurrent_tasks or 1,
-            duration=oq.time_per_task,
-            outs_per_task=oq.outs_per_task)
+            concurrent_tasks=oq.concurrent_tasks or 1)
         if oq.hazard_curves_from_gmfs:
             self.L = oq.imtls.size
             acc0 = {r: ProbabilityMap(self.sitecol.sids, self.L, 1).fill(0)
