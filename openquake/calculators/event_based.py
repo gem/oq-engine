@@ -143,8 +143,11 @@ def build_computers(proxies, full_lt, oqparam, dstore, monitor):
                 except FarAwayRupture:
                     # skip this rupture
                     continue
-    for block in block_splitter(computers, 1_000_000, lambda c: len(c.ctx)):
-        yield event_based, block, oqparam
+    if sum(len(c.ctx) for c in computers) <= 500_000:
+        yield event_based(computers, oqparam, monitor)
+    else:
+        for block in block_splitter(computers, 500_000, lambda c: len(c.ctx)):
+            yield event_based, block, oqparam
 
 def event_based(computers, oqparam, monitor):
     alldata = AccumDict(accum=[])
