@@ -392,10 +392,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def execute(self):
         oq = self.oqparam
-        oq.mags_by_trt = {
-            trt: python3compat.decode(dset[:])
-            for trt, dset in self.datastore['source_mags'].items()}
-
         dstore = self.datastore
         if oq.ground_motion_fields and oq.min_iml.sum() == 0:
             logging.warning('The GMFs are not filtered: '
@@ -409,6 +405,9 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore.parent = datastore.read(oq.hazard_calculation_id)
             self.full_lt = dstore.parent['full_lt']
         elif hasattr(self, 'csm'):  # from sources
+            oq.mags_by_trt = {
+                trt: python3compat.decode(dset[:])
+                for trt, dset in self.datastore['source_mags'].items()}
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
@@ -429,7 +428,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if oq.ground_motion_fields:
             imts = oq.get_primary_imtls()
-            nrups = len(dstore['ruptures'])
             base.create_gmf_data(dstore, imts, oq.get_sec_imts())
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/rup_info', rup_dt)
