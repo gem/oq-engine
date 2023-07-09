@@ -458,10 +458,10 @@ class ClassicalCalculator(base.HazardCalculator):
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         self.ntiles = 1 + int(req_gb / oq.pmap_max_mb)  # 50 GB
         if self.ntiles > 1:
-            self.execute_seq(maxw)
+            self.execute_par(maxw)
         else:  # regular case
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
-            self.execute_par(maxw)
+            self.execute_reg(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             raise RuntimeError('There are no ruptures close to the site(s)')
@@ -474,43 +474,19 @@ class ClassicalCalculator(base.HazardCalculator):
             self.classical_time = time.time() - t0
         return True
 
-    def execute_par(self, maxw):
+    def execute_reg(self, maxw):
         """
         Regular case
         """
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        acc = self.run_one(self.sitecol, maxw)
-        if self.oqparam.disagg_by_src:
-            self.haz.store_disagg(acc)
-
-    def execute_seq(self, maxw):
-        """
-        Use sequential tiling
-        """
-        assert self.N > self.oqparam.max_sites_disagg, self.N
-        logging.info('Running %d tiles', self.ntiles)
-        for n, tile in enumerate(self.sitecol.split(self.ntiles)):
-            if n == 0:
-                self.check_memory(len(tile), self.oqparam.imtls.size, maxw)
-            self.run_one(tile, maxw)
-            logging.info('Finished tile %d of %d', n+1, self.ntiles)
-            if parallel.oq_distribute() == 'zmq':
-                w.WorkerMaster(config.zworkers).restart()
-            else:
-                parallel.Starmap.shutdown()
-
-    def run_one(self, sitecol, maxw):
-        """
-        Run a subset of sites and update the accumulator
-        """
         acc = {}  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
-        nbytes = 8 * len(sitecol) * L * Gt
+        nbytes = 8 * len(self.sitecol) * L * Gt
         logging.info(f'Allocating %s for the global pmap ({Gt=})',
                      humansize(nbytes))
-        self.pmap = ProbabilityMap(sitecol.sids, L, Gt).fill(1)
+        self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(1)
         allargs = []
         for cm in self.cmakers:
             cm.pmap_max_mb = oq.pmap_max_mb
@@ -524,7 +500,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                allargs.append((block, sitecol, cm))
+                allargs.append((block, self.sitecol, cm))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -533,6 +509,37 @@ class ClassicalCalculator(base.HazardCalculator):
             nbytes = self.haz.store_poes(self.pmap.array, self.pmap.sids)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
+        if self.oqparam.disagg_by_src:
+            self.haz.store_disagg(acc)
+
+    def execute_par(self, maxw):
+        """
+        Use parallel tiling
+        """
+        oq = self.oqparam
+        assert not oq.disagg_by_src
+        assert self.N > self.oqparam.max_sites_disagg, self.N
+        acc = {}  # src_id -> pmap
+        L = oq.imtls.size
+        Gt = len(self.trt_rlzs)
+        nbytes = 8 * len(self.sitecol) * L * Gt
+        logging.info(f'Allocating %s for the global pmap ({Gt=})',
+                     humansize(nbytes))
+        allargs = []
+        for cm in self.cmakers:
+            cm.pmap_max_mb = oq.pmap_max_mb
+            sg = self.csm.src_groups[cm.grp_id]
+            if sg.atomic or sg.weight <= maxw:
+                tiles = [self.sitecol]
+            else:
+                tiles = self.sitecol.split(ntiles)
+            for tile in tiles:
+                allargs.append((sg, tile, cm))
+
+        self.datastore.swmr_on()  # must come before the Starmap
+        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
+            pmap = ~dic['pnemap']
+            self.haz.store_poes(pmap, pmap.sids)
         return acc
 
     def store_info(self):
