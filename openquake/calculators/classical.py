@@ -456,9 +456,9 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        self.ntiles = 1 + int(req_gb / oq.pmap_max_mb)  # 50 GB
-        if self.ntiles > 1:
-            self.execute_par(maxw)
+        big = req_gb > oq.pmap_max_mb
+        if big:
+            self.execute_big(maxw)
         else:  # regular case
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
@@ -512,20 +512,15 @@ class ClassicalCalculator(base.HazardCalculator):
         if self.oqparam.disagg_by_src:
             self.haz.store_disagg(acc)
 
-    def execute_par(self, maxw):
+    def execute_big(self, maxw):
         """
         Use parallel tiling
         """
         oq = self.oqparam
         assert not oq.disagg_by_src
         assert self.N > self.oqparam.max_sites_disagg, self.N
-        acc = {}  # src_id -> pmap
-        L = oq.imtls.size
-        Gt = len(self.trt_rlzs)
-        nbytes = 8 * len(self.sitecol) * L * Gt
-        logging.info(f'Allocating %s for the global pmap ({Gt=})',
-                     humansize(nbytes))
         allargs = []
+        self.ntiles = 0
         for cm in self.cmakers:
             cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
@@ -534,12 +529,16 @@ class ClassicalCalculator(base.HazardCalculator):
             else:
                 for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
                     allargs.append((sg, tile, cm))
+                    self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
+        nbytes = 0
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
-            pmap = ~dic['pnemap']
-            self.haz.store_poes(pmap, pmap.sids)
-        return acc
+            pnemap = dic['pnemap']
+            self.cfactor += dic['cfactor']
+            nbytes += self.haz.store_poes(pnemap.array, pnemap.sids)
+        logging.info('Stored %s of PoEs', humansize(nbytes))
+        return {}
 
     def store_info(self):
         """
