@@ -530,11 +530,10 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
             if sg.atomic or sg.weight <= maxw:
-                tiles = [self.sitecol]
+                allargs.append((sg, self.sitecol, cm))
             else:
-                tiles = self.sitecol.split(ntiles)
-            for tile in tiles:
-                allargs.append((sg, tile, cm))
+                for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
+                    allargs.append((sg, tile, cm))
 
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
