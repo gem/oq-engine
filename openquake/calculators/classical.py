@@ -532,11 +532,10 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
-        nbytes = 0
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
-            nbytes += self.haz.store_poes(pnemap.array, pnemap.sids)
+            nbytes = self.haz.store_poes(pnemap.array, pnemap.sids)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         return {}
 
