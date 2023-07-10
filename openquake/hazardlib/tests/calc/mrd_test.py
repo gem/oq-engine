@@ -34,25 +34,32 @@ CWD = os.path.dirname(__file__)
 class MRD01TestCase(unittest.TestCase):
     """ Computes the mean rate density using a simple PSHA input model """
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        from openquake.commonlib import logs
+        from openquake.calculators import base
+
+        job_ini = os.path.join(CWD, 'expected', 'mrd', 'job.ini')
+        with logs.init('calc', job_ini) as log:
+            calc = base.calculators(log.get_oqparam(), log.calc_id)
+            calc.run()
 
         # Settings
-        fname = os.path.join(CWD, 'expected', 'mrd', 'calc_2130.hdf5')
-        self.imts = ['SA(0.2)', 'SA(1.0)']  # subset of the parent IMTs
+        cls.imts = ['SA(0.2)', 'SA(1.0)']  # subset of the parent IMTs
 
         # Load datastore
-        self.dstore = datastore.read(fname)
-        self.oqp = self.dstore['oqparam']
+        cls.dstore = calc.datastore
+        cls.oqp = calc.oqparam
 
         # Read the context maker and set the IMTLS
-        [cmaker] = read_cmakers(self.dstore)
-        self.cmaker = cmaker.restrict(self.imts)
+        [cmaker] = read_cmakers(cls.dstore)
+        cls.cmaker = cmaker.restrict(cls.imts)
 
         # Read contexts
-        self.ctx = read_ctx_by_grp(self.dstore)[0]
+        cls.ctx = read_ctx_by_grp(cls.dstore)[0]
 
         # Set the cross correlation model
-        self.crosscorr = BakerJayaram2008()
+        cls.crosscorr = BakerJayaram2008()
 
     def test_direct(self):
 
