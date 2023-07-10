@@ -456,7 +456,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        max_gb = config.memory.pmap_max_gb
+        max_gb = float(config.memory.pmap_max_gb)
         if oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb:
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
