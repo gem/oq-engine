@@ -456,12 +456,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        big = req_gb > oq.pmap_max_mb
-        if big:
-            self.execute_big(maxw)
-        else:  # regular case
+        if oq.disagg_by_src or self.N < oq.max_sites_disagg:
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
+        else:
+            self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             raise RuntimeError('There are no ruptures close to the site(s)')
