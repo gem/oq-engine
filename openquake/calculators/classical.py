@@ -456,10 +456,11 @@ class ClassicalCalculator(base.HazardCalculator):
 
         t0 = time.time()
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
-        if oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < 4:
+        if oq.disagg_by_src or self.N < oq.max_sites_disagg:
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
+            logging.info('Using parallel tiling')
             self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
