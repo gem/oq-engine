@@ -112,12 +112,11 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    parent = dstore.parent if dstore.parent else dstore
-    with parent:
+    with dstore:
         if sitecol is None:  # regular
-            sitecol = parent['sitecol']
+            sitecol = dstore['sitecol']
         else:  # big
-            arr = parent.getitem('_csm')[cmaker.grp_id]
+            arr = dstore.getitem('_csm')[cmaker.grp_id]
             srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     # maximum size of the pmap array in GB
     size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
@@ -497,6 +496,10 @@ class ClassicalCalculator(base.HazardCalculator):
                      humansize(nbytes))
         self.pmap = ProbabilityMap(self.sitecol.sids, L, Gt).fill(1)
         allargs = []
+        if 'sitecol' in self.datastore.parent:
+            ds = self.datastore.parent
+        else:
+            ds = self.datastore
         for cm in self.cmakers:
             cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
@@ -509,7 +512,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                allargs.append((block, None, cm, self.datastore))
+                allargs.append((block, None, cm, ds))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -530,6 +533,10 @@ class ClassicalCalculator(base.HazardCalculator):
         assert self.N > self.oqparam.max_sites_disagg, self.N
         allargs = []
         self.ntiles = 0
+        if '_csm' in self.datastore.parent:
+            ds = self.datastore.parent
+        else:
+            ds = self.datastore
         for cm in self.cmakers:
             cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
@@ -537,7 +544,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((sg, self.sitecol, cm))
             else:
                 for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
-                    allargs.append((None, tile, cm, self.datastore))
+                    allargs.append((None, tile, cm, ds))
                     self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
