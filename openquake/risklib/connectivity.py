@@ -346,6 +346,14 @@ def calc_efficiency(graph, N, att, eff_table, eff):
             inv = [1/x for x in lengths.values() if x != 0]
             eff_node = (sum(inv))/(N-1)
         eff_table.at[node, eff] = eff_node
+
+    if eff == 'Eff':
+        # This is done so that if the initial graph has a node disconnected,
+        # will raise an error when calculating the efficiency loss
+        eff_table['Eff_loss'] = (
+            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
+        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
+
     return eff_table
 
 
@@ -482,12 +490,6 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
         # Connectivity Loss for each node
         pcl_table['PCL_node'] = 1 - (pcl_table['NS']/pcl_table['NS0'])
         wcl_table['WCL_node'] = 1 - (wcl_table['WS']/wcl_table['WS0'])
-
-        # This is done so that if the initial graph has a node disconnected,
-        # will raise an error when calculating the efficiency loss
-        eff_table['Eff_loss'] = (
-            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
-        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
 
         # Computing the mean of the connectivity loss to consider the overall
         # performance of the area (at global level)
@@ -627,11 +629,6 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
         # Connectivity Loss for each node
         pcl_table['PCL_node'] = 1 - (pcl_table['NS']/pcl_table['NS0'])
         wcl_table['WCL_node'] = 1 - (wcl_table['WS']/wcl_table['WS0'])
-        # This is done so that if the initial graph has a node disconnected,
-        # will raise an error when calculating the efficiency loss
-        eff_table['Eff_loss'] = (
-            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
-        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
 
         # Computing the mean of the connectivity loss to consider the overall
         # performance of the area (at global level)
@@ -710,13 +707,6 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
 
         # To check the the values for each node after the earthquake event
         eff_table = calc_efficiency(G, N, att, eff_table, 'Eff')
-
-        # Efficiency Loss for each node
-        # This is done so that if the initial graph has a node disconnected,
-        # will raise an error when calculating the efficiency loss
-        eff_table['Eff_loss'] = (
-            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
-        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
 
         # Computing the mean of the connectivity loss to consider the overall
         # performance of the area (at global level)
