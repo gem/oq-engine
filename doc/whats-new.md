@@ -333,8 +333,8 @@ even three times: this has been fixed.
 # oq commands
 
 We finally removed the command `oq celery`, since we have deprecated
-celery for over 5 years. We also removed all references to celery and
-rabbitmq in the engine documentation.
+celery for over 5 years. We also removed the obsolete references
+to celery and rabbitmq in the engine documentation.
 
 If a calculation ID is already taken in the database, now
 `oq importcalc` raises a clear error before importing the HDF5 file.
