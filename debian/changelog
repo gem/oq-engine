@@ -1,6 +1,6 @@
   [Kendra Johnson]
   * Added `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50` to
-    the NGAEast GMPEs
+    the NGAEast and nshmp_2014 GMPEs 
 
   [Michele Simionato]
   * Fixed the hanging of classical calculations due to large zmq packets
