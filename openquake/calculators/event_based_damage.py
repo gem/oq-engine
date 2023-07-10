@@ -306,11 +306,6 @@ class DamageCalculator(EventBasedRiskCalculator):
             logging.info(
                 'Stored avarage connectivity loss (infra-avg_loss)')
         # TODO: group event items in the datastore
-        # Storing the connectivity loss at global level for each event
-        # event_connectivity_loss_ccl.to_csv("ccl_event.csv")
-        # event_connectivity_loss_pcl.to_csv("pcl_event.csv")
-        # event_connectivity_loss_wcl.to_csv("wcl_event.csv")
-        # event_connectivity_loss_eff.to_csv("efl_event.csv")
         if 'event_connectivity_loss_eff' in conn_results:
             self.datastore.create_df(
                 'infra-event_efl',
@@ -336,7 +331,6 @@ class DamageCalculator(EventBasedRiskCalculator):
             logging.info(
                 'Stored complete connectivity loss by event (infra-event_ccl)')
         # Storing the connectivity loss at nodal level
-        # taz_cl.to_csv("taz.csv")
         if 'taz_cl' in conn_results:
             self.datastore.create_df(
                 'infra-taz_cl',
@@ -344,14 +338,12 @@ class DamageCalculator(EventBasedRiskCalculator):
             logging.info(
                 'Stored connectivity loss of TAZ nodes (taz_cl)')
         # Storing the connectivity loss at nodal level
-        # dem_cl.to_csv("dem_cl.csv")
         if 'dem_cl' in conn_results:
             self.datastore.create_df(
                 'infra-dem_cl',
                 conn_results['dem_cl'])
             logging.info(
                 'Stored connectivity loss of demand nodes (dem_cl)')
-        # node_el.to_csv("node_el.csv")
         if 'node_el' in conn_results:
             self.datastore.create_df(
                 'infra-node_el',
