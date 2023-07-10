@@ -30,8 +30,6 @@ sudo apt install python3-oq-engine
 The package installs three system service managed through [systemd](https://www.freedesktop.org/software/systemd/man/systemctl.html):
 - `openquake-dbserver`: provides the database for the OpenQuake Engine and must be started before running any `oq engine` command
 - `openquake-webui`: provides the WebUI and is optional
-- `openquake-celery`: used only on a multi-node setup, not used in a default setup
-
 `openquake-dbserver` and `openquake-webui` are started by default at boot.
 
 To manually start, stop or restart a service run

@@ -23,7 +23,7 @@ import operator
 import numpy
 import pandas
 
-from openquake.baselib import hdf5, parallel
+from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import AccumDict, humansize
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
@@ -34,7 +34,6 @@ from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import (
@@ -406,6 +405,9 @@ class EventBasedCalculator(base.HazardCalculator):
             dstore.parent = datastore.read(oq.hazard_calculation_id)
             self.full_lt = dstore.parent['full_lt']
         elif hasattr(self, 'csm'):  # from sources
+            oq.mags_by_trt = {
+                trt: python3compat.decode(dset[:])
+                for trt, dset in self.datastore['source_mags'].items()}
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
@@ -426,7 +428,6 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if oq.ground_motion_fields:
             imts = oq.get_primary_imtls()
-            nrups = len(dstore['ruptures'])
             base.create_gmf_data(dstore, imts, oq.get_sec_imts())
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/rup_info', rup_dt)
