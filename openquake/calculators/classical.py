@@ -112,11 +112,12 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    with dstore:
+    parent = dstore.parent if dstore.parent else dstore
+    with parent:
         if sitecol is None:  # regular
-            sitecol = dstore['sitecol']
+            sitecol = parent['sitecol']
         else:  # big
-            arr = dstore.getitem('_csm')[cmaker.grp_id]
+            arr = parent.getitem('_csm')[cmaker.grp_id]
             srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     # maximum size of the pmap array in GB
     size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
