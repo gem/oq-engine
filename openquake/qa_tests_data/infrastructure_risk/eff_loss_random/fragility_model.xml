@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
 	<fragilityModel id="1" assetCategory="WSS" lossCategory="structural">
-		<description>Pumping Stations: From HAZUS  8-16, Pumping station 1:Medium pumping plants with unanchored components:Pumpingstations2:small plant with anchored component 
-Wells: HAZUS, Pipelines:HAZUS, without any factorial that differentiate breaks and leaks just for the demo
+		<description>random example
 </description>
 		<limitStates>slight moderate extensive complete</limitStates>
 		<fragilityFunction id="connection" format="discrete">

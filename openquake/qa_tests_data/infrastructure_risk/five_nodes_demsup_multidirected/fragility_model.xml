@@ -14,7 +14,7 @@
 			<params ls="minor" mean="0.42" stddev="0.6"/>
 			<params ls="major" mean="0.74" stddev="0.60"/>
 		</fragilityFunction>
-		<fragilityFunction id="TAZ" format="discrete">
+		<fragilityFunction id="POI" format="discrete">
 			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
 			<poes ls="minor">0 0 0 0</poes>
 			<poes ls="major">0 0 0 0</poes>

@@ -1,9 +1,9 @@
-#,"generated_by='OpenQuake engine 3.17.0-git6065d55082', start_date='2023-07-10T08:11:40', checksum=1818992038"
+#,"generated_by='OpenQuake engine 3.17.0-gita7570364de', start_date='2023-07-10T12:32:22', checksum=158942305"
 id,Eff_loss
-A,1.27389E-01
-B,1.39535E-01
-C,2.30769E-01
+A,3.72611E-01
+B,4.30233E-01
+C,5.00000E-01
 D,1.00000E+00
-E,2.30769E-01
-F,1.39535E-01
-G,1.27389E-01
+E,5.00000E-01
+F,4.30233E-01
+G,3.72611E-01
