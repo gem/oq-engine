@@ -944,9 +944,9 @@ existing code.
 Another tricky point in cluster situations is that we need
 to transfer gigabytes of data, i.e. the large arrays coming from
 scientific calculations, rather than lots of small
-messages. Hence, since recent versions of the engine, we are returning
+messages. Hence, we are returning
 data from the tasks via zeromq instead of using celery/rabbitmq as we
-did in the past. This
+did in the remote past. This
 is hidden from the user, but internally the engine keeps track of all
 tasks that were submitted and waits until they send the message that
 they finished. If one task runs out of memory badly and never sends
