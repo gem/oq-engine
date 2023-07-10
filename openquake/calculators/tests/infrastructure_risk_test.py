@@ -30,267 +30,107 @@ aac = numpy.testing.assert_allclose
 
 class ScenarioDamageTestCase(CalculatorTestCase):
 
+    def _check_csv_outputs(self, outputs_list, datastore):
+        for output in outputs_list:
+            [fname] = export(('infra-' + output, 'csv'), datastore)
+            self.assertEqualFiles(
+                'expected/infra-' + output + '.csv',
+                fname,
+                check_all_columns=True)
+
     def test_case_15(self):
         self.run_calc(case_15.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'node_el avg_loss event_ccl event_efl event_pcl event_wcl'
+            ' dem_cl').split()
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-event_ccl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_ccl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-dem_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-dem_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+            ' dem_cl').split()
 
-        [fname] = export(('infra-event_ccl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_ccl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-dem_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-dem_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
 
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-taz_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-taz_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_efl node_el').split()
 
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+            ' dem_cl').split()
 
-        [fname] = export(('infra-event_ccl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_ccl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-dem_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-dem_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+            ' dem_cl').split()
 
-        [fname] = export(('infra-event_ccl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_ccl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-dem_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-dem_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
+            ' dem_cl').split()
 
-        [fname] = export(('infra-event_ccl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_ccl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-dem_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-dem_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
 
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-taz_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-taz_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_efl event_pcl event_wcl node_el'
+            ' taz_cl').split()
 
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-taz_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-taz_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
         ds = self.calc.datastore
 
-        [fname] = export(('infra-avg_loss', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-avg_loss.csv', fname, check_all_columns=True)
+        outputs_list = (
+            'avg_loss event_efl event_pcl event_wcl node_el'
+            ' taz_cl').split()
 
-        [fname] = export(('infra-event_efl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_efl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_pcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_pcl.csv', fname, check_all_columns=True)
-        [fname] = export(('infra-event_wcl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-event_wcl.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-node_el', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-node_el.csv', fname, check_all_columns=True)
-
-        [fname] = export(('infra-taz_cl', 'csv'), ds)
-        self.assertEqualFiles(
-            'expected/infra-taz_cl.csv', fname, check_all_columns=True)
+        self._check_csv_outputs(outputs_list, ds)
