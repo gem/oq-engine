@@ -19,6 +19,8 @@
 import io
 import os
 import time
+import gzip
+import pickle
 import psutil
 import logging
 import operator
@@ -103,14 +105,19 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, sitecol, cmaker, monitor):
+def classical(srcs, sitecol, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
-    
+    with dstore:
+        if sitecol is None:  # regular
+            sitecol = dstore['sitecol']
+        else:  # big
+            arr = dstore.getitem('_csm')[cmaker.grp_id]
+            srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     # maximum size of the pmap array in GB
     size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
     itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
@@ -501,7 +508,7 @@ class ClassicalCalculator(base.HazardCalculator):
             for block in blks:
                 logging.debug('Sending %d source(s) with weight %d',
                               len(block), sg.weight)
-                allargs.append((block, self.sitecol, cm))
+                allargs.append((block, None, cm, self.datastore))
 
         self.datastore.swmr_on()  # must come before the Starmap
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
@@ -529,7 +536,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((sg, self.sitecol, cm))
             else:
                 for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
-                    allargs.append((sg, tile, cm))
+                    allargs.append((None, tile, cm, self.datastore))
                     self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
