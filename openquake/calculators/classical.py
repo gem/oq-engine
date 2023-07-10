@@ -257,7 +257,7 @@ class Hazard:
                 out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
         return out.reshape((self.N, self.M, self.L1))
 
-    def store_poes(self, pnes, the_sids):
+    def store_poes(self, pnes, the_sids, gid=0):
         """
         Store 1-pnes inside the _poes dataset
         """
@@ -281,7 +281,7 @@ class Hazard:
                 return 0
             sids = the_sids[idxs]
             hdf5.extend(self.datastore['_poes/sid'], sids)
-            hdf5.extend(self.datastore['_poes/gid'], gids)
+            hdf5.extend(self.datastore['_poes/gid'], gids + gid)
             hdf5.extend(self.datastore['_poes/lid'], lids + slc.start)
             hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
 
@@ -534,7 +534,8 @@ class ClassicalCalculator(base.HazardCalculator):
         for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
-            nbytes = self.haz.store_poes(pnemap.array, pnemap.sids)
+            gid = self.gids[dic['grp_id']][0]
+            nbytes = self.haz.store_poes(pnemap.array, pnemap.sids, gid)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         return {}
 
