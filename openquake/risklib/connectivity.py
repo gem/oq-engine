@@ -308,27 +308,26 @@ def cleanup_graph(G_original, event_damage_df, g_type):
 
 
 def calc_weighted_connectivity_loss(
-        G_original, nodes_from, nodes_to, wcl_table, pcl_table):
+        graph, att, nodes_from, nodes_to, wcl_table, pcl_table, ws, ns):
     # For calculating weighted connectivity loss
     # Important: if the weights is not provided, then the weights of each edges
     # is considered to be one.
-    att = nx.get_edge_attributes(G_original, 'weights')
     for i in nodes_to:
         if not att:
             path_lengths = [
-                nx.shortest_path_length(G_original, j, i)
-                for j in nodes_from if nx.has_path(G_original, j, i)]
+                nx.shortest_path_length(graph, j, i)
+                for j in nodes_from if nx.has_path(graph, j, i)]
             countw = sum(
                 [1/path_length for path_length in path_lengths
                  if path_length != 0])
         else:
             path_lengths = [
-                nx.shortest_path_length(G_original, j, i, weight='weights')
-                for j in nodes_from if nx.has_path(G_original, j, i)]
+                nx.shortest_path_length(graph, j, i, weight='weights')
+                for j in nodes_from if nx.has_path(graph, j, i)]
             countw = sum(
                 [1/path_length for path_length in path_lengths
                  if path_length != 0])
-        wcl_table.at[i, 'WS0'] = countw * pcl_table.at[i, 'NS0']
+        wcl_table.at[i, ws] = countw * pcl_table.at[i, ns]
     return wcl_table
 
 
@@ -347,6 +346,14 @@ def calc_efficiency(graph, N, att, eff_table, eff):
             inv = [1/x for x in lengths.values() if x != 0]
             eff_node = (sum(inv))/(N-1)
         eff_table.at[node, eff] = eff_node
+
+    if eff == 'Eff':
+        # This is done so that if the initial graph has a node disconnected,
+        # will raise an error when calculating the efficiency loss
+        eff_table['Eff_loss'] = (
+            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
+        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
+
     return eff_table
 
 
@@ -434,8 +441,10 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i)
                         for j in source_nodes) for i in demand_nodes]
 
+    att = nx.get_edge_attributes(G_original, 'weights')
     wcl_table = calc_weighted_connectivity_loss(
-        G_original, source_nodes, demand_nodes, wcl_table, pcl_table)
+        G_original, att, source_nodes, demand_nodes, wcl_table, pcl_table,
+        'WS0', 'NS0')
 
     N = len(G_original)
     att = nx.get_edge_attributes(G_original, 'weights')
@@ -472,35 +481,15 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
             sum(nx.has_path(G, j, i) for j in extant_source_nodes)
             for i in extant_demand_nodes]
 
-        # Weighted Connectivity Loss
-        for i in extant_demand_nodes:
-            if not att:
-                path_lengths = [
-                    nx.shortest_path_length(G, j, i)
-                    for j in extant_source_nodes if nx.has_path(G, j, i)]
-                countw1 = sum([
-                    1/path_length for path_length in path_lengths
-                    if path_length != 0])
-            else:
-                path_lengths = [
-                    nx.shortest_path_length(G, j, i, weight='weights')
-                    for j in extant_source_nodes if nx.has_path(G, j, i)]
-                countw1 = sum([
-                    1/path_length for path_length in path_lengths
-                    if path_length != 0])
-            wcl_table.at[i, 'WS'] = countw1 * pcl_table.at[i, 'NS']
+        wcl_table = calc_weighted_connectivity_loss(
+            G, att, extant_source_nodes, extant_demand_nodes, wcl_table,
+            pcl_table, 'WS', 'NS')
 
         eff_table = calc_efficiency(G, N, att, eff_table, 'Eff')
 
         # Connectivity Loss for each node
         pcl_table['PCL_node'] = 1 - (pcl_table['NS']/pcl_table['NS0'])
         wcl_table['WCL_node'] = 1 - (wcl_table['WS']/wcl_table['WS0'])
-
-        # This is done so that if the initial graph has a node disconnected,
-        # will raise an error when calculating the efficiency loss
-        eff_table['Eff_loss'] = (
-            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
-        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
 
         # Computing the mean of the connectivity loss to consider the overall
         # performance of the area (at global level)
@@ -598,8 +587,10 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     # pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i) for j in TAZ_nodes)
     # for i in TAZ_nodes]
 
+    att = nx.get_edge_attributes(G_original, 'weights')
     wcl_table = calc_weighted_connectivity_loss(
-        G_original, TAZ_nodes, TAZ_nodes, wcl_table, pcl_table)
+        G_original, att, TAZ_nodes, TAZ_nodes, wcl_table, pcl_table, 'WS0',
+        'NS0')
 
     N = len(G_original)
     att = nx.get_edge_attributes(G_original, 'weights')
@@ -629,34 +620,15 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
                         count = count + 1
             pcl_table.at[i, 'NS'] = count
 
-        for i in extant_TAZ_nodes:
-            if not att:
-                path_lengths = [
-                    nx.shortest_path_length(G, j, i)
-                    for j in extant_TAZ_nodes if nx.has_path(G, j, i)]
-                countw1 = sum(
-                    [1/path_length for path_length in path_lengths
-                     if path_length != 0])
-            else:
-                path_lengths = [
-                    nx.shortest_path_length(G, j, i, weight='weights')
-                    for j in extant_TAZ_nodes if nx.has_path(G, j, i)]
-                countw1 = sum(
-                    [1/path_length for path_length in path_lengths
-                     if path_length != 0])
-
-            wcl_table.at[i, 'WS'] = countw1 * pcl_table.at[i, 'NS']
+        wcl_table = calc_weighted_connectivity_loss(
+            G, att, extant_TAZ_nodes, extant_TAZ_nodes, wcl_table, pcl_table,
+            'WS', 'NS')
 
         eff_table = calc_efficiency(G, N, att, eff_table, 'Eff')
 
         # Connectivity Loss for each node
         pcl_table['PCL_node'] = 1 - (pcl_table['NS']/pcl_table['NS0'])
         wcl_table['WCL_node'] = 1 - (wcl_table['WS']/wcl_table['WS0'])
-        # This is done so that if the initial graph has a node disconnected,
-        # will raise an error when calculating the efficiency loss
-        eff_table['Eff_loss'] = (
-            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
-        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
 
         # Computing the mean of the connectivity loss to consider the overall
         # performance of the area (at global level)
@@ -735,13 +707,6 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
 
         # To check the the values for each node after the earthquake event
         eff_table = calc_efficiency(G, N, att, eff_table, 'Eff')
-
-        # Efficiency Loss for each node
-        # This is done so that if the initial graph has a node disconnected,
-        # will raise an error when calculating the efficiency loss
-        eff_table['Eff_loss'] = (
-            eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
-        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
 
         # Computing the mean of the connectivity loss to consider the overall
         # performance of the area (at global level)
