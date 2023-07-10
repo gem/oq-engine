@@ -18,7 +18,8 @@
 
 import gzip
 import numpy
-from openquake.baselib import parallel, general
+from unittest import mock
+from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.hazardlib.source.rupture import get_ruptures
@@ -149,10 +150,14 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
-        self.assert_curves_ok([
-            '/hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1)',
-            'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
-            'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}):
+            self.assert_curves_ok([
+                '/hazard_curve-mean-PGA.csv',
+                'hazard_curve-mean-SA(0.1)',
+                'hazard_curve-mean-SA(0.2).csv',
+                'hazard_curve-mean-SA(0.5).csv',
+                'hazard_curve-mean-SA(1.0).csv',
+                'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
         self.assertGreater(self.calc.ntiles, 2)
 
