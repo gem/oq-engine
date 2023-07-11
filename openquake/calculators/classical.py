@@ -111,7 +111,6 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    rup_indep = getattr(srcs, 'rup_interdep', None) != 'mutex'
     with dstore:
         if sitecol is None:  # regular
             sitecol = dstore['sitecol']
@@ -126,7 +125,8 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
     assert not (itiles > 1 and cmaker.disagg_by_src)
     for sites in sitecol.split_in_tiles(itiles):
         pmap = ProbabilityMap(
-            sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(rup_indep)
+            sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
+                cmaker.rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
         result['pnemap'] = ~pmap.remove_zeros()
         result['pnemap'].trt_smrs = cmaker.trt_smrs
@@ -501,8 +501,9 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         for cm in self.cmakers:
-            cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
+            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.pmap_max_mb = oq.pmap_max_mb
             if oq.disagg_by_src:  # possible only with a single tile
                 blks = groupby(sg, basename).values()
             elif sg.atomic or sg.weight <= maxw:
@@ -538,10 +539,11 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             ds = self.datastore
         for cm in self.cmakers:
-            cm.pmap_max_mb = oq.pmap_max_mb
             sg = self.csm.src_groups[cm.grp_id]
+            cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
+            cm.pmap_max_mb = oq.pmap_max_mb
             if sg.atomic or sg.weight <= maxw:
-                allargs.append((sg, self.sitecol, cm))
+                allargs.append((None, self.sitecol, cm, ds))
             else:
                 for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
                     allargs.append((None, tile, cm, ds))
