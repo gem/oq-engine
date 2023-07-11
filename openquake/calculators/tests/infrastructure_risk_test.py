@@ -28,7 +28,7 @@ from openquake.calculators.tests import CalculatorTestCase
 aac = numpy.testing.assert_allclose
 
 
-class ScenarioDamageTestCase(CalculatorTestCase):
+class InfrastructureRiskTestCase(CalculatorTestCase):
 
     def _check_csv_outputs(self, outputs_list, datastore):
         for output in outputs_list:
