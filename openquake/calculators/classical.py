@@ -503,7 +503,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for cm in self.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.pmap_max_mb = oq.pmap_max_mb
+            cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             if oq.disagg_by_src:  # possible only with a single tile
                 blks = groupby(sg, basename).values()
             elif sg.atomic or sg.weight <= maxw:
@@ -541,7 +541,7 @@ class ClassicalCalculator(base.HazardCalculator):
         for cm in self.cmakers:
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
-            cm.pmap_max_mb = oq.pmap_max_mb
+            cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((None, self.sitecol, cm, ds))
             else:
