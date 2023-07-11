@@ -74,27 +74,6 @@ binning parameters, i.e. on `mag_bin_width`, `distance_bin_width`,
 `coordinate_bin_width=0.1` to `coordinate_bin_width=1.0` the size of your
 disaggregation matrix will be reduced by 100 times.
 
-### How can I compute mean disaggregation outputs?
-
-If a calculation has more than one realization, the user can set in
-the job.ini file the parameter `rlz_index` to specify which subset of
-the realizations should be considered when computing the
-disaggregation outputs (if `rlz_index` is not specified only the
-realization producing the hazard curve closest to the mean curve will
-be considered). The full set of realizations can be specified as
-well. Then, when exporting the outputs in CSV format, there will be a
-column for each realization, with names like `poe0, poe1, ...`  for
-each realization listed in `rlz_index`.  From that the user can
-compute the mean values manually, for instance by reading the CSV with
-pandas. Exporting many realizations together captures the full
-variability of the disaggregation results, that would be lost by
-exporting only the means.
-
-NB: it is very common for hazard models to have
-thousands/millions/billions of realizations; in that case the user is
-expected to *reduce* the logic tree to a manageable number of
-realizations before performing the disaggregation.
-
 ## event based calculations
 
 ### What is the relation between sources, ruptures, events and realizations?
