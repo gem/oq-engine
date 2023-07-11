@@ -234,10 +234,10 @@ class Bradley2012(CrossCorrelationBetween):
         :param rng: random number generator
         :returns: a correlated matrix of epsilons of shape (M, E)
 
-        FIXME: probably rng should be used also in this class
+        NB: the user must specify the random seed first
         """
         corma = self._get_correlation_matrix(imts)
-        return np.random.multivariate_normal(
+        return rng.multivariate_normal(
             np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
 
     def _get_correlation_matrix(self, imts):
