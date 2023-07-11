@@ -1,9 +1,13 @@
+python3-oq-engine (3.16.5-1~xenial01) xenial; urgency=low
+
   [Kendra Johnson]
   * Added `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50` to
-    the NGAEast and NSHMP2014 GMPEs 
+    the NGAEast and NSHMP2014 GMPEs
 
   [Michele Simionato]
   * Fixed the hanging of classical calculations due to large zmq packets
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Tue, 11 Jul 2023 09:14:09 +0000
 
 python3-oq-engine (3.16.4-1~xenial01) xenial; urgency=low
 
