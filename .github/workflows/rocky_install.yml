@@ -45,7 +45,7 @@ jobs:
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
-        dnf install -y git git-lfs nc
+        dnf install -y git git-lfs nc procps
         pip3 -V
         python3 -c "import sys; print(sys.version)"
         #
