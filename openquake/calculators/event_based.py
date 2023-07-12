@@ -199,6 +199,15 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
     return smap
 
 
+def set_mags(oq, dstore):
+    """
+    Set the attribute oq.mags_by_trt
+    """
+    oq.mags_by_trt = {
+        trt: python3compat.decode(dset[:])
+        for trt, dset in dstore['source_mags'].items()}
+
+
 def compute_avg_gmf(gmf_df, weights, min_iml):
     """
     :param gmf_df: a DataFrame with colums eid, sid, rlz, gmv...
@@ -426,10 +435,9 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
             self.full_lt = dstore.parent['full_lt']
+            set_mags(oq, dstore)
         elif hasattr(self, 'csm'):  # from sources
-            oq.mags_by_trt = {
-                trt: python3compat.decode(dset[:])
-                for trt, dset in self.datastore['source_mags'].items()}
+            set_mags(oq, dstore)
             self.build_events_from_sources()
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
