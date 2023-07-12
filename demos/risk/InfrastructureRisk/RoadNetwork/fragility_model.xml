@@ -34,7 +34,7 @@
 			<poes ls="minor">0 0 0 0</poes>
 			<poes ls="major">0 0 0 0</poes>
 		</fragilityFunction>
-		<fragilityFunction id="Road" format="discrete">
+		<fragilityFunction id="road" format="discrete">
 			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
 			<poes ls="minor">0 0 0 0</poes>
 			<poes ls="major">0 0 0 0</poes>
