@@ -108,7 +108,7 @@ def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
     """
     Launcher of event_based tasks
     """
-    blocksize = int(numpy.ceil(len(allproxies) / 10))
+    blocksize = int(numpy.ceil(len(allproxies) / 20))
     t0 = time.time()
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
@@ -116,10 +116,10 @@ def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
         yield event_based(proxies, cmaker, oqparam, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
-        if dt > oqparam.time_per_task and len(rem) > blocksize:
-            for block in block_splitter(rem, blocksize):
+        if dt > oqparam.time_per_task and len(rem) > 2*blocksize:
+            for block in block_splitter(rem, 2*blocksize):
                 yield event_based, block, cmaker, oqparam, dstore
-            break
+            return
 
 
 def event_based(proxies, cmaker, oqparam, dstore, monitor):
