@@ -506,7 +506,7 @@ weights can be travel time, distance, importance factor, etc., according to the
 user requirement.
 
 *Note: If weight is not present, it assigns 1 as weight to every edge while
-calculating Weighted Connectivity Loss(WCL) and Efficiency Loss(EFL)*
+calculating Weighted Connectivity Loss(WCL) and Efficiency Loss(EL)*
 
 If the user wants to specify the graph type, another column **graphtype** must
 be added. It can be either "directed", "multi", "multidirected" or "simple".
@@ -549,7 +549,7 @@ Calculation Steps
   * Complete Connectivity Loss (CCL)
   * Partial Connectivity Loss (PCL)
   * Weighted Connectivity Loss (WCL)
-  * Efficiency Loss (EFL)
+  * Efficiency Loss (EL)
 
 In summary, for the computation of infrastructure risk at connectivity level in
 OpenQuake, the input requirements and the outputs obtained are shown
@@ -572,11 +572,11 @@ Specification of the Outputs Obtained
 
 * If some nodes behave as both supply and demand, and are assigned as "both"
   or "TAZ" (traffic analysis zone) in the column **demand_or_supply**, PCL,
-  WCL and EFL are computed for both nodal level and overall network.
+  WCL and EL are computed for both nodal level and overall network.
 
 * If there is no assignment of "demand" or "supply" to the column
-  **demand_or_supply**, only EFL is computed for overall network. Also, at
-  nodal level, for all the nodes, EFL only is computed.
+  **demand_or_supply**, only EL is computed for overall network. Also, at
+  nodal level, for all the nodes, EL only is computed.
 
 For the simplification, :numref:`fig:infrastructure-output-by-nodes-func` has been added to understand what
 can be obtained by various specifications.

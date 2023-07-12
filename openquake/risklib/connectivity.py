@@ -150,7 +150,7 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
     (taz_cl, node_el,
         event_connectivity_loss_pcl,
         event_connectivity_loss_wcl,
-        event_connectivity_loss_eff) = EFLWCLPCLloss_TAZ(
+        event_connectivity_loss_eff) = ELWCLPCLloss_TAZ(
         exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df, g_type)
     sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
     sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
@@ -197,7 +197,7 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
     demand_nodes_analysis_results = {}
     (dem_cl, node_el, event_connectivity_loss_ccl,
         event_connectivity_loss_pcl, event_connectivity_loss_wcl,
-        event_connectivity_loss_eff) = EFLWCLPCLCCL_demand(
+        event_connectivity_loss_eff) = ELWCLPCLCCL_demand(
         exposure_df, G_original, eff_nodes, demand_nodes, source_nodes,
         damage_df, g_type)
     sum_connectivity_loss_ccl = event_connectivity_loss_ccl['CCL'].sum()
@@ -251,7 +251,7 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
 def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
                           damage_df, g_type, calculation_mode):
     generic_nodes_analysis_results = {}
-    node_el, event_connectivity_loss_eff = EFL_node(
+    node_el, event_connectivity_loss_eff = EL_node(
         exposure_df, G_original, eff_nodes, damage_df, g_type)
     sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
 
@@ -410,7 +410,7 @@ def analysis(dstore):
     return connectivity_results
 
 
-def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
+def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
                         source_nodes, damage_df, g_type):
     # Classic one where particular nodes are divided as supply or demand and
     # the main interest is to check the serviceability of supply to demand
@@ -555,11 +555,11 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
             event_connectivity_loss_eff)
 
 
-def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
+def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
                       eff_nodes, damage_df, g_type):
     # When the nodes acts as both demand and supply.
     # For example, traffic analysis zone in transportation network. This
-    # calculates, efficiency loss (EFL),
+    # calculates, efficiency loss (EL),
     # weighted connectivity loss (WCL),partial connectivity loss(PCL).
     # Simple connectivity loss (SCL) doesnt make any sense in this case.
 
@@ -683,7 +683,7 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
             event_connectivity_loss_wcl, event_connectivity_loss_eff)
 
 
-def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
+def EL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
     # when no information about supply or demand is given or known,
     # only efficiency loss is calculated for all nodes
 
