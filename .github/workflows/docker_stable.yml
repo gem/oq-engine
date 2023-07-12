@@ -21,12 +21,12 @@ jobs:
   # This Checkout is necessary when using a context in docker/build-push-action
       - name: Clone Repository (Latest)
         uses: actions/checkout@v2
-        #    if: github.event.inputs.git-ref == ''
-        #  - name: Clone Repository (Custom Ref)
-        #    uses: actions/checkout@v2
-        #    if: github.event.inputs.git-ref != ''
-        #    with:
-        #      ref: ${{ github.event.inputs.git-ref }}
+        if: github.event.inputs.git-ref == ''
+      - name: Clone Repository (Custom Ref)
+        uses: actions/checkout@v2
+        if: github.event.inputs.git-ref != ''
+        with:
+          ref: ${{ github.event.inputs.git-ref }}
       - name: Extract tag names
         shell: bash
         run: echo "##[set-output name=tags;]" | tr -d '\n'; for tag in $(echo ${{ github.event.inputs.tags }} | tr , '\n'); do echo "-t openquake/engine:$tag " | tr -d '\n'; done
