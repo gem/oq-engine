@@ -45,7 +45,7 @@ jobs:
         pyver=`echo ${{ matrix.python-version }} | tr -d .`
         dnf update -y
         dnf install -y python${pyver}
-        dnf install -y git git-lfs nc
+        dnf install -y git git-lfs nc procps
         pip3 -V
         python3 -c "import sys; print(sys.version)"
         #
@@ -76,7 +76,7 @@ jobs:
         # Wait the DbServer to come up
         echo "Waiting DBServer up on port 1907...."
         while ! nc -z localhost 1907; do
-          sleep 5 # wait 
+          sleep 5 # wait
         done
         echo "Add settings for login and logging on webui before to start"
         cd /__w/oq-engine/oq-engine/
@@ -89,10 +89,10 @@ jobs:
         echo "DISPLAY content of local_settings"
         cat local_settings.py
         # START WEBUI
-        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8800 -s &'
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start -s &'
         echo "Waiting WEBUI up on port 8800...."
         while ! nc -z localhost 8800; do
-          sleep 5 
+          sleep 5
         done
         ls -lrt /var/log/oq-engine/
         sleep 1
@@ -122,22 +122,23 @@ jobs:
         sleep 5
         cd /__w/oq-engine/oq-engine/
         cd openquake/server
-        cat > local_settings.py 
+        cat > local_settings.py
         echo "DISPLAY content of local_settings"
         cat local_settings.py
-        # START WEBUI
-        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start 127.0.0.1:8888 -s &'
-        echo "Waiting WEBUI up on port 8888...."
-        while ! nc -z localhost 8888; do
-          sleep 5 
+        # RESTART WEBUI
+        pkill oq-webui
+        runuser -l openquake -c '/opt/openquake/venv/bin/oq webui start -s &'
+        echo "Waiting WEBUI up on port 8800...."
+        while ! nc -z localhost 8800; do
+          sleep 5
         done
-        curl --fail -I -L -X GET http://127.0.0.1:8888/
+        curl --fail -I -L -X GET http://127.0.0.1:8800/
         sleep 1
-        curl --fail -I -L -X GET http://127.0.0.1:8888/taxtweb
+        curl --fail -I -L -X GET http://127.0.0.1:8800/taxtweb
         sleep 1
-        curl --fail -I -L -X GET http://127.0.0.1:8888/taxonomy
+        curl --fail -I -L -X GET http://127.0.0.1:8800/taxonomy
         sleep 1
-        curl --fail -I -L -X GET http://127.0.0.1:8888/ipt
+        curl --fail -I -L -X GET http://127.0.0.1:8800/ipt
     - name: Run tests
       run: |
         source /opt/openquake/venv/bin/activate
