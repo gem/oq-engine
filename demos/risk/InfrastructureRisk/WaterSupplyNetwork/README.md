@@ -1,6 +1,6 @@
 Water Supply Demo
 -----------------
-In this example, we present a water supply system with 17 number of nodes and 23 number of edges. Exposure model is prepared for both node and edge-like component. The water supply system consists of pipelines, pumping stations, tank, treatment plant, and demand nodes. The information of the the start_node and end_node of each edge gives the information about how components are interlinked. With all the attributes from the exposure model, the network is created. The graph considered is unweighted, undirected, and a simple one. 
+In this example, we present a water supply system with 17 number of nodes and 23 number of edges. Exposure model is prepared for both node and edge-like components. The water supply system consists of pipelines, pumping stations, tank, treatment plant, and demand nodes. The information of the the start_node and end_node of each edge gives the information about how components are interlinked. With all the attributes from the exposure model, the network is created. The graph considered is unweighted, undirected, and a simple one. 
 
 In the expo_demo_edges, the location is for the centroid of the edges. 
 
