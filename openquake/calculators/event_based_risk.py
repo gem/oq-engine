@@ -272,7 +272,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
-    def save_tmp(self, monitor, srcfilter=None):
+    def save_tmp(self, monitor):
         """
         Save some useful data in the file calc_XXX_tmp.hdf5
         """
@@ -285,7 +285,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers in chunks of at most 1 million elements
         monitor.save('start-stop', compactify3(tss))
-        monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
@@ -415,11 +414,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            srcfilter = self.src_filter()
             full_lt = self.datastore['full_lt']
             smap = event_based.starmap_from_rups(
-                ebrisk, oq, full_lt, self.sitecol, self.datastore)
-            self.save_tmp(smap.monitor, srcfilter)
+                ebrisk, oq, full_lt, self.sitecol, self.datastore,
+                self.save_tmp)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(

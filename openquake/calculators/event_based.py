@@ -116,7 +116,11 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     max_iml = oqparam.get_max_iml()
     scenario = 'scenario' in oqparam.calculation_mode
-    with dstore:
+    if dstore.parent and 'rupgeoms' in dstore.parent:
+        ds = dstore.parent
+    else:
+        ds = dstore
+    with ds as dstore:
         sitecol = dstore['sitecol']
         srcfilter = SourceFilter(sitecol, oqparam.maximum_distance(cmaker.trt))
         rupgeoms = dstore['rupgeoms']
@@ -171,7 +175,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
                 sig_eps=numpy.array(sig_eps, sig_eps_dt(oqparam.imtls)))
 
 
-def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
+def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     nr = len(dstore['ruptures'])
     logging.info('Reading {:_d} ruptures'.format(nr))
     allproxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
@@ -186,6 +190,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
 
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
+    if save_tmp:
+        save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
@@ -471,7 +477,8 @@ class EventBasedCalculator(base.HazardCalculator):
                     for r in range(self.R)}
         else:
             acc0 = {}
-        smap = starmap_from_rups(event_based, oq, self.full_lt, self.sitecol, dstore)
+        smap = starmap_from_rups(
+            event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts, acc0)
         if 'gmf_data' not in dstore:
             return acc
