@@ -29,7 +29,7 @@ from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
     get_loss_builder, fix_dtypes, PostRiskCalculator)
-from openquake.server.db.actions import DISPLAY_NAME
+from openquake.calculators.export import DISPLAY_NAME
 
 U8 = numpy.uint8
 U16 = numpy.uint16
