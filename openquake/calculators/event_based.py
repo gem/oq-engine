@@ -113,16 +113,14 @@ def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
         n += len(proxies)
-        res = event_based(proxies, cmaker, oqparam, dstore, monitor)
+        yield event_based(proxies, cmaker, oqparam, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > oqparam.time_per_task and len(rem) > 2*blocksize:
             for block in block_splitter(rem, 2*blocksize):
-                yield event_based, block, cmaker, oqparam, dstore
-            yield res
+                yield build_event_based, block, cmaker, oqparam, dstore
             return
-        else:
-            yield res
+
 
 def event_based(proxies, cmaker, oqparam, dstore, monitor):
     """
