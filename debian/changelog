@@ -1,3 +1,5 @@
+python3-oq-engine (3.17.0-2~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Raise an early error if the user disable both realizations and statistics
   * Internal: added dbserver.user in openquake.cfg
@@ -206,6 +208,8 @@
   * Fixed install.py: it must not set the shared_dir
   * Optimized disaggregation in performance, memory consumption and data
     transfer; also changed the task distribution algorithm
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 12 Jul 2023 13:00:58 +0000
 
 python3-oq-engine (3.16.0-2~xenial01) xenial; urgency=low
 

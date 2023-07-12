@@ -39,7 +39,7 @@ The code name for version 3.16 is **Angela**, in memory of the Italian science j
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.16**.
+Latest stable version is the **OpenQuake Engine 3.17**.
 
 <!-- GEM END -->
 
