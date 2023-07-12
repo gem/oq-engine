@@ -137,8 +137,7 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
         exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df, g_type)
     sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
     sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
-    sum_connectivity_loss_eff = event_connectivity_loss_eff[
-        'EFFLoss'].sum()
+    sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
 
     if calculation_mode == "event_based_damage":
         inv_time = dstore["oqparam"].investigation_time
@@ -159,8 +158,7 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
             lambda x: x/num_events)
         taz_cl.loc[:, "WCL_node"] = taz_cl["WCL_node"].apply(
             lambda x: x/num_events)
-        node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
-            lambda x: x/num_events)
+        node_el.loc[:, "EL"] = node_el["EL"].apply(lambda x: x/num_events)
 
     taz_cl.drop(columns=['ordinal'], inplace=True)
     node_el.drop(columns=['ordinal'], inplace=True)
@@ -188,8 +186,7 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
     sum_connectivity_loss_ccl = event_connectivity_loss_ccl['CCL'].sum()
     sum_connectivity_loss_pcl = event_connectivity_loss_pcl['PCL'].sum()
     sum_connectivity_loss_wcl = event_connectivity_loss_wcl['WCL'].sum()
-    sum_connectivity_loss_eff = event_connectivity_loss_eff[
-        'EFFLoss'].sum()
+    sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
 
     if calculation_mode == "event_based_damage":
         inv_time = dstore["oqparam"].investigation_time
@@ -217,7 +214,7 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
             lambda x: x/num_events)
         dem_cl.loc[:, "WCL_node"] = dem_cl["WCL_node"].apply(
             lambda x: x/num_events)
-        node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
+        node_el.loc[:, "EL"] = node_el["EL"].apply(
             lambda x: x/num_events)
 
     dem_cl.drop(columns=['ordinal'], inplace=True)
@@ -239,8 +236,7 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
     generic_nodes_analysis_results = {}
     node_el, event_connectivity_loss_eff = EFL_node(
         exposure_df, G_original, eff_nodes, damage_df, g_type)
-    sum_connectivity_loss_eff = event_connectivity_loss_eff[
-        'EFFLoss'].sum()
+    sum_connectivity_loss_eff = event_connectivity_loss_eff['EL'].sum()
 
     if calculation_mode == "event_based_damage":
         inv_time = dstore["oqparam"].investigation_time
@@ -252,8 +248,7 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
     elif calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
         avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
-        node_el.loc[:, "Eff_loss"] = node_el["Eff_loss"].apply(
-            lambda x: x/num_events)
+        node_el.loc[:, "EL"] = node_el["EL"].apply(lambda x: x/num_events)
 
     node_el.drop(columns=['ordinal'], inplace=True)
 
@@ -350,9 +345,9 @@ def calc_efficiency(graph, N, att, eff_table, eff):
     if eff == 'Eff':
         # This is done so that if the initial graph has a node disconnected,
         # will raise an error when calculating the efficiency loss
-        eff_table['Eff_loss'] = (
+        eff_table['EL'] = (
             eff_table.Eff0 - eff_table.Eff)/eff_table.Eff0.replace({0: np.nan})
-        eff_table['Eff_loss'] = eff_table['Eff_loss'].fillna(0)
+        eff_table['EL'] = eff_table['EL'].fillna(0)
 
     return eff_table
 
@@ -424,12 +419,12 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     eff_table.set_index("id", inplace=True)
 
     # Create an empty dataframe with columns "event_id" and
-    # "CCL"/"PCL"/"WCL"/"EFFLoss"
+    # "CCL"/"PCL"/"WCL"/"EL"
 
     event_connectivity_loss_ccl = pd.DataFrame(columns=['event_id', 'CCL'])
     event_connectivity_loss_pcl = pd.DataFrame(columns=['event_id', 'PCL'])
     event_connectivity_loss_wcl = pd.DataFrame(columns=['event_id', 'WCL'])
-    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EFFLoss'])
+    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EL'])
 
     # To check the the values for each node before the earthquake event
 
@@ -512,7 +507,7 @@ def EFLWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
             {'event_id': event_id, 'WCL': WCL_mean_per_event},
             ignore_index=True)
         event_connectivity_loss_eff = event_connectivity_loss_eff.append(
-            {'event_id': event_id, 'EFFLoss': Glo_effloss_per_event},
+            {'event_id': event_id, 'EL': Glo_effloss_per_event},
             ignore_index=True)
 
         # To store the sum of performance indicator at nodal level to calulate
@@ -564,10 +559,10 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     wcl_table.set_index('id', inplace=True)
 
     # Create an empty dataframe with columns "event_id" and
-    # "CCL"/"PCL"/"WCL"/"EFFLoss"
+    # "CCL"/"PCL"/"WCL"/"EL"
     event_connectivity_loss_pcl = pd.DataFrame(columns=['event_id', 'PCL'])
     event_connectivity_loss_wcl = pd.DataFrame(columns=['event_id', 'WCL'])
-    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EFFLoss'])
+    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EL'])
 
     # To check the the values for each node before the earthquake event
 
@@ -647,7 +642,7 @@ def EFLWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
             {'event_id': event_id, 'WCL': WCL_mean_per_event},
             ignore_index=True)
         event_connectivity_loss_eff = event_connectivity_loss_eff.append(
-            {'event_id': event_id, 'EFFLoss': Glo_effloss_per_event},
+            {'event_id': event_id, 'EL': Glo_effloss_per_event},
             ignore_index=True)
 
         # To store the sum of performance indicator at nodal level to calulate
@@ -682,8 +677,8 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
     eff_table = pd.DataFrame({'id': eff_nodes})
     eff_table.set_index("id", inplace=True)
 
-    # Create an empty dataframe with columns "event_id" and "EFFLoss"
-    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EFFLoss'])
+    # Create an empty dataframe with columns "event_id" and "EL"
+    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EL'])
 
     # To check the the values for each node before the earthquake event
 
@@ -717,7 +712,7 @@ def EFL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
 
         # Storing the value of performance indicators for each event
         event_connectivity_loss_eff = event_connectivity_loss_eff.append(
-            {'event_id': event_id, 'EFFLoss': Glo_effloss_per_event},
+            {'event_id': event_id, 'EL': Glo_effloss_per_event},
             ignore_index=True)
 
         # To store the sum of performance indicator at nodal level to calulate

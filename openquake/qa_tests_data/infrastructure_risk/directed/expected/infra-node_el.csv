@@ -1,5 +1,5 @@
 #,"generated_by='OpenQuake engine 3.17.0-git6065d55082', start_date='2023-07-10T08:22:13', checksum=924131480"
-id,Eff_loss
+id,EL
 A,5.00000E-01
 B,4.77454E-02
 C,3.16472E-01
