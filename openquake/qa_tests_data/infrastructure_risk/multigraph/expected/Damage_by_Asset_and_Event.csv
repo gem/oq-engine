@@ -1,4 +1,4 @@
-event_id,id,dmg_1,dmg_2,collapsed
+event_id,id,dmg_1,dmg_2,non_operational
 0,A,0,0,0
 0,B,0,0,0
 0,C,0,0,0

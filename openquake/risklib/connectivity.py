@@ -138,7 +138,7 @@ def get_damage_df(dstore, exposure_df):
         .sort_index(level=["event_id", "id"])
         .astype(int)
         .join(exposure_df)
-        .assign(is_functional=lambda x: x.collapsed == 0)
+        .assign(is_functional=lambda x: x.non_operational == 0)
     )[["type", "start_node", "end_node", "is_functional", "taxonomy"]]
 
     return damage_df
@@ -411,7 +411,7 @@ def analysis(dstore):
 
 
 def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
-                        source_nodes, damage_df, g_type):
+                       source_nodes, damage_df, g_type):
     # Classic one where particular nodes are divided as supply or demand and
     # the main interest is to check the serviceability of supply to demand
     # nodes. This calculates, complete connectivity loss (CCL), weighted
@@ -556,7 +556,7 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
 
 
 def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
-                      eff_nodes, damage_df, g_type):
+                     eff_nodes, damage_df, g_type):
     # When the nodes acts as both demand and supply.
     # For example, traffic analysis zone in transportation network. This
     # calculates, efficiency loss (EL),
