@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.4">
 	<exposureModel id="ex1" category="buildings" taxonomySource="GEM taxonomy">
-		<description>test</description>
+		<description>test example for road network</description>
 		<conversions>
 			<costTypes>
 			</costTypes>
