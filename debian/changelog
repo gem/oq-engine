@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Replaced sequential tiling with parallel tiling in large classical
+    calculations
   * Huge reduction of the memory usage in the event_based calculator; also,
     reduced the slow tasks
 
