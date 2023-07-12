@@ -2612,7 +2612,7 @@ quantiles) are supported by all the calculators.
 By default, OpenQuake will export only the statistical results, i.e.
 mean curves and quantiles. If the user requires the complete results for
 all realizations, there is a flag to specify, please see the FAQ
-https://github.com/gem/oq-engine/blob/master/doc/faq-hazard.md. Beware
+https://github.com/gem/oq-engine/blob/engine-3.17/doc/faq-hazard.md. Beware
 that if the logic tree contains a large number of end branches the
 process of exporting the results from each end *Branch* can add a
 significant amount of time - possibly longer than the computation time -

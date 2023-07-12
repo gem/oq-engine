@@ -490,7 +490,7 @@ Here `set_between_epsilon` is simply shifting the mean with the formula
 will likely grow more methods. If you want to understand how it works you
 should look at the source code:
                     
-https://github.com/gem/oq-engine/blob/master/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py
+https://github.com/gem/oq-engine/blob/engine-3.17/openquake/hazardlib/gsim/mgmpe/modifiable_gmpe.py
 
 MultiPointSources
 =============================
