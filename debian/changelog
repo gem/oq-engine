@@ -1,5 +1,12 @@
 python3-oq-engine (3.16.5-1~xenial01) xenial; urgency=low
 
+  [Matteo Nastasi]
+  * Fixed the IPT error "ClearableFileInput doesn't support uploading multiple
+    files" caused by the upgrade to Django >= 3.2.19
+
+  [Antonio Ettorre]
+  * Upgraded Django version to version 3.2.20 with some security fixes
+
   [Kendra Johnson]
   * Added `DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50` to
     the NGAEast and NSHMP2014 GMPEs
