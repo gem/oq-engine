@@ -217,7 +217,7 @@ def get_engine_latest_version(request):
     return HttpResponse(engine.check_obsolete_version())
 
 
-@cross_domain_ajax
+# @cross_domain_ajax
 @require_http_methods(['GET'])
 def get_available_gsims(request):
     """

@@ -192,10 +192,6 @@ if STANDALONE and WEBUI:
 
     FILE_PATH_FIELD_DIRECTORY = datastore.get_datadir()
 
-    CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
-    CONTEXT_PROCESSORS.insert(0, 'django.template.context_processors.request')
-    CONTEXT_PROCESSORS.append('openquakeplatform.utils.oq_context_processor')
-
 try:
     # Try to load a local_settings.py from the current folder; this is useful
     # when packages are used. A custom local_settings.py can be placed in
@@ -305,13 +301,13 @@ if LOCKDOWN:
             'APP_DIRS': True,
             'OPTIONS': {
                 'context_processors': [
+                    'django.template.context_processors.request',
                     'django.contrib.auth.context_processors.auth',
                     'django.template.context_processors.debug',
                     'django.template.context_processors.i18n',
                     'django.template.context_processors.media',
                     'django.template.context_processors.static',
                     'django.template.context_processors.tz',
-                    'django.template.context_processors.request',
                     'django.contrib.messages.context_processors.messages',
                     'openquake.server.utils.oq_server_context_processor',
                 ],
@@ -337,3 +333,9 @@ if LOCKDOWN:
         {'NAME': 'django.contrib.auth.password_validation.'
                  'NumericPasswordValidator', },
     ]
+
+    # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
+    if STANDALONE and WEBUI:
+        CONTEXT_PROCESSORS = TEMPLATES[0]['OPTIONS']['context_processors']
+        CONTEXT_PROCESSORS.append(
+            'openquakeplatform.utils.oq_context_processor')
