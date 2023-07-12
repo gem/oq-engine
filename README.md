@@ -25,7 +25,6 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 [![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
 [![PyPI Version](https://img.shields.io/pypi/v/openquake.engine.svg)](https://pypi.python.org/pypi/openquake.engine)
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/openquake.engine.svg)
-[![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/gem/oq-engine.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/gem/oq-engine/context:python)
 
 ### Current Long Term Support (LTS) release - for users wanting stability
 
