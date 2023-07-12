@@ -108,7 +108,7 @@ def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
     """
     Launcher of event_based tasks
     """
-    blocksize = int(numpy.ceil(len(allproxies) / 20))
+    blocksize = 50
     t0 = time.time()
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
