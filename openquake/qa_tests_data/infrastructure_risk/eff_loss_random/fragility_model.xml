@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
 	<fragilityModel id="1" assetCategory="Random" lossCategory="structural">
-		<description>random example, warning: The values for fragility curves are not representative and just random just for test purpose
+		<description>random example, Warning: The values for fragility curves are random and not representative just for test purpose.
 </description>
 		<limitStates>slight moderate extensive complete</limitStates>
 		<fragilityFunction id="connection" format="discrete">
