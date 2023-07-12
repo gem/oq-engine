@@ -41,7 +41,7 @@ U8 = numpy.uint8
 
 TWO32 = 2 ** 32
 KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
-                      'fatalities', 'homeless', 'non-operational']
+                      'fatalities', 'homeless', 'non_operational']
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1644,7 +1644,7 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         raise NotImplementedError(consequence)
     elif consequence == 'losses':
         return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif consequence in ['collapsed', 'non-operational']:
+    elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
     elif consequence == 'injured':
         return dmgdist @ coeffs * asset['occupants_night']
@@ -1660,7 +1660,7 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
         sum of the values corresponding to agg_id for the given consequence
     """
     aval = agg_values[agg_id]
-    if consequence in ['collapsed', 'non-operational']:
+    if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence == 'injured':
         return aval['occupants_night']
