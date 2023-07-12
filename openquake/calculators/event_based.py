@@ -105,6 +105,9 @@ def get_computer(cmaker, oqparam, proxy, sids, sitecol,
 
 
 def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
+    """
+    Launcher of event_based tasks
+    """
     blocksize = int(numpy.ceil(len(allproxies) / 10))
     t0 = time.time()
     n = 0
@@ -113,10 +116,9 @@ def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
         yield event_based(proxies, cmaker, oqparam, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
-        if dt > oqparam.time_per_task and len(rem) > 10:
-            half = len(rem) // 2
-            yield event_based, rem[:half], cmaker, oqparam, dstore
-            yield event_based, rem[half:], cmaker, oqparam, dstore
+        if dt > oqparam.time_per_task and len(rem) > blocksize:
+            for block in block_splitter(proxies, blocksize):
+                yield event_based, block, cmaker, oqparam, dstore
             break
 
 
