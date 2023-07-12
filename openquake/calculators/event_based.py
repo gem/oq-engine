@@ -104,6 +104,25 @@ def get_computer(cmaker, oqparam, proxy, sids, sitecol,
         oqparam._amplifier, oqparam._sec_perils)
 
 
+def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
+    """
+    Launcher of event_based tasks
+    """
+    blocksize = 50
+    t0 = time.time()
+    n = 0
+    for proxies in block_splitter(allproxies, blocksize):
+        n += len(proxies)
+        yield event_based(proxies, cmaker, oqparam, dstore, monitor)
+        rem = allproxies[n:]  # remaining ruptures
+        dt = time.time() - t0
+        if dt > oqparam.time_per_task and len(rem) > 10:
+            half = len(rem) // 2
+            yield build_event_based, rem[:half], cmaker, oqparam, dstore
+            yield build_event_based, rem[half:], cmaker, oqparam, dstore
+            return
+
+
 def event_based(proxies, cmaker, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
@@ -194,6 +213,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     for trt_smr, proxies in gb.items():
+        proxies.sort(key=operator.itemgetter('mag'))
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
@@ -478,7 +498,7 @@ class EventBasedCalculator(base.HazardCalculator):
         else:
             acc0 = {}
         smap = starmap_from_rups(
-            event_based, oq, self.full_lt, self.sitecol, dstore)
+            build_event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts, acc0)
         if 'gmf_data' not in dstore:
             return acc
