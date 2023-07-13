@@ -104,7 +104,7 @@ def get_computer(cmaker, oqparam, proxy, sids, sitecol,
         oqparam._amplifier, oqparam._sec_perils)
 
 
-def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
+def gen_event_based(allproxies, cmaker, oqparam, dstore, monitor):
     """
     Launcher of event_based tasks
     """
@@ -118,8 +118,8 @@ def build_event_based(allproxies, cmaker, oqparam, dstore, monitor):
         dt = time.time() - t0
         if dt > oqparam.time_per_task and len(rem) > 10:
             half = len(rem) // 2
-            yield build_event_based, rem[:half], cmaker, oqparam, dstore
-            yield build_event_based, rem[half:], cmaker, oqparam, dstore
+            yield gen_event_based, rem[:half], cmaker, oqparam, dstore
+            yield gen_event_based, rem[half:], cmaker, oqparam, dstore
             return
 
 
@@ -195,6 +195,10 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
 
 
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
+    """
+    Submit the ruptures and apply `func` (event_based or ebrisk)
+    """
+    set_mags(oq, dstore)
     nr = len(dstore['ruptures'])
     logging.info('Reading {:_d} ruptures'.format(nr))
     allproxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
@@ -229,9 +233,10 @@ def set_mags(oq, dstore):
     """
     Set the attribute oq.mags_by_trt
     """
-    oq.mags_by_trt = {
-        trt: python3compat.decode(dset[:])
-        for trt, dset in dstore['source_mags'].items()}
+    if 'source_mags' in dstore:
+        oq.mags_by_trt = {
+            trt: python3compat.decode(dset[:])
+            for trt, dset in dstore['source_mags'].items()}
 
 
 def compute_avg_gmf(gmf_df, weights, min_iml):
@@ -498,7 +503,7 @@ class EventBasedCalculator(base.HazardCalculator):
         else:
             acc0 = {}
         smap = starmap_from_rups(
-            build_event_based, oq, self.full_lt, self.sitecol, dstore)
+            gen_event_based, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts, acc0)
         if 'gmf_data' not in dstore:
             return acc
