@@ -71,6 +71,7 @@ def count_ruptures(src):
 def strip_zeros(gmf_df):
     # remove the rows with all zero values
     df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
+    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
     ok = df.to_numpy().sum(axis=1) > 0
     return gmf_df[ok]
 
@@ -127,7 +128,8 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    alldata = AccumDict(accum=[])
+    alldata = []
+    se_dt = sig_eps_dt(oqparam.imtls)
     sig_eps = []
     times = []  # rup_id, nsites, dt
     hcurves = {}  # key -> poes
@@ -170,14 +172,11 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
             dt = time.time() - t0
             times.append((proxy['id'], len(computer.ctx.sids),
                           computer.ctx.rrup.min(), dt))
-            for key in df.columns:
-                alldata[key].extend(df[key])
-    for key, val in sorted(alldata.items()):
-        if key in 'eid sid rlz':
-            alldata[key] = U32(alldata[key])
-        else:
-            alldata[key] = F32(alldata[key])
-    gmfdata = strip_zeros(pandas.DataFrame(alldata))
+            alldata.append(df)
+    if sum(len(df) for df in alldata):
+        gmfdata = strip_zeros(pandas.concat(alldata))
+    else:
+        gmfdata = ()
     if len(gmfdata) and oqparam.hazard_curves_from_gmfs:
         hc_mon = monitor('building hazard curves', measuremem=False)
         for (sid, rlz), df in gmfdata.groupby(['sid', 'rlz']):
@@ -191,7 +190,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     if not oqparam.ground_motion_fields:
         gmfdata = ()
     return dict(gmfdata=gmfdata, hcurves=hcurves, times=times,
-                sig_eps=numpy.array(sig_eps, sig_eps_dt(oqparam.imtls)))
+                sig_eps=numpy.array(sig_eps, se_dt))
 
 
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
@@ -369,7 +368,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
                 hdf5.extend(self.datastore['gmf_data/rup_info'], times)
-                [task_no] = numpy.unique(times['task_no'])
                 if self.N >= calc.SLICE_BY_EVENT_NSITES:
                     sbe = calc.build_slice_by_event(
                         df.eid.to_numpy(), self.offset)
