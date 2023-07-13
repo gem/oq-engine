@@ -223,7 +223,7 @@ def gen_event_based(allproxies, cmaker, oqparam, dstore, monitor):
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
         n += len(proxies)
-        yield event_based(proxies, cmaker, oqparam, dstore, monitor)
+        yield from event_based(proxies, cmaker, oqparam, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > oqparam.time_per_task and len(rem) > 10:
@@ -237,10 +237,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
-    alldata = []
     se_dt = sig_eps_dt(oqparam.imtls)
-    sig_eps = []
-    times = []  # rup_id, nsites, dt
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
     max_iml = oqparam.get_max_iml()
@@ -276,21 +273,20 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
                     # skip this rupture
                     continue
             with cmon:
+                sig_eps = []
                 df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
-            times.append((proxy['id'], len(computer.ctx.sids),
-                          computer.ctx.rrup.min(), dt))
-            alldata.append(df)
-    if sum(len(df) for df in alldata):
-        gmfdata = strip_zeros(pandas.concat(alldata))
-    else:
-        gmfdata = ()
-    times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)
-    times.sort(order='rup_id')
-    if not oqparam.ground_motion_fields:
-        gmfdata = ()
-    return dict(gmfdata=gmfdata, times=times,
-                sig_eps=numpy.array(sig_eps, se_dt))
+            tup = (proxy['id'], len(computer.ctx.sids),
+                   computer.ctx.rrup.min(), dt)
+            if len(df):
+                gmfdata = strip_zeros(df)
+            else:
+                gmfdata = ()
+            times = numpy.array([tup + (monitor.task_no,)], rup_dt)
+            if not oqparam.ground_motion_fields:
+                gmfdata = ()
+            yield dict(gmfdata=gmfdata, times=times,
+                       sig_eps=numpy.array(sig_eps, se_dt))
 
 
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
@@ -465,6 +461,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with sav_mon:
             df = result.pop('gmfdata')
             if len(df):
+                '''
                 dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
                 hdf5.extend(self.datastore['gmf_data/rup_info'], times)
@@ -482,6 +479,7 @@ class EventBasedCalculator(base.HazardCalculator):
                                 df[sec_imt])
                 sig_eps = result.pop('sig_eps')
                 hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
+                '''
                 self.offset += len(df)
         return acc
 
