@@ -1,21 +1,35 @@
 Road Network Demo
 -----------------
-In this example, we present a road network with 29 number of nodes and 38 number of edges which is more grid-like. Exposure model is prepared for both node and edge-like components. The road network consists of road segment, bridges, connection and TAZ nodes. The information of the start_node and end_node of each edge gives the information about how components are interlinked. With all the attributes from the exposure model, the network is created. 
 
-In the expo_demo_edges, the location is for the centroid of the edges. The weights refer to the lengths and thus the graph is weighted. 
+In this example, we present a grid-like road network with 29 nodes and 38
+edges. The exposure model is prepared for both node- and edge-like components.
+The road network consists of road segments, bridges, connections and TAZ
+(Traffic Analysis Zone) nodes. The information of the `start_node` and
+`end_node` of each edge indicated how components are interlinked. With all the
+attributes from the exposure model, the network is created.
 
-As seen in the expo_demo_nodes, we have the nodes acting as TAZ (traffic analysis zone). Therefore, partial connectivity loss , weighted connectivity loss and efficiency loss are calculated. 
+In the `expo_demo_edges`, the location is for the centroid of the edges. The
+weights refer to the lengths and thus the graph is weighted.
 
-Note:This is an example for the demonstrative purpose and doesn't represent a real network. 
+As seen in the `expo_demo_nodes`, we have the nodes acting as TAZ. Therefore,
+partial connectivity loss, weighted connectivity loss and efficiency loss are
+calculated.
+
+Note: this is an example for the demonstrative purpose and does not represent a
+real network.
 
 **Hazard**
-Expected runtime: 4 seconds 
+
+Expected runtime: 4 seconds
+
 Outputs:
+
 - Events
 - Ground Motion Fields
 
 **Risk**
-Expected runtime: 3 seconds 
+
+Expected runtime: 3 seconds
 
 Outputs:
 
