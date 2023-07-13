@@ -116,7 +116,7 @@ def build_hcurves(calc):
         for r in range(R):
             calc.datastore['hcurves-rlzs'][:, r] = pmaps[r].array
             if oq.poes:
-                [hmap] = calc.make_hmaps([pmaps[r]], oq.imtls, oq.poes)
+                [hmap] = make_hmaps([pmaps[r]], oq.imtls, oq.poes)
                 ds[:, r] = hmap.array
 
     if S:
@@ -373,6 +373,8 @@ class GmfSaver(object):
 
     def add(self, result):
         df = result.pop('gmfdata')
+        if len(df) == 0:
+            return
         self.gmf_acc.append(df)
         self.nrows += len(df)
         if self.nrows > 1_000_000:
@@ -409,6 +411,7 @@ class GmfSaver(object):
             self.rup_info_acc.clear()
             self.sbe_acc.clear()
             self.se_acc.clear()
+
 
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):

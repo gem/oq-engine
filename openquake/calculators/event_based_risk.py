@@ -28,7 +28,6 @@ from scipy import sparse
 from openquake.baselib import (
     hdf5, performance, parallel, general, python3compat)
 from openquake.hazardlib import stats, InvalidFile
-from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
@@ -256,10 +255,10 @@ def ebrisk(proxies, cmaker, oqparam, dstore, monitor):
     :returns: a dictionary of arrays
     """
     oqparam.ground_motion_fields = True
-    dic = event_based.event_based(proxies, cmaker, oqparam, dstore, monitor)
-    if len(dic['gmfdata']) == 0:  # no GMFs
-        return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    for dic in event_based.event_based(
+            proxies, cmaker, oqparam, dstore, monitor):
+        if len(dic['gmfdata']):
+            yield event_based_risk(dic['gmfdata'], oqparam, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
