@@ -860,9 +860,10 @@ class ContextMaker(object):
                     rctx.src_id = src_id
                     if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id
-                        c = rup.surface.get_closest_points(sites.complete)
-                        rctx.clon = c.lons[rctx.sids]
-                        rctx.clat = c.lats[rctx.sids]
+                        if self.fewsites:
+                            c = rup.surface.get_closest_points(sites.complete)
+                            rctx.clon = c.lons[rctx.sids]
+                            rctx.clat = c.lats[rctx.sids]
                     yield rctx
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
