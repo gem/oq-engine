@@ -256,7 +256,7 @@ class RuptureImporter(object):
         # sanity check
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
-        events['id'] = numpy.arange(len(events))
+        #events['id'] = numpy.arange(len(events))
         # set event year and event ses starting from 1
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])

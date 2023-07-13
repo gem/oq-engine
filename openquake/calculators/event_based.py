@@ -25,7 +25,7 @@ import pandas
 
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
-    AccumDict, humansize, groupby, block_splitter)
+    AccumDict, humansize, groupby, block_splitter, random_choice)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
@@ -311,6 +311,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if save_tmp:
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
+    eid_rlz = []
     for trt_smr, proxies in gb.items():
         proxies.sort(key=operator.itemgetter('mag'))
         trt = full_lt.trts[trt_smr // TWO24]
@@ -321,7 +322,27 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         hint = nr / (oq.concurrent_tasks or 1)
         for block in block_splitter(proxies, hint):
             smap.submit((block, cmaker, oq, dstore))
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_rlz.append(get_eid_rlz(proxies, rlzs))
+    eid_rlz = numpy.concatenate(eid_rlz, dtype=eid_rlz_dt)
+    dstore['events']['id'] = eid_rlz['eid']
     return smap
+
+
+eid_rlz_dt = numpy.dtype([('eid', U32), ('rlz', U32)])
+
+def get_eid_rlz(proxies, rlzs):
+    n_occ = sum(proxy['n_occ'] for proxy in proxies)
+    out = numpy.zeros(n_occ, eid_rlz_dt)
+    start = 0
+    for proxy in proxies:
+        n = proxy['n_occ']
+        stop = start + n
+        out[start:stop]['eid'] = numpy.arange(
+            proxy['e0'], proxy['e0'] + n, dtype=U32)
+        out[start:stop]['rlz'] = random_choice(rlzs, n, 0, proxy['seed'])
+        start = stop
+    return out
 
 
 def set_mags(oq, dstore):
