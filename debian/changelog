@@ -1,5 +1,18 @@
   [Michele Simionato]
+  * Fixed the error "You must supply a list of magnitudes as 2-digit strings"
+    when starting from ruptures in a model with GMPETables (i.e. Canada)
+  * Replaced sequential tiling with parallel tiling in large classical
+    calculations
+  * Huge reduction of the memory usage in the event_based calculator; also,
+    reduced the slow tasks
+
+python3-oq-engine (3.17.0-2~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Raise an early error if the user disable both realizations and statistics
+  * Internal: added dbserver.user in openquake.cfg
   * Solved the hanging of classical calculations due to large zmq packets
+    and reduced memory occupation
 
   [Marco Pagani, Michele Simionato]
   * Added support for the "direct" method in MRD calculations
@@ -203,6 +216,8 @@
   * Fixed install.py: it must not set the shared_dir
   * Optimized disaggregation in performance, memory consumption and data
     transfer; also changed the task distribution algorithm
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 12 Jul 2023 13:00:58 +0000
 
 python3-oq-engine (3.16.0-2~xenial01) xenial; urgency=low
 

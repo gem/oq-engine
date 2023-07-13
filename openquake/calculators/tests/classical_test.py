@@ -18,7 +18,8 @@
 
 import gzip
 import numpy
-from openquake.baselib import parallel, general
+from unittest import mock
+from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.hazardlib.source.rupture import get_ruptures
@@ -149,12 +150,16 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
-        self.assert_curves_ok([
-            '/hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1)',
-            'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
-            'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}):
+            self.assert_curves_ok([
+                '/hazard_curve-mean-PGA.csv',
+                'hazard_curve-mean-SA(0.1)',
+                'hazard_curve-mean-SA(0.2).csv',
+                'hazard_curve-mean-SA(0.5).csv',
+                'hazard_curve-mean-SA(1.0).csv',
+                'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertEqual(self.calc.ntiles, 2)
+        self.assertGreater(self.calc.ntiles, 2)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
@@ -444,6 +449,12 @@ class ClassicalTestCase(CalculatorTestCase):
                                "hazard_curve-rlz-003-PGA.csv",
                                "hazard_curve-rlz-003-SA(0.5).csv"],
                               case_54.__file__)
+
+        # check that disabling the stats causes an error
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_54.__file__, 'job.ini',
+                          individual_rlzs='false')
+        self.assertIn('you disabled all statistics', str(ctx.exception))
 
     def test_case_55(self):
         # test with amplification function == 1

@@ -32,7 +32,6 @@ https://wheelhouse.openquake.org/v3/py/idna-2.8-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/urllib3-1.25.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/Django-3.2.19-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.4.1-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/django_pam-2.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/python_pam-1.8.4-py2.py3-none-any.whl
@@ -48,3 +47,4 @@ https://wheelhouse.openquake.org/v3/py/packaging-21.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/fonttools-4.38.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-5.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/zipp-3.10.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/Django-3.2.20-py3-none-any.whl

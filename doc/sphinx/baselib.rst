@@ -3,8 +3,8 @@ openquake.baselib
 =================
 
 `openquake.baselib` is a collection of utilities to run large numeric
-simulations. It includes support for parallel computing (via multiprocessing,
-celery, zmq or dask), performance monitoring and a serialization library
+simulations. It includes support for parallel computing (via multiprocessing
+or zmq), performance monitoring and a serialization library
 from Python objects to HDF5 files and viceversa.
 
 Development and support

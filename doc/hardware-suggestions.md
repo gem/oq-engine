@@ -21,7 +21,7 @@ Our cluster master node "wilson" is a Dell® PowerEdge™ R720 with 16 Xeon core
 
 For our largest calculations on a continental or global scale we use a cluster composed of "wilson" (see above) acting as a "master" and two clusters composed by 5 worker nodes (Dell® PowerEdge™ M915 blades) each with 4x 16 cores AMD® Opteron™ and 128GB of RAM for the first and 4 Dell® PowerEdge™ M630 blades (2x 20t/10c Intel® Xeon™ E5-2640v4, 128GB RAM each) for the second cluster.  Worker nodes do not need much disk since the data is stored in the master filesystem.
 
-Network is made with a link aggregation between two 10 gigabit connections; however, up to a couple hundred celery workers a single gigabit connection is enough.
+Network is made with a link aggregation between two 10 gigabit connections; however, up to a couple hundred workers a single gigabit connection is enough.
 
 Windows is not supported for large scale deployments.
 

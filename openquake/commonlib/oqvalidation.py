@@ -467,12 +467,6 @@ max_sites_disagg:
   Example: *max_sites_disagg = 100*
   Default: 10
 
-pmap_max_mb:
-   Control the size of the returned pmaps in classical calculations.
-   The default is 50 MB; you can reduce it if zmq cannot keep up.
-   Example: *pmap_max_mb = 25*
-   Default: 50
-
 max_weight:
   INTERNAL
 
@@ -772,7 +766,7 @@ time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
-  Default: 2000
+  Default: 200
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -986,7 +980,6 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_mb = valid.Param(valid.positivefloat, 50.)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -1053,7 +1046,7 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 2000)
+    time_per_task = valid.Param(valid.positivefloat, 200)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
