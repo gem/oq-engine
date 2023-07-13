@@ -355,6 +355,62 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     return dic
 
 
+class GmfSaver(object):
+    def __init__(self, oq, dstore, mon):
+        self.dstore = dstore
+        self.mon = mon
+        self.primary = oq.get_primary_imtls()
+        self.sec_imts = oq.get_sec_imts()
+        self.N = len(dstore['sitecol'])
+        self.gmf_dt = oq.gmf_data_dt()
+        self.se_dt = sig_eps_dt(oq.imtls)
+        self.gmf_acc = []
+        self.rup_info_acc = []
+        self.sbe_acc = []
+        self.se_acc = []
+        self.nrows = 0
+        self.offset = 0
+
+    def add(self, result):
+        df = result.pop('gmfdata')
+        self.gmf_acc.append(df)
+        self.nrows += len(df)
+        if self.nrows > 1_000_000:
+            self.save()
+        if self.N >= SLICE_BY_EVENT_NSITES:
+            sbe = build_slice_by_event(
+                df.eid.to_numpy(), self.offset)
+            self.sbe_acc.append(sbe)
+        self.se_acc.append(result.pop('sig_eps'))
+        self.rup_info_acc.append(result.pop('times'))
+
+    def save(self):
+        with self.mon:
+            if sum(len(df) for df in self.gmf_acc) == 0:
+                return  # nothing to save
+            rup_info = numpy.concatenate(self.rup_info_acc, dtype=rup_dt)
+            sbe = numpy.concatenate(self.sbe_acc, dtype=slice_dt)
+            se = numpy.concatenate(self.se_acc, dtype=self.se_dt)
+            hdf5.extend(self.dstore['gmf_data/rup_info'], rup_info)
+            if len(sbe):
+                hdf5.extend(self.dstore['gmf_data/slice_by_event'], sbe)
+            hdf5.extend(self.dstore['gmf_data/sigma_epsilon'], se)
+
+            df = pandas.concat(self.gmf_acc)
+            dset = self.dstore['gmf_data/sid']
+            hdf5.extend(dset, df.sid.to_numpy())
+            hdf5.extend(self.dstore['gmf_data/eid'], df.eid.to_numpy())
+            for m in range(len(self.primary)):
+                hdf5.extend(self.dstore[f'gmf_data/gmv_{m}'], df[f'gmv_{m}'])
+            for sec_imt in self.sec_imts:
+                hdf5.extend(self.dstore[f'gmf_data/{sec_imt}'], df[sec_imt])
+
+            self.nrows = 0
+            self.gmf_acc.clear()
+            self.rup_info_acc.clear()
+            self.sbe_acc.clear()
+            self.se_acc.clear()
+
 @base.calculators.add('event_based', 'scenario', 'ucerf_hazard')
 class EventBasedCalculator(base.HazardCalculator):
     """
@@ -454,33 +510,7 @@ class EventBasedCalculator(base.HazardCalculator):
         """
         if result is None:  # instead of a dict
             raise MemoryError('You ran out of memory!')
-        sav_mon = self.monitor('saving gmfs')
-        agg_mon = self.monitor('aggregating hcurves')
-        primary = self.oqparam.get_primary_imtls()
-        sec_imts = self.oqparam.get_sec_imts()
-        with sav_mon:
-            df = result.pop('gmfdata')
-            if len(df):
-                '''
-                dset = self.datastore['gmf_data/sid']
-                times = result.pop('times')
-                hdf5.extend(self.datastore['gmf_data/rup_info'], times)
-                if self.N >= SLICE_BY_EVENT_NSITES:
-                    sbe = build_slice_by_event(
-                        df.eid.to_numpy(), self.offset)
-                    hdf5.extend(self.datastore['gmf_data/slice_by_event'], sbe)
-                hdf5.extend(dset, df.sid.to_numpy())
-                hdf5.extend(self.datastore['gmf_data/eid'], df.eid.to_numpy())
-                for m in range(len(primary)):
-                    hdf5.extend(self.datastore[f'gmf_data/gmv_{m}'],
-                                df[f'gmv_{m}'])
-                for sec_imt in sec_imts:
-                    hdf5.extend(self.datastore[f'gmf_data/{sec_imt}'],
-                                df[sec_imt])
-                sig_eps = result.pop('sig_eps')
-                hdf5.extend(self.datastore['gmf_data/sigma_epsilon'], sig_eps)
-                '''
-                self.offset += len(df)
+        self.saver.add(result)
         return acc
 
     def _read_scenario_ruptures(self):
@@ -551,7 +581,6 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.info('minimum_intensity=%s', oq.minimum_intensity)
         else:
             logging.info('min_iml=%s', oq.min_iml)
-        self.offset = 0
         if oq.hazard_calculation_id:  # from ruptures
             dstore.parent = datastore.read(oq.hazard_calculation_id)
             self.full_lt = dstore.parent['full_lt']
@@ -587,7 +616,9 @@ class EventBasedCalculator(base.HazardCalculator):
         # event_based in parallel
         smap = starmap_from_rups(
             gen_event_based, oq, self.full_lt, self.sitecol, dstore)
+        self.saver = GmfSaver(oq, dstore, self._monitor('saving gmfs'))
         acc = smap.reduce(self.agg_dicts)
+        self.saver.save()
         if 'gmf_data' not in dstore:
             return acc
         if oq.ground_motion_fields:
