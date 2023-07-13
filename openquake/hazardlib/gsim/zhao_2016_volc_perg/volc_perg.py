@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from collections import OrderedDict
 
 from openquake.hazardlib.geo import polygon as pgn
 from openquake.hazardlib.geo.geodetic import npoints_between, distance
@@ -78,10 +77,10 @@ def get_dist_traversed_per_zone(line_mesh, volc_pgn_store, polygon_per_zone,
         ctx: Context of ruptures and sites to compute ground-motions for
     """
     # Store the distanc per volc zone per travel path
-    dist_per_volc_zone_per_path = OrderedDict([(path_idx, {}) for path_idx,
-                                               site in enumerate(ctx.lon)])
-    in_zone_coo_per_zone_per_path = OrderedDict([(path_idx, {}) for path_idx,
-                                               site in enumerate(ctx.lon)])
+    dist_per_volc_zone_per_path, in_zone_coo_per_zone_per_path = {}, {}
+    for path_idx, site in enumerate(ctx.lon):
+        dist_per_volc_zone_per_path[path_idx] = {}
+        in_zone_coo_per_zone_per_path[path_idx] = {}
 
     # For each travel path
     for idx_path, site in enumerate(ctx.lon):

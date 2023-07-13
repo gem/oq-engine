@@ -253,12 +253,9 @@ class GsimLogicTree(object):
                 for gsim in gsims:
                     for k, v in gsim.kwargs.items():
                         if k.endswith(('_file', '_table')):
-                            if v == None:
-                                pass
-                            else:
-                                fname = os.path.join(dirname, v)
-                                with open(fname, 'rb') as f:
-                                    dic[os.path.basename(v)] = f.read()
+                            fname = os.path.join(dirname, v)
+                            with open(fname, 'rb') as f:
+                                dic[os.path.basename(v)] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):

@@ -272,22 +272,21 @@ get_distance_term = CallableDict()
 
 
 @get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_distance_term_asc(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store = None,
                           pgn_per_zone = None):
     """
     Returns the distance scaling term defined in equation 3
     """
     x_ij = ctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
-    
+
     # Geometric attenuation scaling described in equation 6
     g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
         np.ones_like(x_ij)
     idx = x_ij <= 30.0
     if np.any(idx):
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
-                                      x_ij[idx] + gn_exp)
-    
+                                      x_ij[idx] + gn_exp)    
     # equation 5
     c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     # equation 4
@@ -297,7 +296,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_file=None, pgn_store = None,
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
-def get_distance_term_um(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store = None,
                          pgn_per_zone = None):
     """
     Returns the distance attenuation term
@@ -318,7 +317,7 @@ def get_distance_term_um(trt, C, ctx, volc_arc_file=None, pgn_store = None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_distance_term_SInter(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store = None,
                              pgn_per_zone = None):
     """
     Returns distance scaling term, dependent on top of rupture depth,
@@ -341,7 +340,7 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_file=None, pgn_store = None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None, pgn_store = None,
+def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store = None,
                             pgn_per_zone = None):
     """
     Returns the distance scaling term in equation 2a
@@ -351,7 +350,7 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_file=None, pgn_store = None,
     """
     # Check if need to apply non-ergodic path effects
     cctx = copy.copy(ctx)
-    if volc_arc_file is not None:
+    if volc_arc_str is not None:
         # Get distance traversed per travel path through volcanic zones (rvolc),
         # with rvolc capped at 80km if total distance traversed through zones is 
         # greater than 80km, and set to 12 km if zones are traversed but the
@@ -606,16 +605,16 @@ class ZhaoEtAl2016Asc(GMPE):
     #: Required distance measure is Rrup and Rvolc
     REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
-    def __init__(self, volc_arc_file=None, **kwargs):
-        super().__init__(volc_arc_file=volc_arc_file, **kwargs)
+    def __init__(self, volc_arc_str=None, **kwargs):
+        super().__init__(volc_arc_str=volc_arc_str, **kwargs)
         
-        if volc_arc_file is not None:
-            with open(volc_arc_file, 'rb') as fle:
-                self.volc_arc_file = fle.read().decode('utf-8')
+        if volc_arc_str is not None:
+            with open(volc_arc_str, 'rb') as fle:
+                self.volc_arc_str = fle.read().decode('utf-8')
             self.pgn_store, self.pgn_per_zone = get_volc_zones(
-                self.volc_arc_file)
+                self.volc_arc_str)
         else:
-            self.volc_arc_file = None
+            self.volc_arc_str = None
             self.pgn_store = None
             self.pgn_per_zone = None
 
@@ -630,13 +629,13 @@ class ZhaoEtAl2016Asc(GMPE):
             C_SITE = self.COEFFS_SITE[imt]
             trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
             s_c, idx = _get_site_classification(ctx.vs30)
-            volc_arc_file = self.volc_arc_file
+            volc_arc_str = self.volc_arc_str
             pgn_store = self.pgn_store
             pgn_per_zone = self.pgn_per_zone
             sa_rock = (get_magnitude_scaling_term(trt, C, ctx) +
                        get_sof_term(trt, C, ctx) +
                        get_depth_term(trt, C, ctx) +
-                       get_distance_term(trt, C, ctx, volc_arc_file, pgn_store,
+                       get_distance_term(trt, C, ctx, volc_arc_str, pgn_store,
                                          pgn_per_zone))
             mean[m] = add_site_amplification(trt, C, C_SITE, sa_rock, idx, ctx)
             

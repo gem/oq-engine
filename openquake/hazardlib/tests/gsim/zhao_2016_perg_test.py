@@ -29,6 +29,7 @@ from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.contexts import ContextMaker
 from openquake.hazardlib.gsim.zhao_2016 import ZhaoEtAl2016SSlabPErg
+from openquake.hazardlib.gsim.zhao_2016 import ZhaoEtAl2016SSlab
 
 DATA_FOLDER = os.path.join(os.path.dirname(__file__),'data', 'ZHAO16PERG',
                            'unit_test_volc.geojson')
@@ -212,7 +213,7 @@ class TestZhao2016PErg(unittest.TestCase):
         # Get implementations of Zhao et al. (2016) intra-slab GMM
         volc_arc_fname = DATA_FOLDER
         self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_fname)
-        self.gmm = ZhaoEtAl2016SSlabPErg()
+        self.gmm = ZhaoEtAl2016SSlab()
         
     def test01(self):
         """
