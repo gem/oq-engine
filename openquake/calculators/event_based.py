@@ -377,10 +377,9 @@ class GmfSaver(object):
         self.nrows += len(df)
         if self.nrows > 1_000_000:
             self.save()
-        if self.N >= SLICE_BY_EVENT_NSITES:
-            sbe = build_slice_by_event(
-                df.eid.to_numpy(), self.offset)
-            self.sbe_acc.append(sbe)
+        sbe = build_slice_by_event(
+            df.eid.to_numpy(), self.offset)
+        self.sbe_acc.append(sbe)
         self.se_acc.append(result.pop('sig_eps'))
         self.rup_info_acc.append(result.pop('times'))
 
@@ -392,7 +391,7 @@ class GmfSaver(object):
             sbe = numpy.concatenate(self.sbe_acc, dtype=slice_dt)
             se = numpy.concatenate(self.se_acc, dtype=self.se_dt)
             hdf5.extend(self.dstore['gmf_data/rup_info'], rup_info)
-            if len(sbe):
+            if self.N > SLICE_BY_EVENT_NSITES:
                 hdf5.extend(self.dstore['gmf_data/slice_by_event'], sbe)
             hdf5.extend(self.dstore['gmf_data/sigma_epsilon'], se)
 
