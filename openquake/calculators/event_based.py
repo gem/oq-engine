@@ -373,17 +373,17 @@ class GmfSaver(object):
 
     def add(self, result):
         df = result.pop('gmfdata')
-        if len(df) == 0:
+        nr = len(df)
+        if nr == 0:  # do nothing
             return
-        self.gmf_acc.append(df)
-        self.nrows += len(df)
-        if self.nrows > 1_000_000:
+        self.nrows += nr
+        if self.nrows > 10_000_000:
             self.save()
-        sbe = build_slice_by_event(
-            df.eid.to_numpy(), self.offset)
+        sbe = build_slice_by_event(df.eid.to_numpy(), self.offset)
         self.sbe_acc.append(sbe)
         self.se_acc.append(result.pop('sig_eps'))
         self.rup_info_acc.append(result.pop('times'))
+        self.gmf_acc.append(df)
 
     def save(self):
         with self.mon:
