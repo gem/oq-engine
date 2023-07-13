@@ -223,6 +223,9 @@ class RuptureImporter(object):
         # DRAMATIC! the event IDs will be overridden a few lines below,
         # see the line events['id'] = numpy.arange(len(events))
 
+        cumsum = self.datastore['ruptures']['n_occ'].cumsum()
+        rup_array['e0'][1:] = cumsum[:-1]
+        self.datastore['ruptures']['e0'] = rup_array['e0']
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
@@ -249,7 +252,7 @@ class RuptureImporter(object):
         # sanity check
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
-        events['id'] = numpy.arange(len(events))
+
         # set event year and event ses starting from 1
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
@@ -260,9 +263,6 @@ class RuptureImporter(object):
             extra['year'] = rng.choice(itime, len(events)) + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
-        cumsum = self.datastore['ruptures']['n_occ'].cumsum()
-        rup_array['e0'][1:] = cumsum[:-1]
-        self.datastore['ruptures']['e0'] = rup_array['e0']
 
     def check_overflow(self, E):
         """
