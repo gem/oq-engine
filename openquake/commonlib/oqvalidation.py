@@ -386,6 +386,11 @@ infer_occur_rates:
    Example: *infer_occur_rates = true*
    Default: False
 
+infrastructure_connectivity_analysis:
+    If set, run the infrastructure connectivity analysis.
+    Example: *infrastructure_connectivity_analysis = true*
+    Default: False
+
 inputs:
   INTERNAL. Dictionary with the input files paths.
 
@@ -968,6 +973,7 @@ class OqParam(valid.ParamSet):
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     infer_occur_rates = valid.Param(valid.boolean, False)
+    infrastructure_connectivity_analysis = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)

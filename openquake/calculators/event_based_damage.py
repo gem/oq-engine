@@ -286,8 +286,8 @@ class DamageCalculator(EventBasedRiskCalculator):
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
 
-        fields = self.assetcol.array.dtype.names
-        if 'supply_or_demand' in fields:
+        if (hasattr(oq, 'infrastructure_connectivity_analysis')
+                and oq.infrastructure_connectivity_analysis):
             conn_results = connectivity.analysis(self.datastore)
             self._store_connectivity_analysis_results(conn_results)
 
