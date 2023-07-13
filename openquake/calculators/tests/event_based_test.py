@@ -400,8 +400,8 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-rlz-004.csv',
         ]
         # test the --hc functionality, i.e. that ruptures are read correctly
-        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
-        fnames = out['hcurves', 'csv']
+        self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
 
