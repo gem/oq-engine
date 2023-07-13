@@ -356,6 +356,10 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
 
 
 class GmfSaver(object):
+    """
+    A class to store gmf_data, rup_info, sigma_eps, slice_by_event
+    efficiently
+    """
     def __init__(self, oq, dstore, mon):
         self.dstore = dstore
         self.mon = mon
