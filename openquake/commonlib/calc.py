@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import EBRupture, events_dt
+from openquake.hazardlib.source.rupture import EBRupture, events_dt, get_eid_rlz
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -183,15 +183,8 @@ class RuptureImporter(object):
         """
         :returns: a composite array with the associations eid->rlz
         """
-        eid_rlz = []
-        for rup in proxies:
-            srcid, rupid = divmod(int(rup['id']), TWO30)
-            ebr = EBRupture(
-                Mock(), rup['source_id'],
-                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'])
-            ebr.seed = rup['seed']
-            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim, self.scenario):
-                eid_rlz.append((eid, rup['id'], rlz))
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_rlz = get_eid_rlz(proxies, rlzs, self.scenario)
         return {ordinal: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
