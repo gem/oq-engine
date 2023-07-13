@@ -71,6 +71,7 @@ def count_ruptures(src):
 def strip_zeros(gmf_df):
     # remove the rows with all zero values
     df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
+    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
     ok = df.to_numpy().sum(axis=1) > 0
     return gmf_df[ok]
 
@@ -172,7 +173,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
             times.append((proxy['id'], len(computer.ctx.sids),
                           computer.ctx.rrup.min(), dt))
             alldata.append(df)
-    if alldata:
+    if sum(len(df) for df in alldata):
         gmfdata = strip_zeros(pandas.concat(alldata))
     else:
         gmfdata = ()
