@@ -242,11 +242,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     max_iml = oqparam.get_max_iml()
     scenario = 'scenario' in oqparam.calculation_mode
-    if dstore.parent and 'rupgeoms' in dstore.parent:
-        ds = dstore.parent
-    else:
-        ds = dstore
-    with ds as dstore:
+    with dstore:
         sitecol = dstore['sitecol']
         srcfilter = SourceFilter(sitecol, oqparam.maximum_distance(cmaker.trt))
         rupgeoms = dstore['rupgeoms']
@@ -312,7 +308,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     for trt_smr, proxies in gb.items():
-        proxies.sort(key=operator.itemgetter('mag'))
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
@@ -495,6 +490,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 eff_ruptures += dic['eff_ruptures']
             with mon:
                 self.nruptures += len(rup_array)
+                # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         if len(self.datastore['ruptures']) == 0:
@@ -671,7 +667,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        if not oq.ground_motion_fields:
+        if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             return
         # check seed dependency unless the number of GMFs is huge
         size = self.datastore.getsize('gmf_data/gmv_0')
