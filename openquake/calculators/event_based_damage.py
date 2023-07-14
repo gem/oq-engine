@@ -302,6 +302,10 @@ class DamageCalculator(EventBasedRiskCalculator):
                     ' one of %s fields must be found in the exposure'
                     % at_least_fields)
 
+            # FIXME: Improve the warning message
+            logging.warning(
+                'Connectivity analysis is still an experimental feature!')
+
             conn_results = connectivity.analysis(self.datastore)
             self._store_connectivity_analysis_results(conn_results)
 
