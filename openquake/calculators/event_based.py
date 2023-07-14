@@ -185,11 +185,11 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def get_computer(cmaker, oqparam, proxy, sids, sitecol,
-                 station_sitecol, station_data):
+def get_computer(cmaker, proxy, sids, sitecol, station_sitecol, station_data):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
+    oq = cmaker.oq
     trt = cmaker.trt
     ebr = proxy.to_ebr(trt)
     if station_sitecol:
@@ -202,16 +202,16 @@ def get_computer(cmaker, oqparam, proxy, sids, sitecol,
                 ebr, sitecol.filtered(target_sids),
                 sitecol.filtered(station_sids),
                 station_data.loc[station_sids],
-                oqparam.observed_imts,
-                cmaker, oqparam.correl_model, oqparam.cross_correl,
-                oqparam.ground_motion_correlation_params,
-                oqparam.number_of_ground_motion_fields,
-                oqparam._amplifier, oqparam._sec_perils)
+                oq.observed_imts,
+                cmaker, oq.correl_model, oq.cross_correl,
+                oq.ground_motion_correlation_params,
+                oq.number_of_ground_motion_fields,
+                oq._amplifier, oq._sec_perils)
 
     return GmfComputer(
         ebr, sitecol.filtered(sids), cmaker,
-        oqparam.correl_model, oqparam.cross_correl,
-        oqparam._amplifier, oqparam._sec_perils)
+        oq.correl_model, oq.cross_correl,
+        oq._amplifier, oq._sec_perils)
 
 
 def gen_event_based(allproxies, cmaker, dstore, monitor):
@@ -267,7 +267,7 @@ def event_based(proxies, cmaker, dstore, monitor):
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 try:
                     computer = get_computer(
-                        cmaker, oq, proxy, sids, sitecol,
+                        cmaker, proxy, sids, sitecol,
                         station_sitecol, station_data)
                 except FarAwayRupture:
                     # skip this rupture
