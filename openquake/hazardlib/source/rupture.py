@@ -779,6 +779,11 @@ class EBRupture(object):
 
 
 def get_eid_rlz(recs, rlzs, scenario):
+    """
+    Build the associations event_id -> rlz_id for each rup_id.
+
+    :returns: a structured array with fields ('id', 'rup_id', 'rlz_id')
+    """
     n_occ = sum(rec['n_occ'] for rec in recs)
     out = numpy.zeros(n_occ, events_dt)
     start = 0
