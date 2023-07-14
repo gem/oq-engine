@@ -302,7 +302,8 @@ class DamageCalculator(EventBasedRiskCalculator):
                     ' one of %s fields must be found in the exposure'
                     % at_least_fields)
 
-            # FIXME: Improve the warning message
+            # FIXME: Improve the warning message, both here and in the
+            # documentation
             logging.warning(
                 'Connectivity analysis is still an experimental feature!')
 
