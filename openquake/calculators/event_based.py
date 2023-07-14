@@ -214,7 +214,7 @@ def get_computer(cmaker, oqparam, proxy, sids, sitecol,
         oqparam._amplifier, oqparam._sec_perils)
 
 
-def gen_event_based(allproxies, cmaker, oqparam, dstore, monitor):
+def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     Launcher of event_based tasks
     """
@@ -223,33 +223,34 @@ def gen_event_based(allproxies, cmaker, oqparam, dstore, monitor):
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
         n += len(proxies)
-        yield event_based(proxies, cmaker, oqparam, dstore, monitor)
+        yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
-        if dt > oqparam.time_per_task and len(rem) > 10:
+        if dt > cmaker.oq.time_per_task and len(rem) > 10:
             half = len(rem) // 2
-            yield gen_event_based, rem[:half], cmaker, oqparam, dstore
-            yield gen_event_based, rem[half:], cmaker, oqparam, dstore
+            yield gen_event_based, rem[:half], cmaker, dstore
+            yield gen_event_based, rem[half:], cmaker, dstore
             return
 
 
-def event_based(proxies, cmaker, oqparam, dstore, monitor):
+def event_based(proxies, cmaker, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
+    oq = cmaker.oq
     alldata = []
-    se_dt = sig_eps_dt(oqparam.imtls)
+    se_dt = sig_eps_dt(oq.imtls)
     sig_eps = []
     times = []  # rup_id, nsites, dt
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
-    max_iml = oqparam.get_max_iml()
-    scenario = 'scenario' in oqparam.calculation_mode
+    max_iml = oq.get_max_iml()
+    scenario = 'scenario' in oq.calculation_mode
     with dstore:
         sitecol = dstore['sitecol']
-        srcfilter = SourceFilter(sitecol, oqparam.maximum_distance(cmaker.trt))
+        srcfilter = SourceFilter(sitecol, oq.maximum_distance(cmaker.trt))
         rupgeoms = dstore['rupgeoms']
-        if "station_data" in oqparam.inputs:
+        if "station_data" in oq.inputs:
             station_data = dstore.read_df('station_data', 'site_id')
             station_sitecol = sitecol.filtered(station_data.index)
         else:
@@ -266,7 +267,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 try:
                     computer = get_computer(
-                        cmaker, oqparam, proxy, sids, sitecol,
+                        cmaker, oq, proxy, sids, sitecol,
                         station_sitecol, station_data)
                 except FarAwayRupture:
                     # skip this rupture
@@ -283,7 +284,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
         gmfdata = ()
     times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
-    if not oqparam.ground_motion_fields:
+    if not oq.ground_motion_fields:
         gmfdata = ()
     return dict(gmfdata=gmfdata, times=times,
                 sig_eps=numpy.array(sig_eps, se_dt))
@@ -319,7 +320,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         hint = nr / (oq.concurrent_tasks or 1)
         for block in block_splitter(proxies, hint):
-            smap.submit((block, cmaker, oq, dstore))
+            smap.submit((block, cmaker, dstore))
     return smap
 
 
