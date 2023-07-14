@@ -778,6 +778,32 @@ class EBRupture(object):
             self.__class__.__name__, self.id, self.n_occ)
 
 
+def get_eid_rlz(recs, rlzs, scenario):
+    """
+    Build the associations event_id -> rlz_id for each rup_id.
+
+    :returns: a structured array with fields ('id', 'rup_id', 'rlz_id')
+    """
+    n_occ = sum(rec['n_occ'] for rec in recs)
+    out = numpy.zeros(n_occ, events_dt)
+    start = 0
+    for rec in recs:
+        n = rec['n_occ']
+        stop = start + n
+        slc = out[start:stop]
+        slc['id'] = numpy.arange(rec['e0'], rec['e0'] + n, dtype=U32)
+        slc['rup_id'] = rec['id']
+        if scenario:
+            # the rlzs are distributed evenly
+            div = n // len(rlzs)
+            slc['rlz_id'] = rlzs[numpy.arange(n) // div]
+        else:
+            # event_based: the rlzs are distributed randomly
+            slc['rlz_id'] = general.random_choice(rlzs, n, 0, rec['seed'])
+        start = stop
+    return out
+
+
 class RuptureProxy(object):
     """
     A proxy for a rupture record.

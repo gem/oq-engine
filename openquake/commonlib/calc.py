@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import EBRupture, events_dt
+from openquake.hazardlib.source.rupture import EBRupture, events_dt, get_eid_rlz
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -183,15 +183,8 @@ class RuptureImporter(object):
         """
         :returns: a composite array with the associations eid->rlz
         """
-        eid_rlz = []
-        for rup in proxies:
-            srcid, rupid = divmod(int(rup['id']), TWO30)
-            ebr = EBRupture(
-                Mock(), rup['source_id'],
-                rup['trt_smr'], rup['n_occ'], rupid, e0=rup['e0'])
-            ebr.seed = rup['seed']
-            for eid, rlz in ebr.get_eid_rlz(rlzs_by_gsim, self.scenario):
-                eid_rlz.append((eid, rup['id'], rlz))
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_rlz = get_eid_rlz(proxies, rlzs, self.scenario)
         return {ordinal: numpy.array(eid_rlz, events_dt)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
@@ -201,12 +194,15 @@ class RuptureImporter(object):
         """
         oq = self.oqparam
         logging.info('Reordering the ruptures and storing the events')
-        geom_id = numpy.argsort(rup_array['id'])
+        geom_id = numpy.argsort(rup_array[['trt_smr', 'id']])
         rup_array = rup_array[geom_id]
         nr = len(rup_array)
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
+        n_occ = rup_array['n_occ']
+        self.check_overflow(n_occ.sum())  # check the number of events
+        rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
@@ -225,7 +221,6 @@ class RuptureImporter(object):
     def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
-        self.check_overflow(E)  # check the number of events
         events = numpy.zeros(E, rupture.events_dt)
         # DRAMATIC! the event IDs will be overridden a few lines below,
         # see the line events['id'] = numpy.arange(len(events))
@@ -256,7 +251,7 @@ class RuptureImporter(object):
         # sanity check
         n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
         assert n_unique_events == len(events), (n_unique_events, len(events))
-        events['id'] = numpy.arange(len(events))
+
         # set event year and event ses starting from 1
         nses = self.oqparam.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
@@ -267,9 +262,6 @@ class RuptureImporter(object):
             extra['year'] = rng.choice(itime, len(events)) + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
-        cumsum = self.datastore['ruptures']['n_occ'].cumsum()
-        rup_array['e0'][1:] = cumsum[:-1]
-        self.datastore['ruptures']['e0'] = rup_array['e0']
 
     def check_overflow(self, E):
         """
