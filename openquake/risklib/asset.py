@@ -741,7 +741,8 @@ def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
 
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                 check_dupl=True, by_country=False, asset_prefix='',
-                tagcol=None, errors=None, monitor=None):
+                tagcol=None, errors=None, infr_conn_analysis=False,
+                monitor=None):
     logging.info('Reading %s', fname)
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
@@ -773,6 +774,21 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             df['retrofitted'] = exposure.cost_calculator(
                 'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
+        if infr_conn_analysis:
+            at_least_columns = ['purpose', 'start_node', 'end_node']
+            for column in at_least_columns:
+                if column in list(names):
+                    break
+            else:
+                raise InvalidFile(
+                    'In order to run the connectivity analysis, at least'
+                    ' one of %s fields must be found in the exposure %s'
+                    % (at_least_columns, fname))
+            if not (df[df.type == 'node']['weight'] == '1').all():
+                logging.warning(
+                    f'Weights different from 1 present in {fname} will'
+                    f' be ignored')
+
         df['id'] = asset_prefix + df.id
         dfs.append(df)
 
@@ -847,7 +863,8 @@ class Exposure(object):
 
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
-                 check_dupl=True, tagcol=None, by_country=False, errors=None):
+                 check_dupl=True, tagcol=None, by_country=False, errors=None,
+                 infr_conn_analysis=False):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -870,7 +887,8 @@ class Exposure(object):
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, ignore_missing_costs,
-                            check_dupl, by_country, prefix, tagcol, errors))
+                            check_dupl, by_country, prefix, tagcol, errors,
+                            infr_conn_analysis))
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):

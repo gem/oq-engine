@@ -289,21 +289,8 @@ class DamageCalculator(EventBasedRiskCalculator):
         if (hasattr(oq, 'infrastructure_connectivity_analysis')
                 and oq.infrastructure_connectivity_analysis):
 
-            # FIXME: do this check before running the calculation
-            fields = self.assetcol.array.dtype.names
-            at_least_fields = ['purpose', 'start_node', 'end_node']
-            for field in at_least_fields:
-                if field in fields:
-                    break
-            else:
-                # FIXME: print the path of the exposure file
-                raise ValueError(
-                    'In order to run the connectivity analysis, at least'
-                    ' one of %s fields must be found in the exposure'
-                    % at_least_fields)
-
             # FIXME: Improve the warning message, both here and in the
-            # documentation
+            #        documentation
             logging.warning(
                 'Connectivity analysis is still an experimental feature!')
 
