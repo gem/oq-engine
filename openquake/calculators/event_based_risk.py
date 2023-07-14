@@ -247,19 +247,18 @@ def gen_outputs(df, crmodel, rng, monitor):
                 yield out
 
 
-def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
+def ebrisk(proxies, cmaker, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
-    :param full_lt: a FullLogicTree instance
-    :param oqparam: input parameters
+    :param cmaker: ContextMaker instance associated to the trt_smr
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    oqparam.ground_motion_fields = True
-    dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
+    cmaker.oq.ground_motion_fields = True
+    dic = event_based.event_based(proxies, cmaker, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    return event_based_risk(dic['gmfdata'], cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -272,7 +271,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
-    def save_tmp(self, monitor, srcfilter=None):
+    def save_tmp(self, monitor):
         """
         Save some useful data in the file calc_XXX_tmp.hdf5
         """
@@ -285,7 +284,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers in chunks of at most 1 million elements
         monitor.save('start-stop', compactify3(tss))
-        monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
@@ -415,19 +413,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            srcfilter = self.src_filter()
-            proxies = [RuptureProxy(rec)
-                       for rec in self.datastore['ruptures'][:]]
             full_lt = self.datastore['full_lt']
-            self.datastore.swmr_on()  # must come before the Starmap
-            smap = parallel.Starmap.apply_split(
-                ebrisk, (proxies, full_lt, oq, self.datastore),
-                key=operator.itemgetter('trt_smr'),
-                weight=operator.itemgetter('n_occ'),
-                h5=self.datastore.hdf5,
-                duration=oq.time_per_task,
-                outs_per_task=5)
-            self.save_tmp(smap.monitor, srcfilter)
+            smap = event_based.starmap_from_rups(
+                ebrisk, oq, full_lt, self.sitecol, self.datastore,
+                self.save_tmp)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(
