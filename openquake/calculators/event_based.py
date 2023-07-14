@@ -137,11 +137,7 @@ def event_based(proxies, cmaker, oqparam, dstore, monitor):
     cmon = monitor('computing gmfs', measuremem=False)
     max_iml = oqparam.get_max_iml()
     scenario = 'scenario' in oqparam.calculation_mode
-    if dstore.parent and 'rupgeoms' in dstore.parent:
-        ds = dstore.parent
-    else:
-        ds = dstore
-    with ds as dstore:
+    with dstore:
         sitecol = dstore['sitecol']
         srcfilter = SourceFilter(sitecol, oqparam.maximum_distance(cmaker.trt))
         rupgeoms = dstore['rupgeoms']
