@@ -281,13 +281,18 @@ def event_based(proxies, cmaker, dstore, monitor):
     if sum(len(df) for df in alldata):
         gmfdata = strip_zeros(pandas.concat(alldata))
     else:
-        gmfdata = ()
+        gmfdata = {}
     times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
     if not oq.ground_motion_fields:
-        gmfdata = ()
-    return dict(gmfdata=gmfdata, times=times,
+        gmfdata = {}
+    return dict(gmfdata=todict(gmfdata), times=times,
                 sig_eps=numpy.array(sig_eps, se_dt))
+
+def todict(dframe):
+    if len(dframe) == 0:
+        return {}
+    return {k: dframe[k].to_numpy() for k in dframe.columns}
 
 
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
@@ -456,12 +461,12 @@ class EventBasedCalculator(base.HazardCalculator):
         if result is None:  # instead of a dict
             raise MemoryError('You ran out of memory!')
         sav_mon = self.monitor('saving gmfs')
-        agg_mon = self.monitor('aggregating hcurves')
         primary = self.oqparam.get_primary_imtls()
         sec_imts = self.oqparam.get_sec_imts()
         with sav_mon:
-            df = result.pop('gmfdata')
-            if len(df):
+            gmfdata = result.pop('gmfdata')
+            if len(gmfdata):
+                df = pandas.DataFrame(gmfdata)
                 dset = self.datastore['gmf_data/sid']
                 times = result.pop('times')
                 hdf5.extend(self.datastore['gmf_data/rup_info'], times)
