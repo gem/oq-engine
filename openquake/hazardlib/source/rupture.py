@@ -749,6 +749,7 @@ class EBRupture(object):
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
+    # TODO: replace with the function get_eid_rlz
     def get_eid_rlz(self, rlzs_by_gsim, scenario):
         """
         :param rlzs_by_gsim: a dictionary gsims -> rlzs array

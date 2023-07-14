@@ -249,8 +249,7 @@ class RuptureImporter(object):
                     raise ValueError('There are more than %d events!' % i)
 
         # sanity check
-        n_unique_events = len(numpy.unique(events[['id', 'rup_id']]))
-        assert n_unique_events == len(events), (n_unique_events, len(events))
+        numpy.testing.assert_equal(events['id'], numpy.arange(E))
 
         # set event year and event ses starting from 1
         nses = self.oqparam.ses_per_logic_tree_path
