@@ -632,7 +632,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
     def post_execute(self, dummy):
         oq = self.oqparam
-        if not oq.ground_motion_fields:
+        if not oq.ground_motion_fields or 'gmf_data' not in self.datastore:
             return
         # check seed dependency unless the number of GMFs is huge
         size = self.datastore.getsize('gmf_data/gmv_0')
