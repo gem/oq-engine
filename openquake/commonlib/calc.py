@@ -200,6 +200,9 @@ class RuptureImporter(object):
         rupids = numpy.unique(rup_array['id'])
         assert len(rupids) == nr, 'rup_id not unique!'
         rup_array['geom_id'] = geom_id
+        n_occ = rup_array['n_occ']
+        self.check_overflow(n_occ.sum())  # check the number of events
+        rup_array['e0'][1:] = n_occ.cumsum()[:-1]
         if len(self.datastore['ruptures']):
             self.datastore['ruptures'].resize((0,))
         hdf5.extend(self.datastore['ruptures'], rup_array)
@@ -218,14 +221,10 @@ class RuptureImporter(object):
     def _save_events(self, rup_array, rgetters):
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
-        self.check_overflow(E)  # check the number of events
         events = numpy.zeros(E, rupture.events_dt)
         # DRAMATIC! the event IDs will be overridden a few lines below,
         # see the line events['id'] = numpy.arange(len(events))
 
-        cumsum = self.datastore['ruptures']['n_occ'].cumsum()
-        rup_array['e0'][1:] = cumsum[:-1]
-        self.datastore['ruptures']['e0'] = rup_array['e0']
         # when computing the events all ruptures must be considered,
         # including the ones far away that will be discarded later on
         # build the associations eid -> rlz sequentially or in parallel
