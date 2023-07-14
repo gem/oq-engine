@@ -28,6 +28,7 @@ from scipy import sparse
 from openquake.baselib import (
     hdf5, performance, parallel, general, python3compat)
 from openquake.hazardlib import stats, InvalidFile
+from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
@@ -246,19 +247,18 @@ def gen_outputs(df, crmodel, rng, monitor):
                 yield out
 
 
-def ebrisk(proxies, cmaker, oqparam, dstore, monitor):
+def ebrisk(proxies, cmaker, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
-    :param oqparam: input parameters
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    oqparam.ground_motion_fields = True
-    for dic in event_based.event_based(
-            proxies, cmaker, oqparam, dstore, monitor):
+    cmaker.oq.ground_motion_fields = True
+    for dic in event_based.event_based(proxies, cmaker, dstore, monitor):
         if len(dic['gmfdata']):
-            yield event_based_risk(dic['gmfdata'], oqparam, monitor)
+            gmf_df = pandas.DataFrame(dic['gmfdata'])
+            yield event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
