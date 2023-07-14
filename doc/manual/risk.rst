@@ -524,7 +524,7 @@ As of now, only the binary state is considered i.e "functional/operational" or
    :name: fig:infrastructure-consequence-model
    :width: 95%
 
-   Example of the consequence model (*Note: 0 implies still functional and 1 implies non-functional*)
+   Example of the consequence model (*Note: 0 implies still operational and 1 implies non-operational*)
 
 Calculation Steps
 ~~~~~~~~~~~~~~~~~
