@@ -6,7 +6,7 @@
 			<costTypes>
 			</costTypes>
 		</conversions>
-		<tagNames>type start_node end_node supply_or_demand parent_id</tagNames>
+		<tagNames>type start_node end_node purpose parent_id</tagNames>
 		<occupancyPeriods></occupancyPeriods>
 		<assets>
 			exposure_demo_nodes.csv

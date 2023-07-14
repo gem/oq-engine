@@ -1,4 +1,4 @@
-id,lon,lat,taxonomy,number,type,start_node,end_node,supply_or_demand,weights,graphtype,parent_id
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weights,graphtype,parent_id
 A,22.93338001,40.63547573,TAZ,1,node,NA,NA,TAZ,0,multidirected,A
 D,22.94554577,40.62540568,connection,1,node,NA,NA,connection,0,multidirected,D
 C,22.9332537,40.62050837,TAZ,1,node,NA,NA,TAZ,0,multidirected,C

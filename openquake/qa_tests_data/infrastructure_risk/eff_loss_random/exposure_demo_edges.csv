@@ -1,4 +1,4 @@
-id,lon,lat,taxonomy,number,type,start_node,end_node,supply_or_demand,weights,parent_id
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weights,parent_id
 L1,22.9549,40.64355,link,1,edge,D,E,NA,5,L1
 L2,22.97612,40.63954,link1,1,edge,F,G,NA,2,L2
 L3,22.9392,40.63624,link,1,edge,A,B,NA,1,L3

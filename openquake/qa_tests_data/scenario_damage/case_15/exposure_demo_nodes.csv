@@ -1,4 +1,4 @@
-id,lon,lat,taxonomy,number,vulnerable,type,start_node,end_node,supply_or_demand,length,parent_id
+id,lon,lat,taxonomy,number,vulnerable,type,start_node,end_node,purpose,length,parent_id
 D1,22.95191549,40.62819584,demand,1,no,node,NA,NA,demand,NA,D1
 D2,22.95546068,40.62813585,demand,1,no,node,NA,NA,demand,NA,D2
 D3,22.95204663,40.63269763,demand,1,no,node,NA,NA,demand,NA,D3

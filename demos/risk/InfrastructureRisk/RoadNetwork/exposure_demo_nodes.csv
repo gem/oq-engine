@@ -1,4 +1,4 @@
-id,lon,lat,taxonomy,number,type,start_node,end_node,supply_or_demand,length,parent_id
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,length,parent_id
 A,22.9534273,40.61404073,connection,1,node,NA,NA,connection,0,A
 B,22.96583789,40.61114889,connection,1,node,NA,NA,connection,0,B
 C,22.96871043,40.61126198,connection,1,node,NA,NA,connection,0,C

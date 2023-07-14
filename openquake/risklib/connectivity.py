@@ -60,17 +60,17 @@ def classify_nodes(exposure_df):
 
     # TAZ is the acronym of "Traffic Analysis Zone"
     # user can write both as well
-    TAZ_nodes = exposure_df.loc[(exposure_df.supply_or_demand == "TAZ") | (
-        exposure_df.supply_or_demand == "both")].index.to_list()
+    TAZ_nodes = exposure_df.loc[(exposure_df.purpose == "TAZ") | (
+        exposure_df.purpose == "both")].index.to_list()
 
     # ## Maybe we can write supply or source and demand or sink so that user
     #    can use whatever they want to
     # source_nodes = exposure_df.loc[exposure_df[
-    #     'supply_or_demand'].isin(['source', 'supply'])].index.to_list()
+    #     'purpose'].isin(['source', 'supply'])].index.to_list()
     source_nodes = exposure_df.loc[
-        exposure_df.supply_or_demand == "source"].index.to_list()
+        exposure_df.purpose == "source"].index.to_list()
     demand_nodes = exposure_df.loc[
-        exposure_df.supply_or_demand == "demand"].index.to_list()
+        exposure_df.purpose == "demand"].index.to_list()
     eff_nodes = exposure_df.loc[exposure_df.type == "node"].index.to_list()
 
     # We should raise an error if the exposure nodes contain at the same time
@@ -422,7 +422,7 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     # To store the information of the performance indicators at connectivity
     # level
     dem_cl = exposure_df[
-        exposure_df['supply_or_demand'] == 'demand'].iloc[:, 0:1]
+        exposure_df['purpose'] == 'demand'].iloc[:, 0:1]
     node_el = exposure_df[exposure_df['type'] == 'node'].iloc[:, 0:1]
 
     ccl_table = pd.DataFrame({'id': demand_nodes})
@@ -565,7 +565,7 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
 
     # To store the information of the performance indicators at connectivity
     # level
-    taz_cl = exposure_df[exposure_df['supply_or_demand'] == 'TAZ'].iloc[:, 0:1]
+    taz_cl = exposure_df[exposure_df['purpose'] == 'TAZ'].iloc[:, 0:1]
     node_el = exposure_df[exposure_df['type'] == 'node'].iloc[:, 0:1]
 
     pcl_table = pd.DataFrame({'id': TAZ_nodes})
