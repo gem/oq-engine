@@ -258,7 +258,8 @@ def ebrisk(proxies, cmaker, dstore, monitor):
     dic = event_based.event_based(proxies, cmaker, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], cmaker.oq, monitor)
+    gmf_df = pandas.DataFrame(dic['gmfdata'])
+    return event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
