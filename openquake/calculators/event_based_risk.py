@@ -247,19 +247,18 @@ def gen_outputs(df, crmodel, rng, monitor):
                 yield out
 
 
-def ebrisk(proxies, cmaker, oqparam, dstore, monitor):
+def ebrisk(proxies, cmaker, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
-    :param oqparam: input parameters
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    oqparam.ground_motion_fields = True
-    dic = event_based.event_based(proxies, cmaker, oqparam, dstore, monitor)
+    cmaker.oq.ground_motion_fields = True
+    dic = event_based.event_based(proxies, cmaker, dstore, monitor)
     if len(dic['gmfdata']) == 0:  # no GMFs
         return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    return event_based_risk(dic['gmfdata'], cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
