@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Moved the generation of the hazard curves from the GMFs in post_execute
   * Fixed the error "You must supply a list of magnitudes as 2-digit strings"
     when starting from ruptures in a model with GMPETables (i.e. Canada)
   * Replaced sequential tiling with parallel tiling in large classical
