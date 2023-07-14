@@ -48,8 +48,8 @@ def get_exposure_df(dstore):
     ).set_index("id")
 
     # FIXME: Needs to be checked. It gives an error if this is not done.
-    if 'weights' in exposure_df.columns:
-        exposure_df['weights'] = exposure_df['weights'].astype(float)
+    if 'weight' in exposure_df.columns:
+        exposure_df['weight'] = exposure_df['weight'].astype(float)
 
     return exposure_df
 
@@ -318,7 +318,7 @@ def cleanup_graph(G_original, event_damage_df, g_type):
 def calc_weighted_connectivity_loss(
         graph, att, nodes_from, nodes_to, wcl_table, pcl_table, ws, ns):
     # For calculating weighted connectivity loss
-    # Important: if the weights is not provided, then the weights of each edges
+    # Important: if the weight is not provided, then the weight of each edges
     # is considered to be one.
     for i in nodes_to:
         if not att:
@@ -330,7 +330,7 @@ def calc_weighted_connectivity_loss(
                  if path_length != 0])
         else:
             path_lengths = [
-                nx.shortest_path_length(graph, j, i, weight='weights')
+                nx.shortest_path_length(graph, j, i, weight='weight')
                 for j in nodes_from if nx.has_path(graph, j, i)]
             countw = sum(
                 [1/path_length for path_length in path_lengths
@@ -341,7 +341,7 @@ def calc_weighted_connectivity_loss(
 
 def calc_efficiency(graph, N, att, eff_table, eff):
     # For calculating efficiency
-    # Important: If the weights is not provided, then the weights of each edges
+    # Important: If the weight is not provided, then the weight of each edges
     # is considered to be one.
     for node in graph:
         if not att:
@@ -350,7 +350,7 @@ def calc_efficiency(graph, N, att, eff_table, eff):
             eff_node = (sum(inv))/(N-1)
         else:
             lengths = nx.single_source_dijkstra_path_length(
-                graph, node, weight="weights")
+                graph, node, weight="weight")
             inv = [1/x for x in lengths.values() if x != 0]
             eff_node = (sum(inv))/(N-1)
         eff_table.at[node, eff] = eff_node
@@ -451,13 +451,13 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
         sum(nx.has_path(G_original, j, i) for j in source_nodes)
         for i in demand_nodes]
 
-    att = nx.get_edge_attributes(G_original, 'weights')
+    att = nx.get_edge_attributes(G_original, 'weight')
     wcl_table = calc_weighted_connectivity_loss(
         G_original, att, source_nodes, demand_nodes, wcl_table, pcl_table,
         'WS0', 'NS0')
 
     N = len(G_original)
-    att = nx.get_edge_attributes(G_original, 'weights')
+    att = nx.get_edge_attributes(G_original, 'weight')
     eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
 
     # Now we check for every event after earthquake
@@ -597,13 +597,13 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     # pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i) for j in TAZ_nodes)
     # for i in TAZ_nodes]
 
-    att = nx.get_edge_attributes(G_original, 'weights')
+    att = nx.get_edge_attributes(G_original, 'weight')
     wcl_table = calc_weighted_connectivity_loss(
         G_original, att, TAZ_nodes, TAZ_nodes, wcl_table, pcl_table, 'WS0',
         'NS0')
 
     N = len(G_original)
-    att = nx.get_edge_attributes(G_original, 'weights')
+    att = nx.get_edge_attributes(G_original, 'weight')
     eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
 
     for event_id, event_damage_df in damage_df.groupby("event_id"):
@@ -698,7 +698,7 @@ def EL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
     # To check the the values for each node before the earthquake event
 
     N = len(G_original)
-    att = nx.get_edge_attributes(G_original, 'weights')
+    att = nx.get_edge_attributes(G_original, 'weight')
     eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
 
     # After eathquake

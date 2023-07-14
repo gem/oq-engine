@@ -1,4 +1,4 @@
-id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weights,graphtype,parent_id
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weight,graphtype,parent_id
 A,22.93338001,40.63547573,POI,1,node,NA,NA,source,0,directed,A
 D,22.94554577,40.62540568,connection,1,node,NA,NA,connection,0,directed,D
 C,22.9332537,40.62050837,POI,1,node,NA,NA,demand,0,directed,C

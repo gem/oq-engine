@@ -1,4 +1,4 @@
-id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weights,graphtype,parent_id
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weight,graphtype,parent_id
 E1,22.9394,40.62296,road,1,edge,D,C,NA,2,multidirected,E1
 E2,22.93332,40.62799,road,1,edge,C,A,NA,5,multidirected,E2
 E3,22.95123,40.62884,road,1,edge,B,D,NA,2,multidirected,E3
