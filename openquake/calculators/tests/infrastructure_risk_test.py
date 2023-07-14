@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import shutil
 import numpy
 from openquake.qa_tests_data.scenario_damage import case_15
 from openquake.qa_tests_data.infrastructure_risk import (
@@ -30,13 +32,20 @@ aac = numpy.testing.assert_allclose
 
 class InfrastructureRiskTestCase(CalculatorTestCase):
 
-    def _check_csv_outputs(self, outputs_list, datastore):
+    def _check_csv_outputs(self, outputs_list, datastore, testcase,
+                           replace_expected=False):
         for output in outputs_list:
-            [fname] = export(('infra-' + output, 'csv'), datastore)
-            self.assertEqualFiles(
-                'expected/infra-' + output + '.csv',
-                fname,
-                check_all_columns=True)
+            expected_fname = 'expected/infra-' + output + '.csv'
+            expected_path = os.path.join(
+                os.path.dirname(testcase.__file__), expected_fname)
+            [got_path] = export(('infra-' + output, 'csv'), datastore)
+            if replace_expected:
+                shutil.copy2(got_path, expected_path)
+            else:
+                self.assertEqualFiles(
+                    got_path, expected_path, check_all_columns=True)
+        if replace_expected:
+            raise ValueError('Remember to set replace_expected to False!')
 
     def test_case_15(self):
         self.run_calc(case_15.__file__, 'job.ini')
@@ -46,7 +55,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             'node_el avg_loss event_ccl event_efl event_pcl event_wcl'
             ' dem_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, case_15)
 
     def test_demand_supply(self):
         self.run_calc(demand_supply.__file__, 'job.ini')
@@ -56,7 +65,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
             ' dem_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, demand_supply)
 
     def test_directed(self):
         self.run_calc(directed.__file__, 'job.ini')
@@ -65,7 +74,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         outputs_list = (
             'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, directed)
 
     def test_eff_loss_random(self):
         self.run_calc(eff_loss_random.__file__, 'job.ini')
@@ -74,7 +83,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         outputs_list = (
             'avg_loss event_efl node_el').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, eff_loss_random)
 
     def test_five_nodes_demsup_directed(self):
         self.run_calc(five_nodes_demsup_directed.__file__, 'job.ini')
@@ -84,7 +93,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
             ' dem_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, five_nodes_demsup_directed)
 
     def test_five_nodes_demsup_directedunweighted(self):
         self.run_calc(five_nodes_demsup_directedunweighted.__file__, 'job.ini')
@@ -94,7 +103,8 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
             ' dem_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(
+            outputs_list, ds, five_nodes_demsup_directedunweighted)
 
     def test_five_nodes_demsup_multidirected(self):
         self.run_calc(five_nodes_demsup_multidirected.__file__, 'job.ini')
@@ -104,7 +114,8 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             'avg_loss event_ccl event_efl event_pcl event_wcl node_el'
             ' dem_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(
+            outputs_list, ds, five_nodes_demsup_multidirected)
 
     def test_multidirected(self):
         self.run_calc(multidirected.__file__, 'job.ini')
@@ -113,24 +124,22 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
         outputs_list = (
             'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, multidirected)
 
     def test_multigraph(self):
         self.run_calc(multigraph.__file__, 'job.ini')
         ds = self.calc.datastore
 
         outputs_list = (
-            'avg_loss event_efl event_pcl event_wcl node_el'
-            ' taz_cl').split()
+            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, multigraph)
 
     def test_undirected(self):
         self.run_calc(undirected.__file__, 'job.ini')
         ds = self.calc.datastore
 
         outputs_list = (
-            'avg_loss event_efl event_pcl event_wcl node_el'
-            ' taz_cl').split()
+            'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
 
-        self._check_csv_outputs(outputs_list, ds)
+        self._check_csv_outputs(outputs_list, ds, undirected)

@@ -63,10 +63,6 @@ def classify_nodes(exposure_df):
     TAZ_nodes = exposure_df.loc[(exposure_df.purpose == "TAZ") | (
         exposure_df.purpose == "both")].index.to_list()
 
-    # ## Maybe we can write supply or source and demand or sink so that user
-    #    can use whatever they want to
-    # source_nodes = exposure_df.loc[exposure_df[
-    #     'purpose'].isin(['source', 'supply'])].index.to_list()
     source_nodes = exposure_df.loc[
         exposure_df.purpose == "source"].index.to_list()
     demand_nodes = exposure_df.loc[
@@ -446,12 +442,14 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     # To check the the values for each node before the earthquake event
 
     # For calculating complete connectivity Loss
-    ccl_table['CNO'] = [1 if any(nx.has_path(G_original, j, i)
-                        for j in source_nodes) else 0 for i in demand_nodes]
+    ccl_table.loc[demand_nodes, 'CNO'] = [
+        1 if any(nx.has_path(G_original, j, i) for j in source_nodes) else 0
+        for i in demand_nodes]
 
     # For calculating partial connectivity loss
-    pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i)
-                        for j in source_nodes) for i in demand_nodes]
+    pcl_table.loc[demand_nodes, 'NS0'] = [
+        sum(nx.has_path(G_original, j, i) for j in source_nodes)
+        for i in demand_nodes]
 
     att = nx.get_edge_attributes(G_original, 'weights')
     wcl_table = calc_weighted_connectivity_loss(
@@ -477,14 +475,14 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
         # If demand nodes are damaged itself (Example, building collapsed where
         # demand node is considered)
 
-        ccl_table.loc[~ccl_table.index.isin(extant_demand_nodes), 'CN'] = 0
+        ccl_table.loc[~ccl_table.index.isin(extant_demand_nodes), 'CNS'] = 0
         pcl_table.loc[~pcl_table.index.isin(extant_demand_nodes), 'NS'] = 0
         wcl_table.loc[~wcl_table.index.isin(extant_demand_nodes), 'WS'] = 0
         eff_table.loc[~eff_table.index.isin(extant_eff_nodes), 'Eff'] = 0
 
         # To check the the values for each node after the earthquake event
         # Complete connectivity loss
-        ccl_table['CNS'] = [
+        ccl_table.loc[extant_demand_nodes, 'CNS'] = [
             1 if any(nx.has_path(G, j, i) for j in extant_source_nodes) else 0
             for i in extant_demand_nodes]
 
