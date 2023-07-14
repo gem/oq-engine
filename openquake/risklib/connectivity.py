@@ -225,7 +225,7 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
         avg_connectivity_loss_pcl = sum_connectivity_loss_pcl / num_events
         avg_connectivity_loss_wcl = sum_connectivity_loss_wcl / num_events
         avg_connectivity_loss_eff = sum_connectivity_loss_eff/num_events
-        dem_cl.loc[:, "CCL_node"] = dem_cl["CCL_node"].apply(
+        dem_cl.loc[:, "Isolation_node"] = dem_cl["Isolation_node"].apply(
             lambda x: x/num_events)
         dem_cl.loc[:, "PCL_node"] = dem_cl["PCL_node"].apply(
             lambda x: x/num_events)
@@ -529,7 +529,7 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
 
         # To store the sum of performance indicator at nodal level to calulate
         # the average afterwards
-        ccl_table['CCL_node'] = 1 - ccl_table['CNS']
+        ccl_table['Isolation_node'] = 1 - ccl_table['CNS']
         ccl_table1 = ccl_table.drop(columns=['CNO', 'CNS'])
         ccl_table1 = ccl_table1.reset_index()
         dem_cl = pd.concat((dem_cl, ccl_table1)).groupby(

@@ -1,5 +1,5 @@
 #,,,,"generated_by='OpenQuake engine 3.17.0-gita7570364de', start_date='2023-07-10T12:32:22', checksum=158942305"
-id,CN,CCL_node,PCL_node,WCL_node
+id,CN,Isolation_node,PCL_node,WCL_node
 A,0.00000E+00,0.00000E+00,6.66667E-01,7.69231E-01
 E,0.00000E+00,0.00000E+00,5.00000E-01,7.22222E-01
 G,0.00000E+00,5.00000E-01,5.00000E-01,6.33333E-01
