@@ -116,7 +116,7 @@ def build_hcurves(calc):
         for r in range(R):
             calc.datastore['hcurves-rlzs'][:, r] = pmaps[r].array
             if oq.poes:
-                [hmap] = calc.make_hmaps([pmaps[r]], oq.imtls, oq.poes)
+                [hmap] = make_hmaps([pmaps[r]], oq.imtls, oq.poes)
                 ds[:, r] = hmap.array
 
     if S:
