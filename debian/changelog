@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Fixed the associations event_id, rup_id, rlz_id
+
 python3-oq-engine (3.17.0-2~xenial01) xenial; urgency=low
 
   [Michele Simionato]
