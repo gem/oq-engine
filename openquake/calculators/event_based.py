@@ -296,6 +296,10 @@ def todict(dframe):
     return {k: dframe[k].to_numpy() for k in dframe.columns}
 
 
+def weight(proxy):
+    return (proxy['mag'] / 5.)**6
+
+
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -304,6 +308,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     nr = len(dstore['ruptures'])
     logging.info('Reading {:_d} ruptures'.format(nr))
     allproxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
+    
     if "station_data" in oq.inputs:
         # this is meant to be used in conditioned scenario calculations with
         # a single rupture; we are taking the first copy of the rupture
@@ -318,14 +323,15 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if save_tmp:
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
+    totw = sum(weight(p) for p in allproxies)
+    maxw = totw / (oq.concurrent_tasks or 1)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        hint = 2 * nr / (oq.concurrent_tasks or 1)  # double size blocks
-        for block in block_splitter(proxies, hint):
+        for block in block_splitter(proxies, maxw, weight):
             smap.submit((block, cmaker, dstore))
     return smap
 
