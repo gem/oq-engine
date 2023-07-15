@@ -226,8 +226,9 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
         n += len(proxies)
         with fmon:
             computers = get_computers(proxies, cmaker, dstore)
-        if computers:
-            yield event_based(computers, monitor)
+        if not computers:
+            continue
+        yield event_based(computers, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and len(rem) >= 3:
