@@ -218,7 +218,7 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     Launcher of event_based tasks
     """
-    blocksize = 50
+    blocksize = 20
     t0 = time.time()
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
@@ -226,10 +226,11 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
-        if dt > cmaker.oq.time_per_task and len(rem) > 10:
-            half = len(rem) // 2
-            yield gen_event_based, rem[:half], cmaker, dstore
-            yield gen_event_based, rem[half:], cmaker, dstore
+        if dt > cmaker.oq.time_per_task and len(rem) >= 3:
+            s = len(rem) // 3
+            yield gen_event_based, rem[:s], cmaker, dstore
+            yield gen_event_based, rem[s:2*s], cmaker, dstore
+            yield gen_event_based, rem[2*s:], cmaker, dstore
             return
 
 
@@ -323,7 +324,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        hint = nr / (oq.concurrent_tasks or 1)
+        hint = 2 * nr / (oq.concurrent_tasks or 1)  # double size blocks
         for block in block_splitter(proxies, hint):
             smap.submit((block, cmaker, dstore))
     return smap
@@ -642,7 +643,7 @@ class EventBasedCalculator(base.HazardCalculator):
             return
         # check seed dependency unless the number of GMFs is huge
         size = self.datastore.getsize('gmf_data/gmv_0')
-        if 'gmf_data' in self.datastore and size < 4E9:
+        if 'gmf_data' in self.datastore and size < 4E8:
             logging.info('Checking stored GMFs')
             msg = views.view('extreme_gmvs', self.datastore)
             logging.warning(msg)
