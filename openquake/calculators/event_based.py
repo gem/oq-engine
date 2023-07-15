@@ -223,7 +223,9 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
         n += len(proxies)
-        yield event_based(proxies, cmaker, dstore, monitor)
+        computers = get_computers(proxies, cmaker, dstore, monitor)
+        if computers:
+            yield event_based(computers, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and len(rem) >= 3:
@@ -234,19 +236,10 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
             return
 
 
-def event_based(proxies, cmaker, dstore, monitor):
-    """
-    Compute GMFs and optionally hazard curves
-    """
+def get_computers(proxies, cmaker, dstore, monitor):
     oq = cmaker.oq
-    alldata = []
-    se_dt = sig_eps_dt(oq.imtls)
-    sig_eps = []
-    times = []  # rup_id, nsites, dt
     fmon = monitor('filtering ruptures', measuremem=False)
-    cmon = monitor('computing gmfs', measuremem=False)
-    max_iml = oq.get_max_iml()
-    scenario = 'scenario' in oq.calculation_mode
+    computers = []
     with dstore:
         sitecol = dstore['sitecol']
         srcfilter = SourceFilter(sitecol, oq.maximum_distance(cmaker.trt))
@@ -258,7 +251,6 @@ def event_based(proxies, cmaker, dstore, monitor):
             station_data = None
             station_sitecol = None
         for proxy in proxies:
-            t0 = time.time()
             with fmon:
                 if proxy['mag'] < cmaker.min_mag:
                     continue
@@ -267,16 +259,33 @@ def event_based(proxies, cmaker, dstore, monitor):
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 try:
-                    computer = get_computer(
+                    computers.append(get_computer(
                         cmaker, proxy, sids, sitecol,
-                        station_sitecol, station_data)
+                        station_sitecol, station_data))
                 except FarAwayRupture:
                     # skip this rupture
                     continue
+    return computers
+
+
+def event_based(computers, monitor):
+    """
+    Compute GMFs and optionally hazard curves
+    """
+    oq = computers[0].cmaker.oq
+    alldata = []
+    se_dt = sig_eps_dt(oq.imtls)
+    sig_eps = []
+    times = []  # rup_id, nsites, dt
+    cmon = monitor('computing gmfs', measuremem=False)
+    max_iml = oq.get_max_iml()
+    scenario = 'scenario' in oq.calculation_mode
+    t0 = time.time()
+    for computer in computers:
             with cmon:
                 df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
-            times.append((proxy['id'], len(computer.ctx.sids),
+            times.append((computer.ebrupture.id, len(computer.ctx.sids),
                           computer.ctx.rrup.min(), dt))
             alldata.append(df)
     if sum(len(df) for df in alldata):
@@ -289,6 +298,7 @@ def event_based(proxies, cmaker, dstore, monitor):
         gmfdata = {}
     return dict(gmfdata=todict(gmfdata), times=times,
                 sig_eps=numpy.array(sig_eps, se_dt))
+
 
 def todict(dframe):
     if len(dframe) == 0:

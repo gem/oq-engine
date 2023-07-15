@@ -255,11 +255,14 @@ def ebrisk(proxies, cmaker, dstore, monitor):
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
-    dic = event_based.event_based(proxies, cmaker, dstore, monitor)
-    if len(dic['gmfdata']) == 0:  # no GMFs
-        return {}
-    gmf_df = pandas.DataFrame(dic['gmfdata'])
-    return event_based_risk(gmf_df, cmaker.oq, monitor)
+    computers = event_based.get_computers(proxies, cmaker, dstore, monitor)
+    if computers:
+        dic = event_based.event_based(computers, monitor)
+        if len(dic['gmfdata']) == 0:  # no GMFs
+            return {}
+        gmf_df = pandas.DataFrame(dic['gmfdata'])
+        return event_based_risk(gmf_df, cmaker.oq, monitor)
+    return {}
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
