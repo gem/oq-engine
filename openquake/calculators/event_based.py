@@ -324,7 +324,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     totw = sum(weight(p) for p in allproxies)
-    maxw = totw / (oq.concurrent_tasks or 1)
+    maxw = 2 * totw / (oq.concurrent_tasks or 1)
     for trt_smr, proxies in gb.items():
         proxies.sort(key=operator.itemgetter('mag'))
         trt = full_lt.trts[trt_smr // TWO24]
