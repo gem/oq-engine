@@ -297,7 +297,7 @@ def todict(dframe):
 
 
 def weight(proxy):
-    return (proxy['mag'] / 5.)**6
+    return 10**proxy['mag']
 
 
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
