@@ -218,12 +218,14 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     Launcher of event_based tasks
     """
+    fmon = monitor('filtering ruptures', measuremem=False)
     blocksize = 20
     t0 = time.time()
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
         n += len(proxies)
-        computers = get_computers(proxies, cmaker, dstore, monitor)
+        with fmon:
+            computers = get_computers(proxies, cmaker, dstore)
         if computers:
             yield event_based(computers, monitor)
         rem = allproxies[n:]  # remaining ruptures
@@ -236,9 +238,8 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
             return
 
 
-def get_computers(proxies, cmaker, dstore, monitor):
+def get_computers(proxies, cmaker, dstore):
     oq = cmaker.oq
-    fmon = monitor('filtering ruptures', measuremem=False)
     computers = []
     with dstore:
         sitecol = dstore['sitecol']
@@ -251,20 +252,19 @@ def get_computers(proxies, cmaker, dstore, monitor):
             station_data = None
             station_sitecol = None
         for proxy in proxies:
-            with fmon:
-                if proxy['mag'] < cmaker.min_mag:
-                    continue
-                sids = srcfilter.close_sids(proxy, cmaker.trt)
-                if len(sids) == 0:  # filtered away
-                    continue
-                proxy.geom = rupgeoms[proxy['geom_id']]
-                try:
-                    computers.append(get_computer(
-                        cmaker, proxy, sids, sitecol,
-                        station_sitecol, station_data))
-                except FarAwayRupture:
-                    # skip this rupture
-                    continue
+            if proxy['mag'] < cmaker.min_mag:
+                continue
+            sids = srcfilter.close_sids(proxy, cmaker.trt)
+            if len(sids) == 0:  # filtered away
+                continue
+            proxy.geom = rupgeoms[proxy['geom_id']]
+            try:
+                computers.append(get_computer(
+                    cmaker, proxy, sids, sitecol,
+                    station_sitecol, station_data))
+            except FarAwayRupture:
+                # skip this rupture
+                continue
     return computers
 
 

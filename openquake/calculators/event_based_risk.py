@@ -255,7 +255,8 @@ def ebrisk(proxies, cmaker, dstore, monitor):
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
-    computers = event_based.get_computers(proxies, cmaker, dstore, monitor)
+    with monitor('filtering ruptures', measuremem=False):
+        computers = event_based.get_computers(proxies, cmaker, dstore)
     if computers:
         dic = event_based.event_based(computers, monitor)
         if len(dic['gmfdata']) == 0:  # no GMFs
