@@ -784,10 +784,14 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                     'In order to run the connectivity analysis, at least'
                     ' one of %s fields must be found in the exposure %s'
                     % (at_least_columns, fname))
-            if not (df[df.type == 'node']['weight'] == '1').all():
-                logging.warning(
-                    f'Weights different from 1 present in {fname} will'
-                    f' be ignored')
+            try:
+                if not (df[df.type == 'node']['weight'] == '1').all():
+                    logging.warning(
+                        f'Weights different from 1 present in {fname} will'
+                        f' be ignored')
+            except KeyError:
+                # 'weight' is not a mandatory field, so it could be missing
+                pass
 
         df['id'] = asset_prefix + df.id
         dfs.append(df)
