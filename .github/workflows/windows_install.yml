@@ -77,6 +77,7 @@ jobs:
       - name: Run demos to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          python -m pip install h5py==3.7.0
           #
           python -c 'import fiona'
           oq --version
