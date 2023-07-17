@@ -81,6 +81,7 @@ jobs:
           python -c 'import fiona'
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          oq engine --run D:\a\oq-engine\oq-engine\demos\risk\ClassicalDamage\job_hazard.ini
           python -m pip install pytest
           pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\sep
           #
