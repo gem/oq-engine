@@ -60,8 +60,8 @@ def classify_nodes(exposure_df):
 
     # TAZ is the acronym of "Traffic Analysis Zone"
     # user can write both as well
-    TAZ_nodes = exposure_df.loc[(exposure_df.purpose == "TAZ") | (
-        exposure_df.purpose == "both")].index.to_list()
+    TAZ_nodes = exposure_df.loc[
+        exposure_df.purpose.isin(["TAZ", "both"])].index.to_list()
 
     source_nodes = exposure_df.loc[
         exposure_df.purpose == "source"].index.to_list()
@@ -293,7 +293,7 @@ def cleanup_graph(G_original, event_damage_df, g_type):
     # is possible between two nodes.
     # If it is a multi graph then every edge has a key value
 
-    if g_type == "MultiGraph" or g_type == "MultiDiGraph":
+    if g_type in ["MultiGraph", "MultiDiGraph"]:
         edges_to_remove = [
             (u, v, key)
             for (u, v, key, data) in G.edges(keys=True, data=True)
