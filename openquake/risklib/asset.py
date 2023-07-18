@@ -757,7 +757,7 @@ def check_exposure_for_infr_conn_analysis(df, fname):
     # Log a warning if node weights are present and they are not all '1',
     # because handling weights in the nodes is not implemented yet
     if 'weight' in exposure_columns:  # 'weight' is not mandatory
-        if not (df[df.type == 'node']['weight'] == '1').all():
+        if not (df[df.type.str.lower() == 'node']['weight'] == '1').all():
             logging.warning(
                 f'Node weights different from 1 present in {fname} will'
                 f' be ignored. Handling node weights is not implemented yet.')
@@ -772,8 +772,8 @@ def check_exposure_for_infr_conn_analysis(df, fname):
 
     # Raise an error if 'purpose' contains at least one 'TAZ' value and at
     # least a value in ['source'. 'demand']
-    purpose_values = list(df['purpose'])
-    if 'TAZ' in purpose_values and ('source' in purpose_values
+    purpose_values = set(df['purpose'].str.lower())
+    if 'taz' in purpose_values and ('source' in purpose_values
                                     or 'demand' in purpose_values):
         raise InvalidFile(
             f'Column "purpose" of {fname} can not contain at the same time'

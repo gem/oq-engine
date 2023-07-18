@@ -61,13 +61,14 @@ def classify_nodes(exposure_df):
     # TAZ is the acronym of "Traffic Analysis Zone"
     # user can write both as well
     TAZ_nodes = exposure_df.loc[
-        exposure_df.purpose.isin(["TAZ", "both"])].index.to_list()
+        exposure_df.purpose.str.lower().isin(["taz", "both"])].index.to_list()
 
     source_nodes = exposure_df.loc[
-        exposure_df.purpose == "source"].index.to_list()
+        exposure_df.purpose.str.lower() == "source"].index.to_list()
     demand_nodes = exposure_df.loc[
-        exposure_df.purpose == "demand"].index.to_list()
-    eff_nodes = exposure_df.loc[exposure_df.type == "node"].index.to_list()
+        exposure_df.purpose.str.lower() == "demand"].index.to_list()
+    eff_nodes = exposure_df.loc[
+        exposure_df.type.str.lower() == "node"].index.to_list()
 
     # We should raise an error if the exposure nodes contain at the same time
     # taz/both and demand/supply
@@ -102,20 +103,21 @@ def get_graph_type(exposure_df):
 def create_original_graph(exposure_df, g_type):
     # Create the original graph and add edge and node attributes.
     G_original = nx.from_pandas_edgelist(
-        exposure_df.loc[exposure_df.type == "edge"],
+        exposure_df.loc[exposure_df.type.str.lower() == "edge"],
         source="start_node",
         target="end_node",
         edge_attr=True, create_using=getattr(nx, g_type)()
     )
     # This is done for the cases where there might be a disconnected node with
     # no edges and are not added in the G_original previously
-    for _, row in exposure_df.loc[exposure_df.type == "node"].iterrows():
+    for _, row in exposure_df.loc[
+            exposure_df.type.str.lower() == "node"].iterrows():
         if row["id"] not in G_original.nodes:
             G_original.add_node(row["id"], **row)
     # Adding the attribute of the nodes
     nx.set_node_attributes(
         G_original, exposure_df.loc[
-            exposure_df.type == "node"].to_dict("index")
+            exposure_df.type.str.lower() == "node"].to_dict("index")
     )
 
     return G_original
@@ -279,9 +281,9 @@ def cleanup_graph(G_original, event_damage_df, g_type):
     G = G_original.copy()
 
     nodes_damage_df = event_damage_df.loc[
-        event_damage_df.type == "node"].droplevel(level=0)
+        event_damage_df.type.str.lower() == "node"].droplevel(level=0)
     edges_damage_df = event_damage_df.loc[
-        event_damage_df.type == "edge"].droplevel(level=0)
+        event_damage_df.type.str.lower() == "edge"].droplevel(level=0)
 
     # Updating the graph to remove damaged edges and nodes
     nonfunctional_edges_df = edges_damage_df.loc[
@@ -418,8 +420,9 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     # To store the information of the performance indicators at connectivity
     # level
     dem_cl = exposure_df[
-        exposure_df['purpose'] == 'demand'].iloc[:, 0:1]
-    node_el = exposure_df[exposure_df['type'] == 'node'].iloc[:, 0:1]
+        exposure_df['purpose'].str.lower() == 'demand'].iloc[:, 0:1]
+    node_el = exposure_df[
+        exposure_df['type'].str.lower() == 'node'].iloc[:, 0:1]
 
     ccl_table = pd.DataFrame({'id': demand_nodes})
     pcl_table = pd.DataFrame({'id': demand_nodes})
@@ -563,8 +566,10 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
 
     # To store the information of the performance indicators at connectivity
     # level
-    taz_cl = exposure_df[exposure_df['purpose'] == 'TAZ'].iloc[:, 0:1]
-    node_el = exposure_df[exposure_df['type'] == 'node'].iloc[:, 0:1]
+    taz_cl = exposure_df[
+        exposure_df['purpose'].str.lower() == 'taz'].iloc[:, 0:1]
+    node_el = exposure_df[
+        exposure_df['type'].str.lower() == 'node'].iloc[:, 0:1]
 
     pcl_table = pd.DataFrame({'id': TAZ_nodes})
     wcl_table = pd.DataFrame({'id': TAZ_nodes})
@@ -687,7 +692,8 @@ def EL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
 
     # To store the information of the performance indicators at connectivity
     # level
-    node_el = exposure_df[exposure_df['type'] == 'node'].iloc[:, 0:1]
+    node_el = exposure_df[
+        exposure_df['type'].str.lower() == 'node'].iloc[:, 0:1]
 
     eff_table = pd.DataFrame({'id': eff_nodes})
     eff_table.set_index("id", inplace=True)
