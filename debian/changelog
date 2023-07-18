@@ -4,6 +4,9 @@
     Connectivity Loss (CCL), Partial Connectivity Loss (PCL), Weighted
     Connectivity Loss (WCL), and Efficiency Loss (EL) based on Poudel et al.
     (2023).
+  * Implemented the Bradley (2012) cross-correlation equations between peak
+    ground velocity (PGV), peak ground acceleration (PGA), and 5% damped
+    pseudo-spectral acceleration (SA)
 
   [Michele Simionato]
   * Moved the generation of the hazard curves from the GMFs in post_execute
