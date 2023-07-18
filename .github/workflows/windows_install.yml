@@ -78,12 +78,14 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           #
-          python -c 'import fiona'
+          #python -c 'import fiona'
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          oq engine --run D:\a\oq-engine\oq-engine\demos\risk\ClassicalDamage\job_hazard.ini
           python -m pip install pytest
-          pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\sep
-          #
-          pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\openquake\hazardlib\tests\gsim\kotha_2020_test.py
-          #
-          pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\calculators
+          pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake
+          #pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\sep
+          ##
+          #pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\openquake\hazardlib\tests\gsim\kotha_2020_test.py
+          ##
+          #pytest -vsx --color=yes D:\a\oq-engine\oq-engine\openquake\calculators
