@@ -296,10 +296,6 @@ def todict(dframe):
     return {k: dframe[k].to_numpy() for k in dframe.columns}
 
 
-def weight(proxy):
-    return proxy['nsites']
-
-
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -323,6 +319,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if save_tmp:
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
+    weight = SourceFilter(dstore['sitecol'], {}).rup_weight
     totw = sum(weight(p) for p in allproxies)
     maxw = 2 * totw / (oq.concurrent_tasks or 1)
     for trt_smr, proxies in gb.items():

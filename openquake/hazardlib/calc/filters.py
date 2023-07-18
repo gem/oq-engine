@@ -412,6 +412,11 @@ class SourceFilter(object):
                 if sites is not None:
                     yield s, sites
 
+    def rup_weight(self, rec):
+        hypo = rec['hypo']
+        radius = 25 * (1 + (rec['mag'] / 5.)**6)  # from 30 km to ~1000 km
+        return len(self._close_sids(hypo[0], hypo[1], hypo[2], radius)) + 1
+
     # used in source and rupture prefiltering: it should not discard too much
     def close_sids(self, src_or_rec, trt=None, maxdist=None):
         """
