@@ -729,7 +729,8 @@ class ContextMaker(object):
 
         # setting distance parameters
         for par in dists:
-            ctx[par] = dists[par]
+            ctx[par] = dists[par] # TODO: measure the performance penalty caused
+            # by getting closest point even when fewsites is False
         ctx['clon'] = closest[0]
         ctx['clat'] = closest[1]
 
