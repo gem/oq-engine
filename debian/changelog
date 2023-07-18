@@ -1,3 +1,10 @@
+  [Astha Poudel, Anirudh Rao, Paolo Tormene]
+  * Updates to the infrastructure risk assessment and connectivity analysis
+    module to incorporate additional performance metrics including Complete
+    Connectivity Loss (CCL), Partial Connectivity Loss (PCL), Weighted
+    Connectivity Loss (WCL), and Efficiency Loss (EL) based on Poudel et al.
+    (2023).
+
   [Michele Simionato]
   * Moved the generation of the hazard curves from the GMFs in post_execute
   * Fixed the error "You must supply a list of magnitudes as 2-digit strings"
