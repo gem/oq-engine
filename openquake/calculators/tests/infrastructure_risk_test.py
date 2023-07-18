@@ -180,3 +180,19 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             ' all equal values.')
         self.assertIn(got_msg_head, exc_msg)
         self.assertIn(got_msg_tail, exc_msg)
+
+    def test_weighted_nodes(self):
+        with self.assertLogs(level='WARNING') as log:
+            expected_log_head = 'Node weights different from 1 present in'
+            expected_log_tail = (
+                'exposure_demo_weighted_nodes.csv will be ignored.'
+                ' Handling node weights is not implemented yet.')
+            self.run_calc(eff_loss_random.__file__, 'job_weighted_nodes.ini')
+            warning_was_found = False
+            for record in log.records:
+                if record.msg.startswith(expected_log_head):
+                    self.assertIn(expected_log_tail, record.msg)
+                    warning_was_found = True
+            self.assertTrue(
+                warning_was_found,
+                'If there are node weights != 1, a warning should be raised')
