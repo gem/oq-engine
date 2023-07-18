@@ -218,7 +218,7 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     Launcher of event_based tasks
     """
-    blocksize = 40
+    blocksize = 20
     t0 = time.time()
     n = 0
     for proxies in block_splitter(allproxies, blocksize):
@@ -323,13 +323,12 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     totw = sum(weight(p) for p in allproxies)
     maxw = 2 * totw / (oq.concurrent_tasks or 1)
     for trt_smr, proxies in gb.items():
-        proxies.sort(key=weight)
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for block in block_splitter(proxies, maxw, weight):
+        for block in block_splitter(proxies, maxw, weight, sort=True):
             smap.submit((block, cmaker, dstore))
     return smap
 
