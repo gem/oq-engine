@@ -553,7 +553,7 @@ class ContextMaker(object):
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
-        for i, ctx in enumerate(ctxs):
+        for ctx in ctxs:
             ctx = ctx.roundup(self.minimum_distance)
             slc = slice(start, start + len(ctx))
             for par in dd:
