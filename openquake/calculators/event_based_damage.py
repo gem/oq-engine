@@ -289,11 +289,6 @@ class DamageCalculator(EventBasedRiskCalculator):
         if (hasattr(oq, 'infrastructure_connectivity_analysis')
                 and oq.infrastructure_connectivity_analysis):
 
-            # FIXME: Improve the warning message, both here and in the
-            #        documentation
-            logging.warning(
-                'Connectivity analysis is still an experimental feature!')
-
             conn_results = connectivity.analysis(self.datastore)
             self._store_connectivity_analysis_results(conn_results)
 

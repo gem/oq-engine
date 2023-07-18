@@ -449,9 +449,6 @@ OpenQuake- engine Book (Risk).
 Infrastructure Risk Analysis
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. warning::
-    Infrastructure Risk Analysis is still an experimental feature
-
 Rationale
 ~~~~~~~~~
 
