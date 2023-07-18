@@ -19,6 +19,7 @@
 import os
 import shutil
 import numpy
+from openquake.baselib import InvalidFile
 from openquake.qa_tests_data.scenario_damage import case_15
 from openquake.qa_tests_data.infrastructure_risk import (
     five_nodes_demsup_directed, five_nodes_demsup_directedunweighted,
@@ -143,3 +144,39 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
             'avg_loss event_efl event_pcl event_wcl node_el taz_cl').split()
 
         self._check_csv_outputs(outputs_list, ds, undirected)
+
+    def test_missing_mandatory_column(self):
+        with self.assertRaises(InvalidFile) as exc:
+            self.run_calc(undirected.__file__,
+                          'job_missing_mandatory_column.ini')
+        exc_msg = exc.exception.args[0]
+        got_msg_head = (
+            'The following mandatory columns are missing in the exposure')
+        got_msg_tail = (
+            'exposure_demo_nodes_missing_mandatory_column.csv": [\'purpose\']')
+        self.assertIn(got_msg_head, exc_msg)
+        self.assertIn(got_msg_tail, exc_msg)
+
+    def test_incompatible_purposes(self):
+        with self.assertRaises(InvalidFile) as exc:
+            self.run_calc(demand_supply.__file__,
+                          'job_incompatible_purposes.ini')
+        exc_msg = exc.exception.args[0]
+        got_msg_head = 'Column "purpose" of'
+        got_msg_tail = (
+            'exposure_demo_nodes_incompatible_purposes.csv can not contain'
+            ' at the same time the value "TAZ" and either "source"'
+            ' or "demand".')
+        self.assertIn(got_msg_head, exc_msg)
+        self.assertIn(got_msg_tail, exc_msg)
+
+    def test_multiple_graphtypes(self):
+        with self.assertRaises(InvalidFile) as exc:
+            self.run_calc(multigraph.__file__, 'job_multiple_graphtypes.ini')
+        exc_msg = exc.exception.args[0]
+        got_msg_head = 'The column "graphtype" of'
+        got_msg_tail = (
+            'exposure_demo_nodes_multiple_graphtypes.csv" must contain'
+            ' all equal values.')
+        self.assertIn(got_msg_head, exc_msg)
+        self.assertIn(got_msg_tail, exc_msg)
