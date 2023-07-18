@@ -2,8 +2,8 @@
   * Updates to the infrastructure risk assessment and connectivity analysis
     module to incorporate additional performance metrics including Complete
     Connectivity Loss (CCL), Partial Connectivity Loss (PCL), Weighted
-    Connectivity Loss (WCL), and Efficiency Loss (EL) based on Poudel et al.
-    (2023).
+    Connectivity Loss (WCL), and Efficiency Loss (EL) based on
+    Poudel et al. (2023)
   * Implemented the Bradley (2012) cross-correlation equations between peak
     ground velocity (PGV), peak ground acceleration (PGA), and 5% damped
     pseudo-spectral acceleration (SA)
