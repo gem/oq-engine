@@ -250,25 +250,27 @@ class test_array_funcs_super_simple(unittest.TestCase):
 
 @unittest.skipIf(gdal is None, "GDAL not always installed correctly")
 class test_make_local_relief_raster(unittest.TestCase):
-    def setUp(self):
-        self.test_relief_raster = gdal.Open(test_relief)
-        outfile_handler, self.outfile = tempfile.mkstemp()
-        self.lrr = make_local_relief_raster(
-            test_dem, 5, outfile=self.outfile, write=False, trim=False
-        )
 
     def test_make_local_relief_raster_geo_transform(self):
-
-        np.testing.assert_allclose(
-            self.lrr.GetGeoTransform(),
-            self.test_relief_raster.GetGeoTransform(),
+        test_relief_raster = gdal.Open(test_relief)
+        outfile_handler, outfile = tempfile.mkstemp()
+        lrr = make_local_relief_raster(
+            test_dem, 5, outfile=outfile, write=False, trim=False
         )
+        np.testing.assert_allclose(
+            lrr.GetGeoTransform(),
+            test_relief_raster.GetGeoTransform(),
+        )
+        os.remove(outfile)
 
     def test_make_2d_local_relief_raster_array_vals(self):
-        np.testing.assert_array_almost_equal(
-            self.lrr.GetRasterBand(1).ReadAsArray(),
-            self.test_relief_raster.GetRasterBand(1).ReadAsArray(),
+        test_relief_raster = gdal.Open(test_relief)
+        outfile_handler, outfile = tempfile.mkstemp()
+        lrr = make_local_relief_raster(
+            test_dem, 5, outfile=outfile, write=False, trim=False
         )
-
-    def tearDown(self):
-        os.remove(self.outfile)
+        np.testing.assert_array_almost_equal(
+            lrr.GetRasterBand(1).ReadAsArray(),
+            test_relief_raster.GetRasterBand(1).ReadAsArray(),
+        )
+        os.remove(outfile)
