@@ -20,7 +20,7 @@ real network.
 
 **Hazard**
 
-Expected runtime: 5 seconds
+Expected runtime: 14 seconds
 
 Outputs:
 
@@ -29,7 +29,7 @@ Outputs:
 
 **Risk**
 
-Expected runtime: 12 seconds
+Expected runtime: 25 seconds
 
 Outputs:
 
