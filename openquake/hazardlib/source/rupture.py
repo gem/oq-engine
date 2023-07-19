@@ -85,6 +85,7 @@ rupture_dt = numpy.dtype([
     ('maxlat', F32),
     ('hypo', (F32, 3)),
     ('geom_id', U32),
+    ('nsites', U32),
     ('e0', U32)])
 
 code2cls = {}
