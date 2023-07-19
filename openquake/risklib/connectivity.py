@@ -47,7 +47,6 @@ def get_exposure_df(dstore):
         )
     ).set_index("id")
 
-    # FIXME: Needs to be checked. It gives an error if this is not done.
     if 'weight' in exposure_df.columns:
         exposure_df['weight'] = exposure_df['weight'].astype(float)
 
