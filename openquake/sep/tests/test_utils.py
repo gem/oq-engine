@@ -1,5 +1,6 @@
 import os
 import unittest
+import tempfile
 
 import numpy as np
 try:
@@ -251,8 +252,9 @@ class test_array_funcs_super_simple(unittest.TestCase):
 class test_make_local_relief_raster(unittest.TestCase):
     def setUp(self):
         self.test_relief_raster = gdal.Open(test_relief)
+        outfile_handler, outfile = tempfile.mkstemp()
         self.lrr = make_local_relief_raster(
-            test_dem, 5, outfile=None, write=False, trim=False
+            test_dem, 5, outfile=outfile, write=False, trim=False
         )
 
     def test_make_local_relief_raster_geo_transform(self):
@@ -267,10 +269,3 @@ class test_make_local_relief_raster(unittest.TestCase):
             self.lrr.GetRasterBand(1).ReadAsArray(),
             self.test_relief_raster.GetRasterBand(1).ReadAsArray(),
         )
-
-    def tearDown(self):
-        # NOTE: On Windows it raises
-        #       PermissionError: [WinError 32] The process cannot access the
-        #       file because it is being used by another process: 'tmp.tiff'
-        # os.remove("tmp.tiff")
-        pass
