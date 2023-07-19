@@ -673,7 +673,7 @@ class ClassicalCalculator(base.HazardCalculator):
             smap.submit(args)
         acc = smap.reduce(self.agg_dicts, acc)
         for g in list(acc):
-            # FIXME: why is it so important that g is int64?
+            # NOTE: on Windows g is a int32; on Linux it is a int64
             if isinstance(g, (numpy.int64, numpy.int32)):
                 with self.monitor('storing PoEs', measuremem=True):
                     pne = acc.pop(g)
