@@ -37,7 +37,7 @@ from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo import polygon as pgn
+from openquake.hazardlib.geo import Polygon
 from openquake.hazardlib.gsim.zhao_2016_volc_perg import volc_perg
 
 
@@ -517,51 +517,37 @@ def get_volc_zones(volc_polygons):
     """
     # Get the volc zone polygons
     with fiona.open(volc_polygons,'r') as inp:
-        volc_zone_id = {}
-        polygon_per_volc_zone_lon = {}
-        polygon_per_volc_zone_lat = {}
-        for idx, f in enumerate(inp):
-
+        zone_id, zone_lons, zone_lats = {}, {}, {}
+        for i, f in enumerate(inp):
+            
             # Get zone_id
-            tmp_props_per_zone = pd.Series(f['properties'])
-            volc_zone_id[idx] = tmp_props_per_zone[0]
-
+            zone_id[i] = pd.Series(f['properties'])[0]
+            
             # Per zone get lat and lon of each polygon vertices
-            for idx_coord, coord in enumerate(f['geometry']['coordinates'][0]):
-                polygon_per_volc_zone_lon[
-                    volc_zone_id[idx], idx_coord] = f['geometry'][
-                        'coordinates'][0][idx_coord][0]
-                polygon_per_volc_zone_lat[
-                    volc_zone_id[idx], idx_coord] = f['geometry'][
-                        'coordinates'][0][idx_coord][1]
+            for c, coo in enumerate(f['geometry']['coordinates'][0]):
+                zone_lons[zone_id[i], c] = f['geometry']['coordinates'][0][c][0]
+                zone_lats[zone_id[i], c] = f['geometry']['coordinates'][0][c][1]
 
     # Store all required info in dict
-    volc_pgn_store = {'volc_zone': volc_zone_id,
-                      'lons_per_zone': polygon_per_volc_zone_lon,
-                      'lats_per_zone': polygon_per_volc_zone_lat}
+    pgn_store = {'zone': zone_id, 'zone_lons': zone_lons, 'zone_lats': zone_lats}
 
     # Set dict for volcanic zones
-    zone_dict = OrderedDict([(volc_pgn_store['volc_zone'][zone], {}
-                              ) for zone in volc_pgn_store['volc_zone']])
+    zone_dict = OrderedDict([(pgn_store['zone'][z], {}) for z in pgn_store['zone']])
 
     # Get polygon per zone
-    pnts_per_zone = zone_dict
-    polygon_per_zone = zone_dict
-    for zone in volc_pgn_store['volc_zone']:
-        zone_id = volc_pgn_store['volc_zone'][zone]
-        for coord_idx, coord in enumerate(volc_pgn_store['lons_per_zone']):
-            if zone_id in coord:
-                pnts_per_zone[zone_id][coord_idx] = Point(volc_pgn_store[
-                    'lons_per_zone'][zone_id, coord[1]],
-                          volc_pgn_store['lats_per_zone'][zone_id, coord[1]])
-            else:
-                pass
-        pnts_list_per_zone = []
-        for idx, coordinates in enumerate(pnts_per_zone[zone_id]):
-            pnts_list_per_zone.append(pnts_per_zone[zone_id][coordinates])
-        polygon_per_zone[zone_id] =  pgn.Polygon(pnts_list_per_zone)
+    pnts_zone, zone_pgn = zone_dict, zone_dict
+    for zone in pgn_store['zone']:
+        zid = pgn_store['zone'][zone]
+        for c, coo in enumerate(pgn_store['zone_lons']):
+            if pgn_store['zone'][zone] in coo:
+                pnts_zone[zid][c] = Point(pgn_store['zone_lons'][zid, coo[1]],
+                                          pgn_store['zone_lats'][zid, coo[1]])
+        zone_pnts = []
+        for coo in pnts_zone[zid]:
+            zone_pnts.append(pnts_zone[zid][coo])
+        zone_pgn[zid] = Polygon(zone_pnts)
         
-    return volc_pgn_store, polygon_per_zone
+    return pgn_store, zone_pgn
 
 
 class ZhaoEtAl2016Asc(GMPE):
