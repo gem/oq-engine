@@ -269,4 +269,8 @@ class test_make_local_relief_raster(unittest.TestCase):
         )
 
     def tearDown(self):
-        os.remove("tmp.tiff")
+        # NOTE: On Windows it raises
+        #       PermissionError: [WinError 32] The process cannot access the
+        #       file because it is being used by another process: 'tmp.tiff'
+        # os.remove("tmp.tiff")
+        pass
