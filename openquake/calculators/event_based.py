@@ -317,14 +317,16 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if save_tmp:
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
+    nsites = sum(p['nsites'] for p in allproxies)
+    maxsites = nsites / (oq.concurrent_tasks or 1)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        hint = nr / (oq.concurrent_tasks or 1)
-        for block in block_splitter(proxies, hint):
+        for block in block_splitter(
+                proxies, maxsites, operator.itemgetter('nsites')):
             smap.submit((block, cmaker, dstore))
     return smap
 
