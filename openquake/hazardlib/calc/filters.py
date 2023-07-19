@@ -125,7 +125,7 @@ def get_distances(rupture, sites, param, dcache=None):
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
     elif param == 'closest_point' or param == 'clon' or param == 'clat':
         t = rupture.surface.get_closest_points(sites)  # TODO: measure the
-        # perfomance penalty due to the double call to `.get_closest_points`
+        # perfomance penalty due to the triple call to `.get_closest_points`
         # In large calculations; it could very well be insignificant and in
         # that case it is not worth doing anything
         if param == 'closest_point':

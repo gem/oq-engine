@@ -559,6 +559,8 @@ class ContextMaker(object):
             for par in dd:
                 if par == 'rup_id':
                     val = getattr(ctx, par)
+                elif par == 'non_erg_path_corr':
+                    val = True
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 if par == 'closest_point':
@@ -726,13 +728,13 @@ class ContextMaker(object):
                 ctxt[par] = planar.hypo[:, 1]
             elif par == 'hypo_depth':
                 ctxt[par] = planar.hypo[:, 2]
-
+        
         # setting distance parameters
         for par in dists:
-            ctx[par] = dists[par] # TODO: measure the performance penalty caused
-            # by getting closest point even when fewsites is False
-        ctx['clon'] = closest[0]
-        ctx['clat'] = closest[1]
+            ctx[par] = dists[par]
+        if self.fewsites:
+            ctx['clon'] = closest[0]
+            ctx['clat'] = closest[1]
 
         # setting site parameters
         for par in self.siteparams:
