@@ -589,8 +589,8 @@ can be obtained by various specifications.
    Output computed from the implementation according to the specification of the function of the nodes
 
 Mainly, the library, NetworkX (Aric et al. 2008) has been used during the
-implementation. Further details can be found in Poudel et al. 2023, and Poudel
-and Pitilakis 2023. Also, much concept during the implementation has been drawn
+implementation. Further details can be found in Poudel et al. 2023.
+Also, much concept during the implementation has been drawn
 from Pitilakis et al. 2014.
 
 References
