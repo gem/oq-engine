@@ -130,4 +130,4 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.17.1'
+__version__ = '3.17.2'
