@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Fixed bug #8907: unable to run ClassicalDamage demo on Windows
+
   [Astha Poudel, Anirudh Rao, Paolo Tormene]
   * Updates to the infrastructure risk assessment and connectivity analysis
     module to incorporate additional performance metrics including Complete
