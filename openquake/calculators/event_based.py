@@ -219,12 +219,14 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     t0 = time.time()
     n = 0
-    for proxies in block_splitter(allproxies, 500_000, get_nsites):
+    maxsites = 300_000
+    for proxies in block_splitter(allproxies, maxsites, get_nsites):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
-        if dt > cmaker.oq.time_per_task and len(rem) > 10:
+        if dt > cmaker.oq.time_per_task and sum(
+                r['nsites'] for r in rem) > maxsites:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, dstore
             yield gen_event_based, rem[half:], cmaker, dstore
@@ -316,6 +318,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     nsites = sum(p['nsites'] for p in allproxies)
     maxsites = nsites / (oq.concurrent_tasks or 1)
+    logging.info(f'{maxsites=}')
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
