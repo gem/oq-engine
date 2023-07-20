@@ -55,7 +55,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
-
+get_nsites = operator.itemgetter('nsites')
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
@@ -217,10 +217,9 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     Launcher of event_based tasks
     """
-    blocksize = 50
     t0 = time.time()
     n = 0
-    for proxies in block_splitter(allproxies, blocksize):
+    for proxies in block_splitter(allproxies, 300_000, get_nsites):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
@@ -323,8 +322,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for block in block_splitter(
-                proxies, maxsites, operator.itemgetter('nsites')):
+        for block in block_splitter(proxies, maxsites, get_nsites):
             smap.submit((block, cmaker, dstore))
     return smap
 
