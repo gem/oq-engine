@@ -57,8 +57,7 @@ TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 
 rup_dt = numpy.dtype(
-    [('rup_id', I64), ('nsites', U16), ('rrup', F32), ('time', F32),
-    ('task_no', U16)])
+    [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -275,8 +274,7 @@ def event_based(proxies, cmaker, dstore, monitor):
             with cmon:
                 df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
-            times.append((proxy['id'], len(computer.ctx.sids),
-                          computer.ctx.rrup.min(), dt))
+            times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
     if sum(len(df) for df in alldata):
         gmfdata = strip_zeros(pandas.concat(alldata))
