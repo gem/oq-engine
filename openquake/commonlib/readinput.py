@@ -938,7 +938,8 @@ def get_exposure(oqparam, h5=None):
             oqparam.inputs['exposure'], oqparam.calculation_mode,
             oqparam.ignore_missing_costs,
             by_country='country' in asset.tagset(oqparam.aggregate_by),
-            errors='ignore' if oqparam.ignore_encoding_errors else None)
+            errors='ignore' if oqparam.ignore_encoding_errors else None,
+            infr_conn_analysis=oqparam.infrastructure_connectivity_analysis)
     return exposure
 
 
@@ -958,7 +959,8 @@ def get_station_data(oqparam, sitecol):
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
-    sid = {(lon, lat): sid for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
+    sid = {(lon, lat): sid
+           for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
     sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values
@@ -1005,8 +1007,9 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     with Monitor('associating exposure', measuremem=True, h5=h5):
         region = wkt.loads(oqparam.region) if oqparam.region else None
         sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
-    logging.info('Associated {:_d} assets (of {:_d}) to {:_d} sites (of {:_d})'.
-                 format(len(exp.assets), A, len(sitecol), N))
+    logging.info(
+        'Associated {:_d} assets (of {:_d}) to {:_d} sites'
+        ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
 
     assetcol = asset.AssetCollection(
         exp, sitecol, oqparam.time_event, oqparam.aggregate_by)

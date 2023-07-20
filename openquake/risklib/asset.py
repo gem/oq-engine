@@ -739,9 +739,51 @@ def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
     return pandas.DataFrame({f: array[f] for f, dt in dtlist}).set_index('id')
 
 
+def check_exposure_for_infr_conn_analysis(df, fname):
+
+    exposure_columns = list(df.columns)
+
+    # Raise an error if any of those columns is present
+    mandatory_columns = ['purpose', 'start_node', 'end_node']
+    mandatory_columns_not_found = []
+    for mandatory_column in mandatory_columns:
+        if mandatory_column not in exposure_columns:
+            mandatory_columns_not_found.append(mandatory_column)
+    if mandatory_columns_not_found:
+        raise InvalidFile(
+            f'The following mandatory columns are missing in the'
+            f' exposure "{fname}": {mandatory_columns_not_found}')
+
+    # Log a warning if node weights are present and they are not all '1',
+    # because handling weights in the nodes is not implemented yet
+    if 'weight' in exposure_columns:  # 'weight' is not mandatory
+        if not (df[df.type.str.lower() == 'node']['weight'] == '1').all():
+            logging.warning(
+                f'Node weights different from 1 present in {fname} will'
+                f' be ignored. Handling node weights is not implemented yet.')
+
+    # Raise an error if the column 'graphtype' is present and it does not
+    # contain a unique value
+    if 'graphtype' in exposure_columns:  # 'graphtype' is not mandatory
+        if not (df['graphtype'] == df['graphtype'][0]).all():
+            raise InvalidFile(
+                'The column "graphtype" of "%s" must contain all equal values.'
+                % fname)
+
+    # Raise an error if 'purpose' contains at least one 'TAZ' value and at
+    # least a value in ['source'. 'demand']
+    purpose_values = set(df['purpose'].str.lower())
+    if 'taz' in purpose_values and ('source' in purpose_values
+                                    or 'demand' in purpose_values):
+        raise InvalidFile(
+            f'Column "purpose" of {fname} can not contain at the same time'
+            f' the value "TAZ" and either "source" or "demand".')
+
+
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                 check_dupl=True, by_country=False, asset_prefix='',
-                tagcol=None, errors=None, monitor=None):
+                tagcol=None, errors=None, infr_conn_analysis=False,
+                monitor=None):
     logging.info('Reading %s', fname)
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
@@ -773,6 +815,9 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             df['retrofitted'] = exposure.cost_calculator(
                 'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
+        if infr_conn_analysis:
+            check_exposure_for_infr_conn_analysis(df, fname)
+
         df['id'] = asset_prefix + df.id
         dfs.append(df)
 
@@ -847,7 +892,8 @@ class Exposure(object):
 
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
-                 check_dupl=True, tagcol=None, by_country=False, errors=None):
+                 check_dupl=True, tagcol=None, by_country=False, errors=None,
+                 infr_conn_analysis=False):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -870,7 +916,8 @@ class Exposure(object):
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, ignore_missing_costs,
-                            check_dupl, by_country, prefix, tagcol, errors))
+                            check_dupl, by_country, prefix, tagcol, errors,
+                            infr_conn_analysis))
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):

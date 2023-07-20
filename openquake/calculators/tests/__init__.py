@@ -48,28 +48,29 @@ def strip_calc_id(fname):
 
 
 def columns(line):
-    data = []
+    numeric_columns = []
+    textual_columns = []
     if ',' in line:  # csv file
         for column in line.split(','):
             try:
                 floats = list(map(float, column.split(' ')))
-            except ValueError:  # skip header
-                pass
+            except ValueError:
+                textual_columns.append(column)
             else:
-                data.append(numpy.array(floats))
+                numeric_columns.append(numpy.array(floats))
     elif '|' in line:  # org file
         for column in line.split('|'):
             try:
-                data.append(float(column))
+                numeric_columns.append(float(column))
             except ValueError:
-                pass  # ignore nonfloats
+                textual_columns.append(column)
     else:  # txt file
         for column in line.split(' '):
             try:
-                data.append(float(column))
+                numeric_columns.append(float(column))
             except ValueError:
-                pass  # ignore nonfloats
-    return data
+                textual_columns.append(column)
+    return numeric_columns, textual_columns
 
 
 orig_open = open
@@ -169,18 +170,22 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
-    def practicallyEqual(self, line1, line2, delta):
+    def practicallyEqual(self, line1, line2, delta, check_all_columns=False):
         """
         Compare lines containing numbers up to the given delta
+        If check_all_columns is True, also textual values are compared
         """
-        columns1 = columns(line1)
-        columns2 = columns(line2)
-        for c1, c2 in zip(columns1, columns2):
+        num_columns1, txt_columns1 = columns(line1)
+        num_columns2, txt_columns2 = columns(line2)
+        for c1, c2 in zip(num_columns1, num_columns2):
             numpy.testing.assert_allclose(c1, c2, atol=delta, rtol=delta)
+        if check_all_columns:
+            for txt_c1, txt_c2 in zip(txt_columns1, txt_columns2):
+                self.assertEqual(txt_c1, txt_c2)
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda lines: lines,
-            delta=1E-6, lastline=None):
+            delta=1E-6, lastline=None, check_all_columns=False):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -212,7 +217,7 @@ class CalculatorTestCase(unittest.TestCase):
             for exp, got in zip(make_comparable(expected_lines),
                                 make_comparable(actual_lines)):
                 if delta:
-                    self.practicallyEqual(exp, got, delta)
+                    self.practicallyEqual(exp, got, delta, check_all_columns)
                 else:
                     self.assertEqual(exp, got)
         except AssertionError:

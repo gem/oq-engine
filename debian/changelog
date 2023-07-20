@@ -1,3 +1,17 @@
+  [Astha Poudel, Anirudh Rao, Paolo Tormene]
+  * Updates to the infrastructure risk assessment and connectivity analysis
+    module to incorporate additional performance metrics including Complete
+    Connectivity Loss (CCL), Partial Connectivity Loss (PCL), Weighted
+    Connectivity Loss (WCL), and Efficiency Loss (EL) based on
+    Poudel et al. (2023).
+  * Implemented the possibility of including both weighted and unweighted
+    graphs for infrastructure risk.
+  * Implemented the possibility of including simple undirected graphs, simple
+    directed graphs, multigraphs and multi-directed graphs.
+  * Implemented the Bradley (2012) cross-correlation equations between peak
+    ground velocity (PGV), peak ground acceleration (PGA), and 5% damped
+    pseudo-spectral acceleration (SA)
+
   [Michele Simionato]
   * Moved the generation of the hazard curves from the GMFs in post_execute
   * Fixed the error "You must supply a list of magnitudes as 2-digit strings"

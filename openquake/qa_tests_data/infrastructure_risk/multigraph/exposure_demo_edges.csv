@@ -1,0 +1,7 @@
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weight,parent_id,graphtype
+E1,22.9394,40.62296,road,1,edge,D,C,NA,2,E1,multi
+E2,22.93332,40.62799,road,1,edge,C,A,NA,5,E2,multi
+E3,22.95123,40.62884,road,1,edge,B,D,NA,2,E3,multi
+E4,22.93923,40.63676,bridge,1,edge,A,E,NA,2,E4,multi
+E5,22.951,40.63516,road,1,edge,E,B,NA,2,E5,multi
+E6,22.93923,40.63676,road,1,edge,A,E,NA,5,E6,multi
