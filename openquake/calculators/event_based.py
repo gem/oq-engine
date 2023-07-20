@@ -219,7 +219,7 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     t0 = time.time()
     n = 0
-    for proxies in block_splitter(allproxies, 300_000, get_nsites):
+    for proxies in block_splitter(allproxies, 500_000, get_nsites):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
