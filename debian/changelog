@@ -1,3 +1,10 @@
+python3-oq-engine (3.16.6-1~xenial01) xenial; urgency=low
+
+  [Paolo Tormene]
+  * Fixed bug #8907: unable to run ClassicalDamage demo on Windows
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org> Thu, 20 Jul 2023 12:51:10 +0000
+
 python3-oq-engine (3.16.5-1~xenial01) xenial; urgency=low
 
   [Matteo Nastasi]
