@@ -600,9 +600,10 @@ References
    network structure, dynamics, and function using NetworkX, in Proceedings of
    the 7th Python in Science Conference (SciPy2008), Gäel Varoquaux, Travis
    Vaught, and Jarrod Millman (Eds), (Pasadena, CA USA), pp. 11–15
-2. Poudel A, Pitilakis K, Silva V, Rao A (2023) Infrastructure Seismic Risk
-   Assessment: An Overview and Integration to Contemporary Open Tool Towards
-   Global Usage, Bulletin of Earthquake Engineering, Under Review
+2. Poudel, A., Pitilakis, K., Silva, V. and Rao, A., (2023). Infrastructure
+   seismic risk assessment: an overview and integration to contemporary open
+   tool towards global usage. Bulletin of Earthquake Engineering.
+   DOI: https://doi.org/10.1007/s10518-023-01693-z
 3. Poudel A, Pitilakis K (2023) Systemic Vulnerability and Risk Assessment of
    Critical Infrastructures and Systems at Urban Scale: Prospect towards Global
    Usage, Deliverable ESR 4.5, URBASIS-EU project, Under Review
