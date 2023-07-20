@@ -269,3 +269,9 @@ class test_make_local_relief_raster(unittest.TestCase):
             self.lrr.GetRasterBand(1).ReadAsArray(),
             self.test_relief_raster.GetRasterBand(1).ReadAsArray(),
         )
+
+    def tearDown(self):
+        # NOTE: On Windows, trying to remove the temporary outfile raises
+        #       PermissionError: [WinError 32] The process cannot access the
+        #       file because it is being used by another process
+        pass
