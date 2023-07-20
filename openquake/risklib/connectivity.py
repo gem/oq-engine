@@ -55,7 +55,7 @@ def get_exposure_df(dstore):
 
 def classify_nodes(exposure_df):
     # Classifying the nodes accodingly to compute performance indicator in
-    # global and local scale
+    # global and local level
 
     # TAZ is the acronym of "Traffic Analysis Zone"
     # user can write both as well
@@ -304,13 +304,7 @@ def cleanup_graph(G_original, event_damage_df, g_type):
             (u, v) for (u, v, data) in G.edges(data=True)
             if data['id'] in nonfunctional_edges_df.index.to_list()]
 
-    # nonfunctional_edge_tuples = list(
-    #     zip(nonfunctional_edges_df.start_node,
-    #         nonfunctional_edges_df.end_node)
-    # )
-
     G.remove_edges_from(edges_to_remove)
-    # G.remove_edges_from(nonfunctional_edge_tuples)
     G.remove_nodes_from(nonfunctional_nodes_df.index.to_list())
 
     return G
@@ -561,7 +555,6 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     # For example, traffic analysis zone in transportation network. This
     # calculates, efficiency loss (EL),
     # weighted connectivity loss (WCL),partial connectivity loss(PCL).
-    # Simple connectivity loss (SCL) doesnt make any sense in this case.
 
     # To store the information of the performance indicators at connectivity
     # level
@@ -593,13 +586,6 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
                 if nx.has_path(G_original, j, i):
                     count = count + 1
         pcl_table.at[i, 'NS0'] = count
-
-    # Code below is not giving correct answer because the path is checked from
-    # a TAZ to every other TAZ
-    # but this will include itself as well. in the above code it is done by
-    # specifying (if i !=j)
-    # pcl_table['NS0'] = [sum(nx.has_path(G_original, j, i) for j in TAZ_nodes)
-    # for i in TAZ_nodes]
 
     att = nx.get_edge_attributes(G_original, 'weight')
     wcl_table = calc_weighted_connectivity_loss(
