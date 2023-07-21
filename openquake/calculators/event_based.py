@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import math
 import time
 import os.path
 import logging
@@ -58,6 +59,9 @@ TWO32 = numpy.float64(2 ** 32)
 get_nsites = operator.itemgetter('nsites')
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+
+def rup_weight(rup):
+    return math.sqrt(rup['nsites'])
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -219,13 +223,14 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     t0 = time.time()
     n = 0
-    for proxies in block_splitter(allproxies, cmaker.maxsites, get_nsites):
+    maxw = sum(rup_weight(p) for p in allproxies) / 10
+    for proxies in block_splitter(allproxies, maxw, rup_weight):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and sum(
-                r['nsites'] for r in rem) > 2 * cmaker.maxsites:
+                rup_weight(r) for r in rem) > 2 * maxw:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, dstore
             yield gen_event_based, rem[half:], cmaker, dstore
@@ -324,7 +329,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        cmaker.maxsites = max(maxsites / 10, 100_000)
         for block in block_splitter(proxies, maxsites, get_nsites):
             smap.submit((block, cmaker, dstore))
     return smap
