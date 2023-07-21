@@ -269,7 +269,7 @@ def view_rup_info(token, dstore, maxrows=25):
     """
     if not code2cls:
         code2cls.update(source.rupture.BaseRupture.init())
-    fields = ['code', 'n_occ', 'mag']
+    fields = ['code', 'n_occ', 'nsites', 'mag']
     rups = dstore.read_df('ruptures', 'id')[fields]
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
