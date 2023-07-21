@@ -179,7 +179,7 @@ def rolling_raster_operation(
         if write == True:
             raise ValueError("Must specify raster outfile")
         else:
-            outfile_handler, outfile = tempfile.mkstemp()
+            outfile_handler, outfile = tempfile.mkstemp(suffix='.tiff')
 
     ds = gdal.Open(in_raster)
 
