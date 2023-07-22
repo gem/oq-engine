@@ -459,7 +459,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # testing slowest ruptures
         df = view('rup_info', self.calc.datastore)
-        self.assertEqual(list(df.columns), ['n_occ', 'mag', 'nsites',
+        self.assertEqual(list(df.columns), ['n_occ', 'nsites', 'mag',
                                             'rrup', 'time', 'surface'])
 
     def test_case_23(self):

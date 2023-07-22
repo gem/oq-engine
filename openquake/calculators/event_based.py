@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import math
 import time
 import os.path
 import logging
@@ -55,10 +56,12 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
-
+get_nsites = operator.itemgetter('nsites')
 rup_dt = numpy.dtype(
-    [('rup_id', I64), ('nsites', U16), ('rrup', F32), ('time', F32),
-    ('task_no', U16)])
+    [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+
+def rup_weight(rup):
+    return math.ceil(rup['nsites'] / 100)
 
 # ######################## hcurves_from_gmfs ############################ #
 
@@ -218,15 +221,16 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     Launcher of event_based tasks
     """
-    blocksize = 50
     t0 = time.time()
     n = 0
-    for proxies in block_splitter(allproxies, blocksize):
+    maxw = sum(rup_weight(p) for p in allproxies) / 10
+    for proxies in block_splitter(allproxies, maxw, rup_weight):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
-        if dt > cmaker.oq.time_per_task and len(rem) > 10:
+        if dt > cmaker.oq.time_per_task and sum(
+                rup_weight(r) for r in rem) > 2 * maxw:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, dstore
             yield gen_event_based, rem[half:], cmaker, dstore
@@ -275,8 +279,7 @@ def event_based(proxies, cmaker, dstore, monitor):
             with cmon:
                 df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
-            times.append((proxy['id'], len(computer.ctx.sids),
-                          computer.ctx.rrup.min(), dt))
+            times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
     if sum(len(df) for df in alldata):
         gmfdata = strip_zeros(pandas.concat(alldata))
@@ -317,14 +320,16 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if save_tmp:
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
+    nsites = sum(p['nsites'] for p in allproxies)
+    maxsites = nsites / (oq.concurrent_tasks or 1)
+    logging.info('maxsites = {:_d}'.format(round(maxsites)))
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        hint = nr / (oq.concurrent_tasks or 1)
-        for block in block_splitter(proxies, hint):
+        for block in block_splitter(proxies, maxsites, get_nsites):
             smap.submit((block, cmaker, dstore))
     return smap
 
