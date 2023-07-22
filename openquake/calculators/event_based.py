@@ -61,7 +61,7 @@ rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
 def rup_weight(rup):
-    return math.sqrt(rup['nsites'])
+    return math.ceil(rup['nsites'] / 100)
 
 # ######################## hcurves_from_gmfs ############################ #
 
