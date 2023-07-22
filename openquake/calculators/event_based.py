@@ -223,7 +223,7 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     t0 = time.time()
     n = 0
-    maxw = sum(rup_weight(p) for p in allproxies) / 10
+    maxw = max(sum(rup_weight(p) for p in allproxies) / 10, 100_000)
     for proxies in block_splitter(allproxies, maxw, rup_weight):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
