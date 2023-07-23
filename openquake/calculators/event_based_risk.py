@@ -298,8 +298,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         if oq.calculation_mode == 'ebrisk':
             oq.ground_motion_fields = False
-            logging.warning('You should be using the event_based_risk '
-                            'calculator, not ebrisk!')
         parent = self.datastore.parent
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
