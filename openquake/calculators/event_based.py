@@ -222,13 +222,13 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     t0 = time.time()
     n = 0
-    for proxies in block_splitter(allproxies, 1_000_000, rup_weight):
+    for proxies in block_splitter(allproxies, 800_000, rup_weight):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and sum(
-                rup_weight(r) for r in rem) > 2_000_000:
+                rup_weight(r) for r in rem) > 1_000_000:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, dstore
             yield gen_event_based, rem[half:], cmaker, dstore
