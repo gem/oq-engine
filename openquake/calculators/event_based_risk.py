@@ -254,7 +254,7 @@ def ebrisk(proxies, cmaker, dstore, monitor):
     """
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
-            proxies, 10_000, event_based.rup_weight):
+            proxies, 20_000, event_based.rup_weight):
         dic = event_based.event_based(block, cmaker, dstore, monitor)
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
