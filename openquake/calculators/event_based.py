@@ -228,7 +228,7 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and sum(
-                rup_weight(r) for r in rem) > 15_000:
+                rup_weight(r) for r in rem) > 12_000:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, dstore
             yield gen_event_based, rem[half:], cmaker, dstore
