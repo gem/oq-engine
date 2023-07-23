@@ -224,24 +224,21 @@ def gen_outputs(df, crmodel, rng, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
-    slices = performance.split_slices(df.eid.to_numpy(), 1_000_000)
+    sids = df.sid.to_numpy()
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
         for taxo in assets.taxonomy.unique():
             adf = assets[assets.taxonomy == taxo]
-            for start, stop in slices:
-                gdf = df[start:stop]
-                with fil_mon:
-                    # *crucial* for the performance of the next step
-                    gmf_df = gdf[numpy.isin(gdf.sid.to_numpy(),
-                                            adf.site_id.to_numpy())]
-                if len(gmf_df) == 0:  # common enough
-                    continue
-                with mon_risk:
-                    out = crmodel.get_output(
-                        adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-                yield out
+            with fil_mon:
+                # *crucial* for the performance of the next step
+                gmf_df = df[numpy.isin(sids, adf.site_id.to_numpy())]
+            if len(gmf_df) == 0:  # common enough
+                continue
+            with mon_risk:
+                out = crmodel.get_output(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+            yield out
 
 
 def ebrisk(proxies, cmaker, dstore, monitor):
