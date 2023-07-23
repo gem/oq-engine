@@ -318,7 +318,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if save_tmp:
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
-    totw = sum(rup_weight['nsites'] for p in allproxies) / (
+    totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
