@@ -25,10 +25,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import (
-    hdf5, performance, parallel, general, python3compat)
+from openquake.baselib import hdf5, performance, general, python3compat
 from openquake.hazardlib import stats, InvalidFile
-from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
