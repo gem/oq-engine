@@ -278,7 +278,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     Returns the distance scaling term defined in equation 3
     """
     cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # No path correction applied
+    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # Make NaNs from smt ctx equal zero
     x_ij = cctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
 
@@ -304,7 +304,7 @@ def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     Returns the distance attenuation term
     """
     cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # No path correction applied
+    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # Make NaNs from smt ctx equal zero
     x_ij = cctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
     g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
@@ -328,7 +328,7 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     as described in equation 6
     """
     cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # No path correction applied
+    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # Make NaNs from smt ctx equal zero
     x_ij = cctx.rrup
     # Get r_ij - distance for geometric spreading (equations 4 & 5)
     c_m = np.minimum(cctx.mag, CONSTANTS["m_c"])
@@ -355,7 +355,7 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     of :class:`ZhaoEtAl2016SSlabPErg`. 
     """
     cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # For if no path correction applied
+    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # Make NaNs from smt ctx equal zero
     # Check if need to apply non-ergodic path effects
     if volc_arc_str is not None:
         # Get distance traversed per travel path through volcanic zones (rvolc),
