@@ -550,6 +550,7 @@ class ContextMaker(object):
         dd['probs_occur'] = numpy.zeros(np)
         dd['clon'] = numpy.float64(0.)
         dd['clat'] = numpy.float64(0.)
+        dd['rvolc'] = numpy.float64(0.)
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
@@ -559,8 +560,8 @@ class ContextMaker(object):
             for par in dd:
                 if par == 'rup_id':
                     val = getattr(ctx, par)
-                elif par == 'non_erg_path_corr':
-                    val = True
+                if par == 'rvolc':
+                    val = numpy.float64(0.) # Fix to zero prior to ray-tracing 
                 else:
                     val = getattr(ctx, par, numpy.nan)
                 if par == 'closest_point':
