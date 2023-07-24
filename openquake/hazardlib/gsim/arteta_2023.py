@@ -21,6 +21,8 @@ Module exports :class:`ArtetaEtAl2023_Vs30`
                :class:`ArtetaEtAl2023`
 """
 import numpy as np
+import copy
+
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
@@ -70,7 +72,9 @@ def _compute_RVolc_term(C, rvolc):
     """
     Computes the term of attenuation by the path portion crossing the volcanic region
     """
-    f_RVolc = C["Tetha6"]*rvolc
+    rvolc_c = copy.copy(rvolc)
+    rvolc_c[np.isnan(rvolc_c)] = 0. # If no rvolc fix to zero (smtk use)
+    f_RVolc = C["Tetha6"]*rvolc_c
     return f_RVolc
 
 
