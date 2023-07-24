@@ -226,7 +226,7 @@ def gen_outputs(df, crmodel, rng, monitor):
             adf = assets[assets.taxonomy == taxo]
             with fil_mon:
                 # *crucial* for the performance of the next step
-                gmf_df = df[numpy.isin(sids, adf.site_id.to_numpy())]
+                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
             if len(gmf_df) == 0:  # common enough
                 continue
             with mon_risk:
