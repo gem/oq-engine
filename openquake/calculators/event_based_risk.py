@@ -177,7 +177,10 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             else:
                 data = dstore['gmf_data/' + col][s0+start:s0+stop]
                 dic[col] = data[idx - start]
-    return event_based_risk(pandas.DataFrame(dic), oqparam, monitor)
+    df = pandas.DataFrame(dic)
+    for s0, s1 in performance.split_slices(
+            dic['eid'], oqparam.max_gmvs_per_task):
+        yield event_based_risk(df[s0:s1], oqparam, monitor)
 
 
 def event_based_risk(df, oqparam, monitor):
