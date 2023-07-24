@@ -269,7 +269,7 @@ def view_rup_info(token, dstore, maxrows=25):
     """
     if not code2cls:
         code2cls.update(source.rupture.BaseRupture.init())
-    fields = ['code', 'n_occ', 'mag']
+    fields = ['code', 'n_occ', 'nsites', 'mag']
     rups = dstore.read_df('ruptures', 'id')[fields]
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
@@ -1207,8 +1207,7 @@ def view_risk_by_rup(token, dstore):
     rdf = dstore.read_df('ruptures', 'id')
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = loss_by_rup.join(rdf).join(info)[
-        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2',
-         'nsites', 'rrup']]
+        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2', 'rrup']]
     for field in df.columns:
         if field not in ('mag', 'n_occ'):
             df[field] = numpy.round(F64(df[field]), 1)

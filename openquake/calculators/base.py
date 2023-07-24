@@ -1239,7 +1239,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
         eff_time = 0
-    dstore.create_df('gmf_data', items, 'gzip')
+    dstore.create_df('gmf_data', items)  # not gzipping for speed
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
                      effective_time=eff_time)
