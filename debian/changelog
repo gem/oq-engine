@@ -1,6 +1,7 @@
   [Michele Simionato]
   * Reduced memory consumption in the master node in post_risk
-  * Reduced slow tasks in the ebrisk calculator
+  * Reduced slow tasks in the ebrisk calculator and memory consumption
+    in the master node
 
   [Paolo Tormene]
   * Fixed bug #8907: unable to run ClassicalDamage demo on Windows
