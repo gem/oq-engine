@@ -277,9 +277,7 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     """
     Returns the distance scaling term defined in equation 3
     """
-    cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # If no rvolc fix to zero (smt use)
-    x_ij = cctx.rrup
+    x_ij = ctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
 
     # Geometric attenuation scaling described in equation 6
@@ -290,11 +288,11 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store = None,
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
                                       x_ij[idx] + gn_exp)    
     # equation 5
-    c_m = np.minimum(cctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     # equation 4
     r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
     return C["gcr"] * np.log(r_ij) + C["gcrL"] * np.log(x_ij + 200.0) +\
-        g_n + C["ecr"] * x_ij + C["ecrV"] * cctx.rvolc + C["gamma_S"]
+        g_n + C["ecr"] * x_ij + C["ecrV"] * ctx.rvolc + C["gamma_S"]
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
@@ -303,9 +301,7 @@ def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     """
     Returns the distance attenuation term
     """
-    cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # If no rvolc fix to zero (smtk use)
-    x_ij = cctx.rrup
+    x_ij = ctx.rrup
     gn_exp = np.exp(C["c1"] + 6.5 * C["c2"])
     g_n = C["gcrN"] * np.log(CONSTANTS["xcro"] + 30. + gn_exp) *\
         np.ones_like(x_ij)
@@ -313,11 +309,11 @@ def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     if np.any(idx):
         g_n[idx] = C["gcrN"] * np.log(CONSTANTS["xcro"] +
                                       x_ij[idx] + gn_exp)
-    c_m = np.minimum(cctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     r_ij = CONSTANTS["xcro"] + x_ij + np.exp(C["c1"] + C["c2"] * c_m)
     return (C["gUM"] * np.log(r_ij) +
             C["gcrL"] * np.log(x_ij + 200.0) +
-            g_n + C["eum"] * x_ij + C["ecrV"] * cctx.rvolc + C["gamma_S"])
+            g_n + C["eum"] * x_ij + C["ecrV"] * ctx.rvolc + C["gamma_S"])
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
@@ -327,14 +323,12 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     Returns distance scaling term, dependent on top of rupture depth,
     as described in equation 6
     """
-    cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # If no rvolc fix to zero (smtk use)
-    x_ij = cctx.rrup
+    x_ij = ctx.rrup
     # Get r_ij - distance for geometric spreading (equations 4 & 5)
-    c_m = np.minimum(cctx.mag, CONSTANTS["m_c"])
+    c_m = np.minimum(ctx.mag, CONSTANTS["m_c"])
     r_ij = CONSTANTS["xinto"] + x_ij + np.exp(C["alpha"] + C["beta"] * c_m)
     # Get factors common to both shallow and deep
-    dterm = C["gint"] * np.log(r_ij) + C["eintV"] * cctx.rvolc + C["gammaint"]
+    dterm = C["gint"] * np.log(r_ij) + C["eintV"] * ctx.rvolc + C["gammaint"]
     dterm += np.where(
         ctx.ztor < 25.,
         # Shallow events have geometric and anelastic attenuation term
