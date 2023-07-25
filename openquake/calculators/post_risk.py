@@ -243,7 +243,9 @@ def build_store_agg(dstore, rbe_df, num_events):
     if dmgs:
         aggnumber = dstore['agg_values']['number']
     # double loop to avoid running out of memory
-    for agg_id in rbe_df.agg_id.unique():
+    agg_ids = rbe_df.agg_id.unique()
+    logging.info("Performing %d aggregations", len(agg_ids))
+    for agg_id in agg_ids:
         gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
         for (rlz_id, loss_id), df in gb:
             ne = num_events[rlz_id]
@@ -269,7 +271,7 @@ def build_store_agg(dstore, rbe_df, num_events):
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
         items = []
-        for agg_id in rbe_df.agg_id.unique():
+        for agg_id in agg_ids:
             gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
             for (rlz_id, loss_id), df in gb:
                 data = {kind: df[kind].to_numpy() for kind in loss_kinds}
