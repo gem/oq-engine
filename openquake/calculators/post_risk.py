@@ -242,19 +242,24 @@ def build_store_agg(dstore, rbe_df, num_events):
     dmgs = [col for col in columns if col.startswith('dmg_')]
     if dmgs:
         aggnumber = dstore['agg_values']['number']
-    gb = rbe_df.groupby(['agg_id', 'rlz_id', 'loss_id'])
-    for (agg_id, rlz_id, loss_id), df in gb:
-        ne = num_events[rlz_id]
-        aggrisk['agg_id'].append(agg_id)
-        aggrisk['rlz_id'].append(rlz_id)
-        aggrisk['loss_id'].append(loss_id)
-        if dmgs:
-            # infer the number of buildings in nodamage state
-            ndamaged = sum(df[col].sum() for col in dmgs)
-            aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
-        for col in columns:
-            agg = df[col].sum()
-            aggrisk[col].append(agg * tr if oq.investigation_time else agg/ne)
+    # double loop to avoid running out of memory
+    agg_ids = rbe_df.agg_id.unique()
+    logging.info("Performing %d aggregations", len(agg_ids))
+    for agg_id in agg_ids:
+        gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
+        for (rlz_id, loss_id), df in gb:
+            ne = num_events[rlz_id]
+            aggrisk['agg_id'].append(agg_id)
+            aggrisk['rlz_id'].append(rlz_id)
+            aggrisk['loss_id'].append(loss_id)
+            if dmgs:
+                # infer the number of buildings in nodamage state
+                ndamaged = sum(df[col].sum() for col in dmgs)
+                aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
+            for col in columns:
+                agg = df[col].sum()
+                aggrisk[col].append(
+                    agg * tr if oq.investigation_time else agg/ne)
     fix_dtypes(aggrisk)
     aggrisk = pandas.DataFrame(aggrisk)
     dstore.create_df(
@@ -266,9 +271,11 @@ def build_store_agg(dstore, rbe_df, num_events):
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
         items = []
-        for (agg_id, rlz_id, loss_id), df in gb:
-            data = {kind: df[kind].to_numpy() for kind in loss_kinds}
-            items.append([(agg_id, rlz_id, loss_id), data])
+        for agg_id in agg_ids:
+            gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
+            for (rlz_id, loss_id), df in gb:
+                data = {kind: df[kind].to_numpy() for kind in loss_kinds}
+                items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
             build_aggcurves, (items, builder),
             concurrent_tasks=oq.concurrent_tasks,

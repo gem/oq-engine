@@ -56,7 +56,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
-get_nsites = operator.itemgetter('nsites')
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
@@ -223,14 +222,13 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     """
     t0 = time.time()
     n = 0
-    maxw = max(sum(rup_weight(p) for p in allproxies) / 10, 100_000)
-    for proxies in block_splitter(allproxies, maxw, rup_weight):
+    for proxies in block_splitter(allproxies, 10_000, rup_weight):
         n += len(proxies)
         yield event_based(proxies, cmaker, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and sum(
-                rup_weight(r) for r in rem) > 2 * maxw:
+                rup_weight(r) for r in rem) > 12_000:
             half = len(rem) // 2
             yield gen_event_based, rem[:half], cmaker, dstore
             yield gen_event_based, rem[half:], cmaker, dstore
@@ -303,9 +301,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
     set_mags(oq, dstore)
-    nr = len(dstore['ruptures'])
-    logging.info('Reading {:_d} ruptures'.format(nr))
-    allproxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
+    rups = dstore['ruptures'][:]
+    logging.info('Reading {:_d} ruptures'.format(len(rups)))
+    logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
+    allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
         # this is meant to be used in conditioned scenario calculations with
         # a single rupture; we are taking the first copy of the rupture
@@ -320,16 +319,16 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if save_tmp:
         save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
-    nsites = sum(p['nsites'] for p in allproxies)
-    maxsites = nsites / (oq.concurrent_tasks or 1)
-    logging.info('maxsites = {:_d}'.format(round(maxsites)))
+    totw = sum(rup_weight(p) for p in allproxies) / (
+        oq.concurrent_tasks or 1)
+    logging.info('totw = {:_d}'.format(round(totw)))
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for block in block_splitter(proxies, maxsites, get_nsites):
+        for block in block_splitter(proxies, totw, rup_weight):
             smap.submit((block, cmaker, dstore))
     return smap
 

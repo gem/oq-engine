@@ -25,10 +25,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import (
-    hdf5, performance, parallel, general, python3compat)
+from openquake.baselib import hdf5, performance, general, python3compat
 from openquake.hazardlib import stats, InvalidFile
-from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
@@ -179,13 +177,10 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             else:
                 data = dstore['gmf_data/' + col][s0+start:s0+stop]
                 dic[col] = data[idx - start]
-        df = pandas.DataFrame(dic)
-    max_gmvs = oqparam.max_gmvs_per_task
-    if len(df) <= max_gmvs:
-        yield event_based_risk(df, oqparam, monitor)
-    else:
-        for s0, s1 in performance.split_slices(df.eid.to_numpy(), max_gmvs):
-            yield event_based_risk, df[s0:s1], oqparam
+    df = pandas.DataFrame(dic)
+    for s0, s1 in performance.split_slices(
+            dic['eid'], oqparam.max_gmvs_per_task):
+        yield event_based_risk(df[s0:s1], oqparam, monitor)
 
 
 def event_based_risk(df, oqparam, monitor):
@@ -226,25 +221,21 @@ def gen_outputs(df, crmodel, rng, monitor):
     mon_risk = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
     ass_mon = monitor('reading assets', measuremem=False)
-    slices = performance.split_slices(df.eid.to_numpy(), 1_000_000)
+    sids = df.sid.to_numpy()
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        taxos = assets.taxonomy.unique()
-        for taxo in taxos:
+        for taxo in assets.taxonomy.unique():
             adf = assets[assets.taxonomy == taxo]
-            for start, stop in slices:
-                gdf = df[start:stop]
-                with fil_mon:
-                    # *crucial* for the performance of the next step
-                    gmf_df = gdf[numpy.isin(gdf.sid.to_numpy(),
-                                            adf.site_id.to_numpy())]
-                if len(gmf_df) == 0:  # common enough
-                    continue
-                with mon_risk:
-                    out = crmodel.get_output(
-                        adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-                yield out
+            with fil_mon:
+                # *crucial* for the performance of the next step
+                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+            if len(gmf_df) == 0:  # common enough
+                continue
+            with mon_risk:
+                out = crmodel.get_output(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+            yield out
 
 
 def ebrisk(proxies, cmaker, dstore, monitor):
@@ -255,11 +246,12 @@ def ebrisk(proxies, cmaker, dstore, monitor):
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
-    dic = event_based.event_based(proxies, cmaker, dstore, monitor)
-    if len(dic['gmfdata']) == 0:  # no GMFs
-        return {}
-    gmf_df = pandas.DataFrame(dic['gmfdata'])
-    return event_based_risk(gmf_df, cmaker.oq, monitor)
+    for block in general.block_splitter(
+            proxies, 20_000, event_based.rup_weight):
+        dic = event_based.event_based(block, cmaker, dstore, monitor)
+        if len(dic['gmfdata']):
+            gmf_df = pandas.DataFrame(dic['gmfdata'])
+            yield event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -299,8 +291,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         if oq.calculation_mode == 'ebrisk':
             oq.ground_motion_fields = False
-            logging.warning('You should be using the event_based_risk '
-                            'calculator, not ebrisk!')
         parent = self.datastore.parent
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
