@@ -1943,7 +1943,8 @@ treaty type: proportional or non proportional.
 specified for each policy covered by the treaty, and the retention is
 calculated as 1 minus all the fractions specified in the multiple
 layers of proportional treaties. For each proportional treaty it is
-possible to define the ``max_cession_event``.
+possible to define the ``max_cession_event``. The most common types of
+proportional treaties are "Quota Share" and "Surplus".
 
 *Non-proportional* treaties are identified by the parameter
 ``type="wxlr"`` or ``type="catxl"``. For each treaty it is required to
@@ -2030,14 +2031,13 @@ by the ``policy`` field in the exposure model.
 In this example the ``Limit`` corresponds to the ``liability`` of each policy, while
 the ``Deductible`` refers to the ``deductible`` in the engine. Both columns indicate
 the absolute values using the same units as the exposed values in the exposure model.
-There are two proportional reinsurance treaties (namely ``QuotaShare`` and ``Surplus``),
+There are two proportional reinsurance treaties (namely ``treaty_1`` and ``treaty_2``),
 and the values indicated in each column represent the fraction of cession under each treaty.
-For example, for "pol_1" the "QuotaShare" ceeds 0.1 of the losses and there is no cession
-under the "Surplus" treaty; therefore the retention corresponding to the proportional 
-treaties for "pol_1" will be (1 - 0.1 - 0. = 0.9).
-In the case of non-proportional treaties, "pol_1" is allocated to the ``WXLR``
-(an excess of loss per risk) treaty, and to the ``CatXL1`` (a catastrophic excess of
-loss per event) treaty. This policy is not covered by the ``CatXL2`` treaty.
+For example, for "p1_a1" the "treaty_1" ceeds 0.1 of the losses and there is a cession
+of 0.2 under the "treaty_2"; therefore the retention corresponding to the proportional 
+treaties for "p1_a1" will be (1 - 0.1 - 0.2 = 0.7).
+In the case of non-proportional treaties, "p1_a1" is allocated to the ``xlr1``
+(an excess of loss per risk) treaty. This policy is not covered by the ``catxl`` treaties.
 
 *Note: treaties must be written in a given order, keeping proportional
 ones first, then non-proportional ones of type "wxlr" and finally those
