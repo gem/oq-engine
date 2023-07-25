@@ -107,6 +107,7 @@ cov_Y_Y_yD:
 """
 
 import logging
+from multiprocessing import get_logger
 from functools import partial
 from dataclasses import dataclass
 
@@ -619,10 +620,17 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
 
     [gsim] = cmaker_Y.gsims
-    logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
-                 "Nominal bias stddev: %.3f",
-                 gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
-                 target_imt, nominal_bias_mean, nominal_bias_stddev)
+
+    logger = get_logger()
+    formatter = logging.Formatter('[%(asctime)s %(levelname)s; %(name)s] [%(processName)s] %(message)s')
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    logger.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
+                "Nominal bias stddev: %.3f",
+                gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
+                target_imt, nominal_bias_mean, nominal_bias_stddev)
 
     mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]  # 0=gsim_idx
     # (4, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
