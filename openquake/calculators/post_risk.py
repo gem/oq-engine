@@ -242,8 +242,13 @@ def build_store_agg(dstore, rbe_df, num_events):
     dmgs = [col for col in columns if col.startswith('dmg_')]
     if dmgs:
         aggnumber = dstore['agg_values']['number']
-    gb = rbe_df.groupby(['agg_id', 'rlz_id', 'loss_id'])
-    for (agg_id, rlz_id, loss_id), df in gb:
+    # not using groupby to avoid running out of memory
+    triples = numpy.unique(
+        rbe_df[['agg_id', 'rlz_id', 'loss_id']].to_numpy(), axis=0)
+    for agg_id, rlz_id, loss_id in triples:
+        df = rbe_df[(rbe_df.agg_id == agg_id) &
+                    (rbe_df.rlz_id == rlz_id) &
+                    (rbe_df.loss_id == loss_id)]
         ne = num_events[rlz_id]
         aggrisk['agg_id'].append(agg_id)
         aggrisk['rlz_id'].append(rlz_id)
@@ -266,7 +271,10 @@ def build_store_agg(dstore, rbe_df, num_events):
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
         items = []
-        for (agg_id, rlz_id, loss_id), df in gb:
+        for agg_id, rlz_id, loss_id in triples:
+            df = rbe_df[(rbe_df.agg_id == agg_id) &
+                        (rbe_df.rlz_id == rlz_id) &
+                        (rbe_df.loss_id == loss_id)]
             data = {kind: df[kind].to_numpy() for kind in loss_kinds}
             items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
