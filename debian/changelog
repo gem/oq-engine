@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Reduced slow tasks in the ebrisk calculator
+
   [Paolo Tormene]
   * Fixed bug #8907: unable to run ClassicalDamage demo on Windows
 
