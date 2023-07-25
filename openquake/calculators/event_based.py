@@ -301,9 +301,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
     set_mags(oq, dstore)
-    nr = len(dstore['ruptures'])
-    logging.info('Reading {:_d} ruptures'.format(nr))
-    allproxies = [RuptureProxy(rec) for rec in dstore['ruptures'][:]]
+    rups = dstore['ruptures'][:]
+    logging.info('Reading {:_d} ruptures'.format(len(rups)))
+    logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
+    allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
         # this is meant to be used in conditioned scenario calculations with
         # a single rupture; we are taking the first copy of the rupture
