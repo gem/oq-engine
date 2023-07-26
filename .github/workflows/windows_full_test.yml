@@ -1,4 +1,4 @@
-name: Windows test of OpenQuake Engine
+name: Windows full tests of OpenQuake Engine
 
 on:
   workflow_dispatch:
