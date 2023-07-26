@@ -7,8 +7,6 @@ on:
         description: Git Ref
         default: master
         required: true
-  schedule:
-    - cron: "00 22 * * *"
   push:
     branches: [ ae-win_numba ]
 
@@ -54,14 +52,14 @@ jobs:
           echo "Branch environment"
           Write-Host $Env:BRANCH
       - name: Install engine on developer mode
-        env: 
+        env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set PIP_DEFAULT_TIMEOUT=100
           python -m pip install pip --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-          write-Host "Branch to test $Env:BRANCH " 
+          write-Host "Branch to test $Env:BRANCH "
           if ($Env:BRANCH)
           {
             Write-Host "Install with workflow_dispatch"
@@ -74,13 +72,12 @@ jobs:
             Write-Host "python install.py devel "
             python install.py devel
           }
-      - name: Test sep, kotha_2020 and all calculators and run a demo to test installation
+      - name: Run all engine tests
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           #
           #python -c 'import fiona'
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          oq engine --run D:\a\oq-engine\oq-engine\demos\risk\ClassicalDamage\job_hazard.ini
           python -m pip install pytest
-          pytest -vs --color=yes D:\a\oq-engine\oq-engine\openquake\sep D:\a\oq-engine\oq-engine\openquake\hazardlib\tests\gsim\kotha_2020_test.py D:\a\oq-engine\oq-engine\openquake\calculators
+          pytest -vs --color=yes D:\a\oq-engine\oq-engine\openquake
