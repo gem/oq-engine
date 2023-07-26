@@ -349,7 +349,6 @@ def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store = None,
     of :class:`ZhaoEtAl2016SSlabPErg`. 
     """
     cctx = copy.copy(ctx)
-    cctx.rvolc[np.isnan(cctx.rvolc)] = 0. # If no rvolc fix to zero (smtk use)
     # Check if need to apply non-ergodic path effects
     if volc_arc_str is not None:
         # Get distance traversed per travel path through volcanic zones (rvolc),
