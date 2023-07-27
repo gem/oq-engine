@@ -78,6 +78,8 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           Write-Host "Run all demos having only job.ini"
           $iniFilePaths = Get-ChildItem "D:\a\oq-engine\oq-engine\openquake\demos" -Recurse -Filter job.ini
           foreach($iniFilePath in $iniFilePaths) {
