@@ -75,6 +75,7 @@ jobs:
             python install.py devel
           }
       - name: Run all demos
+        shell: pwsh
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
