@@ -78,8 +78,19 @@ jobs:
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
-          Get-ChildItem "D:\a\oq-engine\oq-engine\openquake\demos" -Recurse -Filter job.ini | ForEach-Object { oq engine --run $_.FullName --exports xml,hdf5 -p pointsource_distance=0 -r }
-          Get-ChildItem "D:\a\oq-engine\oq-engine\openquake\demos" -Recurse -Directory | ForEach-Object { $demoDir=$_.FullName; Get-ChildItem $_.FullName -Filter job_hazard.ini | ForEach-Object { oq engine --run $demoDir\job_hazard.ini --exports npz -p pointsource_distance=0; oq engine --run $demoDir\job_risk.ini --hc -1 } }
+          Write-Host "Run all demos having only job.ini"
+          $iniFilePaths = Get-ChildItem "D:\a\oq-engine\oq-engine\openquake\demos" -Recurse -Filter job.ini
+          foreach($iniFilePath in $iniFilePaths) {
+            oq engine --run $iniFilePath.FullName --exports xml,hdf5 -p pointsource_distance=0 -r
+          }
+          Write-Host "Run all demos having only job_hazard.ini and job_risk.ini"
+          $demoDirs = Get-ChildItem "D:\a\oq-engine\oq-engine\openquake\demos" -Recurse -Directory
+          foreach($demoDir in $demoDirs) {
+            $jobHazardPaths = Get-ChildItem $demoDir -Filter job_hazard.ini
+            foreach($jobHazardPath in $jobHazardPaths) {
+              oq engine --run $jobHazardPath.FullName --exports npz -p pointsource_distance=0; oq engine --run $demoDir.FullName\job_risk.ini --hc -1
+            }
+          }
       - name: Run all engine tests
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
