@@ -88,6 +88,7 @@ jobs:
         export MPLBACKEND=Agg
         pytest -vs --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py openquake/sep/tests/test_utils.py openquake/sep
     - name: Run risk_test
+      run: |
         source ~/openquake/bin/activate
         oq dbserver start
         oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
