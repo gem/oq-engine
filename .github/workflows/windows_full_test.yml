@@ -72,6 +72,12 @@ jobs:
             Write-Host "python install.py devel "
             python install.py devel
           }
+      - name: Run all demos
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          # FIXME: why those different exports? (using the same as in run-demos.sh)
+          Get-Children "D:\a\oq-engine\oq-engine\openquake\demos" -Recurse -Filter job.ini | ForEach-Object { oq engine --run $_.FullName --exports xml,hdf5 -p pointsource_distance=0 -r }
+          Get-Children "D:\a\oq-engine\oq-engine\openquake\demos" -Recurse -Directory | ForEach-Object { $demoDir=$_.FullName; Get-ChildItem $_.FullName -Filter job_hazard.ini | ForEach-Object { oq engine --run $demoDir\job_hazard.ini --exports npz -p pointsource_distance=0; oq engine --run $demoDir\job_risk.ini --hc -1}
       - name: Run all engine tests
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
