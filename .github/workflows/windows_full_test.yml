@@ -1,14 +1,16 @@
 name: Windows full tests of OpenQuake Engine
 
 on:
-  workflow_dispatch:
-    inputs:
-      git-ref:
-        description: Git Ref
-        default: master
-        required: true
   push:
-    branches: [ ae-win_numba ]
+    branches: [windows-all-tests]
+  # workflow_dispatch:
+  #   inputs:
+  #     git-ref:
+  #       description: Git Ref
+  #       default: master
+  #       required: true
+  # push:
+  #   branches: [ ae-win_numba ]
 
 jobs:
   install_and_test:
