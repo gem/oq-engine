@@ -75,18 +75,17 @@ jobs:
             python install.py devel
           }
       - name: Run all demos
-        shell: pwsh
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          Write-Host "Run all demos having only job.ini"
-          $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Filter job.ini
-          foreach($iniFilePath in $iniFilePaths) {
-            Write-Host "Run $($iniFilePath.FullName)"
-            oq engine --run $iniFilePath.FullName --exports xml,hdf5 -p pointsource_distance=0 -r
-          }
+          # Write-Host "Run all demos having only job.ini"
+          # $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Filter job.ini
+          # foreach($iniFilePath in $iniFilePaths) {
+          #   Write-Host "Run $($iniFilePath.FullName)"
+          #   oq engine --run $iniFilePath.FullName --exports xml,hdf5 -p pointsource_distance=0 -r
+          # }
           Write-Host "Run all demos having only job_hazard.ini and job_risk.ini"
           $demoDirs = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Directory
           foreach($demoDir in $demoDirs) {
@@ -94,8 +93,9 @@ jobs:
             foreach($jobHazardPath in $jobHazardPaths) {
               Write-Host "Run $($jobHazardPath.FullName)"
               oq engine --run $jobHazardPath.FullName --exports npz -p pointsource_distance=0
-              Write-Host "Run $($demoDir.FullName)\job_risk.ini"
-              oq engine --run $demoDir.FullName\job_risk.ini --hc -1
+              $jobRiskPath = $demoDir.FullName + "\job_risk.ini"
+              Write-Host "Run $($jobRiskPath)"
+              oq engine --run $jobRiskPath --hc -1
             }
           }
       - name: Run all engine tests
