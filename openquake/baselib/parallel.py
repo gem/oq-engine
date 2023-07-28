@@ -620,7 +620,10 @@ class SharedArray(object):
     """
     def __init__(self, shape, dtype, value):
         nbytes = numpy.zeros(1, dtype).nbytes * numpy.prod(shape)
-        sm = shmem.SharedMemory(create=True, size=nbytes)
+        # NOTE: on Windows nbytes is a numpy.int32 and it causes an
+        # exception. On Linux, it is a numpy.int64 and it works without
+        # problems
+        sm = shmem.SharedMemory(create=True, size=int(nbytes))
         self.name = sm.name
         self.shape = shape
         self.dtype = dtype
