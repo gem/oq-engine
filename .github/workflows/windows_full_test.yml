@@ -82,14 +82,13 @@ jobs:
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           Write-Host "Run all demos having only job.ini"
-          Get-ChildItem D:\a\oq-engine\oq-engine\demos\
-          $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\openquake\demos\ -Recurse -Filter job.ini
+          $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Filter job.ini
           foreach($iniFilePath in $iniFilePaths) {
             Write-Host "Run $iniFilePath.FullName"
             Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' engine --run $iniFilePath.FullName --exports xml,hdf5 -p pointsource_distance=0 -r }
           }
           Write-Host "Run all demos having only job_hazard.ini and job_risk.ini"
-          $demoDirs = Get-ChildItem D:\a\oq-engine\oq-engine\openquake\demos\ -Recurse -Directory
+          $demoDirs = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Directory
           foreach($demoDir in $demoDirs) {
             $jobHazardPaths = Get-ChildItem $demoDir -Filter job_hazard.ini
             foreach($jobHazardPath in $jobHazardPaths) {
