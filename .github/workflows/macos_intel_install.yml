@@ -9,7 +9,7 @@ name: MacOS Intel install and test
   schedule:
     - cron: "0 1 * * *"
   push:
-    branches: [ test_os ]
+    branches: [macos_test]
 
 jobs:
 
@@ -37,13 +37,6 @@ jobs:
         env: 
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
-          #echo $PY_VER
-          #pip3 install -r requirements-$PY_VER-macos.txt
-          #pip3 install -e .\[osgeo\]
-          echo "sqlite3 version"
-          which sqlite3
-          sqlite3 --version
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
           #
@@ -54,15 +47,14 @@ jobs:
           else
             python install.py devel 
           fi
-      - name: Run demos to test installation
+      - name: Run demos and pytest to test installation
         run: |
           source ~/openquake/bin/activate
           pip3 install pytest
           oq --version
           oq dbserver start
-          #pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-          #pytest -vsx --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/sep
-          #pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/calculators
+          pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/
+          sleep 2
           oq engine --run ~/work/oq-engine/oq-engine/demos/risk/ClassicalDamage/job_hazard.ini
           #
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
