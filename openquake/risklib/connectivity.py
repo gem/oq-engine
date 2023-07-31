@@ -425,7 +425,7 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     ccl_table.set_index('id', inplace=True)
     pcl_table.set_index('id', inplace=True)
     wcl_table.set_index('id', inplace=True)
-    eff_table.set_index("id", inplace=True)
+    eff_table.set_index('id', inplace=True)
 
     # Create an empty dataframe with columns "event_id" and
     # "CCL"/"PCL"/"WCL"/"EL"
@@ -566,7 +566,7 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     pcl_table = pd.DataFrame({'id': TAZ_nodes})
     wcl_table = pd.DataFrame({'id': TAZ_nodes})
     eff_table = pd.DataFrame({'id': eff_nodes})
-    eff_table.set_index("id", inplace=True)
+    eff_table.set_index('id', inplace=True)
     pcl_table.set_index('id', inplace=True)
     wcl_table.set_index('id', inplace=True)
 
