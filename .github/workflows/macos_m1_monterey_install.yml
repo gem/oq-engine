@@ -98,7 +98,7 @@ jobs:
           #     oq engine --run $ini --exports xml,hdf5 -p pointsource_distance=0 -r
           # done
           # FIXME
-          oq engine -run ./risk/InfrastructureRiskRoadNetwork/job_ini --exports xml,hdf5 -p pointsource_distance=0 -r
+          oq engine --run ./risk/InfrastructureRiskRoadNetwork/job.ini --exports xml,hdf5 -p pointsource_distance=0 -r
       - name: Run pytest to test installation
         run: |
           source ~/openquake/bin/activate
