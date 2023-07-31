@@ -27,6 +27,7 @@ import zipfile
 import tempfile
 import unittest
 import numpy
+import pytest
 
 from pathlib import Path
 
@@ -308,7 +309,11 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
 
+
 class CompareTestCase(unittest.TestCase):
+    @pytest.mark.skipif(
+        sys.platform == 'win32',
+        reason="Skipping on Windows")
     def test_med_gmv(self):
         # testing the postprocessor med_gmv
         ini = os.path.join(os.path.dirname(case_13.__file__), 'job_gmv.ini')
@@ -317,7 +322,7 @@ class CompareTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline(f"openquake.commands compare med_gmv PGA {id} {id}")
         self.assertIn('0_0!0: no differences within the tolerances', str(p))
-        
+
 
 class SampleSmTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)

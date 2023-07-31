@@ -24,7 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
-import platform
+import sys
 import pytest
 from openquake.baselib import parallel, general, hdf5, performance
 
@@ -241,8 +241,8 @@ def update_array(shared, index):
 
 class SharedMemoryTestCase(unittest.TestCase):
     @pytest.mark.skipif(
-        platform.system() == 'Windows',
-        reason="FIXME: skipping to try testing on Windows")
+        sys.platform == 'win32',
+        reason="Skipping on Windows")
     def test(self):
         shape = 10, 10
         smap = parallel.Starmap(update_array)
