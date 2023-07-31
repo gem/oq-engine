@@ -17,8 +17,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, macos-12]
-        python-version: [3.9, "3.10"]
+        os: [macos-13]
+        python-version: ["3.10"]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
@@ -47,7 +47,28 @@ jobs:
           else
             python install.py devel 
           fi
-      - name: Run demos and pytest to test installation
+      - name: Run demos to test installation
+        run: |
+          set -x
+          source ~/openquake/bin/activate
+          oq dbserver start
+          sleep 10
+          oq info venv
+          oq info cfg
+          cd ~/work/oq-engine/oq-engine/demos
+          ls -lrt
+          # run demos with job_hazard.ini and job_risk.ini
+          for demo_dir in $(find "$1" -type d | sort); do
+             if [ -f $demo_dir/job_hazard.ini ]; then
+                 oq engine --run $demo_dir/job_hazard.ini --exports npz -p pointsource_distance=0
+                 oq engine --run $demo_dir/job_risk.ini --hc -1
+             fi
+          done
+          # run the other demos
+          for ini in $(find $1 -name job.ini | sort); do
+              oq engine --run $ini --exports xml,hdf5 -p pointsource_distance=0 -r
+          done
+      - name: Run pytest to test installation
         run: |
           source ~/openquake/bin/activate
           pip3 install pytest
@@ -55,8 +76,3 @@ jobs:
           oq dbserver start
           pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/
           sleep 2
-          oq engine --run ~/work/oq-engine/oq-engine/demos/risk/ClassicalDamage/job_hazard.ini
-          #
-          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-          sleep 3
-          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
