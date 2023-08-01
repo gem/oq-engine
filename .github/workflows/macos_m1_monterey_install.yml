@@ -56,7 +56,7 @@ jobs:
           if [ -e "$inst_cmd" ]; then
               sh "$inst_cmd"
           fi
-      - name: Run Installation of oq-engine in devel mode
+      - name: Install oq-engine in devel mode
         env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
@@ -114,7 +114,7 @@ jobs:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
         python-version: [3.9.13]
-      steps:
+    steps:
       - name: Run pytest to test installation
         run: |
           source ~/openquake/bin/activate
