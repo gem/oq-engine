@@ -13,7 +13,7 @@ name: MacOS Monterey M1
 
 jobs:
 
-  install_and_test:
+  install:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -76,6 +76,15 @@ jobs:
           else
             $python install.py devel
           fi
+  demos:
+    needs: install
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [m1]
+        #python-version: [3.9.13, "3.10.9"]
+        python-version: [3.9.13]
+    steps:
       - name: Run demos to test installation
         run: |
           set -x
@@ -97,6 +106,14 @@ jobs:
           for ini in $(find . -name job.ini | sort); do
               OQ_DISTRIBUTE=zmq oq engine --run $ini --exports xml,hdf5 -p pointsource_distance=0 -r
           done
+  tests:
+    needs: install
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [m1]
+        #python-version: [3.9.13, "3.10.9"]
+        python-version: [3.9.13]
       - name: Run pytest to test installation
         run: |
           source ~/openquake/bin/activate
@@ -107,4 +124,3 @@ jobs:
           # test for engine
           #
           pytest -vs --color=yes /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/
-          sleep 2
