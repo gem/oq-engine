@@ -289,6 +289,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         if (hasattr(oq, 'infrastructure_connectivity_analysis')
                 and oq.infrastructure_connectivity_analysis):
 
+            logging.info('Running connectivity analysis')
             conn_results = connectivity.analysis(self.datastore)
             self._store_connectivity_analysis_results(conn_results)
 
