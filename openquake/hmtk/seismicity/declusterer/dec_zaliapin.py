@@ -15,12 +15,7 @@ from openquake.hmtk.seismicity.declusterer.base import (
     BaseCatalogueDecluster, DECLUSTERER_METHODS)
 
 from openquake.hazardlib.geo.geodetic import geodetic_distance, distance, _prepare_coords 
-
-#from openquake.hmtk.seismicity.utils import relative_time
-
 from sklearn import mixture
-#from pymap3d import geodetic2ned
-
 
 @DECLUSTERER_METHODS.add(
     "decluster",
@@ -76,8 +71,7 @@ class Zaliapin(BaseCatalogueDecluster):
                  
 
         if 'output_nearest_neighbor_distances' in config and config['output_nearest_neighbor_distances']:
-            return probability_of_independence, nnd, ms_flag, root, ld
-ì
+            return probability_of_independence, nnd, nni, ms_flag, root, ld
         cluster_index = 1 - ms_flag
         return root, cluster_index
 
