@@ -430,10 +430,14 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     # Create an empty dataframe with columns "event_id" and
     # "CCL"/"PCL"/"WCL"/"EL"
 
-    event_connectivity_loss_ccl = pd.DataFrame(columns=['event_id', 'CCL'])
-    event_connectivity_loss_pcl = pd.DataFrame(columns=['event_id', 'PCL'])
-    event_connectivity_loss_wcl = pd.DataFrame(columns=['event_id', 'WCL'])
-    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EL'])
+    event_connectivity_loss_ccl = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'CCL': pd.Series(dtype=float)})
+    event_connectivity_loss_pcl = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'PCL': pd.Series(dtype=float)})
+    event_connectivity_loss_wcl = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'WCL': pd.Series(dtype=float)})
+    event_connectivity_loss_eff = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
 
     # To check the the values for each node before the earthquake event
 
@@ -572,9 +576,12 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
 
     # Create an empty dataframe with columns "event_id" and
     # "CCL"/"PCL"/"WCL"/"EL"
-    event_connectivity_loss_pcl = pd.DataFrame(columns=['event_id', 'PCL'])
-    event_connectivity_loss_wcl = pd.DataFrame(columns=['event_id', 'WCL'])
-    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EL'])
+    event_connectivity_loss_pcl = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'PCL': pd.Series(dtype=float)})
+    event_connectivity_loss_wcl = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'WCL': pd.Series(dtype=float)})
+    event_connectivity_loss_eff = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
 
     # To check the the values for each node before the earthquake event
 
@@ -684,7 +691,8 @@ def EL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
     eff_table.set_index("id", inplace=True)
 
     # Create an empty dataframe with columns "event_id" and "EL"
-    event_connectivity_loss_eff = pd.DataFrame(columns=['event_id', 'EL'])
+    event_connectivity_loss_eff = pd.DataFrame(
+        {'event_id': pd.Series(dtype=int), 'EL': pd.Series(dtype=float)})
 
     # To check the the values for each node before the earthquake event
 
