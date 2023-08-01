@@ -341,7 +341,6 @@ class DamageCalculator(EventBasedRiskCalculator):
             logging.info(
                 'Stored complete connectivity loss by event (infra-event_ccl)')
         if 'taz_cl' in conn_results:
-            conn_results['taz_cl'].id = conn_results['taz_cl'].id.astype('|S')
             self.datastore.create_df(
                 'infra-taz_cl',
                 conn_results['taz_cl'],
@@ -349,7 +348,6 @@ class DamageCalculator(EventBasedRiskCalculator):
             logging.info(
                 'Stored connectivity loss of TAZ nodes (taz_cl)')
         if 'dem_cl' in conn_results:
-            conn_results['dem_cl'].id = conn_results['dem_cl'].id.astype('|S')
             self.datastore.create_df(
                 'infra-dem_cl',
                 conn_results['dem_cl'],
@@ -357,7 +355,6 @@ class DamageCalculator(EventBasedRiskCalculator):
             logging.info(
                 'Stored connectivity loss of demand nodes (dem_cl)')
         if 'node_el' in conn_results:
-            conn_results['node_el'].id = conn_results['node_el'].id.astype('|S')
             self.datastore.create_df(
                 'infra-node_el',
                 conn_results['node_el'],
