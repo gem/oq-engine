@@ -114,6 +114,7 @@ jobs:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
         python-version: [3.9.13]
+      steps:
       - name: Run pytest to test installation
         run: |
           source ~/openquake/bin/activate
