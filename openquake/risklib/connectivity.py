@@ -513,16 +513,21 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
             Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
 
         # Storing the value of performance indicators for each event
-        event_connectivity_loss_ccl = event_connectivity_loss_ccl.append(
-            {'event_id': event_id, 'CCL': CCL_per_event}, ignore_index=True)
-        event_connectivity_loss_pcl = event_connectivity_loss_pcl.append(
-            {'event_id': event_id, 'PCL': PCL_mean_per_event},
+        event_connectivity_loss_ccl = pd.concat(
+            [event_connectivity_loss_ccl, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'CCL': CCL_per_event}])],
             ignore_index=True)
-        event_connectivity_loss_wcl = event_connectivity_loss_wcl.append(
-            {'event_id': event_id, 'WCL': WCL_mean_per_event},
+        event_connectivity_loss_pcl = pd.concat(
+            [event_connectivity_loss_pcl, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'PCL': PCL_mean_per_event}])],
             ignore_index=True)
-        event_connectivity_loss_eff = event_connectivity_loss_eff.append(
-            {'event_id': event_id, 'EL': Glo_effloss_per_event},
+        event_connectivity_loss_wcl = pd.concat(
+            [event_connectivity_loss_wcl, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
+            ignore_index=True)
+        event_connectivity_loss_eff = pd.concat(
+            [event_connectivity_loss_eff, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
             ignore_index=True)
 
         # To store the sum of performance indicator at nodal level to calulate
@@ -647,14 +652,17 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
             Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
 
         # Storing the value of performance indicators for each event
-        event_connectivity_loss_pcl = event_connectivity_loss_pcl.append(
-            {'event_id': event_id, 'PCL': PCL_mean_per_event},
+        event_connectivity_loss_pcl = pd.concat(
+            [event_connectivity_loss_pcl, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'PCL': PCL_mean_per_event}])],
             ignore_index=True)
-        event_connectivity_loss_wcl = event_connectivity_loss_wcl.append(
-            {'event_id': event_id, 'WCL': WCL_mean_per_event},
+        event_connectivity_loss_wcl = pd.concat(
+            [event_connectivity_loss_wcl, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'WCL': WCL_mean_per_event}])],
             ignore_index=True)
-        event_connectivity_loss_eff = event_connectivity_loss_eff.append(
-            {'event_id': event_id, 'EL': Glo_effloss_per_event},
+        event_connectivity_loss_eff = pd.concat(
+            [event_connectivity_loss_eff, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
             ignore_index=True)
 
         # To store the sum of performance indicator at nodal level to calulate
@@ -725,8 +733,9 @@ def EL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
             Glo_eff0_per_event - Glo_eff_per_event)/Glo_eff0_per_event
 
         # Storing the value of performance indicators for each event
-        event_connectivity_loss_eff = event_connectivity_loss_eff.append(
-            {'event_id': event_id, 'EL': Glo_effloss_per_event},
+        event_connectivity_loss_eff = pd.concat(
+            [event_connectivity_loss_eff, pd.DataFrame.from_records(
+                [{'event_id': event_id, 'EL': Glo_effloss_per_event}])],
             ignore_index=True)
 
         # To store the sum of performance indicator at nodal level to calulate
