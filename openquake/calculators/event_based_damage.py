@@ -310,9 +310,6 @@ class DamageCalculator(EventBasedRiskCalculator):
             logging.info(
                 'Stored avarage connectivity loss (infra-avg_loss)')
         if 'event_connectivity_loss_eff' in conn_results:
-            # FIXME
-            print(conn_results['event_connectivity_loss_eff'])
-            print(conn_results['event_connectivity_loss_eff'].dtypes)
             self.datastore.create_df(
                 'infra-event_efl',
                 conn_results['event_connectivity_loss_eff'],
