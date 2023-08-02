@@ -55,7 +55,7 @@ jobs:
       matrix:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9.13]
+        python-version: [3.9, "3.10"]
     steps:
       - name: Run demos to test installation
         run: |
@@ -86,7 +86,7 @@ jobs:
       matrix:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9.13]
+        python-version: [3.9, "3.10"]
     steps:
       - name: Run tests for calculators and advanced manual to test installation
         run: |
@@ -105,7 +105,7 @@ jobs:
       matrix:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9.13]
+        python-version: [3.9, "3.10"]
     steps:
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         run: |
@@ -124,7 +124,7 @@ jobs:
       matrix:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9.13]
+        python-version: [3.9, "3.10"]
     steps:
       - name: Run tests for the engine server in public mode to test installation
         run: |
@@ -142,7 +142,7 @@ jobs:
       matrix:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9.13]
+        python-version: [3.9, "3.10"]
     steps:
       - name: Run tests for the engine server in read-only mode to test installation
         run: |
@@ -160,7 +160,7 @@ jobs:
       matrix:
         os: [m1]
         #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9.13]
+        python-version: [3.9, "3.10"]
     steps:
       - name: Run tests for the engine server in aelo mode to test installation
         run: |
