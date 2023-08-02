@@ -208,4 +208,4 @@ jobs:
           # test for engine
           #
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
-          OQ_APPLICATION_MODE=public ./openquake/server/manage.py test tests.test_aelo_mode
+          OQ_APPLICATION_MODE=public OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_aelo_mode
