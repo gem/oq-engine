@@ -273,14 +273,13 @@ def fix_geometry_sections(smdict, dstore):
         sections.update(gmod.sections)
     nrml.check_unique(
         sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    s2i = {suid: i for i, suid in enumerate(sorted(sections))}
-    sections = [sections[suid] for suid in sorted(sections)]
-    for idx, sec in enumerate(sections):
+    s2i = {suid: i for i, suid in enumerate(sections)}
+    for idx, sec in enumerate(sections.values()):
         sec.suid = idx
     if dstore and sections:
         with hdf5.File(dstore.tempname, 'w') as h5:
             h5.save_vlen('multi_fault_sections',
-                         [kite_to_geom(sec) for sec in sections])
+                         [kite_to_geom(sec) for sec in sections.values()])
 
     # fix the MultiFaultSources
     section_idxs = []

@@ -29,6 +29,7 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
+TWO24 = 2 ** 24
 poes_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'poe': F64}
 
 
@@ -357,18 +358,18 @@ class ProbabilityMap(object):
         return self.new(self.array.reshape(N, M, P))
 
     # used in calc/disagg_test.py
-    def expand(self, full_lt):
+    def expand(self, full_lt, trt_rlzs):
         """
         Convert a ProbabilityMap with shape (N, L, Gt) into a ProbabilityMap
         with shape (N, L, R): works only for rates
         """
-        N, L, G = self.array.shape
-        assert G == full_lt.Gt, (G, full_lt.Gt)
+        N, L, Gt = self.array.shape
+        assert Gt == len(trt_rlzs), (Gt, len(trt_rlzs))
         R = full_lt.get_num_paths()
         out = ProbabilityMap(range(N), L, R).fill(0.)
-        for g, rlzs in full_lt.rlzs_by_g.items():
+        for g, trs in enumerate(trt_rlzs):
             for sid in range(N):
-                for rlz in rlzs:
+                for rlz in trs % TWO24:
                     out.array[sid, :, rlz] += self.array[sid, :, g]
                 # NB: for probabilities use
                 # combine_probs(out.array[sid], self.array[sid, :, g], rlzs)
@@ -436,12 +437,12 @@ class ProbabilityMap(object):
         dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
-    def multiply_pnes(self, other, i):
+    def multiply_pnes(self, other, g, i):
         """
         Multiply by the probabilities of no exceedence
         """
         # assume other.sids are a subset of self.sids
-        self.array[self.sidx[other.sids], :, 0] *= other.array[:, :, i]
+        self.array[self.sidx[other.sids], :, g] *= other.array[:, :, i]
 
     def update(self, poes, invs, ctxt, itime, mutex_weight):
         """

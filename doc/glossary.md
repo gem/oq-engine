@@ -45,9 +45,7 @@
 
 * **worker process**
 
-  A process which is dedicated to task execution. Worker process are simply celeryd processes which are configured to execute OpenQuake Engine task code.
-
-  For more information about Celery, see http://celeryproject.org/.
+  A process which is dedicated to task execution.
 
 * **worker machine**
 

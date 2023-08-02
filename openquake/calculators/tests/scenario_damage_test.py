@@ -89,7 +89,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
 
         # check agg_damages extraction
         total = extract(self.calc.datastore, 'agg_damages/structural')
-        
+
         aac(total, [[27652.219, 28132.8, 9511.933, 2870.9312, 11832.913]],
             atol=.1)
 
@@ -254,16 +254,6 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         self.assertIn(
             "['CR+PC/LDUAL/HBET:8.19/m', 'CR+PC/LDUAL/HBET:8.19/m ']",
             str(ctx.exception))
-
-    def test_case_15(self):
-        # infrastructure risk
-        self.run_calc(case_15.__file__, 'job.ini')
-        nodes = self.calc.datastore.read_df('functional_demand_nodes')
-        got = dict(zip(nodes.id, nodes.number))
-        expected = {'D1': 36, 'D10': 26, 'D11': 26, 'D12': 25, 'D2': 36,
-                    'D3': 36, 'D4': 36, 'D5': 36, 'D6': 36, 'D7': 25,
-                    'D8': 25, 'D9': 25}
-        self.assertEqual(got, expected)
 
     def test_case_16(self):
         # inconsistent IDs between fragility and consequence in set_tmap

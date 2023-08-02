@@ -179,7 +179,7 @@ jobs:
           while ! nc -z localhost 8800; do
             sleep 5 # wait for 1/10 of the second before check again
           done
-          ls -lrt /var/log/oq-engine/
+          echo "Test WebUI with curl before to test django"
           sleep 1
           # Perform migration after setup local_settings
           cd /opt/openquake/venv/lib/python3.9/site-packages/openquake/engine/

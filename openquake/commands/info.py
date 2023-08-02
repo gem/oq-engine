@@ -40,7 +40,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
-from openquake.server.db.actions import DISPLAY_NAME
+from openquake.calculators.export import DISPLAY_NAME
 
 
 def source_model_info(sm_nodes):
@@ -89,7 +89,8 @@ def do_build_reports(directory):
                     logging.error(str(e))
 
 
-choices = ['calculators', 'gsims', 'imts', 'views', 'exports', 'disagg',
+choices = ['calculators', 'cfg', 'consequences',
+           'gsims', 'imts', 'views', 'exports', 'disagg',
            'extracts', 'parameters', 'sources', 'mfds', 'venv']
 
 

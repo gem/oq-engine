@@ -133,7 +133,8 @@ def jbcorrelation(sites_or_distances, imt, vs30_clustering=False):
         distances = sites_or_distances
 
     # formulae are from page 1700
-    if imt.period < 1:
+    period = 1.0 if imt.string == 'PGV' else imt.period
+    if period < 1:
         if not vs30_clustering:
             # case 1, eq. (17)
             b = 8.5 + 17.2 * imt.period

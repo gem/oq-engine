@@ -31,9 +31,9 @@ from openquake.calculators.tests import (
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_04, case_05, case_06, case_07, case_08, case_09,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_19, case_20, case_21, case_28, case_30, case_31, case_36, case_39,
-    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
-    case_71, case_73, case_79, case_83)
+    case_18, case_19, case_20, case_21, case_28, case_30, case_31, case_36,
+    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
+    case_68, case_71, case_73, case_79, case_83)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -69,8 +69,10 @@ class LogicTreeTestCase(CalculatorTestCase):
             csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
+            trs = full_lt.get_trt_rlzs(self.calc.datastore['trt_smrs'][:])
             rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
-            mean_rates = calc_mean_rates(rmap, full_lt.g_weights, oq.imtls)
+            mean_rates = calc_mean_rates(
+                rmap, full_lt.g_weights(trs), oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=1e-6)
@@ -110,7 +112,7 @@ class LogicTreeTestCase(CalculatorTestCase):
                       calculation_mode='preclassical')
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id,
-                      postproc_func='disagg_by_rel_sources')
+                      postproc_func='disagg_by_rel_sources.main')
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curve-mean.csv', fname)
@@ -311,6 +313,11 @@ hazard_uhs-std.csv
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
         numpy.testing.assert_equal(ids, ['A!0', 'A!1', 'B'])
+
+    def test_case_18(self):
+        # test classical with 2 gsims and 1 sample
+        self.assert_curves_ok(['hazard_curve-mean.csv'],
+                              case_18.__file__)
 
     def test_case_19(self):
         # test for nontrivial GMPE logictree and AvgGMPE
@@ -632,7 +639,7 @@ hazard_uhs-std.csv
         # test with oversampling
         # there are 6 potential paths 1A 1B 1C 2A 2B 2C
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        # trt_rlzs is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
         self.assertEqual(len(self.calc.realizations), 10)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)

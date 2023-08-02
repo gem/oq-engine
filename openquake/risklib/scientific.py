@@ -41,7 +41,7 @@ U8 = numpy.uint8
 
 TWO32 = 2 ** 32
 KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
-                      'fatalities', 'homeless']
+                      'fatalities', 'homeless', 'non_operational']
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -50,7 +50,25 @@ structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins
-reinsurance claim area number'''.split())
+reinsurance claim area number residents
+structural+business_interruption nonstructural+business_interruption
+contents+business_interruption
+structural+nonstructural+business_interruption
+structural+contents+business_interruption
+nonstructural+contents+business_interruption
+structural+nonstructural+contents+business_interruption
+contents_ins business_interruption_ins
+structural_ins+nonstructural_ins structural_ins+contents_ins
+structural_ins+business_interruption_ins nonstructural_ins+contents_ins
+nonstructural_ins+business_interruption_ins
+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins
+structural_ins+nonstructural_ins+business_interruption_ins
+structural_ins+contents_ins+business_interruption_ins
+nonstructural_ins+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+'''.split())
+
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
@@ -1626,14 +1644,14 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         raise NotImplementedError(consequence)
     elif consequence == 'losses':
         return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif consequence == 'collapsed':
+    elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
     elif consequence == 'injured':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'fatalities':
         return dmgdist @ coeffs * asset['occupants_night']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_night']
+        return dmgdist @ coeffs * asset['occupants_avg']
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype):
@@ -1642,7 +1660,7 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
         sum of the values corresponding to agg_id for the given consequence
     """
     aval = agg_values[agg_id]
-    if consequence == 'collapsed':
+    if consequence in ['collapsed', 'non_operational']:
         return aval['number']
     elif consequence == 'injured':
         return aval['occupants_night']

@@ -309,7 +309,7 @@ class GsimLogicTree(object):
 
     def collapse(self, branchset_ids):
         """
-        Collapse the GsimLogicTree by using AgvGMPE instances if needed
+        Collapse the GsimLogicTree by using AgvPoeGMPE instances if needed
 
         :param branchset_ids: branchset ids to collapse
         :returns: a collapse GsimLogicTree instance

@@ -35,6 +35,7 @@ from openquake.baselib import config, hdf5, general, writers
 from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
+from openquake.hazardlib import logictree
 from openquake.hazardlib.gsim.base import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
@@ -43,7 +44,7 @@ from openquake.hazardlib.source import rupture
 from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
-from openquake.commonlib import calc, util, oqvalidation, datastore, logictree
+from openquake.commonlib import calc, util, oqvalidation, datastore
 from openquake.calculators import getters
 
 U16 = numpy.uint16
@@ -51,7 +52,7 @@ U32 = numpy.uint32
 I64 = numpy.int64
 F32 = numpy.float32
 F64 = numpy.float64
-TWO30 = 2 ** 32
+TWO30 = 2 ** 30
 TWO32 = 2 ** 32
 ALL = slice(None)
 CHUNKSIZE = 4*1024**2  # 4 MB
@@ -283,8 +284,8 @@ def extract_exposure_metadata(dstore, what):
             set(dstore['asset_risk'].dtype.names) -
             set(dstore['assetcol/array'].dtype.names))
     dic['names'] = [name for name in dstore['assetcol/array'].dtype.names
-                    if name.startswith(('value-', 'number', 'occupants'))
-                    and name != 'value-occupants']
+                    if name.startswith(('value-', 'occupants'))
+                    and name != 'occupants_avg']
     return ArrayWrapper((), dict(json=hdf5.dumps(dic)))
 
 
@@ -1251,9 +1252,9 @@ class RuptureData(object):
     Container for information about the ruptures of a given
     tectonic region type.
     """
-    def __init__(self, trt, gsims):
+    def __init__(self, trt, gsims, mags):
         self.trt = trt
-        self.cmaker = ContextMaker(trt, gsims, {'imtls': {}})
+        self.cmaker = ContextMaker(trt, gsims, {'imtls': {}, 'mags': mags})
         self.params = sorted(self.cmaker.REQUIRES_RUPTURE_PARAMETERS -
                              set('mag strike dip rake hypo_depth'.split()))
         self.dt = numpy.dtype([
@@ -1272,7 +1273,7 @@ class RuptureData(object):
         for proxy in proxies:
             ebr = proxy.to_ebr(self.trt)
             rup = ebr.rupture
-            ctx = self.cmaker.make_rctx(rup)
+            ctx = self.cmaker.make_legacy_ctx(rup)
             ruptparams = tuple(getattr(ctx, param) for param in self.params)
             point = rup.surface.get_middle_point()
             boundaries = rup.surface.get_surface_boundaries_3d()
@@ -1309,7 +1310,9 @@ def extract_rupture_info(dstore, what):
     boundaries = []
     for rgetter in getters.get_rupture_getters(dstore):
         proxies = rgetter.get_proxies(min_mag)
-        arr = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim).to_array(proxies)
+        mags = dstore[f'source_mags/{rgetter.trt}'][:]
+        rdata = RuptureData(rgetter.trt, rgetter.rlzs_by_gsim, mags)
+        arr = rdata.to_array(proxies)
         for r in arr:
             coords = ['%.5f %.5f' % xyz[:2] for xyz in zip(*r['boundaries'])]
             coordset = sorted(set(coords))
@@ -1526,16 +1529,16 @@ def clusterize(hmaps, rlzs, k):
     :param hmaps: array of shape (R, M, P)
     :param rlzs: composite array of shape R
     :param k: number of clusters to build
-    :returns: (array(K, MP), labels(R))
+    :returns: array of K elements with dtype (rlzs, branch_paths, centroid)
     """
     R, M, P = hmaps.shape
     hmaps = hmaps.transpose(0, 2, 1).reshape(R, M * P)
-    dt = [('label', U32), ('branch_paths', object), ('centroid', (F32, M*P))]
+    dt = [('rlzs', hdf5.vuint32), ('branch_paths', object),
+          ('centroid', (F32, M*P))]
     centroid, labels = kmeans2(hmaps, k, minit='++')
-    dic = dict(path=rlzs['branch_path'], label=labels)
-    df = pandas.DataFrame(dic)
+    df = pandas.DataFrame(dict(path=rlzs['branch_path'], label=labels))
     tbl = []
     for label, grp in df.groupby('label'):
-        paths = [encode(path) for path in grp['path']]
-        tbl.append((label, logictree.collect_paths(paths), centroid[label]))
-    return numpy.array(tbl, dt), labels
+        paths = logictree.collect_paths(encode(list(grp['path'])))
+        tbl.append((grp.index, paths, centroid[label]))
+    return numpy.array(tbl, dt)

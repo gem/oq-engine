@@ -34,7 +34,7 @@ class PostProcTestCase(CalculatorTestCase):
 
     def test_mrd(self):
         # Computes the mean rate density using a simple PSHA input model
-        self.run_calc(case_mrd.__file__, 'job.ini', postproc_func='dummy')
+        self.run_calc(case_mrd.__file__, 'job.ini', postproc_func='dummy.main')
         fnames = export(('hcurves', 'csv'), self.calc.datastore)
         for fname in fnames:
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname)

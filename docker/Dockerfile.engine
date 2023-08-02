@@ -12,7 +12,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-FROM python:3.9-slim AS compile-image
+FROM python:3.10-slim AS compile-image
 LABEL maintainer="GEM Foundation <devops@openquake.org>" \
        vendor="GEM Foundation"
 RUN useradd -m -u 1000 -s /bin/bash openquake
@@ -26,9 +26,9 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 #clone repository and install engine 
 RUN git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \ 
-    pip --disable-pip-version-check install . -r requirements-py39-linux64.txt --no-warn-script-location
+    pip --disable-pip-version-check install . -r requirements-py310-linux64.txt --no-warn-script-location
 #
-FROM python:3.9-slim AS build-image
+FROM python:3.10-slim AS build-image
 COPY --from=compile-image /opt/openquake/ /opt/openquake/
 ENV LANG en_US.UTF-8
 ENV LOCKDOWN=False

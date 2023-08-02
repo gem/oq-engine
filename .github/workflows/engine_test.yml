@@ -73,6 +73,27 @@ jobs:
         oq dbserver start
         OQ_APPLICATION_MODE=public ./openquake/server/manage.py test tests.test_public_mode
 
+  server_read_only_mode:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python  ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version:  ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python install.py devel
+    - name: Server 'READ_ONLY' mode tests
+      run: |
+        source ~/openquake/bin/activate
+        oq dbserver start
+        OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test tests.test_read_only_mode
+
   server_aelo_mode:
     runs-on: ${{ matrix.os }}
     strategy:

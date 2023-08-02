@@ -60,7 +60,11 @@ jobs:
           pip3 install pytest
           oq --version
           oq dbserver start
-          pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-          pytest -vsx --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/sep
-          pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/calculators
-          #oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          #pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
+          #pytest -vsx --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/sep
+          #pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/calculators
+          oq engine --run ~/work/oq-engine/oq-engine/demos/risk/ClassicalDamage/job_hazard.ini
+          #
+          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
+          sleep 3
+          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"

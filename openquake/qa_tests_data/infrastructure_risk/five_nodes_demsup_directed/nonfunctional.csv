@@ -1,0 +1,5 @@
+﻿taxonomy,consequence,loss_type,minor,major
+bridge,non_operational,structural,0,1
+road,non_operational,structural,0,1
+connection,non_operational,structural,0,1
+POI,non_operational,structural,0,1

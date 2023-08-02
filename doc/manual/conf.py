@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
-# OpenQuake for Advanced Users documentation build configuration file, created by
-# sphinx-quickstart on Fri Mar  2 07:29:39 2018.
+# OpenQuake for Advanced Users documentation build configuration file, created
+# by sphinx-quickstart on Fri Mar  2 07:29:39 2018.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -12,18 +12,18 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
 import os
+import shutil
 from openquake import engine
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+# sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+# needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -95,7 +95,7 @@ rst_epilog = """
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -105,7 +105,7 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build','old']
+exclude_patterns = ['_build', 'old']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -167,11 +167,16 @@ html_title = 'OpenQuake Engine Manual %s%s' % (version, branch)
 #html_logo = '_static/oq_logo.png'
 html_logo = None
 
+json_url_path = "../../.ddown_man.json"
+if not os.path.exists(json_url_path):
+    shutil.copyfile("../samples/dot_ddown_man.json.sample",
+                    json_url_path)
+
 html_theme_options = {
     "navbar_start": ["version-switcher"],
     "switcher": {
-        "json_url": "../../.ddown_man.json",
-        "version_match": "development" if it_is_master == True else '.'.join(version.split('.')[0:2])
+        "json_url": json_url_path,
+        "version_match": "development" if it_is_master is True else '.'.join(version.split('.')[0:2])
     },
     "icon_links": [
         {
@@ -235,7 +240,7 @@ html_theme_options = {
             "type": "fontawesome",  # Default is fontawesome
         }
 
-   ]
+    ]
 }
 
 # The name of an image file (relative to this directory) to use as a favicon of
@@ -316,17 +321,20 @@ htmlhelp_basename = 'OpenQuakeEngineManual'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
+    # The paper size ('letterpaper' or 'a4paper').
+    # 'papersize': 'letterpaper',
 
-# The font size ('10pt', '11pt' or '12pt').
-'pointsize': '12pt',
+    # The font size ('10pt', '11pt' or '12pt').
+    'pointsize': '12pt',
 
-# Additional stuff for the LaTeX preamble.
-#'preamble': '',
+    # Additional stuff for the LaTeX preamble.
+    # 'preamble': '',
 
-# Latex figure (float) alignment
-#'figure_align': 'htbp',
+    # Latex figure (float) alignment
+    # 'figure_align': 'htbp',
+    'utf8extra': r"""
+\DeclareUnicodeCharacter{22EE}{\ensuremath{\vdots}}
+""",
 }
 
 # Grouping the document tree into LaTeX files. List of tuples

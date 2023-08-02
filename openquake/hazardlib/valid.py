@@ -353,6 +353,7 @@ asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\-_:]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
+mod_func = SimpleId(MAX_ID_LENGTH, r'[\w_]+\.[\w_]+')
 
 
 def risk_id(value):
@@ -1163,7 +1164,7 @@ def host_port(value=None):
 
 # used for the exposure validation
 cost_type = Choice('structural', 'nonstructural', 'contents',
-                   'business_interruption', 'area', 'number')
+                   'business_interruption')
 
 cost_type_type = Choice('aggregated', 'per_area', 'per_asset')
 

@@ -1,4 +1,97 @@
   [Michele Simionato]
+  * Reduced memory consumption in the master node in post_risk
+  * Reduced slow tasks in the ebrisk calculator and memory consumption
+    in the master node
+
+  [Paolo Tormene]
+  * Fixed bug #8907: unable to run ClassicalDamage demo on Windows
+
+  [Astha Poudel, Anirudh Rao, Paolo Tormene]
+  * Updates to the infrastructure risk assessment and connectivity analysis
+    module to incorporate additional performance metrics including Complete
+    Connectivity Loss (CCL), Partial Connectivity Loss (PCL), Weighted
+    Connectivity Loss (WCL), and Efficiency Loss (EL) based on
+    Poudel et al. (2023).
+  * Implemented the possibility of including both weighted and unweighted
+    graphs for infrastructure risk.
+  * Implemented the possibility of including simple undirected graphs, simple
+    directed graphs, multigraphs and multi-directed graphs.
+  * Implemented the Bradley (2012) cross-correlation equations between peak
+    ground velocity (PGV), peak ground acceleration (PGA), and 5% damped
+    pseudo-spectral acceleration (SA)
+
+  [Michele Simionato]
+  * Moved the generation of the hazard curves from the GMFs in post_execute
+  * Fixed the error "You must supply a list of magnitudes as 2-digit strings"
+    when starting from ruptures in a model with GMPETables (i.e. Canada)
+  * Replaced sequential tiling with parallel tiling in large classical
+    calculations
+  * Huge reduction of the memory usage in the event_based calculator; also,
+    reduced the slow tasks
+
+python3-oq-engine (3.17.0-2~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Raise an early error if the user disable both realizations and statistics
+  * Internal: added dbserver.user in openquake.cfg
+  * Solved the hanging of classical calculations due to large zmq packets
+    and reduced memory occupation
+
+  [Marco Pagani, Michele Simionato]
+  * Added support for the "direct" method in MRD calculations
+
+  [Michele Simionato]
+  * Reimplemented the conditional_spectrum calculator as a post-processor
+
+  [Paolo Tormene, Michele Simionato]
+  * Raise an error when the same parameter is set in different sections
+    of the job.ini file
+
+  [Michele Simionato]
+  * Fixed tau-phi inversion in LanzanoLuzi2019
+  * Fixed another bug with conditioned GMFs appearing as the error
+    `array[m, n, bad] = exp(mean_covs[0, g, m, n], im)
+     TypeError: list indices must be integers or slices, not tuple`
+
+  [Claudio Schill]
+  * Fixed sorting bug in the sigma_mu adjustment factor in
+    the Kuehn et al. (2020) GMM
+
+  [Michele Simionato]
+  * Fixed a subtle filtering bug in conditioned GMFs
+  * Fixed shakemap calculations to take the risk IMTs and not the hazard IMTs
+  * Extended shakemap2gmfs to amplify the GMFs based on user-provided vs30
+    values
+  * Removed sorting of the sections in the multiFaultSource reader to keep
+    the rup_idxs consistent with the order in the files
+  * GMFs too small to produce losses now give a warning rather than an error
+  * Fixed bug in `get_ry0_distance` breaking conditioned GMFs
+  * Made sure lon and lat are rounded to 5 digits in the site collection
+
+  [Graeme Wheaterill]
+  * Fixes to bchydro_2016_epistemic, eshm20_craton and lanzano_2019
+
+  [Michele Simionato]
+  * Extended sensitity analysis to file parameters
+  * Introduced new loss type `residents`
+
+  [Marco Pagani]
+  * Fixed bug in get_profiles_from_simple_fault_data affecting KiteSurfaces
+
+  [Michele Simionato]
+  * Fixed the rupture exporter in presence of GMPETables
+  * Optimized the postclassical phase
+  * Fixed a serious issue in the classical calculator with tiles
+  * Vectorized the association assets <-> hazard sites (up to 32x speedup)
+  * Fixed bug in disaggregation calculations associated to an error
+    in the line `[mag] = np.unique(np.round(ctx.mag, 6))`
+  * Optimized the calculation of geohashes by using numba
+
+  [Paolo Tormene]
+  * Extended total_losses to include business_interruption
+
+  [Michele Simionato]
+  * Recognized `occupants_avg` field in the exposure
   * Optimized reading the exposure (both speed and memory)
   * Optimized the rupture sampling for MultiFaultSources and improved
     the parallelization for MultiFaultSources and MultiPointSources
@@ -146,6 +239,8 @@
   * Fixed install.py: it must not set the shared_dir
   * Optimized disaggregation in performance, memory consumption and data
     transfer; also changed the task distribution algorithm
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 12 Jul 2023 13:00:58 +0000
 
 python3-oq-engine (3.16.0-2~xenial01) xenial; urgency=low
 

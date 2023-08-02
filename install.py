@@ -185,6 +185,7 @@ DEMOS = 'https://artifacts.openquake.org/travis/demos-master.zip'
 GITBRANCH = 'https://github.com/gem/oq-engine/archive/%s.zip'
 URL_STANDALONE = "https://wheelhouse.openquake.org/py/standalone/latest/"
 
+
 def ensure(pip=None, pyvenv=None):
     """
     Create venv and install pip
@@ -228,9 +229,11 @@ def install_standalone(venv):
             pycmd = inst.VENV + '\\Scripts\\python.exe'
     else:
         pycmd = inst.VENV + '/bin/python3'
-    #
-    for app in 'oq-platform-standalone oq-platform-ipt \
-        oq-platform-taxonomy oq-platform-taxtweb openquake.taxonomy'.split():
+    for app in ['oq-platform-standalone',
+                'oq-platform-ipt',
+                'oq-platform-taxonomy',
+                'oq-platform-taxtweb',
+                'openquake.taxonomy']:
         try:
             print("Applications " + app + " are not installed yet \n")
 
@@ -381,7 +384,11 @@ def install(inst, version):
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
         'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
 
-    subprocess.check_call([pycmd, '-m', 'pip', 'install', '-r', req])
+    subprocess.check_call(
+        [pycmd, '-m', 'pip', 'install',
+         '--trusted-host', 'wheelhouse.openquake.org',
+         '--trusted-host', 'raw.githubusercontent.com',
+         '-r', req])
 
     if (inst is devel or inst is devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])

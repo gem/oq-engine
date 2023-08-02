@@ -160,19 +160,10 @@ foo = bar
 bar = foo
 aggregate_by = taxonomy, policy
 """)
-        with self.assertLogs() as captured:
+        with self.assertRaises(InvalidFile) as ctx:
             readinput.get_params(job_config, {})
-        warning_general_bar = (
-            "Parameter(s) ['aggregate_by', 'foo'] is(are) defined in"
-            " multiple sections")
-        warning_foo_bar = ("Parameter(s) ['bar'] is(are) defined in"
-                           " multiple sections")
-        self.assertEqual(captured.records[0].levelname, 'WARNING')
-        self.assertEqual(
-            captured.records[0].getMessage(), warning_general_bar)
-        self.assertEqual(captured.records[1].levelname, 'WARNING')
-        self.assertEqual(
-            captured.records[1].getMessage(), warning_foo_bar)
+        msg = "['aggregate_by', 'foo'] is(are) defined in multiple sections"
+        self.assertIn(msg, str(ctx.exception))
 
 
 def sitemodel():
@@ -387,25 +378,6 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
                       "a-zA-Z0-9_-:, line 11", str(ctx.exception))
 
-    def test_no_assets(self):
-        oqparam = mock.Mock()
-        oqparam.base_path = '/'
-        oqparam.cachedir = ''
-        oqparam.calculation_mode = 'scenario_risk'
-        oqparam.all_cost_types = ['structural']
-        oqparam.insurance_losses = True
-        oqparam.inputs = {'exposure': [self.exposure],
-                          'structural_vulnerability': None}
-        oqparam.region = '''\
-POLYGON((68.0 31.5, 69.5 31.5, 69.5 25.5, 68.0 25.5, 68.0 31.5))'''
-        oqparam.time_event = None
-        oqparam.ignore_missing_costs = []
-        oqparam.aggregate_by = []
-        with self.assertRaises(RuntimeError) as ctx:
-            readinput.get_exposure(oqparam)
-        self.assertIn('Could not find any asset within the region!',
-                      str(ctx.exception))
-
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
         oqparam.base_path = '/'
@@ -457,13 +429,13 @@ exposure_file = %s''' % os.path.basename(self.exposure4))
     def test_Lon_instead_of_lon(self):
         fname = os.path.join(DATADIR, 'exposure.xml')
         with self.assertRaises(InvalidFile) as ctx:
-            asset.Exposure.read([fname])
+            asset.Exposure.read_all([fname])
         self.assertIn("missing {'lon'}", str(ctx.exception))
 
     def test_case_similar(self):
         fname = os.path.join(DATADIR, 'exposure2.xml')
         with self.assertRaises(InvalidFile) as ctx:
-            asset.Exposure.read([fname])
+            asset.Exposure.read_all([fname])
         self.assertIn('''\
 Found case-duplicated fields [['ID', 'id']] in ''', str(ctx.exception))
 
@@ -474,17 +446,19 @@ description = Description containing a % sign''')
         readinput.get_params(job_ini)
 
     def test_GEM4ALL(self):
+        raise unittest.SkipTest('Dropped support for GEM4ALL')
+
         # test a call used in the GEM4ALL importer, pure XML
         fname = os.path.join(os.path.dirname(case_caracas.__file__),
                              'exposure_caracas.xml')
-        a0, a1 = asset.Exposure.read([fname]).assets
+        a0, a1 = asset.Exposure.read_all([fname]).assets
         self.assertEqual(a0.tags, {'taxonomy': 'MUR+ADO_H1'})
         self.assertEqual(a1.tags, {'taxonomy': 'S1M_MC'})
 
         # test a call used in the GEM4ALL importer, XML + CSV
         fname = os.path.join(os.path.dirname(case_2.__file__),
                              'exposure.xml')
-        for ass in asset.Exposure.read([fname]).assets:
+        for ass in asset.Exposure.read_all([fname]).assets:
             # make sure all the attributes exist
             ass.asset_id
             ass.tags['taxonomy']

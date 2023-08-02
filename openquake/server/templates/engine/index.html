@@ -1,7 +1,7 @@
 {% extends "engine/base.html" %}
 
   {% block nav-items %}
-                {% if not aelo_mode %}
+                {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
                 <li class="calc">
                   <form class="calc-form form-horizontal"
                         enctype="multipart/form-data"
@@ -22,7 +22,7 @@
         <div id="oq-body-wrapper">
           <div id="new-release-box" class="alert alert-warning">
           </div>
-          {% if aelo_mode %}
+          {% if application_mode == 'AELO' %}
           <div>
             <h2>Run an AELO calculation</h2>
             {% if not user.email %}
@@ -87,6 +87,7 @@
             <% if (calc.get('status') != 'created') { %>
               <a href="#" data-calc-id="<%= calc.get('id') %>" is-running="<%= calc.get('is_running') %>" class="btn btn-sm btn-log" style="margin: 2px 0 2px 0;">Console</a>
               <% if (calc.get('is_running') == false) { %>
+                {% if application_mode != 'READ_ONLY' %}
                 <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Remove</a>
                 <!-- confirm_modal -->
                 <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
@@ -107,8 +108,10 @@
                 </div>
                 </div>
                 <!-- end confirm_modal -->
+                {% endif %}
                 <% if (calc.get('status') == 'complete') { %>
                   <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
+                  {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"
                     method="post" action="{{ oq_engine_server_url }}/v1/calc/run">
@@ -118,10 +121,12 @@
                   </div>
                   <input type="hidden" name="hazard_job_id" value="<%= calc.get('id') %>"/>
                   </form>
+                  {% endif %}
                 <% } else { %>
                   <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-traceback" style="margin: 2px 0 2px 0;">Traceback</a>
                 <% } %>
               <% } else if (calc.get('abortable')) { %>
+              {% if application_mode != 'READ_ONLY' %}
               <a href="#" data-calc-id="<%= calc.get('id') %>" class="btn btn-sm btn-danger" style="margin: 2px 0 2px 0;">Abort</a>
               <!-- confirm_modal -->
               <div class="modal-backdrop in hide back_confirmDialog<%= calc.get('id') %>"></div>
@@ -142,6 +147,7 @@
               </div>
               </div>
               <!-- end confirm_modal -->
+              {% endif %}
             <% } %>
           <% } %>
           </td>

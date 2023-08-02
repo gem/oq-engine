@@ -38,8 +38,10 @@ import itertools
 import subprocess
 import collections
 import multiprocessing
+from contextlib import contextmanager
 from collections.abc import Mapping, Container, MutableSequence
 import numpy
+import pandas
 from decorator import decorator
 from openquake.baselib import __version__
 from openquake.baselib.python3compat import decode
@@ -1168,6 +1170,13 @@ def random_filter(objects, reduction_factor, seed=42):
     if reduction_factor == 1:  # do not reduce
         return objects
     rnd = random.Random(seed)
+    if isinstance(objects, pandas.DataFrame):
+        name = objects.index.name
+        df = objects.reset_index()
+        df = pandas.DataFrame({
+            col: random_filter(df[col], reduction_factor, seed)
+            for col in df.columns})
+        return df.set_index(name)
     out = []
     for obj in objects:
         if rnd.random() <= reduction_factor:
@@ -1552,6 +1561,20 @@ def sqrscale(x_min, x_max, n):
                          (x_max, x_min))
     delta = numpy.sqrt(x_max - x_min) / (n - 1)
     return x_min + (delta * numpy.arange(n))**2
+
+
+# NB: there is something like this in contextlib in Python 3.11
+@contextmanager
+def chdir(path):
+    """
+    Context manager to temporarily change the CWD
+    """
+    oldpwd = os.getcwd()
+    os.chdir(path)
+    try:
+        yield
+    finally:
+        os.chdir(oldpwd)
 
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 

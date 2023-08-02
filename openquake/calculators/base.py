@@ -360,7 +360,7 @@ def check_time_event(oqparam, occupancy_periods):
     with the periods found in the exposure.
     """
     time_event = oqparam.time_event
-    if time_event and time_event not in occupancy_periods:
+    if time_event != 'avg' and time_event not in occupancy_periods:
         raise ValueError(
             'time_event is %s in %s, but the exposure contains %s' %
             (time_event, oqparam.inputs['job_ini'],
@@ -490,10 +490,9 @@ class HazardCalculator(BaseCalculator):
         if 'station_data' in oq.inputs:
             logging.info('Reading station data from %s',
                          oq.inputs['station_data'])
-            self.station_data, self.station_sites, self.observed_imts = \
-                readinput.get_station_data(oq)
+            self.station_data, self.observed_imts = \
+                readinput.get_station_data(oq, self.sitecol)
             self.datastore.create_df('station_data', self.station_data)
-            self.datastore.create_df('station_sites', self.station_sites)
             oq.observed_imts = self.observed_imts
 
         if (oq.calculation_mode == 'disaggregation' and
@@ -570,13 +569,13 @@ class HazardCalculator(BaseCalculator):
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
-            haz_sitecol = readinput.get_site_collection(oq)
+            haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
-            self.datastore['rlzs_by_g'] = U32([[0]])
+            self.datastore['trt_rlzs'] = U32([[0]])
             self.realizations = fake.get_realizations()
             self.save_crmodel()
             self.datastore.swmr_on()
@@ -679,26 +678,24 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        with self.monitor('reading exposure'):
-            self.sitecol, self.assetcol, discarded = (
-                readinput.get_sitecol_assetcol(
-                    oq, haz_sitecol, self.crmodel.loss_types))
-            # this is overriding the sitecol in test_case_miriam
-            self.datastore['sitecol'] = self.sitecol
-            if len(discarded):
-                self.datastore['discarded'] = discarded
-                if 'scenario' in oq.calculation_mode:
-                    # this is normal for the case of scenario from rupture
-                    logging.info('%d assets were discarded because too far '
-                                 'from the rupture; use `oq show discarded` '
-                                 'to show them and `oq plot_assets` to plot '
-                                 'them' % len(discarded))
-                elif not oq.discard_assets:  # raise an error
-                    self.datastore['assetcol'] = self.assetcol
-                    raise RuntimeError(
-                        '%d assets were discarded; use `oq show discarded` to'
-                        ' show them and `oq plot_assets` to plot them' %
-                        len(discarded))
+        self.sitecol, self.assetcol, discarded = readinput.get_sitecol_assetcol(
+            oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
+        # this is overriding the sitecol in test_case_miriam
+        self.datastore['sitecol'] = self.sitecol
+        if len(discarded):
+            self.datastore['discarded'] = discarded
+            if 'scenario' in oq.calculation_mode:
+                # this is normal for the case of scenario from rupture
+                logging.info('%d assets were discarded because too far '
+                             'from the rupture; use `oq show discarded` '
+                             'to show them and `oq plot_assets` to plot '
+                             'them' % len(discarded))
+            elif not oq.discard_assets:  # raise an error
+                self.datastore['assetcol'] = self.assetcol
+                raise RuntimeError(
+                    '%d assets were discarded; use `oq show discarded` to'
+                    ' show them and `oq plot_assets` to plot them' %
+                    len(discarded))
         if 'insurance' in oq.inputs:
             self.load_insurance_data(oq.inputs['insurance'].items())
         elif 'reinsurance' in oq.inputs:
@@ -855,7 +852,8 @@ class HazardCalculator(BaseCalculator):
                 check_time_event(oq, parent['assetcol'].occupancy_periods)
             elif oq.job_type == 'risk' and 'exposure' not in oq.inputs:
                 raise ValueError('Missing exposure both in hazard and risk!')
-            if oq_hazard.time_event and oq_hazard.time_event != oq.time_event:
+            if (oq_hazard.time_event != 'avg' and
+                    oq_hazard.time_event != oq.time_event):
                 raise ValueError(
                     'The risk configuration file has time_event=%s but the '
                     'hazard was computed with time_event=%s' % (
@@ -999,7 +997,9 @@ class HazardCalculator(BaseCalculator):
         """
         oq = self.oqparam
         if oq.postproc_func:
-            func = getattr(postproc, oq.postproc_func).main
+            modname, funcname = oq.postproc_func.rsplit('.', 1)
+            mod = getattr(postproc, modname)
+            func = getattr(mod, funcname)
             if 'csm' in inspect.getargspec(func).args:
                 if hasattr(self, 'csm'):  # already there
                     csm = self.csm
@@ -1227,26 +1227,26 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     oq = dstore['oqparam']
     R = dstore['full_lt'].get_num_paths()
     M = len(prim_imts)
-    n = 0 if data is None else len(data['sid'])
-    items = [('sid', U32 if n == 0 else data['sid']),
-             ('eid', U32 if n == 0 else data['eid'])]
+    N = 0 if data is None else data['sid'].max() + 1
+    items = [('sid', U32 if N == 0 else data['sid']),
+             ('eid', U32 if N == 0 else data['eid'])]
     for m in range(M):
         col = f'gmv_{m}'
         items.append((col, F32 if data is None else data[col]))
     for imt in sec_imts:
-        items.append((str(imt), F32 if n == 0 else data[imt]))
+        items.append((str(imt), F32 if N == 0 else data[imt]))
     if oq.investigation_time:
         eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
     else:
         eff_time = 0
-    dstore.create_df('gmf_data', items, 'gzip')
+    dstore.create_df('gmf_data', items)  # not gzipping for speed
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
                      effective_time=eff_time)
     if data is not None:
-        df = pandas.DataFrame(dict(items))
-        avg_gmf = numpy.zeros((2, n, M + len(sec_imts)), F32)
-        for sid, df in df.groupby(df.sid):
+        _df = pandas.DataFrame(dict(items))
+        avg_gmf = numpy.zeros((2, N, M + len(sec_imts)), F32)
+        for sid, df in _df.groupby(_df.sid):
             df.pop('eid')
             df.pop('sid')
             avg_gmf[:, sid] = stats.avg_std(df.to_numpy())
@@ -1269,14 +1269,20 @@ def save_agg_values(dstore, assetcol, lossnames, aggby, maxagg):
         dstore['agg_values'] = assetcol.get_agg_values(aggby, maxagg)
 
 
-def save_shakemap(calc, sitecol, shakemap, gmf_dict):
+def store_shakemap(calc, sitecol, shakemap, gmf_dict):
     """
     Store a ShakeMap array as a gmf_data dataset.
     """
     logging.info('Building GMFs')
     oq = calc.oqparam
     with calc.monitor('building/saving GMFs'):
-        imts, gmfs = to_gmfs(shakemap, gmf_dict, oq.site_effects,
+        if oq.site_effects == 'no':
+            vs30 = None  # do not amplify
+        elif oq.site_effects == 'shakemap':
+            vs30 = shakemap['vs30']
+        elif oq.site_effects == 'sitemodel':
+            vs30 = sitecol.vs30
+        imts, gmfs = to_gmfs(shakemap, gmf_dict, vs30,
                              oq.truncation_level,
                              oq.number_of_ground_motion_fields,
                              oq.random_seed, oq.imtls)
@@ -1317,7 +1323,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             uridict = oq.shakemap_uri
         sitecol, shakemap, discarded = get_sitecol_shakemap(
-            uridict, oq.imtls, haz_sitecol,
+            uridict, oq.risk_imtls, haz_sitecol,
             oq.asset_hazard_distance['default'])
         if len(discarded):
             calc.datastore['discarded'] = discarded
@@ -1352,7 +1358,7 @@ def read_shakemap(calc, haz_sitecol, assetcol):
         else:
             # no correlation required, basic calculation is faster
             gmf_dict = {'kind': 'basic'}
-    save_shakemap(calc, sitecol, shakemap, gmf_dict)
+    store_shakemap(calc, sitecol, shakemap, gmf_dict)
     return sitecol, assetcol
 
 

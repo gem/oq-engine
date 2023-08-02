@@ -33,7 +33,7 @@ class Input(object):
 
 
 def compute_mrd(inp, crosscorr, imt1, imt2,
-                meabins, sigbins, monitor):
+                meabins, sigbins, method, monitor):
     """
     :param inp: an Input object (contexts, contextm maker, num_sites)
     :param N: the total number of sites
@@ -43,27 +43,28 @@ def compute_mrd(inp, crosscorr, imt1, imt2,
     :param str imt1: the second Intensity Measure Type
     :param meabins: bins for the means
     :param sigbins: bins for the sigmas
+    :param method: string 'direct' or 'indirect'
     :returns: 4D-matrix with shape (L1, L1, N, G)
     """
     G = len(inp.cmaker.gsims)
     mrd = calc_mean_rate_dist(inp.ctx, inp.N, inp.cmaker, crosscorr,
-                              imt1, imt2, meabins, sigbins)
-    return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gidx)}
+                              imt1, imt2, meabins, sigbins, method)
+    return {g: mrd[:, :, :, i % G] for i, g in enumerate(inp.cmaker.gid)}
 
 
-def combine_mrds(acc, rlzs_by_g):
+def combine_mrds(acc, g_weights):
     """
     Sum the mean rates with the right weights
     """
-    weig = rlzs_by_g['weight']
     g = next(iter(acc))  # first key
     out = numpy.zeros(acc[g].shape)  # shape (L1, L1, N)
     for g in acc:
-        out += acc[g] * weig[g]
+        out += acc[g] * g_weights[g]['weight']
     return out
 
 
-def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
+def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins,
+         method='indirect'):
     """
     :param dstore: datastore with the classical calculation
 
@@ -71,12 +72,13 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
     """
     crosscorr = getattr(cc, cross_correlation)()
     oq = dstore['oqparam']
+    full_lt = dstore['full_lt'].init()
     N = len(dstore['sitecol'])
     L1 = oq.imtls.size // len(oq.imtls) - 1
     if L1 > 24:
         logging.warning('There are many intensity levels (%d), the '
                         'calculation can be pretty slow', L1 + 1)
-    assert N <= 10, 'Too many sites: %d' % N
+    assert N <= oq.max_sites_disagg, 'Too many sites: %d' % N
     cmakers = contexts.read_cmakers(dstore)
     ctx_by_grp = contexts.read_ctx_by_grp(dstore)
     n = sum(len(ctx) for ctx in ctx_by_grp.values())
@@ -86,7 +88,8 @@ def main(dstore, imt1, imt2, cross_correlation, seed, meabins, sigbins):
         # NB: a trivial splitting of the contexts would case task-dependency!
         cmaker = cmakers[grp_id]
         smap.submit((Input(ctx, cmaker, N), crosscorr, imt1, imt2,
-                     meabins, sigbins))
+                     meabins, sigbins, method))
     acc = smap.reduce()
     mrd = dstore.create_dset('mrd', float, (L1, L1, N))
-    mrd[:] = combine_mrds(acc, dstore['rlzs_by_g'][:])
+    trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
+    mrd[:] = combine_mrds(acc, full_lt.g_weights(trt_rlzs))

@@ -16,16 +16,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import numpy
 from numpy.testing import assert_almost_equal as aae
-
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
-    case_9, case_10, case_11, case_12, case_13, case_14, case_15,
-    case_16, case_17, case_18, case_19, case_20, case_21, case_22)
+    case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
+    case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
+    case_26)
 from openquake.baselib.general import gettemp
-from openquake.hazardlib import InvalidFile
+from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
 from openquake.calculators.views import text_table, view
 from openquake.calculators.tests import CalculatorTestCase
@@ -176,7 +175,7 @@ class ScenarioTestCase(CalculatorTestCase):
             sorted(assetcol.array.dtype.names),
             sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'value-area',
                     'value-contents', 'value-nonstructural', 'value-number',
-                    'value-occupants', 'occupants_night', 'value-structural',
+                    'occupants_avg', 'occupants_night', 'value-structural',
                     'ideductible', 'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
                     'OCCUPANCY', 'NAME_1']))
 
@@ -256,3 +255,20 @@ class ScenarioTestCase(CalculatorTestCase):
         for gmv in 'gmv_0 gmv_1 gmv_2 gmv_3'.split():
             for g1, g2 in zip(df0[gmv], df1[gmv]):
                 assert abs(g1-g2) < 5E-6, (gmv, g1, g2)
+
+    def test_case_23(self):
+        # check exposure with duplicates
+        with self.assertRaises(nrml.DuplicatedID):
+            self.run_calc(case_23.__file__, 'job.ini')
+
+    def test_case_24(self):
+        # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
+        self.run_calc(case_24.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)
+
+    def test_case_26(self):
+        # conditioned GMFs with extreme_gmv
+        self.run_calc(case_26.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)

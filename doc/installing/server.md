@@ -122,7 +122,7 @@ When using `python-oq-libs` for Debian, *gunicorn* is already provided.
 gunicorn -w N wsgi:application
 ```
 
-where `N` is the number of workers, which is usually equal to `(CPU threads)*2`.
+where `N` is the number of workers, we suggest `N = 4`.
 
 *gunicorn* is usually managed by the OS init system. See an example for [systemd](../../debian/systemd/openquake-webui.service).
 

@@ -269,7 +269,7 @@ def view_rup_info(token, dstore, maxrows=25):
     """
     if not code2cls:
         code2cls.update(source.rupture.BaseRupture.init())
-    fields = ['code', 'n_occ', 'mag']
+    fields = ['code', 'n_occ', 'nsites', 'mag']
     rups = dstore.read_df('ruptures', 'id')[fields]
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
@@ -302,6 +302,7 @@ def view_full_lt(token, dstore):
     num_paths = full_lt.get_num_potential_paths()
     if not full_lt.num_samples and num_paths > 15000:
         return '<%d realizations>' % num_paths
+    full_lt.get_trt_rlzs(dstore['trt_smrs'][:])  # set _rlzs_by
     header = ['trt_smr', 'gsim', 'rlzs']
     rows = []
     for trt_smr, rbg in full_lt._rlzs_by.items():
@@ -647,17 +648,17 @@ def view_assets_by_site(token, dstore):
     Display statistical information about the distribution of the assets
     """
     taxonomies = dstore['assetcol/tagcol/taxonomy'][()]
-    assets_by_site = dstore['assetcol'].assets_by_site()
+    assets_by = group_array(dstore['assetcol'].array, 'site_id')
     data = ['taxonomy num_sites mean stddev min max num_assets'.split()]
     num_assets = AccumDict()
-    for assets in assets_by_site:
+    for assets in assets_by.values():
         num_assets += {k: [len(v)] for k, v in group_array(
             assets, 'taxonomy').items()}
     for taxo in sorted(num_assets):
         val = numpy.array(num_assets[taxo])
         data.append(stats(taxonomies[taxo], val, val.sum()))
     if len(num_assets) > 1:  # more than one taxonomy, add a summary
-        n_assets = numpy.array([len(assets) for assets in assets_by_site])
+        n_assets = numpy.array([len(assets) for assets in assets_by.values()])
         data.append(stats('*ALL*', n_assets, n_assets.sum()))
     return text_table(data)
 
@@ -1206,8 +1207,7 @@ def view_risk_by_rup(token, dstore):
     rdf = dstore.read_df('ruptures', 'id')
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = loss_by_rup.join(rdf).join(info)[
-        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2',
-         'nsites', 'rrup']]
+        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2', 'rrup']]
     for field in df.columns:
         if field not in ('mag', 'n_occ'):
             df[field] = numpy.round(F64(df[field]), 1)
@@ -1415,7 +1415,7 @@ def view_mean_perils(token, dstore):
 
 @view.add('pmaps_size')
 def view_pmaps_size(token, dstore):
-    return humansize(get_pmaps_gb(dstore))
+    return humansize(get_pmaps_gb(dstore)[0])
 
 
 @view.add('rup_stats')

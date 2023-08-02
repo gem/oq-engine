@@ -26,6 +26,7 @@ import functools
 import collections
 import multiprocessing
 import numpy
+import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
 from openquake.baselib.general import DictArray, AccumDict
@@ -363,10 +364,10 @@ iml_disagg:
   Default: no default
 
 imt_ref:
-  Reference intensity measure type usedto compute the conditional spectrum.
+  Reference intensity measure type used to compute the conditional spectrum.
   The imt_ref must belong to the list of IMTs of the calculation.
   Example: *imt_ref = SA(0.15)*.
-  Default: no default
+  Default: empty string
 
 individual_rlzs:
   When set, store the individual hazard curves and/or individual risk curves
@@ -384,6 +385,11 @@ infer_occur_rates:
    nonparametric sources.
    Example: *infer_occur_rates = true*
    Default: False
+
+infrastructure_connectivity_analysis:
+    If set, run the infrastructure connectivity analysis.
+    Example: *infrastructure_connectivity_analysis = true*
+    Default: False
 
 inputs:
   INTERNAL. Dictionary with the input files paths.
@@ -465,14 +471,6 @@ max_sites_disagg:
   *max_sites_disagg*, that must be greater or equal to the number of sites.
   Example: *max_sites_disagg = 100*
   Default: 10
-
-pmap_max_gb:
-   Control the memory used in large classical calculations. The default is .4
-   (meant for people with 2 GB per core or less) but you increase it if you
-   have plenty of memory, thus producing less tiles and making the calculation
-   more efficient. For small calculations it has no effect.
-   Example: *pmap_max_gb = 2*
-   Default: .4
 
 max_weight:
   INTERNAL
@@ -565,7 +563,7 @@ pointsource_distance:
 
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
-  Example: *postproc_func = compute_mrd*
+  Example: *postproc_func = compute_mrd.main*
   Default: '' (no postprocessing)
 
 postproc_args:
@@ -584,7 +582,7 @@ ps_grid_spacing:
 
 quantiles:
   List of probabilities used to compute the quantiles across realizations.
-  Example: quantiles = 9.15 0.50 0.85
+  Example: quantiles = 0.15 0.50 0.85
   Default: empty list
 
 random_seed:
@@ -712,9 +710,11 @@ shift_hypo:
   Default: false
 
 site_effects:
-  Flag used in ShakeMap calculations to turn out GMF amplification
-  Example: *site_effects = true*.
-  Default: False
+  Used in ShakeMap calculations to turn on GMF amplification based
+  on the vs30 values in the ShakeMap (site_effects='shakemap') or in the
+  site collection (site_effects='sitecol').
+  Example: *site_effects = 'shakemap'*.
+  Default: 'no'
 
 sites:
   Used to specify a list of sites.
@@ -765,13 +765,13 @@ time_event:
   Used in scenario_risk calculations when the occupancy depend on the time.
   Valid choices are "day", "night", "transit".
   Example: *time_event = day*.
-  Default: None
+  Default: "avg"
 
 time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
-  Default: 2000
+  Default: 300
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -834,9 +834,14 @@ ALL_CALCULATORS = ['aftershock',
                    'multi_risk',
                    'classical_bcr',
                    'preclassical',
-                   'conditional_spectrum',
                    'event_based_damage',
                    'scenario_damage']
+
+COST_TYPES = [
+    'structural', 'nonstructural', 'contents', 'business_interruption']
+ALL_COST_TYPES = [
+    '+'.join(s) for l_idx in range(len(COST_TYPES))
+    for s in itertools.combinations(COST_TYPES, l_idx + 1)]
 
 
 def check_same_levels(imtls):
@@ -888,6 +893,7 @@ class OqParam(valid.ParamSet):
         'business_interruption_consequence',
         'structural_vulnerability_retrofitted',
         'occupants_vulnerability',
+        'residents_vulnerability',
         'area_vulnerability',
         'number_vulnerability',
     }
@@ -956,11 +962,12 @@ class OqParam(valid.ParamSet):
     ignore_missing_costs = valid.Param(valid.namelist, [])
     ignore_covs = valid.Param(valid.boolean, False)
     iml_disagg = valid.Param(valid.floatdict, {})  # IMT -> IML
-    imt_ref = valid.Param(valid.intensity_measure_type)
+    imt_ref = valid.Param(valid.intensity_measure_type, '')
     individual_rlzs = valid.Param(valid.boolean, None)
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     infer_occur_rates = valid.Param(valid.boolean, False)
+    infrastructure_connectivity_analysis = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -979,7 +986,6 @@ class OqParam(valid.ParamSet):
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_gb = valid.Param(valid.positivefloat, .4)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -995,7 +1001,7 @@ class OqParam(valid.ParamSet):
     poes = valid.Param(valid.probabilities, [])
     poes_disagg = valid.Param(valid.probabilities, [])
     pointsource_distance = valid.Param(valid.floatdict, {'default': PSDIST})
-    postproc_func = valid.Param(valid.simple_id, '')
+    postproc_func = valid.Param(valid.mod_func, 'dummy.main')
     postproc_args = valid.Param(valid.dictionary, {})
     prefer_global_site_params = valid.Param(valid.boolean, None)
     ps_grid_spacing = valid.Param(valid.positivefloat, 0)
@@ -1033,7 +1039,8 @@ class OqParam(valid.ParamSet):
     shakemap_id = valid.Param(valid.nice_string, None)
     shakemap_uri = valid.Param(valid.dictionary, {})
     shift_hypo = valid.Param(valid.boolean, False)
-    site_effects = valid.Param(valid.boolean, False)  # shakemap amplification
+    site_effects = valid.Param(
+        valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_slice = valid.Param(valid.simple_slice, None)
     soil_intensities = valid.Param(valid.positivefloats, None)
@@ -1044,13 +1051,9 @@ class OqParam(valid.ParamSet):
     split_sources = valid.Param(valid.boolean, True)
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
-    time_event = valid.Param(str, None)
-    time_per_task = valid.Param(valid.positivefloat, 2000)
-    total_losses = valid.Param(
-        valid.Choice('structural+nonstructural',
-                     'structural+contents',
-                     'nonstructural+contents',
-                     'structural+nonstructural+contents'), None)
+    time_event = valid.Param(str, 'avg')
+    time_per_task = valid.Param(valid.positivefloat, 300)
+    total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
     use_rates = valid.Param(valid.boolean, False)
@@ -1285,13 +1288,6 @@ class OqParam(valid.ParamSet):
                 raise InvalidFile('%s: you cannot set rlzs_index and '
                                   'num_rlzs_disagg at the same time' % job_ini)
 
-        # checks for conditional_spectrum
-        if self.calculation_mode == 'conditional_spectrum':
-            if not self.poes:
-                raise InvalidFile("%s: you must specify the poes" % job_ini)
-            elif list(self.hazard_stats()) != ['mean']:
-                raise InvalidFile('%s: only the mean is supported' % job_ini)
-
         # checks for classical_damage
         if self.calculation_mode == 'classical_damage':
             if self.conditional_loss_poes:
@@ -1348,7 +1344,7 @@ class OqParam(valid.ParamSet):
                 costtypes = set(rt.rsplit('/')[1] for rt in rfs)
             except OSError:  # FileNotFound for wrong hazard_calculation_id
                 pass
-        self.all_cost_types = sorted(costtypes)
+        self.all_cost_types = sorted(costtypes)  # including occupants
 
         # fix minimum_asset_loss
         self.minimum_asset_loss = {
@@ -1494,7 +1490,7 @@ class OqParam(valid.ParamSet):
 
         Set the attribute risk_imtls.
         """
-        imtls = AccumDict(accum=[])  # imt -> imls
+        risk_imtls = AccumDict(accum=[])  # imt -> imls
         for i, rf in enumerate(risklist):
             if not hasattr(rf, 'imt') or rf.kind.endswith('_retrofitted'):
                 # for consequence or retrofitted
@@ -1505,10 +1501,9 @@ class OqParam(valid.ParamSet):
                               self.steps_per_interval)
                 risklist[i] = rf
             from_string(rf.imt)  # make sure it is a valid IMT
-            imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
+            risk_imtls[rf.imt].extend(iml for iml in rf.imls if iml > 0)
         suggested = ['\nintensity_measure_types_and_levels = {']
-        risk_imtls = self.risk_imtls.copy()
-        for imt, imls in imtls.items():
+        for imt, imls in risk_imtls.items():
             risk_imtls[imt] = list(valid.logscale(min(imls), max(imls), 20))
             suggested.append('  %r: logscale(%s, %s, 20),' %
                              (imt, min(imls), max(imls)))
@@ -1858,7 +1853,7 @@ class OqParam(valid.ParamSet):
         """
         if self.ground_motion_correlation_model:
             for imt in self.imtls:
-                if not (imt.startswith('SA') or imt == 'PGA'):
+                if not (imt.startswith('SA') or imt in ['PGA', 'PGV']):
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
@@ -2056,7 +2051,9 @@ class OqParam(valid.ParamSet):
         return hdf5.dumps(vars(self)), {}
 
     def __fromh5__(self, array, attrs):
-        if isinstance(array, numpy.ndarray):  # old format <= 3.11
+        if isinstance(array, numpy.ndarray):
+            # old format <= 3.11, tested in read_old_data,
+            # used to read old GMFs
             dd = collections.defaultdict(dict)
             for (name_, literal_) in array:
                 name = python3compat.decode(name_)
@@ -2067,5 +2064,11 @@ class OqParam(valid.ParamSet):
                 else:
                     dd[name] = ast.literal_eval(literal)
             vars(self).update(dd)
-        else:  # new format >= 3.12
+        else:
+            # for version >= 3.12
             vars(self).update(json.loads(python3compat.decode(array)))
+
+        Idist = calc.filters.IntegrationDistance
+        if hasattr(self, 'maximum_distance') and not isinstance(
+                self.maximum_distance, Idist):
+            self.maximum_distance = Idist(**self.maximum_distance)

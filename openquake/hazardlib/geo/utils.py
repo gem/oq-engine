@@ -22,29 +22,30 @@ to several geographical primitives and some other low-level spatial operations.
 """
 import math
 import logging
-import operator
 import collections
 
 import numpy
 from scipy.spatial import cKDTree
-import shapely.geometry
+from shapely import geometry
 
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
-from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import geodetic
+from openquake.baselib.performance import compile, split_array
+from openquake.hazardlib import geo
 
+U8 = numpy.uint8
 U32 = numpy.uint32
 F32 = numpy.float32
+F64 = numpy.float64
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
-EARTH_RADIUS = geodetic.EARTH_RADIUS
-spherical_to_cartesian = geodetic.spherical_to_cartesian
+EARTH_RADIUS = geo.geodetic.EARTH_RADIUS
+spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
 SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
-
+CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
 
 class BBoxError(ValueError):
     """Bounding box too large"""
@@ -178,32 +179,47 @@ class _GeographicObjects(object):
         return (sitecol.filtered(sids), numpy.array([dic[s] for s in sids]),
                 discarded)
 
-    def assoc2(self, assets_by_site, assoc_dist, mode):
+    def assoc2(self, exp, assoc_dist, region, mode):
         """
         Associated a list of assets by site to the site collection used
         to instantiate GeographicObjects.
 
-        :param assets_by_sites: a list of lists of assets
+        :param exp: Exposure instance
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :returns: filtered site collection, filtered assets by site, discarded
+        :returns: filtered site collection, discarded
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection
+        mesh = exp.mesh
+        assets_by_site = split_array(exp.assets, exp.assets['site_id'])
+        if region:
+            # TODO: use SRTree
+            out = []
+            for i, (lon, lat) in enumerate(zip(mesh.lons, mesh.lats)):
+                if not geometry.Point(lon, lat).within(region):
+                    out.append(i)
+            if out:
+                ok = ~numpy.isin(numpy.arange(len(mesh)), out)
+                if ok.sum() == 0:
+                    raise RuntimeError(
+                        'Could not find any asset within the region!')
+                mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
+                assets_by_site = numpy.array(assets_by_site)[ok]
+                logging.info('Discarded %d assets outside the region', len(out))
         asset_dt = numpy.dtype(
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
         discarded = []
-        for assets in assets_by_site:
-            lon, lat = assets[0].lon, assets[0].lat
-            obj, distance = self.get_closest(lon, lat)
+        objs, distances = self.get_closest(mesh.lons, mesh.lats)
+        for obj, distance, assets in zip(objs, distances, assets_by_site):
             if distance <= assoc_dist:
                 # keep the assets, otherwise discard them
                 assets_by_sid[obj['sids']].extend(assets)
             elif mode == 'strict':
                 raise SiteAssociationError(
                     'There is nothing closer than %s km '
-                    'to site (%s %s)' % (assoc_dist, lon, lat))
+                    'to site (%s %s)' % (assoc_dist, obj['lon'], obj['lat']))
             else:
                 discarded.extend(assets)
         sids = sorted(assets_by_sid)
@@ -211,12 +227,18 @@ class _GeographicObjects(object):
             raise SiteAssociationError(
                 'Could not associate any site to any assets within the '
                 'asset_hazard_distance of %s km' % assoc_dist)
-        assets_by_site = [
-            sorted(assets_by_sid[sid], key=operator.attrgetter('ordinal'))
-            for sid in sids]
-        data = [(asset.asset_id, asset.lon, asset.lat) for asset in discarded]
+        data = [(asset['id'], asset['lon'], asset['lat'])
+                for asset in discarded]
         discarded = numpy.array(data, asset_dt)
-        return self.objects.filtered(sids), assets_by_site, discarded
+        assets = []
+        for sid in sids:
+            for ass in assets_by_sid[sid]:
+                ass['site_id'] = sid
+                assets.append(ass)
+        exp.mesh = mesh
+        exp.assets = numpy.array(assets, ass.dtype)
+        exp.assets['ordinal'] = numpy.arange(len(exp.assets))
+        return self.objects.filtered(sids), discarded
 
 
 def assoc(objects, sitecol, assoc_dist, mode):
@@ -233,12 +255,7 @@ def assoc(objects, sitecol, assoc_dist, mode):
         if 'error' fail if all sites are not associated
     :returns: (filtered site collection, filtered objects)
     """
-    if isinstance(objects, numpy.ndarray) or hasattr(objects, 'lons'):
-        # objects is a geo array with lon, lat fields; used for ShakeMaps
-        return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
-    else:  # objects is the list assets_by_site
-        return _GeographicObjects(sitecol).assoc2(
-            objects, assoc_dist, mode)
+    return _GeographicObjects(objects).assoc(sitecol, assoc_dist, mode)
 
 
 ERROR_OUTSIDE = 'The site (%.1f %.1f) is outside of any vs30 area.'
@@ -260,7 +277,7 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
     index_by_id = dict((id(pl), i) for i, pl in enumerate(polygons))
 
     for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
-        point = shapely.geometry.Point(lon, lat)
+        point = geometry.Point(lon, lat)
         result = next((index_by_id[id(o)]
                        for o in tree.query(point) if o.contains(point)), None)
         if result is not None:
@@ -331,12 +348,12 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     proj = OrthographicProjection(west, east, north, south)
 
     xx, yy = proj(lons, lats)
-    if not shapely.geometry.LineString(list(zip(xx, yy))).is_simple:
+    if not geometry.LineString(list(zip(xx, yy))).is_simple:
         return True
 
     if closed_shape:
         xx, yy = proj(numpy.roll(lons, 1), numpy.roll(lats, 1))
-        if not shapely.geometry.LineString(list(zip(xx, yy))).is_simple:
+        if not geometry.LineString(list(zip(xx, yy))).is_simple:
             return True
 
     return False
@@ -568,9 +585,9 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     """
     if lon1 == lon2 and lat1 == lat2:
         return lon1, lat1
-    dist = geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
-    azimuth = geodetic.azimuth(lon1, lat1, lon2, lat2)
-    return geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
+    dist = geo.geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
+    azimuth = geo.geodetic.azimuth(lon1, lat1, lon2, lat2)
+    return geo.geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
 
 
 @compile("f8[:,:](f8[:,:])")
@@ -670,7 +687,7 @@ def point_to_polygon_distance(polygon, pxx, pyy):
         pxx = pxx.reshape((1, ))
         pyy = pyy.reshape((1, ))
     result = numpy.array([
-        polygon.distance(shapely.geometry.Point(pxx.item(i), pyy.item(i)))
+        polygon.distance(geometry.Point(pxx.item(i), pyy.item(i)))
         for i in range(pxx.size)
     ])
     return result.reshape(pxx.shape)
@@ -753,40 +770,53 @@ def bbox2poly(bbox):
 # see also https://en.wikipedia.org/wiki/Geohash
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
-# it may turn useful in the future (with SiteCollection.geohash)
-def geohash(lon, lat, length):
+# used in SiteCollection.geohash
+@compile(['(f8[:],f8[:],u1)', '(f4[:],f4[:],u1)'])
+def geohash(lons, lats, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
 
-    >>> geohash(lon=10, lat=45, length=5)
-    b'spzpg'
+    >>> arr = geohash(F64([10., 10.]), F64([45., 46.]), length=5)
+    >>> [row.tobytes() for row in arr]
+    [b'spzpg', b'u0pje']
     """
-    lat_interval, lon_interval = (-90.0, 90.0), (-180.0, 180.0)
-    chars = b''
-    bits = [16, 8, 4, 2, 1]
-    bit = 0
-    ch = 0
-    even = True
-    while len(chars) < length:
-        if even:
-            mid = (lon_interval[0] + lon_interval[1]) / 2
-            if lon > mid:
-                ch |= bits[bit]
-                lon_interval = (mid, lon_interval[1])
+    l1 = len(lons)
+    l2 = len(lats)
+    if l1 != l2:
+        raise ValueError('lons, lats of different lenghts')
+    chars = numpy.zeros((l1, length), U8)
+    for p in range(l1):
+        lon = lons[p]
+        lat = lats[p]
+        lat_interval = [-90.0, 90.0]
+        lon_interval = [-180.0, 180.0]
+        bits = [16, 8, 4, 2, 1]
+        bit = 0
+        ch = 0
+        even = True
+        i = 0
+        while i < length:
+            if even:
+                mid = (lon_interval[0] + lon_interval[1]) / 2
+                if lon > mid:
+                    ch |= bits[bit]
+                    lon_interval[:] = [mid, lon_interval[1]]
+                else:
+                    lon_interval[:] = [lon_interval[0], mid]
             else:
-                lon_interval = (lon_interval[0], mid)
-        else:
-            mid = (lat_interval[0] + lat_interval[1]) / 2
-            if lat > mid:
-                ch |= bits[bit]
-                lat_interval = (mid, lat_interval[1])
+                mid = (lat_interval[0] + lat_interval[1]) / 2
+                if lat > mid:
+                    ch |= bits[bit]
+                    lat_interval[:] = [mid, lat_interval[1]]
+                else:
+                    lat_interval[:] = [lat_interval[0], mid]
+            even = not even
+            if bit < 4:
+                bit += 1
             else:
-                lat_interval = (lat_interval[0], mid)
-        even = not even
-        if bit < 4:
-            bit += 1
-        else:
-            chars += BASE32[ch]
-            bit = 0
-            ch = 0
+                chars[p, i] = CODE32[ch]
+                bit = 0
+                ch = 0
+                i += 1
     return chars
+

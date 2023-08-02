@@ -38,9 +38,8 @@ U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
 
-COST_TYPE_REGEX = '|'.join(valid.cost_type.choices)
-RISK_TYPE_REGEX = re.compile(
-    r'(%s|occupants|fragility)_([\w_]+)' % COST_TYPE_REGEX)
+LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents'
+RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)' % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
@@ -149,7 +148,7 @@ def get_risk_functions(oqparam, kind='vulnerability fragility consequence '
     rmodels = AccumDict()
     for kind in kinds:
         for key in sorted(oqparam.inputs):
-            mo = re.match('(occupants|%s)_%s$' % (COST_TYPE_REGEX, kind), key)
+            mo = re.match('(occupants|%s)_%s$' % (LTYPE_REGEX, kind), key)
             if mo:
                 loss_type = mo.group(1)  # the cost_type in the key
                 # can be occupants, structural, nonstructural, ...
@@ -307,7 +306,10 @@ class RiskModel(object):
         vf = self.risk_functions[loss_type]
         lratios = self.loss_ratios[loss_type]
         imls = self.hazard_imtls[vf.imt]
-        values = assets['value-' + loss_type].to_numpy()
+        if loss_type == 'occupants':
+            values = assets['occupants_avg'].to_numpy()
+        else:
+            values = assets['value-' + loss_type].to_numpy()
         rtime = self.risk_investigation_time or self.investigation_time
         lrcurves = numpy.array(
             [scientific.classical(
@@ -386,10 +388,11 @@ class RiskModel(object):
         :returns: a DataFrame with columns eid, eid, loss
         """
         sid = assets['site_id']
-        if loss_type == 'occupants' and self.time_event:
+        if loss_type == 'occupants':
             val = assets['occupants_%s' % self.time_event].to_numpy()
         else:
             val = assets['value-' + loss_type].to_numpy()
+
         asset_df = pandas.DataFrame(dict(aid=assets.index, val=val), sid)
         vf = self.risk_functions[loss_type]
         return vf(asset_df, gmf_df, col, rndgen,
@@ -587,25 +590,26 @@ class CompositeRiskModel(collections.abc.Mapping):
 
         # check imt_by_lt has consistent loss types for all taxonomies
         if self._riskmodels:
-            records = [[rm.taxonomy] + list(rm.imt_by_lt)
-                       for rm in self._riskmodels.values()]  # [[tax, lt...]]
-            expected_lts = set(records[0][1:])
-            kind = kinds[0]  # vulnerability or fragility
-            for rec in records[1:]:
-                ltypes = set(rec[1:])
-                if not ltypes & expected_lts:
-                    if not self.tmap:
-                        fname = inputs[rec[1] + '_' + kind]
-                        raise NameError(f'The ID {rec[0]} is in {fname}, not '
-                                        f'in the other {kind} files')
-                elif ltypes != expected_lts:
-                    others = ltypes - expected_lts
-                    lt = expected_lts.pop()
-                    fname = inputs[lt + '_' + kind]
-                    for other in others:
-                        # TODO: should this be an error?
-                        logging.warning(f'The ID {rec[0]} is in {fname} but '
-                                        f'not in the {other}_{kind} file')
+            missing = AccumDict(accum=[])
+            for lt in self.loss_types:
+                rms = []
+                if self.tmap:
+                    for pairs in self.tmap[lt][1:]:
+                        for risk_id, weight in pairs:
+                            rms.append(self._riskmodels[risk_id])
+                else:
+                    rms.extend(self._riskmodels.values())
+                for rm in rms:
+                    try:
+                        rm.imt_by_lt[lt]
+                    except KeyError:
+                        key = '%s/%s' % (kinds[0], lt)
+                        fname = self.oqparam._risk_files[key]
+                        missing[fname].append(rm.taxonomy)
+            if missing:
+                for fname, ids in missing.items():
+                    raise InvalidFile(
+                        '%s: missing %s' % (fname, ' '.join(ids)))
 
     def compute_csq(self, asset, fractions, loss_type):
         """

@@ -46,6 +46,33 @@ def engine_profile(jobctx, nrows):
 def from_file(fname, concurrent_jobs=8):
     """
     Run a PSHA analysis on the given sites
+
+    The CSV file must contain in each row a site identifier
+    starting with the 3-character code of the mosaic model that covers it, and
+    the longitude and latitude of the site, separated by commas.
+
+    It may be convenient also to define environment variables to select or
+    exclude subsets of sites from those specified in the CSV file:
+
+    * `OQ_ONLY_MODELS`: a comma-separated list of mosaic models (each
+      identified by the corresponding 3-charracters code) to be selected,
+      excluding sites covered by other models
+    * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
+      all models except those specified in this list
+    * `OQ_ONLY_SITEIDS`: a comma-separated list of site identifiers
+      to be selected, excluding all others from the analysis
+    * `OQ_EXCLUDE_SITEIDS`: a comma-separated list of site identifiers to be
+      excluded, selecting all the others
+    * `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected
+      between those covered by each model
+
+    For instance::
+
+      $ OQ_ONLY_MODELS=CAN,AUS oq mosaic run_site sites.csv
+
+    would select from the file `sites.csv` only those for which the site id
+    starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
+    models for Canada and Australia.
     """
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
@@ -64,9 +91,9 @@ def from_file(fname, concurrent_jobs=8):
             if only_siteids and siteid not in only_siteids.split(','):
                 continue
             curr_model = siteid[:3]
-            if exclude_models and curr_model in exclude_models:
+            if exclude_models and curr_model in exclude_models.split(','):
                 continue
-            if only_models and curr_model not in only_models:
+            if only_models and curr_model not in only_models.split(','):
                 continue
             try:
                 count_sites_per_model[curr_model] += 1
@@ -105,7 +132,8 @@ def from_file(fname, concurrent_jobs=8):
 def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = 8):
     """
-    Run a PSHA analysis on the given lon, lat
+    Run a PSHA analysis on the given lon and lat or given a CSV file
+    formatted as described in the 'from_file' function
     """
     dbserver.ensure_on()
     print(f'Concurrent jobs: {concurrent_jobs}')

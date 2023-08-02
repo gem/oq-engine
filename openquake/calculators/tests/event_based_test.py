@@ -36,12 +36,11 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.event_based import get_mean_curve, compute_avg_gmf
 from openquake.calculators.tests import CalculatorTestCase
-from openquake.qa_tests_data.classical import case_18 as gmpe_tables
 from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_25, case_26, case_27, case_28, case_29, src_mutex)
+    case_25, case_26, case_27, case_28, case_29, case_30, src_mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -401,14 +400,10 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-rlz-004.csv',
         ]
         # test the --hc functionality, i.e. that ruptures are read correctly
-        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
-        fnames = out['hcurves', 'csv']
+        self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-
-        # check that GMFs are not stored
-        with self.assertRaises(KeyError):
-            self.calc.datastore['gmf_data']
 
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
@@ -464,7 +459,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # testing slowest ruptures
         df = view('rup_info', self.calc.datastore)
-        self.assertEqual(list(df.columns), ['n_occ', 'mag', 'nsites',
+        self.assertEqual(list(df.columns), ['n_occ', 'nsites', 'mag',
                                             'rrup', 'time', 'surface'])
 
     def test_case_23(self):
@@ -604,11 +599,7 @@ class EventBasedTestCase(CalculatorTestCase):
         [fname] = out['event_based_mfd', 'csv']
         self.assertEqualFiles('expected/event_based_mfd.csv', fname, delta=1E-6)
 
-    def test_gmpe_tables(self):
-        out = self.run_calc(
-            gmpe_tables.__file__, 'job.ini',
-            calculation_mode='event_based',
-            investigation_time='100',
-            exports='csv')
-        [fname, _, _] = out['gmf_data', 'csv']
-        self.assertEqualFiles('expected/gmf.csv', fname, delta=1E-6)
+    def test_30(self):
+        out = self.run_calc(case_30.__file__, 'job.ini', exports='csv')
+        [fname] = out['ruptures', 'csv']
+        self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)

@@ -25,10 +25,8 @@ import numpy
 import pandas
 from scipy import sparse
 
-from openquake.baselib import (
-    hdf5, performance, parallel, general, python3compat)
+from openquake.baselib import hdf5, performance, general, python3compat
 from openquake.hazardlib import stats, InvalidFile
-from openquake.hazardlib.source.rupture import RuptureProxy
 from openquake.commonlib.calc import starmap_from_gmfs, compactify3
 from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
@@ -179,13 +177,10 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             else:
                 data = dstore['gmf_data/' + col][s0+start:s0+stop]
                 dic[col] = data[idx - start]
-        df = pandas.DataFrame(dic)
-    max_gmvs = oqparam.max_gmvs_per_task
-    if len(df) <= max_gmvs:
-        yield event_based_risk(df, oqparam, monitor)
-    else:
-        for s0, s1 in performance.split_slices(df.eid.to_numpy(), max_gmvs):
-            yield event_based_risk, df[s0:s1], oqparam
+    df = pandas.DataFrame(dic)
+    for s0, s1 in performance.split_slices(
+            dic['eid'], oqparam.max_gmvs_per_task):
+        yield event_based_risk(df[s0:s1], oqparam, monitor)
 
 
 def event_based_risk(df, oqparam, monitor):
@@ -196,13 +191,13 @@ def event_based_risk(df, oqparam, monitor):
     :returns: a dictionary of arrays
     """
     with monitor('reading crmodel', measuremem=True):
+        crmodel = monitor.read('crmodel')
         ideduc = monitor.read('assets/ideductible')
         aggids = monitor.read('aggids')
-        crmodel = monitor.read('crmodel')
         rlz_id = monitor.read('rlz_id')
         weights = [1] if oqparam.collect_rlzs else monitor.read('weights')
 
-    ARK = (len(ideduc), len(weights), oqparam.K)
+    ARK = (oqparam.A, len(weights), oqparam.K)
     if oqparam.ignore_master_seed or oqparam.ignore_covs:
         rng = None
     else:
@@ -221,44 +216,42 @@ def gen_outputs(df, crmodel, rng, monitor):
     :param crmodel: CompositeRiskModel instance
     :param rng: random number generator
     :param monitor: Monitor instance
+    :yields: one output per taxonomy and slice of events
     """
-    mon_risk = monitor('computing risk', measuremem=True)
+    mon_risk = monitor('computing risk', measuremem=False)
     fil_mon = monitor('filtering GMFs', measuremem=False)
-    ass_mon = monitor('reading assets', measuremem=True)
-    slices = performance.split_slices(df.eid.to_numpy(), 1_000_000)
+    ass_mon = monitor('reading assets', measuremem=False)
+    sids = df.sid.to_numpy()
     for s0, s1 in monitor.read('start-stop'):
         with ass_mon:
             assets = monitor.read('assets', slice(s0, s1)).set_index('ordinal')
-        taxos = numpy.sort(assets.taxonomy.unique())
-        for taxo in taxos:
+        for taxo in assets.taxonomy.unique():
             adf = assets[assets.taxonomy == taxo]
-            for start, stop in slices:
-                gdf = df[start:stop]
-                with fil_mon:
-                    # *crucial* for the performance of the next step
-                    gmf_df = gdf[numpy.isin(gdf.sid.to_numpy(),
-                                            adf.site_id.to_numpy())]
-                if len(gmf_df) == 0:  # common enough
-                    continue
-                with mon_risk:
-                    out = crmodel.get_output(
-                        adf, gmf_df, crmodel.oqparam._sec_losses, rng)
-                yield out
+            with fil_mon:
+                # *crucial* for the performance of the next step
+                gmf_df = df[numpy.isin(sids, adf.site_id.unique())]
+            if len(gmf_df) == 0:  # common enough
+                continue
+            with mon_risk:
+                out = crmodel.get_output(
+                    adf, gmf_df, crmodel.oqparam._sec_losses, rng)
+            yield out
 
 
-def ebrisk(proxies, full_lt, oqparam, dstore, monitor):
+def ebrisk(proxies, cmaker, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
-    :param full_lt: a FullLogicTree instance
-    :param oqparam: input parameters
+    :param cmaker: ContextMaker instance associated to the trt_smr
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
-    oqparam.ground_motion_fields = True
-    dic = event_based.event_based(proxies, full_lt, oqparam, dstore, monitor)
-    if len(dic['gmfdata']) == 0:  # no GMFs
-        return {}
-    return event_based_risk(dic['gmfdata'], oqparam, monitor)
+    cmaker.oq.ground_motion_fields = True
+    for block in general.block_splitter(
+            proxies, 20_000, event_based.rup_weight):
+        dic = event_based.event_based(block, cmaker, dstore, monitor)
+        if len(dic['gmfdata']):
+            gmf_df = pandas.DataFrame(dic['gmfdata'])
+            yield event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
@@ -271,7 +264,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     precalc = 'event_based'
     accept_precalc = ['scenario', 'event_based', 'event_based_risk', 'ebrisk']
 
-    def save_tmp(self, monitor, srcfilter=None):
+    def save_tmp(self, monitor):
         """
         Save some useful data in the file calc_XXX_tmp.hdf5
         """
@@ -284,7 +277,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         # storing start-stop indices in a smart way, so that the assets are
         # read from the workers in chunks of at most 1 million elements
         monitor.save('start-stop', compactify3(tss))
-        monitor.save('srcfilter', srcfilter)
         monitor.save('crmodel', self.crmodel)
         monitor.save('rlz_id', self.rlzs)
         monitor.save('weights', self.datastore['weights'][:])
@@ -299,8 +291,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         if oq.calculation_mode == 'ebrisk':
             oq.ground_motion_fields = False
-            logging.warning('You should be using the event_based_risk '
-                            'calculator, not ebrisk!')
         parent = self.datastore.parent
         if parent:
             self.datastore['full_lt'] = parent['full_lt']
@@ -349,6 +339,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq.M = len(oq.all_imts())
         oq.N = self.N
         oq.K = K
+        oq.A = self.assetcol['ordinal'].max() + 1
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
@@ -413,19 +404,10 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             elif not hasattr(oq, 'maximum_distance'):
                 raise InvalidFile('Missing maximum_distance in %s'
                                   % oq.inputs['job_ini'])
-            srcfilter = self.src_filter()
-            proxies = [RuptureProxy(rec)
-                       for rec in self.datastore['ruptures'][:]]
             full_lt = self.datastore['full_lt']
-            self.datastore.swmr_on()  # must come before the Starmap
-            smap = parallel.Starmap.apply_split(
-                ebrisk, (proxies, full_lt, oq, self.datastore),
-                key=operator.itemgetter('trt_smr'),
-                weight=operator.itemgetter('n_occ'),
-                h5=self.datastore.hdf5,
-                duration=oq.time_per_task,
-                outs_per_task=5)
-            self.save_tmp(smap.monitor, srcfilter)
+            smap = event_based.starmap_from_rups(
+                ebrisk, oq, full_lt, self.sitecol, self.datastore,
+                self.save_tmp)
             smap.reduce(self.agg_dicts)
             if self.gmf_bytes == 0:
                 raise RuntimeError(

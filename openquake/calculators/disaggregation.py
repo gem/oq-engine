@@ -409,7 +409,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if name.endswith('rlzs'):
             Z = self.shapedic['Z']
         else:
-            Z = len(oq.hazard_stats())
+            Z = 1  # only mean is supported
         out = output_dict(self.shapedic, oq.disagg_outputs, Z)
         count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
@@ -434,14 +434,6 @@ class DisaggregationCalculator(base.HazardCalculator):
                         _disagg_trt[s] = tuple(
                             pprod(mat8[..., 0, 0], axis=(1, 2, 3, 4, 5)))
                     poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
-                    if poe and abs(1 - poe_agg/poe) > .1 and not count[s]:
-                        # warn only once per site
-                        msg = ('Site #%d, IMT=%s, rlz=#%d: poe_agg=%s is '
-                               'quite different from the expected poe=%s,'
-                               ' perhaps not enough levels')
-                        logging.warning(msg,  s, imt, best_rlzs[s, z],
-                                        poe_agg, poe)
-                        count[s] += 1
                     if name.endswith('-rlzs'):
                         self.datastore['poe4'][s, m, p, z] = poe_agg
 

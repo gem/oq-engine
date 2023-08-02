@@ -33,8 +33,10 @@ import itertools
 import numpy
 import pandas
 import requests
+from shapely import wkt
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
+from openquake.baselib.performance import Monitor
 from openquake.baselib.general import (
     random_filter, countby, group_array, get_duplicates, gettemp)
 from openquake.baselib.python3compat import zip, decode
@@ -196,7 +198,11 @@ def normalize(key, fnames, base_path):
     return input_type, filenames
 
 
-def _update(params, items, base_path):
+def update(params, items, base_path):
+    """
+    Update a dictionary of string parameters with new parameters. Manages
+    correctly file parameters.
+    """
     for key, value in items:
         if key in ('hazard_curves_csv', 'hazard_curves_file',
                    'site_model_csv', 'site_model_file',
@@ -230,15 +236,15 @@ def _update(params, items, base_path):
             params[key] = value
 
 
-def _warn_about_duplicates(cp):
+def check_params(cp, fname):
     params_sets = [
         set(cp.options(section)) for section in cp.sections()]
     for pair in itertools.combinations(params_sets, 2):
         params_intersection = sorted(set.intersection(*pair))
         if params_intersection:
-            logging.warning(
-                f'Parameter(s) {params_intersection} is(are) defined in'
-                f' multiple sections')
+            raise InvalidFile(
+                f'{fname}: parameter(s) {params_intersection} is(are) defined'
+                ' in multiple sections')
 
 
 # NB: this function must NOT log, since it is called when the logging
@@ -280,7 +286,7 @@ def get_params(job_ini, kw={}):
     params = dict(base_path=base_path, inputs={'job_ini': job_ini})
     cp = configparser.ConfigParser(interpolation=None)
     cp.read([job_ini], encoding='utf-8-sig')  # skip BOM on Windows
-    _warn_about_duplicates(cp)
+    check_params(cp, job_ini)
     dic = {}
     for sect in cp.sections():
         dic.update(cp.items(sect))
@@ -293,11 +299,11 @@ def get_params(job_ini, kw={}):
         items = [('source_model_logic_tree_file', fname)] + list(dic.items())
     else:
         items = list(dic.items())
-    _update(params, items, base_path)
+    update(params, items, base_path)
 
     if input_zip:
         params['inputs']['input_zip'] = os.path.abspath(input_zip)
-    _update(params, kw.items(), base_path)  # override on demand
+    update(params, kw.items(), base_path)  # override on demand
 
     return params
 
@@ -370,7 +376,7 @@ def get_mesh(oqparam, h5=None):
     """
     if 'exposure' in oqparam.inputs and Global.exposure is None:
         # read it only once
-        Global.exposure = get_exposure(oqparam)
+        Global.exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
         return geo.Mesh.from_coords(oqparam.sites)
     elif 'hazard_curves' in oqparam.inputs:
@@ -550,7 +556,6 @@ def get_site_collection(oqparam, h5=None):
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
-
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -587,6 +592,9 @@ def get_site_collection(oqparam, h5=None):
         sitecol = sitecol.filter(mask)
         assert sitecol is not None, 'No sites in the slice %d:%d' % ss
         sitecol.make_complete()
+
+    sitecol.array['lon'] = numpy.round(sitecol.lons, 5)
+    sitecol.array['lat'] = numpy.round(sitecol.lats, 5)
 
     ss = os.environ.get('OQ_SAMPLE_SITES')
     if ss:
@@ -915,7 +923,7 @@ def get_crmodel(oqparam):
     return crm
 
 
-def get_exposure(oqparam):
+def get_exposure(oqparam, h5=None):
     """
     Read the full exposure in memory and build a list of
     :class:`openquake.risklib.asset.Asset` instances.
@@ -925,16 +933,17 @@ def get_exposure(oqparam):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    exposure = Global.exposure = asset.Exposure.read(
-        oqparam.inputs['exposure'], oqparam.calculation_mode,
-        oqparam.region, oqparam.ignore_missing_costs,
-        by_country='country' in asset.tagset(oqparam.aggregate_by),
-        errors='ignore' if oqparam.ignore_encoding_errors else None)
-    exposure.mesh, exposure.assets_by_site = exposure.get_mesh_assets_by_site()
+    with Monitor('reading exposure', measuremem=True, h5=h5):
+        exposure = Global.exposure = asset.Exposure.read_all(
+            oqparam.inputs['exposure'], oqparam.calculation_mode,
+            oqparam.ignore_missing_costs,
+            by_country='country' in asset.tagset(oqparam.aggregate_by),
+            errors='ignore' if oqparam.ignore_encoding_errors else None,
+            infr_conn_analysis=oqparam.infrastructure_connectivity_analysis)
     return exposure
 
 
-def get_station_data(oqparam):
+def get_station_data(oqparam, sitecol):
     """
     Read the station data input file and build a list of
     ground motion stations and recorded ground motion values
@@ -942,50 +951,47 @@ def get_station_data(oqparam):
 
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :returns sd:
-        a Pandas dataframe with station ids and coordinates as the index and
-        IMT names as the first level of column headers and
-        mean, std as the second level of column headers
-    :returns imts:
-        a list of observed intensity measure types
+    :param sitecol:
+        the hazard site collection
+    :returns: station_data, observed_imts
     """
-    if 'station_data' in oqparam.inputs:
-        fname = oqparam.inputs['station_data']
-        sdata = pandas.read_csv(fname)
+    # Read the station data and associate the site ID from longitude, latitude
+    df = pandas.read_csv(oqparam.inputs['station_data'])
+    lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
+    lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
+    sid = {(lon, lat): sid
+           for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
+    sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
 
-        # Identify the columns with IM values
-        # Replace replace() with removesuffix() for pandas ≥ 1.4
-        imt_candidates = sdata.filter(regex="_VALUE$").columns.str.replace(
-            "_VALUE", "")
-        imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
-        im_cols = [imt + '_' + stat
-                   for imt in imts for stat in ["mean", "std"]]
-        station_cols = ["STATION_ID", "LONGITUDE", "LATITUDE"]
-        cols = []
-        for im in imts:
-            stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
-            cols.append(im + '_VALUE')
-            cols.append(im + '_' + stddev_str)
-        station_data = pandas.DataFrame(sdata[cols].values, columns=im_cols)
-        station_sites = pandas.DataFrame(
-            sdata[station_cols].values, columns=["station_id", "lon", "lat"]
-        ).astype({"station_id": str, "lon": F64, "lat": F64})
-    return station_data, station_sites, imts
+    # Identify the columns with IM values
+    # Replace replace() with removesuffix() for pandas ≥ 1.4
+    imt_candidates = df.filter(regex="_VALUE$").columns.str.replace(
+        "_VALUE", "")
+    imts = [valid.intensity_measure_type(imt) for imt in imt_candidates]
+    im_cols = [imt + '_' + stat for imt in imts for stat in ["mean", "std"]]
+    cols = []
+    for im in imts:
+        stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
+        cols.append(im + '_VALUE')
+        cols.append(im + '_' + stddev_str)
+    station_data = pandas.DataFrame(df[cols].values, columns=im_cols)
+    station_data['site_id'] = sids
+    return station_data, imts
 
 
-def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
+def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
     """
     :param oqparam: calculation parameters
     :param haz_sitecol: the hazard site collection
     :param exp_types: the expected loss types
     :returns: (site collection, asset collection, discarded)
     """
+    exp = Global.exposure
+    if exp is None:  # not read already
+        exp = Global.exposure = get_exposure(oqparam, h5)
     asset_hazard_distance = max(oqparam.asset_hazard_distance.values())
-    if Global.exposure is None:
-        # haz_sitecol not extracted from the exposure
-        Global.exposure = get_exposure(oqparam)
     if haz_sitecol is None:
-        haz_sitecol = get_site_collection(oqparam)
+        haz_sitecol = get_site_collection(oqparam, h5)
     if oqparam.region_grid_spacing:
         haz_distance = oqparam.region_grid_spacing * 1.414
         if haz_distance != asset_hazard_distance:
@@ -994,29 +1000,19 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=()):
     else:
         haz_distance = asset_hazard_distance
 
-    if haz_sitecol.mesh != Global.exposure.mesh:
-        # associate the assets to the hazard sites
-        sitecol, assets_by, discarded = geo.utils.assoc(
-            Global.exposure.assets_by_site, haz_sitecol, haz_distance,
-            'filter')
-        assets_by_site = [[] for _ in sitecol.complete.sids]
-        num_assets = 0
-        for sid, assets in zip(sitecol.sids, assets_by):
-            assets_by_site[sid] = assets
-            num_assets += len(assets)
-        logging.info('Associated {:_d} assets to {:_d} sites'.
-                     format(num_assets, len(sitecol)))
-    else:
-        # asset sites and hazard sites are the same
-        sitecol = haz_sitecol
-        assets_by_site = Global.exposure.assets_by_site
-        discarded = []
-        logging.info('Read {:_d} sites and {:_d} assets from the exposure'.
-                     format(len(sitecol), sum(len(a) for a in assets_by_site)))
+    # associate the assets to the hazard sites
+    # this is absurdely fast: 10 million assets can be associated in <10s
+    A = len(exp.assets)
+    N = len(haz_sitecol)
+    with Monitor('associating exposure', measuremem=True, h5=h5):
+        region = wkt.loads(oqparam.region) if oqparam.region else None
+        sitecol, discarded = exp.associate(haz_sitecol, haz_distance, region)
+    logging.info(
+        'Associated {:_d} assets (of {:_d}) to {:_d} sites'
+        ' (of {:_d})'.format(len(exp.assets), A, len(sitecol), N))
 
     assetcol = asset.AssetCollection(
-        Global.exposure, assets_by_site, oqparam.time_event,
-        oqparam.aggregate_by)
+        exp, sitecol, oqparam.time_event, oqparam.aggregate_by)
     u, c = numpy.unique(assetcol['taxonomy'], return_counts=True)
     idx = c.argmax()  # index of the most common taxonomy
     tax = assetcol.tagcol.taxonomy[u[idx]]

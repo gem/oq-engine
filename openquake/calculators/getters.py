@@ -150,7 +150,10 @@ class PmapGetter(object):
         self.use_rates = use_rates
         self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.rlzs_by_g = full_lt.rlzs_by_g
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
+        else:
+            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.slices = slices
         self._pmap = {}
 
@@ -186,7 +189,7 @@ class PmapGetter(object):
         """
         if self._pmap:
             return self._pmap
-        G = len(self.rlzs_by_g)
+        G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
                 poes_df = dstore.read_df('_poes', slc=slice(start, stop))
@@ -223,9 +226,9 @@ class PmapGetter(object):
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in pmap:  # no hazard for sid
             return pc0
-        for g, rlzs in self.rlzs_by_g.items():
+        for g, trs in enumerate(self.trt_rlzs):
             probability_map.combine_probs(
-                pc0.array, pmap[sid].array[:, g], rlzs)
+                pc0.array, pmap[sid].array[:, g], trs % TWO24)
         return pc0
 
     def get_mean(self):
@@ -264,7 +267,6 @@ def get_rupture_getters(dstore, ct=0, srcfilter=None):
     rup_array = dstore['ruptures'][:]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    rup_array.sort(order=['trt_smr', 'n_occ', 'seed'])
     proxies = [RuptureProxy(rec) for rec in rup_array]
     maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
     rgetters = []

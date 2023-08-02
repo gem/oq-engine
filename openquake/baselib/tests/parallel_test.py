@@ -26,11 +26,6 @@ import tempfile
 import numpy
 from openquake.baselib import parallel, general, hdf5, performance
 
-try:
-    import celery
-except ImportError:
-    celery = None
-
 
 def get_length(data, monitor):
     return {'n': len(data)}
