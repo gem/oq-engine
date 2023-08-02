@@ -142,8 +142,6 @@ jobs:
           oq --version
           oq dbserver start
           sleep 10
-          # test for engine
-          #
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
 
@@ -159,12 +157,9 @@ jobs:
       - name: Run tests for the engine server in public mode to test installation
         run: |
           source ~/openquake/bin/activate
-          pip3 install pyshp pytest flake8
           oq --version
           oq dbserver start
           sleep 10
-          # test for engine
-          #
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           OQ_APPLICATION_MODE=public ./openquake/server/manage.py test tests.test_public_mode
 
@@ -180,14 +175,11 @@ jobs:
       - name: Run tests for the engine server in read-only mode to test installation
         run: |
           source ~/openquake/bin/activate
-          pip3 install pyshp pytest flake8
           oq --version
           oq dbserver start
           sleep 10
-          # test for engine
-          #
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
-          OQ_APPLICATION_MODE=public ./openquake/server/manage.py test tests.test_read_only_mode
+          OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test tests.test_read_only_mode
 
   server_aelo_mode:
     needs: install
@@ -201,11 +193,8 @@ jobs:
       - name: Run tests for the engine server in aelo mode to test installation
         run: |
           source ~/openquake/bin/activate
-          pip3 install pyshp pytest flake8
           oq --version
           oq dbserver start
           sleep 10
-          # test for engine
-          #
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
-          OQ_APPLICATION_MODE=public OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_aelo_mode
+          OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_aelo_mode
