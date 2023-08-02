@@ -13,7 +13,7 @@ name: MacOS Intel install and test
 
 jobs:
 
-  Install_and_test:
+  install:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
