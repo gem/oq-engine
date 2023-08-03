@@ -75,6 +75,8 @@ jobs:
             Write-Host "python install.py devel "
             python install.py devel
           }
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+
   demos:
     needs: install
     runs-on: windows-latest
@@ -84,7 +86,6 @@ jobs:
     steps:
       - name: Run all demos
         run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
@@ -106,6 +107,7 @@ jobs:
               oq engine --run $jobRiskPath --hc -1
             }
           }
+
   engine:
     needs: install
     runs-on: windows-latest
@@ -115,9 +117,7 @@ jobs:
     steps:
       - name: Run all engine tests
         run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          #
-          #python -c 'import fiona'
+          # python -c 'import fiona'
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           python -m pip install pytest
@@ -133,7 +133,6 @@ jobs:
     steps:
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         run: |
-          source ~/openquake/bin/activate
           pip3 install pyshp pytest flake8
           oq --version
           oq dbserver start
@@ -152,7 +151,6 @@ jobs:
         env:
           OQ_APPLICATION_MODE: public
         run: |
-          source ~/openquake/bin/activate
           oq --version
           oq dbserver start
           sleep 10
@@ -170,7 +168,6 @@ jobs:
         env:
           OQ_APPLICATION_MODE: read_only
         run: |
-          source ~/openquake/bin/activate
           oq --version
           oq dbserver start
           sleep 10
@@ -189,7 +186,6 @@ jobs:
           OQ_APPLICATION_MODE: aelo
           OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
         run: |
-          source ~/openquake/bin/activate
           oq --version
           oq dbserver start
           sleep 10
