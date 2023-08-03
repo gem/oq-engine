@@ -13,7 +13,7 @@ name: MacOS Monterey M1
 
 jobs:
 
-  install:
+  install_and_test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

@@ -13,7 +13,7 @@ name: MacOS Intel install and test
 
 jobs:
 
-  install:
+  install_and_test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -47,25 +47,18 @@ jobs:
           else
             python install.py devel 
           fi
+          source ~/openquake/bin/activate
+          pip3 install pytest pyshp flake8
+          oq dbserver start
+          sleep 10
 
-  demos:
-    needs: install
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [m1]
-        #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9, "3.10"]
-    steps:
       - name: Run demos to test installation
         run: |
           set -x
           source ~/openquake/bin/activate
-          oq dbserver start
-          sleep 10
           oq info venv
           oq info cfg
-          cd ~/work/oq-engine/oq-engine/demos
+          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/demos
           ls -lrt
           # run demos with job_hazard.ini and job_risk.ini
           for demo_dir in $(find . -type d | sort); do
@@ -79,94 +72,37 @@ jobs:
               OQ_DISTRIBUTE=zmq oq engine --run $ini --exports xml,hdf5 -p pointsource_distance=0 -r
           done
 
-  engine:
-    needs: install
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [m1]
-        #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9, "3.10"]
-    steps:
       - name: Run tests for calculators and advanced manual to test installation
+        if: always()
         run: |
           source ~/openquake/bin/activate
-          pip3 install pytest
-          oq --version
-          oq dbserver start
-          sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
-  hazardlib:
-    needs: install
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [m1]
-        #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9, "3.10"]
-    steps:
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
+        if: always()
         run: |
           source ~/openquake/bin/activate
-          pip3 install pyshp pytest flake8
-          oq --version
-          oq dbserver start
-          sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
 
-  server_public_mode:
-    needs: install
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [m1]
-        #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9, "3.10"]
-    steps:
       - name: Run tests for the engine server in public mode to test installation
+        if: always()
         run: |
           source ~/openquake/bin/activate
-          oq --version
-          oq dbserver start
-          sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           OQ_APPLICATION_MODE=public ./openquake/server/manage.py test tests.test_public_mode
 
-  server_read_only_mode:
-    needs: install
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [m1]
-        #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9, "3.10"]
-    steps:
       - name: Run tests for the engine server in read-only mode to test installation
+        if: always()
         run: |
           source ~/openquake/bin/activate
-          oq --version
-          oq dbserver start
-          sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test tests.test_read_only_mode
 
-  server_aelo_mode:
-    needs: install
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [m1]
-        #python-version: [3.9.13, "3.10.9"]
-        python-version: [3.9, "3.10"]
-    steps:
       - name: Run tests for the engine server in aelo mode to test installation
+        if: always()
         run: |
           source ~/openquake/bin/activate
-          oq --version
-          oq dbserver start
-          sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_aelo_mode
