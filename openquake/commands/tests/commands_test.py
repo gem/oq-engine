@@ -310,9 +310,7 @@ class RunShowExportTestCase(unittest.TestCase):
 
 
 class CompareTestCase(unittest.TestCase):
-    import pytest  # not on top, because pytest is not in engine requirements
-
-    @pytest.mark.skipif(
+    @unittest.skipIf(
         sys.platform == 'win32',
         reason="Skipping on Windows")
     def test_med_gmv(self):

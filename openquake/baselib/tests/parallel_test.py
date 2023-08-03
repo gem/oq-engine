@@ -25,7 +25,6 @@ import itertools
 import tempfile
 import numpy
 import sys
-import pytest
 from openquake.baselib import parallel, general, hdf5, performance
 
 
@@ -240,7 +239,7 @@ def update_array(shared, index):
 
 
 class SharedMemoryTestCase(unittest.TestCase):
-    @pytest.mark.skipif(
+    @unittest.skipIf(
         sys.platform == 'win32',
         reason="Skipping on Windows")
     def test(self):
