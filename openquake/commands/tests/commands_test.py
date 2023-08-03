@@ -27,7 +27,6 @@ import zipfile
 import tempfile
 import unittest
 import numpy
-import pytest
 
 from pathlib import Path
 
@@ -311,6 +310,8 @@ class RunShowExportTestCase(unittest.TestCase):
 
 
 class CompareTestCase(unittest.TestCase):
+    import pytest  # not on top, because pytest is not in engine requirements
+
     @pytest.mark.skipif(
         sys.platform == 'win32',
         reason="Skipping on Windows")
