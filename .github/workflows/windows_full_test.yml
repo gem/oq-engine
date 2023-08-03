@@ -112,7 +112,9 @@ jobs:
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           cd D:\a\oq-engine\oq-engine
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
+          cd doc/adv-manual
+          pytest @(get-childitem -name *.rst)
 
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         if: always()
