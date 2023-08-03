@@ -104,6 +104,7 @@ jobs:
       #     }
 
       - name: Run all engine tests
+        if: always()
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           #
@@ -114,6 +115,7 @@ jobs:
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
+        if: always()
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # python -m pip install pyshp flake8
@@ -124,6 +126,7 @@ jobs:
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
 
       - name: Run tests for the engine server in public mode to test installation
+        if: always()
         env:
           OQ_APPLICATION_MODE: public
         run: |
@@ -135,6 +138,7 @@ jobs:
           ./openquake/server/manage.py test tests.test_public_mode
 
       - name: Run tests for the engine server in read-only mode to test installation
+        if: always()
         env:
           OQ_APPLICATION_MODE: read_only
         run: |
@@ -146,6 +150,7 @@ jobs:
           ./openquake/server/manage.py test tests.test_read_only_mode
 
       - name: Run tests for the engine server in aelo mode to test installation
+        if: always()
         env:
           OQ_APPLICATION_MODE: aelo
           OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
