@@ -75,7 +75,7 @@ jobs:
             Write-Host "python install.py devel "
             python install.py devel
           }
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          python -m pip install pytest
 
   demos:
     needs: install
@@ -86,6 +86,7 @@ jobs:
     steps:
       - name: Run all demos
         run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
@@ -117,10 +118,11 @@ jobs:
     steps:
       - name: Run all engine tests
         run: |
-          # python -c 'import fiona'
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          #
+          #python -c 'import fiona'
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          python -m pip install pytest
           cd D:\a\oq-engine\oq-engine
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
@@ -133,9 +135,10 @@ jobs:
     steps:
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         run: |
-          pip3 install pyshp pytest flake8
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          python -m pip install pyshp flake8
           oq --version
-          oq dbserver start
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/
           pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
@@ -151,8 +154,9 @@ jobs:
         env:
           OQ_APPLICATION_MODE: public
         run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          oq dbserver start
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           ./openquake/server/manage.py test tests.test_public_mode
@@ -168,8 +172,9 @@ jobs:
         env:
           OQ_APPLICATION_MODE: read_only
         run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          oq dbserver start
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           ./openquake/server/manage.py test tests.test_read_only_mode
@@ -186,8 +191,9 @@ jobs:
           OQ_APPLICATION_MODE: aelo
           OQ_CONFIG_FILE: openquake/server/tests/data/openquake.cfg
         run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
           oq --version
-          oq dbserver start
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
           ./openquake/server/manage.py test tests.test_aelo_mode
