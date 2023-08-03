@@ -75,7 +75,8 @@ jobs:
             Write-Host "python install.py devel "
             python install.py devel
           }
-          python -m pip install pytest numpy pyshp flake8
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          python -m pip install pytest pyshp flake8
 
       # - name: Run all demos
       #   run: |
