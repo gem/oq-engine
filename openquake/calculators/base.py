@@ -845,7 +845,14 @@ class HazardCalculator(BaseCalculator):
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
-
+        # NOTE: it would be good to specify the exposure file name in the
+        #       error message, but the exposure might be reused from the hazard
+        if oq.aggregate_by:
+            for taglist in oq.aggregate_by:
+                for tag in taglist:
+                    if tag not in self.assetcol.tagcol.tagnames:
+                        raise AttributeError(
+                            f"Missing tag '{tag}' in expsure model")
         if oq_hazard:
             parent = self.datastore.parent
             if 'assetcol' in parent:
