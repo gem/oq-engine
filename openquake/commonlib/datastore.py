@@ -50,8 +50,12 @@ def extract_calc_id_datadir(filename):
     """
     Extract the calculation ID from the given filename or integer:
 
-    >>> extract_calc_id_datadir('/mnt/ssd/oqdata/calc_25.hdf5')
-    (25, '/mnt/ssd/oqdata')
+    >>> id, datadir = extract_calc_id_datadir('/mnt/ssd/oqdata/calc_25.hdf5')
+    >>> id
+    25
+    >>> os.path.normpath(datadir).split(os.sep)[1:]
+    ['mnt', 'ssd', 'oqdata']
+
     >>> extract_calc_id_datadir('/mnt/ssd/oqdata/wrong_name.hdf5')
     Traceback (most recent call last):
        ...
