@@ -1500,3 +1500,20 @@ def view_sources_branches(token, dstore):
     out = [(t, ' '.join(shorten(s)), b)
            for ((b, t), s) in sorted(acc.items())]
     return numpy.array(sorted(out), dt('trt sources branches'))
+
+
+@view.add('MPL')
+def view_MPL(token, dstore):
+    """
+    Maximum Probable Loss at a given return period
+    """
+    rp = int(token.split(':')[1])
+    K = dstore['risk_by_event'].attrs['K']
+    ltypes = list(dstore['agg_curves-stats'])
+    out = numpy.zeros(1, [(lt, float) for lt in ltypes])
+    for ltype in ltypes:
+        # shape (K+1, S, P)
+        arr = dstore.sel(f'agg_curves-stats/{ltype}',
+                         stat='mean', agg_id=K, return_period=rp)
+        out[ltype] = arr
+    return out
