@@ -162,6 +162,11 @@ def analyze_taz_nodes(dstore, exposure_df, G_original, TAZ_nodes, eff_nodes,
             sum_connectivity_loss_pcl / eff_inv_time)
         avg_connectivity_loss_wcl = sum_connectivity_loss_wcl/eff_inv_time
         avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
+        taz_cl.loc[:, "PCL_node"] = taz_cl["PCL_node"].apply(
+            lambda x: x/eff_inv_time)
+        taz_cl.loc[:, "WCL_node"] = taz_cl["WCL_node"].apply(
+            lambda x: x/eff_inv_time)
+        node_el.loc[:, "EL"] = node_el["EL"].apply(lambda x: x/eff_inv_time)
 
     elif calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
@@ -215,6 +220,14 @@ def analyze_demand_nodes(dstore, exposure_df, G_original, eff_nodes,
             sum_connectivity_loss_wcl / eff_inv_time)
         avg_connectivity_loss_eff = (
             sum_connectivity_loss_eff / eff_inv_time)
+        dem_cl.loc[:, "Isolation_node"] = dem_cl["Isolation_node"].apply(
+            lambda x: x/eff_inv_time)
+        dem_cl.loc[:, "PCL_node"] = dem_cl["PCL_node"].apply(
+            lambda x: x/eff_inv_time)
+        dem_cl.loc[:, "WCL_node"] = dem_cl["WCL_node"].apply(
+            lambda x: x/eff_inv_time)
+        node_el.loc[:, "EL"] = node_el["EL"].apply(
+            lambda x: x/eff_inv_time)
 
     elif calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
@@ -258,6 +271,7 @@ def analyze_generic_nodes(dstore, exposure_df, G_original, eff_nodes,
         num_lt_samples = dstore["oqparam"].number_of_logic_tree_samples
         eff_inv_time = inv_time * ses_per_ltp * num_lt_samples
         avg_connectivity_loss_eff = sum_connectivity_loss_eff/eff_inv_time
+        node_el.loc[:, "EL"] = node_el["EL"].apply(lambda x: x/eff_inv_time)
 
     elif calculation_mode == "scenario_damage":
         num_events = len(damage_df.reset_index().event_id.unique())
