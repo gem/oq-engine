@@ -312,7 +312,7 @@ class BaseCalculator(metaclass=abc.ABCMeta):
             fmts = exports
         elif exports:  # is a string
             fmts = exports.split(',')
-        elif isinstance(self.oqparam.exports, tuple):
+        elif isinstance(self.oqparam.exports, (tuple, list)):
             fmts = self.oqparam.exports
         else:  # is a string
             fmts = self.oqparam.exports.split(',')

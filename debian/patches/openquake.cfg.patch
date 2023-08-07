@@ -2,16 +2,16 @@ Index: oq-engine/openquake/engine/openquake.cfg
 ===================================================================
 --- a/openquake/engine/openquake.cfg
 +++ b/openquake/engine/openquake.cfg
-@@ -44,7 +44,7 @@
- celery_queue = celery
+@@ -38,7 +38,7 @@
  
  [dbserver]
+ user = openquake
 -file = ~/oqdata/db.sqlite3
 +file = /var/lib/openquake/db.sqlite3
  # daemon bind address; must be a valid IP address
  # example: 0.0.0.0
  listen = 127.0.0.1
-@@ -55,9 +55,10 @@
+@@ -47,9 +47,10 @@
  # of the master node (on the master node cfg too)
  # example: master.hpc
  host = localhost

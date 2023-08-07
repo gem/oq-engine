@@ -33,6 +33,8 @@ aac = numpy.testing.assert_allclose
 
 class InfrastructureRiskTestCase(CalculatorTestCase):
 
+    # TODO: we need tests also for event-based
+
     def _check_csv_outputs(self, outputs_list, datastore, testcase,
                            replace_expected=False):
         for output in outputs_list:
