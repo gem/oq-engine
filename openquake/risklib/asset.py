@@ -783,7 +783,7 @@ def check_exposure_for_infr_conn_analysis(df, fname):
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                 check_dupl=True, by_country=False, asset_prefix='',
                 tagcol=None, errors=None, infr_conn_analysis=False,
-                monitor=None):
+                aggregate_by=None, monitor=None):
     logging.info('Reading %s', fname)
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
@@ -817,7 +817,11 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                                'value-number': df['value-number']})
         if infr_conn_analysis:
             check_exposure_for_infr_conn_analysis(df, fname)
-
+        if aggregate_by:
+            for taglist in aggregate_by:
+                for tag in taglist:
+                    if f'value-{tag}' not in df.columns:
+                        raise InvalidFile(f'Missing tag "{tag}" in {fname}')
         df['id'] = asset_prefix + df.id
         dfs.append(df)
 
@@ -893,7 +897,7 @@ class Exposure(object):
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, by_country=False, errors=None,
-                 infr_conn_analysis=False):
+                 infr_conn_analysis=False, aggregate_by=None):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -917,7 +921,7 @@ class Exposure(object):
                 prefix = ''
             allargs.append((fname, calculation_mode, ignore_missing_costs,
                             check_dupl, by_country, prefix, tagcol, errors,
-                            infr_conn_analysis))
+                            infr_conn_analysis, aggregate_by))
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):

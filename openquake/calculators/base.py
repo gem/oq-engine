@@ -572,7 +572,8 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
+            self.datastore.create_df('_poes',
+                                     readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
@@ -678,7 +679,9 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        self.sitecol, self.assetcol, discarded = readinput.get_sitecol_assetcol(
+        (self.sitecol,
+         self.assetcol,
+         discarded) = readinput.get_sitecol_assetcol(
             oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
         # this is overriding the sitecol in test_case_miriam
         self.datastore['sitecol'] = self.sitecol
@@ -845,14 +848,6 @@ class HazardCalculator(BaseCalculator):
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
-        # NOTE: it would be good to specify the exposure file name in the
-        #       error message, but the exposure might be reused from the hazard
-        if oq.aggregate_by:
-            for taglist in oq.aggregate_by:
-                for tag in taglist:
-                    if tag not in self.assetcol.tagcol.tagnames:
-                        raise AttributeError(
-                            f"Missing tag '{tag}' in expsure model")
         if oq_hazard:
             parent = self.datastore.parent
             if 'assetcol' in parent:
@@ -999,7 +994,7 @@ class HazardCalculator(BaseCalculator):
             recs, source_reader.source_info_dt)
 
     def post_process(self):
-       	"""
+        """
         Run postprocessing function, if any
         """
         oq = self.oqparam
@@ -1118,7 +1113,8 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
     names = [n for n in names if n != 'custom_site_id']
-    imts = [name.lstrip('gmv_') for name in names if name not in ('sid', 'eid')]
+    imts = [name.lstrip('gmv_')
+            for name in names if name not in ('sid', 'eid')]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:

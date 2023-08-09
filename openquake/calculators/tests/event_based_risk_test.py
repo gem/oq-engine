@@ -22,6 +22,7 @@ import numpy
 
 from openquake.baselib.general import gettemp
 from openquake.baselib.hdf5 import read_csv
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.commonlib import logs, readinput
 from openquake.calculators.views import view, text_table
@@ -84,9 +85,10 @@ class EventBasedRiskTestCase(CalculatorTestCase):
                                   delta=1E-5)
 
     def test_case_1_missing_occupancy(self):
-        with self.assertRaises(AttributeError) as ctx:
+        with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_1.__file__, 'job_missing_occupancy.ini')
-        self.assertIn("Missing tag 'occupancy' in expsure model",
+        self.assertIn('Missing tag "occupancy" in', str(ctx.exception))
+        self.assertIn('qa_tests_data/event_based_risk/case_1/exposure.csv',
                       str(ctx.exception))
 
     def test_case_1_ins(self):
