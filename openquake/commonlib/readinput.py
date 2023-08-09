@@ -448,6 +448,7 @@ def get_site_model(oqparam):
     if 'amplification' in oqparam.inputs:
         req_site_params.add('ampcode')
     arrays = []
+    sm_fieldsets = {}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and not fname.endswith('.xml'):
 
@@ -461,6 +462,7 @@ def get_site_model(oqparam):
                 else:
                     sm = get_poor_site_model(fname)
 
+            sm_fieldsets[fname] = set(sm.dtype.names)
             # make sure site_id starts from 0, if given
             if 'site_id' in sm.dtype.names:
                 if (sm['site_id'] != numpy.arange(len(sm))).any():
@@ -527,6 +529,20 @@ def get_site_model(oqparam):
             raise InvalidFile('There are duplicated sites in %s:\n%s' %
                               (fname, dupl))
         arrays.append(sm)
+
+    # check if any field is present only in one source model input file
+    for this_sm_fname in sm_fieldsets:
+        for other_sm_fname in sm_fieldsets:
+            if other_sm_fname == this_sm_fname:
+                continue
+            this_fieldset = sm_fieldsets[this_sm_fname]
+            other_fieldset = sm_fieldsets[other_sm_fname]
+            fieldsets_diff = this_fieldset - other_fieldset
+            if fieldsets_diff:
+                raise InvalidFile(
+                    f'Fields {fieldsets_diff} present in'
+                    f' {this_sm_fname} were not found in {other_sm_fname}')
+
     return numpy.concatenate(arrays)
 
 
