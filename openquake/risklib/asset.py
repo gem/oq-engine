@@ -820,7 +820,8 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         if aggregate_by:
             for taglist in aggregate_by:
                 for tag in taglist:
-                    if f'value-{tag}' not in df.columns:
+                    if (tag not in df.columns
+                            and f'value-{tag}' not in df.columns):
                         raise InvalidFile(f'Missing tag "{tag}" in {fname}')
         df['id'] = asset_prefix + df.id
         dfs.append(df)
