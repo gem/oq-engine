@@ -530,7 +530,7 @@ def get_site_model(oqparam):
                               (fname, dupl))
         arrays.append(sm)
 
-    # check if any field is present only in one source model input file
+    # all source model input files must have the same fields
     for this_sm_fname in sm_fieldsets:
         for other_sm_fname in sm_fieldsets:
             if other_sm_fname == this_sm_fname:
