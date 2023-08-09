@@ -83,6 +83,12 @@ class EventBasedRiskTestCase(CalculatorTestCase):
             self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
                                   delta=1E-5)
 
+    def test_case_1_missing_occupancy(self):
+        with self.assertRaises(AttributeError) as ctx:
+            self.run_calc(case_1.__file__, 'job_missing_occupancy.ini')
+        self.assertIn("Missing tag 'occupancy' in expsure model",
+                      str(ctx.exception))
+
     def test_case_1_ins(self):
         # no aggregation
         self.run_calc(case_1.__file__, 'job2.ini')
