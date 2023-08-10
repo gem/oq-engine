@@ -820,6 +820,9 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         if aggregate_by:
             for taglist in aggregate_by:
                 for tag in taglist:
+                    if tag == 'site_id':
+                        # 'site_id' is added later in _get_mesh_assets
+                        continue
                     if (tag not in df.columns
                             and f'value-{tag}' not in df.columns):
                         raise InvalidFile(f'Missing tag "{tag}" in {fname}')
