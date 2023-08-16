@@ -40,8 +40,43 @@ U16 = numpy.uint16
 U8 = numpy.uint8
 
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
-                      'fatalities', 'homeless', 'non_operational']
+
+
+def loss_consequence_func(aval, xltype):
+    if xltype.endswith('_ins'):
+        xltype = xltype[:-4]
+    if '+' in xltype:  # total loss type
+        return sum(aval[lt] for lt in xltype.split('+'))
+    return aval[xltype]
+
+
+KNOWN_CONSEQUENCES = {
+    'loss': {
+        'asset_field': 'value-%s',  # converted using loss_type
+        'agg_value_func': lambda aval, xltype: loss_consequence_func(
+            aval, xltype)},
+    'losses': {
+        'asset_field': 'value-%s',  # converted using loss_type
+        'agg_value_func': lambda aval, xltype: loss_consequence_func(
+            aval, xltype)},
+    'collapsed': {
+        'asset_field': 'value-number',
+        'agg_value_func': lambda aval, xltype: aval['number']},
+    'non_operational': {
+        'asset_field': 'value-number',
+        'agg_value_func': lambda aval, xltype: aval['number']},
+    'injured': {
+        'asset_field': 'occupants_night',
+        'agg_value_func': lambda aval, xltype: aval['occupants_night']},
+    'fatalities': {
+        'asset_field': 'occupants_night',
+        'agg_value_func': lambda aval, xltype: aval['occupants_night']},
+    'homeless': {
+        'asset_field': 'occupants_avg',
+        'agg_value_func': lambda aval, xltype: aval['occupants_night']},
+}
+
+
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1642,16 +1677,11 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence in ('loss', 'losses'):
-        asset_field = 'value-' + loss_type
-    elif consequence in ('collapsed', 'non_operational'):
-        asset_field = 'value-number'
-    elif consequence in ('injured', 'fatalities'):
-        asset_field = 'occupants_night'
-    elif consequence == 'homeless':
-        asset_field = 'occupants_avg'
-    else:
-        raise NotImplementedError(consequence)
+    try:
+        asset_field = KNOWN_CONSEQUENCES[
+            consequence]['asset_field'] % loss_type
+    except TypeError:
+        asset_field = KNOWN_CONSEQUENCES[consequence]['asset_field']
     return dmgdist @ coeffs * asset[asset_field]
 
 
@@ -1660,21 +1690,10 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
-    aval = agg_values[agg_id]
-    if consequence in ('collapsed', 'non_operational'):
-        return aval['number']
-    elif consequence in ('injured', 'fatalities'):
-        return aval('occupants_night')
-    elif consequence == 'homeless':
-        return aval('occupants_night')
-    elif consequence in ('loss', 'losses'):
-        if xltype.endswith('_ins'):
-            xltype = xltype[:-4]
-        if '+' in xltype:  # total loss type
-            return sum(aval[lt] for lt in xltype.split('+'))
-        return aval[xltype]
-    else:
+    if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
+    aval = agg_values[agg_id]
+    return KNOWN_CONSEQUENCES['agg_value_func'](aval, xltype)
 
 
 # ########################### u64_to_eal ################################# #
