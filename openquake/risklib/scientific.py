@@ -1642,16 +1642,17 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence == 'losses':
-        return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif consequence in ['collapsed', 'non_operational']:
-        return dmgdist @ coeffs * asset['value-number']
-    elif consequence == 'injured':
-        return dmgdist @ coeffs * asset['occupants_night']
-    elif consequence == 'fatalities':
-        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence in ('loss', 'losses'):
+        asset_field = 'value-' + loss_type
+    elif consequence in ('collapsed', 'non_operational'):
+        asset_field = 'value-number'
+    elif consequence in ('injured', 'fatalities'):
+        asset_field = 'occupants_night'
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_avg']
+        asset_field = 'occupants_avg'
+    else:
+        raise NotImplementedError(consequence)
+    return dmgdist @ coeffs * asset[asset_field]
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype):
@@ -1660,14 +1661,12 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
         sum of the values corresponding to agg_id for the given consequence
     """
     aval = agg_values[agg_id]
-    if consequence in ['collapsed', 'non_operational']:
+    if consequence in ('collapsed', 'non_operational'):
         return aval['number']
-    elif consequence == 'injured':
-        return aval['occupants_night']
-    elif consequence == 'fatalities':
-        return aval['occupants_night']
+    elif consequence in ('injured', 'fatalities'):
+        return aval('occupants_night')
     elif consequence == 'homeless':
-        return aval['occupants_night']
+        return aval('occupants_night')
     elif consequence in ('loss', 'losses'):
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
