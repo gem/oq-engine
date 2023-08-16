@@ -151,7 +151,7 @@ read_params = {
 
 
 def calculate_consequences(calc_id, output_dir):
-    calc_id = datastore.get_last_calc_id() if calc_id == '-1' else int(calc_id)
+    calc_id = datastore.get_last_calc_id() if calc_id == -1 else int(calc_id)
     dstore = datastore.read(calc_id)
     lt = 0  # structural damage
     stat = 0  # damage state mean values
