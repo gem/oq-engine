@@ -50,6 +50,9 @@ def loss_agg_value_func(aval, xltype):
     return aval[xltype]
 
 
+# NOTE: in order to add a new consequence, it should be sufficient to add a
+# new item into the KNOWN_CONSEQUENCES dict, specifying the asset field to be
+# used in multiplication and the function to be used for the aggregation
 # FIXME: give proper names to asset_field and agg_value_func
 # asset_field is used in consequence to compute:
 #     dmgdist @ coeffs * asset[asset_field]
