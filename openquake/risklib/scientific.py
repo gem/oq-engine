@@ -1681,19 +1681,25 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         asset_field = KNOWN_CONSEQUENCES[
             consequence]['asset_field'] % loss_type
     except TypeError:
+        # when the asset_field string does not require the loss_type
         asset_field = KNOWN_CONSEQUENCES[consequence]['asset_field']
     return dmgdist @ coeffs * asset[asset_field]
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype):
     """
+    FIXME: describe params
+    :param consequence: kind of consequence
+    :param agg_values: FIXME
+    :param agg_id: FIXME
+    :param xltype: FIXME
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
-    return KNOWN_CONSEQUENCES['agg_value_func'](aval, xltype)
+    return KNOWN_CONSEQUENCES[consequence]['agg_value_func'](aval, xltype)
 
 
 # ########################### u64_to_eal ################################# #
