@@ -21,7 +21,7 @@ import numpy as np
 from openquake.baselib import performance
 from openquake.commonlib import datastore
 import pandas as pd
-from tqdm import tqdm  # FIXME: add it to requirements or remove it
+# from tqdm import tqdm  # FIXME: add it to requirements or remove it
 
 CD = os.path.join(os.path.dirname(__file__), os.pardir, 'risklib', 'data')
 params_file = os.path.join(CD, "Hazus_Consequence_Parameters.xlsx")
@@ -231,7 +231,9 @@ def calculate_consequences(calc_id, output_dir):
                  "sc_BusDispl180", "sc_BusDispl360",
                  "debris_brick_wood_tons", "debris_concrete_steel_tons"])
 
-            for asset in tqdm(assetcol):
+            # FIXME: use tqdm if we can add it to the requirements
+            # for asset in tqdm(assetcol):
+            for asset in assetcol:
                 asset_ref = asset['id'].decode()
                 asset_occ, asset_typ, code_level = taxonomies[
                     asset['taxonomy']].split('-')
