@@ -42,12 +42,13 @@ U8 = numpy.uint8
 TWO32 = 2 ** 32
 
 
-def loss_consequence_func(aval, xltype):
+def loss_agg_value_func(aval, xltype):
     if xltype.endswith('_ins'):
         xltype = xltype[:-4]
     if '+' in xltype:  # total loss type
         return sum(aval[lt] for lt in xltype.split('+'))
     return aval[xltype]
+
 
 # FIXME: give proper names to asset_field and agg_value_func
 # asset_field is used in consequence to compute:
@@ -58,12 +59,10 @@ def loss_consequence_func(aval, xltype):
 KNOWN_CONSEQUENCES = {
     'loss': {
         'asset_field': 'value-%s',  # converted using loss_type
-        'agg_value_func': lambda aval, xltype: loss_consequence_func(
-            aval, xltype)},
+        'agg_value_func': loss_agg_value_func},
     'losses': {
         'asset_field': 'value-%s',  # converted using loss_type
-        'agg_value_func': lambda aval, xltype: loss_consequence_func(
-            aval, xltype)},
+        'agg_value_func': loss_agg_value_func},
     'collapsed': {
         'asset_field': 'value-number',
         'agg_value_func': lambda aval, xltype: aval['number']},
