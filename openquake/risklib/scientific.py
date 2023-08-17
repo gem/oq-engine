@@ -49,7 +49,12 @@ def loss_consequence_func(aval, xltype):
         return sum(aval[lt] for lt in xltype.split('+'))
     return aval[xltype]
 
-
+# FIXME: give proper names to asset_field and agg_value_func
+# asset_field is used in consequence to compute:
+#     dmgdist @ coeffs * asset[asset_field]
+# agg_value_func is uded in get_agg_value to computer:
+#     aval = agg_values[agg_id]
+#     agg_value_func(aval, xltype)
 KNOWN_CONSEQUENCES = {
     'loss': {
         'asset_field': 'value-%s',  # converted using loss_type
@@ -73,6 +78,7 @@ KNOWN_CONSEQUENCES = {
         'agg_value_func': lambda aval, xltype: aval['occupants_night']},
     'homeless': {
         'asset_field': 'occupants_avg',
+        # FIXME: is it correct to use occupants_night instead of occupants_avg?
         'agg_value_func': lambda aval, xltype: aval['occupants_night']},
 }
 
