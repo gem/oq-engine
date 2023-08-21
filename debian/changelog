@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Raise an error if files specified in site_model_file do not have the same
+    headers
+
   [Michele Simionato]
   * Reduced memory consumption in the master node in post_risk
   * Reduced slow tasks in the ebrisk calculator and memory consumption

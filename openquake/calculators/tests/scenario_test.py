@@ -217,6 +217,15 @@ class ScenarioTestCase(CalculatorTestCase):
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
 
+    def test_case_21_different_columns(self):
+        # conditioned gmfs
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_21.__file__, 'job_different_columns.ini',
+                          concurrent_tasks='0')
+        self.assertIn("Fields {'custom_site_id'} present in",
+                      str(ctx.exception))
+        self.assertIn("were not found in", str(ctx.exception))
+
     def test_case_22(self):
         # check that exported GMFs are importable
         self.run_calc(case_22.__file__, 'job.ini')
