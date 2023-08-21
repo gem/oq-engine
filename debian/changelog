@@ -3,6 +3,7 @@
     headers
 
   [Michele Simionato]
+  * Improved error message when quantiles are not supported in event based risk
   * Reduced memory consumption in the master node in post_risk
   * Reduced slow tasks in the ebrisk calculator and memory consumption
     in the master node
