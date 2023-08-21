@@ -462,20 +462,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
 
-        # sanity check on the risk_by_event
-        alt = self.datastore.read_df('risk_by_event')
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * (K + 1) * len(self.xtypes)
-        size = len(alt)
-        assert size <= upper_limit, (size, upper_limit)
-        # sanity check on uniqueness by (agg_id, loss_id, event_id)
-        arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
-        uni = numpy.unique(arr, axis=0)
-        if len(uni) < len(arr):
-            raise RuntimeError('risk_by_event contains %d duplicates!' %
-                               (len(arr) - len(uni)))
+        if upper_limit < 1E7:
+            # sanity check on risk_by_event if not too large
+            alt = self.datastore.read_df('risk_by_event')
+            size = len(alt)
+            assert size <= upper_limit, (size, upper_limit)
+            # sanity check on uniqueness by (agg_id, loss_id, event_id)
+            arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
+            uni = numpy.unique(arr, axis=0)
+            if len(uni) < len(arr):
+                raise RuntimeError('risk_by_event contains %d duplicates!' %
+                                   (len(arr) - len(uni)))
 
         if oq.avg_losses:
+            logging.info('Storing avg_losses-rlzs')
             for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):
