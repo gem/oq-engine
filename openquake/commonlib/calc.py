@@ -18,13 +18,12 @@
 
 import logging
 import functools
-from unittest.mock import Mock
 import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import EBRupture, events_dt, get_eid_rlz
+from openquake.hazardlib.source.rupture import events_dt, get_eid_rlz
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
