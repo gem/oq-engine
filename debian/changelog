@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Backported fix to `import_gmfs_csv`, which was breaking sometimes with a
+    filtered site collection
+
 python3-oq-engine (3.16.6-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene]
