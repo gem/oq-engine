@@ -21,82 +21,105 @@ import numpy as np
 from openquake.baselib import performance
 from openquake.commonlib import datastore
 import pandas as pd
-# from tqdm import tqdm  # FIXME: add it to requirements or remove it
 
 CD = os.path.join(os.path.dirname(__file__), os.pardir, 'risklib', 'data')
 params_file = os.path.join(CD, "Hazus_Consequence_Parameters.xlsx")
+square_footage_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_SquareFootage.csv')
+collapse_rate_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_CollapseRates.csv')
+interruption_time_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_InterruptionTimeMultipliers.csv')
+casualty_rate_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_IndoorCasualtyRates_%s.csv')
+repair_time_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_BuildingRepairTime.csv')
+recovery_time_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_BuildingRecoveryTime.csv')
+debris_unitweight_bwo_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_Debris_UnitWeight_BWO.csv')
+debris_unitweight_rcs_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_Debris_UnitWeight_RCS.csv')
+debris_bwo_structural_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_Debris_BWO_Structural.csv')
+debris_bwo_nonstructural_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_Debris_BWO_Nonstructural.csv')
+debris_rcs_structural_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_Debris_RCS_Structural.csv')
+debris_rcs_nonstructural_file = os.path.join(
+    CD, 'Hazus_Consequence_Parameters_Debris_RCS_Nonstructural.csv')
 
 
-def read_square_footage(xlsx):
-    square_footage_df = pd.read_excel(
-        xlsx, sheet_name="Square Footage", skiprows=1, index_col=0)
+def read_square_footage(square_footage_file):
+    square_footage_df = pd.read_csv(square_footage_file, index_col=0)
     return square_footage_df
 
 
-def read_repair_ratio_str(xlsx):
-    repair_ratio_str_df = pd.read_excel(
-        xlsx, sheet_name="Structural Repair Ratios", skiprows=2, index_col=0)
-    repair_ratio_str_df.index.name = "Occupancy"
-    repair_ratio_str_df.rename_axis(
-        "Structural Damage State", axis="columns", inplace=True)
-    return repair_ratio_str_df/100
+# NOTE: unused
+# def read_repair_ratio_str(xlsx):
+#     repair_ratio_str_df = pd.read_excel(
+#         xlsx, sheet_name="Structural Repair Ratios", skiprows=2, index_col=0)
+#     repair_ratio_str_df.index.name = "Occupancy"
+#     repair_ratio_str_df.rename_axis(
+#         "Structural Damage State", axis="columns", inplace=True)
+#     return repair_ratio_str_df/100
 
 
-def read_repair_ratio_nsa(xlsx):
-    repair_ratio_nsa_df = pd.read_excel(
-        xlsx, sheet_name="NonstrAccel Repair Ratios", skiprows=2, index_col=0)
-    repair_ratio_nsa_df.index.name = "Occupancy"
-    repair_ratio_nsa_df.rename_axis(
-        "Acceleration Sensitive Non-structural Damage State",
-        axis="columns", inplace=True)
-    return repair_ratio_nsa_df/100
+# def read_repair_ratio_nsa(xlsx):
+#     repair_ratio_nsa_df = pd.read_excel(
+#         xlsx, sheet_name="NonstrAccel Repair Ratios",
+#         skiprows=2, index_col=0)
+#     repair_ratio_nsa_df.index.name = "Occupancy"
+#     repair_ratio_nsa_df.rename_axis(
+#         "Acceleration Sensitive Non-structural Damage State",
+#         axis="columns", inplace=True)
+#     return repair_ratio_nsa_df/100
 
 
-def read_repair_ratio_nsd(xlsx):
-    repair_ratio_nsd_df = pd.read_excel(
-        xlsx, sheet_name="NonstrDrift Repair Ratios", skiprows=2, index_col=0)
-    repair_ratio_nsd_df.index.name = "Occupancy"
-    repair_ratio_nsd_df.rename_axis(
-        "Drift Sensitive Non-structural Damage State",
-        axis="columns", inplace=True)
-    return repair_ratio_nsd_df/100
+# def read_repair_ratio_nsd(xlsx):
+#     repair_ratio_nsd_df = pd.read_excel(
+#         xlsx, sheet_name="NonstrDrift Repair Ratios",
+#         skiprows=2, index_col=0)
+#     repair_ratio_nsd_df.index.name = "Occupancy"
+#     repair_ratio_nsd_df.rename_axis(
+#         "Drift Sensitive Non-structural Damage State",
+#         axis="columns", inplace=True)
+#     return repair_ratio_nsd_df/100
 
 
-def read_repair_ratio_con(xlsx):
-    repair_ratio_con_df = pd.read_excel(
-        xlsx, sheet_name="Contents Damage Ratios", skiprows=2, index_col=0)
-    repair_ratio_con_df.index.name = "Occupancy"
-    repair_ratio_con_df.rename_axis(
-        "Acceleration Sensitive Non-structural Damage State",
-        axis="columns", inplace=True)
-    return repair_ratio_con_df/100
+# def read_repair_ratio_con(xlsx):
+#     repair_ratio_con_df = pd.read_excel(
+#         xlsx, sheet_name="Contents Damage Ratios", skiprows=2, index_col=0)
+#     repair_ratio_con_df.index.name = "Occupancy"
+#     repair_ratio_con_df.rename_axis(
+#         "Acceleration Sensitive Non-structural Damage State",
+#         axis="columns", inplace=True)
+#     return repair_ratio_con_df/100
 
 
-def read_collapse_rate(xlsx):
-    collapse_rate_df = pd.read_excel(
-        xlsx, sheet_name="Collapse Rates", skiprows=1, index_col=0)
+def read_collapse_rate(collapse_rate_file):
+    collapse_rate_df = pd.read_csv(
+        collapse_rate_file, index_col=0)
     return collapse_rate_df/100
 
 
-def read_casualty_rate_in(xlsx):
-    casualty_rate_in_df = pd.read_excel(
-        xlsx, sheet_name="Indoor Casualty Rates",
-        skiprows=1, index_col=0, header=[0, 1])
-    casualty_rate_in_df.index.name = "Building Type"
-    casualty_rate_in_df.columns.names = ["Damage State", "Severity Level"]
+def read_casualty_rate_in(casualty_rate_file):
+    casualty_rate_in_df = pd.read_csv(
+        casualty_rate_file, index_col=0)
     return casualty_rate_in_df/100
 
 
-def read_casualty_rate_out(xlsx):
-    casualty_rate_out_df = pd.read_excel(
-        xlsx, sheet_name="Outdoor Casualty Rates",
-        skiprows=1, index_col=0, header=[0, 1])
-    casualty_rate_out_df.index.name = "Building Type"
-    casualty_rate_out_df.columns.names = ["Damage State", "Severity Level"]
-    return casualty_rate_out_df/100
+# NOTE: unused
+# def read_casualty_rate_out(xlsx):
+#     casualty_rate_out_df = pd.read_excel(
+#         xlsx, sheet_name="Outdoor Casualty Rates",
+#         skiprows=1, index_col=0, header=[0, 1])
+#     casualty_rate_out_df.index.name = "Building Type"
+#     casualty_rate_out_df.columns.names = ["Damage State", "Severity Level"]
+#     return casualty_rate_out_df/100
 
 
-def read_debris_weight(xlsx):
+def read_debris_weight_from_xlsx(xlsx):
     debris_df = pd.read_excel(
         xlsx, sheet_name="Debris", index_col=0, header=[0, 1, 2])
     debris_df.index.name = "Building Type"
@@ -104,28 +127,34 @@ def read_debris_weight(xlsx):
     return debris_df
 
 
-def read_repair_time(xlsx):
-    repair_time_df = pd.read_excel(
-        xlsx, sheet_name="Building Repair Time", skiprows=2, index_col=0)
+def read_debris(debris_file):
+    debris_df = pd.read_csv(
+        debris_file, index_col=0)
+    debris_df.index.name = "taxonomy"
+    return debris_df
+
+
+def read_repair_time(repair_time_file):
+    repair_time_df = pd.read_csv(
+        repair_time_file, index_col=0)
     repair_time_df.index.name = "Occupancy"
     repair_time_df.rename_axis(
         "Structural Damage State", axis="columns", inplace=True)
     return repair_time_df
 
 
-def read_recovery_time(xlsx):
-    recovery_time_df = pd.read_excel(
-        xlsx, sheet_name="Building Recovery Time", skiprows=2, index_col=0)
+def read_recovery_time(recovery_time_file):
+    recovery_time_df = pd.read_csv(
+        recovery_time_file, index_col=0)
     recovery_time_df.index.name = "Occupancy"
     recovery_time_df.rename_axis(
         "Structural Damage State", axis="columns", inplace=True)
     return recovery_time_df
 
 
-def read_interruption_time(xlsx):
-    interruption_time_df = pd.read_excel(
-        xlsx, sheet_name="Interruption Time Multipliers",
-        skiprows=2, index_col=0)
+def read_interruption_time(interruption_time_file):
+    interruption_time_df = pd.read_csv(
+        interruption_time_file, index_col=0)
     interruption_time_df.index.name = "Occupancy"
     interruption_time_df.rename_axis(
         "Structural Damage State", axis="columns", inplace=True)
@@ -136,14 +165,14 @@ def read_interruption_time(xlsx):
 xlsx = pd.ExcelFile(params_file)
 read_params = {
     "Square Footage": read_square_footage,
-    "Structural Repair Ratios": read_repair_ratio_str,
-    "NonstrAccel Repair Ratios": read_repair_ratio_nsa,
-    "NonstrDrift Repair Ratios": read_repair_ratio_nsd,
-    "Contents Damage Ratios": read_repair_ratio_con,
+    # "Structural Repair Ratios": read_repair_ratio_str,
+    # "NonstrAccel Repair Ratios": read_repair_ratio_nsa,
+    # "NonstrDrift Repair Ratios": read_repair_ratio_nsd,
+    # "Contents Damage Ratios": read_repair_ratio_con,
     "Collapse Rates": read_collapse_rate,
     "Indoor Casualty Rates": read_casualty_rate_in,
-    "Outdoor Casualty Rates": read_casualty_rate_out,
-    "Debris": read_debris_weight,
+    # "Outdoor Casualty Rates": read_casualty_rate_out,
+    # "Debris": read_debris_weight,
     "Building Repair Time": read_repair_time,
     "Building Recovery Time": read_recovery_time,
     "Interruption Time Multipliers": read_interruption_time,
@@ -170,7 +199,8 @@ def calculate_consequences(calc_id, output_dir):
         return
 
     # Read the various consequences tables from the spreadsheet
-    square_footage_df = read_params["Square Footage"](xlsx)
+    # square_footage_df = read_params["Square Footage"](xlsx)
+    square_footage_df = read_params["Square Footage"](square_footage_file)
 
     # NOTE: unused
     # repair_ratio_str_df = read_params["Structural Repair Ratios"](xlsx)
@@ -178,25 +208,41 @@ def calculate_consequences(calc_id, output_dir):
     # repair_ratio_nsd_df = read_params["NonstrDrift Repair Ratios"](xlsx)
     # repair_ratio_con_df = read_params["Contents Damage Ratios"](xlsx)
 
-    collapse_rate_df = read_params["Collapse Rates"](xlsx)
-    casualty_rate_in_df = read_params["Indoor Casualty Rates"](xlsx)
+    collapse_rate_df = read_params["Collapse Rates"](collapse_rate_file)
+
+    severity_levels = ["Severity1", "Severity2", "Severity3", "Severity4"]
+    casualty_rate_in = {}
+    for severity_level in severity_levels:
+        casualty_rate_in_df = read_params["Indoor Casualty Rates"](
+            casualty_rate_file % severity_level)
+        casualty_rate_in[severity_level] = casualty_rate_in_df
 
     # NOTE: unused
     # casualty_rate_out_df = read_params["Outdoor Casualty Rates"](xlsx)
 
-    repair_time_df = read_params["Building Repair Time"](xlsx)
-    recovery_time_df = read_params["Building Recovery Time"](xlsx)
-    interruption_time_df = read_params["Interruption Time Multipliers"](xlsx)
-    debris_df = read_params["Debris"](xlsx)
-    unit_weight_df = debris_df["Unit Weight (tons per 1,000 sqft)"]
-    debris_brick_wood_pct_df = debris_df[
-        "Brick, Wood, and Other Debris Generated (in Percentage of Weight)"]
-    debris_concrete_steel_pct_df = debris_df[
-        "Reinforced Concrete and Wrecked Steel Generated"
-        " (in Percentage of Weight)"]
+    repair_time_df = read_params["Building Repair Time"](repair_time_file)
+
+    recovery_time_df = read_params["Building Recovery Time"](
+        recovery_time_file)
+
+    interruption_time_df = read_params["Interruption Time Multipliers"](
+        interruption_time_file)
+
+    debris_brick_wood_pct_structural_df = read_debris(
+        debris_bwo_structural_file)
+    debris_brick_wood_pct_nonstructural_df = read_debris(
+        debris_bwo_nonstructural_file)
+    debris_concrete_steel_pct_structural_df = read_debris(
+        debris_rcs_structural_file)
+    debris_concrete_steel_pct_nonstructural_df = read_debris(
+        debris_rcs_nonstructural_file)
+
+    unit_weight_bwo_df = read_debris(
+        debris_unitweight_bwo_file)
+    unit_weight_rcs_df = read_debris(
+        debris_unitweight_rcs_file)
 
     # Initialize lists / dicts to store the asset level casualty estimates
-    severity_levels = ["Severity 1", "Severity 2", "Severity 3", "Severity 4"]
     casualties_day = {
         "Severity 1": 0, "Severity 2": 0, "Severity 3": 0, "Severity 4": 0}
     casualties_night = {
@@ -231,8 +277,6 @@ def calculate_consequences(calc_id, output_dir):
                  "sc_BusDispl180", "sc_BusDispl360",
                  "debris_brick_wood_tons", "debris_concrete_steel_tons"])
 
-            # FIXME: use tqdm if we can add it to the requirements
-            # for asset in tqdm(assetcol):
             for asset in assetcol:
                 asset_ref = asset['id'].decode()
                 asset_occ, asset_typ, code_level = taxonomies[
@@ -246,6 +290,10 @@ def calculate_consequences(calc_id, output_dir):
                 elif calculation_mode == 'classical_damage':
                     asset_damages = damages[asset['ordinal'], stat, rlzi]
                     asset_damages = [max(0, d) for d in asset_damages]
+
+                # discarding 'no damage'
+                asset_damages = asset_damages[1:]
+
                 asset_damage_ratios = [d/asset['value-number']
                                        for d in asset_damages]
 
@@ -262,38 +310,42 @@ def calculate_consequences(calc_id, output_dir):
 
                 # Debris weight estimates
                 # Hazus tables 12.1, 12.2, 12.3
-                unit_weight = unit_weight_df.loc[asset_typ]
+                unit_weight_bwo = unit_weight_bwo_df.loc[asset_typ]
+                unit_weight_rcs = unit_weight_rcs_df.loc[asset_typ]
                 weight_brick_wood = (
-                    unit_weight["Brick, Wood and Other"]
+                    unit_weight_bwo
                     * square_footage_df.loc[asset_occ].values[0] / 1000
                     * asset['value-number'])
                 weight_concrete_steel = (
-                    unit_weight["Reinforced Concrete and Steel"]
+                    unit_weight_rcs
                     * square_footage_df.loc[asset_occ].values[0] / 1000
                     * asset['value-number'])
-                debris_brick_wood_pct = debris_brick_wood_pct_df.loc[asset_typ]
-                debris_concrete_steel_pct = debris_concrete_steel_pct_df.loc[
-                    asset_typ]
+
+                debris_brick_wood_pct_structural = \
+                    debris_brick_wood_pct_structural_df.loc[asset_typ]
+                debris_brick_wood_pct_nonstructural = \
+                    debris_brick_wood_pct_nonstructural_df.loc[asset_typ]
+                debris_concrete_steel_pct_structural = \
+                    debris_concrete_steel_pct_structural_df.loc[asset_typ]
+                debris_concrete_steel_pct_nonstructural = \
+                    debris_concrete_steel_pct_nonstructural_df.loc[asset_typ]
 
                 debris_brick_wood_str = weight_brick_wood[
-                    "Structural"] * np.dot(
+                    "structural"] * np.dot(
                         asset_damage_ratios,
-                        debris_brick_wood_pct["Structural Damage State"] / 100)
+                        debris_brick_wood_pct_structural / 100)
                 debris_brick_wood_nst = weight_brick_wood[
-                    "Nonstructural"] * np.dot(
+                    "nonstructural"] * np.dot(
                         asset_damage_ratios,
-                        debris_brick_wood_pct[
-                            "Nonstructural Damage State"] / 100)
+                        debris_brick_wood_pct_nonstructural / 100)
                 debris_concrete_steel_str = weight_concrete_steel[
-                    "Structural"] * np.dot(
+                    "structural"] * np.dot(
                         asset_damage_ratios,
-                        debris_concrete_steel_pct[
-                            "Structural Damage State"] / 100)
+                        debris_concrete_steel_pct_structural / 100)
                 debris_concrete_steel_nst = weight_concrete_steel[
-                    "Nonstructural"] * np.dot(
+                    "nonstructural"] * np.dot(
                         asset_damage_ratios,
-                        debris_concrete_steel_pct[
-                            "Nonstructural Damage State"] / 100)
+                        debris_concrete_steel_pct_nonstructural / 100)
 
                 debris_brick_wood = (
                     debris_brick_wood_str + debris_brick_wood_nst)
@@ -328,13 +380,13 @@ def calculate_consequences(calc_id, output_dir):
                 # 13.8
                 collapse_rate = collapse_rate_df.loc[asset_typ].values[0]
                 dmg = {
-                    "Slight Damage": asset_damage_ratios[1],
-                    "Moderate Damage": asset_damage_ratios[2],
-                    "Extensive Damage": asset_damage_ratios[3],
+                    "Slight Damage": asset_damage_ratios[0],
+                    "Moderate Damage": asset_damage_ratios[1],
+                    "Extensive Damage": asset_damage_ratios[2],
                     "Complete Damage (No Collapse)": (
-                        asset_damage_ratios[4] * (1 - collapse_rate)),
+                        asset_damage_ratios[3] * (1 - collapse_rate)),
                     "Complete Damage (With Collapse)": (
-                        asset_damage_ratios[4] * collapse_rate)
+                        asset_damage_ratios[3] * collapse_rate)
                     }
                 collapse_ratio = dmg["Complete Damage (With Collapse)"]
                 collapse_ratio_str = "{:.2e}".format(
@@ -346,7 +398,7 @@ def calculate_consequences(calc_id, output_dir):
                 for severity_level in severity_levels:
                     casualty_ratio = np.dot(
                         list(dmg.values()),
-                        casualty_rate_in_df.loc[asset_typ][:, severity_level])
+                        casualty_rate_in[severity_level].loc[asset_typ])
                     casualties_day[severity_level] = (
                         casualty_ratio * asset["occupants_day"])
                     casualties_night[severity_level] = (
