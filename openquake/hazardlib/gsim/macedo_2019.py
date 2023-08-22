@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2023 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,17 +15,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-"""
-Module exports: :class:`MacedoEtAl2019SInter`,
-                :class:`MacedoEtAl2019SSlab`
-"""
 
+"""
+Module exports :class:`MacedoEtAl2019SInter`,
+               :class:`MacedoEtAl2019SSlab`
+"""
 from typing import Dict, List, Tuple
 import numpy as np
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import IMT, IA, PGA, SA
-from openquake.hazardlib.gsim.base import add_alias
-from openquake.hazardlib.gsim.conditional_gmpe import ConditionalGMPE
+from openquake.hazardlib.imt import IMT, IA, PGA, SA, from_string
+from openquake.hazardlib.gsim.base import ConditionalGMPE, add_alias
+
 
 # The Macedo et al. (2019) GMM is period-independent, so all constants
 # can be set as a standard dictionary
@@ -142,7 +142,7 @@ CONSTANTS = {
 
 
 def get_mean_conditional_arias_intensity(
-    C: Dict, ctx: np.recarray, imt: IMT, mean_gms: np.recarray
+    C: Dict, ctx: np.recarray, imt: IMT, mean_gms: Dict
 ) -> np.ndarray:
     """Returns the Arias Intensity (Equation 2)"""
     assert str(imt) == "IA"
@@ -173,9 +173,9 @@ def get_standard_deviations(
     C: Dict,
     kind: str,
     rho_pga_sa1: float,
-    sigma_gms: np.recarray,
-    tau_gms: np.recarray,
-    phi_gms: np.recarray,
+    sigma_gms: Dict,
+    tau_gms: Dict,
+    phi_gms: Dict,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Returns the total standard deviation and, if specified
     by the input ground motions, the between and within-event
@@ -186,7 +186,7 @@ def get_standard_deviations(
     sigma = get_stddev_component(
         C, sigma_ia_cond, sigma_gms["PGA"], sigma_gms["SA(1.0)"], rho_pga_sa1
     )
-    if np.any(tau_gms["PGA"] >= 0.0) or np.any(tau_gms["SA(1.0)"] > 0.0):
+    if tau_gms:
         # If provided by the conditioning ground motion, get the
         # between-event standard deviation
         tau = get_stddev_component(
@@ -198,7 +198,7 @@ def get_standard_deviations(
         )
     else:
         tau = 0.0
-    if np.any(phi_gms["PGA"] >= 0.0) or np.any(phi_gms["SA(1.0)"] > 0.0):
+    if phi_gms:
         # If provided by the conditioning ground motion, get the
         # within-event standard deviation
         phi = get_stddev_component(
@@ -210,14 +210,9 @@ def get_standard_deviations(
 
 
 class MacedoEtAl2019SInter(ConditionalGMPE):
-    """Implementation of a conditional GMPE of Macedo, Abrahamson & Bray (2019)
-    for Arias Intensity, applied to subduction interface earthquakes. This
-    requires characterisation of the PGA and SA(1.0), in addition to magnitude
-    and vs30, for defining Arias intensity, and propagates uncertainty
-    accordingly. The model includes specific regionalisations for "Global"
-    application (default), "Japan", "Taiwan", "New Zealand" and
-    "South America", as well as a user customisable coefficient of correlation
-    between PGA and SA(1.0).
+    """Prototype implementation of a conditional GMPE of
+    Macedo, Abrahamson & Bray (2019) for Arias Intensity, applied to
+    subduction interface earthquakes
 
     Macedo J, Abrahamson N, Bray JD (2019) "Arias Intensity Conditional
     Scaling Ground-Motion Models for Subduction Zones", Bulletin of the
@@ -228,9 +223,8 @@ class MacedoEtAl2019SInter(ConditionalGMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA, PGA, SA}
 
-    # It is unclear to me if the CGMM is for a specific component of Arias
-    # Intensity; however it's fit using NGA Subduction data, which assumes
-    # PGA and SA are in terms of RotD50
+    # It is unclear to me if the CGMM is for a specific component? Or is the
+    # component associated with the input ctx.imt?
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -245,7 +239,7 @@ class MacedoEtAl2019SInter(ConditionalGMPE):
     REQUIRES_RUPTURE_PARAMETERS = {
         "mag",
     }
-    REQUIRES_DISTANCES = set()
+    REQUIRES_DISTANCES = {}
 
     # Subduction interface
     kind = "sinter"
