@@ -396,6 +396,6 @@ def starmap_from_gmfs(task_func, oq, dstore):
         sbe = build_slice_by_event(data['eid'][:])
     smap = parallel.Starmap.apply(
         task_func, (sbe, oq, ds),
-        maxweight=1E6, weight=weight,
+        maxweight=10_000_000, weight=weight,
         h5=dstore.hdf5)
     return smap
