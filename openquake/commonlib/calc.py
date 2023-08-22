@@ -387,7 +387,6 @@ def starmap_from_gmfs(task_func, oq, dstore):
     def weight(rec, dset=dstore['gmf_data/sid']):
         s0, s1 = rec['start'], rec['stop']
         w = num_assets[dset[s0:s1]].sum()
-        print('weight=%s' % w)
         return w
 
     data = ds['gmf_data']
@@ -399,6 +398,6 @@ def starmap_from_gmfs(task_func, oq, dstore):
     maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
     smap = parallel.Starmap.apply(
         task_func, (sbe, oq, ds), weight=weight,
-        maxweight=numpy.clip(maxweight, 1000, 100_000_000),
+        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
         h5=dstore.hdf5)
     return smap
