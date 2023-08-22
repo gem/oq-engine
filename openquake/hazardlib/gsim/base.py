@@ -28,23 +28,29 @@ import warnings
 import functools
 import toml
 import numpy
+from typing import Tuple
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.hazardlib import const
+from openquake.hazardlib.imt import from_string
+from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
-from openquake.hazardlib.contexts import (
-    KNOWN_DISTANCES, full_context, simple_cmaker)
+from openquake.hazardlib.contexts import KNOWN_DISTANCES, full_context, simple_cmaker
 
 
-ADMITTED_STR_PARAMETERS = ['DEFINED_FOR_TECTONIC_REGION_TYPE',
-                           'DEFINED_FOR_INTENSITY_MEASURE_COMPONENT']
-ADMITTED_FLOAT_PARAMETERS = ['DEFINED_FOR_REFERENCE_VELOCITY']
-ADMITTED_SET_PARAMETERS = ['DEFINED_FOR_INTENSITY_MEASURE_TYPES',
-                           'DEFINED_FOR_STANDARD_DEVIATION_TYPES',
-                           'REQUIRES_DISTANCES',
-                           'REQUIRES_ATTRIBUTES',
-                           'REQUIRES_SITES_PARAMETERS',
-                           'REQUIRES_RUPTURE_PARAMETERS']
+ADMITTED_STR_PARAMETERS = [
+    "DEFINED_FOR_TECTONIC_REGION_TYPE",
+    "DEFINED_FOR_INTENSITY_MEASURE_COMPONENT",
+]
+ADMITTED_FLOAT_PARAMETERS = ["DEFINED_FOR_REFERENCE_VELOCITY"]
+ADMITTED_SET_PARAMETERS = [
+    "DEFINED_FOR_INTENSITY_MEASURE_TYPES",
+    "DEFINED_FOR_STANDARD_DEVIATION_TYPES",
+    "REQUIRES_DISTANCES",
+    "REQUIRES_ATTRIBUTES",
+    "REQUIRES_SITES_PARAMETERS",
+    "REQUIRES_RUPTURE_PARAMETERS",
+]
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -80,8 +86,15 @@ class AdaptedWarning(UserWarning):
     """
 
 
-OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
-              'set_parameters', 'set_tables', 'get_conditioning_ground_motions')
+OK_METHODS = (
+    "compute",
+    "get_mean_and_stddevs",
+    "set_poes",
+    "requires",
+    "set_parameters",
+    "set_tables",
+    "get_conditioning_ground_motions",
+)
 
 
 def bad_methods(clsdict):
@@ -90,9 +103,9 @@ def bad_methods(clsdict):
     """
     bad = []
     for name, value in clsdict.items():
-        if name in OK_METHODS or name.startswith('__') and name.endswith('__'):
+        if name in OK_METHODS or name.startswith("__") and name.endswith("__"):
             pass  # not bad
-        elif inspect.isfunction(value) or hasattr(value, '__func__'):
+        elif inspect.isfunction(value) or hasattr(value, "__func__"):
             bad.append(name)
     return bad
 
@@ -103,38 +116,41 @@ class MetaGSIM(abc.ABCMeta):
     mutability bugs without having to change already written GSIMs. Moreover
     it performs some checks against typos.
     """
+
     def __new__(meta, name, bases, dic):
         if len(bases) > 1:
-            raise TypeError('Multiple inheritance is forbidden: %s(%s)' % (
-                name, ', '.join(b.__name__ for b in bases)))
-        if 'get_mean_and_stddevs' in dic and 'compute' in dic:
-            raise TypeError('You cannot define both get_mean_and_stddevs '
-                            'and compute in %s' % name)
+            raise TypeError(
+                "Multiple inheritance is forbidden: %s(%s)"
+                % (name, ", ".join(b.__name__ for b in bases))
+            )
+        if "get_mean_and_stddevs" in dic and "compute" in dic:
+            raise TypeError(
+                "You cannot define both get_mean_and_stddevs "
+                "and compute in %s" % name
+            )
         bad = bad_methods(dic)
         if bad:
-            sys.exit('%s cannot contain the methods %s' % (name, bad))
+            sys.exit("%s cannot contain the methods %s" % (name, bad))
         for k, v in dic.items():
-            if (k == 'compute' and v.__annotations__.get("ctx")
-                    is not numpy.recarray):
-                raise TypeError('%s.compute is not vectorized' % name)
+            if k == "compute" and v.__annotations__.get("ctx") is not numpy.recarray:
+                raise TypeError("%s.compute is not vectorized" % name)
             elif isinstance(v, set):
                 dic[k] = frozenset(v)
-                if k == 'REQUIRES_DISTANCES':
+                if k == "REQUIRES_DISTANCES":
                     missing = v - KNOWN_DISTANCES
                     if missing:
-                        raise ValueError('Unknown distance %s in %s' %
-                                         (missing, name))
+                        raise ValueError("Unknown distance %s in %s" % (missing, name))
         cls = super().__new__(meta, name, bases, dic)
         return cls
 
     def __call__(cls, **kwargs):
-        mixture_model = kwargs.pop('mixture_model', None)
+        mixture_model = kwargs.pop("mixture_model", None)
         self = type.__call__(cls, **kwargs)
-        if not hasattr(self, 'kwargs'):
+        if not hasattr(self, "kwargs"):
             self.kwargs = kwargs
-        if hasattr(self, 'gmpe_table'):
+        if hasattr(self, "gmpe_table"):
             # used in NGAEast to set the full pathname
-            self.kwargs['gmpe_table'] = self.gmpe_table
+            self.kwargs["gmpe_table"] = self.gmpe_table
         if mixture_model is not None:
             self.mixture_model = mixture_model
         return self
@@ -157,6 +173,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     and all the class attributes with names starting from ``DEFINED_FOR``
     and ``REQUIRES``.
     """
+
     #: Reference to a
     #: :class:`tectonic region type <openquake.hazardlib.const.TRT>` this GSIM
     #: is defined for. One GSIM can implement only one tectonic region type.
@@ -235,7 +252,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
-    _toml = ''  # set by valid.gsim
+    _toml = ""  # set by valid.gsim
     superseded_by = None
     non_verified = False
     experimental = False
@@ -248,41 +265,52 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             return
         elif const.StdDev.TOTAL not in stddevtypes:
             raise ValueError(
-                '%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is '
-                'not defined for const.StdDev.TOTAL' % cls.__name__)
+                "%s.DEFINED_FOR_STANDARD_DEVIATION_TYPES is "
+                "not defined for const.StdDev.TOTAL" % cls.__name__
+            )
         for attr, ctable in vars(cls).items():
             if isinstance(ctable, CoeffsTable):
-                if not attr.startswith('COEFFS'):
-                    raise NameError('%s does not start with COEFFS' % attr)
+                if not attr.startswith("COEFFS"):
+                    raise NameError("%s does not start with COEFFS" % attr)
         registry[cls.__name__] = cls
 
     def requires(self):
         """
         :returns: ordered tuple with the required parameters except the mag
         """
-        tot = set(self.REQUIRES_DISTANCES |
-                  self.REQUIRES_RUPTURE_PARAMETERS |
-                  self.REQUIRES_SITES_PARAMETERS)
+        tot = set(
+            self.REQUIRES_DISTANCES
+            | self.REQUIRES_RUPTURE_PARAMETERS
+            | self.REQUIRES_SITES_PARAMETERS
+        )
         return tuple(sorted(tot))
 
     def __init__(self, **kwargs):
         cls = self.__class__
         if cls.superseded_by:
-            msg = '%s is deprecated - use %s instead' % (
-                cls.__name__, cls.superseded_by.__name__)
+            msg = "%s is deprecated - use %s instead" % (
+                cls.__name__,
+                cls.superseded_by.__name__,
+            )
             warnings.warn(msg, DeprecationWarning)
         if cls.non_verified:
-            msg = ('%s is not independently verified - the user is liable '
-                   'for their application') % cls.__name__
+            msg = (
+                "%s is not independently verified - the user is liable "
+                "for their application"
+            ) % cls.__name__
             warnings.warn(msg, NotVerifiedWarning)
         if cls.experimental:
-            msg = ('%s is experimental and may change in future versions - '
-                   'the user is liable for their application') % cls.__name__
+            msg = (
+                "%s is experimental and may change in future versions - "
+                "the user is liable for their application"
+            ) % cls.__name__
             warnings.warn(msg, ExperimentalWarning)
         if cls.adapted:
-            msg = ('%s is not intended for general use and the behaviour '
-                   'may not be as expected - '
-                   'the user is liable for their application') % cls.__name__
+            msg = (
+                "%s is not intended for general use and the behaviour "
+                "may not be as expected - "
+                "the user is liable for their application"
+            ) % cls.__name__
             warnings.warn(msg, AdaptedWarning)
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
@@ -351,9 +379,9 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             ctx = rup  # rup is already a good object
         assert self.compute.__annotations__.get("ctx") is numpy.recarray
         if isinstance(rup.mag, float):  # in old-fashioned tests
-            mags = ['%.2f' % rup.mag]
+            mags = ["%.2f" % rup.mag]
         else:  # array
-            mags=['%.2f' % mag for mag in rup.mag]
+            mags = ["%.2f" % mag for mag in rup.mag]
         cmaker = simple_cmaker([self], [imt.string], mags=mags)
         if not isinstance(ctx, numpy.ndarray):
             ctx = cmaker.recarray([ctx])
@@ -393,14 +421,14 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         """
         if self._toml:
             return self._toml
-        return '[%s]' % self.__class__.__name__
+        return "[%s]" % self.__class__.__name__
 
 
 def to_distribution_values(vals, imt):
     """
     :returns: the logarithm of the values unless the IMT is MMI
     """
-    if str(imt) == 'MMI':
+    if str(imt) == "MMI":
         return vals
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -413,13 +441,17 @@ class GMPE(GroundShakingIntensityModel):
     :class:`GroundShakingIntensityModel` with a distinct feature
     that the intensity values are log-normally distributed.
     """
+
     def set_parameters(self):
         """
         Combines the parameters of the GMPE provided at the construction level
         with the ones originally assigned to the backbone modified GMPE.
         """
-        for key in (ADMITTED_STR_PARAMETERS + ADMITTED_FLOAT_PARAMETERS +
-                    ADMITTED_SET_PARAMETERS):
+        for key in (
+            ADMITTED_STR_PARAMETERS
+            + ADMITTED_FLOAT_PARAMETERS
+            + ADMITTED_SET_PARAMETERS
+        ):
             try:
                 val = getattr(self.gmpe, key)
             except AttributeError:
@@ -440,3 +472,166 @@ class GMPE(GroundShakingIntensityModel):
         arrays and returning None.
         """
         raise NotImplementedError
+
+    def set_poes(self, mean_std, cmaker, ctx, out):
+        """
+        Calculate and return probabilities of exceedance (PoEs) of one or more
+        intensity measure levels (IMLs) of one intensity measure type (IMT)
+        for one or more pairs "site -- rupture".
+
+        :param mean_std:
+            An array of shape (2, M, N) with mean and standard deviations
+            for the sites and intensity measure types
+        :param cmaker:
+            A ContextMaker instance, used only in nhsm_2014
+        :param ctx:
+            A recarray used only in  avg_poe_gmpe
+        :param out:
+            An array of PoEs of shape (N, L) to be filled
+        :raises ValueError:
+            If truncation level is not ``None`` and neither non-negative
+            float number, and if ``imts`` dictionary contain wrong or
+            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+        """
+        loglevels = cmaker.loglevels.array
+        phi_b = cmaker.phi_b
+        M, L1 = loglevels.shape
+        if hasattr(self, "weights_signs"):  # for nshmp_2014, case_72
+            adj = cmaker.adj[self][cmaker.slc]
+            outs = []
+            weights, signs = zip(*self.weights_signs)
+            for s in signs:
+                ms = numpy.array(mean_std)  # make a copy
+                for m in range(len(loglevels)):
+                    ms[0, m] += s * adj
+                outs.append(_get_poes(ms, loglevels, phi_b))
+            out[:] = numpy.average(outs, weights=weights, axis=0)
+        elif hasattr(self, "mixture_model"):
+            for f, w in zip(
+                self.mixture_model["factors"], self.mixture_model["weights"]
+            ):
+                mean_stdi = numpy.array(mean_std)  # a copy
+                mean_stdi[1] *= f  # multiply stddev by factor
+                out[:] += w * _get_poes(mean_stdi, loglevels, phi_b)
+        else:  # regular case
+            _set_poes(mean_std, loglevels, phi_b, out.T)
+        imtweight = getattr(self, "weight", None)  # ImtWeight or None
+        for m, imt in enumerate(cmaker.imtls):
+            mL1 = m * L1
+            if imtweight and imtweight.dic.get(imt) == 0:
+                # set by the engine when parsing the gsim logictree
+                # when 0 ignore the contribution: see _build_branches
+                out[:, mL1 : mL1 + L1] = 0
+
+
+class ConditionalGMPE(GMPE):
+    """Base Class for a form of GMPE in which the output ground
+    motion level is conditional upon other measures of ground motion.
+
+    This class functions for two cases:
+
+    1. The case that the conditioning ground motion values (e.g. PGA, Sa(T)
+    etc.) are known a priori and input via the context array. If so, these must
+    be specified in the `ctx` recarray with both the MEAN and TOTAL_STDDEV (the
+    TOTAL_STDDEV can be 0), e.g. PGA_MEAN, PGA_TOTAL_STDDEV, SA(0.2)_MEAN,
+    SA(0.2)_TOTAL_STDDEV etc. The IMT string must be such that it can be
+    transformed into an IMT object via the `from_string` function. Optionally,
+    the between- and within-event standard deviation of the input ground
+    motions can also be specified using the same syntax, i.e.
+    PGA_INTER_EVENT_STDDEV, SA(1.0)_INTRA_EVENT_STDDEV etc.
+
+    2. The case that the conditioning groung motion values are not known a
+    priori and must therefore be calculated using a GMPE, which the user passes
+    as input to the function.
+
+    If no conditioning ground motion values are input in `ctx` and no GMPE is
+    specified then an error will be raised.
+    """
+
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+
+    # Specific to the Conditional GMPE class. Should be a set
+    # containing string representations of the required IMTs
+    REQUIRES_IMTS = set()
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        if "gmpe" in kwargs:
+            # Create the original GMPE
+            [(gmpe_name, kw)] = kwargs.pop("gmpe").items()
+            self.params = kwargs  # non-gmpe parameters
+            g = globals()
+            for k in self.params:
+                if k not in g:
+                    raise ValueError("Unknown %r in ModifiableGMPE" % k)
+            self.gmpe = registry[gmpe_name](**kw)
+            self.gmpe_table = hasattr(self.gmpe, "gmpe_table")
+            self.set_parameters()
+        else:
+            self.gmpe = None
+            self.gmpe_table = None
+
+    def get_conditioning_ground_motions(
+        self, ctx: numpy.recarray
+    ) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+        """Retreives the ground motions upon which the model
+        is conditioned. If the MEAN and TOTAL_STDDEV of the ground
+        motion are found in the ctx then these are taken directly,
+        otherwise the mean and total standard deviation are determined
+        from the specified GMPE
+        """
+        mean_gms = {}
+        sigma_gms = {}
+        tau_gms = {}
+        phi_gms = {}
+        for imt_string in self.REQUIRES_IMTS:
+            # Get the mean ground motions and total standard deviations
+            # for the IMT from the ctx if they are provided
+            available_gms = []
+            for imt_string in self.REQUIRES_IMTS:
+                for param in ["MEAN", "TOTAL_STDDEV"]:
+                    label = "{:s}_{:s}".format(imt_string, param)
+                    available_gms.append(label in ctx.dtype.names)
+            if all(available_gms):
+                # The required info about the ground motions
+                # is in the ctx - therefore this can be taken directly
+                for imt_string in self.REQUIRES_IMTS:
+                    mean_gms[imt_string] = ctx[imt_string + "_MEAN"]
+                    sigma_gms[imt_string] = ctx[imt_string + "_TOTAL_STDDEV"]
+                    # Optionally, get the between and within-event stddev
+                    if (imt_string + "_INTER_EVENT_STDDEV") in ctx.dtype.names:
+                        tau_gms[imt_string] + ctx[imt_string + "_INTER_EVENT_STDDEV"]
+                    if (imt_string + "_INTRA_EVENT_STDDEV") in ctx.dtype.names:
+                        phi_gms[imt_string] + ctx[imt_string + "_INTRA_EVENT_STDDEV"]
+            else:
+                # Not conditioned on observations found in ctx, so
+                # calculate from GMPE
+                if self.gmpe is None:
+                    raise ValueError(
+                        "Conditioning ground motions must be "
+                        "specified in ctx or a GMPE must be "
+                        "provided"
+                    )
+                nimts = len(self.REQUIRES_IMTS)
+                n = len(ctx)
+                mean = numpy.zeros([nimts, n])
+                sigma = numpy.zeros_like(mean)
+                tau = numpy.zeros_like(mean)
+                phi = numpy.zeros_like(mean)
+                self.gmpe.compute(
+                    ctx,
+                    [from_string(imt) for imt in self.REQUIRES_IMTS],
+                    mean,
+                    sigma,
+                    tau,
+                    phi,
+                )
+                for i, imt in enumerate(self.REQUIRES_IMTS):
+                    mean_gms[imt] = np.exp(mean[i, :])
+                    sigma_gms[imt] = sigma[i, :]
+                    if not numpy.allclose(tau[i, :], 0.0):
+                        tau_gms[imt] = tau[i, :]
+                    if not numpy.allclose(phi[i, :], 0.0):
+                        phi_gms[imt] = phi[i, :]
+        return mean_gms, sigma_gms, tau_gms, phi_gms
