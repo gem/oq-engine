@@ -382,7 +382,7 @@ def starmap_from_gmfs(task_func, oq, dstore):
         ds = dstore.parent
     else:
         ds = dstore
-    N = len(ds['sitecol'])
+    N = ds['sitecol'].sids.max() + 1
     num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
     def weight(rec, dset=dstore['gmf_data/sid']):
         s0, s1 = rec['start'], rec['stop']
