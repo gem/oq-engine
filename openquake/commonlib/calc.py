@@ -394,10 +394,8 @@ def starmap_from_gmfs(task_func, oq, dstore):
         sbe = data['slice_by_event'][:]
     except KeyError:
         sbe = build_slice_by_event(data['eid'][:])
-    nrows = sbe[-1]['stop'] - sbe[0]['start']
-    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
     smap = parallel.Starmap.apply(
-        task_func, (sbe, oq, ds), weight=weight,
-        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        task_func, (sbe, oq, ds),
+        maxweight=1E6, weight=weight,
         h5=dstore.hdf5)
     return smap
