@@ -359,6 +359,18 @@ def build_slice_by_event(eids, offset=0):
     return sbe
 
 
+def get_counts(idxs, N):
+    """
+    :param idxs: indices in the range 0..N-1
+    :param N: size of the returned array
+    :returns: an array of size N with the counts of the indices
+    """
+    counts = numpy.zeros(N, int)
+    uni, cnt = numpy.unique(idxs, return_counts=True)
+    counts[uni] = cnt
+    return counts
+
+    
 def starmap_from_gmfs(task_func, oq, dstore):
     """
     :param task_func: function or generator with signature (gmf_df, oq, dstore)
@@ -370,16 +382,20 @@ def starmap_from_gmfs(task_func, oq, dstore):
         ds = dstore.parent
     else:
         ds = dstore
+    N = ds['sitecol'].sids.max() + 1
+    num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
+    def weight(rec, dset=dstore['gmf_data/sid']):
+        s0, s1 = rec['start'], rec['stop']
+        w = num_assets[dset[s0:s1]].sum()
+        return w
+
     data = ds['gmf_data']
     try:
         sbe = data['slice_by_event'][:]
     except KeyError:
         sbe = build_slice_by_event(data['eid'][:])
-    nrows = sbe[-1]['stop'] - sbe[0]['start']
-    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
     smap = parallel.Starmap.apply(
         task_func, (sbe, oq, ds),
-        weight=lambda rec: rec['stop']-rec['start'],
-        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        maxweight=50_000_000, weight=weight,
         h5=dstore.hdf5)
     return smap
