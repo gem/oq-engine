@@ -79,9 +79,8 @@ KNOWN_CONSEQUENCES = {
         'asset_field': 'occupants_night',
         'agg_value_func': lambda aval, xltype: aval['occupants_night']},
     'homeless': {
-        'asset_field': 'occupants_avg',
-        # FIXME: is it correct to use occupants_night instead of occupants_avg?
-        'agg_value_func': lambda aval, xltype: aval['occupants_night']},
+        'asset_field': 'residents',
+        'agg_value_func': lambda aval, xltype: aval['residents']},
 }
 
 
