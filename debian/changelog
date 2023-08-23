@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed bug in conditioned GMFs, due to the station sites being excluded
+    from the complete site collection
   * Reduced slow tasks and memory consumption
     in the event_based_risk calculator (3x for Chile)
 

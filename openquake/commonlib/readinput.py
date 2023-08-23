@@ -378,14 +378,14 @@ def get_mesh(oqparam, h5=None):
         # read it only once
         Global.exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
-        return geo.Mesh.from_coords(oqparam.sites)
+        mesh = geo.Mesh.from_coords(oqparam.sites)
+        return mesh
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
             mesh, Global.pmap = get_pmap_from_csv(oqparam, fname)
-        else:
-            raise NotImplementedError('Reading from %s' % fname)
-        return mesh
+            return mesh
+        raise NotImplementedError('Reading from %s' % fname)
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
@@ -419,9 +419,11 @@ def get_mesh(oqparam, h5=None):
         if h5:
             h5['site_model'] = sm
         mesh = geo.Mesh(sm['lon'], sm['lat'])
-        return mesh
     elif 'exposure' in oqparam.inputs:
-        return Global.exposure.mesh
+        mesh = Global.exposure.mesh
+    else:
+        mesh = None
+    return mesh
 
 
 def get_poor_site_model(fname):
@@ -599,6 +601,10 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+        if 'station_data' in oqparam.inputs:  # extend the sitecol
+            df = pandas.read_csv(oqparam.inputs['station_data'])
+            sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
+                                     df.LATITUDE.to_numpy())
     if ss:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
@@ -977,7 +983,7 @@ def get_station_data(oqparam, sitecol):
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
     sid = {(lon, lat): sid
-           for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
+           for lon, lat, sid in sitecol.complete[['lon', 'lat', 'sids']]}
     sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values
@@ -1047,6 +1053,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
+            and not 'station_data' in oqparam.inputs
             and sitecol is not sitecol.complete):
         # for predefined hazard you cannot reduce the site collection; instead
         # you can in other cases, typically with a grid which is mostly empty
