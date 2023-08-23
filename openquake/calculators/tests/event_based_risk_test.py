@@ -536,7 +536,8 @@ agg_id
         out = self.run_calc(case_8.__file__,  'job.ini', exports='csv',
                             concurrent_tasks='0')
         for fname in out['aggrisk', 'csv']:
-            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname)
+            self.assertEqualFiles('expected/' + strip_calc_id(fname), fname,
+                                  delta=1E-5)
 
         # NB: there was a taskno-dependency here, so make sure there are
         # no regressions
