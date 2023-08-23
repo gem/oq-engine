@@ -238,17 +238,18 @@ def gen_outputs(df, crmodel, rng, monitor):
             yield out
 
 
-def ebrisk(proxies, cmaker, dstore, monitor):
+def ebrisk(proxies, cmaker, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
+    :param stations: empty pair or (station_data, station_sitecol)
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
-        dic = event_based.event_based(block, cmaker, dstore, monitor)
+        dic = event_based.event_based(block, cmaker, stations, dstore, monitor)
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             yield event_based_risk(gmf_df, cmaker.oq, monitor)
