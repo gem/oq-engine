@@ -23,7 +23,6 @@ from openquake.commonlib import datastore
 import pandas as pd
 
 CD = os.path.join(os.path.dirname(__file__), os.pardir, 'risklib', 'data')
-params_file = os.path.join(CD, "Hazus_Consequence_Parameters.xlsx")
 square_footage_file = os.path.join(
     CD, 'Hazus_Consequence_Parameters_SquareFootage.csv')
 collapse_rate_file = os.path.join(
@@ -55,7 +54,7 @@ def read_square_footage(square_footage_file):
     return square_footage_df
 
 
-# NOTE: unused
+# NOTE: unused (if needed, we must change it to read from csv)
 # def read_repair_ratio_str(xlsx):
 #     repair_ratio_str_df = pd.read_excel(
 #         xlsx, sheet_name="Structural Repair Ratios", skiprows=2, index_col=0)
@@ -109,7 +108,7 @@ def read_casualty_rate_in(casualty_rate_file):
     return casualty_rate_in_df/100
 
 
-# NOTE: unused
+# NOTE: unused (if needed, we must change it to read from csv)
 # def read_casualty_rate_out(xlsx):
 #     casualty_rate_out_df = pd.read_excel(
 #         xlsx, sheet_name="Outdoor Casualty Rates",
@@ -117,14 +116,6 @@ def read_casualty_rate_in(casualty_rate_file):
 #     casualty_rate_out_df.index.name = "Building Type"
 #     casualty_rate_out_df.columns.names = ["Damage State", "Severity Level"]
 #     return casualty_rate_out_df/100
-
-
-def read_debris_weight_from_xlsx(xlsx):
-    debris_df = pd.read_excel(
-        xlsx, sheet_name="Debris", index_col=0, header=[0, 1, 2])
-    debris_df.index.name = "Building Type"
-    debris_df.columns.names = ["Item", "Material", "Component"]
-    return debris_df
 
 
 def read_debris(debris_file):
@@ -161,18 +152,16 @@ def read_interruption_time(interruption_time_file):
     return interruption_time_df
 
 
-# FIXME: add openpyxl to requirements (optional pandas requirement)
-xlsx = pd.ExcelFile(params_file)
 read_params = {
     "Square Footage": read_square_footage,
-    # "Structural Repair Ratios": read_repair_ratio_str,
-    # "NonstrAccel Repair Ratios": read_repair_ratio_nsa,
-    # "NonstrDrift Repair Ratios": read_repair_ratio_nsd,
-    # "Contents Damage Ratios": read_repair_ratio_con,
+    # "Structural Repair Ratios": read_repair_ratio_str,   # unused
+    # "NonstrAccel Repair Ratios": read_repair_ratio_nsa,  # unused
+    # "NonstrDrift Repair Ratios": read_repair_ratio_nsd,  # unused
+    # "Contents Damage Ratios": read_repair_ratio_con,     # unused
     "Collapse Rates": read_collapse_rate,
     "Indoor Casualty Rates": read_casualty_rate_in,
-    # "Outdoor Casualty Rates": read_casualty_rate_out,
-    # "Debris": read_debris_weight,
+    # "Outdoor Casualty Rates": read_casualty_rate_out,    # unused
+    "Debris": read_debris,
     "Building Repair Time": read_repair_time,
     "Building Recovery Time": read_recovery_time,
     "Interruption Time Multipliers": read_interruption_time,
@@ -202,7 +191,7 @@ def calculate_consequences(calc_id, output_dir):
     # square_footage_df = read_params["Square Footage"](xlsx)
     square_footage_df = read_params["Square Footage"](square_footage_file)
 
-    # NOTE: unused
+    # NOTE: unused (if needed, we must change it to read from csv)
     # repair_ratio_str_df = read_params["Structural Repair Ratios"](xlsx)
     # repair_ratio_nsa_df = read_params["NonstrAccel Repair Ratios"](xlsx)
     # repair_ratio_nsd_df = read_params["NonstrDrift Repair Ratios"](xlsx)
@@ -217,7 +206,7 @@ def calculate_consequences(calc_id, output_dir):
             casualty_rate_file % severity_level)
         casualty_rate_in[severity_level] = casualty_rate_in_df
 
-    # NOTE: unused
+    # NOTE: unused (if needed, we must change it to read from csv)
     # casualty_rate_out_df = read_params["Outdoor Casualty Rates"](xlsx)
 
     repair_time_df = read_params["Building Repair Time"](repair_time_file)
@@ -228,18 +217,18 @@ def calculate_consequences(calc_id, output_dir):
     interruption_time_df = read_params["Interruption Time Multipliers"](
         interruption_time_file)
 
-    debris_brick_wood_pct_structural_df = read_debris(
+    debris_brick_wood_pct_structural_df = read_params["Debris"](
         debris_bwo_structural_file)
-    debris_brick_wood_pct_nonstructural_df = read_debris(
+    debris_brick_wood_pct_nonstructural_df = read_params["Debris"](
         debris_bwo_nonstructural_file)
-    debris_concrete_steel_pct_structural_df = read_debris(
+    debris_concrete_steel_pct_structural_df = read_params["Debris"](
         debris_rcs_structural_file)
-    debris_concrete_steel_pct_nonstructural_df = read_debris(
+    debris_concrete_steel_pct_nonstructural_df = read_params["Debris"](
         debris_rcs_nonstructural_file)
 
-    unit_weight_bwo_df = read_debris(
+    unit_weight_bwo_df = read_params["Debris"](
         debris_unitweight_bwo_file)
-    unit_weight_rcs_df = read_debris(
+    unit_weight_rcs_df = read_params["Debris"](
         debris_unitweight_rcs_file)
 
     # Initialize lists / dicts to store the asset level casualty estimates
