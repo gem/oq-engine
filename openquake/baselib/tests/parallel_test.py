@@ -231,25 +231,3 @@ class SplitTaskTestCase(unittest.TestCase):
         shutil.rmtree(tmpdir)
 
 
-def update_array(shared, index):
-    with shared as array:
-        for i in range(index):
-            for j in range(index):
-                array[i, j] *= .99
-
-
-class SharedMemoryTestCase(unittest.TestCase):
-    @unittest.skipIf(
-        sys.platform == 'win32',
-        reason="Skipping on Windows")
-    def test(self):
-        shape = 10, 10
-        smap = parallel.Starmap(update_array)
-        shared = smap.create_shared(shape, value=1.)
-        for i in range(shape[1]):
-            smap.submit((shared, i))
-        smap.reduce()
-        print()
-        with shared as array:
-            print(array)
-        parallel.Starmap.shutdown()

@@ -207,7 +207,7 @@ def event_based_risk(df, oqparam, monitor):
     outs = gen_outputs(df, crmodel, rng, monitor)
     avg, alt = aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(),
                       monitor)
-    return dict(avg=avg, alt=alt)
+    return dict(avg=avg, alt=alt, gmf_bytes=df.memory_usage().sum())
 
 
 def gen_outputs(df, crmodel, rng, monitor):
@@ -238,17 +238,18 @@ def gen_outputs(df, crmodel, rng, monitor):
             yield out
 
 
-def ebrisk(proxies, cmaker, dstore, monitor):
+def ebrisk(proxies, cmaker, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
     :param cmaker: ContextMaker instance associated to the trt_smr
+    :param stations: empty pair or (station_data, station_sitecol)
     :param monitor: a Monitor instance
     :returns: a dictionary of arrays
     """
     cmaker.oq.ground_motion_fields = True
     for block in general.block_splitter(
             proxies, 20_000, event_based.rup_weight):
-        dic = event_based.event_based(block, cmaker, dstore, monitor)
+        dic = event_based.event_based(block, cmaker, stations, dstore, monitor)
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             yield event_based_risk(gmf_df, cmaker.oq, monitor)
@@ -442,7 +443,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         if not dic:
             return
-        self.gmf_bytes += dic['alt'].memory_usage().sum()
+        self.gmf_bytes += dic.pop('gmf_bytes')
         self.oqparam.ground_motion_fields = False  # hack
         with self.monitor('saving risk_by_event'):
             alt = dic.pop('alt')
@@ -462,20 +463,22 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
 
-        # sanity check on the risk_by_event
-        alt = self.datastore.read_df('risk_by_event')
         K = self.datastore['risk_by_event'].attrs.get('K', 0)
         upper_limit = self.E * (K + 1) * len(self.xtypes)
-        size = len(alt)
-        assert size <= upper_limit, (size, upper_limit)
-        # sanity check on uniqueness by (agg_id, loss_id, event_id)
-        arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
-        uni = numpy.unique(arr, axis=0)
-        if len(uni) < len(arr):
-            raise RuntimeError('risk_by_event contains %d duplicates!' %
-                               (len(arr) - len(uni)))
+        if upper_limit < 1E7:
+            # sanity check on risk_by_event if not too large
+            alt = self.datastore.read_df('risk_by_event')
+            size = len(alt)
+            assert size <= upper_limit, (size, upper_limit)
+            # sanity check on uniqueness by (agg_id, loss_id, event_id)
+            arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
+            uni = numpy.unique(arr, axis=0)
+            if len(uni) < len(arr):
+                raise RuntimeError('risk_by_event contains %d duplicates!' %
+                                   (len(arr) - len(uni)))
 
         if oq.avg_losses:
+            logging.info('Storing avg_losses-rlzs')
             for lt in self.xtypes:
                 al = self.avg_losses[lt]
                 for r in range(self.R):

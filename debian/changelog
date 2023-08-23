@@ -1,4 +1,15 @@
   [Michele Simionato]
+  * Reduced slow tasks and memory consumption
+    in the event_based_risk calculator (3x for Chile)
+
+  [Paolo Tormene]
+  * Raise an error if files specified in site_model_file do not have the same
+    headers
+  * Give a better error message for risk calculations where the aggregate_by
+    tag is specified but it doesn't exist in the exposure model
+
+  [Michele Simionato]
+  * Improved error message when quantiles are not supported in event based risk
   * Reduced memory consumption in the master node in post_risk
   * Reduced slow tasks in the ebrisk calculator and memory consumption
     in the master node
