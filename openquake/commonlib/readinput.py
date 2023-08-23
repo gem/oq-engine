@@ -384,9 +384,8 @@ def get_mesh(oqparam, h5=None):
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
             mesh, Global.pmap = get_pmap_from_csv(oqparam, fname)
-        else:
-            raise NotImplementedError('Reading from %s' % fname)
-        return mesh
+            return mesh
+        raise NotImplementedError('Reading from %s' % fname)
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
@@ -422,6 +421,8 @@ def get_mesh(oqparam, h5=None):
         mesh = geo.Mesh(sm['lon'], sm['lat'])
     elif 'exposure' in oqparam.inputs:
         mesh = Global.exposure.mesh
+    else:
+        mesh = None
     return mesh
 
 
