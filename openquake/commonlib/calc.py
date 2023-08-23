@@ -382,6 +382,7 @@ def starmap_from_gmfs(task_func, oq, dstore):
         ds = dstore.parent
     else:
         ds = dstore
+    A = len(dstore['assetcol/array'])
     N = ds['sitecol'].sids.max() + 1
     if 'site_model' in ds:
         N = max(N, len(ds['site_model']))
@@ -398,6 +399,6 @@ def starmap_from_gmfs(task_func, oq, dstore):
         sbe = build_slice_by_event(data['eid'][:])
     smap = parallel.Starmap.apply(
         task_func, (sbe, oq, ds),
-        maxweight=50_000_000, weight=weight,
+        maxweight=A*10, weight=weight,
         h5=dstore.hdf5)
     return smap
