@@ -312,7 +312,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         # TODO: this is ugly and must be improved upon!
         allproxies = allproxies[0:1]
         station_data = dstore.read_df('station_data', 'site_id')
-        station_sitecol = sitecol.filtered(station_data.index)
+        station_sitecol = sitecol.complete.filtered(station_data.index)
         stations = station_data, station_sitecol
     else:
         stations = ()
@@ -638,7 +638,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # really compute and store the avg_gmf
         M = len(self.oqparam.min_iml)
-        avg_gmf = numpy.zeros((2, self.N, M), F32)
+        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), M), F32)
         for sid, avgstd in compute_avg_gmf(
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
