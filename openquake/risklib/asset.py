@@ -1050,7 +1050,10 @@ class Exposure(object):
 
     def associate(self, haz_sitecol, haz_distance, region=None):
         """
-        Associate the a exposure to the given site collection
+        Associate the exposure to the given site collection within
+        the given distance.
+
+        :returns: filtered site collection, discarded assets
         """
         return geo.utils._GeographicObjects(
             haz_sitecol).assoc2(self, haz_distance, region, 'filter')
