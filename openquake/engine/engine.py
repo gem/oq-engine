@@ -82,11 +82,6 @@ def set_concurrent_tasks_default(calc):
     OqParam.concurrent_tasks.default. Abort the calculations if no
     workers are available. Do nothing for trivial distributions.
     """
-    if OQ_DISTRIBUTE in 'no processpool ipp':  # do nothing
-        num_workers = 0 if OQ_DISTRIBUTE == 'no' else parallel.Starmap.CT // 2
-        logging.warning('Using %d cores on %s', num_workers, platform.node())
-        return
-
     master = w.WorkerMaster(config.zworkers)
     num_workers = sum(total for host, running, total in master.wait())
     if num_workers == 0:
@@ -276,10 +271,10 @@ def run_calc(log):
         # if msg:
         #    logging.warning(msg)
         calc.from_engine = True
-        if config.zworkers['host_cores']:
+        if OQ_DISTRIBUTE == 'zmq':
             set_concurrent_tasks_default(calc)
         else:
-            logging.warning('Assuming %d %s workers',
+            logging.warning('Using %d %s workers',
                             parallel.Starmap.CT // 2, OQ_DISTRIBUTE)
         t0 = time.time()
         calc.run(shutdown=True)

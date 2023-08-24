@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Introduced support for SLURM (experimental)
   * Fixed bug in conditioned GMFs, due to the station sites being excluded
     from the complete site collection
   * Reduced slow tasks and memory consumption
