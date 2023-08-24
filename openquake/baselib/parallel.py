@@ -223,7 +223,7 @@ SLURM_BATCH = '''\
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
-srun ~/.conda/envs/openquake/bin/python -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
+srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 '''
 
 def sbatch(mon):
@@ -232,7 +232,8 @@ def sbatch(mon):
     """
     path = os.path.join(mon.calc_dir, 'slurm.sh')
     with open(path, 'w') as f:
-        f.write(SLURM_BATCH.format(mon=mon))
+        python = config.distribution.python or sys.executable
+        f.write(SLURM_BATCH.format(python=python, mon=mon))
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
     if sbatch:
