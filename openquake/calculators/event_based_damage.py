@@ -29,6 +29,7 @@ from openquake.calculators import base
 from openquake.calculators.event_based_risk import EventBasedRiskCalculator
 from openquake.calculators.post_risk import (
     get_loss_builder, fix_dtypes, PostRiskCalculator)
+from openquake.calculators.export import DISPLAY_NAME
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -285,9 +286,76 @@ class DamageCalculator(EventBasedRiskCalculator):
                        loss_type=oq.loss_types,
                        dmg_state=['no_damage'] + self.crmodel.get_dmg_csq())
 
-        fields = self.assetcol.array.dtype.names
-        if 'supply_or_demand' in fields:
-            demand_nodes, avg_conn_loss = connectivity.analysis(self.datastore)
-            self.datastore.create_df('functional_demand_nodes', demand_nodes)
-            logging.info('Stored functional_demand_nodes')
-            logging.info('Average connectivity loss: %.4f', avg_conn_loss)
+        if (hasattr(oq, 'infrastructure_connectivity_analysis')
+                and oq.infrastructure_connectivity_analysis):
+
+            logging.info('Running connectivity analysis')
+            conn_results = connectivity.analysis(self.datastore)
+            self._store_connectivity_analysis_results(conn_results)
+
+    def _store_connectivity_analysis_results(self, conn_results):
+        avg_dict = {}
+        if 'avg_connectivity_loss_eff' in conn_results:
+            avg_dict['efl'] = [conn_results['avg_connectivity_loss_eff']]
+        if 'avg_connectivity_loss_pcl' in conn_results:
+            avg_dict['pcl'] = [conn_results['avg_connectivity_loss_pcl']]
+        if 'avg_connectivity_loss_wcl' in conn_results:
+            avg_dict['wcl'] = [conn_results['avg_connectivity_loss_wcl']]
+        if 'avg_connectivity_loss_ccl' in conn_results:
+            avg_dict['ccl'] = [conn_results['avg_connectivity_loss_ccl']]
+        if avg_dict:
+            avg_df = pandas.DataFrame(data=avg_dict)
+            self.datastore.create_df(
+                'infra-avg_loss', avg_df,
+                display_name=DISPLAY_NAME['infra-avg_loss'])
+            logging.info(
+                'Stored avarage connectivity loss (infra-avg_loss)')
+        if 'event_connectivity_loss_eff' in conn_results:
+            self.datastore.create_df(
+                'infra-event_efl',
+                conn_results['event_connectivity_loss_eff'],
+                display_name=DISPLAY_NAME['infra-event_efl'])
+            logging.info(
+                'Stored efficiency loss by event (infra-event_efl)')
+        if 'event_connectivity_loss_pcl' in conn_results:
+            self.datastore.create_df(
+                'infra-event_pcl',
+                conn_results['event_connectivity_loss_pcl'],
+                display_name=DISPLAY_NAME['infra-event_pcl'])
+            logging.info(
+                'Stored partial connectivity loss by event (infra-event_pcl)')
+        if 'event_connectivity_loss_wcl' in conn_results:
+            self.datastore.create_df(
+                'infra-event_wcl',
+                conn_results['event_connectivity_loss_wcl'],
+                display_name=DISPLAY_NAME['infra-event_wcl'])
+            logging.info(
+                'Stored weighted connectivity loss by event (infra-event_wcl)')
+        if 'event_connectivity_loss_ccl' in conn_results:
+            self.datastore.create_df(
+                'infra-event_ccl',
+                conn_results['event_connectivity_loss_ccl'],
+                display_name=DISPLAY_NAME['infra-event_ccl'])
+            logging.info(
+                'Stored complete connectivity loss by event (infra-event_ccl)')
+        if 'taz_cl' in conn_results:
+            self.datastore.create_df(
+                'infra-taz_cl',
+                conn_results['taz_cl'],
+                display_name=DISPLAY_NAME['infra-taz_cl'])
+            logging.info(
+                'Stored connectivity loss of TAZ nodes (taz_cl)')
+        if 'dem_cl' in conn_results:
+            self.datastore.create_df(
+                'infra-dem_cl',
+                conn_results['dem_cl'],
+                display_name=DISPLAY_NAME['infra-dem_cl'])
+            logging.info(
+                'Stored connectivity loss of demand nodes (dem_cl)')
+        if 'node_el' in conn_results:
+            self.datastore.create_df(
+                'infra-node_el',
+                conn_results['node_el'],
+                display_name=DISPLAY_NAME['infra-node_el'])
+            logging.info(
+                'Stored efficiency loss of nodes (node_el)')

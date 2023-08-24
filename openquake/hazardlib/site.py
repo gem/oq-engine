@@ -67,6 +67,10 @@ def calculate_z2pt5(vs30):
     return numpy.exp(c1 + numpy.log(vs30) * c2)
 
 
+def rnd5(lons):
+    return numpy.round(lons, 5)
+
+
 class Site(object):
     """
     Site object represents a geographical location defined by its position
@@ -576,6 +580,29 @@ class SiteCollection(object):
                 raise ValueError('The site parameter %s is always zero: please '
                                  'check the site model' % param)
         return site_model
+
+    def extend(self, lons, lats):
+        """
+        Extend the site collection to additional (and different) points.
+        Used for station_data in conditioned GMFs.
+        """
+        assert len(lons) == len(lats), (len(lons), len(lats))
+        orig = set(zip(rnd5(self.lons), rnd5(self.lats)))
+        new = set(zip(rnd5(lons), rnd5(lats))) - orig
+        if not new:
+            return self
+        lons, lats = zip(*sorted(new))
+        N1 = len(self)
+        N2 = len(lons)
+        array = numpy.zeros(N1 + N2, self.array.dtype)
+        array[:N1] = self.array
+        array[N1:]['sids'] = numpy.arange(N1, N1+N2)
+        array[N1:]['lon'] = lons
+        array[N1:]['lat'] = lats
+        sitecol = object.__new__(self.__class__)
+        sitecol.array = array
+        sitecol.complete = sitecol
+        return sitecol
 
     def within(self, region):
         """

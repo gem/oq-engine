@@ -25,7 +25,7 @@ from scipy import sparse
 
 from openquake.baselib import sap, general
 from openquake.calculators import export
-from openquake.server.db.actions import DISPLAY_NAME
+from openquake.calculators.export import DISPLAY_NAME
 from openquake import commands
 
 # check for Python version

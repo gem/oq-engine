@@ -101,7 +101,8 @@ class CrossCorrelationBetween(ABC):
         if truncation_level < 1E-9:
             truncation_level = 1E-9
         self.truncation_level = truncation_level
-        self.distribution = stats.truncnorm(-truncation_level, truncation_level)
+        self.distribution = stats.truncnorm(-truncation_level,
+                                            truncation_level)
 
     @abstractmethod
     def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
@@ -147,6 +148,84 @@ class GodaAtkinson2009(CrossCorrelationBetween):
                             np.log10(Tmin / 0.25)) * np.log10(Tmax / Tmin)
         delta = 1 + np.cos(-1.5 * np.log10(Tmax / Tmin))
         return (1. - np.cos(angle) + delta) / 3.
+
+    def get_inter_eps(self, imts, num_events, rng):
+        """
+        :param imts: a list of M intensity measure types
+        :param num_events: the number of events to consider (E)
+        :param rng: random number generator
+        :returns: a correlated matrix of epsilons of shape (M, E)
+
+        NB: the user must specify the random seed first
+        """
+        corma = self._get_correlation_matrix(imts)
+        return rng.multivariate_normal(
+            np.zeros(len(imts)), corma, num_events).T  # E, M -> M, E
+
+    def _get_correlation_matrix(self, imts):
+        # cached on the periods
+        periods = tuple(imt.period for imt in imts)
+        try:
+            return self.cache[periods]
+        except KeyError:
+            self.cache[periods] = corma = np.zeros((len(imts), len(imts)))
+        for i, imi in enumerate(imts):
+            for j, imj in enumerate(imts):
+                corma[i, j] = self.get_correlation(imi, imj)
+        return corma
+
+
+class Bradley2012(CrossCorrelationBetween):
+    """
+    Implements the correlation model for total residuals
+    between Peak Ground Velocity and Spectrum-Based
+    Intensity Measures from Bradley, B. A. (2012).
+    'Empirical correlations between peak ground velocity
+    and spectrum-based intensity measures.'
+    Earthquake Spectra, 28(1), 17–35.
+    https://doi.org/10.1193/1.3675582
+    """
+    cache = {}  # periods -> correlation matrix
+
+    def get_correlation(self, from_imt: IMT, to_imt: IMT) -> float:
+        """
+        :returns: a scalar in the range 0..1
+        """
+
+        if from_imt == to_imt:
+            return 1
+        if from_imt.string != 'PGV' and to_imt.string != 'PGV':
+            return 0
+
+        if from_imt.string == 'PGV':
+            T = to_imt.period
+        else:
+            T = from_imt.period
+
+        if T < 0.01:
+            return 0.733
+        elif T < 0.1:
+            a = 0.73
+            b = 0.54
+            c = 0.045
+            d = 1.8
+        elif T < 0.75:
+            a = 0.54
+            b = 0.81
+            c = 0.28
+            d = 1.5
+        elif T < 2.5:
+            a = 0.80
+            b = 0.76
+            c = 1.1
+            d = 3.0
+        else:
+            a = 0.76
+            b = 0.70
+            c = 5.0
+            d = 3.2
+
+        return ((a + b) / 2 - (a - b) / 2 * np.tanh(d * np.log(T / c)))
 
     def get_inter_eps(self, imts, num_events, rng):
         """

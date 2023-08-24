@@ -11,7 +11,7 @@ The script allows the user to select between different kinds of installations:
 
 >**NOTES:**
 
->_**Note 1.** On some Linux distributions (i.e. Ubuntu) you may need to install the package `python3-venv` before running the installer_
+>_**Note 1.** On some Linux distributions (e.g. Ubuntu) you may need to install the package `python3-venv` before running the installer_
 > <br />
 >_**Note 2.** New Macs with the M1 CPU are supported only if you're on macOS 12.x and for python3.9.
 ><br />_ Apple ships its own version of Python with OS X. However, we strongly recommend installing the official Python distribution.
@@ -22,6 +22,8 @@ Alternatively, use Python from one of the OS X package managers (Homebrew, MacPo
 >_**Note 4.** This script will install the OpenQuake engine in its own virtual environment. Users who need to use any additional Python packages (eg. Jupyter, Spyder) along with the OpenQuake-engine should install those packages within this virtual environment._
 > <br />
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
+> <br />
+>_**Note 6.** On Windows installations we recommend using Python 3.10._
 
 After installing, you can get the location of the engine virtual enviroment with the command
 ```

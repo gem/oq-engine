@@ -91,14 +91,16 @@ def get_rup_array(ebruptures, srcfilter=nofilter):
             continue
 
         # apply distance filtering
-        if srcfilter.sitecol is not None and len(
-                srcfilter.close_sids(rec, rup.tectonic_region_type)) == 0:
-            continue
+        nsites = 0
+        if srcfilter.sitecol is not None:
+            nsites = len(srcfilter.close_sids(rec, rup.tectonic_region_type))
+            if nsites== 0:
+                continue
 
         rate = getattr(rup, 'occurrence_rate', numpy.nan)
         tup = (ebrupture.id, ebrupture.seed, ebrupture.source_id,
                ebrupture.trt_smr, rup.code, ebrupture.n_occ, rup.mag, rup.rake,
-               rate, minlon, minlat, maxlon, maxlat, hypo, 0, 0)
+               rate, minlon, minlat, maxlon, maxlat, hypo, 0, nsites, 0)
         rups.append(tup)
         # we are storing the geometries as arrays of 32 bit floating points;
         # the first element is the number of surfaces, then there are

@@ -76,6 +76,7 @@ jobs:
         pip install pytest
         oq dbserver start
         cd ~/work/oq-engine/oq-engine
+        oq engine --run demos/risk/ClassicalDamage/job_hazard.ini
         #
         export MPLBACKEND=Agg
         pytest -vsx --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py

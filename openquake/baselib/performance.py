@@ -451,6 +451,7 @@ else:
 @compile(["int64[:, :](uint8[:])",
           "int64[:, :](uint16[:])",
           "int64[:, :](uint32[:])",
+          "int64[:, :](int32[:])",
           "int64[:, :](int64[:])"])
 def idx_start_stop(integers):
     # given an array of integers returns an array int64 of shape (n, 3)

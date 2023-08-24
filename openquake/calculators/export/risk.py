@@ -595,9 +595,9 @@ def export_aggcurves_csv(ekey, dstore):
             if loss_id == scientific.LOSSID['claim']:  # temporary hack
                 continue
             if loss_id == scientific.LOSSID['occupants']:
-                lt =  LT[loss_id] + '_' + oq.time_event
+                lt = LT[loss_id] + '_' + oq.time_event
             else:
-                lt =  LT[loss_id]
+                lt = LT[loss_id]
             if tagnames:
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
                     edic[tagname].extend([tag] * len(d))
@@ -639,3 +639,19 @@ def export_reinsurance(ekey, dstore):
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df.rename(columns=fmap), dest, comment=dstore.metadata)
     return [dest]
+
+
+@export.add(('infra-avg_loss', 'csv'),
+            ('infra-node_el', 'csv'),
+            ('infra-taz_cl', 'csv'),
+            ('infra-dem_cl', 'csv'),
+            ('infra-event_ccl', 'csv'),
+            ('infra-event_pcl', 'csv'),
+            ('infra-event_wcl', 'csv'),
+            ('infra-event_efl', 'csv'))
+def export_node_el(ekey, dstore):
+    dest = dstore.export_path('%s.%s' % ekey)
+    df = dstore.read_df(ekey[0])
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    writer.save(df, dest, comment=dstore.metadata)
+    return writer.getsaved()

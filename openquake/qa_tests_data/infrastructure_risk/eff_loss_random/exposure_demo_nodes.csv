@@ -1,0 +1,8 @@
+id,lon,lat,taxonomy,number,type,start_node,end_node,purpose,weight,parent_id
+A,22.93338001,40.63547573,connection,1,node,NA,NA,connection,1,A
+D,22.95505511,40.65044114,connection,1,node,NA,NA,connection,1,D
+C,22.94079628,40.64918567,connection,1,node,NA,NA,connection,1,C
+E,22.9547444,40.63666488,connection,1,node,NA,NA,connection,1,E
+B,22.94502357,40.63700308,connection,1,node,NA,NA,connection,1,B
+F,22.96974411,40.64340508,connection,1,node,NA,NA,connection,1,F
+G,22.98249063,40.63566969,connection,1,node,NA,NA,connection,1,G

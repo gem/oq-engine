@@ -386,6 +386,11 @@ infer_occur_rates:
    Example: *infer_occur_rates = true*
    Default: False
 
+infrastructure_connectivity_analysis:
+    If set, run the infrastructure connectivity analysis.
+    Example: *infrastructure_connectivity_analysis = true*
+    Default: False
+
 inputs:
   INTERNAL. Dictionary with the input files paths.
 
@@ -766,7 +771,7 @@ time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=600*
-  Default: 200
+  Default: 300
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -962,6 +967,7 @@ class OqParam(valid.ParamSet):
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     infer_occur_rates = valid.Param(valid.boolean, False)
+    infrastructure_connectivity_analysis = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -1046,7 +1052,7 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 200)
+    time_per_task = valid.Param(valid.positivefloat, 300)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
@@ -1847,7 +1853,7 @@ class OqParam(valid.ParamSet):
         """
         if self.ground_motion_correlation_model:
             for imt in self.imtls:
-                if not (imt.startswith('SA') or imt == 'PGA'):
+                if not (imt.startswith('SA') or imt in ['PGA', 'PGV']):
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
@@ -1926,8 +1932,8 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights, only the mean is available,
-        and number_of_logic_tree_samples must be greater than 1.
+        sampling_method must be early_weights and number_of_logic_tree_samples
+        must be greater than 1.
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
@@ -1946,8 +1952,10 @@ class OqParam(valid.ParamSet):
                 raise ValueError('Please specify number_of_logic_tree_samples'
                                  '=%d' % n)
         hstats = list(self.hazard_stats())
-        nostats = not hstats or hstats == ['mean']
-        return nostats and self.number_of_logic_tree_samples > 1 and (
+        if hstats and hstats != ['mean']:
+            msg = '%s: quantiles are not supported with collect_rlzs=true'
+            raise InvalidFile(msg % self.inputs['job_ini'])
+        return self.number_of_logic_tree_samples > 1 and (
             self.sampling_method == 'early_weights')
 
     def check_aggregate_by(self):
