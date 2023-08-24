@@ -28,7 +28,8 @@ from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.calc.filters import split_source, SourceFilter
+from openquake.hazardlib.calc.filters import (
+    getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
@@ -93,6 +94,9 @@ def preclassical(srcs, sites, cmaker, monitor):
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
     for src in srcs:
+        mmag = getdefault(cmaker.oq.minimum_magnitude, src.tectonic_region_type)
+        if src.get_mags()[-1] < mmag:  # magnitudes all below min_mag
+            continue
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
