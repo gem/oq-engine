@@ -232,7 +232,7 @@ def sbatch(mon):
     """
     path = os.path.join(mon.calc_dir, 'slurm.sh')
     with open(path, 'w') as f:
-        python = config.distribution.python or sys.executable
+        python = config.distribution.python
         f.write(SLURM_BATCH.format(python=python, mon=mon))
     os.chmod(path, os.stat(path).st_mode | stat.S_IEXEC)
     sbatch = subprocess.run(['which', 'sbatch'], capture_output=True).stdout
@@ -282,7 +282,7 @@ def ipp_submit(self, func, args, monitor):
 
 @submit.add('slurm')
 def slurm_submit(self, func, args, monitor):
-    calc_dir = monitor.filename.rsplit('.', 1)[0]  # $HOME/oqdata/calc_XXX
+    calc_dir = monitor.calc_dir  # $HOME/oqdata/calc_XXX
     if not os.path.exists(calc_dir):
         os.mkdir(calc_dir)
     inpname = str(self.task_no + 1) + '.inp'
