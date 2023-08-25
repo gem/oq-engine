@@ -1,1 +1,1 @@
-openquake/hazardlib/tests/data/test_non_param_write.xml text eol=lf
+openquake/hazardlib/tests/data/*.xml text eol=lf
