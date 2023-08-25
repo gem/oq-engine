@@ -75,9 +75,7 @@ jobs:
         source ~/openquake/bin/activate
         oq dbserver start
         cd ~/work/oq-engine/oq-engine
-        # FIXME: run all demos?
-        # OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
-        oq engine --run demos/risk/ClassicalDamage/job_hazard.ini
+        OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
     - name: Run tests
       run: |
         source ~/openquake/bin/activate
