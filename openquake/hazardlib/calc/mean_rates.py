@@ -24,7 +24,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.contexts import get_cmakers
 
 
-def to_rates(probs):
+def to_rates(probs, itime=1):
     """
     Convert an array of probabilities into an array of rates
 
@@ -32,18 +32,19 @@ def to_rates(probs):
     array([1.609438])
     """
     pnes = 1. - probs
-    pnes[pnes == 0] = 1E-45  # minimum float32
-    return - numpy.log(pnes)
+    pnes[pnes <= 0.] = 1E-45  # minimum float32
+    pnes[pnes >= 1.] = 0  # minimum float32
+    return - numpy.log(pnes) / itime
 
 
-def to_probs(rates):
+def to_probs(rates, itime=1):
     """
     Convert an array of rates into an array of probabilities
 
     >>> numpy.round(to_probs(numpy.array([1.609438])), 6)
     array([0.8])
     """
-    return 1. - numpy.exp(- rates)
+    return 1. - numpy.exp(- rates * itime)
 
 
 def calc_rmap(src_groups, full_lt, sitecol, oq):
