@@ -1493,10 +1493,13 @@ class RecordBuilder(object):
     Builder for numpy records or arrays.
 
     >>> rb = RecordBuilder(a=0, b=1., c="2")
-    >>> rb.dtype
-    dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
     >>> rb()
     (0, 1., b'2')
+    >>> import pytest, sys
+    >>> if sys.platform.startswith('win'):
+    ...     assert rb.dtype.descr == [('a', '<i4'), ('b', '<f8'), ('c', '|S1')]
+    ... else:
+    ...     assert rb.dtype.descr == [('a', '<i8'), ('b', '<f8'), ('c', '|S1')]
     """
     def __init__(self, **defaults):
         self.names = []
