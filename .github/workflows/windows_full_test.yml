@@ -103,7 +103,7 @@ jobs:
       #       }
       #     }
 
-      - name: Run all engine tests
+      - name: Run tests for calculators and advanced manual
         if: always()
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
