@@ -297,7 +297,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         totsites = sum(row[source_reader.NUM_SITES]
                        for row in self.csm.source_info.values())
         if totsites == 0:
-            raise RuntimeError('There are no sources close to the site(s)')
+            raise RuntimeError('There are no sources close to the site(s)! '
+                               'Use oq plot sources? to debug')
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':
