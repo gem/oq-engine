@@ -25,19 +25,18 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
 
 
-def get_rel_source_ids(dstore, imts, poes, threshold=.1):
+def get_rel_source_ids(dstore, imts, iml_disagg, threshold=.1):
     """
     :returns: sorted list of relevant source IDs
     """
     source_ids = set()
     for im in imts:
-        for poe in poes:
-            aw = extract.extract(dstore,
-                                 f'mean_rates_by_src?imt={im}&poe={poe}')
-            poe_array = aw.array['poe']  # for each source in decreasing order
-            max_poe = poe_array[0]
-            rel = aw.array[poe_array > threshold * max_poe]
-            source_ids.update(rel['src_id'])
+        aw = extract.extract(
+            dstore, f'mean_rates_by_src?imt={im}&iml={iml_disagg[im]}')
+        poe_array = aw.array['poe']  # for each source in decreasing order
+        max_poe = poe_array[0]
+        rel = aw.array[poe_array > threshold * max_poe]
+        source_ids.update(rel['src_id'])
     return python3compat.decode(sorted(source_ids))
 
 
@@ -50,11 +49,11 @@ def middle(arr):
 
 def main(dstore, csm):
     """
-    Compute and store the mean disaggregatiob by Mag_Dist_Eps for
+    Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model
     """
     oq = dstore['oqparam']
-    if len(oq.poes) == 0:
+    if len(oq.iml_disagg) == 0:
         return
     # oq.cachedir = datastore.get_datadir()
     parent = dstore.parent or dstore
@@ -65,9 +64,9 @@ def main(dstore, csm):
     assert len(sitecol) == 1, sitecol
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
     if 'mean_rates_by_src' in parent:
-        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.poes, threshold=.1)
+        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.iml_disagg, threshold=.1)
     else:
-        rel_ids = get_rel_source_ids(dstore, oq.imtls, oq.poes, threshold=.1)
+        rel_ids = get_rel_source_ids(dstore, oq.imtls, oq.iml_disagg, threshold=.1)
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
 
@@ -87,14 +86,13 @@ def main(dstore, csm):
         smap.submit((groups, sitecol, relt, (edges, shp), oq))
     mags, dists, lons, lats, eps, trts = edges
     arr = numpy.zeros(
-        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M'], shp['P'])
-    )
-    for srcid, rates5D, rates2D in smap:
+        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M']))
+    for srcid, rates4D, rates2D in smap:
         idx = src2idx[basename(srcid, '!;')]
-        arr[idx] = disagg.to_probs(rates5D)
+        arr[idx] = disagg.to_probs(rates4D)
     dic = dict(
-        shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt', 'poe'],
-        source_id=rel_ids, imt=list(oq.imtls), poe=oq.poes,
+        shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
+        source_id=rel_ids, imt=list(oq.imtls), iml=oq.iml_disagg,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
     dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
 

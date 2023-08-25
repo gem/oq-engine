@@ -459,13 +459,13 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml3, rlz_weights, src_mutex={}):
+    def disagg_mag_dist_eps(self, iml1, rlz_weights, src_mutex={}):
         """
-        :param iml3: an array of shape (M, P, Z)
+        :param iml1: an array of shape M
         :param src_mutex: a dictionary src_id -> weight, default empty
-        :returns: a 5D matrix of rates of shape (Ma, D, E, M, P)
+        :returns: a 4D matrix of rates of shape (Ma, D, E, M)
         """
-        M, P, Z = iml3.shape
+        M = len(iml1)
         out = numpy.zeros((self.Ma, self.D, self.E, M, P))
         for magi in range(self.Ma):
             try:
@@ -473,7 +473,7 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat6 = self.disagg6D(iml3[:, :, rlz], g)
+                mat6 = self.disagg6D(iml1, g)
                 out[magi] += mat6.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 
@@ -629,17 +629,16 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    rates5D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M'], s['P']))
+    rates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], s['M']))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
                  for rlzs in cm.gsims.values()]
-    iml3 = rmap.expand(reduced_lt, trt_rlzs).interp4D(
-        oq.imtls, oq.poes)[0]  # (M, P, Z)
+    iml2 = [oq.iml_disagg[imt] for imt in oq.imtls]
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
-        rates5D += dis.disagg_mag_dist_eps(iml3, ws)
+        rates4D += dis.disagg_mag_dist_eps(iml2, ws)
     gws = reduced_lt.g_weights(trt_rlzs)
     rates2D = calc_mean_rates(rmap, gws, oq.imtls)[0]
-    return source_id, rates5D, rates2D
+    return source_id, rates4D, rates2D
