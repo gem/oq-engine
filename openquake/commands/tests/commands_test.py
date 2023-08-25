@@ -384,7 +384,11 @@ class UpgradeNRMLTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>''')
         sap.runline(f'openquake.commands upgrade_nrml {tmpdir}')
-        shutil.rmtree(tmpdir)
+        if not sys.platform.startswith('win'):
+            # NOTE: on Windows it raises:
+            #       PermissionError: [WinError 32] The process cannot access
+            #       the file because it is being used by another process
+            shutil.rmtree(tmpdir)
 
 
 class ZipTestCase(unittest.TestCase):
