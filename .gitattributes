@@ -1,1 +1,1 @@
-openquake/hazardlib/tests/data/*.xml text eol=lf
+openquake/hazardlib/tests/*/*.xml text eol=lf
