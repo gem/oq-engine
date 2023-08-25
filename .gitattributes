@@ -1,1 +1,2 @@
-**/*.xml text eol=lf
+* text=auto
+*.xml text eol=lf
