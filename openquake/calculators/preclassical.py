@@ -22,7 +22,7 @@ import operator
 import numpy
 import h5py
 from openquake.baselib import general, parallel, hdf5
-from openquake.hazardlib import pmf, geo
+from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
@@ -294,10 +294,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Raise an error if the sources were all discarded
         """
-        if 'source_info' in self.datastore:
-            num_sites = self.datastore['source_info']['num_sites']
-            if (num_sites == 0).all():
-                raise RuntimeError('There are no sources close to the site(s)')
+        totsites = sum(row[source_reader.NUM_SITES]
+                       for row in self.csm.source_info.values())
+        if totsites == 0:
+            raise RuntimeError('There are no sources close to the site(s)! '
+                               'Use oq plot sources? to debug')
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':
