@@ -82,6 +82,13 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
+def _filter(srcs, min_mag, fraction=1.):
+    mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
+    if fraction < 1.:
+        srcs = general.random_filter(srcs, fraction) or [srcs[0]]
+    return [src for src in srcs if src.get_mags()[-1] >= mmag]
+
+
 def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
@@ -94,9 +101,6 @@ def preclassical(srcs, sites, cmaker, monitor):
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
     for src in srcs:
-        mmag = getdefault(cmaker.oq.minimum_magnitude, src.tectonic_region_type)
-        if src.get_mags()[-1] < mmag:  # magnitudes all below min_mag
-            continue
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -104,8 +108,9 @@ def preclassical(srcs, sites, cmaker, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        splits = split_source(src) if (
-            cmaker.split_sources and src.nsites) else [src]
+        splits = _filter(
+            split_source(src) if cmaker.split_sources and src.nsites
+            else [src], cmaker.oq.minimum_magnitude, cmaker.fraction)
         for ss in splits:
             ss.num_ruptures = ss.count_ruptures()
         split_sources.extend(splits)
@@ -196,7 +201,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        ss = os.environ.get('OQ_SAMPLE_SOURCES')
         for grp_id, srcs in sources_by_key.items():
+            cmaker = cmakers[grp_id]
+            cmaker.fraction = float(ss) if ss else 1.
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
@@ -204,21 +212,20 @@ class PreClassicalCalculator(base.HazardCalculator):
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
                 elif src.code in b'CFN':  # send the heavy sources
-                    smap.submit(([src], sites, cmakers[grp_id]))
+                    smap.submit(([src], sites, cmaker))
                 else:
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
                 if oq.ps_grid_spacing:
                     # do not split the pointsources
-                    smap.submit(
-                        (pointsources + pointlike, sites, cmakers[grp_id]))
+                    smap.submit((pointsources + pointlike, sites, cmaker))
                 else:
                     for block in block_splitter(pointsources, 1000):
-                        smap.submit((block, sites, cmakers[grp_id]))
+                        smap.submit((block, sites, cmaker))
                     others.extend(pointlike)
             for block in block_splitter(others, 20):
-                smap.submit((block, sites, cmakers[grp_id]))
+                smap.submit((block, sites, cmaker))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
@@ -242,11 +249,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                 srcs.sort(key=operator.attrgetter('source_id'))
             # srcs can be empty if the minimum_magnitude filter is on
             if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
-                # check if OQ_SAMPLE_SOURCES is set
-                ss = os.environ.get('OQ_SAMPLE_SOURCES')
-                if ss:
-                    logging.info('Sampled sources for group #%d', grp_id)
-                    srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
                 newsg = SourceGroup(srcs[0].tectonic_region_type)
                 newsg.sources = srcs
                 csm.src_groups[grp_id] = newsg
