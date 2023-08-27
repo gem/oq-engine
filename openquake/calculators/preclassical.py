@@ -83,6 +83,8 @@ def collapse_nphc(src):
 
 
 def _filter(srcs, min_mag, fraction=1.):
+    # filter by magnitude and optionally sample source
+    # count the ruptures
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     if fraction < 1.:
         srcs = general.random_filter(srcs, fraction)
