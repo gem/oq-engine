@@ -86,7 +86,10 @@ def _filter(srcs, min_mag, fraction=1.):
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
     if fraction < 1.:
         srcs = general.random_filter(srcs, fraction)
-    return [src for src in srcs if src.get_mags()[-1] >= mmag]
+    out = [src for src in srcs if src.get_mags()[-1] >= mmag]
+    for ss in out:
+        ss.num_ruptures = ss.count_ruptures()
+    return out
 
 
 def preclassical(srcs, sites, cmaker, monitor):
@@ -94,12 +97,12 @@ def preclassical(srcs, sites, cmaker, monitor):
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites:
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
+    splits = []
     for src in srcs:
         if sites:
             # NB: this is approximate, since the sites are sampled
@@ -108,26 +111,25 @@ def preclassical(srcs, sites, cmaker, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        splits = _filter(
-            split_source(src) if cmaker.split_sources and src.nsites
-            else [src], cmaker.oq.minimum_magnitude, cmaker.fraction)
-        for ss in splits:
-            ss.num_ruptures = ss.count_ruptures()
-        split_sources.extend(splits)
+        if cmaker.split_sources and src.nsites:
+            splits.extend(split_source(src))
+        else:
+            splits.append(src)
+    splits = _filter(splits, cmaker.oq.minimum_magnitude, cmaker.fraction)
     mon = monitor('weighting sources', measuremem=False)
     if sites is None or spacing == 0:
         if sites is None:
-            for src in split_sources:
+            for src in splits:
                 src.weight = .01
         else:
-            cmaker.set_weight(split_sources, sf, multiplier, mon)
-        dic = {grp_id: split_sources}
+            cmaker.set_weight(splits, sf, multiplier, mon)
+        dic = {grp_id: splits}
         dic['before'] = len(srcs)
-        dic['after'] = len(split_sources)
+        dic['after'] = len(splits)
         yield dic
     else:
         cnt = 0
-        for msr, block in groupby(split_sources, msr_name).items():
+        for msr, block in groupby(splits, msr_name).items():
             dic = grid_point_sources(block, spacing, msr, cnt, monitor)
             cnt = dic.pop('cnt')
             for src in dic[grp_id]:
