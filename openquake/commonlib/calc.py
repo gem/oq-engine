@@ -387,9 +387,10 @@ def starmap_from_gmfs(task_func, oq, dstore):
     if 'site_model' in ds:
         N = max(N, len(ds['site_model']))
     num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
-    def weight(rec, dset=dstore['gmf_data/sid']):
+    sids = dstore['gmf_data/sid'][:]
+    def weight(rec):
         s0, s1 = rec['start'], rec['stop']
-        w = num_assets[dset[s0:s1]].sum()
+        w = num_assets[sids[s0:s1]].sum()
         return w
 
     data = ds['gmf_data']
@@ -397,6 +398,7 @@ def starmap_from_gmfs(task_func, oq, dstore):
         sbe = data['slice_by_event'][:]
     except KeyError:
         sbe = build_slice_by_event(data['eid'][:])
+    dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (sbe, oq, ds),
         maxweight=A*10, weight=weight,
