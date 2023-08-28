@@ -310,9 +310,6 @@ class RunShowExportTestCase(unittest.TestCase):
 
 
 class CompareTestCase(unittest.TestCase):
-    @unittest.skipIf(
-        sys.platform == 'win32',
-        reason="Skipping on Windows")
     def test_med_gmv(self):
         # testing the postprocessor med_gmv
         ini = os.path.join(os.path.dirname(case_13.__file__), 'job_gmv.ini')
