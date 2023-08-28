@@ -398,6 +398,7 @@ def starmap_from_gmfs(task_func, oq, dstore):
         sbe = data['slice_by_event'][:]
     except KeyError:
         sbe = build_slice_by_event(data['eid'][:])
+    dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (sbe, oq, ds),
         maxweight=A*10, weight=weight,
