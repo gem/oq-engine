@@ -559,7 +559,7 @@ pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
-  Default: {'default': 1000}
+  Default: {'default': 100}
 
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
@@ -807,10 +807,7 @@ width_of_mfd_bin:
   Default: None
 """ % __version__
 
-try:
-    PSDIST = config.performance.pointsource_distance
-except AttributeError:
-    PSDIST = 1000
+PSDIST = float(config.performance.pointsource_distance)
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32

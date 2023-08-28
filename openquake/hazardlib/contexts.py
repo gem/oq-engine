@@ -29,6 +29,7 @@ import numpy
 import shapely
 from scipy.interpolate import interp1d
 
+from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
     sqrscale)
@@ -375,7 +376,8 @@ class ContextMaker(object):
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
         self.maximum_distance = _interp(param, 'maximum_distance', trt)
         if 'pointsource_distance' not in param:
-            self.pointsource_distance = 1000.
+            self.pointsource_distance = float(
+                config.performance.pointsource_distance)
         else:
             self.pointsource_distance = getdefault(
                 param['pointsource_distance'], trt)
