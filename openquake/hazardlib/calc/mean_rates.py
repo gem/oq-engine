@@ -32,9 +32,7 @@ def to_rates(probs, itime=1):
     array([1.609438])
     """
     pnes = 1. - probs
-    pnes[pnes <= 0.] = 1E-45  # minimum float32
-    pnes[pnes >= 1.] = .9999999  # minimum float32
-    return - numpy.log(pnes) / itime
+    return numpy.clip(- numpy.log(pnes) / itime, 1E-16, 100)
 
 
 def to_probs(rates, itime=1):
