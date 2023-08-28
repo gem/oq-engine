@@ -54,6 +54,7 @@ def get_params_from(inputs):
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
     params['postproc_func'] = 'disagg_by_rel_sources.main'
+    # params['postproc_func'] = 'compute_rtgm.main'
     # params['cachedir'] = datastore.get_datadir()
     return params
 
