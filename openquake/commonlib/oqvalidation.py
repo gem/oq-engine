@@ -559,7 +559,7 @@ pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
-  Default: {'default': 40}
+  Default: {'default': 100}
 
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
