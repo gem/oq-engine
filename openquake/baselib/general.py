@@ -1210,14 +1210,14 @@ def random_histogram(counts, nbins_or_binweights, seed):
     bins and a faster algorithm will be used. Otherwise pass the weights.
     Here are a few examples:
 
-    >>> random_histogram(1, 2, seed=42).astype(list)
-    array([0, 1], dtype=object)
-    >>> random_histogram(100, 5, seed=42).astype(list)
-    array([22, 17, 21, 26, 14], dtype=object)
-    >>> random_histogram(10000, 5, seed=42).astype(list)
-    array([2034, 2000, 2014, 1998, 1954], dtype=object)
-    >>> random_histogram(1000, [.3, .3, .4], seed=42).astype(list)
-    array([308, 295, 397], dtype=object)
+    >>> list(random_histogram(1, 2, seed=42))
+    [0, 1]
+    >>> list(random_histogram(100, 5, seed=42))
+    [22, 17, 21, 26, 14]
+    >>> list(random_histogram(10000, 5, seed=42))
+    [2034, 2000, 2014, 1998, 1954]
+    >>> list(random_histogram(1000, [.3, .3, .4], seed=42))
+    [308, 295, 397]
     """
     rng = numpy.random.default_rng(seed)
     try:
@@ -1397,23 +1397,15 @@ def get_duplicates(array, *fields):
 
 def add_columns(a, b, on, cols=None):
     """
-    >>> a_dt = [('aid', int), ('eid', int), ('loss', float)]
-    >>> b_dt = [('ordinal', int), ('custom_site_id', int)]
+    >>> a_dt = [('aid', numpy.int64), ('eid', numpy.int64), ('loss', float)]
+    >>> b_dt = [('ordinal', numpy.int64), ('custom_site_id', numpy.int64)]
     >>> a = numpy.array([(1, 0, 2.4), (2, 0, 2.2),
     ...                  (1, 1, 2.1), (2, 1, 2.3)], a_dt)
     >>> b = numpy.array([(0, 20126), (1, 20127), (2, 20128)], b_dt)
-    >>> res = add_columns(a, b, 'aid', ['custom_site_id'])
-    >>> res.astype(list)
+    >>> add_columns(a, b, 'aid', ['custom_site_id'])
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
-           (2, 1, 2.3, 20128)], dtype=object)
-    >>> if sys.platform.startswith('win'):
-    ...     assert res.dtype.descr == [
-    ...         ('aid', '<i4'), ('eid', '<i4'),
-    ...         ('loss', '<f8'), ('custom_site_id', '<i4')]
-    ... else:
-    ...     assert res.dtype.descr == [
-    ...         ('aid', '<i8'), ('eid', '<i8'),
-    ...         ('loss', '<f8'), ('custom_site_id', '<i8')]
+           (2, 1, 2.3, 20128)],
+          dtype=[('aid', '<i8'), ('eid', '<i8'), ('loss', '<f8'), ('custom_site_id', '<i8')])
     """
     if cols is None:
         cols = b.dtype.names
@@ -1500,13 +1492,11 @@ class RecordBuilder(object):
     """
     Builder for numpy records or arrays.
 
-    >>> rb = RecordBuilder(a=0, b=1., c="2")
+    >>> rb = RecordBuilder(a=numpy.int64(0), b=1., c="2")
+    >>> rb.dtype
+    dtype([('a', '<i8'), ('b', '<f8'), ('c', 'S1')])
     >>> rb()
     (0, 1., b'2')
-    >>> if sys.platform.startswith('win'):
-    ...     assert rb.dtype.descr == [('a', '<i4'), ('b', '<f8'), ('c', '|S1')]
-    ... else:
-    ...     assert rb.dtype.descr == [('a', '<i8'), ('b', '<f8'), ('c', '|S1')]
     """
     def __init__(self, **defaults):
         self.names = []
