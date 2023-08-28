@@ -332,7 +332,7 @@ hazard_uhs-std.csv
         mean_rates = to_rates(mean_poes)
         rates_by_source = self.calc.datastore[
             'mean_rates_by_src'][0]  # (M, L1, Ns)
-        aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
+        aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
 
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
@@ -389,7 +389,7 @@ hazard_uhs-std.csv
         self.assertEqual(aw.imt, 'PGA')
         self.assertEqual(aw.poe, .001)
         # the numbers are quite different on macOS, 6.461143e-05 :-(
-        aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-7)
+        aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-6)
 
         # testing view_relevant_sources
         arr = view('relevant_sources:SA(1.0)', self.calc.datastore)

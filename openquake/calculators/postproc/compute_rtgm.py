@@ -70,6 +70,18 @@ except ImportError:
 from openquake.hazardlib.calc.mean_rates import to_rates
 
 
+def norm_imt(imt):
+    """
+    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1
+    """
+    return imt.replace('(', '').replace(')', '').replace('.', '')
+
+# hard-coded for year 1
+IMTs = [norm_imt(im) for im in ['PGA', 'SA(0.2)', 'SA(1.0)']]
+Ts = [0, 0.2, 1.0]
+LIMITs = np.array([0.5, 1.5, 0.6])
+
+
 def _find_fact_maxC(T,code):
     # find the factor to convert to maximum component based on
     # ASCE7-16 and ASCE7-22
@@ -104,16 +116,15 @@ def _find_fact_maxC(T,code):
 
 def calc_rtgm_df(rtgm_haz, oq):
     # Obtaining Risk-Targeted Ground Motions from hazard curves
-    M = len(oq.imtls)
+    M = len(IMTs)
     export_rtgm = []
     riskCoeff = np.zeros(M)
     RTGM, UHGM, RTGM_max, MCE = (np.zeros(M), np.zeros(M),
                                  np.zeros(M), np.zeros(M))
     results = rtg.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
-    for m, imt in enumerate(oq.imtls):
-        IMT = norm_imt(imt)
+    for m, IMT in enumerate(IMTs):
         rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
-        T = imt.period
+        T = Ts[m]
         fact = _find_fact_maxC(T, 'ASCE7-16')
         RTGM[m] = rtgmCalc['rtgm'] / fact
         RTGM_max[m] = rtgmCalc['rtgm']
@@ -122,35 +133,27 @@ def calc_rtgm_df(rtgm_haz, oq):
         # note that RTGM_max is the ProbMCEr, while RTGM is used for the
         # identification of the sources as the hazard curves are in
         # geometric mean
-        if imt == 'PGA':
+        if IMT == 'PGA':
             RTGM[m] = UHGM[m]
             MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg   
         else:
             MCE[m] = RTGM_max[m]   
         # this is saved for the next step.
-        export_rtgm.append(str(imt) + ': ' + str(RTGM[m]))
+        export_rtgm.append(IMT + ': ' + str(RTGM[m]))
     print(export_rtgm)
-    imts = np.array(['PGA', 'SA(0.2)','SA(1.0)']) # hard-coded for year 1
-    limit_det = np.array([0.5, 1.5, 0.6])
-    if (MCE < limit_det).all():
-        dic =  {'IMT': [norm_imt(imt) for imt in oq.imtls],
+    if (MCE < LIMITs).all():
+        dic =  {'IMT': IMTs,
                 'UHGM_2475yr-GM': UHGM,
                 'RTGM': RTGM_max,
                 'ProbMCE': MCE,
                 'RiskCoeff': riskCoeff,
-                'DLL': limit_det,
-                'MCE>DLL?': RTGM_max > limit_det,
+                'DLL': LIMITs,
+                'MCE>DLL?': RTGM_max > LIMITs,
                 'GoverningMCE': MCE}
     else:
+        import pdb; pdb.set_trace()
         raise NotImplementedError
     return pd.DataFrame(dic)
-
-    
-def norm_imt(imt):
-    """
-    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1
-    """
-    return imt.replace('(', '').replace(')', '').replace('.', '')
 
 
 def get_hazdic(hcurves, imtls, invtime, sitecol):
@@ -168,7 +171,7 @@ def get_hazdic(hcurves, imtls, invtime, sitecol):
                  'Vs30': site.vs30},
         'hazCurves': {norm_imt(imt): {'iml': imtls[imt],
                                       'afe': to_rates(hcurves[0, m], invtime)}
-                      for m, imt in enumerate(imtls)}}
+                      for m, imt in enumerate(imtls) if norm_imt(imt) in IMTs}}
     return hazdic
 
 
