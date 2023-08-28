@@ -1406,7 +1406,6 @@ def add_columns(a, b, on, cols=None):
     >>> res.astype(list)
     array([(1, 0, 2.4, 20127), (2, 0, 2.2, 20128), (1, 1, 2.1, 20127),
            (2, 1, 2.3, 20128)], dtype=object)
-    >>> import pytest, sys
     >>> if sys.platform.startswith('win'):
     ...     assert res.dtype.descr == [
     ...         ('aid', '<i4'), ('eid', '<i4'),
@@ -1504,7 +1503,6 @@ class RecordBuilder(object):
     >>> rb = RecordBuilder(a=0, b=1., c="2")
     >>> rb()
     (0, 1., b'2')
-    >>> import pytest, sys
     >>> if sys.platform.startswith('win'):
     ...     assert rb.dtype.descr == [('a', '<i4'), ('b', '<f8'), ('c', '|S1')]
     ... else:
