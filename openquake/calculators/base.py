@@ -986,7 +986,9 @@ class HazardCalculator(BaseCalculator):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        if 'source_info' not in self.datastore:
+        # called first in preclassical, then called again in classical
+        first_time = 'source_info' not in self.datastore
+        if first_time:
             source_reader.create_source_info(self.csm, self.datastore.hdf5)
         self.csm.update_source_info(source_data)
         recs = [tuple(row) for row in self.csm.source_info.values()]
