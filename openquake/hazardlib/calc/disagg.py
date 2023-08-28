@@ -459,21 +459,21 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_mag_dist_eps(self, iml1, rlz_weights, src_mutex={}):
+    def disagg_mag_dist_eps(self, imlM, rlz_weights, src_mutex={}):
         """
-        :param iml1: an array of shape M
+        :param imlM: an array of shape M
         :param src_mutex: a dictionary src_id -> weight, default empty
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
         """
-        M = len(iml1)
-        out = numpy.zeros((self.Ma, self.D, self.E, M, P))
+        M = len(imlM)
+        out = numpy.zeros((self.Ma, self.D, self.E, M))
         for magi in range(self.Ma):
             try:
                 self.init(magi, src_mutex)
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat6 = self.disagg6D(iml1, g)
+                mat6 = self.disagg6D(imlM[:, None], g)
                 out[magi] += mat6.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 
