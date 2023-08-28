@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Enabled the pointsource_distance approximation by default at 100 km
   * Fixed an error with sources below the minimum_magnitude
   * Introduced support for SLURM (experimental)
   * Fixed bug in conditioned GMFs, due to the station sites being excluded
