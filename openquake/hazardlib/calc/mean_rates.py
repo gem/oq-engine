@@ -47,7 +47,7 @@ def to_probs(rates, itime=1):
 
 def calc_rmap(src_groups, full_lt, sitecol, oq):
     """
-    :returns: a ProbabilityMap of shape (N, L, Gt)
+    :returns: a ProbabilityMap of rates with shape (N, L, Gt)
     """
     oq.use_rates = True
     oq.disagg_by_src = False
@@ -72,15 +72,17 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     return rmap, ctxs, cmakers
 
 
-def calc_mean_rates(rmap, gweights, imtls):
+def calc_mean_rates(rmap, gweights, imtls, imts=None):
     """
     :returns: mean hazard rates as an array of shape (N, M, L1)
     """
-    M = len(imtls)
-    L1 = imtls.size // M
+    L1 = imtls.size // len(imtls)
     N = len(rmap.array)
+    if imts is None:
+        imts = imtls
+    M = len(imts)
     rates = numpy.zeros((N, M, L1))
-    for m, imt in enumerate(imtls):
+    for m, imt in enumerate(imts):
         rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [
             gw[imt] for gw in gweights]
     return rates
