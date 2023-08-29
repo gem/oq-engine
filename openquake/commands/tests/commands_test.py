@@ -310,9 +310,6 @@ class RunShowExportTestCase(unittest.TestCase):
 
 
 class CompareTestCase(unittest.TestCase):
-    @unittest.skipIf(
-        sys.platform == 'win32',
-        reason="Skipping on Windows")
     def test_med_gmv(self):
         # testing the postprocessor med_gmv
         ini = os.path.join(os.path.dirname(case_13.__file__), 'job_gmv.ini')
@@ -384,7 +381,11 @@ class UpgradeNRMLTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>''')
         sap.runline(f'openquake.commands upgrade_nrml {tmpdir}')
-        shutil.rmtree(tmpdir)
+        if not sys.platform.startswith('win'):
+            # NOTE: on Windows it raises:
+            #       PermissionError: [WinError 32] The process cannot access
+            #       the file because it is being used by another process
+            shutil.rmtree(tmpdir)
 
 
 class ZipTestCase(unittest.TestCase):

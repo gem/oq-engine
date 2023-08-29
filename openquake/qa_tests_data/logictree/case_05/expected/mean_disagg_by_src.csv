@@ -1,5 +1,5 @@
-#,,,,,,"generated_by='OpenQuake engine 3.17.0-gitd195ad0e77', start_date='2023-03-28T07:23:59', checksum=1954669382, lon=0.5, lat=-0.5"
-source_id,mag,dist,eps,imt,poe,value
-1,5.50000E+00,1.00000E+02,0.00000E+00,PGA,2.00000E-02,3.83127E-03
-1,6.50000E+00,1.00000E+02,0.00000E+00,PGA,2.00000E-02,1.25074E-02
-1,7.50000E+00,1.00000E+02,0.00000E+00,PGA,2.00000E-02,4.42737E-03
+#,,,,,"generated_by='OpenQuake engine 3.18.0-git9fbb9a0056', start_date='2023-08-29T07:07:45', checksum=3350790890, lon=0.5, lat=-0.5"
+source_id,mag,dist,eps,imt,value
+1,5.50000E+00,1.00000E+02,0.00000E+00,PGA,5.03007E-01
+1,6.50000E+00,1.00000E+02,0.00000E+00,PGA,3.65201E-01
+1,7.50000E+00,1.00000E+02,0.00000E+00,PGA,5.83473E-02
