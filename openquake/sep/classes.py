@@ -191,5 +191,28 @@ class ZhuLiquefactionGeneral(SecondaryPeril):
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
         return out
 
+class BozzoniLiquefactionEurope(SecondaryPeril):
+    """
+    Computes the liquefaction probability from PGA
+    """
+    outputs = ["LiqProb"]
+
+    def __init__(self, intercept=-11.489, pgam_coeff=3.864, cti_coeff=2.328, vs30_coeff=-0.091):
+        self.intercept = intercept
+        self.pgam_coeff = pgam_coeff
+        self.cti_coeff = cti_coeff
+        self.vs30_coeff = vs30_coeff
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == 'PGA':
+                out.append(bozzoni_liquefaction_probability_europe(
+                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
+        return out
+
 
 supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]

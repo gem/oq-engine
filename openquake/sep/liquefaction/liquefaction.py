@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020, GEM Foundation
+# Copyright (C) 2020-2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -80,6 +80,7 @@ def zhu_magnitude_correction_factor(mag: float):
     """
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake.
+
     """
     return mag ** 2.56 / 10 ** 2.24
 
@@ -119,6 +120,47 @@ def zhu_liquefaction_probability_general(
           + cti_coeff * cti
           + vs30_coeff * np.log(vs30)
           + intercept)
+    prob_liq = 1.0 / (1.0 + np.exp(-Xg))
+    return prob_liq
+
+
+def bozzoni_liquefaction_probability_europe(
+    pga: Union[float, np.ndarray],
+    mag: Union[float, np.ndarray],
+    cti: Union[float, np.ndarray],
+    vs30: Union[float, np.ndarray],
+    intercept: float = -11.489,
+    pgam_coeff: float = 3.864,
+    cti_coeff: float = 2.328,
+    vs30_coeff: float = -0.091,
+) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of a site undergoing liquefaction using the
+    logistic regression of Bozzoni et al., 2021. Optimal regression 
+    coefficients are associated with ADASYN sampling algorithm (AUC = 0.95). 
+
+    Reference: Bozzoni, F., Bonì, R., Conca, D., Lai, C. G., Zuccolo, E., & Meisina, C. (2021). 
+    Megazonation of earthquake-induced soil liquefaction hazard in continental Europe. 
+    Bulletin of Earthquake Engineering, 19(10), 4059–4082. https://doi.org/10.1007/s10518-020-01008-6
+
+    :param pga:
+        Peak Ground Acceleration, measured in g
+    :param mag:
+        Magnitude of causative earthquake (moment or work scale)
+    :param cti:
+        Compound Topographic Index, a proxy for soil wetness.
+    :param vs30:
+        Shear-wave velocity averaged over the upper 30 m of the earth at the
+        site.
+
+    :returns:
+        Probability of liquefaction at the site.
+    """
+    pga_scale = pga * zhu_magnitude_correction_factor(mag)
+    Xg =  (pgam_coeff * np.log(pga_scale)
+           + cti_coeff * cti
+           + vs30_coeff * np.log(vs30)
+           + intercept)
     prob_liq = 1.0 / (1.0 + np.exp(-Xg))
     return prob_liq
 
