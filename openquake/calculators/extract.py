@@ -1193,7 +1193,8 @@ def extract_mean_rates_by_src(dstore, what):
     L1, Ns = rates.shape
     arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('poe', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = [numpy.interp(oq.imtls[imt], rates[:, i], iml) for i in range(Ns)]
+    arr['poe'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
+                  for i in range(Ns)]
     arr.sort(order='poe')
     return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, iml=iml))
 

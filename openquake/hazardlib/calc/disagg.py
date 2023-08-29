@@ -466,6 +466,7 @@ class Disaggregator(object):
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
         """
         M = len(imlM)
+        iml2 = imlM[:, None]
         out = numpy.zeros((self.Ma, self.D, self.E, M))
         for magi in range(self.Ma):
             try:
@@ -473,8 +474,8 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat6 = self.disagg6D(imlM[:, None], g)
-                out[magi] += mat6.sum(axis=(1, 2)) * rlz_weights[rlz]
+                mat5 = self.disagg6D(iml2, g)[..., 0]  # P = 0
+                out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 
     def __repr__(self):
@@ -612,8 +613,8 @@ def disaggregation(
 
 # ###################### disagg by source ################################ #
 
-def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
-              monitor=Monitor()):
+def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
+                  oq, imts, imls, monitor=Monitor()):
     """
     Compute disaggregation for the given source.
 
@@ -621,7 +622,9 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     :param sitecol: a SiteCollection
     :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
-    :param oq: Oqparam instance
+    :param oq: OqParam instance
+    :param imts: Intensity Measure Types to disaggregate
+    :param imls: Intensity Measure Levels to disaggregate
     :param monitor: a Monitor instance
     :returns: source_id, rates(Ma, D, E, M, P), rates(M, L1)
     """
@@ -634,11 +637,10 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic, oq,
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
                  for rlzs in cm.gsims.values()]
-    iml2 = [oq.iml_disagg[imt] for imt in oq.imtls]
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
-        rates4D += dis.disagg_mag_dist_eps(iml2, ws)
+        rates4D += dis.disagg_mag_dist_eps(imls, ws)
     gws = reduced_lt.g_weights(trt_rlzs)
-    rates2D = calc_mean_rates(rmap, gws, oq.imtls)[0]
+    rates2D = calc_mean_rates(rmap, gws, oq.imtls, imts)[0]
     return source_id, rates4D, rates2D
