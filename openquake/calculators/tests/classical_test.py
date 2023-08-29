@@ -656,6 +656,7 @@ class ClassicalTestCase(CalculatorTestCase):
             disagg_outputs='Dist',
             disagg_bin_edges='{"dist": [0, 15, 30]}',
             hazard_calculation_id=hc_str)
+
         dbm = view('disagg:Dist', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_dist.org', fname)
