@@ -1004,7 +1004,7 @@ class HazardCalculator(BaseCalculator):
             modname, funcname = oq.postproc_func.rsplit('.', 1)
             mod = getattr(postproc, modname)
             func = getattr(mod, funcname)
-            if 'csm' in inspect.getargspec(func).args:
+            if 'csm' in inspect.getfullargspec(func).args:
                 if hasattr(self, 'csm'):  # already there
                     csm = self.csm
                 else:  # read the csm from the parent calculation
