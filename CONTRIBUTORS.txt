@@ -44,7 +44,7 @@ Trevor Allen             (@treviallen)          July 2016
 Jonathan Griffin         (@griffij)             October 2016
 Özkan Kale                                      October 2016
 Valerio Poggi            (@klunk386)            March 2017
-Abhineet Gupta                                  April 2017
+Abhineet Gupta           (@abhineetgupta)       April 2017
 Armando Scarpati         (@hascar)              June 2017
 Kendra Johnson           (@kejohnso)            April 2018
 Pablo Heresi             (@pheresi)             August 2018
@@ -80,6 +80,7 @@ Anne Hulsey              (@annehulsey)          July 2022
 Nicole Paul              (@nicolepaul)          May 2023
 Claudio Schill           (@claudio525)          June 2023
 Astha Poudel             (@asthapoudel)         July 2023
+Lana Todorovic           (@LanaTodorovic93)     August 2023
 
 Project management
 ------------------
