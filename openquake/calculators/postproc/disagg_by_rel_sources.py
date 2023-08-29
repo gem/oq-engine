@@ -19,6 +19,7 @@
 import logging
 import numpy
 from openquake.baselib import sap, hdf5, python3compat, parallel
+from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
@@ -33,9 +34,9 @@ def get_rel_source_ids(dstore, imts, imls, threshold=.1):
     for imt, iml in zip(imts, imls):
         aw = extract.extract(
             dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
-        poe_array = aw.array['poe']  # for each source in decreasing order
-        max_poe = poe_array[0]
-        rel = aw.array[poe_array > threshold * max_poe]
+        rates = aw.array['rate']  # for each source in decreasing order
+        max_rate = rates[0]
+        rel = aw.array[rates > threshold * max_rate]
         source_ids.update(rel['src_id'])
     return python3compat.decode(sorted(source_ids))
 
@@ -47,14 +48,16 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def main(dstore, csm, imts=(), imls=()):
+def main(dstore, csm, imts, imls):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model
     """
     oq = dstore['oqparam']
-    if not imts:
-        return
+    for imt in imts:
+        if imt not in oq.imtls:
+            raise InvalidFile('%s: %s is not a known IMTs' %
+                              (oq.inputs['job_ini'], imt))
     # oq.cachedir = datastore.get_datadir()
     parent = dstore.parent or dstore
     oq.mags_by_trt = {
