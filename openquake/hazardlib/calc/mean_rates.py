@@ -33,7 +33,7 @@ def to_rates(probs, itime=1):
     """
     pnes = 1. - probs
     pnes[pnes == 0] = 1E-45  # mininum 32 bit float
-    return numpy.clip(- numpy.log(pnes) / itime, 1E-15, 100)
+    return numpy.clip(- numpy.log(pnes) / itime, 1E-12, 100)
 
 
 def to_probs(rates, itime=1):
