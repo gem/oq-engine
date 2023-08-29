@@ -25,14 +25,14 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
 
 
-def get_rel_source_ids(dstore, imts, iml_disagg, threshold=.1):
+def get_rel_source_ids(dstore, imts, imls, threshold=.1):
     """
     :returns: sorted list of relevant source IDs
     """
     source_ids = set()
-    for im in imts:
+    for imt, iml in zip(imts, imls):
         aw = extract.extract(
-            dstore, f'mean_rates_by_src?imt={im}&iml={iml_disagg[im]}')
+            dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
         poe_array = aw.array['poe']  # for each source in decreasing order
         max_poe = poe_array[0]
         rel = aw.array[poe_array > threshold * max_poe]
@@ -47,13 +47,13 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def main(dstore, csm):
+def main(dstore, csm, imts=(), imls=()):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model
     """
     oq = dstore['oqparam']
-    if len(oq.iml_disagg) == 0:
+    if not imts:
         return
     # oq.cachedir = datastore.get_datadir()
     parent = dstore.parent or dstore
@@ -64,9 +64,9 @@ def main(dstore, csm):
     assert len(sitecol) == 1, sitecol
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
     if 'mean_rates_by_src' in parent:
-        rel_ids = get_rel_source_ids(parent, oq.imtls, oq.iml_disagg, threshold=.1)
+        rel_ids = get_rel_source_ids(parent, imts, imls, threshold=.1)
     else:
-        rel_ids = get_rel_source_ids(dstore, oq.imtls, oq.iml_disagg, threshold=.1)
+        rel_ids = get_rel_source_ids(dstore, imts, imls, threshold=.1)
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
 
@@ -92,7 +92,7 @@ def main(dstore, csm):
         arr[idx] = disagg.to_probs(rates4D)
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-        source_id=rel_ids, imt=list(oq.imtls), iml=oq.iml_disagg,
+        source_id=rel_ids, imt=imts, iml=imls,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
     dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
 

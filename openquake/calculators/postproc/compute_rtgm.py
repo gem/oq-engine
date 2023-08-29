@@ -68,7 +68,7 @@ try:
 except ImportError:
     rtg = None
 from openquake.hazardlib.calc.mean_rates import to_rates
-
+from openquake.calculators import postproc
 
 def norm_imt(imt):
     """
@@ -79,7 +79,7 @@ def norm_imt(imt):
 # hard-coded for year 1
 IMTs = [norm_imt(im) for im in ['PGA', 'SA(0.2)', 'SA(1.0)']]
 Ts = [0, 0.2, 1.0]
-LIMITs = np.array([0.5, 1.5, 0.6])
+DLLs = np.array([0.5, 1.5, 0.6])
 
 
 def _find_fact_maxC(T,code):
@@ -115,20 +115,22 @@ def _find_fact_maxC(T,code):
 
 
 def calc_rtgm_df(rtgm_haz, oq):
-    # Obtaining Risk-Targeted Ground Motions from hazard curves
+    """
+    Obtaining Risk-Targeted Ground Motions from the hazard curves.
+
+    :param rtgm_haz: a dictionary containing the annual frequency losses
+    :param oq: OqParam instance
+    """
     M = len(IMTs)
-    export_rtgm = []
-    riskCoeff = np.zeros(M)
-    RTGM, UHGM, RTGM_max, MCE = (np.zeros(M), np.zeros(M),
-                                 np.zeros(M), np.zeros(M))
+    riskCoeff, RTGM, UHGM, RTGM_max, MCE = (
+        np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M))
     results = rtg.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
     for m, IMT in enumerate(IMTs):
         rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
         T = Ts[m]
         fact = _find_fact_maxC(T, 'ASCE7-16')
-        RTGM[m] = rtgmCalc['rtgm'] / fact
-        RTGM_max[m] = rtgmCalc['rtgm']
-        UHGM[m] = rtgmCalc['uhgm'] / fact  # back to GM
+        RTGM_max[m] = rtgmCalc['rtgm']  # for maximum component
+        UHGM[m] = rtgmCalc['uhgm'] / fact  # for geometric mean
         riskCoeff[m] = rtgmCalc['riskCoeff']
         # note that RTGM_max is the ProbMCEr, while RTGM is used for the
         # identification of the sources as the hazard curves are in
@@ -137,18 +139,16 @@ def calc_rtgm_df(rtgm_haz, oq):
             RTGM[m] = UHGM[m]
             MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg   
         else:
-            MCE[m] = RTGM_max[m]   
-        # this is saved for the next step.
-        export_rtgm.append(IMT + ': ' + str(RTGM[m]))
-    print(export_rtgm)
-    if (MCE < LIMITs).all():
+            RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
+            MCE[m] = RTGM_max[m]
+    if (MCE < DLLs).all():
         dic =  {'IMT': IMTs,
                 'UHGM_2475yr-GM': UHGM,
                 'RTGM': RTGM_max,
                 'ProbMCE': MCE,
                 'RiskCoeff': riskCoeff,
-                'DLL': LIMITs,
-                'MCE>DLL?': RTGM_max > LIMITs,
+                'DLL': DLLs,
+                'MCE>DLL?': RTGM_max > DLLs,
                 'GoverningMCE': MCE}
     else:
         import pdb; pdb.set_trace()
@@ -175,7 +175,7 @@ def get_hazdic(hcurves, imtls, invtime, sitecol):
     return hazdic
 
 
-def main(dstore):
+def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
     """
@@ -191,3 +191,6 @@ def main(dstore):
     rtgm_haz = rtg.GroundMotionHazard.from_dict(hazdic)
     df = calc_rtgm_df(rtgm_haz, oq)
     dstore.create_df('rtgm', df)
+    if (df.ProbMCE < DLLs).all():  # do not disaggregate by relevant sources
+        return
+    postproc.disagg_by_rel_sources.main(dstore, csm, IMTs, list(df.RTGM))
