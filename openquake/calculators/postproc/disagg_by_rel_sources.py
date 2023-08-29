@@ -56,7 +56,7 @@ def main(dstore, csm, imts, imls):
     oq = dstore['oqparam']
     for imt in imts:
         if imt not in oq.imtls:
-            raise InvalidFile('%s: %s is not a known IMTs' %
+            raise InvalidFile('%s: %s is not a known IMT' %
                               (oq.inputs['job_ini'], imt))
     # oq.cachedir = datastore.get_datadir()
     parent = dstore.parent or dstore
