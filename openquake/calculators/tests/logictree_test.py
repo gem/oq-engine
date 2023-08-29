@@ -153,6 +153,10 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.assertEqual(info.loc[b'2'].weight, 177)
         self.assertEqual(info.loc[b'3'].weight, 5871)
 
+        # testing view_relevant_sources
+        arr = view('relevant_sources:PGA', self.calc.datastore)
+        self.assertEqual(decode(arr['src_id']), ['1', '2'])
+
     def test_case_07_bis(self):
         # same as 07 but with sampling
         self.run_calc(case_07.__file__, 'sampling.ini')
@@ -383,16 +387,12 @@ hazard_uhs-std.csv
         ae(dbs.src_id, ['CHAR1', 'COMFLT1', 'SFLT1'])
 
         # testing extract_mean_rates_by_src
-        aw = extract(self.calc.datastore, 'mean_rates_by_src?imt=PGA&poe=1E-3')
+        aw = extract(self.calc.datastore, 'mean_rates_by_src?imt=PGA&iml=1E-2')
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
-        self.assertEqual(aw.poe, .001)
-        # the numbers are quite different on macOS, 6.461143e-05 :-(
-        aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-6)
-
-        # testing view_relevant_sources
-        arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
-        self.assertEqual(decode(arr['src_id']), ['SFLT1'])
+        self.assertEqual(aw.iml, .01)
+        # the numbers are quite different on macOS
+        aac(aw.array['poe'], [0.02 , 0.015, 0.015], atol=1E-6)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
