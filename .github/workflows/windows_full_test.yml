@@ -80,7 +80,7 @@ jobs:
 
       - name: Run all demos
         run: |
-          $demosDir = D:\a\oq-engine\oq-engine\demos
+          $demosDir = "D:\a\oq-engine\oq-engine\demos"
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
