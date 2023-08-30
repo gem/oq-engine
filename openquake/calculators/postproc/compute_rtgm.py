@@ -46,12 +46,14 @@ from openquake.calculators import postproc
 
 def norm_imt(imt):
     """
-    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1
+    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1,
+    PGAG -> PGA
     """
     return imt.replace('(', '').replace(')', '').replace('.', '').replace(
         'G', '')
 
 # hard-coded for year 1
+# TODO: interpolate for vs30 != 760 and for different periods
 imts = ['PGAG', 'SA(0.2)', 'SA(1.0)']
 IMTs = [norm_imt(im) for im in imts]
 Ts = [0, 0.2, 1.0]
