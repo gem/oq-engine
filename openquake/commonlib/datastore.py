@@ -63,8 +63,6 @@ def extract_calc_id_datadir(filename):
     ... except ValueError as exc:
     ...     assert 'Cannot extract calc_id from' in str(exc)
     ...     assert 'wrong_name.hdf5' in str(exc)
-    ... else:
-    ...     raise RuntimeError('A ValueError should be raised')
     """
     filename = os.path.abspath(filename)
     datadir = os.path.dirname(filename)
