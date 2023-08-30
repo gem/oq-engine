@@ -275,7 +275,8 @@ def export_event_loss_table(ekey, dstore):
     del df['rlz_id']
     if 'scenario' in oq.calculation_mode:
         del df['rup_id']
-        del df['year']
+        if 'year' in df.columns:
+            del df['year']
     df.sort_values(['event_id', 'loss_type'], inplace=True)
     writer.save(df, dest, comment=md)
     return writer.getsaved()
