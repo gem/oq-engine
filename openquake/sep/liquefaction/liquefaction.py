@@ -189,6 +189,55 @@ def zhu_etal_2017_liquefaction_probability_coastal(
     return prob_liq
 
 
+def zhu_etal_2017_liquefaction_probability_general(
+    pgv: Union[float, np.ndarray],
+    vs30: Union[float, np.ndarray],
+    dw: Union[float, np.ndarray],
+    wtd: Union[float, np.ndarray],
+    precip: Union[float, np.ndarray],
+    intercept: float = 8.801,
+    pgv_coeff: float = 0.334,
+    vs30_coeff: float = -1.918,
+    dw_coeff: float = -0.0333,
+    wtd_coeff: float = -0.2054,
+    precip_coeff: float = 0.0005408
+) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of a site undergoing liquefaction using the
+    logistic regression of Zhu et al., 2017. This particular equation is
+    the recommended noncoastal model, which is the model recommended by the
+    authors for global implementation. Noncoastal events are defined as those
+    for which the average distance to the nearest coast of the liquefaction 
+    features is greater than 20 km.
+
+    Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017). 
+    An updated geospatial liquefaction model for global application. 
+    Bulletin of the Seismological Society of America, 107(3), 1365–1385. 
+    https://doi.org/10.1785/0120160198
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param vs30:
+        Shear-wave velocity averaged over the upper 30 m of the earth at the
+        site, measured in m/s
+    :param dw:
+        Distance to the nearest water body, measured in km
+    :param wtd:
+        Global water table depth, measured in m
+    :param precip:
+        Mean annual precipitation, measured in mm
+
+    :returns:
+        Probability of liquefaction at the site.
+    """
+    pgv_scale = pgv # No PGV scaling in the original model
+    Xg = (pgv_coeff * np.log(pgv_scale) + vs30_coeff * np.log(vs30) 
+          + precip_coeff * precip + dw_coeff * dw 
+          + wtd_coeff * wtd + intercept)
+    prob_liq = sigmoid(Xg)
+    return prob_liq
+
+
 def bozzoni_etal_2021_liquefaction_probability_europe(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
