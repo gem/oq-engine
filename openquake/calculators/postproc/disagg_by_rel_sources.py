@@ -73,6 +73,7 @@ def main(dstore, csm, imts, imls):
         rel_ids = get_rel_source_ids(dstore, imts, imls, threshold=.1)
     logging.info('There are %d relevant sources: %s',
                  len(rel_ids), ' '.join(rel_ids))
+    imldic = dict(zip(imts, imls))
     imls = numpy.array(imls)
 
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
@@ -88,10 +89,10 @@ def main(dstore, csm, imts, imls):
                      source_id, Z)
         groups = relt.reduce_groups(csm.src_groups, source_id)
         assert groups, 'No groups for %s' % source_id
-        smap.submit((groups, sitecol, relt, (edges, shp), oq, imts, imls))
+        smap.submit((groups, sitecol, relt, (edges, shp), oq, imldic))
     mags, dists, lons, lats, eps, trts = edges
     arr = numpy.zeros(
-        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], shp['M']))
+        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], len(imldic)))
     for srcid, rates4D, rates2D in smap:
         idx = src2idx[basename(srcid, '!;')]
         arr[idx] = disagg.to_probs(rates4D)

@@ -46,7 +46,7 @@ from openquake.calculators import postproc
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
-PGA,0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
+PGA0,0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
 SA(0.01),0.50,0.57,0.66,0.73,0.75,0.70,0.62,0.55
 SA(0.02),0.52,0.58,0.68,0.74,0.75,0.70,0.62,0.55
 SA(0.03),0.60,0.66,0.75,0.79,0.78,0.70,0.62,0.55
@@ -68,12 +68,12 @@ SA(4.0),0.12,0.13,0.16,0.24,0.34,0.47,0.66,0.81
 SA(5.0),0.10,0.11,0.13,0.19,0.26,0.36,0.49,0.61
 SA(7.5),0.063,0.068,0.080,0.11,0.15,0.19,0.26,0.31
 SA(10.0),0.042,0.045,0.052,0.069,0.089,0.11,0.14,0.17
-PGAG,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
+PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 '''), index_col='imt')
 
 # hard-coded for year 1
 # TODO: interpolate for vs30 != 760 and for different periods
-imts = ['PGAG', 'SA(0.2)', 'SA(1.0)']
+imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
 Ts = [0, 0.2, 1.0]
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = np.array([D[imt] for imt in imts])  # [0.5, 1.5, 0.6]
@@ -83,8 +83,7 @@ def norm_imt(imt):
     Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1,
     PGAG -> PGA
     """
-    return imt.replace('(', '').replace(')', '').replace('.', '').replace(
-        'G', '')
+    return imt.replace('(', '').replace(')', '').replace('.', '')
 
 IMTs = [norm_imt(im) for im in imts]
 
@@ -195,4 +194,4 @@ def main(dstore, csm):
     dstore.create_df('rtgm', df)
     if (df.ProbMCE < DLLs).all():  # do not disaggregate by relevant sources
         return
-    postproc.disagg_by_rel_sources.main(dstore, csm, IMTs, list(df.RTGM))
+    postproc.disagg_by_rel_sources.main(dstore, csm, imts, list(df.RTGM))
