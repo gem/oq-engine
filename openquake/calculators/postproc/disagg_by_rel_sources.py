@@ -48,6 +48,7 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
+# tested in LogicTreeTestCase::test_case_05, 07, 12
 def main(dstore, csm, imts, imls):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
