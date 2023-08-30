@@ -29,36 +29,10 @@ Useful abbreviations:
 - UHGM: Uniform Hazard Spectra
 - RiskCoeff: RTGM / UHGM_2475y
 - DLL: Deterministic Lower Limit
-
-T Site Class A B BC C CD D DE E
-0.00 0.50 0.57 0.66 0.73 0.74 0.69 0.61 0.55
-0.01 0.50 0.57 0.66 0.73 0.75 0.70 0.62 0.55
-0.02 0.52 0.58 0.68 0.74 0.75 0.70 0.62 0.55
-0.03 0.60 0.66 0.75 0.79 0.78 0.70 0.62 0.55
-0.05 0.81 0.89 0.95 0.96 0.89 0.76 0.62 0.55
-0.075 1.04 1.14 1.21 1.19 1.08 0.90 0.71 0.62
-0.10 1.12 1.25 1.37 1.37 1.24 1.04 0.82 0.72
-0.15 1.12 1.29 1.53 1.61 1.50 1.27 1.00 0.87
-0.20 1.01 1.19 1.50 1.71 1.66 1.44 1.15 1.01
-0.25 0.90 1.07 1.40 1.71 1.77 1.58 1.30 1.15
-0.30 0.81 0.98 1.30 1.66 1.83 1.71 1.44 1.30
-0.40 0.69 0.83 1.14 1.53 1.82 1.80 1.61 1.48
-0.50 0.60 0.72 1.01 1.38 1.73 1.80 1.68 1.60
-0.75 0.46 0.54 0.76 1.07 1.41 1.57 1.60 1.59
-1.0 0.37 0.42 0.60 0.86 1.17 1.39 1.51 1.58
-1.5 0.26 0.29 0.41 0.60 0.84 1.09 1.35 1.54
-2.0 0.21 0.23 0.31 0.45 0.64 0.88 1.19 1.46
-3.0 0.15 0.17 0.21 0.31 0.45 0.63 0.89 1.11
-4.0 0.12 0.13 0.16 0.24 0.34 0.47 0.66 0.81
-5.0 0.10 0.11 0.13 0.19 0.26 0.36 0.49 0.61
-7.5 0.063 0.068 0.080 0.11 0.15 0.19 0.26 0.31
-10 0.042 0.045 0.052 0.069 0.089 0.11 0.14 0.17
-PGAG 0.37 0.43 0.50 0.55 0.56 0.53 0.46 0.42 
-
-# PGA_G: PGA for Geometric Mean (no Risk Targeted)
-# PGA: PGA for Maximum Component
-
+- PGA_G: PGA for Geometric Mean (no Risk Targeted)
+- PGA: PGA for Maximum Component
 """
+import os
 import logging
 import numpy as np
 import pandas as pd
@@ -74,12 +48,19 @@ def norm_imt(imt):
     """
     Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1
     """
-    return imt.replace('(', '').replace(')', '').replace('.', '')
+    return imt.replace('(', '').replace(')', '').replace('.', '').replace(
+        'G', '')
 
 # hard-coded for year 1
-IMTs = [norm_imt(im) for im in ['PGA', 'SA(0.2)', 'SA(1.0)']]
+imts = ['PGAG', 'SA(0.2)', 'SA(1.0)']
+IMTs = [norm_imt(im) for im in imts]
 Ts = [0, 0.2, 1.0]
-DLLs = np.array([0.5, 1.5, 0.6])
+
+DLL_csv = os.path.join(os.path.dirname(__file__),
+                       'deterministic_lower_limit.csv')
+DLL_df = pd.read_csv(DLL_csv, index_col='imt')
+D = DLL_df.BC.loc  # site class BC for vs30=760m/s
+DLLs = np.array([D[imt] for imt in imts])  # [0.5, 1.5, 0.6]
 
 
 def _find_fact_maxC(T,code):
@@ -141,18 +122,13 @@ def calc_rtgm_df(rtgm_haz, oq):
         else:
             RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
             MCE[m] = RTGM_max[m]
-    if (MCE < DLLs).all():
-        dic =  {'IMT': IMTs,
-                'UHGM_2475yr-GM': UHGM,
-                'RTGM': RTGM_max,
-                'ProbMCE': MCE,
-                'RiskCoeff': riskCoeff,
-                'DLL': DLLs,
-                'MCE>DLL?': RTGM_max > DLLs,
-                'GoverningMCE': MCE}
-    else:
-        import pdb; pdb.set_trace()
-        raise NotImplementedError
+    dic =  {'IMT': IMTs,
+            'UHGM_2475yr-GM': UHGM,
+            'RTGM': RTGM_max,
+            'ProbMCE': MCE,
+            'RiskCoeff': riskCoeff,
+            'DLL': DLLs,
+            'MCE>DLL?': RTGM_max > DLLs}
     return pd.DataFrame(dic)
 
 
