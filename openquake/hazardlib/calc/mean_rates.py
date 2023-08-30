@@ -32,7 +32,9 @@ def to_rates(probs, itime=1):
     array([1.609438])
     """
     pnes = 1. - probs
-    return numpy.clip(- numpy.log(pnes) / itime, 1E-16, 100)
+    pnes[pnes == 0] = 1E-45  # mininum 32 bit float
+    # NB: the test most sensitive to 1E-45 and 1E-12 is case_78
+    return numpy.clip(- numpy.log(pnes) / itime, 1E-12, 100)
 
 
 def to_probs(rates, itime=1):

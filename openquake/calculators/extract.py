@@ -41,7 +41,6 @@ from openquake.hazardlib.gsim.base import (
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
@@ -1191,11 +1190,11 @@ def extract_mean_rates_by_src(dstore, what):
     imt_id = list(oq.imtls).index(imt)
     rates = dset[site_id, imt_id]
     L1, Ns = rates.shape
-    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('poe', '<f8')])
+    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('rate', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
-                  for i in range(Ns)]
-    arr.sort(order='poe')
+    arr['rate'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
+                   for i in range(Ns)]
+    arr.sort(order='rate')
     return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, iml=iml))
 
 

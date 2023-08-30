@@ -392,7 +392,7 @@ hazard_uhs-std.csv
         self.assertEqual(aw.imt, 'PGA')
         self.assertEqual(aw.iml, .01)
         # the numbers are quite different on macOS
-        aac(aw.array['poe'], [0.02 , 0.015, 0.015], atol=1E-6)
+        aac(aw.array['rate'], [0.02 , 0.015, 0.015], atol=1E-6)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
