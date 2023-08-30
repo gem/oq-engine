@@ -186,6 +186,11 @@ def zhu_etal_2017_liquefaction_probability_coastal(
           + precip_coeff * precip + dc_coeff * np.sqrt(dc) 
           + dr_coeff * dr + intercept)
     prob_liq = sigmoid(Xg)
+
+    # Zhu et al. 2017 heuristically assign zero to the predicted probability 
+    # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
+    # probability when VS30 > 620 m/s.
+    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     return prob_liq
 
 
@@ -235,6 +240,11 @@ def zhu_etal_2017_liquefaction_probability_general(
           + precip_coeff * precip + dw_coeff * dw 
           + wtd_coeff * wtd + intercept)
     prob_liq = sigmoid(Xg)
+
+    # Zhu et al. 2017 heuristically assign zero to the predicted probability 
+    # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
+    # probability when VS30 > 620 m/s.
+    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     return prob_liq
 
 
