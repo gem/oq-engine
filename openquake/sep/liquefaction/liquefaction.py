@@ -22,7 +22,7 @@ import numpy as np
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
 # to the minimum PGA level necessary to induce liquefaction
-LIQUEFACTION_PGA_THRESHOLD_TABLE = {
+HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE = {
     b"vh": 0.09,
     b"h": 0.12,
     b"m": 0.15,
@@ -41,7 +41,7 @@ LIQUEFACTION_PGA_THRESHOLD_TABLE = {
 # to coefficients for the range of PGA that can cause liquefaction.
 # See `hazus_conditional_liquefaction_probability` for more explanation
 # of how these values are used.
-LIQUEFACTION_COND_PROB_PGA_TABLE = {
+HAZUS_LIQUEFACTION_COND_PROB_PGA_TABLE = {
     b"vh": [9.09, 0.82],
     b"h": [7.67, 0.92],
     b"m": [6.67, 1.0],
@@ -57,7 +57,7 @@ LIQUEFACTION_COND_PROB_PGA_TABLE = {
 }
 
 
-LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
+HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
     b"vh": 0.25,
     b"h": 0.2,
     b"m": 0.1,
@@ -76,16 +76,29 @@ LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 FT_PER_M = 3.28084
 
 
-def zhu_magnitude_correction_factor(mag: float):
+def idriss_magnitude_scaling_factor(mag: float):
+    """
+    Youd, T. L., & Idriss, I. M. (2001).
+    Liquefaction Resistance of Soils: Summary Report from the 1996 NCEER and 1998 NCEER/NSF
+    Workshops on Evaluation of Liquefaction Resistance of Soils. Journal of Geotechnical
+    and Geoenvironmental Engineering, 127(4), 297–313.
+    https://doi.org/10.1061/(asce)1090-0241(2001)127:4(297)
+
+    """
+    return (10**2.24) / (mag**2.56)
+
+
+def idriss_magnitude_weighting_factor(mag: float):
     """
     Corrects the liquefaction probabilty equations based on the magnitude
-    of the causative earthquake.
+    of the causative earthquake. Defined as the inverse of the magnitude
+    scaling factor.
 
     """
-    return mag ** 2.56 / 10 ** 2.24
+    return 1.0 / idriss_magnitude_scaling_factor(mag)
 
 
-def zhu_liquefaction_probability_general(
+def zhu15_liquefaction_probability_general(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
     cti: Union[float, np.ndarray],
@@ -116,16 +129,14 @@ def zhu_liquefaction_probability_general(
     :returns:
         Probability of liquefaction at the site.
     """
-    pga_scale = pga * zhu_magnitude_correction_factor(mag)
-    Xg = (pgam_coeff * np.log(pga_scale)
-          + cti_coeff * cti
-          + vs30_coeff * np.log(vs30)
-          + intercept)
+    pga_scale = pga * idriss_magnitude_weighting_factor(mag)
+    Xg = (pgam_coeff * np.log(pga_scale) + cti_coeff * cti
+          + vs30_coeff * np.log(vs30) + intercept)
     prob_liq = 1.0 / (1.0 + np.exp(-Xg))
     return prob_liq
 
 
-def bozzoni_liquefaction_probability_europe(
+def bozzoni21_liquefaction_probability_europe(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
     cti: Union[float, np.ndarray],
@@ -137,12 +148,13 @@ def bozzoni_liquefaction_probability_europe(
 ) -> Union[float, np.ndarray]:
     """
     Calculates the probability of a site undergoing liquefaction using the
-    logistic regression of Bozzoni et al., 2021. Optimal regression 
-    coefficients are associated with ADASYN sampling algorithm (AUC = 0.95). 
+    logistic regression of Bozzoni et al., 2021. Optimal regression
+    coefficients are associated with ADASYN sampling algorithm (AUC = 0.95).
 
-    Reference: Bozzoni, F., Bonì, R., Conca, D., Lai, C. G., Zuccolo, E., & Meisina, C. (2021). 
-    Megazonation of earthquake-induced soil liquefaction hazard in continental Europe. 
-    Bulletin of Earthquake Engineering, 19(10), 4059–4082. https://doi.org/10.1007/s10518-020-01008-6
+    Reference: Bozzoni, F., Bonì, R., Conca, D., Lai, C. G., Zuccolo, E., & Meisina, C. (2021).
+    Megazonation of earthquake-induced soil liquefaction hazard in continental Europe.
+    Bulletin of Earthquake Engineering, 19(10), 4059–4082.
+    https://doi.org/10.1007/s10518-020-01008-6
 
     :param pga:
         Peak Ground Acceleration, measured in g
@@ -157,11 +169,13 @@ def bozzoni_liquefaction_probability_europe(
     :returns:
         Probability of liquefaction at the site.
     """
-    pga_scale = pga * zhu_magnitude_correction_factor(mag)
-    Xg =  (pgam_coeff * np.log(pga_scale)
-           + cti_coeff * cti
-           + vs30_coeff * np.log(vs30)
-           + intercept)
+    pga_scale = pga * idriss_magnitude_weighting_factor(mag)
+    Xg = (
+        pgam_coeff * np.log(pga_scale)
+        + cti_coeff * cti
+        + vs30_coeff * np.log(vs30)
+        + intercept
+    )
     prob_liq = 1.0 / (1.0 + np.exp(-Xg))
     return prob_liq
 
@@ -177,10 +191,7 @@ def hazus_magnitude_correction_factor(
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake.
     """
-    return (m3_coeff * (mag ** 3)
-            + m2_coeff * (mag ** 2)
-            + m1_coeff * mag
-            + intercept)
+    return m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
 
 
 def hazus_groundwater_correction_factor(
@@ -200,7 +211,7 @@ def hazus_groundwater_correction_factor(
 
 
 def hazus_conditional_liquefaction_probability(
-    pga, susceptibility_category, coeff_table=LIQUEFACTION_COND_PROB_PGA_TABLE
+    pga, susceptibility_category, coeff_table=HAZUS_LIQUEFACTION_COND_PROB_PGA_TABLE
 ):
     """
     Calculates the probility of liquefaction of a soil susceptibility category
@@ -211,8 +222,7 @@ def hazus_conditional_liquefaction_probability(
         coeffs = coeff_table[susceptibility_category]
         liq_prob = coeffs[0] * pga - coeffs[1]
     else:
-        coeffs = [coeff_table[susc_cat]
-                  for susc_cat in susceptibility_category]
+        coeffs = [coeff_table[susc_cat] for susc_cat in susceptibility_category]
         coeff_0 = np.array([c[0] for c in coeffs])
         coeff_1 = np.array([c[1] for c in coeffs])
         liq_prob = coeff_0 * pga - coeff_1
@@ -272,26 +282,22 @@ def hazus_liquefaction_probability(
         analysis, or how to compare this to other liquefaction models.
         Defaults to `True` following the HAZUS methods.
     """
-    groundwater_corr = hazus_groundwater_correction_factor(
-        groundwater_depth, unit="m")
+    groundwater_corr = hazus_groundwater_correction_factor(groundwater_depth, unit="m")
     mag_corr = hazus_magnitude_correction_factor(mag)
 
     if isinstance(liq_susc_cat, str):
-        liq_susc_prob = hazus_conditional_liquefaction_probability(
-            pga, liq_susc_cat)
+        liq_susc_prob = hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
         if do_map_proportion_correction:
-            map_unit_proportion = LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[
-                liq_susc_cat]
+            map_unit_proportion = HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[liq_susc_cat]
         else:
             map_unit_proportion = 1.0
     else:
-        liq_susc_prob = hazus_conditional_liquefaction_probability(
-            pga, liq_susc_cat)
+        liq_susc_prob = hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
 
         if do_map_proportion_correction:
             map_unit_proportion = np.array(
-                [LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[lsc]
-                 for lsc in liq_susc_cat])
+                [LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[lsc] for lsc in liq_susc_cat]
+            )
         else:
             map_unit_proportion = 1.0
 

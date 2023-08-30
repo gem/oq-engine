@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2020, GEM Foundation
+# Copyright (C) 2020-2023, GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -20,15 +20,20 @@ import inspect
 from openquake.hazardlib import imt
 from openquake.sep.landslide.common import static_factor_of_safety
 from openquake.sep.landslide.newmark import (
-    newmark_critical_accel, newmark_displ_from_pga_M,
-    prob_failure_given_displacement)
+    newmark_critical_accel,
+    newmark_displ_from_pga_M,
+    prob_failure_given_displacement,
+)
 from openquake.sep.liquefaction.liquefaction import (
-    hazus_liquefaction_probability, zhu_liquefaction_probability_general,
-    LIQUEFACTION_PGA_THRESHOLD_TABLE)
+    hazus_liquefaction_probability,
+    zhu15_liquefaction_probability_general,
+    bozzoni21_liquefaction_probability_europe,
+    HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
+)
 from openquake.sep.liquefaction.lateral_spreading import (
-    hazus_lateral_spreading_displacement)
-from openquake.sep.liquefaction.vertical_settlement import (
-    hazus_vertical_settlement)
+    hazus_lateral_spreading_displacement,
+)
+from openquake.sep.liquefaction.vertical_settlement import hazus_vertical_settlement
 
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
@@ -142,12 +147,12 @@ class HazusDeformation(SecondaryPeril):
     Computes PGDMax or PGDGeomMean from PGA
     """
     def __init__(self, return_unit='m', deformation_component='PGDMax',
-        pga_threshold_table=LIQUEFACTION_PGA_THRESHOLD_TABLE):
+        pga_threshold_table=HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE):
         self.return_unit = return_unit
         self.deformation_component = getattr(imt, deformation_component)
         self.outputs = [deformation_component]
 
-        if pga_threshold_table != LIQUEFACTION_PGA_THRESHOLD_TABLE:
+        if pga_threshold_table != HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE:
             pga_threshold_table = {bytes(str(k), 'utf-8'): v
                 for k, v in pga_threshold_table.items()}
         self.pga_threshold_table=pga_threshold_table
@@ -169,7 +174,7 @@ class HazusDeformation(SecondaryPeril):
         return out
 
 
-class ZhuLiquefactionGeneral(SecondaryPeril):
+class Zhu15LiquefactionGeneral(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
@@ -188,11 +193,11 @@ class ZhuLiquefactionGeneral(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGA':
-                out.append(zhu_liquefaction_probability_general(
+                out.append(zhu15_liquefaction_probability_general(
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
         return out
 
-class BozzoniLiquefactionEurope(SecondaryPeril):
+class Bozzoni21LiquefactionEurope(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
@@ -211,7 +216,7 @@ class BozzoniLiquefactionEurope(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGA':
-                out.append(bozzoni_liquefaction_probability_europe(
+                out.append(bozzoni21_liquefaction_probability_europe(
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
         return out
 
