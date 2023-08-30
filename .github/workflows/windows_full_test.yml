@@ -2,7 +2,7 @@ name: Windows full tests of OpenQuake Engine
 
 on:
   push:
-    branches: [windows-all-tests]
+    branches: [simplified-powershell]
   # workflow_dispatch:
   #   inputs:
   #     git-ref:
@@ -80,20 +80,21 @@ jobs:
 
       - name: Run all demos
         run: |
+          $demosDir = D:\a\oq-engine\oq-engine\demos
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           Write-Host "Run all demos having only job.ini"
-          $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Filter job.ini
+          $iniFilePaths = ls -r $demosDir job.ini
           foreach($iniFilePath in $iniFilePaths) {
             Write-Host "Run $($iniFilePath.FullName)"
             oq engine --run $iniFilePath.FullName --exports xml,hdf5 -p pointsource_distance=0 -r
           }
           Write-Host "Run all demos having only job_hazard.ini and job_risk.ini"
-          $demoDirs = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Directory
+          $demoDirs = ls -dir -r $demosDir
           foreach($demoDir in $demoDirs) {
-            $jobHazardPaths = Get-ChildItem $demoDir -Filter job_hazard.ini
+            $jobHazardPaths = ls $demoDir.FullName job_hazard.ini
             foreach($jobHazardPath in $jobHazardPaths) {
               Write-Host "Run $($jobHazardPath.FullName)"
               oq engine --run $jobHazardPath.FullName --exports npz -p pointsource_distance=0
