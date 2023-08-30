@@ -83,8 +83,7 @@ def norm_imt(imt):
     Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1,
     PGAG -> PGA
     """
-    return imt.replace('(', '').replace(')', '').replace('.', '').replace(
-        'PGAG', 'PGA')
+    return imt.replace('(', '').replace(')', '').replace('.', '')
 
 IMTs = [norm_imt(im) for im in imts]
 
