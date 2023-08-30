@@ -136,7 +136,7 @@ def expose_outputs(dstore, owner=USER, status='complete'):
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
     if 'ruptures' in dskeys:
-        if  'scenario' in calcmode:
+        if  'scenario' in calcmode or len(dstore['ruptures']) == 0:
             # do not export, as requested by Vitor
             exportable.remove('ruptures')
         else:
