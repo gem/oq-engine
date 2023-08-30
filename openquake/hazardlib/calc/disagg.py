@@ -608,7 +608,7 @@ def disaggregation(
                 dis.init(magi, src_mutex={})  # src_mutex not implemented yet
             except FarAwayRupture:
                 continue                
-            mat4 = dis.disagg6D([[iml]], 0)[..., 0, 0]
+            mat4 = dis.disagg6D({imt: [iml]}, 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
 
