@@ -76,7 +76,11 @@ HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 FT_PER_M = 3.28084
 
 
-def idriss_magnitude_scaling_factor(mag: float):
+def sigmoid(x):
+  return 1.0 / (1.0 + np.exp(-x))
+
+
+def _idriss_magnitude_scaling_factor(mag: float):
     """
     Youd, T. L., & Idriss, I. M. (2001).
     Liquefaction Resistance of Soils: Summary Report from the 1996 NCEER and 1998 NCEER/NSF
@@ -88,17 +92,17 @@ def idriss_magnitude_scaling_factor(mag: float):
     return (10**2.24) / (mag**2.56)
 
 
-def idriss_magnitude_weighting_factor(mag: float):
+def _idriss_magnitude_weighting_factor(mag: float):
     """
     Corrects the liquefaction probabilty equations based on the magnitude
     of the causative earthquake. Defined as the inverse of the magnitude
     scaling factor.
 
     """
-    return 1.0 / idriss_magnitude_scaling_factor(mag)
+    return 1.0 / _idriss_magnitude_scaling_factor(mag)
 
 
-def zhu15_liquefaction_probability_general(
+def zhu_etal_2015_liquefaction_probability_general(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
     cti: Union[float, np.ndarray],
@@ -129,14 +133,63 @@ def zhu15_liquefaction_probability_general(
     :returns:
         Probability of liquefaction at the site.
     """
-    pga_scale = pga * idriss_magnitude_weighting_factor(mag)
+    pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (pgam_coeff * np.log(pga_scale) + cti_coeff * cti
           + vs30_coeff * np.log(vs30) + intercept)
-    prob_liq = 1.0 / (1.0 + np.exp(-Xg))
+    prob_liq = sigmoid(Xg)
     return prob_liq
 
 
-def bozzoni21_liquefaction_probability_europe(
+def zhu_etal_2017_liquefaction_probability_coastal(
+    pgv: Union[float, np.ndarray],
+    vs30: Union[float, np.ndarray],
+    dr: Union[float, np.ndarray],
+    dc: Union[float, np.ndarray],
+    precip: Union[float, np.ndarray],
+    intercept: float = 12.435,
+    pgv_coeff: float = 0.301,
+    vs30_coeff: float = -2.615,
+    dr_coeff: float = 0.0666,
+    dc_coeff: float = -0.0287,
+    precip_coeff: float = 0.0005556
+) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of a site undergoing liquefaction using the
+    logistic regression of Zhu et al., 2017. This particular equation is
+    the recommended 'coastal model'. A coastal event is defined as one 
+    where the liquefaction occurrences are, on average, within 20 km of the 
+    coast; or, for earthquakes with insignificant or no liquefaction, 
+    epicentral distances less than 50 km.
+
+    Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017). 
+    An updated geospatial liquefaction model for global application. 
+    Bulletin of the Seismological Society of America, 107(3), 1365–1385. 
+    https://doi.org/10.1785/0120160198
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param vs30:
+        Shear-wave velocity averaged over the upper 30 m of the earth at the
+        site, measured in m/s
+    :param dr:
+        Distance to the nearest river, measured in km
+    :param dc:
+        Distance to the nearest coast, measured in km
+    :param precip:
+        Mean annual precipitation, measured in mm
+
+    :returns:
+        Probability of liquefaction at the site.
+    """
+    pgv_scale = pgv # No PGV scaling in the original model
+    Xg = (pgv_coeff * np.log(pgv_scale) + vs30_coeff * np.log(vs30) 
+          + precip_coeff * precip + dc_coeff * np.sqrt(dc) 
+          + dr_coeff * dr + intercept)
+    prob_liq = sigmoid(Xg)
+    return prob_liq
+
+
+def bozzoni_etal_2021_liquefaction_probability_europe(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
     cti: Union[float, np.ndarray],
@@ -169,18 +222,18 @@ def bozzoni21_liquefaction_probability_europe(
     :returns:
         Probability of liquefaction at the site.
     """
-    pga_scale = pga * idriss_magnitude_weighting_factor(mag)
+    pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
         pgam_coeff * np.log(pga_scale)
         + cti_coeff * cti
         + vs30_coeff * np.log(vs30)
         + intercept
     )
-    prob_liq = 1.0 / (1.0 + np.exp(-Xg))
+    prob_liq = sigmoid(Xg)
     return prob_liq
 
 
-def hazus_magnitude_correction_factor(
+def _hazus_magnitude_correction_factor(
     mag,
     m3_coeff: float = 0.0027,
     m2_coeff: float = -0.0267,
@@ -194,7 +247,7 @@ def hazus_magnitude_correction_factor(
     return m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
 
 
-def hazus_groundwater_correction_factor(
+def _hazus_groundwater_correction_factor(
     groundwater_depth,
     gd_coeff: float = 0.022,
     intercept: float = 0.93,
@@ -210,7 +263,7 @@ def hazus_groundwater_correction_factor(
     return gd_coeff * groundwater_depth + intercept
 
 
-def hazus_conditional_liquefaction_probability(
+def _hazus_conditional_liquefaction_probability(
     pga, susceptibility_category, coeff_table=HAZUS_LIQUEFACTION_COND_PROB_PGA_TABLE
 ):
     """
@@ -227,6 +280,7 @@ def hazus_conditional_liquefaction_probability(
         coeff_1 = np.array([c[1] for c in coeffs])
         liq_prob = coeff_0 * pga - coeff_1
 
+    # TODO: Refactor below using np.clip
     if np.isscalar(liq_prob):
         if liq_prob <= 0:
             liq_prob = 0.0
@@ -282,21 +336,21 @@ def hazus_liquefaction_probability(
         analysis, or how to compare this to other liquefaction models.
         Defaults to `True` following the HAZUS methods.
     """
-    groundwater_corr = hazus_groundwater_correction_factor(groundwater_depth, unit="m")
-    mag_corr = hazus_magnitude_correction_factor(mag)
+    groundwater_corr = _hazus_groundwater_correction_factor(groundwater_depth, unit="m")
+    mag_corr = _hazus_magnitude_correction_factor(mag)
 
     if isinstance(liq_susc_cat, str):
-        liq_susc_prob = hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
         if do_map_proportion_correction:
             map_unit_proportion = HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[liq_susc_cat]
         else:
             map_unit_proportion = 1.0
     else:
-        liq_susc_prob = hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
+        liq_susc_prob = _hazus_conditional_liquefaction_probability(pga, liq_susc_cat)
 
         if do_map_proportion_correction:
             map_unit_proportion = np.array(
-                [LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[lsc] for lsc in liq_susc_cat]
+                [HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE[lsc] for lsc in liq_susc_cat]
             )
         else:
             map_unit_proportion = 1.0

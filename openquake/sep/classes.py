@@ -26,8 +26,9 @@ from openquake.sep.landslide.newmark import (
 )
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
-    zhu15_liquefaction_probability_general,
-    bozzoni21_liquefaction_probability_europe,
+    zhu_etal_2015_liquefaction_probability_general,
+    zhu_etal_2017_liquefaction_probability_coastal,
+    bozzoni_etal_2021_liquefaction_probability_europe,
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
 )
 from openquake.sep.liquefaction.lateral_spreading import (
@@ -174,13 +175,13 @@ class HazusDeformation(SecondaryPeril):
         return out
 
 
-class Zhu15LiquefactionGeneral(SecondaryPeril):
+class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
     outputs = ["LiqProb"]
 
-    def __init__(self, intercept=24.1, pgam_coeff = 2.067, cti_coeff=0.355, vs30_coeff=-4.784):
+    def __init__(self, intercept=24.1, pgam_coeff=2.067, cti_coeff=0.355, vs30_coeff=-4.784):
         self.intercept = intercept
         self.pgam_coeff = pgam_coeff
         self.cti_coeff = cti_coeff
@@ -193,11 +194,40 @@ class Zhu15LiquefactionGeneral(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGA':
-                out.append(zhu15_liquefaction_probability_general(
+                out.append(zhu_etal_2015_liquefaction_probability_general(
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
         return out
+    
 
-class Bozzoni21LiquefactionEurope(SecondaryPeril):
+class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
+    """
+    Computes the liquefaction probability from PGA
+    """
+    outputs = ["LiqProb"]
+
+    def __init__(self, intercept=12.435, pgv_coeff=0.301, vs30_coeff=-2.615, 
+                 dr_coeff=0.0666, dc_coeff=-0.0287, precip_coeff=0.0005556):
+        self.intercept = intercept
+        self.pgv_coeff = pgv_coeff
+        self.vs30_coeff = vs30_coeff
+        self.dr_coeff = dr_coeff
+        self.dc_coeff = dc_coeff
+        self.precip_coeff = precip_coeff
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == 'PGV':
+                out.append(zhu_etal_2017_liquefaction_probability_coastal(
+                    pgv=gmf, vs30=sites.vs30, dr=sites.dr, 
+                    dc=sites.dc, precip=sites.precip))
+        return out
+    
+
+class Bozzoni2021LiquefactionEurope(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
@@ -216,7 +246,7 @@ class Bozzoni21LiquefactionEurope(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGA':
-                out.append(bozzoni21_liquefaction_probability_europe(
+                out.append(bozzoni_etal_2021_liquefaction_probability_europe(
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
         return out
 
