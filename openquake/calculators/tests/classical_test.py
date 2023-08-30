@@ -658,9 +658,9 @@ class ClassicalTestCase(CalculatorTestCase):
             hazard_calculation_id=hc_str)
 
         # skipped because broken on CI due to a mysterious extra space
-        # dbm = view('disagg:Dist', self.calc.datastore)
-        # fname = general.gettemp(text_table(dbm, ext='org'))
-        # self.assertEqualFiles('expected/disagg_by_dist.org', fname)
+        dbm = view('disagg:Dist', self.calc.datastore)
+        fname = general.gettemp(text_table(dbm, ext='org'))
+        self.assertEqualFiles('expected/disagg_by_dist.org', fname)
 
     def test_case_80(self):
         # New Madrid cluster with rup_mutex
