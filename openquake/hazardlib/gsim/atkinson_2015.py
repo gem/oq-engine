@@ -121,7 +121,6 @@ class Atkinson2015(GMPE):
         rsat = self.rsat
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            
             imean = (_get_magnitude_term(C, ctx.mag) +
                      _get_distance_term(C, ctx.rhypo, ctx.mag, rsat))
             # Convert mean from cm/s and cm/s/s
