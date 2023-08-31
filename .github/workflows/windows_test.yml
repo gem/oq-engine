@@ -9,6 +9,8 @@ on:
         required: true
   schedule:
     - cron: "00 22 * * *"
+  push:
+    branches: [ windows-all-tests ]
 
 jobs:
 
