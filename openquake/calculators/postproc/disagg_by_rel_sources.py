@@ -99,7 +99,7 @@ def main(dstore, csm, imts, imls):
         (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], len(imldic)))
     for srcid, rates4D, rates2D in smap:
         idx = src2idx[basename(srcid, '!;')]
-        arr[idx] = disagg.to_probs(rates4D)
+        arr[idx] = rates4D
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, imt=imts, iml=imls,
