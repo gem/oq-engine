@@ -17,7 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module to compute the Risk Targeted Ground Motion by using the
-rtgmpy module from the USGS.
+rtgmpy module from the USGS. The only calls performed are
+
+1. trgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)  # from hazard rates
+2. rtgm.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')  # returns RTGM
 
 Useful abbreviations:
 
@@ -190,8 +193,9 @@ def main(dstore, csm):
     hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
     hazdic = get_hazdic(hcurves, oq.imtls, oq.investigation_time, sitecol)
     rtgm_haz = rtg.GroundMotionHazard.from_dict(hazdic)
-    df = calc_rtgm_df(rtgm_haz, oq)
-    dstore.create_df('rtgm', df)
-    if (df.ProbMCE < DLLs).all():  # do not disaggregate by relevant sources
+    rtgm_df = calc_rtgm_df(rtgm_haz, oq)
+    logging.info('Computed RTGM\n%s', rtgm_df)
+    dstore.create_df('rtgm', rtgm_df)
+    if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         return
-    postproc.disagg_by_rel_sources.main(dstore, csm, imts, list(df.RTGM))
+    postproc.disagg_by_rel_sources.main(dstore, csm, imts, list(rtgm_df.RTGM))
