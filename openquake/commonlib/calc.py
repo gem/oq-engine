@@ -411,10 +411,12 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             sbe = data['slice_by_event'][:]
         except KeyError:
             sbe = build_slice_by_event(data['eid'][:])
-        slices = get_slices(sbe, data, num_assets)
+        slices = []
+        for slc in general.gen_slices(0, len(sbe), 1000):
+            slices.append(get_slices(sbe[slc], data, num_assets))
     dstore.swmr_on()
     smap = parallel.Starmap.apply(
-        task_func, (slices, oq, ds),
+        task_func, (numpy.concatenate(slices), oq, ds),
         maxweight=A*10, weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap
