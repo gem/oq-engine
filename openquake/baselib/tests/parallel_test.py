@@ -24,6 +24,7 @@ import unittest
 import itertools
 import tempfile
 import numpy
+import sys
 from openquake.baselib import parallel, general, hdf5, performance
 
 
@@ -228,3 +229,5 @@ class SplitTaskTestCase(unittest.TestCase):
         self.assertAlmostEqual(res, 48.6718458266)
         """
         shutil.rmtree(tmpdir)
+
+

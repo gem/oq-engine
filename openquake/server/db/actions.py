@@ -114,7 +114,7 @@ def create_job(db, datadir, calculation_mode='to be set',
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
                hazard_calculation_id=hc_id,
-               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)),
+               ds_calc_dir=os.path.join(datadir, 'calc_%s' % calc_id),
                host=host)
     return db('INSERT INTO job (?S) VALUES (?X)',
               job.keys(), job.values()).lastrowid
@@ -132,7 +132,7 @@ def import_job(db, calc_id, calc_mode, description, user_name, status,
                hazard_calculation_id=hc_id,
                is_running=0,
                status=status,
-               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
+               ds_calc_dir=os.path.join(datadir, 'calc_%s' % calc_id))
     db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
 
 

@@ -215,4 +215,5 @@ class TestCsvCatalogueWriter(unittest.TestCase):
         '''
         Remove the test file
         '''
-        os.system('rm %s' % self.output_filename)
+        if os.path.exists(self.output_filename):
+            os.remove(self.output_filename)
