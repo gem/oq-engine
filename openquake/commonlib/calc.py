@@ -389,7 +389,7 @@ def get_slices(sbe, data, num_assets):
     return out
 
 
-def starmap_from_gmfs(task_func, oq, dstore):
+def starmap_from_gmfs(task_func, oq, dstore, mon):
     """
     :param task_func: function or generator with signature (gmf_df, oq, dstore)
     :param oq: an OqParam instance
@@ -404,13 +404,14 @@ def starmap_from_gmfs(task_func, oq, dstore):
     N = ds['sitecol'].sids.max() + 1
     if 'site_model' in ds:
         N = max(N, len(ds['site_model']))
-    num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
-    data = ds['gmf_data']
-    try:
-        sbe = data['slice_by_event'][:]
-    except KeyError:
-        sbe = build_slice_by_event(data['eid'][:])
-    slices = get_slices(sbe, data, num_assets)
+    with mon('computing event impact', measuremem=True):
+        num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
+        data = ds['gmf_data']
+        try:
+            sbe = data['slice_by_event'][:]
+        except KeyError:
+            sbe = build_slice_by_event(data['eid'][:])
+        slices = get_slices(sbe, data, num_assets)
     dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
