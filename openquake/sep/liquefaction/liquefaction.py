@@ -181,8 +181,7 @@ def zhu_etal_2017_liquefaction_probability_coastal(
     :returns:
         Probability of liquefaction at the site.
     """
-    pgv_scale = pgv # No PGV scaling in the original model
-    Xg = (pgv_coeff * np.log(pgv_scale) + vs30_coeff * np.log(vs30) 
+    Xg = (pgv_coeff * np.log(pgv) + vs30_coeff * np.log(vs30) 
           + precip_coeff * precip + dc_coeff * np.sqrt(dc) 
           + dr_coeff * dr + intercept)
     prob_liq = sigmoid(Xg)
