@@ -83,10 +83,9 @@ DLLs = np.array([D[imt] for imt in imts])  # [0.5, 1.5, 0.6]
 
 def norm_imt(imt):
     """
-    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1,
-    PGAG -> PGA
+    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1
     """
-    return imt.replace('(', '').replace(')', '').replace('.', '')
+    return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
 IMTs = [norm_imt(im) for im in imts]
 
