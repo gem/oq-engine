@@ -308,6 +308,7 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
 
+
 class CompareTestCase(unittest.TestCase):
     def test_med_gmv(self):
         # testing the postprocessor med_gmv
@@ -317,7 +318,7 @@ class CompareTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline(f"openquake.commands compare med_gmv PGA {id} {id}")
         self.assertIn('0_0!0: no differences within the tolerances', str(p))
-        
+
 
 class SampleSmTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)
@@ -380,7 +381,11 @@ class UpgradeNRMLTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>''')
         sap.runline(f'openquake.commands upgrade_nrml {tmpdir}')
-        shutil.rmtree(tmpdir)
+        if not sys.platform.startswith('win'):
+            # NOTE: on Windows it raises:
+            #       PermissionError: [WinError 32] The process cannot access
+            #       the file because it is being used by another process
+            shutil.rmtree(tmpdir)
 
 
 class ZipTestCase(unittest.TestCase):

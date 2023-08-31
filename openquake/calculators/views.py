@@ -1471,11 +1471,11 @@ def view_relevant_sources(token, dstore):
     of the highest source.
     """
     imt = token.split(':')[1]
-    poe = dstore['oqparam'].poes[0]
-    aw = extract(dstore, f'mean_rates_by_src?imt={imt}&poe={poe}')
-    poes = aw.array['poe']  # for each source in decreasing order
-    max_poe = poes[0]
-    return aw.array[poes > .1 * max_poe]
+    kw = dstore['oqparam'].postproc_args
+    iml = dict(zip(kw['imts'], kw['imls']))[imt]
+    aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+    rates = aw.array['rate']  # for each source in decreasing order
+    return aw.array[rates > .1 * rates[0]]
 
 
 def shorten(lst):
@@ -1500,3 +1500,20 @@ def view_sources_branches(token, dstore):
     out = [(t, ' '.join(shorten(s)), b)
            for ((b, t), s) in sorted(acc.items())]
     return numpy.array(sorted(out), dt('trt sources branches'))
+
+
+@view.add('MPL')
+def view_MPL(token, dstore):
+    """
+    Maximum Probable Loss at a given return period
+    """
+    rp = int(token.split(':')[1])
+    K = dstore['risk_by_event'].attrs['K']
+    ltypes = list(dstore['agg_curves-stats'])
+    out = numpy.zeros(1, [(lt, float) for lt in ltypes])
+    for ltype in ltypes:
+        # shape (K+1, S, P)
+        arr = dstore.sel(f'agg_curves-stats/{ltype}',
+                         stat='mean', agg_id=K, return_period=rp)
+        out[ltype] = arr
+    return out

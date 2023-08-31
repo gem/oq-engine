@@ -1,4 +1,4 @@
-#,,,,,,,,,,"generated_by='OpenQuake engine 3.17.0-git422fda9f3a', start_date='2023-06-27T11:18:25', checksum=3898917116"
+#,,,,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitcd0efc9faa', start_date='2023-08-23T11:12:11', checksum=3898917116"
 custom_site_id,lon,lat,gmv_PGA,gsd_PGA,gmv_SA(0.3),gsd_SA(0.3),gmv_SA(0.6),gsd_SA(0.6),gmv_SA(1.0),gsd_SA(1.0)
 t_1,1.51038E+01,4.02107E+01,1.48972E-03,1.89331E+00,1.72722E-03,1.99921E+00,1.92473E-03,2.03955E+00,2.06887E-03,2.03023E+00
 t_7,1.49466E+01,4.02756E+01,1.55214E-03,1.90700E+00,1.81477E-03,1.97318E+00,2.07473E-03,1.98287E+00,2.12906E-03,2.03179E+00

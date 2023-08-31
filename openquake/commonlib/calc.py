@@ -17,14 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import operator
 import functools
-from unittest.mock import Mock
 import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import EBRupture, events_dt, get_eid_rlz
+from openquake.hazardlib.source.rupture import events_dt, get_eid_rlz
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -42,6 +42,7 @@ I32 = numpy.int32
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
+I64 = numpy.int64
 F64 = numpy.float64
 
 code2cls = rupture.BaseRupture.init()
@@ -360,6 +361,34 @@ def build_slice_by_event(eids, offset=0):
     return sbe
 
 
+def get_counts(idxs, N):
+    """
+    :param idxs: indices in the range 0..N-1
+    :param N: size of the returned array
+    :returns: an array of size N with the counts of the indices
+    """
+    counts = numpy.zeros(N, int)
+    uni, cnt = numpy.unique(idxs, return_counts=True)
+    counts[uni] = cnt
+    return counts
+
+
+def get_slices(sbe, data, num_assets):
+    """
+    :returns: a list of triple (start, stop, weight)
+    """
+    logging.info('Reading event weights')
+    out = numpy.zeros(
+        len(sbe), [('start', I64), ('stop', I64), ('weight', float)])
+    sids = data['sid']
+    for i, rec in enumerate(sbe):
+        s0, s1 = rec['start'], rec['stop']
+        out[i]['start'] = s0
+        out[i]['stop'] = s1
+        out[i]['weight'] = num_assets[sids[s0:s1]].sum()
+    return out
+
+
 def starmap_from_gmfs(task_func, oq, dstore):
     """
     :param task_func: function or generator with signature (gmf_df, oq, dstore)
@@ -371,16 +400,20 @@ def starmap_from_gmfs(task_func, oq, dstore):
         ds = dstore.parent
     else:
         ds = dstore
+    A = len(dstore['assetcol/array'])
+    N = ds['sitecol'].sids.max() + 1
+    if 'site_model' in ds:
+        N = max(N, len(ds['site_model']))
+    num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
     data = ds['gmf_data']
     try:
         sbe = data['slice_by_event'][:]
     except KeyError:
         sbe = build_slice_by_event(data['eid'][:])
-    nrows = sbe[-1]['stop'] - sbe[0]['start']
-    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
+    slices = get_slices(sbe, data, num_assets)
+    dstore.swmr_on()
     smap = parallel.Starmap.apply(
-        task_func, (sbe, oq, ds),
-        weight=lambda rec: rec['stop']-rec['start'],
-        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        task_func, (slices, oq, ds),
+        maxweight=A*10, weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap

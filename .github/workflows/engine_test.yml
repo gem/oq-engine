@@ -25,9 +25,9 @@ jobs:
     - name: Calculators and documentation tests
       run: |
         source ~/openquake/bin/activate
-        pip install pytest
+        pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
-        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
+        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage' && pytest doc/adv-manual/*.rst
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -50,7 +50,8 @@ jobs:
         pip install pyshp pytest flake8
         oq dbserver start
         cd openquake
-        pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+        pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 hazardlib sep commands engine hmtk risklib commonlib baselib
+        pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
