@@ -377,14 +377,14 @@ def get_slices(sbe, data, num_assets):
     """
     :returns: a list of triple (start, stop, weight)
     """
-    logging.info('Reading event weights')
     out = numpy.zeros(
         len(sbe), [('start', I64), ('stop', I64), ('weight', float)])
-    sids = data['sid']
+    start = sbe[0]['start']
+    sids = data['sid'][start:sbe[-1]['stop']]
     for i, rec in enumerate(sbe):
-        s0, s1 = rec['start'], rec['stop']
-        out[i]['start'] = s0
-        out[i]['stop'] = s1
+        s0, s1 = rec['start'] - start, rec['stop'] - start
+        out[i]['start'] = s0 + start
+        out[i]['stop'] = s1 + start
         out[i]['weight'] = num_assets[sids[s0:s1]].sum()
     return out
 
@@ -412,6 +412,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         except KeyError:
             sbe = build_slice_by_event(data['eid'][:])
         slices = []
+        logging.info('Reading event weights')
         for slc in general.gen_slices(0, len(sbe), 1000):
             slices.append(get_slices(sbe[slc], data, num_assets))
     dstore.swmr_on()
