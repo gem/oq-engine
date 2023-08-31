@@ -12,9 +12,12 @@ from openquake.sep.landslide.newmark import (
 )
 
 from openquake.sep.liquefaction import (
-    LIQUEFACTION_PGA_THRESHOLD_TABLE,
+    HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
     hazus_liquefaction_probability,
-    zhu_liquefaction_probability_general
+    zhu_etal_2015_liquefaction_probability_general,
+    zhu_etal_2017_liquefaction_probability_coastal,
+    zhu_etal_2017_liquefaction_probability_general,
+    bozzoni_etal_2021_liquefaction_probability_europe
 )
 
 from openquake.sep.liquefaction.lateral_spreading import (
@@ -91,6 +94,8 @@ class test_liquefaction_cali_small(unittest.TestCase):
         self.pga = np.array([0.29624916, 0.80906772, 0.35025253, 0.78940926,
             0.56134898, 0.25358895, 0.10497708, 0.05846073, 0.67329238,
             0.69782966])
+        
+        self.pgv = np.array([10, 20, 30, 40, 45, 50, 55, 60, 65, 70])
 
     def test_hazus_liquefaction_prob(self):
         self.sites["haz_liq_prob"] = hazus_liquefaction_probability(
@@ -105,7 +110,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
 
 
     def test_zhu_liquefaction_prob(self):
-        self.sites["zhu_liq_prob"] = zhu_liquefaction_probability_general(
+        self.sites["zhu_liq_prob"] = zhu_etal_2015_liquefaction_probability_general(
             pga=self.pga, mag=self.mag, cti=self.sites["cti"], 
             vs30=self.sites["vs30"])
 
@@ -115,6 +120,36 @@ class test_liquefaction_cali_small(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(self.sites["zhu_liq_prob"], zlp)
 
+    def test_bozzoni_liquefaction_prob(self):
+        self.sites["bozzoni_liq_prob"] = bozzoni_etal_2021_liquefaction_probability_europe(
+            pga=self.pga, mag=self.mag, cti=self.sites["cti"], 
+            vs30=self.sites["vs30"])
+
+        zlp = np.array([1, 1, 0.999999, 1, 1, 0.999999, 0.999989, 0.999922, 1, 1])
+
+        np.testing.assert_array_almost_equal(self.sites["bozzoni_liq_prob"], zlp)
+
+    def test_zhu_coastal_liquefaction_prob(self):
+        self.sites["zhu17_coastal_liq_prob"] = zhu_etal_2017_liquefaction_probability_coastal(
+            pgv=self.pgv, vs30=self.sites["vs30"], dr=self.sites["dr"], dc=self.sites["dc"], 
+            precip=self.sites["precip"])
+
+        zlp = np.array([0.147724296, 0.059958674, 0.206449471, 0.142744967, 0.218298201,
+                        0.342584912, 0.217105303, 0.088124828, 0.234620795, 0.13528652])
+
+        np.testing.assert_array_almost_equal(self.sites["zhu17_coastal_liq_prob"], zlp)
+
+    def test_zhu_general_liquefaction_prob(self):
+        self.sites["zhu17_general_liq_prob"] = zhu_etal_2017_liquefaction_probability_general(
+            pgv=self.pgv, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
+            precip=self.sites["precip"])
+
+        zlp = np.array([0.238647776, 0.134912013, 0.325250532, 0.253336248, 0.34605218,
+                        0.458236498, 0.334831618, 0.1798869, 0.359086043, 0.252791617])
+
+        np.testing.assert_array_almost_equal(self.sites["zhu17_general_liq_prob"], zlp)
+
+    
     def test_hazus_liquefaction_displacements(self):
 
         self.sites["hazus_lat_disp"] = hazus_lateral_spreading_displacement(
