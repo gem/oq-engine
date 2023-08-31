@@ -109,9 +109,9 @@ class test_liquefaction_cali_small(unittest.TestCase):
             pga=self.pga, mag=self.mag, cti=self.sites["cti"], 
             vs30=self.sites["vs30"])
 
-        zlp = np.array([0.79003182, 0.43775041, 0.70513967, 0.84349872,
-            0.88613944, 0.86409455, 0.48914665, 0.0606366 , 0.85349938,
-            0.69109006])
+        zlp = np.array([0.506859, 0.383202, 0.438535, 0.807301,
+            0.807863, 0.595353, 0.079580, 0.003111, 0.792592,
+            0.603895])
 
         np.testing.assert_array_almost_equal(self.sites["zhu_liq_prob"], zlp)
 

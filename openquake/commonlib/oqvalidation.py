@@ -559,7 +559,7 @@ pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
-  Default: {'default': 1000}
+  Default: {'default': 100}
 
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
@@ -770,8 +770,8 @@ time_event:
 time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
-  Example: *time_per_task=600*
-  Default: 300
+  Example: *time_per_task=1000*
+  Default: 600
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -807,10 +807,7 @@ width_of_mfd_bin:
   Default: None
 """ % __version__
 
-try:
-    PSDIST = config.performance.pointsource_distance
-except AttributeError:
-    PSDIST = 1000
+PSDIST = float(config.performance.pointsource_distance)
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
@@ -1052,7 +1049,7 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 300)
+    time_per_task = valid.Param(valid.positivefloat, 600)
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
@@ -1932,8 +1929,8 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights, only the mean is available,
-        and number_of_logic_tree_samples must be greater than 1.
+        sampling_method must be early_weights and number_of_logic_tree_samples
+        must be greater than 1.
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
@@ -1952,8 +1949,10 @@ class OqParam(valid.ParamSet):
                 raise ValueError('Please specify number_of_logic_tree_samples'
                                  '=%d' % n)
         hstats = list(self.hazard_stats())
-        nostats = not hstats or hstats == ['mean']
-        return nostats and self.number_of_logic_tree_samples > 1 and (
+        if hstats and hstats != ['mean']:
+            msg = '%s: quantiles are not supported with collect_rlzs=true'
+            raise InvalidFile(msg % self.inputs['job_ini'])
+        return self.number_of_logic_tree_samples > 1 and (
             self.sampling_method == 'early_weights')
 
     def check_aggregate_by(self):

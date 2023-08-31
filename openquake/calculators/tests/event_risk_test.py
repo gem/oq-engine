@@ -107,7 +107,7 @@ class GmfEbRiskTestCase(CalculatorTestCase):
         self.run_calc(case_5.__file__, 'job.ini')
         rbe = self.calc.datastore.read_df('risk_by_event')
         self.assertEqual(len(rbe), 0)
-        
+
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
         calc0 = self.calc.datastore  # single file event_based_risk

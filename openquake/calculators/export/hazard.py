@@ -93,8 +93,12 @@ def export_hmaps_csv(key, dest, sitemesh, array, comment):
 
 def add_imt(fname, imt):
     """
-    >>> add_imt('/path/to/hcurve_23.csv', 'SA(0.1)')
-    '/path/to/hcurve-SA(0.1)_23.csv'
+    >>> orig_path = '/path/to/hcurve_23.csv'
+    >>> new_path = add_imt(orig_path, 'SA(0.1)')
+    >>> os.path.dirname(new_path) == os.path.dirname(orig_path)
+    True
+    >>> os.path.basename(new_path)
+    'hcurve-SA(0.1)_23.csv'
     """
     name = os.path.basename(fname)
     newname = re.sub(r'(_\d+\.)', '-%s\\1' % imt, name)

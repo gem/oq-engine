@@ -24,7 +24,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.contexts import get_cmakers
 
 
-def to_rates(probs):
+def to_rates(probs, itime=1):
     """
     Convert an array of probabilities into an array of rates
 
@@ -32,23 +32,24 @@ def to_rates(probs):
     array([1.609438])
     """
     pnes = 1. - probs
-    pnes[pnes == 0] = 1E-45  # minimum float32
-    return - numpy.log(pnes)
+    pnes[pnes == 0] = 1E-45  # mininum 32 bit float
+    # NB: the test most sensitive to 1E-45 and 1E-12 is case_78
+    return numpy.clip(- numpy.log(pnes) / itime, 1E-12, 100)
 
 
-def to_probs(rates):
+def to_probs(rates, itime=1):
     """
     Convert an array of rates into an array of probabilities
 
     >>> numpy.round(to_probs(numpy.array([1.609438])), 6)
     array([0.8])
     """
-    return 1. - numpy.exp(- rates)
+    return 1. - numpy.exp(- rates * itime)
 
 
 def calc_rmap(src_groups, full_lt, sitecol, oq):
     """
-    :returns: a ProbabilityMap of shape (N, L, Gt)
+    :returns: a ProbabilityMap of rates with shape (N, L, Gt)
     """
     oq.use_rates = True
     oq.disagg_by_src = False
@@ -73,15 +74,17 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
     return rmap, ctxs, cmakers
 
 
-def calc_mean_rates(rmap, gweights, imtls):
+def calc_mean_rates(rmap, gweights, imtls, imts=None):
     """
     :returns: mean hazard rates as an array of shape (N, M, L1)
     """
-    M = len(imtls)
-    L1 = imtls.size // M
+    L1 = imtls.size // len(imtls)
     N = len(rmap.array)
+    if imts is None:
+        imts = imtls
+    M = len(imts)
     rates = numpy.zeros((N, M, L1))
-    for m, imt in enumerate(imtls):
+    for m, imt in enumerate(imts):
         rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [
             gw[imt] for gw in gweights]
     return rates

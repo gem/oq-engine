@@ -90,6 +90,7 @@ def zhu_liquefaction_probability_general(
     cti: Union[float, np.ndarray],
     vs30: Union[float, np.ndarray],
     intercept: float = 24.1,
+    pgam_coeff: float = 2.067,
     cti_coeff: float = 0.355,
     vs30_coeff: float = -4.784,
 ) -> Union[float, np.ndarray]:
@@ -115,7 +116,7 @@ def zhu_liquefaction_probability_general(
         Probability of liquefaction at the site.
     """
     pga_scale = pga * zhu_magnitude_correction_factor(mag)
-    Xg = (np.log(pga_scale)
+    Xg = (pgam_coeff * np.log(pga_scale)
           + cti_coeff * cti
           + vs30_coeff * np.log(vs30)
           + intercept)

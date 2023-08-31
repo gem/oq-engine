@@ -216,7 +216,7 @@ def get_computer(cmaker, proxy, sids, sitecol, station_sitecol, station_data):
         oq._amplifier, oq._sec_perils)
 
 
-def gen_event_based(allproxies, cmaker, dstore, monitor):
+def gen_event_based(allproxies, cmaker, stations, dstore, monitor):
     """
     Launcher of event_based tasks
     """
@@ -224,18 +224,18 @@ def gen_event_based(allproxies, cmaker, dstore, monitor):
     n = 0
     for proxies in block_splitter(allproxies, 10_000, rup_weight):
         n += len(proxies)
-        yield event_based(proxies, cmaker, dstore, monitor)
+        yield event_based(proxies, cmaker, stations, dstore, monitor)
         rem = allproxies[n:]  # remaining ruptures
         dt = time.time() - t0
         if dt > cmaker.oq.time_per_task and sum(
                 rup_weight(r) for r in rem) > 12_000:
             half = len(rem) // 2
-            yield gen_event_based, rem[:half], cmaker, dstore
-            yield gen_event_based, rem[half:], cmaker, dstore
+            yield gen_event_based, rem[:half], cmaker, stations, dstore
+            yield gen_event_based, rem[half:], cmaker, stations, dstore
             return
 
 
-def event_based(proxies, cmaker, dstore, monitor):
+def event_based(proxies, cmaker, stations, dstore, monitor):
     """
     Compute GMFs and optionally hazard curves
     """
@@ -252,12 +252,10 @@ def event_based(proxies, cmaker, dstore, monitor):
         sitecol = dstore['sitecol']
         srcfilter = SourceFilter(sitecol, oq.maximum_distance(cmaker.trt))
         rupgeoms = dstore['rupgeoms']
-        if "station_data" in oq.inputs:
-            station_data = dstore.read_df('station_data', 'site_id')
-            station_sitecol = sitecol.filtered(station_data.index)
+        if stations:
+            station_data, station_sitecol = stations
         else:
-            station_data = None
-            station_sitecol = None
+            station_data, station_sitecol = None, None
         for proxy in proxies:
             t0 = time.time()
             with fmon:
@@ -313,6 +311,11 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         # expensive, so we want to avoid repeating it num_gmfs times)
         # TODO: this is ugly and must be improved upon!
         allproxies = allproxies[0:1]
+        station_data = dstore.read_df('station_data', 'site_id')
+        station_sitecol = sitecol.complete.filtered(station_data.index)
+        stations = station_data, station_sitecol
+    else:
+        stations = ()
 
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
@@ -329,7 +332,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, totw, rup_weight):
-            smap.submit((block, cmaker, dstore))
+            smap.submit((block, cmaker, stations, dstore))
     return smap
 
 
@@ -595,8 +598,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        smap = starmap_from_rups(
-            gen_event_based, oq, self.full_lt, self.sitecol, dstore)
+        eb = (event_based if parallel.oq_distribute() == 'slurm'
+              else gen_event_based)
+        smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
             return acc
@@ -635,7 +639,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         # really compute and store the avg_gmf
         M = len(self.oqparam.min_iml)
-        avg_gmf = numpy.zeros((2, self.N, M), F32)
+        avg_gmf = numpy.zeros((2, len(self.sitecol.complete), M), F32)
         for sid, avgstd in compute_avg_gmf(
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
