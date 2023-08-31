@@ -321,8 +321,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                        'hcurves-rlzs' in self.datastore)
         if has_hcurves:
             keys.add('hcurves')
-        if 'ruptures' in self.datastore:
+        if 'ruptures' in self.datastore and len(self.datastore['ruptures']):
             keys.add('event_based_mfd')
+        elif 'ruptures' in keys:
+            keys.remove('ruptures')
         for fmt in fmts:
             if not fmt:
                 continue
@@ -1004,7 +1006,7 @@ class HazardCalculator(BaseCalculator):
             modname, funcname = oq.postproc_func.rsplit('.', 1)
             mod = getattr(postproc, modname)
             func = getattr(mod, funcname)
-            if 'csm' in inspect.getargspec(func).args:
+            if 'csm' in inspect.getfullargspec(func).args:
                 if hasattr(self, 'csm'):  # already there
                     csm = self.csm
                 else:  # read the csm from the parent calculation

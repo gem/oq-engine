@@ -1474,9 +1474,8 @@ def view_relevant_sources(token, dstore):
     kw = dstore['oqparam'].postproc_args
     iml = dict(zip(kw['imts'], kw['imls']))[imt]
     aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
-    poes = aw.array['poe']  # for each source in decreasing order
-    max_poe = poes[0]
-    return aw.array[poes > .1 * max_poe]
+    rates = aw.array['rate']  # for each source in decreasing order
+    return aw.array[rates > .1 * rates[0]]
 
 
 def shorten(lst):
