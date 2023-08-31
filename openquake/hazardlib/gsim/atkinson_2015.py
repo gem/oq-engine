@@ -41,16 +41,16 @@ def _get_distance_term(C, rhypo, mag, rsat):
     Returns the distance scaling term including the apparent anelastic
     attenuation term (C4 * R)
     """
-    h_eff = get_effective_dist(rsat, mag)
+    h_eff = get_effective_depth(rsat, mag)
     r_val = np.sqrt(rhypo ** 2.0 + h_eff ** 2.0)
     return C["c3"] * np.log10(r_val) + C["c4"] * r_val
 
 
-get_effective_dist = CallableDict()
+get_effective_depth = CallableDict()
 
 
-@get_effective_dist.add('default')
-def _get_effective_distance(rsat, mag):
+@get_effective_depth.add('default')
+def _get_effective_depth(rsat, mag):
     """
     Returns the effective distance term in equation 3. This may be
     overwritten in sub-classes
@@ -59,8 +59,8 @@ def _get_effective_distance(rsat, mag):
     return np.where(h_eff > 1.0, h_eff, 1.0)
 
 
-@get_effective_dist.add('alternative')
-def _get_effective_distance_alt(rsat, mag):
+@get_effective_depth.add('alternative')
+def _get_effective_depth_alt(rsat, mag):
     """
     Alternative effective distance term provided in Atkinson (2015) (page 986)
     for use of stronger distance-saturation effects than within default model
