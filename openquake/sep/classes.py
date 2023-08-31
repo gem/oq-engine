@@ -29,6 +29,8 @@ from openquake.sep.liquefaction.liquefaction import (
     zhu_etal_2015_liquefaction_probability_general,
     zhu_etal_2017_liquefaction_probability_coastal,
     zhu_etal_2017_liquefaction_probability_general,
+    rashidian_baise_2020_liquefaction_probability,
+    allstadt_etal_2022_liquefaction_probability,
     bozzoni_etal_2021_liquefaction_probability_europe,
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
 )
@@ -218,7 +220,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, imt_gmf, sites):
+    def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
@@ -229,6 +231,74 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
 
 
 class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
+    """
+    Computes the liquefaction probability from PGA
+    """
+    outputs = ["LiqProb"]
+
+    def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
+                 dw_coeff=-0.0333, wtd_coeff=-0.2054, precip_coeff=0.0005408):
+        self.intercept = intercept
+        self.pgv_scaling_factor = pgv_scaling_factor
+        self.pgv_coeff = pgv_coeff
+        self.vs30_coeff = vs30_coeff
+        self.dw_coeff = dw_coeff
+        self.wtd_coeff = wtd_coeff
+        self.precip_coeff = precip_coeff
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == 'PGV':
+                out.append(zhu_etal_2017_liquefaction_probability_general(
+                    pgv=gmf, vs30=sites.vs30, dw=sites.dw, 
+                    wtd=sites.wtd, precip=sites.precip))
+        return out
+
+
+class RashidianBaise2020Liquefaction(SecondaryPeril):
+    """
+    Computes the liquefaction probability from PGA
+    """
+    outputs = ["LiqProb"]
+
+    def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
+                 dw_coeff=-0.0333, wtd_coeff=-0.2054, precip_coeff=0.0005408):
+        self.intercept = intercept
+        self.pgv_scaling_factor = pgv_scaling_factor
+        self.pgv_coeff = pgv_coeff
+        self.vs30_coeff = vs30_coeff
+        self.dw_coeff = dw_coeff
+        self.wtd_coeff = wtd_coeff
+        self.precip_coeff = precip_coeff
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        pga = None
+        pgv = None
+        for im, gmf in imt_gmf:
+            if im.string == 'PGV':
+                pgv = gmf
+            elif im.string == 'PGA':
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the RashidianBaise2020Liquefaction model")
+        out.append(rashidian_baise_2020_liquefaction_probability(
+            pga=pga, pgv=pgv, vs30=sites.vs30, dw=sites.dw, 
+            wtd=sites.wtd, precip=sites.precip))
+        return out
+    
+
+class AllstadtEtAl2022Liquefaction(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
@@ -246,13 +316,24 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
     def prepare(self, sites):
         pass
 
-    def compute(self, imt_gmf, sites):
+    def compute(self, mag, imt_gmf, sites):
         out = []
+        pga = None
+        pgv = None
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                out.append(zhu_etal_2017_liquefaction_probability_general(
-                    pgv=gmf, vs30=sites.vs30, dw=sites.dw, 
-                    wtd=sites.wtd, precip=sites.precip))
+                pgv = gmf
+            elif im.string == 'PGA':
+                pga = gmf
+            else:
+                continue
+        # Raise error if either PGA or PGV is missing
+        if pga is None or pgv is None:
+            raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the AllstadtEtAl2022Liquefaction model")
+        
+        out.append(allstadt_etal_2022_liquefaction_probability(
+            pga=pga, pgv=pgv, mag=mag, vs30=sites.vs30, dw=sites.dw, 
+            wtd=sites.wtd, precip=sites.precip))
         return out
 
 

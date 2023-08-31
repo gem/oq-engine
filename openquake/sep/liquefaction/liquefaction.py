@@ -201,6 +201,7 @@ def zhu_etal_2017_liquefaction_probability_general(
     wtd: Union[float, np.ndarray],
     precip: Union[float, np.ndarray],
     intercept: float = 8.801,
+    pgv_scaling_factor: float = 1.0,
     pgv_coeff: float = 0.334,
     vs30_coeff: float = -1.918,
     dw_coeff: float = -0.0333,
@@ -209,7 +210,7 @@ def zhu_etal_2017_liquefaction_probability_general(
 ) -> Union[float, np.ndarray]:
     """
     Calculates the probability of a site undergoing liquefaction using the
-    logistic regression of Zhu et al., 2017. This particular equation is
+    logistic regression of the Zhu et al., 2017. This particular equation is
     the recommended noncoastal model, which is the model recommended by the
     authors for global implementation. Noncoastal events are defined as those
     for which the average distance to the nearest coast of the liquefaction 
@@ -235,16 +236,131 @@ def zhu_etal_2017_liquefaction_probability_general(
     :returns:
         Probability of liquefaction at the site.
     """
-    pgv_scale = pgv # No PGV scaling in the original model
-    Xg = (pgv_coeff * np.log(pgv_scale) + vs30_coeff * np.log(vs30) 
-          + precip_coeff * precip + dw_coeff * dw 
-          + wtd_coeff * wtd + intercept)
+    Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
+          + vs30_coeff * np.log(vs30) + precip_coeff * precip 
+          + dw_coeff * dw + wtd_coeff * wtd + intercept)
     prob_liq = sigmoid(Xg)
 
     # Zhu et al. 2017 heuristically assign zero to the predicted probability 
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s.
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
+    return prob_liq
+
+
+def rashidian_baise_2020_liquefaction_probability(
+    pga: Union[float, np.ndarray],
+    pgv: Union[float, np.ndarray],
+    vs30: Union[float, np.ndarray],
+    dw: Union[float, np.ndarray],
+    wtd: Union[float, np.ndarray],
+    precip: Union[float, np.ndarray],
+    intercept: float = 8.801,
+    pgv_scaling_factor: float = 1.0,
+    pgv_coeff: float = 0.334,
+    vs30_coeff: float = -1.918,
+    dw_coeff: float = -0.0333,
+    wtd_coeff: float = -0.2054,
+    precip_coeff: float = 0.0005408
+) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of a site undergoing liquefaction using the
+    logistic regression of the Zhu et al., 2017 noncoastal model, which is the 
+    model recommended by the authors for global implementation, as modified 
+    by Rashidian and Baise (2020) to decrease over-prediction in large areas 
+    experiencing low PGA (below 0.1 g) with the addition of a PGA threshold 
+    (no liquefaction when PGA < 0.1 g).
+
+    Reference: Rashidian, V., & Baise, L. G. (2020). 
+    Regional efficacy of a global geospatial liquefaction model. 
+    Engineering Geology, 272, 105644. 
+    https://doi.org/10.1016/j.enggeo.2020.105644
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param vs30:
+        Shear-wave velocity averaged over the upper 30 m of the earth at the
+        site, measured in m/s
+    :param dw:
+        Distance to the nearest water body, measured in km
+    :param wtd:
+        Global water table depth, measured in m
+    :param precip:
+        Mean annual precipitation, measured in mm
+
+    :returns:
+        Probability of liquefaction at the site.
+    """
+    prob_liq = zhu_etal_2017_liquefaction_probability_general(pgv, vs30, dw, wtd, 
+                 precip, intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
+                 pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, dw_coeff=dw_coeff, 
+                 wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
+
+    # Zhu et al. 2017 heuristically assign zero to the predicted probability 
+    # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
+    # probability when VS30 > 620 m/s. Additionally, Rashidian and Baise (2020)
+    # assign zero to the probability when PGA < 0.1 g.
+    prob_liq = np.where(pga < 0.1, 0, prob_liq)
+    return prob_liq
+
+
+def allstadt_etal_2022_liquefaction_probability(
+    pga: Union[float, np.ndarray],
+    pgv: Union[float, np.ndarray],
+    mag: Union[float, np.ndarray],
+    vs30: Union[float, np.ndarray],
+    dw: Union[float, np.ndarray],
+    wtd: Union[float, np.ndarray],
+    precip: Union[float, np.ndarray],
+    intercept: float = 8.801,
+    pgv_coeff: float = 0.334,
+    vs30_coeff: float = -1.918,
+    dw_coeff: float = -0.0333,
+    wtd_coeff: float = -0.2054,
+    precip_coeff: float = 0.0005408
+) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of a site undergoing liquefaction using the
+    logistic regression of the Zhu et al., 2017 noncoastal model, which is the 
+    model recommended by the authors for global implementation, as modified 
+    by Rashidian and Baise (2020) to decrease over-prediction in large areas 
+    experiencing low PGA (below 0.1 g) with the addition of a PGA threshold 
+    (no liquefaction when PGA < 0.1 g). For use in their the US Geological 
+    Survey (USGS) ground failure (GF) product, further caps on precipitation 
+    and PGV of 2500 mm/year and 150 cm/s respectively were imposed to avoid
+    unrealistic extrapolations when either factor was much higher than found 
+    in the training data, as described in Allstadt et al. (2022). Finally, an
+    ad-hoc magnitude scaling factor is applied to the PGV values to reduce
+    overprediction of liquefaction probabilities for lower magnitude events.
+
+    Reference: Allstadt, K. E., Thompson, E. M., Jibson, R. W., Wald, D. J., 
+    Hearne, M., Hunter, E. J., Fee, J., Schovanec, H., Slosky, D., 
+    & Haynie, K. L. (2022). The US Geological Survey ground failure product: 
+    Near-real-time estimates of earthquake-triggered landslides and liquefaction. 
+    Earthquake Spectra, 38(1), 5–36. https://doi.org/10.1177/87552930211032685
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param vs30:
+        Shear-wave velocity averaged over the upper 30 m of the earth at the
+        site, measured in m/s
+    :param dw:
+        Distance to the nearest water body, measured in km
+    :param wtd:
+        Global water table depth, measured in m
+    :param precip:
+        Mean annual precipitation, measured in mm
+
+    :returns:
+        Probability of liquefaction at the site.
+    """
+    pgv = np.where(pgv > 150, 150, pgv)
+    precip = np.where(precip > 2500, 2500, precip)
+    pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
+    prob_liq = rashidian_baise_2020_liquefaction_probability(pga, pgv, vs30, dw, wtd, precip, 
+                 intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
+                 pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, 
+                 dw_coeff=dw_coeff, wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
     return prob_liq
 
 
