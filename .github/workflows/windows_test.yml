@@ -1,16 +1,16 @@
 name: Windows full tests of OpenQuake Engine
 
 on:
-  workflow_dispatch:
-    inputs:
-      git-ref:
-        description: Git Ref
-        default: master
-        required: true
-  schedule:
-    - cron: "00 22 * * *"
   push:
     branches: [ windows-all-tests ]
+  # workflow_dispatch:
+  #   inputs:
+  #     git-ref:
+  #       description: Git Ref
+  #       default: master
+  #       required: true
+  # schedule:
+  #   - cron: "00 22 * * *"
 
 jobs:
 
