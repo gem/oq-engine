@@ -18,11 +18,12 @@
 
 """
 Module exports :class:'Atkinson2015'
+               :class:`Atkinson2015AltDistSat`
 """
 import numpy as np
 from scipy.constants import g
 
-
+from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
@@ -35,22 +36,36 @@ def _get_magnitude_term(C, mag):
     return C["c0"] + C["c1"] * mag + C["c2"] * mag ** 2.0
 
 
-def _get_distance_term(C, rhypo, mag):
+def _get_distance_term(C, rhypo, mag, rsat):
     """
     Returns the distance scaling term including the apparent anelastic
     attenuation term (C4 * R)
     """
-    h_eff = _get_effective_distance(mag)
+    h_eff = get_effective_dist(rsat, mag)
     r_val = np.sqrt(rhypo ** 2.0 + h_eff ** 2.0)
     return C["c3"] * np.log10(r_val) + C["c4"] * r_val
 
 
-def _get_effective_distance(mag):
+get_effective_dist = CallableDict()
+
+
+@get_effective_dist.add('default')
+def _get_effective_distance(rsat, mag):
     """
     Returns the effective distance term in equation 3. This may be
     overwritten in sub-classes
     """
     h_eff = 10.0 ** (-1.72 + 0.43 * mag)
+    return np.where(h_eff > 1.0, h_eff, 1.0)
+
+
+@get_effective_dist.add('alternative')
+def _get_effective_distance_alt(rsat, mag):
+    """
+    Alternative effective distance term provided in Atkinson (2015) (page 986)
+    for use of stronger distance-saturation effects than within default model
+    """
+    h_eff = 10.0 ** (-0.28 + 0.19 * mag)
     return np.where(h_eff > 1.0, h_eff, 1.0)
 
 
@@ -89,10 +104,13 @@ class Atkinson2015(GMPE):
     REQUIRES_SITES_PARAMETERS = set()
 
     #: Required rupture parameters are magnitude
-    REQUIRES_RUPTURE_PARAMETERS = {'mag', }
+    REQUIRES_RUPTURE_PARAMETERS = {'mag'}
 
     #: Required distance measure is hypocentral distance
     REQUIRES_DISTANCES = {'rhypo'}
+
+    # Default distance-saturation scaling
+    rsat = 'default'    
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -100,11 +118,12 @@ class Atkinson2015(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        rsat = self.rsat
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-
+            
             imean = (_get_magnitude_term(C, ctx.mag) +
-                     _get_distance_term(C, ctx.rhypo, ctx.mag))
+                     _get_distance_term(C, ctx.rhypo, ctx.mag, rsat))
             # Convert mean from cm/s and cm/s/s
             if imt.string.startswith(('PGA', 'SA')):
                 mean[m] = np.log((10.0 ** (imean - 2.0)) / g)
@@ -127,3 +146,16 @@ class Atkinson2015(GMPE):
     3.0000  -3.827   1.060   0.009086  -1.398    0.00000   0.24   0.22     0.32
     5.0000  -4.321   1.080   0.009376  -1.378    0.00000   0.25   0.18     0.31
     """)
+
+
+class Atkinson2015AltDistSat(Atkinson2015):
+    """
+    This class implements the alternative effective depth equation provided on
+    page 986 of Atkinson (2015) for the use of stronger distance-saturation
+    effects than obtainable within the default model
+    """
+    experimental = True # No verification table available
+    
+    # Alternative (stronger) distance-saturation scaling
+    rsat = 'alternative'
+    
