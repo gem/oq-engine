@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
           #os: [macos-latest, windows-latest, ubuntu-latest]
-        python-version: [3.8]
+        python-version: [3.10]
     #
     steps:
     # This Checkout use git-ref keyword from dispatch
@@ -46,7 +46,7 @@ jobs:
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
     # Use script to install engine and not the pip install .
-    - name: Install engine with install script and version 3.11
+    - name: Install engine with install script and version latest
       run: |
         sudo env "PATH=$PATH" python -m pip install --default-timeout=100 pip wheel setuptools --upgrade
         sleep 2

@@ -84,6 +84,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
             if iml2.sum() == 0:  # zero hard for this site
                 continue
 
+            imldic = {imt: iml2[m] for m, imt in enumerate(cmaker.imts)}
             rlzs = dstore['best_rlzs'][dis.sid]
         for magi in range(dis.Ma):
             try:
@@ -96,7 +97,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
                     g = dis.g_by_rlz[rlz]
                 except KeyError:  # non-contributing rlz
                     continue
-                res[rlz] = rates6D = dis.disagg6D(iml2, g)
+                res[rlz] = rates6D = dis.disagg6D(imldic, g)
                 if rwdic:  # compute mean rates and store them in the 0 key
                     if 'mean' not in res:
                         res['mean'] = rates6D * rwdic[rlz]

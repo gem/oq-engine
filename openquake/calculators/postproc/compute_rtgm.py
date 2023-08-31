@@ -17,7 +17,10 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Module to compute the Risk Targeted Ground Motion by using the
-rtgmpy module from the USGS.
+rtgmpy module from the USGS. The only calls performed are
+
+1. trgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)  # from hazard rates
+2. rtgm.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')  # returns RTGM
 
 Useful abbreviations:
 
@@ -46,7 +49,7 @@ from openquake.calculators import postproc
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
-PGA,0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
+PGA0,0.50,0.57,0.66,0.73,0.74,0.69,0.61,0.55
 SA(0.01),0.50,0.57,0.66,0.73,0.75,0.70,0.62,0.55
 SA(0.02),0.52,0.58,0.68,0.74,0.75,0.70,0.62,0.55
 SA(0.03),0.60,0.66,0.75,0.79,0.78,0.70,0.62,0.55
@@ -68,23 +71,21 @@ SA(4.0),0.12,0.13,0.16,0.24,0.34,0.47,0.66,0.81
 SA(5.0),0.10,0.11,0.13,0.19,0.26,0.36,0.49,0.61
 SA(7.5),0.063,0.068,0.080,0.11,0.15,0.19,0.26,0.31
 SA(10.0),0.042,0.045,0.052,0.069,0.089,0.11,0.14,0.17
-PGAG,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
+PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 '''), index_col='imt')
 
 # hard-coded for year 1
 # TODO: interpolate for vs30 != 760 and for different periods
-imts = ['PGAG', 'SA(0.2)', 'SA(1.0)']
+imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
 Ts = [0, 0.2, 1.0]
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = np.array([D[imt] for imt in imts])  # [0.5, 1.5, 0.6]
 
 def norm_imt(imt):
     """
-    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1,
-    PGAG -> PGA
+    Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1
     """
-    return imt.replace('(', '').replace(')', '').replace('.', '').replace(
-        'G', '')
+    return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
 IMTs = [norm_imt(im) for im in imts]
 
@@ -191,8 +192,9 @@ def main(dstore, csm):
     hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
     hazdic = get_hazdic(hcurves, oq.imtls, oq.investigation_time, sitecol)
     rtgm_haz = rtg.GroundMotionHazard.from_dict(hazdic)
-    df = calc_rtgm_df(rtgm_haz, oq)
-    dstore.create_df('rtgm', df)
-    if (df.ProbMCE < DLLs).all():  # do not disaggregate by relevant sources
+    rtgm_df = calc_rtgm_df(rtgm_haz, oq)
+    logging.info('Computed RTGM\n%s', rtgm_df)
+    dstore.create_df('rtgm', rtgm_df)
+    if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         return
-    postproc.disagg_by_rel_sources.main(dstore, csm, IMTs, list(df.RTGM))
+    postproc.disagg_by_rel_sources.main(dstore, csm, imts, list(rtgm_df.RTGM))
