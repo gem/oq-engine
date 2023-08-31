@@ -414,7 +414,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             sbe = build_slice_by_event(data['eid'][:])
         slices = []
         logging.info('Reading event weights')
-        for slc in general.gen_slices(0, len(sbe), 10_000):
+        for slc in general.gen_slices(0, len(sbe), 100_000):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
     dstore.swmr_on()
