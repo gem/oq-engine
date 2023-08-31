@@ -1667,7 +1667,7 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
     elif consequence == 'fatalities':
         return aval['occupants_night']
     elif consequence == 'homeless':
-        return aval['redsidents']
+        return aval['residents']
     elif consequence in ('loss', 'losses'):
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
