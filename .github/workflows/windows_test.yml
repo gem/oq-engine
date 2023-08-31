@@ -86,7 +86,7 @@ jobs:
           $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Filter job.ini
           foreach($iniFilePath in $iniFilePaths) {
             Write-Host "Run $($iniFilePath.FullName)"
-            oq engine --run $iniFilePath.FullName --exports xml,hdf5 -p pointsource_distance=0 -r
+            oq engine --run $iniFilePath.FullName --exports csv,hdf5
           }
           Write-Host "Run all demos having only job_hazard.ini and job_risk.ini"
           $demoDirs = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Directory
@@ -94,10 +94,10 @@ jobs:
             $jobHazardPaths = Get-ChildItem $demoDir -Filter job_hazard.ini
             foreach($jobHazardPath in $jobHazardPaths) {
               Write-Host "Run $($jobHazardPath.FullName)"
-              oq engine --run $jobHazardPath.FullName --exports npz -p pointsource_distance=0
+              oq engine --run $jobHazardPath.FullName --exports csv,hdf5
               $jobRiskPath = $demoDir.FullName + "\job_risk.ini"
               Write-Host "Run $($jobRiskPath)"
-              oq engine --run $jobRiskPath --hc -1
+              oq engine --run $jobRiskPath --exports csv,hdf5 --hc -1
             }
           }
 
