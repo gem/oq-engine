@@ -3,18 +3,40 @@ from typing import Optional, Union, List
 import numpy as np
 
 from openquake.sep.liquefaction import (
-    hazus_magnitude_correction_factor,
-    LIQUEFACTION_PGA_THRESHOLD_TABLE,
+    #hazus_magnitude_correction_factor,
+    HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
     FT_PER_M)
 
 INCH_PER_M = FT_PER_M * 12.
 
+def _hazus_displacement_correction_factor(
+    mag,
+    m3_coeff: float = 0.0086,
+    m2_coeff: float = -0.0914,
+    m1_coeff: float = 0.4698,
+    intercept=-0.9835,
+):
+    """
+    Improves estimates of lateral spreading during liquefaction based on the
+    magnitude of an earthquake.
+
+    Parameters other than `mag` are numerical coefficients for the polynomial
+    fit, which can be modified if one has a region-specific or otherwise
+    updated calibration.
+
+    :param mag:
+        Moment magnitude of causative earthquake.
+
+    :returns:
+        Correction factor to be applied to lateral spreading displacements.
+    """
+    return m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
 
 def hazus_lateral_spreading_displacement(
         mag: Union[float, np.ndarray],
         pga: Union[float, np.ndarray],
         liq_susc_cat: Union[str, List[str]],
-        pga_threshold_table: dict = LIQUEFACTION_PGA_THRESHOLD_TABLE,
+        pga_threshold_table: dict = HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
         return_unit: str = 'm') -> Union[float, np.ndarray]:
     """
     Distance of lateral spreading from Hazus
@@ -104,38 +126,38 @@ def hazus_lateral_spreading_displacement_fn(
         )
         a[3.0 < pga_ratio] = 70.0 * pga_ratio[3.0 < pga_ratio] - 180.0
 
-    mag_corr_factor = hazus_disp_mag_correction_factor_spreading(mag)
+    mag_corr_factor = _hazus_displacement_correction_factor(mag)
     disp_inch = mag_corr_factor * a
 
     return disp_inch
 
 
 
-def hazus_disp_mag_correction_factor_spreading(
-    mag: float,
-    m3_coeff: float = 0.0086,
-    m2_coeff: float = -0.0914,
-    m1_coeff: float = 0.4698,
-    intercept: float = -0.9835,
-) -> float:
-    """
-    Improves estimates of lateral spreading during liquefaction based on the
-    magnitude of an earthquake.
+# def hazus_disp_mag_correction_factor_spreading(
+#     mag: float,
+#     m3_coeff: float = 0.0086,
+#     m2_coeff: float = -0.0914,
+#     m1_coeff: float = 0.4698,
+#     intercept: float = -0.9835,
+# ) -> float:
+#     """
+#     Improves estimates of lateral spreading during liquefaction based on the
+#     magnitude of an earthquake.
 
-    Parameters other than `mag` are numerical coefficients for the polynomial
-    fit, which can be modified if one has a region-specific or otherwise
-    updated calibration.
+#     Parameters other than `mag` are numerical coefficients for the polynomial
+#     fit, which can be modified if one has a region-specific or otherwise
+#     updated calibration.
 
-    :param mag:
-        Moment magnitude of causative earthquake.
+#     :param mag:
+#         Moment magnitude of causative earthquake.
 
-    :returns:
-        Correction factor to be applied to lateral spreading displacements.
-    """
-    return hazus_magnitude_correction_factor(
-        mag,
-        m3_coeff=m3_coeff,
-        m2_coeff=m2_coeff,
-        m1_coeff=m1_coeff,
-        intercept=intercept,
-    )
+#     :returns:
+#         Correction factor to be applied to lateral spreading displacements.
+#     """
+#     return hazus_magnitude_correction_factor(
+#         mag,
+#         m3_coeff=m3_coeff,
+#         m2_coeff=m2_coeff,
+#         m1_coeff=m1_coeff,
+#         intercept=intercept,
+#     )

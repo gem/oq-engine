@@ -151,6 +151,7 @@ def zhu_etal_2017_liquefaction_probability_coastal(
     vs30_coeff: float = -2.615,
     dr_coeff: float = 0.0666,
     dc_coeff: float = -0.0287,
+    dcdr_coeff: float = -0.0369,
     precip_coeff: float = 0.0005556
 ) -> Union[float, np.ndarray]:
     """
@@ -183,7 +184,7 @@ def zhu_etal_2017_liquefaction_probability_coastal(
     """
     Xg = (pgv_coeff * np.log(pgv) + vs30_coeff * np.log(vs30) 
           + precip_coeff * precip + dc_coeff * np.sqrt(dc) 
-          + dr_coeff * dr + intercept)
+          + dr_coeff * dr + dcdr_coeff * np.sqrt(dc) * dr + intercept)
     prob_liq = sigmoid(Xg)
 
     # Zhu et al. 2017 heuristically assign zero to the predicted probability 
@@ -203,8 +204,8 @@ def zhu_etal_2017_liquefaction_probability_general(
     pgv_scaling_factor: float = 1.0,
     pgv_coeff: float = 0.334,
     vs30_coeff: float = -1.918,
-    dw_coeff: float = -0.0333,
-    wtd_coeff: float = -0.2054,
+    dw_coeff: float = -0.2054,
+    wtd_coeff: float = -0.0333,
     precip_coeff: float = 0.0005408
 ) -> Union[float, np.ndarray]:
     """

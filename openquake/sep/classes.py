@@ -209,12 +209,14 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     outputs = ["LiqProb"]
 
     def __init__(self, intercept=12.435, pgv_coeff=0.301, vs30_coeff=-2.615, 
-                 dr_coeff=0.0666, dc_coeff=-0.0287, precip_coeff=0.0005556):
+                 dr_coeff=0.0666, dc_coeff=-0.0287, dcdr_coeff = -0.0369, 
+                 precip_coeff=0.0005556):
         self.intercept = intercept
         self.pgv_coeff = pgv_coeff
         self.vs30_coeff = vs30_coeff
         self.dr_coeff = dr_coeff
         self.dc_coeff = dc_coeff
+        self.dcdr_coeff = dcdr_coeff
         self.precip_coeff = precip_coeff
 
     def prepare(self, sites):
@@ -237,7 +239,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
     outputs = ["LiqProb"]
 
     def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
-                 dw_coeff=-0.0333, wtd_coeff=-0.2054, precip_coeff=0.0005408):
+                 dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
         self.intercept = intercept
         self.pgv_scaling_factor = pgv_scaling_factor
         self.pgv_coeff = pgv_coeff
