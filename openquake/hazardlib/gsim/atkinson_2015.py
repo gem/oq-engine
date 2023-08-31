@@ -151,9 +151,9 @@ class Atkinson2015AltDistSat(Atkinson2015):
     """
     This class implements the alternative effective depth equation provided on
     page 986 of Atkinson (2015) for the use of stronger distance-saturation
-    effects than obtainable within the default model
+    effects than implemented within the default model
     """
-    experimental = True # No verification table available
+    experimental = True # No verification table currently available
     
     # Alternative (stronger) distance-saturation scaling
     rsat = 'alternative'
