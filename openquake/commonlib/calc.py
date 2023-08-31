@@ -380,12 +380,13 @@ def get_slices(sbe, data, num_assets):
     out = numpy.zeros(
         len(sbe), [('start', I64), ('stop', I64), ('weight', float)])
     start = sbe[0]['start']
-    sids = data['sid'][start:sbe[-1]['stop']]
+    stop = sbe[-1]['stop']
+    sids = data['sid'][start:stop]
     for i, rec in enumerate(sbe):
-        s0, s1 = rec['start'] - start, rec['stop'] - start
-        out[i]['start'] = s0 + start
-        out[i]['stop'] = s1 + start
-        out[i]['weight'] = num_assets[sids[s0:s1]].sum()
+        s0, s1 = rec['start'], rec['stop']
+        out[i]['start'] = s0
+        out[i]['stop'] = s1
+        out[i]['weight'] = num_assets[sids[s0-start:s1-start]].sum()
     return out
 
 
@@ -413,11 +414,12 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
             sbe = build_slice_by_event(data['eid'][:])
         slices = []
         logging.info('Reading event weights')
-        for slc in general.gen_slices(0, len(sbe), 1000):
+        for slc in general.gen_slices(0, len(sbe), 10_000):
             slices.append(get_slices(sbe[slc], data, num_assets))
+        slices = numpy.concatenate(slices, dtype=slices[0].dtype)
     dstore.swmr_on()
     smap = parallel.Starmap.apply(
-        task_func, (numpy.concatenate(slices), oq, ds),
+        task_func, (slices, oq, ds),
         maxweight=A*10, weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap
