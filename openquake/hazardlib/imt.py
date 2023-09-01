@@ -268,6 +268,12 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+def LiqOccur():
+    """
+    Liquefaction occurrence class
+    """
+    return IMT('LiqOccur')
+
 
 def PGDMax(vert_settlement, lat_spread):
     """
