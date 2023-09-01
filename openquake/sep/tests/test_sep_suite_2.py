@@ -149,7 +149,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(self.sites["zhu17_general_liq_prob"], zlp)
 
-    
     def test_hazus_liquefaction_displacements(self):
 
         self.sites["hazus_lat_disp"] = hazus_lateral_spreading_displacement(
