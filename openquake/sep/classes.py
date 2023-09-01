@@ -258,7 +258,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
             if im.string == 'PGV':
                 out.append(zhu_etal_2017_liquefaction_probability_general(
                     pgv=gmf, vs30=sites.vs30, dw=sites.dw, 
-                    wtd=sites.wtd, precip=sites.precip))
+                    wtd=sites.gwd, precip=sites.precip))
         return out
 
 
@@ -297,7 +297,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
             raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the RashidianBaise2020Liquefaction model")
         out.append(rashidian_baise_2020_liquefaction_probability(
             pga=pga, pgv=pgv, vs30=sites.vs30, dw=sites.dw, 
-            wtd=sites.wtd, precip=sites.precip))
+            wtd=sites.gwd, precip=sites.precip))
         return out
     
 
@@ -336,7 +336,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
         
         out.append(allstadt_etal_2022_liquefaction_probability(
             pga=pga, pgv=pgv, mag=mag, vs30=sites.vs30, dw=sites.dw, 
-            wtd=sites.wtd, precip=sites.precip))
+            wtd=sites.gwd, precip=sites.precip))
         return out
 
 
@@ -383,8 +383,10 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                out.append(todorovic_silva_2022_nonparametric_general(
-                    pgv=gmf, mag=mag, vs30=sites.vs30, dw=sites.dw, wtd=sites.wtd, precip=sites.precip))
+                out_class, out_prob = todorovic_silva_2022_nonparametric_general(
+                    pgv=gmf, vs30=sites.vs30, dw=sites.dw, wtd=sites.gwd, precip=sites.precip)
+            out.append(out_class)
+            out.append(out_prob)
         return out
 
 

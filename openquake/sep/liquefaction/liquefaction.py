@@ -19,7 +19,7 @@
 from typing import Union
 import numpy as np
 import pandas as pd
-import gzip, pickle
+import gzip, os, pickle
 # from openquake.baselib.general import decompress
 
 
@@ -458,11 +458,12 @@ def todorovic_silva_2022_nonparametric_general(
     }
     df = pd.DataFrame(dict)
     model_file = 'data/todorovic_silva_2022/todorovic_silva_2022.pkl.gz'
-    with gzip.open(model_file, 'rb') as gzipped_file:
-        file = gzipped_file.read(model_file)
-        model = pickle.loads(file)
+    model_path = os.path.join(os.path.dirname(__file__), model_file)
+    with gzip.open(model_path, 'rb') as gzipped_file:
+        file = gzipped_file.read()
+        model = pickle.loads(file)            
         out_class = model.predict(df)
-        out_prob = model.predict_proba(df)
+        out_prob = model.predict_proba(df)[:, 1]
         return out_class, out_prob
 
 
