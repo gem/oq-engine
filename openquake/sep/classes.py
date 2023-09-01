@@ -32,6 +32,7 @@ from openquake.sep.liquefaction.liquefaction import (
     rashidian_baise_2020_liquefaction_probability,
     allstadt_etal_2022_liquefaction_probability,
     bozzoni_etal_2021_liquefaction_probability_europe,
+    todorovic_silva_2022_nonparametric_general,
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
 )
 from openquake.sep.liquefaction.lateral_spreading import (
@@ -360,6 +361,30 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
             if im.string == 'PGA':
                 out.append(bozzoni_etal_2021_liquefaction_probability_europe(
                     pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
+        return out
+
+
+supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
+
+
+class TodorovicSilva2022NonParametric(SecondaryPeril):
+    """
+    Computes the liquefaction occurrence and liquefaction probability.
+    """
+    outputs = ["LiqOccur", "LiqProb"]
+
+    def __init__(self):
+        pass
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == 'PGV':
+                out.append(todorovic_silva_2022_nonparametric_general(
+                    pgv=gmf, mag=mag, vs30=sites.vs30, dw=sites.dw, wtd=sites.wtd, precip=sites.precip))
         return out
 
 
