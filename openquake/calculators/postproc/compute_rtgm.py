@@ -41,9 +41,10 @@ import numpy as np
 import pandas as pd
 from scipy import interpolate
 try:
-    import rtgmpy as rtg
+    import rtgmpy
 except ImportError:
-    rtg = None
+    rtgmpy = None
+from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 
@@ -77,9 +78,9 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 # hard-coded for year 1
 # TODO: interpolate for vs30 != 760 and for different periods
 imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
-Ts = [0, 0.2, 1.0]
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-DLLs = np.array([D[imt] for imt in imts])  # [0.5, 1.5, 0.6]
+DLLs = [D[imt] for imt in imts]
+assert DLLs == [0.5, 1.5, 0.6]
 
 def norm_imt(imt):
     """
@@ -87,8 +88,10 @@ def norm_imt(imt):
     """
     return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
-IMTs = [norm_imt(im) for im in imts]
-
+f1 = interpolate.interp1d([0.2, 1], [1.1, 1.3])
+f2 = interpolate.interp1d([1, 5], [1.3, 1.5])
+f3 = interpolate.interp1d([0.2, 1], [1.2, 1.25])
+f4 = interpolate.interp1d([0.2, 1], [1.1, 1.3])
 
 def _find_fact_maxC(T,code):
     # find the factor to convert to maximum component based on
@@ -99,11 +102,9 @@ def _find_fact_maxC(T,code):
         elif T <= 0.2:
             fact_maxC = 1.1
         elif T <= 1:
-            f = interpolate.interp1d([0.2,1],[1.1, 1.3])
-            fact_maxC = f(T)
+            fact_maxC = f1(T)
         elif T <= 5:
-            f = interpolate.interp1d([1,5],[1.3, 1.5])
-            fact_maxC = f(T)
+            fact_maxC = f2(T)
         else:
             fact_maxC = 1.5
     elif code == 'ASCE7-22':
@@ -112,11 +113,9 @@ def _find_fact_maxC(T,code):
         elif T <= 0.2:
             fact_maxC = 1.2
         elif T <= 1:
-            f = interpolate.interp1d([0.2,1],[1.2, 1.25])
-            fact_maxC = f(T)
+            fact_maxC = f3(T)
         elif T <= 10:
-            f = interpolate.interp1d([1,5],[1.25, 1.3])
-            fact_maxC = f(T)
+            fact_maxC = f4(T)
         else:
             fact_maxC = 1.5
     return fact_maxC
@@ -129,13 +128,16 @@ def calc_rtgm_df(rtgm_haz, oq):
     :param rtgm_haz: a dictionary containing the annual frequency losses
     :param oq: OqParam instance
     """
-    M = len(IMTs)
+    M = len(imts)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M))
-    results = rtg.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
-    for m, IMT in enumerate(IMTs):
+    results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
+    IMTs = []
+    for m, imt in enumerate(imts):
+        IMT = norm_imt(imt)
+        IMTs.append(IMT)
+        T = from_string(imt).period
         rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
-        T = Ts[m]
         fact = _find_fact_maxC(T, 'ASCE7-16')
         RTGM_max[m] = rtgmCalc['rtgm']  # for maximum component
         UHGM[m] = rtgmCalc['uhgm'] / fact  # for geometric mean
@@ -174,7 +176,7 @@ def get_hazdic(hcurves, imtls, invtime, sitecol):
                  'Vs30': site.vs30},
         'hazCurves': {norm_imt(imt): {'iml': imtls[imt],
                                       'afe': to_rates(hcurves[0, m], invtime)}
-                      for m, imt in enumerate(imtls) if norm_imt(imt) in IMTs}}
+                      for m, imt in enumerate(imtls) if imt in imts}}
     return hazdic
 
 
@@ -182,7 +184,7 @@ def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
     """
-    if not rtg:
+    if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
     logging.info('Computing Risk Targeted Ground Motion')
@@ -191,7 +193,7 @@ def main(dstore, csm):
     sitecol = dstore['sitecol']
     hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
     hazdic = get_hazdic(hcurves, oq.imtls, oq.investigation_time, sitecol)
-    rtgm_haz = rtg.GroundMotionHazard.from_dict(hazdic)
+    rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
     rtgm_df = calc_rtgm_df(rtgm_haz, oq)
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
