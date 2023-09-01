@@ -46,7 +46,7 @@ def get_params_from(inputs):
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
         params['description'] += ' (%(lon)s, %(lat)s)' % inputs
-    params['ps_grid_spacing'] = '0.'
+    params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['disagg_by_src'] = 'true'
     params['use_rates'] = 'true'
