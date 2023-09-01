@@ -153,7 +153,7 @@ class Atkinson2015AltDistSat(Atkinson2015):
     page 986 of Atkinson (2015) for the use of stronger distance-saturation
     effects than implemented within the default model
     """
-    experimental = True # No verification table currently available
+    non_verified = True # No verification table currently available
     
     # Alternative (stronger) distance-saturation scaling
     rsat = 'alternative'
