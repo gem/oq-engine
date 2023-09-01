@@ -18,6 +18,8 @@
 
 from typing import Union
 import numpy as np
+import pandas as pd
+import pickle
 
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
@@ -74,7 +76,7 @@ HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 
 
 FT_PER_M = 3.28084
-
+CM_PER_M = 100
 
 def sigmoid(x):
   return 1.0 / (1.0 + np.exp(-x))
@@ -406,6 +408,62 @@ def bozzoni_etal_2021_liquefaction_probability_europe(
     )
     prob_liq = sigmoid(Xg)
     return prob_liq
+
+
+def todorovic_silva_2022_nonparametric_general(
+    pgv: Union[float, np.ndarray],
+    vs30: Union[float, np.ndarray],
+    dw: Union[float, np.ndarray],
+    wtd: Union[float, np.ndarray],
+    precip: Union[float, np.ndarray],
+    ) -> Union[float, np.ndarray]:
+    """
+    Returns the binary class output (i.e, 0 or 1) which indicates liquefaction
+    nonoccurrence or liquefaction occurrence as per Todorovic and Silva (2022). 
+    In addition, it returns the probability of belonging to a class 1, or liq-
+    uefaction occurrence. The implemented model includes modifications from the 
+    version published in Todorovic and Silva (2022).
+
+    Reference: Todorovic, L., Silva, V. (2022). 
+    A liquefaction occurrence model for regional analysis. 
+    Soil Dynamics and Earthquake Engineering, 161, 1–12. 
+    https://doi.org/10.1016/j.soildyn.2022.107430
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param vs30:
+        Shear-wave velocity averaged over the upper 30 m of the earth at the
+        site, measured in m/s
+    :param dw:
+        Distance to the nearest water body, measured in km
+    :param wtd:
+        Distance to the nearest water body, measured in km
+    :param precip:
+        Mean annual precipitation, measured in mm
+
+    :returns:
+        out_class: ndarray of len(sitemodel)  
+            Returns binary output 0 or 1, i.e., liquefaction occurrence.
+        out_prob: ndarray of len(sitemodel)
+            Returns probability of belonging to class 1.
+        
+    """
+    with open('data/todorovic_silva_2022/todorovic_silva_2022.pkl', "rb") as model_file:
+        model = pickle.load(model_file)
+
+    strain_proxy = pgv / (CM_PER_M * vs30)
+    dict = {
+        'strain_proxy': strain_proxy,
+        'dw': dw,
+        'wtd': wtd,
+        'precip': precip
+    }
+    df = pd.DataFrame(dict)
+
+    out_class = model.predict(df)
+    out_prob = model.predict_proba(df)
+
+    return out_class, out_prob
 
 
 def _hazus_magnitude_correction_factor(
