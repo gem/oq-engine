@@ -19,7 +19,8 @@
 from typing import Union
 import numpy as np
 import pandas as pd
-import pickle
+import gzip, pickle
+# from openquake.baselib.general import decompress
 
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
@@ -437,7 +438,7 @@ def todorovic_silva_2022_nonparametric_general(
     :param dw:
         Distance to the nearest water body, measured in km
     :param wtd:
-        Distance to the nearest water body, measured in km
+        Global water table depth, measured in m
     :param precip:
         Mean annual precipitation, measured in mm
 
@@ -448,9 +449,6 @@ def todorovic_silva_2022_nonparametric_general(
             Returns probability of belonging to class 1.
         
     """
-    with open('data/todorovic_silva_2022/todorovic_silva_2022.pkl', "rb") as model_file:
-        model = pickle.load(model_file)
-
     strain_proxy = pgv / (CM_PER_M * vs30)
     dict = {
         'strain_proxy': strain_proxy,
@@ -459,11 +457,13 @@ def todorovic_silva_2022_nonparametric_general(
         'precip': precip
     }
     df = pd.DataFrame(dict)
-
-    out_class = model.predict(df)
-    out_prob = model.predict_proba(df)
-
-    return out_class, out_prob
+    model_file = 'data/todorovic_silva_2022/todorovic_silva_2022.pkl.gz'
+    with gzip.open(model_file, 'rb') as gzipped_file:
+        file = gzipped_file.read(model_file)
+        model = pickle.loads(file)
+        out_class = model.predict(df)
+        out_prob = model.predict_proba(df)
+        return out_class, out_prob
 
 
 def _hazus_magnitude_correction_factor(
