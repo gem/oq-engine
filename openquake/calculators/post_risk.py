@@ -497,8 +497,10 @@ def post_aggregate(calc_id: int, aggregate_by):
     parent = datastore.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
-    if aggby and aggby[0] not in asset.tagset(oqp.aggregate_by):
-        raise ValueError('%r not in %s' % (aggby, oqp.aggregate_by))
+    parent_tags = asset.tagset(oqp.aggregate_by)
+    for tag in aggby:
+        if tag not in parent_tags:
+            raise ValueError('%r not in %s' % (tag, oqp.aggregate_by[0]))
     dic = dict(
         calculation_mode='reaggregate',
         description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
