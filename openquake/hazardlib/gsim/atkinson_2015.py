@@ -149,9 +149,13 @@ class Atkinson2015(GMPE):
 
 class Atkinson2015AltDistSat(Atkinson2015):
     """
-    This class implements the alternative effective depth equation provided on
+    This class implements the alternative effective depth term provided on
     page 986 of Atkinson (2015) for the use of stronger distance-saturation
-    effects than implemented within the default model
+    effects than implemented within the default model.
+    
+    It should be noted that this class uses the coefficients obtained using the
+    Yenier and Atkinson (2014) effective depth term i.e. those used within the
+    base gsim class too, with modification only to the effective depth term
     """
     # Alternative (stronger) distance-saturation scaling
     rsat = 'alternative'
