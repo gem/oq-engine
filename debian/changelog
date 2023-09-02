@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Backported fix to event based risk calculations with
+    aggregate_by(parent) != aggregate_by(child)
   * Backported fix to the `risk_by_event` exporter for some calculations
     starting from GMFs on a CSV file
   * Backported fix to `import_gmfs_csv`, which was breaking sometimes with a
