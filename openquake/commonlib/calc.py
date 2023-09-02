@@ -419,6 +419,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
     dstore.swmr_on()
     maxw = slices['weight'].sum()/ (oq.concurrent_tasks or 1) or 1.
+    logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
         maxweight=min(maxw, 50_000_000),
