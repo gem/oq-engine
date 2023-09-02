@@ -518,6 +518,9 @@ def post_aggregate(calc_id: int, aggregate_by):
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
     parent_tags = asset.tagset(oqp.aggregate_by)
+    if aggby and not parent_tags:
+        raise ValueError('Cannot reaggregate from a parent calculation '
+                         'without aggregate_by')
     for tag in aggby:
         if tag not in parent_tags:
             raise ValueError('%r not in %s' % (tag, oqp.aggregate_by[0]))
