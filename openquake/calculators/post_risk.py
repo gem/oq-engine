@@ -356,7 +356,6 @@ def build_reinsurance(dstore, num_events):
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
 
-
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -374,8 +373,8 @@ class PostRiskCalculator(base.RiskCalculator):
                 ds, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
             aggby = ds.parent['oqparam'].aggregate_by
-            self.reaggreate = (
-                aggby and oq.aggregate_by and oq.aggregate_by[0] not in aggby)
+            self.reaggreate = (aggby and oq.aggregate_by and
+                               set(oq.aggregate_by[0]) < set(aggby[0]))
             if self.reaggreate:
                 [names] = aggby
                 self.num_tags = dict(
