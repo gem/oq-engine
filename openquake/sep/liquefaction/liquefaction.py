@@ -262,8 +262,8 @@ def rashidian_baise_2020_liquefaction_probability(
     pgv_scaling_factor: float = 1.0,
     pgv_coeff: float = 0.334,
     vs30_coeff: float = -1.918,
-    dw_coeff: float = -0.0333,
-    wtd_coeff: float = -0.2054,
+    dw_coeff: float = -0.2054,
+    wtd_coeff: float = -0.0333,
     precip_coeff: float = 0.0005408
 ) -> Union[float, np.ndarray]:
     """
@@ -318,8 +318,8 @@ def allstadt_etal_2022_liquefaction_probability(
     intercept: float = 8.801,
     pgv_coeff: float = 0.334,
     vs30_coeff: float = -1.918,
-    dw_coeff: float = -0.0333,
-    wtd_coeff: float = -0.2054,
+    dw_coeff: float = -0.2054,
+    wtd_coeff: float = -0.0333,
     precip_coeff: float = 0.0005408
 ) -> Union[float, np.ndarray]:
     """
