@@ -21,7 +21,7 @@ import unittest
 import numpy
 
 from openquake.baselib.general import DictArray
-from openquake.hazardlib import read_input, calc
+from openquake.hazardlib import read_input, calc, site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
@@ -30,7 +30,7 @@ from openquake.hazardlib.contexts import (
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
-    NonParametricProbabilisticRupture as NPPR
+    get_planar, NonParametricProbabilisticRupture as NPPR
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
@@ -542,3 +542,22 @@ class PlanarDistancesTestCase(unittest.TestCase):
         for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
             dist = get_distances_planar(planar, sites, par)[0]
             aac(dist, ctx[par], err_msg=par)
+
+    def test_from_planar(self):
+        s = site.Site(Point(0, 0), vs30=760,
+                      vs30measured=False, z1pt0=20, z2pt5=30)
+        msr = WC1994()
+        mag = 5.0
+        aratio = 1.
+        strike = 0.
+        dip = 90.
+        rake = 45
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        rup = get_planar(s, msr, mag, aratio, strike, dip, rake, trt)
+        gsims = [AbrahamsonEtAl2014()]
+        cm = ContextMaker(trt, gsims, dict(imtls={'PGA': []}))
+        ctx = cm.from_planar(rup, 100)
+        mea, sig, tau, phi = cm.get_mean_stds([ctx])
+        aac(sig, .79162428)
+        aac(tau, .47)
+        aac(phi, .637)

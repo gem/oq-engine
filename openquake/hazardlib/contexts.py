@@ -39,7 +39,8 @@ from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr
-from openquake.hazardlib.site import site_param_dt
+from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
+from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
@@ -579,6 +580,21 @@ class ContextMaker(object):
             params.add(dparam + '_')
         return params
 
+    def from_planar(self, rup, hdist, point='TC', toward_azimuth=90,
+                    direction='positive', step=5.):
+        """
+        :param rup:
+            a BaseRupture instance with a PlanarSurface and site parameters
+
+        :returns: a context array for the sites around the rupture
+        """
+        sitecol = SiteCollection.from_planar(
+            rup, point='TC', toward_azimuth=90,
+            direction='positive', hdist=hdist, step=5.,
+            req_site_params=self.REQUIRES_SITES_PARAMETERS)
+        rctxs = self.gen_contexts([[[rup], sitecol]], src_id=0)
+        return self.recarray(list(rctxs))
+
     def from_srcs(self, srcs, sitecol):  # used in disagg.disaggregation
         """
         :param srcs: a list of Source objects
@@ -752,9 +768,9 @@ class ContextMaker(object):
         :yields: context arrays
         """
         dd = self.defaultdict.copy()
-        tom = src.temporal_occurrence_model
+        tom = getattr(src, 'temporal_occurrence_model', None)
 
-        if isinstance(tom, NegativeBinomialTOM):
+        if tom and isinstance(tom, NegativeBinomialTOM):
             if hasattr(src, 'pointsources'):  # CollapsedPointSource
                 maxrate = max(max(ps.mfd.occurrence_rates)
                               for ps in src.pointsources)

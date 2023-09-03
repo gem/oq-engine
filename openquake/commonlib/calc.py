@@ -420,6 +420,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     dstore.swmr_on()
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
-        maxweight=A*10, weight=operator.itemgetter('weight'),
+        maxweight=slices['weight'].sum()/ (oq.concurrent_tasks or 1),
+        weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap

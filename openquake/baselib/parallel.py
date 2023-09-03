@@ -744,7 +744,6 @@ class Starmap(object):
                 arg0, concurrent_tasks or 1, weight, key)]
         return cls(task, taskargs, distribute, progress, h5)
 
-    @classmethod
     def apply_split(cls, task, allargs, concurrent_tasks=None,
                     maxweight=None, weight=lambda item: 1,
                     key=lambda item: 'Unspecified',

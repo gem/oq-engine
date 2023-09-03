@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface import BaseSurface, PlanarSurface
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -299,6 +299,11 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
         self.ruid = None
+
+    @property
+    def hypo_depth(self):
+        """Returns the hypocentral depth"""
+        return self.hypocenter.z
 
     @property
     def code(self):
@@ -882,3 +887,16 @@ def get_ruptures(fname_csv):
     dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
     # NB: PMFs for nonparametric ruptures are missing
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
+
+
+def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
+    """
+    :returns: a BaseRupture with a PlanarSurface built around the site
+    """
+    hc = site.location
+    surf = PlanarSurface.from_hypocenter(hc, msr, mag, aratio, strike, dip,
+                                         rake, ztor)
+    rup = BaseRupture(mag, rake, trt, hc, surf)
+    rup.rup_id = 0
+    vars(rup).update(vars(site))
+    return rup
