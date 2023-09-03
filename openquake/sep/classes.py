@@ -32,6 +32,7 @@ from openquake.sep.liquefaction.liquefaction import (
     rashidian_baise_2020_liquefaction_probability,
     allstadt_etal_2022_liquefaction_probability,
     akhlagi_etal_2021_liquefaction_probability_model_a,
+    akhlagi_etal_2021_liquefaction_probability_model_b,
     bozzoni_etal_2021_liquefaction_probability_europe,
     todorovic_silva_2022_nonparametric_general,
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
@@ -365,6 +366,34 @@ class AkhlagiEtAl2021LiquefactionA(SecondaryPeril):
             if im.string == 'PGV':
                 out.append(akhlagi_etal_2021_liquefaction_probability_model_a(
                     pgv=gmf, tri=sites.tri, dc=sites.dc, 
+                    dr=sites.dr, zwb=sites.zwb))
+        return out
+    
+
+class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
+    """
+    Computes the liquefaction probability from PGA
+    """
+    outputs = ["LiqProb"]
+
+    def __init__(self, intercept=9.504, pgv_coeff=0.706, vs30_coeff=-0.994, 
+                 dc_coeff=-0.389, dr_coeff=-0.291, zwb_coeff=-0.205):
+        self.intercept = intercept
+        self.pgv_coeff = pgv_coeff
+        self.vs30_coeff = vs30_coeff
+        self.dc_coeff = dc_coeff
+        self.dr_coeff = dr_coeff
+        self.zwb_coeff = zwb_coeff
+
+    def prepare(self, sites):
+        pass
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == 'PGV':
+                out.append(akhlagi_etal_2021_liquefaction_probability_model_b(
+                    pgv=gmf, vs30_coeff=sites.vs30_coeff, dc=sites.dc, 
                     dr=sites.dr, zwb=sites.zwb))
         return out
 

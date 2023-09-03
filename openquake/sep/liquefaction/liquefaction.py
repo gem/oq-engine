@@ -414,6 +414,54 @@ def akhlagi_etal_2021_liquefaction_probability_model_a(
     return prob_liq
 
 
+def akhlagi_etal_2021_liquefaction_probability_model_b(
+    pgv: Union[float, np.ndarray],
+    vs30: Union[float, np.ndarray],
+    dc: Union[float, np.ndarray],
+    dr: Union[float, np.ndarray],
+    zwb: Union[float, np.ndarray],
+    intercept: float = 9.504,
+    pgv_coeff: float = 0.706,
+    vs30_coeff: float = -0.994,
+    dc_coeff: float = -0.389,
+    dr_coeff: float = -0.291,
+    zwb_coeff: float = -0.205
+) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of a site undergoing liquefaction using the
+    logistic regression of the Akhlagi et al., 2021 model B.
+
+    Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A., 
+    & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction 
+    Model With Uncertainty Propagation. SSA Annual Meeting Abstracts (p. 162). 
+    Seismological Society of America.
+    Model parameters described in: Baise, L. G., Akhlaghi, A., Chansky, A., 
+    Meyer, M., & Moeveni, B. (2021). USGS Award #G20AP00029. Updating the 
+    Geospatial Liquefaction Database and Model. 
+    Tufts University. Medford, Massachusetts, United States.
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param vs30:
+        Shear-wave velocity averaged over the upper 30 m of the earth at the
+        site, measured in m/s
+    :param dc:
+        Distance to the nearest coast, measured in km
+    :param dr:
+        Distance to the nearest river, measured in km
+    :param zwb:
+        Elevation above the nearest water body, measured in m
+
+    :returns:
+        Probability of liquefaction at the site.
+    """
+    Xg = (pgv_coeff * np.log(pgv)  + vs30_coeff * np.log(vs30) 
+          + dc_coeff * np.log(dc + 1) + dr_coeff * np.log(dr + 1) 
+          + zwb_coeff * np.sqrt(zwb) + intercept)
+    prob_liq = sigmoid(Xg)
+    return prob_liq
+
+
 def bozzoni_etal_2021_liquefaction_probability_europe(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
