@@ -271,7 +271,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
     outputs = ["LiqProb"]
 
     def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
-                 dw_coeff=-0.0333, wtd_coeff=-0.2054, precip_coeff=0.0005408):
+                 dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
         self.intercept = intercept
         self.pgv_scaling_factor = pgv_scaling_factor
         self.pgv_coeff = pgv_coeff
@@ -310,7 +310,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
     outputs = ["LiqProb"]
 
     def __init__(self, intercept=8.801, pgv_coeff=0.334, vs30_coeff=-1.918, 
-                 dw_coeff=-0.0333, wtd_coeff=-0.2054, precip_coeff=0.0005408):
+                 dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
         self.intercept = intercept
         self.pgv_coeff = pgv_coeff
         self.vs30_coeff = vs30_coeff
