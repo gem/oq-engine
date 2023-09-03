@@ -367,6 +367,53 @@ def allstadt_etal_2022_liquefaction_probability(
     return prob_liq
 
 
+def akhlagi_etal_2021_liquefaction_probability_model_a(
+    pgv: Union[float, np.ndarray],
+    tri: Union[float, np.ndarray],
+    dc: Union[float, np.ndarray],
+    dr: Union[float, np.ndarray],
+    zwb: Union[float, np.ndarray],
+    intercept: float = 4.925,
+    pgv_coeff: float = 0.694,
+    tri_coeff: float = -0.459,
+    dc_coeff: float = -0.403,
+    dr_coeff: float = -0.309,
+    zwb_coeff: float = -0.164
+) -> Union[float, np.ndarray]:
+    """
+    Calculates the probability of a site undergoing liquefaction using the
+    logistic regression of the Akhlagi et al., 2021 model A.
+
+    Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A., 
+    & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction 
+    Model With Uncertainty Propagation. SSA Annual Meeting Abstracts (p. 162). 
+    Seismological Society of America.
+    Model parameters described in: Baise, L. G., Akhlaghi, A., Chansky, A., 
+    Meyer, M., & Moeveni, B. (2021). USGS Award #G20AP00029. Updating the 
+    Geospatial Liquefaction Database and Model. 
+    Tufts University. Medford, Massachusetts, United States.
+
+    :param pgv:
+        Peak Ground Velocity, measured in cm/s
+    :param tri:
+        Topographic roughness index, unitless
+    :param dc:
+        Distance to the nearest coast, measured in km
+    :param dr:
+        Distance to the nearest river, measured in km
+    :param zwb:
+        Elevation above the nearest water body, measured in m
+
+    :returns:
+        Probability of liquefaction at the site.
+    """
+    Xg = (pgv_coeff * np.log(pgv)  + tri_coeff * np.sqrt(tri)
+          + dc_coeff * np.log(dc + 1) + dr_coeff * np.log(dr + 1) 
+          + zwb_coeff * np.sqrt(zwb) + intercept)
+    prob_liq = sigmoid(Xg)
+    return prob_liq
+
+
 def bozzoni_etal_2021_liquefaction_probability_europe(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
