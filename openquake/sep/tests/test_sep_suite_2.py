@@ -17,7 +17,12 @@ from openquake.sep.liquefaction import (
     zhu_etal_2015_liquefaction_probability_general,
     zhu_etal_2017_liquefaction_probability_coastal,
     zhu_etal_2017_liquefaction_probability_general,
-    bozzoni_etal_2021_liquefaction_probability_europe
+    rashidian_baise_2020_liquefaction_probability,
+    allstadt_etal_2022_liquefaction_probability,
+    akhlagi_etal_2021_liquefaction_probability_model_a,
+    akhlagi_etal_2021_liquefaction_probability_model_b,
+    bozzoni_etal_2021_liquefaction_probability_europe,
+    todorovic_silva_2022_nonparametric_general
 )
 
 from openquake.sep.liquefaction.lateral_spreading import (
@@ -148,6 +153,70 @@ class test_liquefaction_cali_small(unittest.TestCase):
                         0.458236498, 0.334831618, 0.1798869, 0.359086043, 0.252791617])
 
         np.testing.assert_array_almost_equal(self.sites["zhu17_general_liq_prob"], zlp)
+
+    def test_rashidian_baise_2020_liquefaction_prob(self):
+        self.sites["rashidian20_liq_prob"] = rashidian_baise_2020_liquefaction_probability(
+            pgv=self.pgv, pga=self.pga, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
+            precip=self.sites["precip"])
+
+        zlp = np.array([0.238647776, 0.134912013, 0.325250532, 0.253336248, 0.34605218,
+                        0.458236498, 0.334831618, 0, 0.359086043, 0.252791617])
+
+        np.testing.assert_array_almost_equal(self.sites["rashidian20_liq_prob"], zlp)
+
+    def test_allstadt_2022_liquefaction_prob(self):
+        self.sites["allstadt22_liq_prob"] = allstadt_etal_2022_liquefaction_probability(
+            pgv=self.pgv, pga=self.pga, mag=self.mag, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
+            precip=self.sites["precip"])
+
+        zlp = np.array([0.235711715, 0.133029207, 0.321699203, 0.25027888, 0.342388975,
+                        0.454210576, 0.33122703, 0, 0.355359841, 0.249738624])
+
+        np.testing.assert_array_almost_equal(self.sites["allstadt22_liq_prob"], zlp)
+
+    def test_akhlagi_2021_liquefaction_prob_a(self):
+        self.sites["akhlagi21_liq_prob_a"] = akhlagi_etal_2021_liquefaction_probability_model_a(
+            pgv=self.pgv, tri=self.sites["tri"], dc=self.sites["dc"], dr=self.sites["dr"], 
+            zwb=self.sites["zwb"])
+
+        zlp = np.array([0.949740005, 0.660621806, 0.982407491, 0.972949802, 0.989203293,
+                        0.992850986, 1.58769E-05, 0.526810919, 0.988698807, 0.908844299])
+
+        np.testing.assert_array_almost_equal(self.sites["akhlagi21_liq_prob_a"], zlp)
+
+    def test_akhlagi_2021_liquefaction_prob_b(self):
+        self.sites["akhlagi21_liq_prob_b"] = akhlagi_etal_2021_liquefaction_probability_model_b(
+            pgv=self.pgv, vs30=self.sites["vs30"], dc=self.sites["dc"], dr=self.sites["dr"], 
+            zwb=self.sites["zwb"])
+
+        zlp = np.array([0.973289334, 0.974526031, 0.988384878, 0.988594348, 0.990864928,
+                        0.992975958, 0.991752215, 0.989183352, 0.992783854, 0.990591401])
+
+        np.testing.assert_array_almost_equal(self.sites["akhlagi21_liq_prob_b"], zlp)
+
+    def test_todorovic_2022_liquefaction_class(self):
+        out_class, out_prob = todorovic_silva_2022_nonparametric_general(
+            pgv=self.pgv, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
+            precip=self.sites["precip"])
+
+        self.sites["todorovic22_liq_class"] = out_class  
+
+        zlp = np.array([0, 0, 1, 0, 1, 1, 0, 0, 1, 0])
+
+        np.testing.assert_array_almost_equal(self.sites["todorovic22_liq_class"], zlp)
+    
+    def test_todorovic_2022_liquefaction_prob(self):
+        out_class, out_prob = todorovic_silva_2022_nonparametric_general(
+            pgv=self.pgv, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
+            precip=self.sites["precip"])
+
+        self.sites["todorovic22_liq_prob"] = out_prob
+
+        zlp = np.array([0.146836456, 0.125042935, 0.506716333, 0.337096019, 0.644430133,
+                        0.764566745, 0.39217018, 0.447345824, 0.779893313, 0.498648192])
+
+        np.testing.assert_array_almost_equal(self.sites["todorovic22_liq_prob"], zlp)
+
 
     def test_hazus_liquefaction_displacements(self):
 
