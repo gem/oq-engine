@@ -346,6 +346,7 @@ class AkhlagiEtAl2021LiquefactionA(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
+    experimental = True
     outputs = ["LiqProb"]
 
     def __init__(self, intercept=4.925, pgv_coeff=0.694, tri_coeff=-0.459, 
@@ -374,6 +375,7 @@ class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
+    experimental = True
     outputs = ["LiqProb"]
 
     def __init__(self, intercept=9.504, pgv_coeff=0.706, vs30_coeff=-0.994, 
