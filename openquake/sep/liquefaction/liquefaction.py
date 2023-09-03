@@ -20,7 +20,6 @@ from typing import Union
 import numpy as np
 import pandas as pd
 import gzip, os, pickle
-# from openquake.baselib.general import decompress
 
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
@@ -78,6 +77,7 @@ HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 
 FT_PER_M = 3.28084
 CM_PER_M = 100
+
 
 def sigmoid(x):
   return 1.0 / (1.0 + np.exp(-x))
