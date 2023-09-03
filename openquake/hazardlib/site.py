@@ -201,6 +201,8 @@ site_param_dt = {
     'dc': numpy.float64,
     'dr': numpy.float64,
     'dwb': numpy.float64,
+    'zwb': numpy.float64,
+    'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
 
