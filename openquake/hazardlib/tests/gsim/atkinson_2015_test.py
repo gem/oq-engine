@@ -40,7 +40,7 @@ class Atkinson2015AltDistSatTestCase(BaseGSIMTestCase):
     # https://www.inducedseismicity.ca/wp-content/uploads/2015/01/A15GMPErev2.xlsx
     # to use the published model (i.e. using the coefficients in Table 2 of
     # Atkinson, 2015) but with the alternative effective depth function
-    # provided on page 984
+    # provided on page 986
 
     def test_alt(self):
         self.check('ATKINSON2015/A15_ALT_MEAN.csv',
