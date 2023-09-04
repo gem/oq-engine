@@ -4,8 +4,8 @@ Liquefaction and Landslide models
 Liquefaction models
 -------------------
 
-Two liquefaction models were are implemented in the OQ-MBTK. The first
-is the method developed for the HAZUS software by the US Federal
+Two liquefaction models are implemented in the OpenQuake engine. 
+The first is the method developed for the HAZUS software by the US Federal
 Emergency Management Agency. This model involves categorization of sites
 into liquefaction susceptibility classes based on geotechnical
 characteristics, and a quanitative probability model for each

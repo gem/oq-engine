@@ -32,7 +32,7 @@ class test_sec_perils_cali_small_xr(unittest.TestCase):
     """
     Integration test suite for secondary perils, with small set of realistic
     inputs.  This is for using a possibly-obselete interface that uses XArray,
-    which is not currently part of the OQ-MBTK dependencies.
+    which is not currently part of the OpenQuake engine dependencies.
     """
     @unittest.skipIf(xr_import == False, "XArray not available")
     def setUp(self):
