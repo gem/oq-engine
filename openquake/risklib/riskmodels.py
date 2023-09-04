@@ -611,7 +611,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, asset, fractions, loss_type):
+    def compute_csq(self, asset, fractions, loss_type, time_period=None):
         """
         :param asset: asset record
         :param fractions: array of probabilies of shape (E, D)
@@ -629,8 +629,8 @@ class CompositeRiskModel(collections.abc.Mapping):
                     # for instance risk_t = 'W_LFM-DUM_H6'
                     cs = coeffs[risk_t][loss_type]
                     csq[consequence] += scientific.consequence(
-                        consequence, cs, asset, fractions[:, 1:], loss_type
-                    ) * weight
+                        consequence, cs, asset, fractions[:, 1:], loss_type,
+                        time_period) * weight
         return csq
 
     def init(self):

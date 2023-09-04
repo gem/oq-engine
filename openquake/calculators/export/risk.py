@@ -100,7 +100,7 @@ def _aggrisk(oq, aggids, aggtags, agg_values, aggrisk, md, dest):
             for col in cols:
                 if col in csqs:  # normally csqs = ['loss']
                     aval = scientific.get_agg_value(
-                        col, agg_values, agg_id, loss_type)
+                        col, agg_values, agg_id, loss_type, oq.time_period)
                     out[col + '_value'].extend(df[col])
                     out[col + '_ratio'].extend(df[col] / aval)
                 else:  # in ScenarioDamageTestCase:test_case_12
@@ -611,7 +611,8 @@ def export_aggcurves_csv(ekey, dstore):
                 edic['rlz_id'].extend([rlz_id] * len(d))
             for cons in consequences:
                 edic[cons + '_value'].extend(d[cons])
-                aval = scientific.get_agg_value(cons, agg_values, agg_id, lt)
+                aval = scientific.get_agg_value(
+                    cons, agg_values, agg_id, lt, oq.time_period)
                 edic[cons + '_ratio'].extend(d[cons] / aval)
         fname = dest.format('-'.join(tagnames))
         writer.save(pandas.DataFrame(edic), fname, comment=md)

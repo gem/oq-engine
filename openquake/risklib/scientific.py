@@ -1631,7 +1631,8 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type,
+                time_period=None):
     """
     :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
@@ -1646,15 +1647,16 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         return dmgdist @ coeffs * asset['value-' + loss_type]
     elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
-    elif consequence == 'injured':
-        return dmgdist @ coeffs * asset['occupants_night']
-    elif consequence == 'fatalities':
-        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        if time_period is not None:
+            return dmgdist @ coeffs * asset[f'occupants_{time_period}']
+        else:
+            return dmgdist @ coeffs * asset['occupants_avg']
     elif consequence == 'homeless':
         return dmgdist @ coeffs * asset['residents']
 
 
-def get_agg_value(consequence, agg_values, agg_id, xltype):
+def get_agg_value(consequence, agg_values, agg_id, xltype, time_period=None):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
@@ -1662,10 +1664,11 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
     aval = agg_values[agg_id]
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
-    elif consequence == 'injured':
-        return aval['occupants_night']
-    elif consequence == 'fatalities':
-        return aval['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        if time_period is not None:
+            return aval[f'occupants_{time_period}']
+        else:
+            return aval['occupants_avg']
     elif consequence == 'homeless':
         return aval['residents']
     elif consequence in ('loss', 'losses'):
