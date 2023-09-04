@@ -155,7 +155,7 @@ def event_based_damage(df, oqparam, dstore, monitor):
 
                         csq = crmodel.compute_csq(
                             asset, d3[a, :, :D] / number[a], lt,
-                            oqparam.time_period)
+                            oqparam.time_event)
                         for name, values in csq.items():
                             d3[a, :, ci[name]] = values
                     if R == 1:

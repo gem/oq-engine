@@ -39,7 +39,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 LTYPE_REGEX = '|'.join(valid.cost_type.choices) + '|area|number|residents'
-RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)' % LTYPE_REGEX)
+RISK_TYPE_REGEX = re.compile(r'(%s|occupants|fragility)_([\w_]+)'
+                             % LTYPE_REGEX)
 
 
 def _assert_equal(d1, d2):
@@ -569,6 +570,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                             except KeyError as err:
                                 raise InvalidFile(
                                     'Missing %s in\n%s' % (err, cfs))
+
     def check_risk_ids(self, inputs):
         """
         Check that there are no missing risk IDs for some risk functions
@@ -611,7 +613,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     raise InvalidFile(
                         '%s: missing %s' % (fname, ' '.join(ids)))
 
-    def compute_csq(self, asset, fractions, loss_type, time_period=None):
+    def compute_csq(self, asset, fractions, loss_type, time_event):
         """
         :param asset: asset record
         :param fractions: array of probabilies of shape (E, D)
@@ -630,7 +632,7 @@ class CompositeRiskModel(collections.abc.Mapping):
                     cs = coeffs[risk_t][loss_type]
                     csq[consequence] += scientific.consequence(
                         consequence, cs, asset, fractions[:, 1:], loss_type,
-                        time_period) * weight
+                        time_event) * weight
         return csq
 
     def init(self):

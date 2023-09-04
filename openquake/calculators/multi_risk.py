@@ -31,13 +31,13 @@ F32 = numpy.float32
 F64 = numpy.float64
 
 
-def get_dmg_csq(crm, assets_by_site, gmf, time_period=None):
+def get_dmg_csq(crm, assets_by_site, gmf, time_event):
     """
     :param crm: a CompositeRiskModel object
     :param assets_by_site: a dictionary of arrays per each site
     :param gmf: a ground motion field
-    :param time_period: time period of the earthquake (e.g. night, day,
-        transit) for scenario_damage or scenario_risk calculations
+    :param time_event: used in when the occupancy depend on the time (the
+        default is avg)
     :returns:
         an array of shape (A, L, 1, D + 1) with the number of buildings
         in each damage state for each asset and loss type
@@ -59,7 +59,7 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_period=None):
                 fracs = rm.scenario_damage(loss_type, assets, df, 'peril')
                 for asset, frac in zip(assets, fracs):
                     dmg = asset['value-number'] * frac  # shape (1, D)
-                    csq = crm.compute_csq(asset, frac, loss_type, time_period)
+                    csq = crm.compute_csq(asset, frac, loss_type, time_event)
                     out[asset['ordinal'], li, 0, :D] = dmg
                     out[asset['ordinal'], li, 0, D] = csq['losses']
     return out
@@ -212,10 +212,10 @@ class MultiRiskCalculator(base.RiskCalculator):
             assets = general.group_array(self.assetcol, 'site_id')
             gmf = self.datastore['multi_peril']['ASH']
             dmg_csq[:, 0] = get_dmg_csq(self.crmodel, assets, gmf,
-                                        self.oqparam.time_period)
+                                        self.oqparam.time_event)
             perils.append('ASH_DRY')
             dmg_csq[:, 1] = get_dmg_csq(self.crmodel, assets, gmf * ampl,
-                                        self.oqparam.time_period)
+                                        self.oqparam.time_event)
             perils.append('ASH_WET')
         hazard = self.datastore['multi_peril']
         binary_perils = []
