@@ -356,7 +356,6 @@ def build_reinsurance(dstore, num_events):
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
 
-
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -374,8 +373,8 @@ class PostRiskCalculator(base.RiskCalculator):
                 ds, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
             aggby = ds.parent['oqparam'].aggregate_by
-            self.reaggreate = (
-                aggby and oq.aggregate_by and oq.aggregate_by[0] not in aggby)
+            self.reaggreate = (aggby and oq.aggregate_by and
+                               set(oq.aggregate_by[0]) < set(aggby[0]))
             if self.reaggreate:
                 [names] = aggby
                 self.num_tags = dict(
@@ -518,8 +517,13 @@ def post_aggregate(calc_id: int, aggregate_by):
     parent = datastore.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
-    if aggby and aggby[0] not in asset.tagset(oqp.aggregate_by):
-        raise ValueError('%r not in %s' % (aggby, oqp.aggregate_by))
+    parent_tags = asset.tagset(oqp.aggregate_by)
+    if aggby and not parent_tags:
+        raise ValueError('Cannot reaggregate from a parent calculation '
+                         'without aggregate_by')
+    for tag in aggby:
+        if tag not in parent_tags:
+            raise ValueError('%r not in %s' % (tag, oqp.aggregate_by[0]))
     dic = dict(
         calculation_mode='reaggregate',
         description=oqp.description + '[aggregate_by=%s]' % aggregate_by,
