@@ -33,7 +33,6 @@ def test_CCA():
     with logs.init('calc', job_ini) as log:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
-    
-    [fname] = export(('rtgm', 'csv'), calc.datastore)
+        [fname] = export(('rtgm', 'csv'), calc.datastore)
     df = pandas.read_csv(fname, skiprows=1)
     aae(df.RTGM, [0.061028, 0.125194, 0.056359], atol=1E-6)
