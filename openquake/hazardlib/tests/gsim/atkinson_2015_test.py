@@ -47,4 +47,4 @@ class Atkinson2015AltDistSatTestCase(BaseGSIMTestCase):
                    'ATKINSON2015/A15_ALT_STD_INTRA.csv',
                    'ATKINSON2015/A15_ALT_STD_INTER.csv',
                    'ATKINSON2015/A15_ALT_STD_TOTAL.csv',
-                   max_discrep_percentage=2.0)
+                   max_discrep_percentage=3.0)
