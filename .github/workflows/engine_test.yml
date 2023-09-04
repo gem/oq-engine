@@ -47,7 +47,7 @@ jobs:
     - name: Hazardlib tests
       run: |
         source ~/openquake/bin/activate
-        pip install pyshp pytest flake8
+        pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
         cd openquake
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 hazardlib sep commands engine hmtk risklib commonlib baselib
