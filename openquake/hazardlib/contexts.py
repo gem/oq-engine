@@ -580,8 +580,8 @@ class ContextMaker(object):
             params.add(dparam + '_')
         return params
 
-    def from_planar(self, rup, hdist, point='TC', toward_azimuth=90,
-                    direction='positive', step=5.):
+    def from_planar(self, rup, hdist, step, point='TC', toward_azimuth=90,
+                    direction='positive'):
         """
         :param rup:
             a BaseRupture instance with a PlanarSurface and site parameters

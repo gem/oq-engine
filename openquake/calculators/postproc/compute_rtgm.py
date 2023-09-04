@@ -180,6 +180,10 @@ def get_hazdic(hcurves, imtls, invtime, sitecol):
     return hazdic
 
 
+def calc_deterministic(mag, dist, eps, rtgm):
+    pass
+
+    
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation

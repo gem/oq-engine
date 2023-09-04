@@ -556,8 +556,9 @@ class PlanarDistancesTestCase(unittest.TestCase):
         rup = get_planar(s, msr, mag, aratio, strike, dip, rake, trt)
         gsims = [AbrahamsonEtAl2014()]
         cm = ContextMaker(trt, gsims, dict(imtls={'PGA': []}))
-        ctx = cm.from_planar(rup, 100)
+        ctx = cm.from_planar(rup, hdist=100, step=5)
         mea, sig, tau, phi = cm.get_mean_stds([ctx])
+        # in this example sig, tau, phi are constant on all sites
         aac(sig, .79162428)
         aac(tau, .47)
         aac(phi, .637)
