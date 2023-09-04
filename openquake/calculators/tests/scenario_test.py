@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
+import platform
 import unittest
 import numpy
 from numpy.testing import assert_almost_equal as aae
@@ -273,8 +274,8 @@ class ScenarioTestCase(CalculatorTestCase):
             self.run_calc(case_23.__file__, 'job.ini')
 
     @unittest.skipIf(
-        sys.platform == 'darwin',
-        reason='Skipped on MacOS (it would need delta=1E-4)')
+        sys.platform == 'darwin' and platform.processor == 'arm',
+        reason='Skipped on MacOS M1 (it would need delta=1E-4)')
     def test_case_24(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         self.run_calc(case_24.__file__, 'job.ini')
@@ -282,8 +283,8 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_gmf.csv', f)
 
     @unittest.skipIf(
-        sys.platform == 'darwin',
-        reason='Skipped on MacOS (it would need delta=1E-5)')
+        sys.platform == 'darwin' and platform.processor == 'arm',
+        reason='Skipped on MacOS M1 (it would need delta=1E-5)')
     def test_case_26(self):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')

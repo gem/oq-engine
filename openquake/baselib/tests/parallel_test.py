@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import platform
 import os
 import unittest.mock as mock
 import time
@@ -146,6 +147,10 @@ class StarmapTestCase(unittest.TestCase):
 
 
 class ThreadPoolTestCase(unittest.TestCase):
+    @unittest.skipIf(
+        sys.platform == 'darwin' and platform.processor == 'i386',
+        reason=('Skipped on MacOS Intel (it would raise "socket.gaierror:'
+                ' [Errno 8] nodename nor servname provided, or not known"'))
     def test(self):
         with mock.patch.dict(os.environ, {'OQ_DISTRIBUTE': 'threadpool'}):
             parallel.Starmap.init()
@@ -229,5 +234,3 @@ class SplitTaskTestCase(unittest.TestCase):
         self.assertAlmostEqual(res, 48.6718458266)
         """
         shutil.rmtree(tmpdir)
-
-
