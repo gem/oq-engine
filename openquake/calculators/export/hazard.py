@@ -673,3 +673,13 @@ def export_fullreport(ekey, dstore):
     with open(dstore.export_path('report.rst'), 'w') as f:
         f.write(view('fullreport', dstore))
     return [f.name]
+
+
+@export.add(('rtgm', 'csv'))
+def export_rtgm(ekey, dstore):
+    df = dstore.read_df('rtgm')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('rtgm.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]
