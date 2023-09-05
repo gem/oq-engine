@@ -1,3 +1,6 @@
+  [Christopher Brooks]
+  * Implemented the Atkinson (2015) GMPE with the alt. eff. depth model
+  
   [Michele Simionato]
   * Fixed a bug when exporting `risk_by_event` in absence of ruptures
   * Fixed a bug by not exporting `event_based_mfd` in absence of ruptures
