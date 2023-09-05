@@ -997,6 +997,12 @@ def get_station_data(oqparam, sitecol):
         stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
         cols.append(im + '_VALUE')
         cols.append(im + '_' + stddev_str)
+    for im_value_col in [im + '_VALUE' for im in imts]:
+        if any(df[im_value_col] == 0):
+            raise InvalidFile(
+                f'Please remove station data with zero intensity value from'
+                f' {oqparam.inputs["station_data"]}:\n'
+                f' {df.loc[df.index[df[im_value_col] == 0]]}')
     station_data = pandas.DataFrame(df[cols].values, columns=im_cols)
     station_data['site_id'] = sids
     return station_data, imts

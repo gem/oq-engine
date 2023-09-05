@@ -253,7 +253,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('gmfdata.csv', gmfs)
         self.assertEqualFiles('sitemodel.csv', sites)
         self.run_calc(case_22.__file__, 'job_from_csv.ini',
-                      gmfs_file='gmfdata.csv',sites_csv='sitemodel.csv')
+                      gmfs_file='gmfdata.csv', sites_csv='sitemodel.csv')
         self.assertEqual(str(self.calc.sitecol),
                          '<SiteCollection with 4/5 sites>')
         ds = self.calc.datastore
@@ -275,6 +275,18 @@ class ScenarioTestCase(CalculatorTestCase):
         self.run_calc(case_24.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f)
+
+    def test_case_24_station_with_zero_im_value(self):
+        # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_24.__file__,
+                          'job_station_with_zero_im_value.ini')
+        self.assertIn(
+            'Please remove station data with zero intensity value from',
+            str(ctx.exception))
+        self.assertIn(
+            'stationlist_seismic_zero_im_value.csv',
+            str(ctx.exception))
 
     def test_case_26(self):
         # conditioned GMFs with extreme_gmv
