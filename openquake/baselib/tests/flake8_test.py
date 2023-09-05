@@ -58,3 +58,40 @@ def test_annoying_character():
                     for i, line in enumerate(open(fname, 'rb'), 1):
                         if b'\xef\xbf\xbc' in line:
                             raise ValueError('%s:%d: %s' % (fname, i, line))
+
+
+def test_csv_endlines():
+
+    # change to True to add final endlines where absent
+    FIX_FINAL_ENDLINES = False
+
+    only_slash_r_endlines = []
+    only_slash_n_endlines = []
+    no_endlines = []
+    for cwd, dirs, files in os.walk(REPO):
+        for f in files:
+            fname = os.path.abspath(os.path.join(cwd, f))
+            if fname.endswith('.csv'):
+                for i, line in enumerate(open(fname, 'rb'), 1):
+                    if not line.endswith(b'\r\n'):
+                        # raise ValueError('%s:%d: %s' % (fname, i, line))
+                        if line.endswith(b'\n'):
+                            only_slash_n_endlines.append(fname)
+                        elif line.endswith(b'\r'):
+                            only_slash_r_endlines.append(fname)
+                        else:
+                            no_endlines.append(fname)
+                        break
+    if only_slash_r_endlines or only_slash_n_endlines or no_endlines:
+        err_msg = ''
+        if only_slash_r_endlines:
+            err_msg += f'Only \\r were found in:\n{only_slash_r_endlines}'
+        if only_slash_n_endlines:
+            err_msg += f'Only \\n were found in:\n{only_slash_n_endlines}'
+        if no_endlines:
+            err_msg += f'No endlines were found in:\n{no_endlines}'
+        if FIX_FINAL_ENDLINES:
+            for fname in no_endlines:
+                with open(fname, 'a') as f:
+                    f.write('\r\n')
+        raise ValueError(err_msg)
