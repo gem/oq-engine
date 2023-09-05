@@ -4,8 +4,8 @@ import unittest
 import numpy as np
 
 from openquake.sep.liquefaction import (
-    zhu_magnitude_correction_factor,
-    zhu_liquefaction_probability_general,
+    _idriss_magnitude_weighting_factor,
+    zhu_etal_2015_liquefaction_probability_general,
     hazus_magnitude_correction_factor,
     hazus_groundwater_correction_factor,
     hazus_conditional_liquefaction_probability,
@@ -14,14 +14,14 @@ from openquake.sep.liquefaction import (
 
 
 class test_zhu_functions(unittest.TestCase):
-    def test_zhu_magnitude_correction_factor(self):
+    def test_idriss_magnitude_weighting_factor(self):
         mags = np.array([6.0, 7.0, 8.0])
         test_res = np.array([0.5650244, 0.83839945, 1.18007706])
         np.testing.assert_array_almost_equal(
-            zhu_magnitude_correction_factor(mags), test_res
+            _idriss_magnitude_weighting_factor(mags), test_res
         )
 
-    def test_zhu_liquefaction_probability_general(self):
+    def zhu_etal_2015_liquefaction_probability_general(self):
         pass
 
 
