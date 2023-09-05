@@ -6,13 +6,5 @@
 		<assets>
 			exposure.csv
 		</assets>
-
-	<!-- <exposureFields>
-    <field oq="day" input="day" />
-    <field oq="night" input="night" />
-    <field oq="transit" input="transit" />
-    <field oq="residents" input="residents" />
-    </exposureFields> -->
-
 	</exposureModel>
 </nrml>
