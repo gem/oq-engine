@@ -39,7 +39,6 @@ from openquake.hazardlib import valid, imt as imt_module
 from openquake.hazardlib.const import StdDev, OK_COMPONENTS
 from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr
-from openquake.hazardlib.mfd.arbitrary_mfd import ArbitraryMFD
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
@@ -1086,6 +1085,21 @@ class ContextMaker(object):
         if self.conv:  # apply horizontal component conversion
             self.horiz_comp_to_geom_mean(out)
         return out
+
+    def get_att_curves(self, site, msr, mag, aratio=1., strike=0.,
+                       dip=45., rake=-90):
+        """
+        :returns: 4 attenuation curves mu, sig, tau, phi
+        """
+        from openquake.hazardlib.source import rupture
+        rup = rupture.get_planar(
+            site, msr, mag, aratio, strike, dip, rake, self.trt)
+        ctx = self.from_planar(rup, hdist=500, step=5)
+        mea, sig, tau, phi = self.get_mean_stds([ctx])
+        return (interp1d(ctx.rrup, mea),
+                interp1d(ctx.rrup, sig),
+                interp1d(ctx.rrup, tau),
+                interp1d(ctx.rrup, phi))
 
     def estimate_sites(self, src, sites):
         """

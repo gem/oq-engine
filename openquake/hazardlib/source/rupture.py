@@ -638,7 +638,7 @@ class PointRupture(ParametricProbabilisticRupture):
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
         self.surface = PointSurface(hypocenter, strike, dip)
-        self.zbot = zbot
+        self.zbot = zbot  # bottom edge depth, used in Campbell-Bozorgnia
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,

@@ -562,3 +562,7 @@ class PlanarDistancesTestCase(unittest.TestCase):
         aac(sig, .79162428)
         aac(tau, .47)
         aac(phi, .637)
+
+        # test att_curves which are functions N-distances -> (G, M, N) arrays
+        mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
+        aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)
