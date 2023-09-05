@@ -1650,7 +1650,7 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
         # NOTE: time_event default is 'avg'
         return dmgdist @ coeffs * asset[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['residents']
+        return dmgdist @ coeffs * asset['value-residents']
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
