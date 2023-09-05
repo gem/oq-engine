@@ -3,14 +3,7 @@ import unittest
 
 import numpy as np
 
-from openquake.sep.liquefaction import (
-    _idriss_magnitude_weighting_factor,
-    zhu_etal_2015_liquefaction_probability_general,
-    hazus_magnitude_correction_factor,
-    hazus_groundwater_correction_factor,
-    hazus_conditional_liquefaction_probability,
-    hazus_liquefaction_probability,
-)
+from openquake.sep.liquefaction import liquefaction
 
 
 class test_zhu_functions(unittest.TestCase):
@@ -18,18 +11,15 @@ class test_zhu_functions(unittest.TestCase):
         mags = np.array([6.0, 7.0, 8.0])
         test_res = np.array([0.5650244, 0.83839945, 1.18007706])
         np.testing.assert_array_almost_equal(
-            _idriss_magnitude_weighting_factor(mags), test_res
+            liquefaction._idriss_magnitude_weighting_factor(mags), test_res
         )
-
-    def zhu_etal_2015_liquefaction_probability_general(self):
-        pass
 
 
 class test_hazus_liquefaction_functions(unittest.TestCase):
     def test_hazus_magnitude_correction_factor(self):
         # magnitudes selected to roughly replicate Fig. 4.7 in the Hazus manual
         mags = np.array([5.1, 6.1, 6.8, 7.6, 8.4])
-        Km = hazus_magnitude_correction_factor(mags)
+        Km = liquefaction._hazus_magnitude_correction_factor(mags)
         test_res = np.array(
             [1.5344407, 1.2845917, 1.1357584, 1.0000432, 0.9089488]
         )
@@ -38,7 +28,7 @@ class test_hazus_liquefaction_functions(unittest.TestCase):
     def test_hazus_gw_correction_factor_ft(self):
         # replicates Fig. 4.8 in the Hazus manual
         depth_ft = np.arange(4, 36, 4)
-        Kw = hazus_groundwater_correction_factor(depth_ft)
+        Kw = liquefaction._hazus_groundwater_correction_factor(depth_ft)
         test_res = np.array(
             [1.018, 1.106, 1.194, 1.282, 1.37, 1.458, 1.546, 1.634]
         )
@@ -47,7 +37,7 @@ class test_hazus_liquefaction_functions(unittest.TestCase):
     def test_hazus_conditional_liquefaction_probability_vl(self):
         # replicates Fig. 4.6 in the Hazus manual
         pga_vl = np.linspace(0.2, 0.6, num=10)
-        cond_vl = hazus_conditional_liquefaction_probability(pga_vl, "vl")
+        cond_vl = liquefaction._hazus_conditional_liquefaction_probability(pga_vl, "vl")
         test_res = np.array(
             [
                 0.0,
@@ -70,7 +60,7 @@ class test_hazus_liquefaction_functions(unittest.TestCase):
         # However values do not match figure exactly, though
         # the formula and coefficients are double-checked...
         pga_l = np.linspace(0.2, 0.6, num=10)
-        cond_l = hazus_conditional_liquefaction_probability(pga_l, "l")
+        cond_l = liquefaction._hazus_conditional_liquefaction_probability(pga_l, "l")
         test_res = np.array(
             [
                 0.0,
@@ -93,7 +83,7 @@ class test_hazus_liquefaction_functions(unittest.TestCase):
         # However values do not match figure exactly, though
         # the formula and coefficients are double-checked...
         pga_m = np.linspace(0.1, 0.4, num=10)
-        cond_m = hazus_conditional_liquefaction_probability(pga_m, "m")
+        cond_m = liquefaction._hazus_conditional_liquefaction_probability(pga_m, "m")
         test_res = np.array(
             [
                 0.0,
@@ -116,7 +106,7 @@ class test_hazus_liquefaction_functions(unittest.TestCase):
         # However values do not match figure exactly, though
         # the formula and coefficients are double-checked...
         pga_h = np.linspace(0.1, 0.3, num=10)
-        cond_h = hazus_conditional_liquefaction_probability(pga_h, "h")
+        cond_h = liquefaction._hazus_conditional_liquefaction_probability(pga_h, "h")
         test_res = np.array(
             [
                 0.0,
@@ -139,7 +129,7 @@ class test_hazus_liquefaction_functions(unittest.TestCase):
         # However values do not match figure exactly, though
         # the formula and coefficients are double-checked...
         pga_vh = np.linspace(0.05, 0.25, num=10)
-        cond_vh = hazus_conditional_liquefaction_probability(pga_vh, "vh")
+        cond_vh = liquefaction._hazus_conditional_liquefaction_probability(pga_vh, "vh")
         test_res = np.array(
             [0.0, 0.0, 0.0385, 0.2405, 0.4425, 0.6445, 0.8465, 1.0, 1.0, 1.0]
         )
