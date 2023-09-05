@@ -99,13 +99,13 @@ def main(dstore, csm, imts, imls):
         (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], len(imldic)))
     for srcid, rates4D, rates2D in smap:
         idx = src2idx[basename(srcid, '!;')]
-        arr[idx] = disagg.to_probs(rates4D)
+        arr[idx] = rates4D
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, imt=imts, iml=imls,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
-    dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
-
+    dstore['mean_disagg_by_src'] = aw = hdf5.ArrayWrapper(arr, dic)
+    return aw
 
 if __name__ == '__main__':
     sap.run(main)

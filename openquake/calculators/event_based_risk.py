@@ -417,7 +417,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             logging.info(
                 'Produced %s of GMFs', general.humansize(self.gmf_bytes))
         else:  # start from GMFs
-            smap = starmap_from_gmfs(ebr_from_gmfs, oq, self.datastore)
+            smap = starmap_from_gmfs(ebr_from_gmfs, oq, self.datastore,
+                                     self._monitor)
             self.save_tmp(smap.monitor)
             smap.reduce(self.agg_dicts)
 

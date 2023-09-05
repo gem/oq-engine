@@ -654,6 +654,9 @@ def export_events(ekey, dstore):
 
 @export.add(('event_based_mfd', 'csv'))
 def export_event_based_mfd(ekey, dstore):
+    if dstore['oqparam'].investigation_time is None:
+        # there is no MFD in scenario calculation
+        return []
     aw = extract(dstore, 'event_based_mfd?')
     path = dstore.export_path('event_based_mfd.csv')
     magfreq = numpy.zeros(len(aw.mag), [('mag', float), ('freq', float)])
@@ -670,3 +673,13 @@ def export_fullreport(ekey, dstore):
     with open(dstore.export_path('report.rst'), 'w') as f:
         f.write(view('fullreport', dstore))
     return [f.name]
+
+
+@export.add(('rtgm', 'csv'))
+def export_rtgm(ekey, dstore):
+    df = dstore.read_df('rtgm')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('rtgm.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]

@@ -1,4 +1,9 @@
+  [Christopher Brooks]
+  * Implemented the Atkinson (2015) GMPE with the alt. eff. depth model
+  
   [Michele Simionato]
+  * Fixed a bug in event based risk calculations with
+    aggregate_by(parent) != aggregate_by(child)
   * Fixed a bug when exporting `risk_by_event` in absence of ruptures
   * Fixed a bug by not exporting `event_based_mfd` in absence of ruptures
   * Implemented Risk Targeted Disaggregations for the AELO project
