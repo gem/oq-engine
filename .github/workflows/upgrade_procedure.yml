@@ -26,7 +26,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
           #os: [macos-latest, windows-latest, ubuntu-latest]
-        python-version: [3.10]
+        python-version: ["3.10"]
     #
     steps:
     # This Checkout use git-ref keyword from dispatch
