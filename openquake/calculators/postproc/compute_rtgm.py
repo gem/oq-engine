@@ -191,10 +191,11 @@ def calc_deterministic(cmaker, msr, site, mag, dist, disagg, rtgm):
     :param disagg: an array of shape (D, E, M)
     :returns: an array of shape (G, M)
     """
-    sigma = cmaker.get_att_curves(site, msr, mag)[1]
-    sig = sigma(dist)  # shape (G, M, N)
-    det= rtgm[m] * np.exp(sig[g, m]) / np.exp(eps[m]*sig[g, m])
-    return det
+    pass # TODO
+    #sigma = cmaker.get_att_curves(site, msr, mag)[1]
+    #sig = sigma(dist)  # shape (G, M, N)
+    #det= rtgm[m] * np.exp(sig[g, m]) / np.exp(eps[m]*sig[g, m])
+    #return det
 
 
 def get_msr(sources, src_id):
