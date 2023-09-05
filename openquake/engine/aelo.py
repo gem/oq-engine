@@ -30,7 +30,7 @@ from openquake.engine import engine
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_params_from(inputs):
+def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     """
     :param inputs: a dictionary with lon, lat, vs30, siteid
 
@@ -39,8 +39,7 @@ def get_params_from(inputs):
     """
     getter = mosaic.MosaicGetter()
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
-    ini = os.path.join(
-        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
@@ -53,6 +52,8 @@ def get_params_from(inputs):
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
+    params['distance_bin_width'] = '25'
+    params['num_epsilon_bins'] = '3'
     params['postproc_func'] = 'compute_rtgm.main'
     # params['cachedir'] = datastore.get_datadir()
     return params

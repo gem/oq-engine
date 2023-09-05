@@ -156,17 +156,12 @@ class CoeffsTable(object):
             raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
         self.rb = self._setup_table_from_str(table, sa_damping)
         if self.opt == 1:
-            keys = list(self._coeffs.keys())
+            keys = list(self._coeffs)
             num_coeff = len(self._coeffs[keys[0]])
             self.cmtx = np.zeros((len(self._coeffs.keys()), num_coeff))
-            periods = np.array([i.period for i in keys])
+            periods = np.array([imt.period for imt in keys])
             idxs = np.argsort(periods)
-            tmp = []
-            for i, idx in enumerate(idxs):
-                key = keys[i]
-                tmp.append(np.array(self._coeffs[key].tolist()))
-            tmp = np.array(tmp)
-            self.cmtx = tmp[idxs, :]
+            self.cmtx = np.array([self._coeffs[keys[i]] for i in idxs])
             self.periods = periods[idxs]
 
     def _setup_table_from_str(self, table, sa_damping):
@@ -241,7 +236,7 @@ class CoeffsTable(object):
 
         if self.opt == 0:
             max_below = min_above = None
-            for unscaled_imt in list(self.sa_coeffs):
+            for unscaled_imt in self.sa_coeffs:
                 if unscaled_imt.damping != getattr(imt, 'damping', None):
                     pass
                 elif unscaled_imt.period > imt.period:
