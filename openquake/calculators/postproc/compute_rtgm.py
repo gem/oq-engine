@@ -45,6 +45,7 @@ try:
 except ImportError:
     rtgmpy = None
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import contexts
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 
@@ -180,10 +181,22 @@ def get_hazdic(hcurves, imtls, invtime, sitecol):
     return hazdic
 
 
-def calc_deterministic(mag, dist, eps, rtgm):
-    pass
+def calc_deterministic(cmaker, src, site, mag, dist, disagg, rtgm):
+    """
+    :param cmaker: a ContextMaker
+    :param src: a source
+    :param site: a hazard site
+    :param mag: a magnitude scalar
+    :param dist: a vector of D distances
+    :param disagg: an array of shape (D, E, M)
+    :returns: an array of shape (G, M)
+    """
+    sigma = cmaker.get_att_curves(site, src.msr, mag)[1]
+    sig = sigma(dist)  # shape (G, M, N)
+    det= rtgm[m] * np.exp(sig[g, m]) / np.exp(eps[m]*sig[g, m])
+    return det
 
-    
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -199,8 +212,21 @@ def main(dstore, csm):
     hazdic = get_hazdic(hcurves, oq.imtls, oq.investigation_time, sitecol)
     rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
     rtgm_df = calc_rtgm_df(rtgm_haz, oq)
+    rtgm = list(rtgm_df.RTGM)
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         return
-    postproc.disagg_by_rel_sources.main(dstore, csm, imts, list(rtgm_df.RTGM))
+    mean_disagg_by_src = postproc.disagg_by_rel_sources.main(
+        dstore, csm, imts, rtgm)
+    cmakers = contexts.read_cmakers(dstore, csm)
+    info = dstore['source_info'][['source_id', 'grp_id']]
+    grp = {src_id: grp_id for src_id, grp_id in info}
+    [site] = sitecol
+    for idx, src_id in enumerate(mean_disagg_by_src.source_id):
+        cmaker = cmakers[grp[src_id]]
+        for ma, mag in enumerate(mean_disagg_by_src.mag):
+            dist = mean_disagg_by_src.dist
+            disagg = mean_disagg_by_src[ma, :, :, :, idx]  # shape (D, E, M)
+            det = calc_deterministic(
+                cmaker, src_id, site, mag, dist, disagg, rtgm)
