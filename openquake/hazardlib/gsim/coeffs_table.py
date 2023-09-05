@@ -161,7 +161,7 @@ class CoeffsTable(object):
             self.cmtx = np.zeros((len(self._coeffs.keys()), num_coeff))
             periods = np.array([imt.period for imt in keys])
             idxs = np.argsort(periods)
-            self.cmtx = np.array([self._coeffs[keys[i]] for i in idxs])
+            self.cmtx = np.array([self._coeffs[keys[i]].tolist() for i in idxs])
             self.periods = periods[idxs]
 
     def _setup_table_from_str(self, table, sa_damping):
