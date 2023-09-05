@@ -181,20 +181,31 @@ def get_hazdic(hcurves, imtls, invtime, sitecol):
     return hazdic
 
 
-def calc_deterministic(cmaker, src, site, mag, dist, disagg, rtgm):
+def calc_deterministic(cmaker, msr, site, mag, dist, disagg, rtgm):
     """
     :param cmaker: a ContextMaker
-    :param src: a source
+    :param msr: a MSR instance
     :param site: a hazard site
     :param mag: a magnitude scalar
     :param dist: a vector of D distances
     :param disagg: an array of shape (D, E, M)
     :returns: an array of shape (G, M)
     """
-    sigma = cmaker.get_att_curves(site, src.msr, mag)[1]
+    sigma = cmaker.get_att_curves(site, msr, mag)[1]
     sig = sigma(dist)  # shape (G, M, N)
     det= rtgm[m] * np.exp(sig[g, m]) / np.exp(eps[m]*sig[g, m])
     return det
+
+
+def get_msr(sources, src_id):
+    """
+    :returns: the MSR of the first source named src_id
+    """
+    msrs = []
+    for src in sources:
+        if src.source_id.startswith(src_id):
+            msrs.append(src.magnitude_scaling_relationship)
+    return msrs[0]
 
 
 def main(dstore, csm):
@@ -220,13 +231,14 @@ def main(dstore, csm):
     mean_disagg_by_src = postproc.disagg_by_rel_sources.main(
         dstore, csm, imts, rtgm)
     cmakers = contexts.read_cmakers(dstore, csm)
-    info = dstore['source_info'][['source_id', 'grp_id']]
-    grp = {src_id: grp_id for src_id, grp_id in info}
+    info = dstore['source_info'][:][['source_id', 'grp_id']]
+    grp_id = {src_id.decode('utf8'): grp_id for src_id, grp_id in info}
     [site] = sitecol
-    for idx, src_id in enumerate(mean_disagg_by_src.source_id):
-        cmaker = cmakers[grp[src_id]]
-        for ma, mag in enumerate(mean_disagg_by_src.mag):
+    for src_idx, src_id in enumerate(mean_disagg_by_src.source_id):
+        cmaker = cmakers[grp_id[src_id]]
+        msr = get_msr(csm.src_groups[grp_id[src_id]], src_id)
+        for mag_idx, mag in enumerate(mean_disagg_by_src.mag):
             dist = mean_disagg_by_src.dist
-            disagg = mean_disagg_by_src[ma, :, :, :, idx]  # shape (D, E, M)
-            det = calc_deterministic(
-                cmaker, src_id, site, mag, dist, disagg, rtgm)
+            disagg = mean_disagg_by_src[src_idx, mag_idx]  # shape (D, E, M)
+            # det = calc_deterministic(
+            #     cmaker, msr, site, mag, dist, disagg, rtgm)
