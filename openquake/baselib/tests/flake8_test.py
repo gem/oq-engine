@@ -64,6 +64,8 @@ def test_csv_endlines():
 
     # change to True to add final endlines where absent
     FIX_FINAL_ENDLINES = False
+    FIX_LF_TO_CRLF = False
+    FIX_CR_TO_CRLF = False
 
     only_slash_r_endlines = []
     only_slash_n_endlines = []
@@ -94,4 +96,18 @@ def test_csv_endlines():
             for fname in no_endlines:
                 with open(fname, 'a') as f:
                     f.write('\r\n')
+        if FIX_LF_TO_CRLF:
+            for fname in only_slash_n_endlines:
+                with open(fname, 'r') as f:
+                    contents = f.read()
+                contents = contents.replace('\n', '\r\n')
+                with open(fname, 'w') as f:
+                    f.write(contents)
+        if FIX_CR_TO_CRLF:
+            for fname in only_slash_r_endlines:
+                with open(fname, 'r') as f:
+                    contents = f.read()
+                contents = contents.replace('\r', '\r\n')
+                with open(fname, 'w') as f:
+                    f.write(contents)
         raise ValueError(err_msg)
