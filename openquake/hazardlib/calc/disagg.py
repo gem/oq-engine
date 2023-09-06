@@ -676,5 +676,5 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
         rates4D += dis.disagg_mag_dist_eps(imldic, ws)
     gws = reduced_lt.g_weights(trt_rlzs)
-    rates2D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))[0]
-    return source_id, rates4D, rates2D
+    rates3D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))  # (N, M, L1)
+    return source_id, rates4D, rates3D[0]  # (M, L1) rates for the site
