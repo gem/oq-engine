@@ -311,7 +311,8 @@ def rashidian_baise_2020(
     model recommended by the authors for global implementation, as modified 
     by Rashidian and Baise (2020) to decrease over-prediction in large areas 
     experiencing low PGA (below 0.1 g) with the addition of a PGA threshold 
-    (no liquefaction when PGA < 0.1 g).
+    (no liquefaction when PGA < 0.1 g). An upper bound for the annual precipitation
+    of 1700 mm is recommended. 
     The optimal threshold probability value to convert the predicted probability
     into binary classification is 0.4 (see p.13 from Zhu et al., 2017).
 
@@ -337,7 +338,8 @@ def rashidian_baise_2020(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-        
+
+    precip = np.where(precip > 1700, 1700, precip)  
     Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
           + vs30_coeff * np.log(vs30) + precip_coeff * precip 
           + dw_coeff * dw + wtd_coeff * wtd + intercept)
