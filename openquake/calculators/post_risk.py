@@ -233,7 +233,6 @@ def build_store_agg(dstore, rbe_df, num_events):
             tr /= len(dstore['weights'])
     events = dstore['events'][:]
     rlz_id = events['rlz_id']
-    year = events['year']
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
     else:
@@ -274,6 +273,7 @@ def build_store_agg(dstore, rbe_df, num_events):
         logging.info('Building aggcurves')
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
+        year = events['year']
         items = []
         for agg_id in agg_ids:
             gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
