@@ -27,13 +27,13 @@ from openquake.sep.landslide.newmark import (
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
     zhu_etal_2015_general,
-    zhu_etal_2017_liquefaction_probability_coastal,
-    zhu_etal_2017_liquefaction_probability_general,
-    rashidian_baise_2020_liquefaction_probability,
-    allstadt_etal_2022_liquefaction_probability,
-    akhlagi_etal_2021_liquefaction_probability_model_a,
-    akhlagi_etal_2021_liquefaction_probability_model_b,
-    bozzoni_etal_2021_liquefaction_probability_europe,
+    zhu_etal_2017_coastal,
+    zhu_etal_2017_general,
+    rashidian_baise_2020,
+    allstadt_etal_2022,
+    akhlagi_etal_2021_model_a,
+    akhlagi_etal_2021_model_b,
+    bozzoni_etal_2021_europe,
     todorovic_silva_2022_nonparametric_general,
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
 )
@@ -183,7 +183,8 @@ class HazusDeformation(SecondaryPeril):
 
 class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGA and transforms it
+    to binary output via the predefined probability threshold.
     """
     outputs = ["LiqProb","LiqOccur"]
 
@@ -209,9 +210,10 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
 
 class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGV and transforms it
+    to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=12.435, pgv_coeff=0.301, vs30_coeff=-2.615, 
                  dr_coeff=0.0666, dc_coeff=-0.0287, dcdr_coeff = -0.0369, 
@@ -231,17 +233,20 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                out.append(zhu_etal_2017_liquefaction_probability_coastal(
+                prob_liq, out_class = zhu_etal_2017_coastal(
                     pgv=gmf, vs30=sites.vs30, dr=sites.dr, 
-                    dc=sites.dc, precip=sites.precip))
+                    dc=sites.dc, precip=sites.precip)
+            out.append(prob_liq)
+            out.append(out_class)
         return out
 
 
 class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGV and transforms it
+    to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
                  dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
@@ -260,17 +265,20 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                out.append(zhu_etal_2017_liquefaction_probability_general(
+                prob_liq, out_class = zhu_etal_2017_general(
                     pgv=gmf, vs30=sites.vs30, dw=sites.dw, 
-                    wtd=sites.gwd, precip=sites.precip))
+                    wtd=sites.gwd, precip=sites.precip)
+            out.append(prob_liq)
+            out.append(out_class)
         return out
 
 
 class RashidianBaise2020Liquefaction(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGV and PGA and transforms it
+    to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
                  dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
@@ -299,17 +307,20 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
             raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the RashidianBaise2020Liquefaction model")
-        out.append(rashidian_baise_2020_liquefaction_probability(
+        prob_liq, out_class = rashidian_baise_2020(
             pga=pga, pgv=pgv, vs30=sites.vs30, dw=sites.dw, 
-            wtd=sites.gwd, precip=sites.precip))
+            wtd=sites.gwd, precip=sites.precip)
+        out.append(prob_liq)
+        out.append(out_class)
         return out
     
 
 class AllstadtEtAl2022Liquefaction(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGV and PGA and transforms it
+    to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=8.801, pgv_coeff=0.334, vs30_coeff=-1.918, 
                  dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
@@ -338,18 +349,21 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
         if pga is None or pgv is None:
             raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the AllstadtEtAl2022Liquefaction model")
         
-        out.append(allstadt_etal_2022_liquefaction_probability(
+        prob_liq, out_class = allstadt_etal_2022(
             pga=pga, pgv=pgv, mag=mag, vs30=sites.vs30, dw=sites.dw, 
-            wtd=sites.gwd, precip=sites.precip))
+            wtd=sites.gwd, precip=sites.precip)
+        out.append(prob_liq)
+        out.append(out_class)
         return out
     
 
 class AkhlagiEtAl2021LiquefactionA(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGV and transforms it
+    to binary output via the predefined probability threshold.
     """
     experimental = True
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=4.925, pgv_coeff=0.694, tri_coeff=-0.459, 
                  dc_coeff=-0.403, dr_coeff=-0.309, zwb_coeff=-0.164):
@@ -367,18 +381,21 @@ class AkhlagiEtAl2021LiquefactionA(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                out.append(akhlagi_etal_2021_liquefaction_probability_model_a(
+                prob_liq, out_class = akhlagi_etal_2021_model_a(
                     pgv=gmf, tri=sites.tri, dc=sites.dc, 
-                    dr=sites.dr, zwb=sites.zwb))
+                    dr=sites.dr, zwb=sites.zwb)
+            out.append(prob_liq)
+            out.append(out_class)
         return out
     
 
 class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGV and transforms it
+    to binary output via the predefined probability threshold.
     """
     experimental = True
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=9.504, pgv_coeff=0.706, vs30_coeff=-0.994, 
                  dc_coeff=-0.389, dr_coeff=-0.291, zwb_coeff=-0.205):
@@ -396,17 +413,20 @@ class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                out.append(akhlagi_etal_2021_liquefaction_probability_model_b(
+                prob_liq, out_class = akhlagi_etal_2021_model_b(
                     pgv=gmf, vs30_coeff=sites.vs30_coeff, dc=sites.dc, 
-                    dr=sites.dr, zwb=sites.zwb))
+                    dr=sites.dr, zwb=sites.zwb)
+            out.append(prob_liq)
+            out.append(out_class)
         return out
 
 
 class Bozzoni2021LiquefactionEurope(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGA
+    Computes the liquefaction probability from PGA and transforms it
+    to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=-11.489, pgam_coeff=3.864, cti_coeff=2.328, vs30_coeff=-0.091):
         self.intercept = intercept
@@ -421,8 +441,10 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGA':
-                out.append(bozzoni_etal_2021_liquefaction_probability_europe(
-                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
+                prob_liq, out_class = bozzoni_etal_2021_europe(
+                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30)
+            out.append(prob_liq)
+            out.append(out_class)
         return out
 
 
@@ -431,7 +453,8 @@ supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):
     """
-    Computes the liquefaction occurrence and liquefaction probability.
+    Computes the liquefaction probability from PGV and transforms it
+    to binary output via the predefined probability threshold.
     """
     outputs = ["LiqOccur", "LiqProb"]
 
