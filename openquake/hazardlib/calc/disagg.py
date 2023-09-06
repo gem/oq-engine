@@ -467,7 +467,7 @@ class Disaggregator(object):
         :param rlzs:
             an array of realization indices
         :param rwdic:
-            if non-empty, compute the mean by using it
+            a dictionary rlz_id->weight; if non-empty, used compute the mean
         :param src_mutex:
             flag used to set the self.src_mutex array of slices
         :yields:
