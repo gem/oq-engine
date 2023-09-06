@@ -148,7 +148,7 @@ def zhu_etal_2015_general(
     return prob_liq, out_class
 
 
-def zhu_etal_2017_liquefaction_probability_coastal(
+def zhu_etal_2017_coastal(
     pgv: Union[float, np.ndarray],
     vs30: Union[float, np.ndarray],
     dr: Union[float, np.ndarray],
@@ -169,6 +169,8 @@ def zhu_etal_2017_liquefaction_probability_coastal(
     where the liquefaction occurrences are, on average, within 20 km of the 
     coast; or, for earthquakes with insignificant or no liquefaction, 
     epicentral distances less than 50 km.
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.4 (see p.13 from the Reference).
 
     Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017). 
     An updated geospatial liquefaction model for global application. 
@@ -188,7 +190,9 @@ def zhu_etal_2017_liquefaction_probability_coastal(
         Mean annual precipitation, measured in mm
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
     Xg = (pgv_coeff * np.log(pgv) + vs30_coeff * np.log(vs30) 
           + precip_coeff * precip + dc_coeff * np.sqrt(dc) 
@@ -199,10 +203,11 @@ def zhu_etal_2017_liquefaction_probability_coastal(
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s.
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
-    return prob_liq
+    out_class = np.where(prob_liq > 0.4, 1, 0)
+    return prob_liq, out_class
 
 
-def zhu_etal_2017_liquefaction_probability_general(
+def zhu_etal_2017_general(
     pgv: Union[float, np.ndarray],
     vs30: Union[float, np.ndarray],
     dw: Union[float, np.ndarray],
@@ -223,6 +228,8 @@ def zhu_etal_2017_liquefaction_probability_general(
     authors for global implementation. Noncoastal events are defined as those
     for which the average distance to the nearest coast of the liquefaction 
     features is greater than 20 km.
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.4 (see p.13 from the Reference).
 
     Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017). 
     An updated geospatial liquefaction model for global application. 
@@ -242,7 +249,9 @@ def zhu_etal_2017_liquefaction_probability_general(
         Mean annual precipitation, measured in mm
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
     Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
           + vs30_coeff * np.log(vs30) + precip_coeff * precip 
@@ -253,10 +262,11 @@ def zhu_etal_2017_liquefaction_probability_general(
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s.
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
-    return prob_liq
+    out_class = np.where(prob_liq > 0.4, 1, 0)
+    return prob_liq, out_class
 
 
-def rashidian_baise_2020_liquefaction_probability(
+def rashidian_baise_2020(
     pga: Union[float, np.ndarray],
     pgv: Union[float, np.ndarray],
     vs30: Union[float, np.ndarray],
@@ -278,6 +288,8 @@ def rashidian_baise_2020_liquefaction_probability(
     by Rashidian and Baise (2020) to decrease over-prediction in large areas 
     experiencing low PGA (below 0.1 g) with the addition of a PGA threshold 
     (no liquefaction when PGA < 0.1 g).
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.4 (see p.13 from Zhu et al., 2017).
 
     Reference: Rashidian, V., & Baise, L. G. (2020). 
     Regional efficacy of a global geospatial liquefaction model. 
@@ -297,22 +309,27 @@ def rashidian_baise_2020_liquefaction_probability(
         Mean annual precipitation, measured in mm
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
-    prob_liq = zhu_etal_2017_liquefaction_probability_general(pgv, vs30, dw, wtd, 
-                 precip, intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
-                 pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, dw_coeff=dw_coeff, 
-                 wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
+        
+    Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
+          + vs30_coeff * np.log(vs30) + precip_coeff * precip 
+          + dw_coeff * dw + wtd_coeff * wtd + intercept)
+    prob_liq = sigmoid(Xg)
 
     # Zhu et al. 2017 heuristically assign zero to the predicted probability 
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s. Additionally, Rashidian and Baise (2020)
     # assign zero to the probability when PGA < 0.1 g.
+    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
-    return prob_liq
+    out_class = np.where(prob_liq > 0.4, 1, 0)
+    return prob_liq, out_class
 
 
-def allstadt_etal_2022_liquefaction_probability(
+def allstadt_etal_2022(
     pga: Union[float, np.ndarray],
     pgv: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
@@ -340,6 +357,8 @@ def allstadt_etal_2022_liquefaction_probability(
     in the training data, as described in Allstadt et al. (2022). Finally, an
     ad-hoc magnitude scaling factor is applied to the PGV values to reduce
     overprediction of liquefaction probabilities for lower magnitude events.
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.4 (see p.13 from Zhu et al., 2017).
 
     Reference: Allstadt, K. E., Thompson, E. M., Jibson, R. W., Wald, D. J., 
     Hearne, M., Hunter, E. J., Fee, J., Schovanec, H., Slosky, D., 
@@ -360,19 +379,29 @@ def allstadt_etal_2022_liquefaction_probability(
         Mean annual precipitation, measured in mm
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
     pgv = np.where(pgv > 150, 150, pgv)
     precip = np.where(precip > 2500, 2500, precip)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
-    prob_liq = rashidian_baise_2020_liquefaction_probability(pga, pgv, vs30, dw, wtd, precip, 
-                 intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
-                 pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, 
-                 dw_coeff=dw_coeff, wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
-    return prob_liq
+    Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
+          + vs30_coeff * np.log(vs30) + precip_coeff * precip 
+          + dw_coeff * dw + wtd_coeff * wtd + intercept)
+    prob_liq = sigmoid(Xg)
+
+    # prob_liq = rashidian_baise_2020_liquefaction_probability(pga, pgv, vs30, dw, wtd, precip, 
+    #              intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
+    #              pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, 
+    #              dw_coeff=dw_coeff, wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
+    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
+    prob_liq = np.where(pga < 0.1, 0, prob_liq)
+    out_class = np.where(prob_liq > 0.4, 1, 0)
+    return prob_liq, out_class
 
 
-def akhlagi_etal_2021_liquefaction_probability_model_a(
+def akhlagi_etal_2021_model_a(
     pgv: Union[float, np.ndarray],
     tri: Union[float, np.ndarray],
     dc: Union[float, np.ndarray],
@@ -388,6 +417,8 @@ def akhlagi_etal_2021_liquefaction_probability_model_a(
     """
     Calculates the probability of a site undergoing liquefaction using the
     logistic regression of the Akhlagi et al., 2021 model A.
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.4 (see p.13 from Zhu et al., 2017).
 
     Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A., 
     & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction 
@@ -410,16 +441,18 @@ def akhlagi_etal_2021_liquefaction_probability_model_a(
         Elevation above the nearest water body, measured in m
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
     Xg = (pgv_coeff * np.log(pgv)  + tri_coeff * np.sqrt(tri)
           + dc_coeff * np.log(dc + 1) + dr_coeff * np.log(dr + 1) 
           + zwb_coeff * np.sqrt(zwb) + intercept)
     prob_liq = sigmoid(Xg)
-    return prob_liq
+    out_class = np.where(prob_liq > 0.4, 1, 0)
+    return prob_liq, out_class
 
-
-def akhlagi_etal_2021_liquefaction_probability_model_b(
+def akhlagi_etal_2021_model_b(
     pgv: Union[float, np.ndarray],
     vs30: Union[float, np.ndarray],
     dc: Union[float, np.ndarray],
@@ -435,6 +468,8 @@ def akhlagi_etal_2021_liquefaction_probability_model_b(
     """
     Calculates the probability of a site undergoing liquefaction using the
     logistic regression of the Akhlagi et al., 2021 model B.
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.4 (see p.13 from Zhu et al., 2017).
 
     Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A., 
     & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction 
@@ -458,16 +493,19 @@ def akhlagi_etal_2021_liquefaction_probability_model_b(
         Elevation above the nearest water body, measured in m
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
     Xg = (pgv_coeff * np.log(pgv)  + vs30_coeff * np.log(vs30) 
           + dc_coeff * np.log(dc + 1) + dr_coeff * np.log(dr + 1) 
           + zwb_coeff * np.sqrt(zwb) + intercept)
     prob_liq = sigmoid(Xg)
-    return prob_liq
+    out_class = np.where(prob_liq > 0.4, 1, 0)
+    return prob_liq, out_class
 
 
-def bozzoni_etal_2021_liquefaction_probability_europe(
+def bozzoni_etal_2021_europe(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
     cti: Union[float, np.ndarray],
@@ -481,6 +519,8 @@ def bozzoni_etal_2021_liquefaction_probability_europe(
     Calculates the probability of a site undergoing liquefaction using the
     logistic regression of Bozzoni et al., 2021. Optimal regression
     coefficients are associated with ADASYN sampling algorithm (AUC = 0.95).
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.57 (see Table 4 from the Reference).
 
     Reference: Bozzoni, F., Bonì, R., Conca, D., Lai, C. G., Zuccolo, E., & Meisina, C. (2021).
     Megazonation of earthquake-induced soil liquefaction hazard in continental Europe.
@@ -498,7 +538,9 @@ def bozzoni_etal_2021_liquefaction_probability_europe(
         site.
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (
@@ -508,7 +550,8 @@ def bozzoni_etal_2021_liquefaction_probability_europe(
         + intercept
     )
     prob_liq = sigmoid(Xg)
-    return prob_liq
+    out_class = np.where(prob_liq > 0.57, 1, 0)
+    return prob_liq, out_class
 
 
 def todorovic_silva_2022_nonparametric_general(
