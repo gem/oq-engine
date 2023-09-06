@@ -26,7 +26,7 @@ from openquake.sep.landslide.newmark import (
 )
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
-    zhu_etal_2015_liquefaction_probability_general,
+    zhu_etal_2015_general,
     zhu_etal_2017_liquefaction_probability_coastal,
     zhu_etal_2017_liquefaction_probability_general,
     rashidian_baise_2020_liquefaction_probability,
@@ -185,7 +185,7 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
     """
     Computes the liquefaction probability from PGA
     """
-    outputs = ["LiqProb"]
+    outputs = ["LiqProb","LiqOccur"]
 
     def __init__(self, intercept=24.1, pgam_coeff=2.067, cti_coeff=0.355, vs30_coeff=-4.784):
         self.intercept = intercept
@@ -200,8 +200,10 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGA':
-                out.append(zhu_etal_2015_liquefaction_probability_general(
-                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30))
+                prob_liq, out_class = zhu_etal_2015_general(
+                    pga=gmf, mag=mag, cti=sites.cti, vs30=sites.vs30)
+            out.append(prob_liq)
+            out.append(out_class)
         return out
     
 
