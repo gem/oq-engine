@@ -462,6 +462,14 @@ class Disaggregator(object):
     def disagg_by_magi(self, imldic, rlzs, rwdic, src_mutex,
                        mon0, mon1, mon2, mon3):
         """
+        :param imldic:
+            a dictionary IMT->IML
+        :param rlzs:
+            an array of realization indices
+        :param rwdic:
+            if non-empty, compute the mean by using it
+        :param src_mutex:
+            flag used to set the self.src_mutex array of slices
         :yields:
             a dictionary with keys trti, magi, sid, rlzi, mean for each magi
         """
