@@ -1517,9 +1517,24 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, years, losses, rlzi=0):
-        return losses_by_period(
+    def build_curves(self, years, losses, rlzi=0):
+        curve_ep = losses_by_period(
             losses, self.return_periods, self.num_events[rlzi], self.eff_time)
+        dframe = pandas.DataFrame(dict(year=years, loss=losses))
+        OEP = []
+        AEP = []
+        for year, df in dframe.groupby('year'):
+            oep = df.loss.max()
+            aep = df.loss.sum()
+            OEP.append(oep)
+            AEP.append(aep)
+        curve_oep = losses_by_period(
+            OEP, self.return_periods, self.num_events[rlzi], self.eff_time)
+        curve_aep = losses_by_period(
+            AEP, self.return_periods, self.num_events[rlzi], self.eff_time)
+        return {'curve_ep': curve_ep,
+                'curve_oep': curve_oep,
+                'curve_aep': curve_aep}
 
 
 def _agg(loss_dfs, weights=None):

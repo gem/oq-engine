@@ -206,15 +206,23 @@ def build_aggcurves(items, builder):
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
         year = data.pop('year')
-        curve = {kind: builder.build_curve(year, data[kind], rlz_id)
-                 for kind in data}
+        curve_ep = {
+            kind: builder.build_curves(year, data[kind], rlz_id)['curve_ep']
+            for kind in data}
+        curve_oep = {
+            kind: builder.build_curves(year, data[kind], rlz_id)['curve_oep']
+            for kind in data}
+        curve_aep = {
+            kind: builder.build_curves(year, data[kind], rlz_id)['curve_aep']
+            for kind in data}
+        # FIXME: handle all curves
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
             dic['rlz_id'].append(rlz_id)
             dic['loss_id'].append(loss_id)
             dic['return_period'].append(period)
             for kind in data:
-                dic[kind].append(curve[kind][p])
+                dic[kind].append(curve_ep[kind][p])
     return dic
 
 
@@ -324,7 +332,7 @@ def build_reinsurance(dstore, num_events):
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
         if oq.investigation_time:
-            curve = {col: builder.build_curve(df[col].to_numpy(), rlzid)
+            curve = {col: builder.build_curves(df[col].to_numpy(), rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
