@@ -355,13 +355,9 @@ def split_by_magbin(ctxt, mag_edges):
 
 class Disaggregator(object):
     """
-    A class to perform single-site disaggregation. Has an attribute
-    .fullctx containing the full context with all magnitudes. The
-    method .init(magnitude_bin_index, src_mutex) sets a .ctx attribute
-    containing only the magnitudes in the magnitude bin. Then the method
-    ._disagg6D can be called in standard disaggregation. When computing
-    mean_disagg_by_src you should call .disagg_mag_dist_eps which will
-    call .init internally.
+    A class to perform single-site disaggregation with methods
+    .disagg_by_magi (called in standard disaggregation) and
+    .disagg_mag_dist_eps (called in disaggregation by relevant source).
     """
     def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
         if isinstance(site, Site):
@@ -462,6 +458,31 @@ class Disaggregator(object):
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
+
+    def disagg_by_magi(self, imldic, rlzs, rwdic, src_mutex,
+                       mon0, mon1, mon2, mon3):
+        """
+        :yields:
+            a dictionary with keys trti, magi, sid, rlzi, mean for each magi
+        """
+        for magi in range(self.Ma):
+            try:
+                self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+            except FarAwayRupture:
+                continue
+            res = {'trti': self.cmaker.trti, 'magi': self.magi, 'sid': self.sid}
+            for z, rlz in enumerate(rlzs):
+                try:
+                    g = self.g_by_rlz[rlz]
+                except KeyError:  # non-contributing rlz
+                    continue
+                res[rlz] = rates6D = self._disagg6D(imldic, g)
+                if rwdic:  # compute mean rates and store them in the 0 key
+                    if 'mean' not in res:
+                        res['mean'] = rates6D * rwdic[rlz]
+                    else:
+                        res['mean'] += rates6D * rwdic[rlz]
+            yield res
 
     def disagg_mag_dist_eps(self, imldic, rlz_weights, src_mutex={}):
         """
