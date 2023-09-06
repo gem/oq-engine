@@ -654,6 +654,9 @@ def export_events(ekey, dstore):
 
 @export.add(('event_based_mfd', 'csv'))
 def export_event_based_mfd(ekey, dstore):
+    if dstore['oqparam'].investigation_time is None:
+        # there is no MFD in scenario calculation
+        return []
     aw = extract(dstore, 'event_based_mfd?')
     path = dstore.export_path('event_based_mfd.csv')
     magfreq = numpy.zeros(len(aw.mag), [('mag', float), ('freq', float)])
