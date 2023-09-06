@@ -42,8 +42,7 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates, to_probs)
 
@@ -91,7 +90,7 @@ def _build_bin_edges(oq, sitecol):
     maxdist = filters.upper_maxdist(oq.maximum_distance)
     truncation_level = oq.truncation_level
     mags_by_trt = oq.mags_by_trt
-    
+
     # build mag_edges
     if 'mag' in oq.disagg_bin_edges:
         mag_edges = oq.disagg_bin_edges['mag']
@@ -310,7 +309,7 @@ def uniform_bins(min_value, max_value, bin_width):
     array([ 0. ,  1.1,  2.2,  3.3,  4.4,  5.5,  6.6,  7.7,  8.8,  9.9, 11. ])
     """
     return bin_width * numpy.arange(
-        int(numpy.floor(min_value/ bin_width)),
+        int(numpy.floor(min_value / bin_width)),
         int(numpy.ceil(max_value / bin_width) + 1))
 
 
@@ -356,7 +355,9 @@ def split_by_magbin(ctxt, mag_edges):
 
 class Disaggregator(object):
     """
-    A class to perform single-site disaggregation.
+    A class to perform single-site disaggregation with methods
+    .disagg_by_magi (called in standard disaggregation) and
+    .disagg_mag_dist_eps (called in disaggregation by relevant source).
     """
     def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
         if isinstance(site, Site):
@@ -373,11 +374,11 @@ class Disaggregator(object):
             cmaker.imts = [from_string(imt) for imt in imts]
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
-        self.bin_edges = (bin_edges[0], # mag
-                          bin_edges[1], # dist,
-                          bin_edges[2][sid], # lon
-                          bin_edges[3][sid], # lat
-                          bin_edges[4]) # eps
+        self.bin_edges = (bin_edges[0],  # mag
+                          bin_edges[1],  # dist,
+                          bin_edges[2][sid],  # lon
+                          bin_edges[3][sid],  # lat
+                          bin_edges[4])  # eps
         for i, name in enumerate(['Ma', 'D', 'Lo', 'La', 'E']):
             setattr(self, name, len(self.bin_edges[i]) - 1)
 
@@ -386,10 +387,11 @@ class Disaggregator(object):
             for rlz in rlzs:
                 self.g_by_rlz[rlz] = g
 
-        if isinstance(srcs_or_ctxs[0], numpy.ndarray):  # passed contexts
+        if isinstance(srcs_or_ctxs[0], numpy.ndarray):
+            # passed contexts, see logictree_test/case_05
             # consider only the contexts affecting the site
             ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
-        else:  # passed sources
+        else:  # passed sources, used only in test_disaggregator
             ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
         if sum(len(c) for c in ctxs) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
@@ -430,12 +432,8 @@ class Disaggregator(object):
                                               self.src_mutex['weight'])
                             if s in src_ids]
 
-    def disagg6D(self, imldic, g):
-        """
-        Disaggregate a single realization.
-
-        :returns: a 6D matrix of shape (D, Lo, La, E, M, P)
-        """
+    def _disagg6D(self, imldic, g):
+        # returns a 6D matrix of shape (D, Lo, La, E, M, P)
         # compute the logarithmic intensities
         imts = list(imldic)
         iml2 = numpy.array(list(imldic.values()))  # shape (M, P)
@@ -461,14 +459,48 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
+    def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
+                       mon0, mon1, mon2, mon3):
+        """
+        :param imtls:
+            a dictionary imt->imls
+        :param rlzs:
+            an array of realization indices
+        :param rwdic:
+            a dictionary rlz_id->weight; if non-empty, used compute the mean
+        :param src_mutex:
+            dictionary used to set the self.src_mutex slices
+        :yields:
+            a dictionary with keys trti, magi, sid, rlzi, mean for each magi
+        """
+        for magi in range(self.Ma):
+            try:
+                self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
+            except FarAwayRupture:
+                continue
+            res = {'trti': self.cmaker.trti, 'magi': self.magi, 'sid': self.sid}
+            for rlz in rlzs:
+                try:
+                    g = self.g_by_rlz[rlz]
+                except KeyError:  # non-contributing rlz
+                    continue
+                res[rlz] = rates6D = self._disagg6D(imtls, g)
+                if rwdic:  # compute mean rates
+                    if 'mean' not in res:
+                        res['mean'] = rates6D * rwdic[rlz]
+                    else:
+                        res['mean'] += rates6D * rwdic[rlz]
+            yield res
+
     def disagg_mag_dist_eps(self, imldic, rlz_weights, src_mutex={}):
         """
         :param imldic: a dictionary imt->iml
         :param src_mutex: a dictionary src_id -> weight, default empty
+        :param rlz_weights: an array with the realization weights
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
         """
         M = len(imldic)
-        imldic = {imt: [iml] for imt, iml in imldic.items()}
+        imtls = {imt: [iml] for imt, iml in imldic.items()}
         out = numpy.zeros((self.Ma, self.D, self.E, M))
         for magi in range(self.Ma):
             try:
@@ -476,7 +508,8 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat5 = self.disagg6D(imldic, g)[..., 0]  # P = 0
+                mat5 = self._disagg6D(imtls, g)[..., 0]  # p = 0
+                # summing on lon, lat and producing a (D, E, M) array
                 out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 
@@ -607,8 +640,8 @@ def disaggregation(
             try:
                 dis.init(magi, src_mutex={})  # src_mutex not implemented yet
             except FarAwayRupture:
-                continue                
-            mat4 = dis.disagg6D({imt: [iml]}, 0)[..., 0, 0]
+                continue
+            mat4 = dis._disagg6D({imt: [iml]}, 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
 
@@ -621,13 +654,13 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     Compute disaggregation for the given source.
 
     :param groups: groups containing a single source ID
-    :param sitecol: a SiteCollection
+    :param sitecol: a SiteCollection with a single site
     :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
     :param imldic: dictionary imt->iml
     :param monitor: a Monitor instance
-    :returns: source_id, rates(Ma, D, E, M, P), rates(M, L1)
+    :returns: source_id, rates(Ma, D, E, M), rates(M, L1)
     """
     assert len(sitecol) == 1, sitecol
     if not hasattr(reduced_lt, 'trt_rlzs'):
@@ -637,11 +670,11 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
-                 for rlzs in cm.gsims.values()]
+                for rlzs in cm.gsims.values()]
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
         rates4D += dis.disagg_mag_dist_eps(imldic, ws)
     gws = reduced_lt.g_weights(trt_rlzs)
-    rates2D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))[0]
-    return source_id, rates4D, rates2D
+    rates3D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))  # (N, M, L1)
+    return source_id, rates4D, rates3D[0]  # (M, L1) rates for the site
