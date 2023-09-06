@@ -459,11 +459,11 @@ class Disaggregator(object):
             mats.append(mat)
         return numpy.average(mats, weights=self.weights, axis=0)
 
-    def disagg_by_magi(self, imldic, rlzs, rwdic, src_mutex,
+    def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
                        mon0, mon1, mon2, mon3):
         """
-        :param imldic:
-            a dictionary IMT->IML
+        :param imtls:
+            a dictionary imt->imls
         :param rlzs:
             an array of realization indices
         :param rwdic:
@@ -484,8 +484,8 @@ class Disaggregator(object):
                     g = self.g_by_rlz[rlz]
                 except KeyError:  # non-contributing rlz
                     continue
-                res[rlz] = rates6D = self._disagg6D(imldic, g)
-                if rwdic:  # compute mean rates and store them in the 0 key
+                res[rlz] = rates6D = self._disagg6D(imtls, g)
+                if rwdic:  # compute mean rates
                     if 'mean' not in res:
                         res['mean'] = rates6D * rwdic[rlz]
                     else:
@@ -500,7 +500,7 @@ class Disaggregator(object):
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
         """
         M = len(imldic)
-        imldic = {imt: [iml] for imt, iml in imldic.items()}
+        imtls = {imt: [iml] for imt, iml in imldic.items()}
         out = numpy.zeros((self.Ma, self.D, self.E, M))
         for magi in range(self.Ma):
             try:
@@ -508,7 +508,7 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat5 = self._disagg6D(imldic, g)[..., 0]  # P = 0
+                mat5 = self._disagg6D(imtls, g)[..., 0]  # P = 0
                 out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 

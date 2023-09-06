@@ -84,9 +84,9 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
             if iml2.sum() == 0:  # zero hard for this site
                 continue
 
-            imldic = {imt: iml2[m] for m, imt in enumerate(cmaker.imts)}
+            imtls = {imt: iml2[m] for m, imt in enumerate(cmaker.imts)}
             rlzs = dstore['best_rlzs'][dis.sid]
-        res = dis.disagg_by_magi(imldic, rlzs, rwdic, src_mutex,
+        res = dis.disagg_by_magi(imtls, rlzs, rwdic, src_mutex,
                                  mon0, mon1, mon2, mon3)
         out.extend(res)
     return out
