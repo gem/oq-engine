@@ -488,6 +488,7 @@ class Disaggregator(object):
         """
         :param imldic: a dictionary imt->iml
         :param src_mutex: a dictionary src_id -> weight, default empty
+        :param rlz_weights: an array with the realization weights
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
         """
         M = len(imldic)
