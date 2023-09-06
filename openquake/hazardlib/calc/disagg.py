@@ -469,7 +469,7 @@ class Disaggregator(object):
         :param rwdic:
             a dictionary rlz_id->weight; if non-empty, used compute the mean
         :param src_mutex:
-            flag used to set the self.src_mutex array of slices
+            dictionary used to set the self.src_mutex slices
         :yields:
             a dictionary with keys trti, magi, sid, rlzi, mean for each magi
         """
