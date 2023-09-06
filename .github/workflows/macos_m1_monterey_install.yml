@@ -7,7 +7,7 @@ name: MacOS Monterey M1
         default: master
         required: true
   schedule:
-    - cron: "15 12 * * *"
+    - cron: "35 01 * * *"
 
 jobs:
 
