@@ -998,7 +998,7 @@ def get_station_data(oqparam, sitecol):
         cols.append(im + '_VALUE')
         cols.append(im + '_' + stddev_str)
     for im_value_col in [im + '_VALUE' for im in imts]:
-        if df[im_value_col].any() == 0:
+        if (df[im_value_col] == 0).any():
             raise InvalidFile(
                 f'Please remove station data with zero intensity value from'
                 f' {oqparam.inputs["station_data"]}:\n'
