@@ -97,7 +97,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
                     g = dis.g_by_rlz[rlz]
                 except KeyError:  # non-contributing rlz
                     continue
-                res[rlz] = rates6D = dis.disagg6D(imldic, g)
+                res[rlz] = rates6D = dis._disagg6D(imldic, g)
                 if rwdic:  # compute mean rates and store them in the 0 key
                     if 'mean' not in res:
                         res['mean'] = rates6D * rwdic[rlz]

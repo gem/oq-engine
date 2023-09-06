@@ -355,7 +355,13 @@ def split_by_magbin(ctxt, mag_edges):
 
 class Disaggregator(object):
     """
-    A class to perform single-site disaggregation.
+    A class to perform single-site disaggregation. Has an attribute
+    .fullctx containing the full context with all magnitudes. The
+    method .init(magnitude_bin_index, src_mutex) sets a .ctx attribute
+    containing only the magnitudes in the magnitude bin. Then the method
+    ._disagg6D can be called in standard disaggregation. When computing
+    mean_disagg_by_src you should call .disagg_mag_dist_eps which will
+    call .init internally.
     """
     def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
         if isinstance(site, Site):
@@ -385,10 +391,11 @@ class Disaggregator(object):
             for rlz in rlzs:
                 self.g_by_rlz[rlz] = g
 
-        if isinstance(srcs_or_ctxs[0], numpy.ndarray):  # passed contexts
+        if isinstance(srcs_or_ctxs[0], numpy.ndarray):
+            # passed contexts, see logictree_test/case_05
             # consider only the contexts affecting the site
             ctxs = [ctx[ctx.sids == sid] for ctx in srcs_or_ctxs]
-        else:  # passed sources
+        else:  # passed sources, used only in test_disaggregator
             ctxs = cmaker.from_srcs(srcs_or_ctxs, self.sitecol)
         if sum(len(c) for c in ctxs) == 0:
             raise FarAwayRupture('No ruptures affecting site #%d' % sid)
@@ -429,12 +436,8 @@ class Disaggregator(object):
                                               self.src_mutex['weight'])
                             if s in src_ids]
 
-    def disagg6D(self, imldic, g):
-        """
-        Disaggregate a single realization.
-
-        :returns: a 6D matrix of shape (D, Lo, La, E, M, P)
-        """
+    def _disagg6D(self, imldic, g):
+        # returns a 6D matrix of shape (D, Lo, La, E, M, P)
         # compute the logarithmic intensities
         imts = list(imldic)
         iml2 = numpy.array(list(imldic.values()))  # shape (M, P)
@@ -475,7 +478,7 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat5 = self.disagg6D(imldic, g)[..., 0]  # P = 0
+                mat5 = self._disagg6D(imldic, g)[..., 0]  # P = 0
                 out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 
@@ -607,7 +610,7 @@ def disaggregation(
                 dis.init(magi, src_mutex={})  # src_mutex not implemented yet
             except FarAwayRupture:
                 continue
-            mat4 = dis.disagg6D({imt: [iml]}, 0)[..., 0, 0]
+            mat4 = dis._disagg6D({imt: [iml]}, 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
 
