@@ -205,7 +205,8 @@ def build_aggcurves(items, builder):
     """
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
-        curve = {kind: builder.build_curve(data[kind], rlz_id)
+        year = data.pop('year')
+        curve = {kind: builder.build_curve(year, data[kind], rlz_id)
                  for kind in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
@@ -230,12 +231,14 @@ def build_store_agg(dstore, rbe_df, num_events):
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
-    rlz_id = dstore['events']['rlz_id']
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
+    year = events['year']
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    del rbe_df['event_id']
+    #del rbe_df['event_id']
     aggrisk = general.AccumDict(accum=[])
     columns = [col for col in rbe_df.columns if col not in {
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
@@ -276,6 +279,7 @@ def build_store_agg(dstore, rbe_df, num_events):
             gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
             for (rlz_id, loss_id), df in gb:
                 data = {kind: df[kind].to_numpy() for kind in loss_kinds}
+                data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
             build_aggcurves, (items, builder),
