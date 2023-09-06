@@ -213,7 +213,7 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     Computes the liquefaction probability from PGV and transforms it
     to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb","LiqOccur"]
+    outputs = ["LiqProb","LiqOccur","LSE"]
 
     def __init__(self, intercept=12.435, pgv_coeff=0.301, vs30_coeff=-2.615, 
                  dr_coeff=0.0666, dc_coeff=-0.0287, dcdr_coeff = -0.0369, 
@@ -233,11 +233,12 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                prob_liq, out_class = zhu_etal_2017_coastal(
+                prob_liq, out_class, lse = zhu_etal_2017_coastal(
                     pgv=gmf, vs30=sites.vs30, dr=sites.dr, 
                     dc=sites.dc, precip=sites.precip)
             out.append(prob_liq)
             out.append(out_class)
+            out.append(lse)
         return out
 
 
@@ -246,7 +247,7 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
     Computes the liquefaction probability from PGV and transforms it
     to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb","LiqOccur"]
+    outputs = ["LiqProb","LiqOccur","LSE"]
 
     def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
                  dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
@@ -265,11 +266,12 @@ class ZhuEtAl2017LiquefactionGeneral(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                prob_liq, out_class = zhu_etal_2017_general(
+                prob_liq, out_class, lse = zhu_etal_2017_general(
                     pgv=gmf, vs30=sites.vs30, dw=sites.dw, 
                     wtd=sites.gwd, precip=sites.precip)
             out.append(prob_liq)
             out.append(out_class)
+            out.append(lse)
         return out
 
 
