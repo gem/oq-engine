@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * An error is raised if any station data has zero intensity value
+
   [Christopher Brooks]
   * Implemented the Atkinson (2015) GMPE with the alt. eff. depth model
   
