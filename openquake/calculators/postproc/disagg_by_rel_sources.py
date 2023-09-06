@@ -104,8 +104,8 @@ def main(dstore, csm, imts, imls):
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, imt=imts, iml=imls,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
-    dstore['mean_disagg_by_src'] = aw = hdf5.ArrayWrapper(arr, dic)
-    return aw
+    dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
+
 
 if __name__ == '__main__':
     sap.run(main)
