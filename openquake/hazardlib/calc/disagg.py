@@ -508,7 +508,7 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             for rlz, g in self.g_by_rlz.items():
-                mat5 = self._disagg6D(imtls, g)[..., 0]  # P = 0
+                mat5 = self._disagg6D(imtls, g)[..., 0]  # p = 0
                 out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz]
         return out
 
