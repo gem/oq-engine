@@ -153,36 +153,46 @@ class test_liquefaction_cali_small(unittest.TestCase):
         np.testing.assert_array_almost_equal(self.sites["bozzoni_liq_class"], clq)
 
     def test_zhu17_coastal(self):
-        prob_liq, out_class = zhu_etal_2017_coastal(
+        prob_liq, out_class, LSE = zhu_etal_2017_coastal(
             pgv=self.pgv, vs30=self.sites["vs30"], dr=self.sites["dr"], dc=self.sites["dc"], 
             precip=self.sites["precip"])
 
         self.sites["zhu17_coastal_liq_prob"] = prob_liq
         self.sites["zhu17_coastal_liq_class"] = out_class
+        self.sites["zhu17_coastal_liq_se"] = LSE
 
         zlp = np.array([0.147724296, 0.059958674, 0.206449471, 0.142744967, 0.218298201,
                         0.342584912, 0.217105303, 0.088124828, 0.234620795, 0.13528652])
         
         clq = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
+        lse = np.array([0.266467348, 0.039739528, 0.880926509, 0.239906371, 1.107989336,
+                        8.333205144, 1.082937311, 0.073922458, 1.50712136, 0.204819111])
+
         np.testing.assert_array_almost_equal(self.sites["zhu17_coastal_liq_prob"], zlp)
         np.testing.assert_array_almost_equal(self.sites["zhu17_coastal_liq_class"], clq)    
+        np.testing.assert_array_almost_equal(self.sites["zhu17_coastal_liq_se"], lse)  
 
     def test_zhu17_general(self):
-        prob_liq, out_class = zhu_etal_2017_general(
+        prob_liq, out_class, LSE = zhu_etal_2017_general(
             pgv=self.pgv, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
             precip=self.sites["precip"])
 
         self.sites["zhu17_general_liq_prob"] = prob_liq
         self.sites["zhu17_general_liq_class"] = out_class
+        self.sites["zhu17_general_liq_se"] = LSE
 
         zlp = np.array([0.238647776, 0.134912013, 0.325250532, 0.253336248, 0.34605218,
                         0.458236498, 0.334831618, 0.1798869, 0.359086043, 0.252791617])
         
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
 
+        lse = np.array([1.482171022, 0.277301525, 4.948255956, 1.846543588, 6.368079142,
+                        18.36402489, 5.569162964, 0.586570244, 7.395635138,	1.831734979])
+
         np.testing.assert_array_almost_equal(self.sites["zhu17_general_liq_prob"], zlp)
         np.testing.assert_array_almost_equal(self.sites["zhu17_general_liq_class"], clq)
+        np.testing.assert_array_almost_equal(self.sites["zhu17_general_liq_se"], lse)
 
     def test_rashidian_baise_2020(self):
         prob_liq, out_class = rashidian_baise_2020(
@@ -232,7 +242,6 @@ class test_liquefaction_cali_small(unittest.TestCase):
         np.testing.assert_array_almost_equal(self.sites["akhlagi21_prob_a"], zlp)
         np.testing.assert_array_almost_equal(self.sites["akhlagi21_class_a"], clq)
         
-
     def test_akhlagi_2021_b(self):
         prob_liq, out_class = akhlagi_etal_2021_model_b(
             pgv=self.pgv, vs30=self.sites["vs30"], dc=self.sites["dc"], dr=self.sites["dr"], 
