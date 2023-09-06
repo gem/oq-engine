@@ -471,7 +471,7 @@ class Disaggregator(object):
             except FarAwayRupture:
                 continue
             res = {'trti': self.cmaker.trti, 'magi': self.magi, 'sid': self.sid}
-            for z, rlz in enumerate(rlzs):
+            for rlz in rlzs:
                 try:
                     g = self.g_by_rlz[rlz]
                 except KeyError:  # non-contributing rlz
