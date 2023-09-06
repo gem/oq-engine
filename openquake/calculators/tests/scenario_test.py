@@ -274,7 +274,7 @@ class ScenarioTestCase(CalculatorTestCase):
             self.run_calc(case_23.__file__, 'job.ini')
 
     @unittest.skipIf(
-        sys.platform == 'darwin' and platform.processor == 'arm',
+        sys.platform == 'darwin' and platform.processor() == 'arm',
         reason='Skipped on MacOS M1 (it would need delta=1E-4)')
     def test_case_24(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
@@ -283,7 +283,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/avg_gmf.csv', f)
 
     @unittest.skipIf(
-        sys.platform == 'darwin' and platform.processor == 'arm',
+        sys.platform == 'darwin' and platform.processor() == 'arm',
         reason='Skipped on MacOS M1 (it would need delta=1E-5)')
     def test_case_26(self):
         # conditioned GMFs with extreme_gmv
