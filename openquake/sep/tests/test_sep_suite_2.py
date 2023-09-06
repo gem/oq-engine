@@ -14,7 +14,7 @@ from openquake.sep.landslide.newmark import (
 from openquake.sep.liquefaction import (
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
     hazus_liquefaction_probability,
-    zhu_etal_2015_liquefaction_probability_general,
+    zhu_etal_2015_general,
     zhu_etal_2017_liquefaction_probability_coastal,
     zhu_etal_2017_liquefaction_probability_general,
     rashidian_baise_2020_liquefaction_probability,
@@ -115,15 +115,28 @@ class test_liquefaction_cali_small(unittest.TestCase):
 
 
     def test_zhu_liquefaction_prob(self):
-        self.sites["zhu_liq_prob"] = zhu_etal_2015_liquefaction_probability_general(
+        prob_liq, out_class = zhu_etal_2015_general(
             pga=self.pga, mag=self.mag, cti=self.sites["cti"], 
             vs30=self.sites["vs30"])
+
+        self.sites["zhu_liq_prob"] = prob_liq
 
         zlp = np.array([0.506859, 0.383202, 0.438535, 0.807301,
             0.807863, 0.595353, 0.079580, 0.003111, 0.792592,
             0.603895])
 
         np.testing.assert_array_almost_equal(self.sites["zhu_liq_prob"], zlp)
+
+    def test_zhu_liquefaction_class(self):
+        prob_liq, out_class = zhu_etal_2015_general(
+            pga=self.pga, mag=self.mag, cti=self.sites["cti"], 
+            vs30=self.sites["vs30"])
+
+        self.sites["zhu_liq_class"] = out_class
+
+        zlp = np.array([1, 1, 1, 1, 1, 1, 0, 0, 1, 1])
+
+        np.testing.assert_array_almost_equal(self.sites["zhu_liq_class"], zlp)
 
     def test_bozzoni_liquefaction_prob(self):
         self.sites["bozzoni_liq_prob"] = bozzoni_etal_2021_liquefaction_probability_europe(
