@@ -280,7 +280,7 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
     Computes the liquefaction probability from PGV and PGA and transforms it
     to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb","LiqOccur"]
+    outputs = ["LiqProb","LiqOccur","LSE"]
 
     def __init__(self, intercept=8.801, pgv_scaling_factor=1.0, pgv_coeff=0.334, vs30_coeff=-1.918, 
                  dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
@@ -309,11 +309,12 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
             raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the RashidianBaise2020Liquefaction model")
-        prob_liq, out_class = rashidian_baise_2020(
+        prob_liq, out_class, lse = rashidian_baise_2020(
             pga=pga, pgv=pgv, vs30=sites.vs30, dw=sites.dw, 
             wtd=sites.gwd, precip=sites.precip)
         out.append(prob_liq)
         out.append(out_class)
+        out.append(lse)
         return out
     
 
@@ -322,7 +323,7 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
     Computes the liquefaction probability from PGV and PGA and transforms it
     to binary output via the predefined probability threshold.
     """
-    outputs = ["LiqProb","LiqOccur"]
+    outputs = ["LiqProb","LiqOccur","LSE"]
 
     def __init__(self, intercept=8.801, pgv_coeff=0.334, vs30_coeff=-1.918, 
                  dw_coeff=-0.2054, wtd_coeff=-0.0333, precip_coeff=0.0005408):
@@ -351,11 +352,12 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
         if pga is None or pgv is None:
             raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the AllstadtEtAl2022Liquefaction model")
         
-        prob_liq, out_class = allstadt_etal_2022(
+        prob_liq, out_class, lse = allstadt_etal_2022(
             pga=pga, pgv=pgv, mag=mag, vs30=sites.vs30, dw=sites.dw, 
             wtd=sites.gwd, precip=sites.precip)
         out.append(prob_liq)
         out.append(out_class)
+        out.append(lse)
         return out
     
 
