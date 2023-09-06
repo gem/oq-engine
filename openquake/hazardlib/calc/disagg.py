@@ -42,8 +42,7 @@ from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
 from openquake.hazardlib.tom import get_pnes
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.gsim.base import to_distribution_values
-from openquake.hazardlib.contexts import (
-    ContextMaker, FarAwayRupture, get_cmakers)
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates, to_probs)
 
@@ -91,7 +90,7 @@ def _build_bin_edges(oq, sitecol):
     maxdist = filters.upper_maxdist(oq.maximum_distance)
     truncation_level = oq.truncation_level
     mags_by_trt = oq.mags_by_trt
-    
+
     # build mag_edges
     if 'mag' in oq.disagg_bin_edges:
         mag_edges = oq.disagg_bin_edges['mag']
@@ -310,7 +309,7 @@ def uniform_bins(min_value, max_value, bin_width):
     array([ 0. ,  1.1,  2.2,  3.3,  4.4,  5.5,  6.6,  7.7,  8.8,  9.9, 11. ])
     """
     return bin_width * numpy.arange(
-        int(numpy.floor(min_value/ bin_width)),
+        int(numpy.floor(min_value / bin_width)),
         int(numpy.ceil(max_value / bin_width) + 1))
 
 
@@ -373,11 +372,11 @@ class Disaggregator(object):
             cmaker.imts = [from_string(imt) for imt in imts]
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
-        self.bin_edges = (bin_edges[0], # mag
-                          bin_edges[1], # dist,
-                          bin_edges[2][sid], # lon
-                          bin_edges[3][sid], # lat
-                          bin_edges[4]) # eps
+        self.bin_edges = (bin_edges[0],  # mag
+                          bin_edges[1],  # dist,
+                          bin_edges[2][sid],  # lon
+                          bin_edges[3][sid],  # lat
+                          bin_edges[4])  # eps
         for i, name in enumerate(['Ma', 'D', 'Lo', 'La', 'E']):
             setattr(self, name, len(self.bin_edges[i]) - 1)
 
@@ -607,7 +606,7 @@ def disaggregation(
             try:
                 dis.init(magi, src_mutex={})  # src_mutex not implemented yet
             except FarAwayRupture:
-                continue                
+                continue
             mat4 = dis.disagg6D({imt: [iml]}, 0)[..., 0, 0]
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
@@ -621,13 +620,13 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     Compute disaggregation for the given source.
 
     :param groups: groups containing a single source ID
-    :param sitecol: a SiteCollection
+    :param sitecol: a SiteCollection with a single site
     :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
     :param imldic: dictionary imt->iml
     :param monitor: a Monitor instance
-    :returns: source_id, rates(Ma, D, E, M, P), rates(M, L1)
+    :returns: source_id, rates(Ma, D, E, M), rates(M, L1)
     """
     assert len(sitecol) == 1, sitecol
     if not hasattr(reduced_lt, 'trt_rlzs'):
@@ -637,7 +636,7 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
-                 for rlzs in cm.gsims.values()]
+                for rlzs in cm.gsims.values()]
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
