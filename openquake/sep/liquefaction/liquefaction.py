@@ -105,7 +105,7 @@ def _idriss_magnitude_weighting_factor(mag: float):
     return 1.0 / _idriss_magnitude_scaling_factor(mag)
 
 
-def zhu_etal_2015_liquefaction_probability_general(
+def zhu_etal_2015_general(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
     cti: Union[float, np.ndarray],
@@ -119,6 +119,8 @@ def zhu_etal_2015_liquefaction_probability_general(
     Calculates the probability of a site undergoing liquefaction using the
     logistic regression of Zhu et al., 2015. This particular equation is
     the 'general model' with global applicability.
+    The optimal threshold probability value to convert the predicted probability
+    into binary classification is 0.2 (see Table 6 from the Reference).
 
     Reference: Zhu et al., 2015, 'A Geospatial Liquefaction Model for Rapid
     Response and Loss Estimation', Earthquake Spectra, 31(3), 1813-1837.
@@ -134,13 +136,16 @@ def zhu_etal_2015_liquefaction_probability_general(
         site.
 
     :returns:
-        Probability of liquefaction at the site.
+        prob_liq: Probability of liquefaction at the site.
+        out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
+                   or liquefaction occurrence occurrence.
     """
     pga_scale = pga * _idriss_magnitude_weighting_factor(mag)
     Xg = (pgam_coeff * np.log(pga_scale) + cti_coeff * cti
           + vs30_coeff * np.log(vs30) + intercept)
     prob_liq = sigmoid(Xg)
-    return prob_liq
+    out_class = np.where(prob_liq > 0.2, 1, 0)
+    return prob_liq, out_class
 
 
 def zhu_etal_2017_liquefaction_probability_coastal(
@@ -539,7 +544,8 @@ def todorovic_silva_2022_nonparametric_general(
 
     :returns:
         out_class: ndarray of len(sitemodel)  
-            Returns binary output 0 or 1, i.e., liquefaction occurrence.
+            Returns binary output 0 or 1, i.e., liquefaction nonoccurrence or
+            liquefaction occurrence occurrence.
         out_prob: ndarray of len(sitemodel)
             Returns probability of belonging to class 1.
         
