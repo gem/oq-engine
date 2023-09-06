@@ -266,6 +266,7 @@ def build_store_agg(dstore, rbe_df, num_events):
         'aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
 
     loss_kinds = [col for col in columns if not col.startswith('dmg_')]
+    # can be ['fatalities', 'losses'] in a scenario_damage test
     if oq.investigation_time and loss_kinds:  # build aggcurves
         logging.info('Building aggcurves')
         units = dstore['cost_calculator'].get_units(oq.loss_types)
