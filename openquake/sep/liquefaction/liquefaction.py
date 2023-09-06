@@ -226,7 +226,6 @@ def zhu_etal_2017_coastal(
     LSE = _liquefaction_spatial_extent(42.08, 62.59, 11.43, prob_liq)
     return prob_liq, out_class, LSE
 
-
 def zhu_etal_2017_general(
     pgv: Union[float, np.ndarray],
     vs30: Union[float, np.ndarray],
@@ -315,6 +314,9 @@ def rashidian_baise_2020(
     of 1700 mm is recommended. 
     The optimal threshold probability value to convert the predicted probability
     into binary classification is 0.4 (see p.13 from Zhu et al., 2017).
+    Liquefaction spatial extent (LSE) is calculated as per formulae 3 from the
+    Reference. Model's coefficients corresponds to the ones for Model 2 from 
+    Zhu et al., 2017.
 
     Reference: Rashidian, V., & Baise, L. G. (2020). 
     Regional efficacy of a global geospatial liquefaction model. 
@@ -352,7 +354,8 @@ def rashidian_baise_2020(
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
+    LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
+    return prob_liq, out_class, LSE
 
 
 def allstadt_etal_2022(
@@ -424,7 +427,8 @@ def allstadt_etal_2022(
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
+    LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
+    return prob_liq, out_class, LSE
 
 
 def akhlagi_etal_2021_model_a(
