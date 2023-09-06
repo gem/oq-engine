@@ -86,24 +86,9 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
 
             imldic = {imt: iml2[m] for m, imt in enumerate(cmaker.imts)}
             rlzs = dstore['best_rlzs'][dis.sid]
-        for magi in range(dis.Ma):
-            try:
-                dis.init(magi, src_mutex, mon0, mon1, mon2, mon3)
-            except disagg.FarAwayRupture:
-                continue
-            res = {'trti': cmaker.trti, 'magi': dis.magi, 'sid': dis.sid}
-            for z, rlz in enumerate(rlzs):
-                try:
-                    g = dis.g_by_rlz[rlz]
-                except KeyError:  # non-contributing rlz
-                    continue
-                res[rlz] = rates6D = dis.disagg6D(imldic, g)
-                if rwdic:  # compute mean rates and store them in the 0 key
-                    if 'mean' not in res:
-                        res['mean'] = rates6D * rwdic[rlz]
-                    else:
-                        res['mean'] += rates6D * rwdic[rlz]
-            out.append(res)
+        res = dis.disagg_by_magi(imldic, rlzs, rwdic, src_mutex,
+                                 mon0, mon1, mon2, mon3)
+        out.extend(res)
     return out
 
 
