@@ -1000,9 +1000,8 @@ def get_station_data(oqparam, sitecol):
     for im_value_col in [im + '_VALUE' for im in imts]:
         if (df[im_value_col] == 0).any():
             raise InvalidFile(
-                f'Please remove station data with zero intensity value from'
-                f' {oqparam.inputs["station_data"]}:\n'
-                f' {df.loc[df.index[df[im_value_col] == 0]]}')
+                f'Remove station data with zero intensity value from station_data_file.\n'
+                f''' {df[['STATION_ID', im_value_col]].loc[df.index[df[im_value_col] == 0]]}''')
     station_data = pandas.DataFrame(df[cols].values, columns=im_cols)
     station_data['site_id'] = sids
     return station_data, imts
