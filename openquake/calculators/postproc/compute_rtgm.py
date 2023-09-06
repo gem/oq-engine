@@ -45,6 +45,7 @@ try:
 except ImportError:
     rtgmpy = None
 from openquake.hazardlib.imt import from_string
+from openquake.hazardlib import contexts
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 
@@ -195,8 +196,9 @@ def main(dstore, csm):
     hazdic = get_hazdic(hcurves, oq.imtls, oq.investigation_time, sitecol)
     rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
     rtgm_df = calc_rtgm_df(rtgm_haz, oq)
+    rtgm = list(rtgm_df.RTGM)
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         return
-    postproc.disagg_by_rel_sources.main(dstore, csm, imts, list(rtgm_df.RTGM))
+    postproc.disagg_by_rel_sources.main(dstore, csm, imts, rtgm)
