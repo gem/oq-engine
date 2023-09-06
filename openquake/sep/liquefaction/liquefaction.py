@@ -105,6 +105,22 @@ def _idriss_magnitude_weighting_factor(mag: float):
     return 1.0 / _idriss_magnitude_scaling_factor(mag)
 
 
+def _liquefaction_spatial_extent(a:float, b:float, c:float, p:float):
+    """
+    Calculates the liquefaction spatial extent (LSE) in % as per formulae 2 from the 
+    Reference. LSE after an earthquake is the spatial area covered by surface 
+    manifestations of liquefaction reported as a percentage of a pixel at a
+    specific location on the map. 
+
+    Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017). 
+    An updated geospatial liquefaction model for global application. 
+    Bulletin of the Seismological Society of America, 107(3), 1365–1385. 
+    https://doi.org/10.1785/0120160198
+    """
+    LSE = a / (1 + b * np.exp(-c * p)) **2
+    return LSE
+    
+
 def zhu_etal_2015_general(
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
@@ -171,6 +187,8 @@ def zhu_etal_2017_coastal(
     epicentral distances less than 50 km.
     The optimal threshold probability value to convert the predicted probability
     into binary classification is 0.4 (see p.13 from the Reference).
+    Liquefaction spatial extent (LSE) is calculated as per formulae 2 from the
+    Reference. Model's coefficients are given in Table 6 (Model 1).
 
     Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017). 
     An updated geospatial liquefaction model for global application. 
@@ -193,6 +211,7 @@ def zhu_etal_2017_coastal(
         prob_liq: Probability of liquefaction at the site.
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
+        LSE: Liquefaction spatial extent (in %).
     """
     Xg = (pgv_coeff * np.log(pgv) + vs30_coeff * np.log(vs30) 
           + precip_coeff * precip + dc_coeff * np.sqrt(dc) 
@@ -204,7 +223,8 @@ def zhu_etal_2017_coastal(
     # probability when VS30 > 620 m/s.
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
+    LSE = _liquefaction_spatial_extent(42.08, 62.59, 11.43, prob_liq)
+    return prob_liq, out_class, LSE
 
 
 def zhu_etal_2017_general(
@@ -230,6 +250,8 @@ def zhu_etal_2017_general(
     features is greater than 20 km.
     The optimal threshold probability value to convert the predicted probability
     into binary classification is 0.4 (see p.13 from the Reference).
+    Liquefaction spatial extent (LSE) is calculated as per formulae 2 from the
+    Reference. Model's coefficients are given in Table 6 (Model 2).
 
     Reference: Zhu, J., Baise, L. G., & Thompson, E. M. (2017). 
     An updated geospatial liquefaction model for global application. 
@@ -252,6 +274,7 @@ def zhu_etal_2017_general(
         prob_liq: Probability of liquefaction at the site.
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
+        LSE: Liquefaction spatial extent (in %).
     """
     Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
           + vs30_coeff * np.log(vs30) + precip_coeff * precip 
@@ -263,7 +286,8 @@ def zhu_etal_2017_general(
     # probability when VS30 > 620 m/s.
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
-    return prob_liq, out_class
+    LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
+    return prob_liq, out_class, LSE
 
 
 def rashidian_baise_2020(
