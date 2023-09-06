@@ -64,7 +64,11 @@ def test_csv_endlines():
 
     # change to True to add final endlines where absent
     FIX_FINAL_ENDLINES = False
+
+    # change to True to replace \n with \r\n where needed
     FIX_LF_TO_CRLF = False
+
+    # change to True to replace \r with \r\n where needed
     FIX_CR_TO_CRLF = False
 
     only_slash_r_endlines = []
