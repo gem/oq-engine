@@ -1,6 +1,14 @@
+  [Paolo Tormene]
+  * Fixed consequence calculations for 'homeless', 'fatality' and 'injury'
+    with/without a specified 'time_event'
+  * Raise an early error if any station data has zero intensity value
+
+  [Michele Simionato, Paolo Tormene]
+  * Internal: checking encoding and newlines of all CSV files in the repository
+
   [Christopher Brooks]
   * Implemented the Atkinson (2015) GMPE with the alt. eff. depth model
-  
+
   [Michele Simionato]
   * Fixed a bug in event based risk calculations with
     aggregate_by(parent) != aggregate_by(child)
