@@ -205,7 +205,7 @@ def build_aggcurves(items, builder):
     """
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
-        year = data.pop('year')
+        year = data.pop('year', None)
         curve = {kind: builder.build_curve(year, data[kind], rlz_id)
                  for kind in data}
         for p, period in enumerate(builder.return_periods):
@@ -214,7 +214,8 @@ def build_aggcurves(items, builder):
             dic['loss_id'].append(loss_id)
             dic['return_period'].append(period)
             for kind in data:
-                dic[kind].append(curve[kind][p])
+                c = curve[kind]['ep']
+                dic[kind].append(c[p])
     return dic
 
 
@@ -273,13 +274,17 @@ def build_store_agg(dstore, rbe_df, num_events):
         logging.info('Building aggcurves')
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
-        year = events['year']
+        try:
+            year = events['year']
+        except ValueError:  # missing in case of GMFs from CSV
+            year = ()
         items = []
         for agg_id in agg_ids:
             gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
             for (rlz_id, loss_id), df in gb:
                 data = {kind: df[kind].to_numpy() for kind in loss_kinds}
-                data['year'] = year[df.event_id.to_numpy()]
+                if len(year):
+                    data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
             build_aggcurves, (items, builder),

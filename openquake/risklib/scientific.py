@@ -1518,8 +1518,13 @@ class LossCurvesMapsBuilder(object):
 
     # used in post_risk
     def build_curve(self, years, losses, rlzi=0):
-        return losses_by_period(
-            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
+        """
+        Compute EP curves. If years is not None, also AEP and OEP curves.
+        """
+        ne = self.num_events[rlzi]
+        dic = {"ep": losses_by_period(
+            losses, self.return_periods, ne, self.eff_time)}
+        return dic
 
 
 def _agg(loss_dfs, weights=None):
