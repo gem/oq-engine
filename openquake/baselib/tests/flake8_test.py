@@ -23,11 +23,31 @@ import io
 import os
 import unittest
 from contextlib import redirect_stdout
+import numba
 
 REPO = os.path.dirname(
     os.path.dirname(
         os.path.dirname(
             os.path.dirname(__file__))))
+
+LF = ord('\n')
+CR = ord('\r')
+
+
+@numba.njit
+def check_newlines(bytes):
+    """
+    :returns: 0 if the newlines are \r\n, 1 for \n and 2 for \r
+    """
+    n1 = len(bytes) - 1
+    for i, byte in enumerate(bytes):
+        if byte == LF:
+            if (i > 0 and bytes[i-1] != CR) or i == 0:
+                return 1  # \n ending
+        elif byte == CR:
+            if (i < n1 and bytes[i+1] != LF) or i == n1:
+                return 2  # \r ending
+    return 0
 
 
 def test_serious_violations():
@@ -60,58 +80,41 @@ def test_annoying_character():
                             raise ValueError('%s:%d: %s' % (fname, i, line))
 
 
-def test_csv_endlines():
+def fix_newlines(fname, lines):
+    with open(fname, 'wb') as f:
+        for line in lines:
+            f.write((line + '\r\n').encode('utf8'))
 
-    # change to True to add final endlines where absent
-    FIX_FINAL_ENDLINES = False
 
-    # change to True to replace \n with \r\n where needed
-    FIX_LF_TO_CRLF = False
+def fix_encoding(fname, encoding):
+    with open(fname, newline='', encoding=encoding) as f:
+        lines = f.read().splitlines()
+    fix_newlines(fname, lines)
 
-    # change to True to replace \r with \r\n where needed
-    FIX_CR_TO_CRLF = False
 
-    only_slash_r_endlines = []
-    only_slash_n_endlines = []
-    no_endlines = []
+# check encoding and newlines
+def test_csv(OVERWRITE=False):
     for cwd, dirs, files in os.walk(REPO):
         for f in files:
-            fname = os.path.abspath(os.path.join(cwd, f))
-            if fname.endswith('.csv'):
-                for i, line in enumerate(open(fname, 'rb'), 1):
-                    if not line.endswith(b'\r\n'):
-                        # raise ValueError('%s:%d: %s' % (fname, i, line))
-                        if line.endswith(b'\n'):
-                            only_slash_n_endlines.append(fname)
-                        elif line.endswith(b'\r'):
-                            only_slash_r_endlines.append(fname)
+            if f.endswith('.csv'):
+                fname = os.path.abspath(os.path.join(cwd, f))
+                # read using universal newlines, check encoding
+                with open(fname, newline='', encoding='utf8') as f:
+                    try:
+                        lines = f.read().splitlines()
+                    except UnicodeDecodeError as exc:
+                        if OVERWRITE:
+                            fix_encoding(fname, 'latin1')
                         else:
-                            no_endlines.append(fname)
-                        break
-    if only_slash_r_endlines or only_slash_n_endlines or no_endlines:
-        err_msg = ''
-        if only_slash_r_endlines:
-            err_msg += f'Only \\r were found in:\n{only_slash_r_endlines}'
-        if only_slash_n_endlines:
-            err_msg += f'Only \\n were found in:\n{only_slash_n_endlines}'
-        if no_endlines:
-            err_msg += f'No endlines were found in:\n{no_endlines}'
-        if FIX_FINAL_ENDLINES:
-            for fname in no_endlines:
-                with open(fname, 'a') as f:
-                    f.write('\r\n')
-        if FIX_LF_TO_CRLF:
-            for fname in only_slash_n_endlines:
-                with open(fname, 'r') as f:
-                    contents = f.read()
-                contents = contents.replace('\n', '\r\n')
-                with open(fname, 'w') as f:
-                    f.write(contents)
-        if FIX_CR_TO_CRLF:
-            for fname in only_slash_r_endlines:
-                with open(fname, 'r') as f:
-                    contents = f.read()
-                contents = contents.replace('\r', '\r\n')
-                with open(fname, 'w') as f:
-                    f.write(contents)
-        raise ValueError(err_msg)
+                            raise UnicodeDecodeError('%s: %s' % (fname, exc))
+                # read in binary, check newlines
+                error = check_newlines(open(fname, 'rb').read())
+                if error and OVERWRITE:
+                    try:
+                        fix_newlines(fname, lines)
+                    except Exception as exc:
+                        raise ValueError('%s: %s' % (fname, exc))
+                elif error == 1:
+                    raise ValueError('Found \\n line ending in %s' % fname)
+                elif error == 2:
+                    raise ValueError('Found \\r line ending in %s' % fname)
