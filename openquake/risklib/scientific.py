@@ -1522,6 +1522,8 @@ class LossCurvesMapsBuilder(object):
         Compute EP curves. If years is not None, also AEP and OEP curves.
         """
         ne = self.num_events[rlzi]
+        #if isinstance(losses, int):
+        #    import pdb; pdb.set_trace()
         dic = {"ep": losses_by_period(
             losses, self.return_periods, ne, self.eff_time)}
         return dic

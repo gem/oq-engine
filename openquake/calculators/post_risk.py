@@ -311,7 +311,12 @@ def build_reinsurance(dstore, num_events):
         tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
-    rlz_id = dstore['events']['rlz_id']
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
+    try:
+        year = events['year']
+    except ValueError:  # missing in case of GMFs from CSV
+        year = ()
     rbe_df = dstore.read_df('reinsurance-risk_by_event', 'event_id')
     columns = rbe_df.columns
     if len(num_events) > 1:
@@ -329,13 +334,17 @@ def build_reinsurance(dstore, num_events):
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
         if oq.investigation_time:
-            curve = {col: builder.build_curve(df[col].to_numpy(), rlzid)
+            if len(year):
+                years = year[df.index.to_numpy()]
+            else:
+                years = ()
+            curve = {col: builder.build_curve(years, df[col].to_numpy(), rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
                 dic['return_period'].append(period)
                 for col in curve:
-                    dic[col].append(curve[col][p])
+                    dic[col].append(curve[col]['ep'][p])
     dstore.create_df('reinsurance-avg_portfolio', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
