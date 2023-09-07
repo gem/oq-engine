@@ -1521,11 +1521,18 @@ class LossCurvesMapsBuilder(object):
         """
         Compute EP curves. If years is not None, also AEP and OEP curves.
         """
+        periods = self.return_periods
         ne = self.num_events[rlzi]
-        #if isinstance(losses, int):
-        #    import pdb; pdb.set_trace()
-        dic = {"ep": losses_by_period(
-            losses, self.return_periods, ne, self.eff_time)}
+        dic = {"ep": losses_by_period(losses, periods, ne, self.eff_time)}
+        if len(years):
+            dframe = pandas.DataFrame(dict(year=years, loss=losses))
+            oep = []
+            aep = []
+            for year, df in dframe.groupby('year'):
+                oep.append(df.loss.max())
+                aep.append(df.loss.sum())
+            dic['aep'] = losses_by_period(aep, periods, ne, self.eff_time)
+            dic['oep'] = losses_by_period(oep, periods, ne, self.eff_time)
         return dic
 
 

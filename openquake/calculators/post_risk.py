@@ -205,7 +205,7 @@ def build_aggcurves(items, builder):
     """
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
-        year = data.pop('year', None)
+        year = data.pop('year', ())
         curve = {kind: builder.build_curve(year, data[kind], rlz_id)
                  for kind in data}
         for p, period in enumerate(builder.return_periods):
@@ -276,6 +276,8 @@ def build_store_agg(dstore, rbe_df, num_events):
         builder = get_loss_builder(dstore, num_events=num_events)
         try:
             year = events['year']
+            if len(numpy.unique(year)) == 1:  # there is a single year
+                year = ()
         except ValueError:  # missing in case of GMFs from CSV
             year = ()
         items = []
@@ -315,6 +317,8 @@ def build_reinsurance(dstore, num_events):
     rlz_id = events['rlz_id']
     try:
         year = events['year']
+        if len(numpy.unique(year)) == 1:  # there is a single year
+            year = ()
     except ValueError:  # missing in case of GMFs from CSV
         year = ()
     rbe_df = dstore.read_df('reinsurance-risk_by_event', 'event_id')
