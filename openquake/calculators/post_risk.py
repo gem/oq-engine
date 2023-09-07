@@ -215,8 +215,14 @@ def build_aggcurves(items, builder):
             dic['return_period'].append(period)
             for kind in data:
                 # NB: kind be ['fatalities', 'losses'] in a scenario_damage test
-                c = curve[kind]['ep']
-                dic[kind].append(c[p])
+                ep = curve[kind]['ep']
+                dic[kind + '_ep'].append(ep[p])
+                if 'aep' in curve[kind]:
+                    aep = curve[kind]['aep']
+                    dic[kind + '_aep'].append(aep[p])
+                if 'oep' in curve[kind]:
+                    oep = curve[kind]['oep']
+                    dic[kind + '_oep'].append(oep[p])
     return dic
 
 
@@ -348,7 +354,14 @@ def build_reinsurance(dstore, num_events):
                 dic['rlz_id'].append(rlzid)
                 dic['return_period'].append(period)
                 for col in curve:
-                    dic[col].append(curve[col]['ep'][p])
+                    ep = curve[col]['ep']
+                    dic[col + '_ep'].append(ep[p])
+                    if 'aep' in curve[col]:
+                        aep = curve[col]['aep']
+                        dic[col + '_aep'].append(aep[p])
+                    if 'oep' in curve[col]:
+                        oep = curve[col]['oep']
+                        dic[col + '_oep'].append(oep[p])
     dstore.create_df('reinsurance-avg_portfolio', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
