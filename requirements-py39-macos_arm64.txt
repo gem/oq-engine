@@ -1,24 +1,6 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
-#
-https://wheelhouse.openquake.org/macos/arm64/py39/pandas-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/matplotlib-3.5.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/Shapely-1.8.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/Pillow-9.1.1-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/scipy-1.8.1-cp39-cp39-macosx_12_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/numpy-1.23.3-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/h5py-3.7.0-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/numba-0.56.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/llvmlite-0.39.1-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/kiwisolver-1.4.3-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/pyzmq-23.2.0-cp39-cp39-macosx_10_15_universal2.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/psutil-5.9.3-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/Fiona-1.8.21-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/GDAL-3.4.3-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/pyproj-3.4.0-cp39-cp39-macosx_11_0_arm64.whl
-#
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.10.0-py2.py3-none-any.whl
@@ -49,3 +31,24 @@ https://wheelhouse.openquake.org/v3/py/fonttools-4.38.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-5.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/zipp-3.10.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/Django-3.2.20-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/threadpoolctl-3.2.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/joblib-1.3.2-py3-none-any.whl
+#
+https://wheelhouse.openquake.org/macos/arm64/py39/pandas-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/matplotlib-3.5.2-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/Shapely-1.8.2-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/Pillow-9.1.1-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/scipy-1.8.1-cp39-cp39-macosx_12_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/numpy-1.23.3-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/h5py-3.7.0-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/numba-0.56.2-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/llvmlite-0.39.1-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/kiwisolver-1.4.3-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/pyzmq-23.2.0-cp39-cp39-macosx_10_15_universal2.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/psutil-5.9.3-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/Fiona-1.8.21-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/GDAL-3.4.3-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/pyproj-3.4.0-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/scikit_learn-1.3.0-cp39-cp39-macosx_12_0_arm64.whl
+#
