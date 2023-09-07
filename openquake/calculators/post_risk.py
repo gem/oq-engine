@@ -52,21 +52,30 @@ def save_curve_stats(dstore):
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
+    ep_fields = ['loss_ep']
+    if 'loss_aep' in aggcurves_df:
+        ep_fields.append('loss_aep')
+    if 'loss_oep' in aggcurves_df:
+        ep_fields.append('loss_oep')
+    E = len(ep_fields)
     for lt in oq.ext_loss_types:
         loss_id = scientific.LOSSID[lt]
-        out = numpy.zeros((K + 1, S, P))
+        out = numpy.zeros((K + 1, S, P, E))
         aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
         for agg_id, df in aggdf.groupby("agg_id"):
             for s, stat in enumerate(stats.values()):
                 for p in range(P):
-                    dfp = df[df.return_period == periods[p]]
-                    ws = weights[dfp.rlz_id.to_numpy()]
-                    ws /= ws.sum()
-                    out[agg_id, s, p] = stat(dfp.loss.to_numpy(), ws)
+                    for e, ep_field in enumerate(ep_fields):
+                        dfp = df[df.return_period == periods[p]]
+                        ws = weights[dfp.rlz_id.to_numpy()]
+                        ws /= ws.sum()
+                        out[agg_id, s, p, e] = stat(dfp[ep_field].to_numpy(),
+                                                    ws)
         stat = 'agg_curves-stats/' + lt
-        dstore.create_dset(stat, F64, (K + 1, S, P))
+        dstore.create_dset(stat, F64, (K + 1, S, P, E))
+        # FIXME: ep_fields?
         dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
-                               return_period=periods)
+                               return_period=periods, ep_fields=ep_fields)
         dstore.set_attrs(stat, units=units)
         dstore[stat][:] = out
 
