@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Raise an early error if any station data has zero intensity value
+
   [Michele Simionato, Paolo Tormene]
   * Internal: checking encoding and newlines of all CSV files in the repository
 

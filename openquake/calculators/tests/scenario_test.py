@@ -282,6 +282,18 @@ class ScenarioTestCase(CalculatorTestCase):
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f)
 
+    def test_case_24_station_with_zero_im_value(self):
+        # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_24.__file__,
+                          'job_station_with_zero_im_value.ini')
+        self.assertIn(
+            'Please remove station data with zero intensity value from',
+            str(ctx.exception))
+        self.assertIn(
+            'stationlist_seismic_zero_im_value.csv',
+            str(ctx.exception))
+
     @unittest.skipIf(
         sys.platform == 'darwin' and platform.processor() == 'arm',
         reason='Skipped on MacOS M1 (it would need delta=1E-5)')
