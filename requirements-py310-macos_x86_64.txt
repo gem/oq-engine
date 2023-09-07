@@ -19,6 +19,7 @@ https://wheelhouse.openquake.org/v3/macos/py310/numpy-1.23.3-cp310-cp310-macosx_
 https://wheelhouse.openquake.org/v3/macos/py310/Fiona-1.8.21-cp310-cp310-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/GDAL-3.4.3-cp310-cp310-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pyproj-3.4.0-cp310-cp310-macosx_10_10_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py310/scikit_learn-1.3.0-cp310-cp310-macosx_10_9_x86_64.whl
 #python
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
