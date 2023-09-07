@@ -1,4 +1,5 @@
   [Paolo Tormene]
+  * Fixed consequence calculations for 'homeless' with/without 'time_event'
   * An error is raised if any station data has zero intensity value
 
   [Christopher Brooks]
