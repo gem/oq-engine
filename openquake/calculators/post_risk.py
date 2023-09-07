@@ -214,6 +214,7 @@ def build_aggcurves(items, builder):
             dic['loss_id'].append(loss_id)
             dic['return_period'].append(period)
             for kind in data:
+                # NB: kind be ['fatalities', 'losses'] in a scenario_damage test
                 c = curve[kind]['ep']
                 dic[kind].append(c[p])
     return dic
@@ -238,7 +239,6 @@ def build_store_agg(dstore, rbe_df, num_events):
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    #del rbe_df['event_id']
     aggrisk = general.AccumDict(accum=[])
     columns = [col for col in rbe_df.columns if col not in {
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
