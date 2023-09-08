@@ -411,6 +411,8 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
     sitecol = dstore['sitecol']
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']
     names = sitecol.array.dtype.names
     arr = sitecol[['lon', 'lat']]
     if 'custom_site_id' in names:
@@ -423,7 +425,7 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     if 'custom_site_id' in names:
-        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        df['csi'] = decode(sitecol.complete.custom_site_id[df.sid])
         ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
         del df['sid']
     else:
@@ -550,11 +552,14 @@ def export_mean_rates_by_src(ekey, dstore):
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
-    df = dstore['mean_disagg_by_src'].to_dframe()
+    aw = dstore['mean_disagg_by_src']
+    df = aw.to_dframe()
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
     com['lat'] = sitecol.lats[0]
+    com['vs30'] = sitecol.vs30[0]
+    com['iml_disagg'] = dict(zip(aw.imt, aw.iml))
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, fname, comment=com)
     return [fname]
