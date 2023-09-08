@@ -57,9 +57,11 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['mag_bin_width'] = '0.1'
     params['epsilon_star'] = True
     params['postproc_func'] = 'compute_rtgm.main'
-    if params['investigation_time'] == 1:
+    print(params['investigation_time'])
+    if params['investigation_time'] == '1.0':
         params['poes'] = '0.000404 0.001025 0.002105 0.004453 0.013767'
-    elif params['investigation_time'] == 50:
+        
+    elif params['investigation_time'] == '50.0':
         params['poes'] = '0.02 0.05 0.10 0.20 0.50'
     else: 
         raise ValueError('Invalid investigation time = '% params['investigation_time'])
