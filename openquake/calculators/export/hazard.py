@@ -555,6 +555,8 @@ def export_mean_disagg_by_src(ekey, dstore):
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
     com['lat'] = sitecol.lats[0]
+    com['vs30'] = sitecol.vs30[0]
+    com['imls_disagg'] = list(dstore['imls_disagg'])
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, fname, comment=com)
     return [fname]
