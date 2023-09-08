@@ -42,6 +42,10 @@ U8 = numpy.uint8
 TWO32 = 2 ** 32
 KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
                       'fatalities', 'homeless', 'non_operational']
+for cons in KNOWN_CONSEQUENCES[:]:
+    KNOWN_CONSEQUENCES.append(cons + '_aep')
+    KNOWN_CONSEQUENCES.append(cons + '_oep')
+
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1654,15 +1658,18 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence == 'losses':
+    cons = consequence.removesuffix('_aep').removesuffix('_oep')
+    if cons in ['loss', 'losses']:
         return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif consequence in ['collapsed', 'non_operational']:
+    elif cons in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
-    elif consequence in ['injured', 'fatalities']:
+    elif cons in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         return dmgdist @ coeffs * asset[f'occupants_{time_event}']
-    elif consequence == 'homeless':
+    elif cons == 'homeless':
         return dmgdist @ coeffs * asset['value-residents']
+    else:
+        raise NotImplementedError(cons)
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
@@ -1670,22 +1677,25 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
+    cons = consequence.removesuffix('_aep').removesuffix('_oep')
     aval = agg_values[agg_id]
-    if consequence in ['collapsed', 'non_operational']:
+    if cons in ['collapsed', 'non_operational']:
         return aval['number']
-    elif consequence in ['injured', 'fatalities']:
+    elif cons in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         return aval[f'occupants_{time_event}']
-    elif consequence == 'homeless':
+    elif cons == 'homeless':
         return aval['residents']
-    elif consequence in ('loss', 'losses'):
+    elif cons in ['loss', 'losses']:
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
         return aval[xltype]
     else:
-        raise NotImplementedError(consequence)
+        raise NotImplementedError(cons)
 
 
 # ########################### u64_to_eal ################################# #

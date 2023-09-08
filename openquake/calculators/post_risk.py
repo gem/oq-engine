@@ -52,7 +52,7 @@ def save_curve_stats(dstore):
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    ep_fields = ['loss_ep']
+    ep_fields = ['loss']
     if 'loss_aep' in aggcurves_df:
         ep_fields.append('loss_aep')
     if 'loss_oep' in aggcurves_df:
@@ -225,7 +225,7 @@ def build_aggcurves(items, builder):
             for kind in data:
                 # NB: kind be ['fatalities', 'losses'] in a scenario_damage test
                 ep = curve[kind]['ep']
-                dic[kind + '_ep'].append(ep[p])
+                dic[kind].append(ep[p])
                 if 'aep' in curve[kind]:
                     aep = curve[kind]['aep']
                     dic[kind + '_aep'].append(aep[p])
@@ -364,7 +364,7 @@ def build_reinsurance(dstore, num_events):
                 dic['return_period'].append(period)
                 for col in curve:
                     ep = curve[col]['ep']
-                    dic[col + '_ep'].append(ep[p])
+                    dic[col].append(ep[p])
                     if 'aep' in curve[col]:
                         aep = curve[col]['aep']
                         dic[col + '_aep'].append(aep[p])
