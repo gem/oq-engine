@@ -52,9 +52,12 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
-    params['distance_bin_width'] = '25'
-    params['num_epsilon_bins'] = '3'
+    params['distance_bin_width'] = '20'
+    params['num_epsilon_bins'] = '10'
+    params['mag_bin_width'] = '0.1'
+    params['epsilon_star'] = True
     params['postproc_func'] = 'compute_rtgm.main'
+    
     # params['cachedir'] = datastore.get_datadir()
     return params
 
