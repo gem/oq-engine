@@ -61,6 +61,11 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+aggregate_loss_curve_type:
+  FIXME: describe this
+  Example: *aggregate_loss_curve_type = ep, oep, aep*.
+  Default: ep
+
 reaggregate_by:
   Used to perform additional aggregations in risk calculations. Takes in
   input a proper subset of the tags in the aggregate_by option.
@@ -903,6 +908,7 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_loss_curves_type = valid.Param(valid.namelists, ['ep'])
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
