@@ -158,6 +158,7 @@ run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
 run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
+run_site.vs30 = 'vs30 value for the calculation'
 
 
 # ######################### sample rups and gmfs ######################### #
