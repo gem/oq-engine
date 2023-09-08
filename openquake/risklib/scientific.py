@@ -1526,11 +1526,9 @@ class LossCurvesMapsBuilder(object):
         dic = {"ep": losses_by_period(losses, periods, ne, self.eff_time)}
         if len(years):
             dframe = pandas.DataFrame(dict(year=years, loss=losses))
-            oep = []
-            aep = []
-            for year, df in dframe.groupby('year'):
-                oep.append(df.loss.max())
-                aep.append(df.loss.sum())
+            agg_loss = dframe.groupby('year').agg(['max', 'sum'])['loss']
+            oep = list(agg_loss['max'])
+            aep = list(agg_loss['sum'])
             dic['aep'] = losses_by_period(aep, periods, ne, self.eff_time)
             dic['oep'] = losses_by_period(oep, periods, ne, self.eff_time)
         return dic
