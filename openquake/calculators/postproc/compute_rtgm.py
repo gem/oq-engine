@@ -185,7 +185,6 @@ def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
                       for m, imt in enumerate(imtls) if imt in imts}}
     return hazdic, np.array(facts)
 
-
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
