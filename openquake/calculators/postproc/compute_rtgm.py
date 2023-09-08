@@ -45,7 +45,6 @@ try:
 except ImportError:
     rtgmpy = None
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib import contexts
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 
@@ -156,8 +155,7 @@ def calc_rtgm_df(rtgm_haz, facts, oq):
             'RTGM': RTGM_max,
             'ProbMCE': MCE,
             'RiskCoeff': riskCoeff,
-            'DLL': DLLs,
-            'MCE>DLL?': RTGM_max > DLLs}
+            'DLL': DLLs}
     return pd.DataFrame(dic)
 
 
