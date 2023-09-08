@@ -550,13 +550,14 @@ def export_mean_rates_by_src(ekey, dstore):
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
-    df = dstore['mean_disagg_by_src'].to_dframe()
+    aw = dstore['mean_disagg_by_src']
+    df = aw.to_dframe()
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
     com['lat'] = sitecol.lats[0]
     com['vs30'] = sitecol.vs30[0]
-    com['imls_disagg'] = list(dstore['imls_disagg'])
+    com['imtls'] = dict(zip(aw.imt, aw.iml))
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, fname, comment=com)
     return [fname]

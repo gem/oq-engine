@@ -122,11 +122,12 @@ def _find_fact_maxC(T,code):
     return fact_maxC
 
 
-def calc_rtgm_df(rtgm_haz, oq):
+def calc_rtgm_df(rtgm_haz, facts, oq):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
     :param rtgm_haz: a dictionary containing the annual frequency losses
+    :param facts: conversion factors from maximum component to geometric mean
     :param oq: OqParam instance
     """
     M = len(imts)
@@ -137,11 +138,9 @@ def calc_rtgm_df(rtgm_haz, oq):
     for m, imt in enumerate(imts):
         IMT = norm_imt(imt)
         IMTs.append(IMT)
-        T = from_string(imt).period
         rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
-        fact = _find_fact_maxC(T, 'ASCE7-16')
         RTGM_max[m] = rtgmCalc['rtgm']  # for maximum component
-        UHGM[m] = rtgmCalc['uhgm'] / fact  # for geometric mean
+        UHGM[m] = rtgmCalc['uhgm'] / facts[m]  # for geometric mean
         riskCoeff[m] = rtgmCalc['riskCoeff']
         # note that RTGM_max is the ProbMCEr, while RTGM is used for the
         # identification of the sources as the hazard curves are in
@@ -150,7 +149,7 @@ def calc_rtgm_df(rtgm_haz, oq):
             RTGM[m] = UHGM[m]
             MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg   
         else:
-            RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
+            RTGM[m] = rtgmCalc['rtgm'] / facts[m]  # for geometric mean
             MCE[m] = RTGM_max[m]
     dic =  {'IMT': IMTs,
             'UHGM_2475yr-GM': UHGM,
@@ -162,7 +161,7 @@ def calc_rtgm_df(rtgm_haz, oq):
     return pd.DataFrame(dic)
 
 
-def get_hazdic(hcurves, imtls, invtime, sitecol):
+def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
     """
     Convert an array of mean hazard curves into a dictionary suitable
     for the rtgmpy library
@@ -201,14 +200,14 @@ def main(dstore, csm):
     assert list(oq.hazard_stats()) == ['mean'], oq.hazard_stats()
     sitecol = dstore['sitecol']
     hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
-    hazdic, facts = get_hazdic(hcurves, oq.imtls, oq.investigation_time, sitecol)
+    hazdic, facts = get_hazdic_facts(
+        hcurves, oq.imtls, oq.investigation_time, sitecol)
     rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
-    rtgm_df = calc_rtgm_df(rtgm_haz, oq)    
+    rtgm_df = calc_rtgm_df(rtgm_haz, facts, oq)    
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         return
     facts[0] = 1 # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy()/facts
-    dstore['imls_disagg'] = imls_disagg
     postproc.disagg_by_rel_sources.main(dstore, csm, imts, imls_disagg)
