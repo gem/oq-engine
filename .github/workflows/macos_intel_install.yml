@@ -51,7 +51,11 @@ jobs:
           pip3 install pytest pyshp flake8
           oq --version  # makes numba compile, so dbserver start becomes quicker
           oq dbserver start
-          sleep 60
+          # Wait the DbServer to come up
+          echo "Waiting DBServer up on port 1908...."
+          while ! nc -z localhost 1908; do
+          sleep 5 # wait for 5 seconds before checking again
+          done
 
       - name: Run demos to test installation
         run: |
