@@ -274,6 +274,12 @@ def LiqOccur():
     """
     return IMT('LiqOccur')
 
+def LSE():
+    """
+    Liquefaction spatial extent
+    """
+    return IMT('LSE')
+
 
 def PGDMax(vert_settlement, lat_spread):
     """
