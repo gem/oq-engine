@@ -598,8 +598,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 dstore.create_dset('gmf_data/slice_by_event', slice_dt)
 
         # event_based in parallel
-        eb = (event_based if parallel.oq_distribute() == 'slurm'
-              else gen_event_based)
+        eb = event_based
+        # if parallel.oq_distribute() == 'slurm' else gen_event_based)
         smap = starmap_from_rups(eb, oq, self.full_lt, self.sitecol, dstore)
         acc = smap.reduce(self.agg_dicts)
         if 'gmf_data' not in dstore:
