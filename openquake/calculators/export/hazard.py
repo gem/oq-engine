@@ -411,6 +411,8 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
     sitecol = dstore['sitecol']
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']
     names = sitecol.array.dtype.names
     arr = sitecol[['lon', 'lat']]
     if 'custom_site_id' in names:
@@ -423,7 +425,7 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     if 'custom_site_id' in names:
-        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        df['csi'] = decode(sitecol.complete.custom_site_id[df.sid])
         ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
         del df['sid']
     else:
