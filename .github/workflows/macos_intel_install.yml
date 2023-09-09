@@ -9,15 +9,15 @@ name: MacOS Intel install and test
   schedule:
     - cron: "0 1 * * *"
   push:
-    branches: [ test_os ]
+    branches: [macos_test]
 
 jobs:
 
-  Install_and_test:
+  install_and_test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, macos-12]
+        os: [macos-13]
         python-version: [3.9, "3.10"]
     steps:
     # This Checkout use git-ref keyword from dispatch
@@ -37,13 +37,6 @@ jobs:
         env: 
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
-          #PY_VER=`echo py${{ matrix.python-version }} | tr -d .`
-          #echo $PY_VER
-          #pip3 install -r requirements-$PY_VER-macos.txt
-          #pip3 install -e .\[osgeo\]
-          echo "sqlite3 version"
-          which sqlite3
-          sqlite3 --version
           export PIP_DEFAULT_TIMEOUT=100
           pip3 install -U pip wheel setuptools
           #
@@ -54,17 +47,64 @@ jobs:
           else
             python install.py devel 
           fi
+          source ~/openquake/bin/activate
+          pip3 install pytest pyshp flake8
+          oq --version  # makes numba compile, so dbserver start becomes quicker
+          oq dbserver start
+          sleep 10
+
       - name: Run demos to test installation
         run: |
+          set -x
           source ~/openquake/bin/activate
-          pip3 install pytest
-          oq --version
-          oq dbserver start
-          #pytest -vsx --color=yes ~/work/oq-engine/oq-engine/openquake/hazardlib/tests/gsim/kotha_2020_test.py
-          #pytest -vsx --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/sep
-          #pytest -vs  --color=yes /Users/runner/work/oq-engine/oq-engine/openquake/calculators
-          oq engine --run ~/work/oq-engine/oq-engine/demos/risk/ClassicalDamage/job_hazard.ini
-          #
-          oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-          sleep 3
-          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
+          oq info venv
+          oq info cfg
+          cd ~/work/oq-engine/oq-engine/demos
+          ls -lrt
+          # run demos with job_hazard.ini and job_risk.ini
+          for demo_dir in $(find . -type d | sort); do
+             if [ -f $demo_dir/job_hazard.ini ]; then
+                 oq engine --run $demo_dir/job_hazard.ini --exports csv,hdf5
+                 oq engine --run $demo_dir/job_risk.ini --exports csv,hdf5 --hc -1
+             fi
+          done
+          # run the other demos
+          for ini in $(find . -name job.ini | sort); do
+              oq engine --run $ini --exports csv,hdf5
+          done
+
+      - name: Run tests for calculators and advanced manual to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          cd ~/work/oq-engine/oq-engine
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
+
+      - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          cd ~/work/oq-engine/oq-engine/openquake
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+
+      - name: Run tests for the engine server in public mode to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          cd ~/work/oq-engine/oq-engine
+          OQ_APPLICATION_MODE=public ./openquake/server/manage.py test tests.test_public_mode
+
+      - name: Run tests for the engine server in read-only mode to test installation
+        if: always()
+        run: |
+          source ~/openquake/bin/activate
+          cd ~/work/oq-engine/oq-engine
+          OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test tests.test_read_only_mode
+
+      # NOTE: we shouldn't need to install the engine in AELO mode on mac
+      # - name: Run tests for the engine server in aelo mode to test installation
+      #   if: always()
+      #   run: |
+      #     source ~/openquake/bin/activate
+      #     cd ~/work/oq-engine/oq-engine
+      #     OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test tests.test_aelo_mode

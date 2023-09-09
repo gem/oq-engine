@@ -771,7 +771,7 @@ time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=1000*
-  Default: 600
+  Default: 1200
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -1049,7 +1049,8 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 600)
+    time_per_task = valid.Param(valid.positivefloat, 1200)
+    # NB: time_per_task > 1200 breaks oq1 (OOM on the master) for Canada EBR
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)

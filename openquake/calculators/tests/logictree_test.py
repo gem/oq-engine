@@ -202,7 +202,8 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_12(self):
         # akin to NAF model
-        self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
+        self.assert_curves_ok(
+            ['mean_rates.csv'], case_12.__file__, delta=1E-15)
 
     def test_case_12_bis(self):
         # test reduction with empty branches

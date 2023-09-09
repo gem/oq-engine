@@ -358,6 +358,8 @@ class Disaggregator(object):
     A class to perform single-site disaggregation with methods
     .disagg_by_magi (called in standard disaggregation) and
     .disagg_mag_dist_eps (called in disaggregation by relevant source).
+    Internally the attributes .mea and .std are set, with shape (G, M, U),
+    for each magnitude bin.
     """
     def __init__(self, srcs_or_ctxs, site, cmaker, bin_edges, imts=None):
         if isinstance(site, Site):
@@ -421,7 +423,7 @@ class Disaggregator(object):
             # NB: using ctx.sort(order='src_id') would cause a ValueError
             self.ctx = self.ctx[numpy.argsort(self.ctx.src_id)]
         with mon0:
-            # shape (G, M, U)
+            # shape (G, M, U), where M = len(imts) <= len(imtls)
             self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
         if self.src_mutex:
             mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
@@ -666,7 +668,7 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
-    rates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
+    drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
     source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
@@ -674,7 +676,7 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     ws = reduced_lt.rlzs['weight']
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges)
-        rates4D += dis.disagg_mag_dist_eps(imldic, ws)
+        drates4D += dis.disagg_mag_dist_eps(imldic, ws)
     gws = reduced_lt.g_weights(trt_rlzs)
     rates3D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))  # (N, M, L1)
-    return source_id, rates4D, rates3D[0]  # (M, L1) rates for the site
+    return source_id, drates4D, rates3D[0]  # (M, L1) rates for the site
