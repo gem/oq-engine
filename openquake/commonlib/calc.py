@@ -416,13 +416,13 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         for slc in general.gen_slices(0, len(sbe), 100_000):
             slices.append(get_slices(sbe[slc], data, num_assets))
         slices = numpy.concatenate(slices, dtype=slices[0].dtype)
+        gb = sum(data[k].nbytes for k in data) / 1024 ** 3
+        num_tasks = numpy.ceil(gb / .5)  # a max of half GB of GMFs per task
+    logging.info(f'{num_tasks=}')
     dstore.swmr_on()
-    maxw = slices['weight'].sum()/ (oq.concurrent_tasks or 1) or 1.
-    logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
-        # maxweight=200M is the limit to run Canada with 2 GB per core
-        maxweight=min(maxw, 200_000_000),
+        concurrent_tasks=max(oq.concurrent_tasks, num_tasks),
         weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap
