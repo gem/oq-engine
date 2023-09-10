@@ -1,6 +1,9 @@
 from typing import Union, List
 
+import gzip, os
 import numpy as np
+import pandas as pd
+import pickle
 
 from openquake.sep.liquefaction import HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE, FT_PER_M
 
@@ -130,3 +133,60 @@ def hazus_lateral_spreading_displacement_fn(
     disp_inch = disp_corr_factor * a
 
     return disp_inch
+
+
+def lateral_spreading_nonparametric_general(
+    pga: Union[float, np.ndarray],
+    elevation: Union[float, np.ndarray],
+    slope: Union[float, np.ndarray],
+    wtd: Union[float, np.ndarray],
+    dr: Union[float, np.ndarray],
+    ) -> Union[float, np.ndarray]:
+    """
+    Returns the multi class output (i.e, 0, 1, 2) which indicates small, medium and 
+    large lateral spreading as per Durante and Rathje (2023). 
+    The model presented here represent a generalisation of the DR21 model (see Reference) 
+    to be used globally. This updated model was presented by Prof. Dr Ellen Rathje at GEM
+    Conference 2023 (see Reference). The pickle file was not requested from Dr Rathje,
+    therefore, we use the tag "Experimental".
+
+    Reference: Durante, M.G., Rathje, E.M. (2021). 
+    An exploration of the use of machine learning to predict lateral spreading. 
+    Earthquake Spectra, 37 (4), 2287–2314. 
+    https://doi.org/10.1177/87552930211004613 
+
+    Rathje, E.M. (2023). Regional Risk Assessment: Liquefaction.
+    GEM Conference (2023): Are we making a difference?
+    https://www.globalquakemodel.org/gem-conference-2023 
+
+    :param pga:
+        Peak Ground Acceleration, measured in g
+    :param elevation:
+        Ground elevation, measured in m
+    :param slope:
+        Ground slope, in %
+    :param wtd:
+        Global water table depth, measured in m
+    :param dr:
+        Distance to the nearest river, measured in km
+
+    :returns:
+        out_class: ndarray of len(sitemodel)  
+            Returns binary output 0 or 1, i.e., liquefaction nonoccurrence or
+            liquefaction occurrence occurrence.      
+    """
+    dict = {
+        'pga': pga,
+        'elevation': elevation,
+        'slope': slope,
+        'wtd': wtd,
+        'dr': dr
+    }
+    df = pd.DataFrame(dict)
+    model_file = 'data/lateral_spreading/lateral_spreading.pkl.gz'
+    model_path = os.path.join(os.path.dirname(__file__), model_file)
+    with gzip.open(model_path, 'rb') as gzipped_file:
+        file = gzipped_file.read()
+        model = pickle.loads(file)            
+        out_class = model.predict(df)
+        return out_class
