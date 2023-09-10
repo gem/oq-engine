@@ -26,7 +26,8 @@ from openquake.sep.liquefaction import (
 )
 
 from openquake.sep.liquefaction.lateral_spreading import (
-    hazus_lateral_spreading_displacement
+    hazus_lateral_spreading_displacement,
+    lateral_spreading_nonparametric_general
 )
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
@@ -285,3 +286,14 @@ class test_liquefaction_cali_small(unittest.TestCase):
             3.84597609, 0.36615681, 0., 0., 1.15887168, 1.3722039 ])
 
         np.testing.assert_array_almost_equal(self.sites.hazus_lat_disp, disps)
+
+    def test_lateral_spread_displacements(self):
+
+        self.sites["lateral_spreading"] = lateral_spreading_nonparametric_general(
+            pga=self.pga, elevation=self.sites["elevation"], slope=self.sites["slope"], wtd=self.sites["gwd"], 
+            dr=self.sites["dr"]
+        )
+
+        disps = np.array([0, 0, 0, 0, 0, 0, 2, 2, 0, 0])
+
+        np.testing.assert_array_almost_equal(self.sites["lateral_spreading"], disps)
