@@ -292,8 +292,14 @@ def LSD():
     """
     Liquefaction-induced lateral spread displacements measured in units of ``m``.
     """
-    return IMT('LSD')    
-    
+    return IMT('LSD')   
+
+
+def LSDClass():
+    """
+    Liquefaction-induced lateral spread displacement class.
+    """
+    return IMT('LSDClass') 
 
 def PGDGeomMean(vert_settlement, lat_spread):
     """
