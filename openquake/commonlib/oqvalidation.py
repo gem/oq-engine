@@ -61,10 +61,13 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
-aggregate_loss_curve_type:
-  FIXME: describe this
-  Example: *aggregate_loss_curve_type = ep, oep, aep*.
-  Default: ep
+aggregate_loss_curves_types:
+  Used for event-based risk and damage calculations, to estimate the aggregated
+  loss Exceedance Probability (EP) only or to also calculate (if possible) the
+  Occurrence Exceedance Probability (OEP) and/or the Aggregate Exceedance
+  Probability (AEP).
+  Example: *aggregate_loss_curves_types = ep, oep, aep*.
+  Default: ep, oep, aep
 
 reaggregate_by:
   Used to perform additional aggregations in risk calculations. Takes in
@@ -908,7 +911,13 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
-    aggregate_loss_curves_type = valid.Param(valid.namelists, ['ep'])
+    aggregate_loss_curves_types = valid.Param(
+        valid.Choice('ep',
+                     'ep, oep',
+                     'ep, aep',
+                     'ep, oep, aep',
+                     'ep, aep, oep'),
+        'ep, oep, aep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')

@@ -1186,7 +1186,7 @@ def extract_mean_rates_by_src(dstore, what):
     [imt] = qdict['imt']
     [iml] = qdict['iml']
     [site_id] = qdict.get('site_id', ['0'])
-    site_id = int(site_id)    
+    site_id = int(site_id)
     imt_id = list(oq.imtls).index(imt)
     rates = dset[site_id, imt_id]
     L1, Ns = rates.shape

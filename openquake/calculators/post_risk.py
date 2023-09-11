@@ -207,7 +207,7 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder):
+def build_aggcurves(items, builder, aggregate_loss_curves_types):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance
@@ -215,7 +215,8 @@ def build_aggcurves(items, builder):
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
         year = data.pop('year', ())
-        curve = {kind: builder.build_curve(year, data[kind], rlz_id)
+        curve = {kind: builder.build_curve(
+                    year, data[kind], aggregate_loss_curves_types, rlz_id)
                  for kind in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
@@ -304,7 +305,7 @@ def build_store_agg(dstore, rbe_df, num_events):
                     data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
-            build_aggcurves, (items, builder),
+            build_aggcurves, (items, builder, oq.aggregate_loss_curves_types),
             concurrent_tasks=oq.concurrent_tasks,
             h5=dstore.hdf5).reduce()
         fix_dtypes(dic)
@@ -357,7 +358,10 @@ def build_reinsurance(dstore, num_events):
                 years = year[df.index.to_numpy()]
             else:
                 years = ()
-            curve = {col: builder.build_curve(years, df[col].to_numpy(), rlzid)
+            curve = {col: builder.build_curve(
+                        years, df[col].to_numpy(),
+                        oq.aggregate_loss_curves_types,
+                        rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)

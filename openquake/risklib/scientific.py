@@ -1521,20 +1521,25 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, years, losses, rlzi=0):
+    def build_curve(self, years, losses, aggregate_loss_curves_types, rlzi=0):
         """
         Compute EP curves. If years is not None, also AEP and OEP curves.
         """
+        agg_loss_curves_types_set = set(
+            aggregate_loss_curves_types.split(', '))
         periods = self.return_periods
         ne = self.num_events[rlzi]
         dic = {"ep": losses_by_period(losses, periods, ne, self.eff_time)}
-        if len(years):
+        # NOTE: assuming 'ep' mandatory and 'oep' and 'aep' optional
+        if len(years) and len(agg_loss_curves_types_set) > 1:
             dframe = pandas.DataFrame(dict(year=years, loss=losses))
             agg_loss = dframe.groupby('year').agg(['max', 'sum'])['loss']
-            oep = list(agg_loss['max'])
-            aep = list(agg_loss['sum'])
-            dic['aep'] = losses_by_period(aep, periods, ne, self.eff_time)
-            dic['oep'] = losses_by_period(oep, periods, ne, self.eff_time)
+            if 'oep' in agg_loss_curves_types_set:
+                oep = list(agg_loss['max'])
+                dic['oep'] = losses_by_period(oep, periods, ne, self.eff_time)
+            if 'aep' in agg_loss_curves_types_set:
+                aep = list(agg_loss['sum'])
+                dic['aep'] = losses_by_period(aep, periods, ne, self.eff_time)
         return dic
 
 
