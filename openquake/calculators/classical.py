@@ -504,7 +504,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
-            if oq.disagg_by_src:  # possible only with a single tile
+            if oq.disagg_by_src and not sg.atomic:
                 blks = groupby(sg, basename).values()
             elif sg.atomic or sg.weight <= maxw:
                 blks = [sg]
