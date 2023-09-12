@@ -30,6 +30,10 @@ from openquake.sep.liquefaction.lateral_spreading import (
     lateral_spreading_nonparametric_general
 )
 
+from openquake.sep.liquefaction.vertical_settlement import (
+    HAZUS_VERT_SETTLEMENT_TABLE,
+    hazus_vertical_settlement)
+
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 site_data_file = os.path.join(BASE_DATA_PATH, "test_site_params.csv")
 
@@ -287,6 +291,20 @@ class test_liquefaction_cali_small(unittest.TestCase):
 
         np.testing.assert_array_almost_equal(self.sites.hazus_lat_disp, disps)
 
+    def test_hazus_vertical_settlements(self):
+
+        self.sites["char_settlement"] = hazus_vertical_settlement(liq_susc_cat=self.sites["liq_susc_cat"],
+                                                                  pga=self.pga, mag=self.mag, 
+                                                                  groundwater_depth=self.sites["gwd"],
+                                                                  do_map_proportion_correction=self.map_proportion_flag )
+        
+        disps = np.array([1.24264956, 0.04829711, 1.24264956, 0.04664702, 
+            1.24264956,	1.24264956,	0,	0,	0.04664702,	0.04664702
+])
+        
+        np.testing.assert_array_almost_equal(self.sites["char_settlement"], disps)
+
+    
     def test_lateral_spread_displacements(self):
 
         self.sites["lateral_spreading"] = lateral_spreading_nonparametric_general(
