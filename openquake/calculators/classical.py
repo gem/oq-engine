@@ -302,7 +302,7 @@ class Hazard:
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
-    def store_disagg(self, pmaps):
+    def store_mean_rates_by_src(self, pmaps):
         """
         Store data inside mean_rates_by_src
         """
@@ -523,7 +523,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
         if self.oqparam.disagg_by_src:
-            self.haz.store_disagg(acc)
+            self.haz.store_mean_rates_by_src(acc)
 
     def execute_big(self, maxw):
         """
