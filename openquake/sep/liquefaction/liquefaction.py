@@ -464,9 +464,9 @@ def akhlagi_etal_2021_model_a(
     :param tri:
         Topographic roughness index, unitless
     :param dc:
-        Distance to the nearest coast, measured in km
+        Distance to the nearest coast, measured in m
     :param dr:
-        Distance to the nearest river, measured in km
+        Distance to the nearest river, measured in m
     :param zwb:
         Elevation above the nearest water body, measured in m
 
@@ -514,11 +514,11 @@ def akhlagi_etal_2021_model_b(
         Peak Ground Velocity, measured in cm/s
     :param vs30:
         Shear-wave velocity averaged over the upper 30 m of the earth at the
-        site, measured in m/s
+        site, measured in cm/s
     :param dc:
-        Distance to the nearest coast, measured in km
+        Distance to the nearest coast, measured in m
     :param dr:
-        Distance to the nearest river, measured in km
+        Distance to the nearest river, measured in m
     :param zwb:
         Elevation above the nearest water body, measured in m
 
