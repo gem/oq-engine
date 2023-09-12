@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Backported a fix to `oq reaggregate`
   * Backported fix to event based risk calculations with
     aggregate_by(parent) != aggregate_by(child)
   * Backported fix to the `risk_by_event` exporter for some calculations

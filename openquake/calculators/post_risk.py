@@ -427,7 +427,7 @@ class PostRiskCalculator(base.RiskCalculator):
             return 0
         if self.reaggreate:
             idxs = numpy.concatenate([
-                reagg_idxs(self.num_tags, oq.aggregate_by),
+                reagg_idxs(self.num_tags, oq.aggregate_by[0]),
                 numpy.array([K], int)])
             rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
             rbe_df = rbe_df.groupby(
