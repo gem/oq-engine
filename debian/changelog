@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a regression in `oq reaggregate`
   * Better error message for logic trees with branchsets exceeding the limit
   * Fixed a bug with mutex sources and disagg_by_src
 
