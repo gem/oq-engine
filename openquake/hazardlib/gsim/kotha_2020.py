@@ -329,11 +329,17 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
         # Get the heteroskedastic tau and phi0
         tau = get_tau(imt, mag)
         phi = get_phi_ss(imt, mag)
+    elif kind in {'avgsa_ESHM20', "avgsa_ESHM20_geology"}:
+        sigma_nonergodic = get_sigma_avgsa_nonergodic(imt, ctx.mag)
+
+        # AvgSa GMMs defined only for Total Std. dev.
+        tau = np.zeros_like(ctx.mag)
+        phi = np.zeros_like(ctx.mag)
     else:
         tau = C["tau_event_0"]
         phi = C["phi_0"]
     if ergodic:
-        if kind in {'ESHM20', 'avgsa_ESHM20'}:
+        if kind == 'ESHM20':
             phi_s2s = np.zeros(ctx.vs30measured.shape, dtype=float)
             phi_s2s[ctx.vs30measured] += C["phi_s2s_obs"]
             phi_s2s[np.logical_not(ctx.vs30measured)] += C["phi_s2s_inf"]
@@ -342,8 +348,17 @@ def get_stddevs(kind, ergodic, phi_s2s, C, ctx, imt):
             phi = np.sqrt(phi ** 2.0 + C["phi_s2s_vs30"] ** 2.)
         elif kind == 'slope':
             phi = np.sqrt(phi ** 2. + C["phi_s2s_slope"] ** 2.)
-        elif kind in {'geology', 'avgsa_ESHM20_geology'}:
+        elif kind =='geology':
             phi = np.sqrt(phi ** 2. + phi_s2s ** 2.)
+        elif kind == "avgsa_ESHM20":
+            phi_s2s = np.zeros(ctx.vs30measured.shape, dtype=float)
+            phi_s2s[ctx.vs30measured] += C["phi_s2s_obs"]
+            phi_s2s[np.logical_not(ctx.vs30measured)] += C["phi_s2s_inf"]
+            sigma = np.sqrt(sigma_nonergodic ** 2.0 + phi_s2s ** 2.0)
+            return [sigma, tau, phi]
+        elif kind == "avgsa_ESHM20_geology":
+            sigma = np.sqrt(sigma_nonergodic ** 2.0 + phi_s2s ** 2.0)
+            return [sigma, tau, phi]
         else:
             phi = np.sqrt(phi ** 2. + C["phis2s"] ** 2.)
     return [np.sqrt(tau ** 2. + phi ** 2.), tau, phi]
@@ -1010,6 +1025,54 @@ for stress in list(ICELAND_dL2L)[1:]:
         add_alias(alias, KothaEtAl2020ESHM20, dl2l=dl2l, c3_epsilon=c3_eps)
 
 
+COEFFS_AVGSA_SIGMA = CoeffsTable(sa_damping=5, table="""\
+     imt   sig1_nonergodic    sig2_nonergodic     sig3_nonergodic    sig4_nonergodic
+    0.05        0.65186851         0.63502447          0.58413764         0.51256041
+    0.10        0.65391037         0.63753338          0.58534068         0.51077108
+    0.15        0.64711095         0.63114068          0.57608737         0.49601824
+    0.20        0.63870196         0.62311662          0.56669519         0.48419628
+    0.25        0.63168765         0.61601656          0.55943517         0.47682369
+    0.30        0.62510362         0.60941771          0.55338781         0.47118716
+    0.40        0.61494356         0.59935866          0.54416054         0.46387267
+    0.50        0.60648154         0.59075204          0.53721195         0.46007307
+    0.60        0.60068997         0.58487147          0.53277796         0.45805654
+    0.70        0.59650635         0.58059896          0.52972167         0.45781648
+    0.80        0.59263225         0.57656666          0.52723495         0.45854582
+    0.90        0.58905227         0.57289965          0.52505753         0.45930144
+    1.00        0.58605227         0.56980059          0.52361851         0.46120830
+    1.25        0.57951663         0.56294076          0.51973142         0.46347203
+    1.50        0.57471779         0.55799391          0.51665516         0.46397407
+    1.75        0.57096219         0.55431757          0.51425825         0.46479829
+    2.00        0.56809903         0.55156436          0.51258446         0.46547080
+    2.50        0.56383356         0.54701187          0.51045970         0.46864530
+    3.00        0.56004741         0.54311485          0.50834857         0.47061923
+    3.50        0.55731680         0.54022250          0.50722364         0.47259022
+    4.00        0.55598689         0.53859154          0.50655623         0.47427746
+    4.50        0.55481076         0.53768759          0.50636183         0.47547987
+    5.00        0.55414057         0.53700075          0.50612310         0.47618535
+    """)
+
+
+def get_sigma_avgsa_nonergodic(imt, mag):
+    """Returns the average SA non-ergodic sigma
+    """
+    C = COEFFS_AVGSA_SIGMA[imt]
+    sig1 = C["sig1_nonergodic"]
+    sig2 = C["sig2_nonergodic"]
+    sig3 = C["sig3_nonergodic"]
+    sig4 = C["sig4_nonergodic"]
+    sigma = np.full_like(mag, sig1)
+    idx = mag > 6.5
+    sigma[idx] = sig4
+    idx = np.logical_and(mag > 5.5, mag <= 6.5)
+    sigma[idx] = ITPL(mag[idx], sig4, sig3, 5.5, 1.0)
+    idx = np.logical_and(mag > 5.0, mag <= 5.5)
+    sigma[idx] = ITPL(mag[idx], sig3, sig2, 5.0, 0.5)
+    idx = np.logical_and(mag > 4.5, mag <= 5.0)
+    sigma[idx] = ITPL(mag[idx], sig2, sig1, 4.5, 0.5)
+    return sigma
+
+
 class KothaEtAl2020AvgSA(KothaEtAl2020):
     """
     Variation of the Kotha et al (2020, 2022) GMM calibrated exclusively for
@@ -1021,6 +1084,9 @@ class KothaEtAl2020AvgSA(KothaEtAl2020):
     #: this GSIM can calculate. A set should contain classes from module
     #: :mod:`openquake.hazardlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA,}
+    
+    #: Supported standard deviation types is are only total std.dev
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL, }
 
     kind = "avgsa_base"
 
@@ -1092,6 +1158,9 @@ class KothaEtAl2020ESHM20AvgSA(KothaEtAl2020ESHM20):
     #: :mod:`openquake.hazardlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA,}
 
+    #: Supported standard deviation types is are only total std.dev
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL, }
+
     #: Required site parameters are vs30, vs30measured and the eshm20_region
     REQUIRES_SITES_PARAMETERS = set(("region", "vs30", "vs30measured"))
 
@@ -1141,6 +1210,8 @@ class KothaEtAl2020ESHM20SlopeGeologyAvgSA(KothaEtAl2020ESHM20):
     #: :mod:`openquake.hazardlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA,}
 
+    #: Supported standard deviation types is are only total std.dev
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL, }
 
     #: Required site parameter is not set
     REQUIRES_SITES_PARAMETERS = {"region", "slope", "geology"}
@@ -1178,7 +1249,7 @@ class KothaEtAl2020ESHM20SlopeGeologyAvgSA(KothaEtAl2020ESHM20):
     """)
 
     COEFFS_RANDOM_INT = CoeffsTable(sa_damping=5, table="""\
-    imt       PRECAMBRIAN      PALEOZOIC   JURASSIC-TRIASSIC     CRETACEOUS       CENEZOIC    PLEISTOCENE      HOLOCENE        UNKNOWN
+    imt       PRECAMBRIAN      PALEOZOIC   JURASSIC-TRIASSIC     CRETACEOUS       CENOZOIC    PLEISTOCENE      HOLOCENE        UNKNOWN
     0.0500     0.04440431    -0.02892322         -0.13716881    -0.05230186    -0.12125642     0.13765416    0.06883992     0.08875193
     0.1000     0.05826280    -0.03109745         -0.13813473    -0.06352593    -0.13533973     0.15914360    0.05630794     0.09438349
     0.1500     0.06136444    -0.03582568         -0.14426874    -0.07207127    -0.13073530     0.16589340    0.05878894     0.09685420
@@ -1205,7 +1276,7 @@ class KothaEtAl2020ESHM20SlopeGeologyAvgSA(KothaEtAl2020ESHM20):
     """)
 
     COEFFS_RANDOM_GRAD = CoeffsTable(sa_damping=5, table="""\
-    imt       PRECAMBRIAN      PALEOZOIC   JURASSIC-TRIASSIC    CRETACEOUS       CENEZOIC     PLEISTOCENE       HOLOCENE       UNKNOWN
+    imt       PRECAMBRIAN      PALEOZOIC   JURASSIC-TRIASSIC    CRETACEOUS       CENOZOIC     PLEISTOCENE       HOLOCENE       UNKNOWN
     0.0500     0.01019174    -0.00671749         -0.03159087   -0.01206327    -0.02807261      0.03183337     0.01588836    0.02053076
     0.1000     0.01425687    -0.00742289         -0.03359498   -0.01538489    -0.03264778      0.03842344     0.01358267    0.02278758
     0.1500     0.01437239    -0.00841885         -0.03389235   -0.01686420    -0.03065271      0.03889881     0.01385255    0.02270436

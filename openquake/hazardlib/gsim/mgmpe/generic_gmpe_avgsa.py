@@ -84,6 +84,7 @@ class GenericGmpeAvgSA(GMPE):
         correlation_function_handles = {
             'baker_jayaram': BakerJayaramCorrelationModel,
             'akkar': AkkarCorrelationModel,
+            "eshm20": ESHM20CorrelationModel,
             'none': DummyCorrelationModel}
 
         # Check for existing correlation function
@@ -112,6 +113,98 @@ class GenericGmpeAvgSA(GMPE):
 
         mean[:] /= self.tnum
         sig[:] = np.sqrt(stddvs_avgsa) / self.tnum
+
+
+class CenteredGmpeAvgSA(GMPE):
+    """
+    """
+
+    # Parameters
+    REQUIRES_SITES_PARAMETERS = set()
+    REQUIRES_DISTANCES = set()
+    REQUIRES_RUPTURE_PARAMETERS = set()
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA,}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ''
+
+    def __init__(self, gmpe_name, corr_func, t_low = 0.2, t_high = 1.5,
+                 n_per: int = 10, **kwargs):
+        
+        self.gmpe = registry[gmpe_name](**kwargs)
+        # Combine the parameters of the GMPE provided at the construction
+        # level with the ones assigned to the average GMPE.
+        for key in dir(self):
+            if key.startswith('REQUIRES_'):
+                setattr(self, key, getattr(self.gmpe, key))
+            if key.startswith('DEFINED_'):
+                if not key.endswith('FOR_INTENSITY_MEASURE_TYPES'):
+                    setattr(self, key, getattr(self.gmpe, key))
+
+        # Ensure that it is always recogised that the AvgSA GMPE is defined
+        # only for total standard deviation even if the called GMPE is
+        # defined for inter- and intra-event standard deviations too
+        self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+        self.t_low = t_low
+        self.t_high = t_high
+        self.t_num = n_per
+        self.max_num_per = kwargs.get("max_num_per", 30)
+
+        correlation_function_handles = {
+            'baker_jayaram': BakerJayaramCorrelationModel,
+            'akkar': AkkarCorrelationModel,
+            "eshm20": ESHM20CorrelationModel,
+            'none': DummyCorrelationModel}
+
+        # Check for existing correlation function
+        if corr_func not in correlation_function_handles:
+            raise ValueError('Not a valid correlation function')
+        else:
+            self.corr_func = \
+                correlation_function_handles[corr_func]
+
+    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        """
+        """
+        t0s = np.array([imt.period for imt in imts])
+        np.sort(t0s)
+        periods = np.hstack(
+            [np.linspace(self.t_low * period, self.t_high * period, self.t_num)
+             for period in t0s]
+            )
+        periods.sort()
+        if len(periods) > self.max_num_per:
+            periods = np.logspace(np.log10(periods[0]),
+                                  np.log10(periods[-1]),
+                                  self.max_num_per)
+        new_imts = [SA(per) for per in periods]
+        mean_sa = np.zeros([len(new_imts), len(ctx)])
+        sigma_sa = np.zeros_like(mean_sa)
+        tau_sa = np.zeros_like(mean_sa)
+        phi_sa = np.zeros_like(mean_sa)
+        self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
+        for m, imt in enumerate(imts):
+            target_periods = np.linspace(self.t_low * imt.period,
+                                         self.t_high * imt.period,
+                                         self.t_num)
+            # Interpolate mean and sigma to the t_num selected periods
+            ipl_mean = interp1d(periods, mean_sa.T, bounds_error=False,
+                                fill_value = (mean_sa[0, :], mean_sa[-1, :]),
+                                assume_sorted=True)
+            mean[m] += ((1.0 / self.t_num) * np.sum(ipl_mean(target_periods),
+                                                    axis=1))
+
+            ipl_sig = interp1d(periods, sigma_sa.T, bounds_error=False,
+                               fill_value = (sigma_sa[0, :], sigma_sa[-1, :]),
+                               assume_sorted=True)
+            sig_target = ipl_sig(target_periods)
+
+            for j, t_1 in enumerate(target_periods):
+                for k, t_2 in enumerate(target_periods):
+                    rho = 1.0 if j == k else self.corr_func.get_correlation(
+                        t_1, t_2)
+                    sig[m] += (rho * sig_target[:, j] * sig_target[:, k])
+            sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
 
 
 class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
@@ -148,7 +241,8 @@ class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
                 self.rho[i, i + j] = self.get_correlation(t1, t2)
         self.rho += (self.rho.T - np.eye(len(self.avg_periods)))
 
-    def get_correlation(self, t1, t2):
+    @staticmethod
+    def get_correlation(t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -218,12 +312,14 @@ class AkkarCorrelationModel(BaseAvgSACorrelationModel):
         ipl2 = interp1d(iper, ipl1(self.avg_periods), axis=0)
         self.rho = ipl2(self.avg_periods)
 
-    def get_correlation(self, t1, t2):
+    @staticmethod
+    def get_correlation(t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
         :param float t1:
-            First period of interest.
+            First period of interest.:w
+
 
         :param float t2:
             Second period of interest.
@@ -264,7 +360,8 @@ class DummyCorrelationModel(BaseAvgSACorrelationModel):
     def build_correlation_matrix(self):
         self.rho = np.ones([len(self.avg_periods), len(self.avg_periods)])
 
-    def get_correlation(self, t1, t2):
+    @staticmethod
+    def get_correlation(t1, t2):
         """
         Computes the correlation coefficient for the specified periods.
 
@@ -279,3 +376,59 @@ class DummyCorrelationModel(BaseAvgSACorrelationModel):
         """
 
         return 1.
+
+
+class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
+    """
+    """
+    @staticmethod
+    def get_correlation(t1, t2):
+        """
+        Computes the correlation coefficient for the specified periods.
+
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float rho:
+            The predicted correlation coefficient.
+
+        Original
+        0.366, 0.105, 0.0099
+        New
+        0.20698079,  0.0888577,  -0.03330
+        """
+
+        t_min = min(t1, t2)
+        t_max = max(t1, t2)
+
+        c1 = 1.0
+        c1 -= np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * 0.20698)
+
+        if t_max < 0.2:
+            c2 = 0.0888577 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
+            c2 = 1.0 - c2 * (t_max - t_min) / (t_max - -0.03330)
+        else:
+            c2 = 0
+
+        if t_max < 0.109:
+            c3 = c2
+        else:
+            c3 = c1
+
+        c4 = c1
+        c4 += 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
+
+        if t_max <= 0.109:
+            rho = c2
+        elif t_min > 0.109:
+            rho = c1
+        elif t_max < 0.2:
+            rho = min(c2, c4)
+        else:
+            rho = c4
+
+        return rho
+
