@@ -12,10 +12,9 @@ technical characteristics, and a quanitative probability model for
 each susceptibility class. The remaining models are the academic 
 geospatial models, i.e., statistical models that uses globally avai-
 lable input variables as first-order proxies to characterise satura-
-tion
-and density properties of the soil. The shaking component is expressed 
-either in terms of Peak Ground Acceleration (PGA) or Peak Ground Velocity 
-(PGV). 
+tion and density properties of the soil. The shaking component is 
+expressed either in terms of Peak Ground Acceleration (PGA) or Peak 
+Ground Velocity (PGV). 
 
 HAZUS
 ^^^^^
@@ -51,7 +50,7 @@ probability). :math:`K_w` is a groundwater depth correction factor
 +-----------+----------------+-----------+---------+----------------+
 | high      | 0.12           | 7.67      | 0.92    | 0.2            |
 +-----------+----------------+-----------+---------+----------------+
-| med       | 0.15           | 6.67      | 1.0     | 0.1            |
+| moderate  | 0.15           | 6.67      | 1.0     | 0.1            |
 +-----------+----------------+-----------+---------+----------------+
 | low       | 0.21           | 5.57      | 1.18    | 0.05           |
 +-----------+----------------+-----------+---------+----------------+
@@ -270,4 +269,89 @@ were considered and the ones that correlate the best with liquefaction
 occurrence are identified as: strain proxy, a ratio between :math:`pgv`
 and :math:`Vs30`; distance to the closest water body :math:`dr`, water
 table depth :math:`wtd`, average precipitation :math:`precip`. 
+
+
+
+Permanent ground displacements due to liquefaction 
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Evaluation of the liquefaction induced permanent ground deformation is 
+conducted using the methodology developed for the HAZUS software by the 
+US Federal Emergency Management Agency. Lateral spreading and vertical
+settlements can have detrimental effects on the built environement. 
+
+Lateral spreading (Hazus)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The expected permanent displacement due to lateral spreading given the
+susceptibility category can be determined as:
+
+.. :math:: E[PGD_{SC}] = K_{\Delta}\times E[PGD|(PGA/PL_{SC})=a]\ \(12)
+
+Where: 
+:math:`E[PGD|(PGA/PL_{SC})=a]` is the expected ground displacement given
+the susceptibility category under a specified level of normalised shaking,
+and is calculated as:
+.. :math:: 12\, x - 12  \text{for} 1 < PGA/PGA(t) < 2
+.. :math:: 18\, x - 24  \text{for} 2 < PGA/PGA(t) < 3
+.. :math:: 70\, x - 180 \text{for} 3 < PGA/PGA(t) < 4
+
+:math:`(PGA/PGA(t))` 
+:math:`PGA(t)` is theminimum shaking level to induce liquefaction (see Table 1)
+:math:`K_{\Delta}` is the displacement correction factor given thhat modify 
+the displacement term for magnitudes other than :math:`M7.5`:
+.. :math:: K_{\Delta} = 0.0086\, M^3 - 0.0914\, M^2 + 0.4698\, M - 0.9835\ \(13)
+
+
+Vertical settlements (Hazus)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Ground settlements are assumed to be related to the area's susceptibility
+category. The ground settlement amplitudes are given in Table 3 for the
+portion of a soil deposit estimated to experience liquefaction at a given 
+ground motion level. The expected settlements at the site is the product
+of the probability of liquefaction and the characteristic settlement
+amplitude corresponding to the liquefaction susceptibility category (LSC). 
+
++----------------+-----------------------+
+| LSC            | Settlements (inches)  |
++================+=======================+
+| very high      |          12           |
++----------------+-----------+-----------+
+| high           |           6           |
++----------------+-----------------------+
+| moderate       |           2           |
++----------------+-----------------------+
+| low            |           1           |
++----------------+-----------------------+
+| very low       |           0           |
++----------------+-----------------------+
+| none           |           0           |
++----------------+-----------------------+
+Table 3: Ground settlements amplitudes for 
+liquefaction susceptibility categories.
+
+
+Nonparametric model
+~~~~~~~~~~~~~~~~~~~
+
+In 2021 Durante et al. (2021) explored potential use of machine learning
+in predicting the lateral spreading on national scale. Later, in 2023
+Professor Rathje presented at GEM Conference a more general model, with
+global applicability. Similar to geospatial liquefaction models, it uses
+globally available inputs as first-order proxies to characterise the
+features that govern lateral spreading. The database used for training 
+the model is a compilation of data obtained from the Next Generation 
+Liquefaction (NGL) initiative and the Canterbury geotechnical database.
+The optimal features are :math:`pga [g]`, ground elevation :math:`[m]`, 
+slope :math:`[%]`, distance to the closest river :math:`d_{r} [m]`, 
+and ground water depth :math:`gwd [m]`. Model's output is categorical,
+i.e., each instance belongs to either of the classes: :math:`0`: small 
+displacements, :math"`1`: medium displacements, :math"`2`: large displa-
+cements. 
+This model is labelled with an experimental tag as the updated model is
+not obtained from the original authors, but has been trained by GEM 
+members with reference to the work of Durante et al. (2021) and Prof.
+Rathje presentation (2023).  
+
 
