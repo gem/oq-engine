@@ -75,9 +75,10 @@ Zhu et al. (2015)
 ~~~~~~~~~~~~~~~~
 
 The model by Zhu et al. (2015) is a logistic regression model requiring
-specification of the Vs30, the Compound Topographic Index (CTI), a proxy
-for soil wetness or groundwater depth, the PGA experienced at a site,
-and the magnitude of the causative earthquake.
+specification of the :math:`Vs30 [m/s]`, the Compound Topographic Index 
+(CTI), a proxy for soil wetness or groundwater depth :math:`gwd [m]`, 
+the :math:`PGA [g]` experienced at a site, and the magnitude of the 
+causative earthquake.
 
 The model is quite simple. An explanatory variable :math:`X` is
 calculated as:
@@ -91,16 +92,16 @@ and the final probability is the logistic function
 The term :math:`PGA_{M,SM}` is the PGA corrected by magnitude scaling
 factor (MSF) that serves as proxy for earthquake duration.
 
-Both the CTI and the Vs30 may be derived from digital elevation data.
-The Vs30 may be estimated from the topographic slope through the equa-
-tions of Wald and Allen (2007), which uses a very low resolution DEM
-compared to modern offerings. As topographic slope tends to increase
-with increased DEM resolution, the estimated Vs30 does too; therefore 
-a low-resolution DEM (i.e., a 1 km resolution) must be used to calcu-
-late Vs30, rather than the 30 m DEM that is the current standard. This 
-results in a more accurate Vs30 for a given slope measurement, but it
-also means that in an urban setting, sub-km-scale variations in slope
-are not accounted for.
+Both the :math:`CTI` and the :math:`Vs30` may be derived from digital 
+elevation data. The :math:`Vs30` may be estimated from the topographic 
+slope through the equa tions of Wald and Allen (2007), which uses a 
+very low resolution DEM compared to modern offerings. As topographic 
+slope tends to increase with increased DEM resolution, the estimated 
+:math:`Vs30` does too; therefore a low-resolution DEM (i.e., a 1 km 
+resolution) must be used to calculate :math:`Vs30`, rather than the 
+30 m DEM that is the current standard. This results in a more accurate 
+:math:`Vs30` for a given slope measurement, but it also means that in 
+an urban setting, sub-km-scale variations in slope are not accounted for.
 
 The CTI (Moore et al., 1991) is a proxy for soil wetness that relates
 the topographic slope of a point to the upstream drainage area of that
@@ -147,15 +148,16 @@ defined as one where the liquefaction occurrences are, on average, within
 epicentral distances less than 50 km.The implemented geospatial models 
 are for global use. An extended set of input parameters is used to 
 describe soil properties (its density and wetness). The ground shaking
-is characterised by :math:`PGV`. Soil density is described by :math:`Vs30`.
-Soil wetness in Model 1 is chatacterised by a set of features: mean annual 
-precipitation :math:`precip`, distance to the coast :math:`dc`, and distance 
-to the river :math:`river`. Distance to the coast also indicates the geologic
-age - younger deposits are found near the coast. Soil wetness in Model 2
-is characterised by closest distance to the water body :math:`dw` which is
-determined as :math:`\min(dc, dr)`, and the water table depth :math:`wtd`. 
-Mean annual precipitation is from a global layer developed by Hijmans et al. (2005). 
-Distance to the nearest river is calculated based on the HydroSHEDS database
+is characterised by :math:`PGV [cm/s]`. Soil density is described by 
+:math:`Vs30 [m/s]`. Soil wetness in Model 1 is chatacterised by a set of 
+features: mean annual precipitation :math:`precip [mm]`, distance to the 
+coast :math:`d_{c} [km]`, and distance to the river :math:`d_{r} [km]`. 
+Distance to the coast also indicates the geologic age - younger deposits 
+are found near the coast. Soil wetness in Model 2 is characterised by 
+closest distance to the water body :math:`d_{w} [km]` which is determined 
+as :math:`\min(d_{c}, d_{r})`, and the water table depth :math:`wtd [m]`. 
+Mean annual precipitation is from a global layer developed by Hijmans 
+et al. (2005). Distance to the nearest river is calculated based on the HydroSHEDS database
 (Lehner et al. 2008). Water table depth is retreived from a global dataset by
 Fan et al (2013).Distance to the nearest coastline data was computed 
 from https://oceancolor.gsfc.nasa.gov. 
@@ -164,14 +166,15 @@ The explanatory varibale :math:`X`is calculated as:
 
 Model 1: 
 .. math:: X = 12.435 + 0.301\, ln\, PGV - 2.615\, ln\, Vs30 + 0.0005556\, precip
-.. math::     -0.0287\, \sqrt{dc} + 0.0666\,dr - 0.0369\, \sqrt{dc} \cdot dr\ \(6) 
+.. math::     -0.0287\, \sqrt{d_{c}} + 0.0666\,d_{r} - 0.0369\, \sqrt{d_{c}} \cdot d_{r}\ \(6) 
 
 Model 2:
 .. math:: X = 8.801 + 0.334\, ln\, PGV - 1.918\, ln\, Vs30 + 0.0005408\, precip
-.. math::     -0.2054\, dc -0.0333\, dr\ \(7)
+.. math::     -0.2054\, d_{w} -0.0333\, wtd\ \(7)
 
-and the probability of liquefaction is calculated using equation (3). Zero
-probability is heuristically assigned if :math:`PGV < 0.3` or :math:`Vs30 > 620`. 
+and the probability of liquefaction is calculated using equation (3). 
+Zero probability is heuristically assigned if :math:`PGV < 3 cm/s ` or 
+:math:`Vs30 > 620 m/s`. 
 
 The proposed probability threshold to convert to class outcome is 0.4. 
 
@@ -204,7 +207,7 @@ The model proposed by Rashidian et al. (2020) keeps the same functional form
 as the general model (Model 2) proposed by Zhu et al. (2017); however, introdu-
 cing two constraints to address the overestimation of liquefaction extent. The 
 mean annual precipitation has been capped to 1700 mm. No liquefaction is heuri-
-stically assign when :math:`pga < 0.1` as an additional measure to decrease the
+stically assign when :math:`pga < 0.1 g` as an additional measure to decrease the
 overestimation of liquefaction. 
 Additional novelty introduced in this model is the magnitude scaling factor
 :math:`MSF` to multiply the :math:`PGV` to mitigate the potential over-prediction
@@ -224,12 +227,12 @@ Akhlagi et al. (2021)
 
 Expanding the liquefaction inventory to include 51 earthquake, Akhlagi et al.
 (2021) proposed two candidate models to predict probability of liquefaction. 
-Shaking is expressed in terms of :math:`PGV`. Soil saturation is characterised 
-using the set of proxies: distance to the nearest coastline :math:`dc`, 
-distance to the closest river :math:`dr`, elevation from the closest water 
-body :math:`Z_{wb}`. Soil density is characterised either by :math:`Vs30` 
-or topographic roughness index :math:`TRI` which is defined as the mean 
-difference between a central pixel and its eight surrounding cells. The 
+Shaking is expressed in terms of :math:`PGV [cm/s]`. Soil saturation is 
+characterised using the set of proxies: distance to the nearest coastline
+:math:`d_{c} [m]`, distance to the closest river :math:`d_{r} [m]`, elevation from the 
+closest water body :math:`Z_{wb} [m]`. Soil density is characterised either by 
+:math:`Vs30 [cm/s]` or topographic roughness index :math:`TRI` which is defined as 
+the mean difference between a central pixel and its eight surrounding cells. The 
 explanatory variables of two candidate models are:
 
 Model 1: 
@@ -240,8 +243,9 @@ Model 2:
 .. math:: X = 9.504 + 0.706\, ln\, PGV - 0.994\, ln\, Vs30 - 0.389\, ln\, d_{c}+1
 .. math::     -0.291\, \ln\, d_{r}+1 - 0.205\, \sqrt{Z_{wb}}\ \(11)
 
-and the probability of liquefaction is calculated using equation (3). Zero
-probability is heuristically assigned if :math:`PGV < 0.3` or :math:`Vs30 > 620`. 
+and the probability of liquefaction is calculated using equation (3). 
+Zero probability is heuristically assigned if :math:`PGV < 3 cm` or 
+:math:`Vs30 > 620 m/s`. 
 
 The proposed probability threshold to convert to class outcome is 0.4. 
 
@@ -266,9 +270,9 @@ A non-parametric model was proposed to predict liquefaction occurrence and
 the associated probabilities. The general model was trained on the dataset
 including inventories from over 40 events. A set of candidate variables 
 were considered and the ones that correlate the best with liquefaction 
-occurrence are identified as: strain proxy, a ratio between :math:`pgv`
-and :math:`Vs30`; distance to the closest water body :math:`dr`, water
-table depth :math:`wtd`, average precipitation :math:`precip`. 
+occurrence are identified as: strain proxy, a ratio between :math:`pgv [cm/s]`
+and :math:`Vs30 [m/s]`; distance to the closest water body :math:`d_{w} [km]`, 
+water table depth :math:`gwd [m]`, average precipitation :math:`precip [mm]`. 
 
 
 
@@ -310,8 +314,9 @@ Ground settlements are assumed to be related to the area's susceptibility
 category. The ground settlement amplitudes are given in Table 3 for the
 portion of a soil deposit estimated to experience liquefaction at a given 
 ground motion level. The expected settlements at the site is the product
-of the probability of liquefaction and the characteristic settlement
-amplitude corresponding to the liquefaction susceptibility category (LSC). 
+of the probability of liquefaction (equation 1) and the characteristic 
+settlement amplitude corresponding to the liquefaction susceptibility 
+category (LSC). 
 
 +----------------+-----------------------+
 | LSC            | Settlements (inches)  |
@@ -332,8 +337,8 @@ Table 3: Ground settlements amplitudes for
 liquefaction susceptibility categories.
 
 
-Nonparametric model
-~~~~~~~~~~~~~~~~~~~
+Nonparametric model for lateral spreading
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In 2021 Durante et al. (2021) explored potential use of machine learning
 in predicting the lateral spreading on national scale. Later, in 2023
@@ -353,5 +358,12 @@ This model is labelled with an experimental tag as the updated model is
 not obtained from the original authors, but has been trained by GEM 
 members with reference to the work of Durante et al. (2021) and Prof.
 Rathje presentation (2023).  
+
+
+
+Landslide models
+----------------
+
+
 
 
