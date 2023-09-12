@@ -452,7 +452,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
-                               'investigation time is too short')
+                               'effective investigation time is too short')
 
         # don't change the order of the 3 things below!
         self.store_source_info(source_data)

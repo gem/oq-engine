@@ -39,7 +39,7 @@ import numpy
 from openquake.baselib import hdf5, node
 from openquake.baselib.python3compat import decode
 from openquake.baselib.node import node_from_elem, context, Node
-from openquake.baselib.general import groupby, group_array, AccumDict
+from openquake.baselib.general import groupby, group_array, AccumDict, BASE183
 from openquake.hazardlib import nrml, InvalidFile, pmf, valid
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.gsim_lt import (
@@ -557,6 +557,12 @@ class SourceModelLogicTree(object):
         values = []
         bsno = len(self.branchsets)
         zeros = []
+        if len(branches) > len(BASE183):
+            msg = ('%s: the branchset %s has too many branches (%d > %d)\n'
+                   'you should split it, see https://docs.openquake.org/'
+                   'oq-engine/advanced/latest/logic_trees.html')
+            raise InvalidFile(
+                msg % (self.filename, bs_id, len(branches), len(BASE183)))
         for brno, branchnode in enumerate(branches):
             weight = ~branchnode.uncertaintyWeight
             value_node = node_from_elem(branchnode.uncertaintyModel)
@@ -595,8 +601,7 @@ class SourceModelLogicTree(object):
                 branch = Branch(bs_id, branch_id, weight, value)
                 self.branches[branch_id] = branch
                 branchset.branches.append(branch)
-            self.shortener[branch_id] = keyno(
-                branch_id, bsno, brno, self.filename)
+            self.shortener[branch_id] = keyno(branch_id, bsno, brno)
             weight_sum += weight
         if zeros:
             branch = Branch(bs_id, zero_id, sum(zeros), '')
@@ -938,8 +943,7 @@ class SourceModelLogicTree(object):
                     uvalue = row['uvalue']  # not really deserializable :-(
                 br = Branch(bsid, row['branch'], row['weight'], uvalue)
                 self.branches[br.branch_id] = br
-                self.shortener[br.branch_id] = keyno(
-                    br.branch_id, ordinal, no, attrs['filename'])
+                self.shortener[br.branch_id] = keyno(br.branch_id, ordinal, no)
                 bset.branches.append(br)
             bsets.append(bset)
         CompositeLogicTree(bsets)  # perform attach_to_branches
