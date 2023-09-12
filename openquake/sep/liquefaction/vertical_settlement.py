@@ -68,7 +68,8 @@ def hazus_vertical_settlement(
     else:
         vert_settlement = settlement_table[liq_susc_cat]
 
-    liquefaction_prob = hazus_liquefaction_probability(pga, mag, liq_susc_cat, groundwater_depth, do_map_proportion_correction)
+    liquefaction_prob = hazus_liquefaction_probability(pga, mag, liq_susc_cat, 
+                                                       groundwater_depth, do_map_proportion_correction)
 
     vert_settlement *= liquefaction_prob
 
