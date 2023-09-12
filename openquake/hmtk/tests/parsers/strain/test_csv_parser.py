@@ -37,10 +37,10 @@
 # directed to the hazard scientific staff of the GEM Model Facility
 # (hazard@globalquakemodel.org).
 #
-# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -173,8 +173,9 @@ class TestStrainCsvWriter(unittest.TestCase):
         self.model, output_variables = self.writer.slice_rates_to_data(
             self.model)
 
-        self.assertListEqual(output_variables,
-                             ['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500', '6.600'])
+        self.assertListEqual(
+            output_variables,
+            ['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500', '6.600'])
         np.testing.assert_array_almost_equal(self.model.data['5.500'],
                                              np.array([1., 1., 1.]))
 
@@ -191,11 +192,11 @@ class TestStrainCsvWriter(unittest.TestCase):
                                                [1., 2.]])
         self.model.target_magnitudes = np.array([5.5, 6.6])
 
-        expected = [['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500',
-                     '6.600'], ['30.0', '30.0', '1.0', '1.0', '1.0', '1.0',
-                                '2.0'], ['30.0', '30.0', '2.0', '2.0', '2.0', '1.0',
-                                         '2.0'], ['30.0', '30.0', '3.0', '3.0', '3.0', '1.0',
-                                                  '2.0']]
+        expected = [
+            ['longitude', 'latitude', 'exx', 'eyy', 'exy', '5.500', '6.600'],
+            ['30.0', '30.0', '1.0', '1.0', '1.0', '1.0', '2.0'],
+            ['30.0', '30.0', '2.0', '2.0', '2.0', '1.0', '2.0'],
+            ['30.0', '30.0', '3.0', '3.0', '3.0', '1.0', '2.0']]
         self.writer.write_file(self.model)
         f = open('a_test_file.csv')
         data = csv.reader(f)

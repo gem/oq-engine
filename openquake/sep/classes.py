@@ -175,8 +175,9 @@ class ZhuLiquefactionGeneral(SecondaryPeril):
     """
     outputs = ["LiqProb"]
 
-    def __init__(self, intercept=24.1, cti_coeff=0.355, vs30_coeff=-4.784):
+    def __init__(self, intercept=24.1, pgam_coeff = 2.067, cti_coeff=0.355, vs30_coeff=-4.784):
         self.intercept = intercept
+        self.pgam_coeff = pgam_coeff
         self.cti_coeff = cti_coeff
         self.vs30_coeff = vs30_coeff
 

@@ -1631,7 +1631,7 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
@@ -1646,15 +1646,14 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
         return dmgdist @ coeffs * asset['value-' + loss_type]
     elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
-    elif consequence == 'injured':
-        return dmgdist @ coeffs * asset['occupants_night']
-    elif consequence == 'fatalities':
-        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_avg']
+        return dmgdist @ coeffs * asset['value-residents']
 
 
-def get_agg_value(consequence, agg_values, agg_id, xltype):
+def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
@@ -1662,12 +1661,11 @@ def get_agg_value(consequence, agg_values, agg_id, xltype):
     aval = agg_values[agg_id]
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
-    elif consequence == 'injured':
-        return aval['occupants_night']
-    elif consequence == 'fatalities':
-        return aval['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return aval[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return aval['occupants_night']
+        return aval['residents']
     elif consequence in ('loss', 'losses'):
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]

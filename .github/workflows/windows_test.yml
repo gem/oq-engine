@@ -1,17 +1,20 @@
-name: TEST OQ calcs using GH
+name: Windows full tests of OpenQuake Engine
 
 on:
   workflow_dispatch:
     inputs:
       git-ref:
         description: Git Ref
-        default: engine-3.12
+        default: master
         required: true
+  schedule:
+    - cron: "00 22 * * *"
   push:
-    branches: [ singapore ]
+    branches: [ windows-all-tests ]
 
 jobs:
-  install_and_test:
+
+  install:
     runs-on: windows-latest
     env:
       GITHUB_PULL_REQUEST: ${{ github.event.number }}
@@ -22,7 +25,7 @@ jobs:
       BRANCH: ${{ github.event.inputs.git-ref }}
     strategy:
       matrix:
-        python-version: [3.8]
+        python-version: ["3.10"]
 
     steps:
       - name: Check out the codebase.
@@ -43,33 +46,114 @@ jobs:
     # You can test your matrix by printing the current Python version
       - name: Display Python version
         run: python -c "import sys; print(sys.version)"
+      - name: Echo env var
+        env:
+          BRANCH: ${{ github.event.inputs.git-ref }}
+        run: |
+          echo "${Env:environment}"
+          Write-Host $Env:GITHUB_REF
+          echo "Branch environment"
+          Write-Host $Env:BRANCH
       - name: Install engine on developer mode
-        env: 
+        env:
           BRANCH: ${{ github.event.inputs.git-ref }}
         run: |
           set PIP_DEFAULT_TIMEOUT=100
-          python -m pip install pip wheel setuptools --upgrade
+          python -m pip install pip --upgrade
           #echo Branch to test %BRANCH%
           #if %BRANCH%=="" (python install.py devel) else (python install.py devel --version %BRANCH%)
-          pwd 
-          ls
-          echo "branch to test: ${BRANCH}"
-          if [[ "$BRANCH" != "" ]]
-          then
-            python install.py devel --version ${BRANCH}
+          write-Host "Branch to test $($Env:BRANCH)"
+          if ($Env:BRANCH)
+          {
+            Write-Host "Install with workflow_dispatch"
+            Write-Host "python install.py devel --version ${env:BRANCH}"
+            python install.py devel --version ${env:BRANCH}
+          }
           else
+          {
+            Write-Host "Install on scheduled task"
+            Write-Host "python install.py devel "
             python install.py devel
-          fi
-        shell: bash
-      - name: Run Test using http method
+          }
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          python -m pip install pytest pyshp flake8
+
+      - name: Run all demos
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          #
+          # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          #
-          write-host "Classical Hazard"
-          oq engine --run "https://github.com/gem/oq-engine/blob/master/openquake/server/tests/data/classical.zip?raw=true"
-          #
-          write-host "Singapore"
-          oq engine --run "https://downloads.openquake.org/risk_test.zip"
+          Write-Host "Run all demos having only job.ini"
+          $iniFilePaths = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Filter job.ini
+          foreach($iniFilePath in $iniFilePaths) {
+            Write-Host "Run $($iniFilePath.FullName)"
+            oq engine --run $iniFilePath.FullName --exports csv,hdf5
+          }
+          Write-Host "Run all demos having only job_hazard.ini and job_risk.ini"
+          $demoDirs = Get-ChildItem D:\a\oq-engine\oq-engine\demos -Recurse -Directory
+          foreach($demoDir in $demoDirs) {
+            $jobHazardPaths = Get-ChildItem $demoDir -Filter job_hazard.ini
+            foreach($jobHazardPath in $jobHazardPaths) {
+              Write-Host "Run $($jobHazardPath.FullName)"
+              oq engine --run $jobHazardPath.FullName --exports csv,hdf5
+              $jobRiskPath = $demoDir.FullName + "\job_risk.ini"
+              Write-Host "Run $($jobRiskPath)"
+              oq engine --run $jobRiskPath --exports csv,hdf5 --hc -1
+            }
+          }
+
+      - name: Run tests for calculators and advanced manual
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          cd D:\a\oq-engine\oq-engine
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
+          cd doc/adv-manual
+          pytest @(get-childitem -name *.rst)
+
+      - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine\openquake
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+
+      - name: Run tests for the engine server in public mode to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine
+          set OQ_APPLICATION_MODE=public
+          .\openquake\server\manage.py test tests.test_public_mode
+
+      - name: Run tests for the engine server in read-only mode to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine
+          set OQ_APPLICATION_MODE=read_only
+          .\openquake\server\manage.py test tests.test_read_only_mode
+
+      - name: Run tests for the engine server in aelo mode to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine
+          set OQ_APPLICATION_MODE=aelo
+          set OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg
+          .\openquake\server\manage.py test tests.test_aelo_mode

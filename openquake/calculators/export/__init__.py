@@ -57,6 +57,7 @@ DISPLAY_NAME = {
     'disagg-rlzs': 'Disaggregation Outputs Per Realization',
     'disagg-stats': 'Statistical Disaggregation Outputs',
     'realizations': 'Realizations',
+    'rtgm': 'Risk Targeted Ground Motion',
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files',

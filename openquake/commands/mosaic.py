@@ -130,7 +130,7 @@ def from_file(fname, concurrent_jobs=8):
 
 
 def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = 8):
+             concurrent_jobs: int = 8, vs30: float = 760):
     """
     Run a PSHA analysis on the given lon and lat or given a CSV file
     formatted as described in the 'from_file' function
@@ -144,7 +144,7 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
         from_file(lonlat_or_fname, concurrent_jobs)
         return
     lon, lat = lonlat_or_fname.split(',')
-    params = get_params_from(dict(lon=lon, lat=lat))
+    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30))
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -153,10 +153,12 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     else:
         engine.run_jobs([jobctx], concurrent_jobs=concurrent_jobs)
 
+
 run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
 run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
+run_site.vs30 = 'vs30 value for the calculation'
 
 
 # ######################### sample rups and gmfs ######################### #

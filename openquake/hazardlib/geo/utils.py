@@ -187,7 +187,7 @@ class _GeographicObjects(object):
         :param exp: Exposure instance
         :param assoc_dist: the maximum distance for association
         :param mode: 'strict', 'warn' or 'filter'
-        :returns: filtered site collection, discarded
+        :returns: filtered site collection, discarded assets
         """
         assert mode in 'strict filter', mode
         self.objects.filtered  # self.objects must be a SiteCollection

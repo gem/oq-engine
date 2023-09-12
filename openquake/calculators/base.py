@@ -321,8 +321,10 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                        'hcurves-rlzs' in self.datastore)
         if has_hcurves:
             keys.add('hcurves')
-        if 'ruptures' in self.datastore:
+        if 'ruptures' in self.datastore and len(self.datastore['ruptures']):
             keys.add('event_based_mfd')
+        elif 'ruptures' in keys:
+            keys.remove('ruptures')
         for fmt in fmts:
             if not fmt:
                 continue
@@ -572,7 +574,8 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore.create_df('_poes', readinput.Global.pmap.to_dframe())
+            self.datastore.create_df('_poes',
+                                     readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
@@ -678,7 +681,9 @@ class HazardCalculator(BaseCalculator):
         .sitecol, .assetcol
         """
         oq = self.oqparam
-        self.sitecol, self.assetcol, discarded = readinput.get_sitecol_assetcol(
+        (self.sitecol,
+         self.assetcol,
+         discarded) = readinput.get_sitecol_assetcol(
             oq, haz_sitecol, self.crmodel.loss_types, self.datastore)
         # this is overriding the sitecol in test_case_miriam
         self.datastore['sitecol'] = self.sitecol
@@ -845,7 +850,6 @@ class HazardCalculator(BaseCalculator):
             if self.sitecol and oq.imtls:
                 logging.info('Read N=%d hazard sites and L=%d hazard levels',
                              len(self.sitecol), oq.imtls.size)
-
         if oq_hazard:
             parent = self.datastore.parent
             if 'assetcol' in parent:
@@ -906,6 +910,8 @@ class HazardCalculator(BaseCalculator):
                         self.sitecol.calculate_z2pt5()
 
                 self.datastore['sitecol'] = self.sitecol
+                if self.sitecol is not self.sitecol.complete:
+                    self.datastore['complete'] = self.sitecol.complete
 
         # store amplification functions if any
         if 'amplification' in oq.inputs:
@@ -984,7 +990,9 @@ class HazardCalculator(BaseCalculator):
         """
         Save (eff_ruptures, num_sites, calc_time) inside the source_info
         """
-        if 'source_info' not in self.datastore:
+        # called first in preclassical, then called again in classical
+        first_time = 'source_info' not in self.datastore
+        if first_time:
             source_reader.create_source_info(self.csm, self.datastore.hdf5)
         self.csm.update_source_info(source_data)
         recs = [tuple(row) for row in self.csm.source_info.values()]
@@ -992,7 +1000,7 @@ class HazardCalculator(BaseCalculator):
             recs, source_reader.source_info_dt)
 
     def post_process(self):
-       	"""
+        """
         Run postprocessing function, if any
         """
         oq = self.oqparam
@@ -1000,7 +1008,7 @@ class HazardCalculator(BaseCalculator):
             modname, funcname = oq.postproc_func.rsplit('.', 1)
             mod = getattr(postproc, modname)
             func = getattr(mod, funcname)
-            if 'csm' in inspect.getargspec(func).args:
+            if 'csm' in inspect.getfullargspec(func).args:
                 if hasattr(self, 'csm'):  # already there
                     csm = self.csm
                 else:  # read the csm from the parent calculation
@@ -1111,7 +1119,8 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     if names[0] == 'rlzi':  # backward compatibility
         names = names[1:]  # discard the field rlzi
     names = [n for n in names if n != 'custom_site_id']
-    imts = [name.lstrip('gmv_') for name in names if name not in ('sid', 'eid')]
+    imts = [name.lstrip('gmv_')
+            for name in names if name not in ('sid', 'eid')]
     oqparam.hazard_imtls = {imt: [0] for imt in imts}
     missing = set(oqparam.imtls) - set(imts)
     if missing:

@@ -378,14 +378,14 @@ def get_mesh(oqparam, h5=None):
         # read it only once
         Global.exposure = get_exposure(oqparam, h5)
     if oqparam.sites:
-        return geo.Mesh.from_coords(oqparam.sites)
+        mesh = geo.Mesh.from_coords(oqparam.sites)
+        return mesh
     elif 'hazard_curves' in oqparam.inputs:
         fname = oqparam.inputs['hazard_curves']
         if isinstance(fname, list):  # for csv
             mesh, Global.pmap = get_pmap_from_csv(oqparam, fname)
-        else:
-            raise NotImplementedError('Reading from %s' % fname)
-        return mesh
+            return mesh
+        raise NotImplementedError('Reading from %s' % fname)
     elif oqparam.region_grid_spacing:
         if oqparam.region:
             poly = geo.Polygon.from_wkt(oqparam.region)
@@ -419,9 +419,11 @@ def get_mesh(oqparam, h5=None):
         if h5:
             h5['site_model'] = sm
         mesh = geo.Mesh(sm['lon'], sm['lat'])
-        return mesh
     elif 'exposure' in oqparam.inputs:
-        return Global.exposure.mesh
+        mesh = Global.exposure.mesh
+    else:
+        mesh = None
+    return mesh
 
 
 def get_poor_site_model(fname):
@@ -448,6 +450,7 @@ def get_site_model(oqparam):
     if 'amplification' in oqparam.inputs:
         req_site_params.add('ampcode')
     arrays = []
+    sm_fieldsets = {}
     for fname in oqparam.inputs['site_model']:
         if isinstance(fname, str) and not fname.endswith('.xml'):
 
@@ -461,6 +464,7 @@ def get_site_model(oqparam):
                 else:
                     sm = get_poor_site_model(fname)
 
+            sm_fieldsets[fname] = set(sm.dtype.names)
             # make sure site_id starts from 0, if given
             if 'site_id' in sm.dtype.names:
                 if (sm['site_id'] != numpy.arange(len(sm))).any():
@@ -527,6 +531,20 @@ def get_site_model(oqparam):
             raise InvalidFile('There are duplicated sites in %s:\n%s' %
                               (fname, dupl))
         arrays.append(sm)
+
+    # all source model input files must have the same fields
+    for this_sm_fname in sm_fieldsets:
+        for other_sm_fname in sm_fieldsets:
+            if other_sm_fname == this_sm_fname:
+                continue
+            this_fieldset = sm_fieldsets[this_sm_fname]
+            other_fieldset = sm_fieldsets[other_sm_fname]
+            fieldsets_diff = this_fieldset - other_fieldset
+            if fieldsets_diff:
+                raise InvalidFile(
+                    f'Fields {fieldsets_diff} present in'
+                    f' {this_sm_fname} were not found in {other_sm_fname}')
+
     return numpy.concatenate(arrays)
 
 
@@ -583,6 +601,10 @@ def get_site_collection(oqparam, h5=None):
             sm = oqparam
         sitecol = site.SiteCollection.from_points(
             mesh.lons, mesh.lats, mesh.depths, sm, req_site_params)
+        if 'station_data' in oqparam.inputs:  # extend the sitecol
+            df = pandas.read_csv(oqparam.inputs['station_data'])
+            sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
+                                     df.LATITUDE.to_numpy())
     if ss:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
@@ -939,7 +961,8 @@ def get_exposure(oqparam, h5=None):
             oqparam.ignore_missing_costs,
             by_country='country' in asset.tagset(oqparam.aggregate_by),
             errors='ignore' if oqparam.ignore_encoding_errors else None,
-            infr_conn_analysis=oqparam.infrastructure_connectivity_analysis)
+            infr_conn_analysis=oqparam.infrastructure_connectivity_analysis,
+            aggregate_by=oqparam.aggregate_by)
     return exposure
 
 
@@ -960,7 +983,7 @@ def get_station_data(oqparam, sitecol):
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
     sid = {(lon, lat): sid
-           for lon, lat, sid in sitecol[['lon', 'lat', 'sids']]}
+           for lon, lat, sid in sitecol.complete[['lon', 'lat', 'sids']]}
     sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values
@@ -974,6 +997,15 @@ def get_station_data(oqparam, sitecol):
         stddev_str = "STDDEV" if im == "MMI" else "LN_SIGMA"
         cols.append(im + '_VALUE')
         cols.append(im + '_' + stddev_str)
+    for im_value_col in [im + '_VALUE' for im in imts]:
+        if (df[im_value_col] == 0).any():
+            file_basename = os.path.basename(oqparam.inputs['station_data'])
+            wrong_rows = df[['STATION_ID', im_value_col]].loc[
+                df.index[df[im_value_col] == 0]]
+            raise InvalidFile(
+                f"Please remove station data with zero intensity value from"
+                f" {file_basename}:\n"
+                f" {wrong_rows}")
     station_data = pandas.DataFrame(df[cols].values, columns=im_cols)
     station_data['site_id'] = sids
     return station_data, imts
@@ -1030,6 +1062,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
+            and not 'station_data' in oqparam.inputs
             and sitecol is not sitecol.complete):
         # for predefined hazard you cannot reduce the site collection; instead
         # you can in other cases, typically with a grid which is mostly empty

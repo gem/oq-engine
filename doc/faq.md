@@ -40,8 +40,8 @@ available RAM.
 Note: on a linux machine you can try disable hyperthreading
 temporarily with the command `sudo echo off > /sys/devices/system/cpu/smt/control`: however, this setting will not survive a reboot. Also, on some
 systems this command will not work. If you cannot disable hyperthreading
-just make sure that if you have enough memory: we recommend 4 GB per
-real core or 2 GB per thread.
+just make sure that if you have enough memory: we recommend at least
+2 GB per thread.
 
 ### Help! My windows server with 32/64 or more cores hangs!
 
@@ -72,13 +72,7 @@ most memory-efficient way to run calculations (browesers can use significant
 memory from your laptop).
 You can also limit the number of parallel threads as explained
 before (i.e. disable hyperthreading, reduce num_cores) or disable
-parallelism altogether by giving the command
-
-```
-$ oq engine --run job.ini --no-distribute
-```
-
-or by setting `concurrent_tasks = 0` in the job.ini file.
+parallelism altogether.
 If you still run out of memory, then you must reduce your calculation or
 upgrade your system.
 
