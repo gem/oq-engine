@@ -157,10 +157,10 @@ are found near the coast. Soil wetness in Model 2 is characterised by
 closest distance to the water body :math:`d_{w} [km]` which is determined 
 as :math:`\min(d_{c}, d_{r})`, and the water table depth :math:`wtd [m]`. 
 Mean annual precipitation is from a global layer developed by Hijmans 
-et al. (2005). Distance to the nearest river is calculated based on the HydroSHEDS database
-(Lehner et al. 2008). Water table depth is retreived from a global dataset by
-Fan et al (2013).Distance to the nearest coastline data was computed 
-from https://oceancolor.gsfc.nasa.gov. 
+et al. (2005). Distance to the nearest river is calculated based on the 
+HydroSHEDS database (Lehner et al. 2008). Water table depth is retreived from a 
+global dataset by Fan et al (2013).Distance to the nearest coastline data
+was computed from https://oceancolor.gsfc.nasa.gov. 
 
 The explanatory varibale :math:`X`is calculated as:
 
@@ -229,8 +229,8 @@ Expanding the liquefaction inventory to include 51 earthquake, Akhlagi et al.
 (2021) proposed two candidate models to predict probability of liquefaction. 
 Shaking is expressed in terms of :math:`PGV [cm/s]`. Soil saturation is 
 characterised using the set of proxies: distance to the nearest coastline
-:math:`d_{c} [m]`, distance to the closest river :math:`d_{r} [m]`, elevation from the 
-closest water body :math:`Z_{wb} [m]`. Soil density is characterised either by 
+:math:`d_{c} [m]`, distance to the closest river :math:`d_{r} [m]`, elevation from 
+the closest water body :math:`Z_{wb} [m]`. Soil density is characterised either by 
 :math:`Vs30 [cm/s]` or topographic roughness index :math:`TRI` which is defined as 
 the mean difference between a central pixel and its eight surrounding cells. The 
 explanatory variables of two candidate models are:
@@ -363,6 +363,104 @@ Rathje presentation (2023).
 
 Landslide models
 ----------------
+
+Landslides are considered as one of the most damaging secondary perils
+associated with earthquakes. Earthquake-induced landslides occurs when 
+the static and inertia forces within the sliding mass reduces the factor
+of safety below 1. Factors contributing to a slope failure are rather 
+complex. The permanent-displacement analysis developed by Newmark (1965)
+is used to model the dynamic performance of slopes (Jibson 2020, 2007).
+It considers a slope as a rigid block resting on an inclined plane at 
+an angle :math:`\alpha` (derived from Digital Elevation Model, DEM). 
+When the input motion which is expressed in terms of acceleration exceeds 
+the critical acceleration :math:`a_{c}`, the block starts to move. The 
+crtical acceleration accounts for the shear strength and geometrical 
+characteristics of the sliding surface, and is calculated as:
+
+.. :math:: a_{c} = (FS-1)\,g\,sin(\alpha)\ \(14)
+
+The lower bound of :math:`a_{c}` is set to 0.05 to avoid unrealistically
+large displacements.
+The static factor of safety is calculated as:
+
+.. :math:: FS = \frac{c'}{\gamma\, t\, sin(\alpha)} + frac{tan(\phi')}{tan(\alpha)} -
+.. :math::       frac{m\, \gamma_{w}\, tan(\phi')}{\gamma\, tan(\alpha)}\ \(15) 
+
+where:
+:math:`c' [Pa]` is the effective cohession with typical values ranging
+from 20 kPa for soils up to 20 MPa for unfaulted rocks.
+:math:`\alpha [\degrees]` is the slope angle.
+:math:`\phi' [\degrees]` is the effective friction angle with typical values 
+ranging from 30 to 40 degrees.
+:math:`\gamma [kg/m^3]` is the dry_density of the soil or rock. It ranges 
+from ~1500 :math:`kg/m^3` for soils to ~ 2500 - 3200 :math:`kg/m^3`.
+:math:`t [m]` is the slope-normal thickness of a failure slab with the default
+value of 2.5 meters.
+:math:`m` is the proportion of slab thickness that is saturated with default
+value of 0.1.
+:math:`\gamma_{w} [kg/m^3]` is the unit weight of water which equals to 
+:math:`1000 kg/m^3`. 
+
+Note that the units of the input parameters reported in this document 
+corresponds to the format required by the Engine to produce correct results.
+The first and second term of the the equation (15) corresponds to the cohesive
+and frictional components of the strength, while the third component 
+accounts for the strength reduction due to pore pressure.
+
+A variety of regression equations can be used to estimate the Newmark
+displacements, and within the engine, Newmark displacement as a 
+function of critical acceleration ratio and moment magnitude is implemented.
+The displacement is in units of meters.
+
+.. :math:: logD_{N} = -2.710 + 
+.. :math::             log[(1-\frac{a_{c}}{a_{max}})^2.335\, (\frac{a_{c}}{a_{max}})^-1.478] + 
+.. :math::             0.424\, M \± 0.454\ \(16) 
+
+The computed displacements do not necessarily correspond directly to  
+measurable slope movements in the field, but the modeled displacements 
+provide an index to correlate with field performance. Jibson (2000) compared 
+the predicted displacements with observations from 1994 Northridge earthquake 
+and fit the data with Weilbull curve. The following equation can be used 
+to estimate the probability of slope failure as a function of Newmark 
+displacement.
+
+.. :math:: P(f) = 0.335\, [1-e^(-0.048\, D_{n}^1.565)]\ \(17)
+
+
+The rock-slope failures are the other common effect observed in earthquakes.
+The methodology proposed by Grant et al., (2016) captures the brittle behavior
+associated with rock-slope failures and discontinuities common in rock masses.
+The static factor of safety is computed as:
+
+.. :math:: FS = \frac{2\, (c+c_{r})\, sin(\alpha)}{\gamma\, h\, sin(\beta)} +
+.. :math::      \frac{tan(\phi)}{tan(\beta)}\ \(18)
+
+where:
+:math:`c [Pa]` is the cohession with typical values ranging from 20 kPa 
+for soils up to 20 MPa for unfaulted rocks. 
+:math:`c_{r}` is the cohesion provided by the root systems of vegetated 
+hillslopes. Here, we adopted the default value of 0 root cohesion.
+:math:`\alpha [\degrees]` is the slope angle.
+:math:`\gamma [kg/m^3]` is the dry_density of the soil or rock. It ranges 
+from ~1500 :math:`kg/m^3` for soils to ~ 2500 - 3200 :math:`kg/m^3`.
+:math:`h [m]` is the vertical height of the failure mass and it corresponds
+to 1/4 of the local relief :math:`H` calculated based on the moving
+window analysis. 
+:math:`\phi' [\degrees]` is the effective friction angle with typical values 
+ranging from 30 to 40 degrees.
+:math:`\beta` is the slope's critical angle calculated as:
+.. :math:: \beta = \frac{\alpha + \phi}{0.5}\ \(19)
+
+The critical acceleration is computed similarly to equation (14). For rock-
+slope failures, the :math:`\alpha` term is replaced with :math:`\beta`.
+
+.. :math:: a_{c} = (FS-1)\,g\,sin(\beta)\ \(20)
+
+Finaly, the coseismic displacements are estimated using Jibson’s (2007) sliding 
+block displacement regression equation:
+
+.. :math:: logD_{N} = 0.215 + 
+.. :math::             log[(1-\frac{a_{c}}{a_{max}})^2.341\, (\frac{a_{c}}{a_{max}})^-1.438]\ \(21) 
 
 
 
