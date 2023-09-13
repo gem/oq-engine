@@ -180,8 +180,10 @@ def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
                  'lon': site.location.x,
                  'lat': site.location.y,
                  'Vs30': site.vs30},
-        'hazCurves': {norm_imt(imt): {'iml': new_imtls[imt],
-                                      'afe': to_rates(hcurves[0, m], invtime)}
+        'hazCurves': {norm_imt(imt):
+                      {'iml': new_imtls[imt],
+                       # NB: minrate > 0 is needed to avoid NaNs in the RTGM
+                       'afe': to_rates(hcurves[0, m], invtime, minrate=1E-12)}
                       for m, imt in enumerate(imtls) if imt in imts}}
     return hazdic, np.array(facts)
 
