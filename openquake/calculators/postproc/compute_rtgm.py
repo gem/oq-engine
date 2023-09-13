@@ -194,9 +194,10 @@ def main(dstore, csm):
         return
     logging.info('Computing Risk Targeted Ground Motion')
     oq = dstore['oqparam']
-    assert list(oq.hazard_stats()) == ['mean'], list(oq.hazard_stats())
-    sitecol = dstore['sitecol']
+    stats = list(oq.hazard_stats())
+    assert stats[0] == ['mean'], stats[0]
     hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
+    sitecol = dstore['sitecol']
     hazdic, facts = get_hazdic_facts(
         hcurves, oq.imtls, oq.investigation_time, sitecol)
     rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
