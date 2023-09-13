@@ -196,6 +196,7 @@ site_param_dt = {
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'relief': numpy.float64,
     'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
