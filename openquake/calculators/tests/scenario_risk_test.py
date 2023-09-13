@@ -28,7 +28,7 @@ from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, case_10, case_11, occupants, case_master,
-    case_shakemap, case_shapefile, reinsurance)
+    case_shakemap, case_shapefile, reinsurance, conditioned)
 
 
 aac = numpy.testing.assert_allclose
@@ -277,3 +277,12 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=1E-5)
+
+    def test_conditioned(self):
+        self.run_calc(conditioned.__file__, 'job.ini',
+                      calculation_mode='scenario')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(conditioned.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname, delta=1E-5)

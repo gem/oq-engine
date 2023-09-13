@@ -910,6 +910,11 @@ class HazardCalculator(BaseCalculator):
                         self.sitecol.calculate_z2pt5()
 
                 self.datastore['sitecol'] = self.sitecol
+                if self.sitecol is not self.sitecol.complete:
+                    self.datastore['complete'] = self.sitecol.complete
+                elif 'complete' in self.datastore.parent:
+                    # fix: the sitecol is not complete
+                    self.sitecol.complete = self.datastore.parent['complete']
 
         # store amplification functions if any
         if 'amplification' in oq.inputs:
