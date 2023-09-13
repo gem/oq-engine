@@ -134,7 +134,7 @@ class NewmarkDisplacement(SecondaryPeril):
 class RockSlopeFailure(SecondaryPeril):
     outputs = ["Disp"]
 
-    def __init__(self, c1=0.215, c2=2.341, c3=-1.428,
+    def __init__(self, c1=0.215, c2=2.341, c3=-1.438,
                  crit_accel_threshold=0.05):
         self.c1 = c1
         self.c2 = c2
