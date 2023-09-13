@@ -18,11 +18,15 @@
 import abc
 import inspect
 from openquake.hazardlib import imt
-from openquake.sep.landslide.common import static_factor_of_safety
+from openquake.sep.landslide.common import static_factor_of_safety, rock_slope_static_factor_of_safety
 from openquake.sep.landslide.newmark import (
     newmark_critical_accel,
     newmark_displ_from_pga_M,
     prob_failure_given_displacement,
+)
+from openquake.sep.landslide.rockfalls import (
+    critical_accel_rock_slope,
+    newmark_displ_from_pga
 )
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
@@ -41,8 +45,6 @@ from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement,
     lateral_spreading_nonparametric_general
 )
-from openquake.sep.liquefaction.vertical_settlement import hazus_vertical_settlement
-
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
     """
@@ -127,6 +129,37 @@ class NewmarkDisplacement(SecondaryPeril):
                     self.crit_accel_threshold)
             out.append(nd)
             out.append(prob_failure_given_displacement(nd))
+        return out
+    
+class RockSlopeFailure(SecondaryPeril):
+    outputs = ["Disp"]
+
+    def __init__(self, c1=0.215, c2=2.341, c3=-1.428,
+                 crit_accel_threshold=0.05):
+        self.c1 = c1
+        self.c2 = c2
+        self.c3 = c3
+        self.crit_accel_threshold = crit_accel_threshold
+
+    def prepare(self, sites):
+        sites.add_col('Fs', float, rock_slope_static_factor_of_safety(
+            slope=sites.slope,
+            cohesion=sites.cohesion_mid,
+            friction_angle=sites.friction_mid,
+            saturation_coeff=sites.saturation,
+            soil_dry_density=sites.dry_density))
+        sites.add_col('crit_accel', float,
+                      critical_accel_rock_slope(sites.Fs, sites.slope))
+
+    def compute(self, mag, imt_gmf, sites):
+        out = []
+        for im, gmf in imt_gmf:
+            if im.string == 'PGA':
+                nd = newmark_displ_from_pga(
+                    gmf, sites.crit_accel, mag,
+                    self.c1, self.c2, self.c3,
+                    self.crit_accel_threshold)
+            out.append(nd)
         return out
 
 
