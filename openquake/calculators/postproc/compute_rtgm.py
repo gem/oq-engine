@@ -194,7 +194,7 @@ def main(dstore, csm):
         return
     logging.info('Computing Risk Targeted Ground Motion')
     oq = dstore['oqparam']
-    assert list(oq.hazard_stats()) == ['mean'], oq.hazard_stats()
+    assert list(oq.hazard_stats()) == ['mean'], list(oq.hazard_stats())
     sitecol = dstore['sitecol']
     hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
     hazdic, facts = get_hazdic_facts(
