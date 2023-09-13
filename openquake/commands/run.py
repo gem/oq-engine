@@ -22,7 +22,11 @@ import socket
 import cProfile
 import warnings
 import getpass
-from pandas.core.common import SettingWithCopyWarning
+
+try:
+    from pandas.core.common import SettingWithCopyWarning
+except ImportError:
+    noSettingWithCopyWarning = True
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
@@ -83,7 +87,8 @@ def main(job_ini,
     Run a calculation
     """
     # os.environ['OQ_DISTRIBUTE'] = 'processpool'
-    warnings.filterwarnings("error", category=SettingWithCopyWarning)
+    if not noSettingWithCopyWarning:
+        warnings.filterwarnings("error", category=SettingWithCopyWarning)
     if not os.environ.get('OQ_DATABASE'):
         dbserver.ensure_on()
     user_name = getpass.getuser()
