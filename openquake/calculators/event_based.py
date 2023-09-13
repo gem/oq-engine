@@ -304,6 +304,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
+        if len(allproxies) > 1:
+            raise InvalidFile('%s: number_of_ground_motion_fields > 1 is not '
+                              'supported yet in conditioned GMFs calculation'
+                              % oq.inputs['job_ini'])
         # this is meant to be used in conditioned scenario calculations with
         # a single rupture; we are taking the first copy of the rupture
         # (remember: _read_scenario_ruptures makes num_gmfs copies to
