@@ -77,8 +77,8 @@ Zhu et al. (2015)
 The model by Zhu et al. (2015) is a logistic regression model requiring
 specification of the :math:`Vs30 [m/s]`, the Compound Topographic Index 
 (CTI), a proxy for soil wetness or groundwater depth :math:`gwd [m]`, 
-the :math:`PGA [g]` experienced at a site, and the magnitude of the 
-causative earthquake.
+the :math:`PGA_{M,SM} [g]` experienced at a site, and the magnitude of 
+the causative earthquake.
 
 The model is quite simple. An explanatory variable :math:`X` is
 calculated as:
@@ -90,11 +90,14 @@ and the final probability is the logistic function
 .. math:: P(L) = \frac{1}{1+e^X}\ \(3)
 
 The term :math:`PGA_{M,SM}` is the PGA corrected by magnitude scaling
-factor (MSF) that serves as proxy for earthquake duration.
+factor (MSF) that serves as proxy for earthquake duration. The :math:`MSF`
+is calculated as per Idriss et al. (1991):
+
+.. math:: MSF = \{10^2.24}{M^2.56}\ \(4)
 
 Both the :math:`CTI` and the :math:`Vs30` may be derived from digital 
 elevation data. The :math:`Vs30` may be estimated from the topographic 
-slope through the equa tions of Wald and Allen (2007), which uses a 
+slope through the equations of Wald and Allen (2007), which uses a 
 very low resolution DEM compared to modern offerings. As topographic 
 slope tends to increase with increased DEM resolution, the estimated 
 :math:`Vs30` does too; therefore a low-resolution DEM (i.e., a 1 km 
@@ -465,3 +468,62 @@ block displacement regression equation:
 
 
 
+Reference
+----------
+
+[1] HAZUS-MH MR5 Earthquake Model Technical Manual (https://www.hsdl.org/?view&did=12760)
+
+[2] Youd, T. L., & Idriss, I. M. (2001). Liquefaction Resistance of Soils: Summary Report 
+    from the 1996 NCEER and 1998 NCEER/NSF Workshops on Evaluation of Liquefaction Resistance 
+    of Soils. Journal of Geotechnical and Geoenvironmental Engineering, 127(4), 297–313.
+    https://doi.org/10.1061/(asce)1090-0241(2001)127:4(297)
+
+[3] I. D. Moore, R. B. Grayson & A. R. Ladson (1991). Digital terrain modelling: A review of 
+    hydrological, geomorphological, and biological applications. Journal of Hydrological 
+    Processes, 5(1), 3-30. https://doi.org/10.1002/hyp.3360050103 
+
+[4] Wald, D.J., Allen, T.I., (2007). Topographic Slope as a Proxy for Seismic Site Conditions 
+    and Amplification. Bull. Seism. Soc. Am. 97 (5), 1379–1395.
+
+[5] Zhu et al., 2015, 'A Geospatial Liquefaction Model for Rapid Response and 
+    Loss Estimation', Earthquake Spectra, 31(3), 1813-1837.
+
+[6] Bozzoni, F., Bonì, R., Conca, D., Lai, C. G., Zuccolo, E., & Meisina, C. (2021). 
+    Megazonation of earthquake-induced soil liquefaction hazard in continental Europe.
+    Bulletin of Earthquake Engineering, 19(10), 4059–4082. https://doi.org/10.1007/s10518-020-01008-6
+
+[7] Zhu, J., Baise, L. G., & Thompson, E. M. (2017). An updated geospatial liquefaction
+    model for global application. Bulletin of the Seismological Society of America, 
+    107(3), 1365–1385. https://doi.org/10.1785/0120160198
+
+[8] Rashidian, V., & Baise, L. G. (2020). Regional efficacy of a global geospatial 
+    liquefaction model. Engineering Geology, 272, 105644. 
+    https://doi.org/10.1016/j.enggeo.2020.105644
+
+[9] Allstadt, K. E., Thompson, E. M., Jibson, R. W., Wald, D. J., Hearne, M., Hunter, E. J., 
+    Fee, J., Schovanec, H., Slosky, D., & Haynie, K. L. (2022). The US Geological Survey 
+    ground failure product: Near-real-time estimates of earthquake-triggered landslides and 
+    liquefaction. Earthquake Spectra, 38(1), 5–36. https://doi.org/10.1177/87552930211032685
+
+[10] Baise, L. G., Akhlaghi, A., Chansky, A., Meyer, M., & Moeveni, B. (2021). USGS Award 
+     #G20AP00029. Updating the Geospatial Liquefaction Database and Model. Tufts University. 
+     Medford, Massachusetts, United States.
+
+[11] Todorovic, L., Silva, V. (2022). A liquefaction occurrence model for regional analysis. 
+     Soil Dynamics and Earthquake Engineering, 161, 1–12. https://doi.org/10.1016/j.soildyn.2022.107430
+
+[12] Durante, M.G., & Rathje, M.E. (2021). An exploration of the use of machine learning to 
+     predict lateral spreading. Earthquake Spectra, 37(4), 1-27. 
+     https://doi.org/10.1177/87552930211004613
+
+[13] Newmark, N.M., 1965. Effects of earthquakes on dams and embankments. Geotechnique 15, 139–159.
+
+[14] Jibson, R.W., Harp, E.L., & Michael, J.A. (2000). A method for producing digital probabilistic 
+     seismic landslide hazard maps. Engineering Geology, 58(3-4), 271-289.
+     https://doi.org/10.1016/S0013-7952(00)00039-9 
+
+[15] Jibson, R.W. (2007). Regression models for estimating coseismic landslide displacement.
+     Engineering Geology, 91(2-4), 209-218. https://doi.org/10.1016/j.enggeo.2007.01.013 
+
+[16] Grant, A., Wartman, J., & Grace, A.J. (2016). Multimodal method for coseismic landslide 
+     hazard assessment. Engineering Geology, 212, 146-160. https://doi.org/10.1016/j.enggeo.2016.08.005
