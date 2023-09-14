@@ -136,7 +136,7 @@ def expose_outputs(dstore, owner=USER, status='complete'):
         if 'loss_curves-stats' in dstore:
             dskeys.add('loss_maps-stats')
     if 'ruptures' in dskeys:
-        if  'scenario' in calcmode or len(dstore['ruptures']) == 0:
+        if 'scenario' in calcmode or len(dstore['ruptures']) == 0:
             # do not export, as requested by Vitor
             exportable.remove('ruptures')
         else:
@@ -389,7 +389,7 @@ def run_jobs(jobctxs, concurrent_jobs=3):
         # the job aborted even before starting
         for job in jobctxs:
             logs.dbcmd('finish', job.calc_id, 'aborted')
-        return jobctxs
+        raise
     for job in jobctxs:
         dic = {'status': 'executing', 'pid': _PID,
                'start_time': datetime.utcnow()}
