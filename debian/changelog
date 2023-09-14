@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Enhanced `oq engine --delete-calculation` to remove calculation files
+    even if the DbServer is on a remote machine
   * Fixed another site collection filtering bug in conditioned GMFs
   * Fixed a regression in `oq reaggregate`
   * Better error message for logic trees with branchsets exceeding the limit
