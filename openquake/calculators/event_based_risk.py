@@ -151,7 +151,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays, the output of event_based_risk
+    :yields: dictionary of arrays, the output of event_based_risk
     """
     if dstore.parent:
         dstore.parent.open('r')
