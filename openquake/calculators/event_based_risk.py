@@ -175,11 +175,13 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             if col == 'sid':
                 dic[col] = haz_sids[idx]
             else:
-                data = dstore['gmf_data/' + col][s0+start:s0+stop]
-                dic[col] = data[idx - start]
+                dset = dstore['gmf_data/' + col]
+                dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
-    for s0, s1 in performance.split_slices(
-            dic['eid'], oqparam.max_gmvs_per_task):
+    del dic
+    slices = performance.split_slices(
+        df.eid.to_numpy(), oqparam.max_gmvs_per_task)
+    for s0, s1 in slices:
         yield event_based_risk(df[s0:s1], oqparam, monitor)
 
 
