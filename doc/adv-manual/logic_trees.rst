@@ -174,7 +174,7 @@ The complete realizations can be obtained by not specifying ``applyToBranches``:
  ...                         ['E', 'extra3.xml', 0.2]],
  ...     ['extendModel', [], ['F', 'extra4.xml', 0.6],
  ...                         ['G', 'extra5.xml', 0.4]])
- >>> logictree.get_all_paths() # 12 paths
+ >>> logictree.get_all_paths() # 2 * 3 * 2 = 12 paths
  ['ACF', 'ACG', 'ADF', 'ADG', 'AEF', 'AEG', 'BCF', 'BCG', 'BDF', 'BDG', 'BEF', 'BEG']
 
 The logic tree demo
