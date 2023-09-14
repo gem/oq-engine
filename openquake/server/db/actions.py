@@ -318,13 +318,14 @@ def finish(db, job_id, status):
        job_id)
 
 
-def del_calc(db, job_id, user, force=False):
+def del_calc(db, job_id, user, delete_file=True, force=False):
     """
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
+    :param delete_file: also delete the HDF5 file
     :param force: delete even if there are dependent calculations
     :returns: a dict with key "success" and value indicating
         the job id of the calculation or of its ancestor, or key "error"
@@ -338,7 +339,7 @@ def del_calc(db, job_id, user, force=False):
     if not force and job_id in job_ids:  # jobarray
         err = []
         for jid in job_ids:
-            res = del_calc(db, jid, user, force=True)
+            res = del_calc(db, jid, user, delete_file, force=True)
             if "error" in res:
                 err.append(res["error"])
         if err:
@@ -363,13 +364,14 @@ def del_calc(db, job_id, user, force=False):
                 '%s and you are %s' % (job_id, owner, user)}
 
     fname = path + ".hdf5"
-    # A calculation could fail before it produces a hdf5
-    if os.path.isfile(fname):
+    # A calculation could fail before it produces a hdf5, or somebody
+    # may have canceled the file, so it could not exist
+    if delete_file and os.path.isfile(fname):
         try:
             os.remove(fname)
         except OSError as exc:  # permission error
             return {"error": 'Could not remove %s: %s' % (fname, exc)}
-    return {"success": str(job_id)}
+    return {"success": str(job_id), "hdf5path": fname}
 
 
 def log(db, job_id, timestamp, level, process, message):
