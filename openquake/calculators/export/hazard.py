@@ -542,6 +542,7 @@ def export_mean_rates_by_src(ekey, dstore):
     for site in sitecol:
         df = rates_df[rates_df.site_id == site.id]
         del df['site_id']
+        df = df[df.value > 0]  # don't export zeros
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
@@ -556,6 +557,7 @@ def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
     aw = dstore['mean_disagg_by_src']
     df = aw.to_dframe()
+    df = df[df.value > 0]  # don't export zeros
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
