@@ -203,7 +203,11 @@ class ClassicalTestCase(CalculatorTestCase):
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 x 2
 
-        # make sure the disaggregation works
+        # check mean_rates_by_src
+        [fname] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/mean_rates_by_src.csv", fname)
+
+        # make sure the disaggregation runs
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_27.__file__, 'job.ini',
                       hazard_calculation_id=hc_id,

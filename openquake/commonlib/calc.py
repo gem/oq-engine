@@ -397,8 +397,11 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     :param dstore: DataStore instance where the GMFs are stored
     :returns: a Starmap object used for event based calculations
     """
+    data = dstore['gmf_data']
     if 'gmf_data' in dstore.parent:
         ds = dstore.parent
+        gb = sum(data[k].nbytes for k in data) / 1024 ** 3
+        logging.info('There are %.1f GB of GMFs', gb)
     else:
         ds = dstore
     N = ds['sitecol'].sids.max() + 1
@@ -406,7 +409,6 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         N = max(N, len(ds['site_model']))
     with mon('computing event impact', measuremem=True):
         num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
-        data = ds['gmf_data']
         try:
             sbe = data['slice_by_event'][:]
         except KeyError:
@@ -421,7 +423,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
-        # maxweight=200M is the limit to run Canada with 2 GB per core
+        # maxweight=200M is the limit to run Chile with 2 GB per core
         maxweight=min(maxw, 200_000_000),
         weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)

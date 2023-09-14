@@ -76,7 +76,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         finally:
             cls.user.delete()
 
-    def aelo_run(self, params, failure_reason=None):
+    def aelo_run_then_remove(self, params, failure_reason=None):
         with tempfile.TemporaryDirectory() as email_dir:
             # FIXME: EMAIL_FILE_PATH is ignored. This would cause concurrency
             # issues in case tests run in parallel, because we are checking the
@@ -134,7 +134,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                     self.assertIn('Please find the results here:',
                                   email_content)
                     self.assertIn(f'engine/{job_id}/outputs', email_content)
-        self.post('%s/remove' % job_id)
+        ret = self.post('%s/remove' % job_id)
+        if ret.status_code != 200:
+            raise RuntimeError('Unable to remove job %s:\n%s' % (job_id, ret))
 
     def get_tested_lon_lat(self, model):
         test_sites_csv = 'openquake/qa_tests_data/mosaic/test_sites.csv'
@@ -147,11 +149,11 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 raise ValueError(f'No tested site was found for {model}')
             return float(row['lon']), float(row['lat'])
 
-    def test_aelo_successful_run_CCA(self):
+    def test_aelo_successful_run_CCA_then_remove_calc(self):
         lon, lat = self.get_tested_lon_lat('CCA')
         params = dict(
             lon=lon, lat=lat, vs30='800.0', siteid='CCA_SITE')
-        self.aelo_run(params)
+        self.aelo_run_then_remove(params)
 
     # NOTE: we can easily add tests for other models as follows:
 
@@ -159,13 +161,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     #     lon, lat = self.get_tested_lon_lat('EUR')
     #     params = dict(
     #         lon=lon, lat=lat, vs30='800.0', siteid='EUR_SITE')
-    #     self.aelo_run(params)
+    #     self.aelo_run_then_remove(params)
 
     # def test_aelo_successful_run_JPN(self):
     #     lon, lat = self.get_tested_lon_lat('JPN')
     #     params = dict(
     #         lon=lon, lat=lat, vs30='800.0', siteid='JPN_SITE')
-    #     self.aelo_run(params)
+    #     self.aelo_run_then_remove(params)
 
     def test_aelo_failing_run_mosaic_model_not_found(self):
         params = dict(
@@ -173,7 +175,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         failure_reason = (
             f"Site at lon={params['lon']} lat={params['lat']}"
             f" is not covered by any model!")
-        self.aelo_run(params, failure_reason)
+        self.aelo_run_then_remove(params, failure_reason)
 
     def aelo_invalid_input(self, params, expected_error):
         resp = self.post('aelo_run', params)

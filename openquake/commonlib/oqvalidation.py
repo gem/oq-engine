@@ -460,8 +460,8 @@ max_data_transfer:
 
 max_gmvs_per_task:
   Maximum number of rows of the gmf_data table per task.
-  Example: *max_gmvs_per_task = 100_000*
-  Default: 1_000_0000
+  Example: *max_gmvs_per_task = 200_000*
+  Default: 100_0000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -779,7 +779,7 @@ time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
   Example: *time_per_task=1000*
-  Default: 1500
+  Default: 1200
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -994,7 +994,7 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
+    max_gmvs_per_task = valid.Param(valid.positiveint, 100_000)
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
@@ -1064,7 +1064,8 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 1500)
+    time_per_task = valid.Param(valid.positivefloat, 1200)
+    # NB: time_per_task > 1200 breaks oq1 (OOM on the master) for Canada EBR
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
