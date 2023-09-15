@@ -21,7 +21,8 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        # FIXME: parametrize --version
+        python install.py devel --version=pandas2
     - name: Calculators and documentation tests
       run: |
         source ~/openquake/bin/activate
