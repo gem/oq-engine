@@ -44,7 +44,8 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        # FIXME: parametrize --version
+        python install.py devel --version=pandas2
     - name: Hazardlib tests
       run: |
         source ~/openquake/bin/activate
@@ -68,7 +69,8 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        # FIXME: parametrize --version
+        python install.py devel --version=pandas2
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -89,7 +91,8 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        # FIXME: parametrize --version
+        python install.py devel --version=pandas2
     - name: Server 'READ_ONLY' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -110,7 +113,8 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        # FIXME: parametrize --version
+        python install.py devel --version=pandas2
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate
