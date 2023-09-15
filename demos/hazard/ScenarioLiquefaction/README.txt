@@ -1,4 +1,4 @@
-Scenario Hazard Simple Fault Rupture Demo
+Scenario Hazard Liquefaction Single Plane Rupture Demo
 
 This calculation demo exercises the Scenario liquefaction calculator by 
 simulating a single rupture originating from a simple fault source.
