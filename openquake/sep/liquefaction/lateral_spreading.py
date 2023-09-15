@@ -135,7 +135,7 @@ def hazus_lateral_spreading_displacement_fn(
     return disp_inch
 
 
-def lateral_spreading_nonparametric_general(
+def Rathje2023_lateral_spreading_general(
     pga: Union[float, np.ndarray],
     elevation: Union[float, np.ndarray],
     slope: Union[float, np.ndarray],
