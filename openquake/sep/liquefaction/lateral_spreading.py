@@ -144,7 +144,7 @@ def lateral_spreading_nonparametric_general(
     ) -> Union[float, np.ndarray]:
     """
     Returns the multi class output (i.e, 0, 1, 2) which indicates small, medium and 
-    large lateral spreading as per Durante and Rathje (2023). 
+    large lateral spreading as per Durante and Rathje (2021). 
     The model presented here represent a generalisation of the DR21 model (see Reference) 
     to be used globally. This updated model was presented by Prof. Dr Ellen Rathje at GEM
     Conference 2023 (see Reference). The pickle file was not requested from Dr Rathje,
