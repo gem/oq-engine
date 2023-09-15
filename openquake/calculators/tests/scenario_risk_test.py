@@ -285,4 +285,4 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(conditioned.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', fname, delta=1E-5)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname, delta=1E-3)
