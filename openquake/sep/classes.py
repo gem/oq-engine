@@ -136,7 +136,8 @@ class NewmarkDisplacement(SecondaryPeril):
             out.append(prob_failure_given_displacement(nd))
         return out
     
-class RockSlopeFailure(SecondaryPeril):
+
+class GrantEtAl2016RockSlopeFailure(SecondaryPeril):
     outputs = ["Disp"]
 
     def __init__(self, c1=0.215, c2=2.341, c3=-1.438,
@@ -228,7 +229,7 @@ class HazusDeformation(SecondaryPeril):
         return out
 
 
-class LateralSpreadNonparametric(SecondaryPeril):
+class Rathje2023LateralSpreadNonparametric(SecondaryPeril):
     """
     Computes the lateral spreading class from PGA.
     """
