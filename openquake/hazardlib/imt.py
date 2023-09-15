@@ -276,7 +276,7 @@ def LiqOccur():
 
 def LSE():
     """
-    Liquefaction spatial extent
+    Liquefaction spatial extent as percentage of a pixel area.
     """
     return IMT('LSE')
 
