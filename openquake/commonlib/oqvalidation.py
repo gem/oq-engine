@@ -66,8 +66,8 @@ aggregate_loss_curves_types:
   loss Exceedance Probability (EP) only or to also calculate (if possible) the
   Occurrence Exceedance Probability (OEP) and/or the Aggregate Exceedance
   Probability (AEP).
-  Example: *aggregate_loss_curves_types = ep, oep, aep*.
-  Default: ep, oep, aep
+  Example: *aggregate_loss_curves_types = ,_oep,_aep*.
+  Default: ,_oep,_aep
 
 reaggregate_by:
   Used to perform additional aggregations in risk calculations. Takes in
@@ -912,12 +912,12 @@ class OqParam(valid.ParamSet):
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
     aggregate_loss_curves_types = valid.Param(
-        valid.Choice('ep',
-                     'ep, oep',
-                     'ep, aep',
-                     'ep, oep, aep',
-                     'ep, aep, oep'),
-        'ep, oep, aep')
+        valid.Choice('',
+                     ',_oep',
+                     ',_aep',
+                     ',_oep,_aep',
+                     ',_aep,_oep'),
+        ',_oep,_aep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
