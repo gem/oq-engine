@@ -220,8 +220,9 @@ class HazusDeformation(SecondaryPeril):
                     mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
                     pga_threshold_table=self.pga_threshold_table,
                     return_unit=self.return_unit)
-                vs = hazus_vertical_settlement(mag=mag,pga=gmf
-                    sites.liq_susc_cat, settlement_table=self.settlement_table,
+                vs = hazus_vertical_settlement(mag=mag,pga=gmf, 
+                    liq_susc_cat = sites.liq_susc_cat, 
+                    settlement_table=self.settlement_table,
                     return_unit=self.return_unit)
                 out.append(self.deformation_component(ls, vs))
         return out
