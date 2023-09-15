@@ -159,7 +159,7 @@ class CondSpectraTestCase(unittest.TestCase):
         # check the result
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
         if OVERWRITE_EXPECTED:
-            df.to_csv(expected, index=False, line_terminator='\r\n',
+            df.to_csv(expected, index=False, lineterminator='\r\n',
                       float_format='%.6f')
         expdf = pandas.read_csv(expected)
         pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)

@@ -1182,7 +1182,7 @@ def view_risk_by_event(token, dstore):
     del df['agg_id']
     out = io.StringIO()
     df[:30].to_csv(out, sep='\t', index=False, float_format='%.1f',
-                   line_terminator='\r\n')
+                   lineterminator='\r\n')
     return out.getvalue()
 
 
