@@ -9,7 +9,11 @@ https://wheelhouse.openquake.org/v3/macos/py39/matplotlib-3.5.3-cp39-cp39-macosx
 https://wheelhouse.openquake.org/v3/macos/py39/h5py-3.7.0-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/numpy-1.23.3-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/scipy-1.8.1-cp39-cp39-macosx_10_9_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py39/pandas-1.3.5-cp39-cp39-macosx_10_9_x86_64.whl
+
+# FIXME: use wheel instead
+# https://wheelhouse.openquake.org/v3/macos/py39/pandas-1.3.5-cp39-cp39-macosx_10_9_x86_64.whl
+pandas == 2.1.0
+
 https://wheelhouse.openquake.org/v3/macos/py39/pyzmq-23.2.1-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/psutil-5.8.0-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/Shapely-1.8.4-cp39-cp39-macosx_10_9_x86_64.whl
