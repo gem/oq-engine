@@ -114,6 +114,34 @@ def _get_style_of_faulting_term(C, ctx):
     return C["sofN"] * NS + C["sofR"] * RS + C["sofS"] * SS
 
 
+def _get_dist_type(GMPE):
+    """
+    Get distance type required for the corresponding class of 
+    Bindi et al. (2014)
+    """
+    # If gsim is [BindiEtAl2014RjbArmenia] strip to [BindiEtAl2014Rjb]
+    toml_str = GMPE._toml.split('\n')[0]
+    gmpe_str = str(GMPE).split('\n')[0].replace('Armenia','')
+    
+    rjb_variants = [str(BindiEtAl2014Rjb()),
+                    str(BindiEtAl2014RjbEC8()), 
+                    str(BindiEtAl2014RjbEC8NoSOF())]
+    
+    for model in rjb_variants:
+        if model == toml_str or model == gmpe_str:
+            dist_type = {'rjb'}
+    
+    rhypo_variants = [str(BindiEtAl2014Rhyp()),
+                      str(BindiEtAl2014RhypEC8()),
+                      str(BindiEtAl2014RhypEC8NoSOF())]
+    
+    for model in rhypo_variants:
+        if model == toml_str or model == gmpe_str:
+            dist_type = {'rhypo'}
+    
+    return dist_type
+
+
 class BindiEtAl2014Rjb(GMPE):
     """
     Implements European GMPE:
@@ -168,7 +196,6 @@ class BindiEtAl2014Rjb(GMPE):
     def __init__(self, adjustment_factor=1.0, **kwargs):
         super().__init__(adjustment_factor=adjustment_factor, **kwargs)
         self.adjustment_factor = np.log(adjustment_factor)
-        [self.dist_type] = self.REQUIRES_DISTANCES
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -176,6 +203,7 @@ class BindiEtAl2014Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        [self.dist_type] = _get_dist_type(self)
         dists = getattr(ctx, self.dist_type)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]

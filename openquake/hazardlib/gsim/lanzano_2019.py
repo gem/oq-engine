@@ -95,6 +95,20 @@ def _get_mechanism(ctx, C):
     return C['f1'] * SS + C['f2'] * TF
 
 
+def _get_dist_type(GMPE):
+    """
+    Get distance type required for the corresponding class of 
+    Lanzano et al. 2019
+    """
+    rrup_variant = str(LanzanoEtAl2019_RUP_OMO())
+    if rrup_variant in str(GMPE._toml) or GMPE == LanzanoEtAl2019_RUP_OMO():
+        dist_type = {'rrup'}
+    else:
+        dist_type = {'rjb'}
+    
+    return dist_type
+
+
 class LanzanoEtAl2019_RJB_OMO(GMPE):
     """
     Implements GMPE developed by G.Lanzano, L.Luzi, F.Pacor, L.Luzi,
@@ -142,7 +156,7 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = self.REQUIRES_DISTANCES
+        [dist_type] = _get_dist_type(self)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imean = (_compute_magnitude(ctx, C) +

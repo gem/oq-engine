@@ -151,6 +151,20 @@ def _get_site_type_dummy_variables(ctx):
     return ssa, ssb, ssc
 
 
+def _get_dist_type(GMPE):
+    """
+    Get distance type required for the corresponding class of 
+    Lanzano et al. 2016
+    """
+    rhypo_variant = str(LanzanoEtAl2016_Rhypo())
+    if rhypo_variant in str(GMPE._toml) or GMPE == LanzanoEtAl2016_Rhypo():
+        dist_type = {'rhypo'}
+    else:
+        dist_type = {'rjb'}
+
+    return dist_type
+
+
 class LanzanoEtAl2016_RJB(GMPE):
     """
     Implements GMPE developed by G.Lanzano, M. D'Amico, C.Felicetta, R.Puglia,
@@ -198,7 +212,7 @@ class LanzanoEtAl2016_RJB(GMPE):
         """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            [dist_type] = self.REQUIRES_DISTANCES
+            [dist_type] = _get_dist_type(self)
 
             imean = (_compute_magnitude(ctx, C) +
                      _compute_distance(dist_type, ctx, C) +

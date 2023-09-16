@@ -116,7 +116,7 @@ class DrouetAlpes2015Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = self.REQUIRES_DISTANCES
+        [dist_type] = _get_dist_type(self)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, ctx.mag, getattr(ctx, dist_type))
@@ -669,3 +669,47 @@ class DrouetAlpes2015RrupHR_50bars(DrouetAlpes2015Rrup):
     3.000000 1.757597  0.032984 -0.336145 -1.818072 0.135737 4.056567 -0.001223 0.549067 0.331647
     pgv      0.541232 -0.175928 -0.222774 -2.408882 0.215679 3.713840 -0.002344 0.559330 0.382729
     """)
+    
+    
+def _get_dist_type(GMPE):
+    """
+    Get distance type required for the corresponding class of 
+    Drouet and Cotton (2015)
+    """
+    toml_str = GMPE._toml.split('\n')[0]
+    gmpe_str = str(GMPE).split('\n')[0]
+    
+    repi_variants = [str(DrouetAlpes2015Repi()),
+                     str(DrouetAlpes2015RepiHR()),
+                     str(DrouetAlpes2015Repi_50bars())]
+    
+    for model in repi_variants:
+        if model == toml_str or model == gmpe_str:
+            dist_type = {'repi'}
+    
+    rjb_variants = [str(DrouetAlpes2015Rjb()),
+                    str(DrouetAlpes2015RjbHR()), 
+                    str(DrouetAlpes2015Rjb_50bars()),
+                    str(DrouetAlpes2015RjbHR_50bars())]
+    
+    for model in rjb_variants:
+        if model == toml_str or model == gmpe_str:
+            dist_type = {'rjb'}
+    
+    rrup_variants = [str(DrouetAlpes2015Rrup()),
+                     str(DrouetAlpes2015RrupHR()),
+                     str(DrouetAlpes2015Rrup_50bars())]
+    
+    for model in rrup_variants:
+        if model == toml_str or model == gmpe_str:
+            dist_type = {'rrup'}
+    
+    rhypo_variants = [str(DrouetAlpes2015Rhyp()),
+                      str(DrouetAlpes2015RhypHR()),
+                      str(DrouetAlpes2015Rhyp_50bars())]
+    
+    for model in rhypo_variants:
+        if model == toml_str or model == gmpe_str:
+            dist_type = {'rhypo'}
+
+    return dist_type
