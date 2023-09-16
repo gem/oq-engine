@@ -28,7 +28,7 @@ from openquake.sep.liquefaction import (
 
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement,
-    lateral_spreading_nonparametric_general
+    Rathje2023_lateral_spreading_general
 )
 
 from openquake.sep.liquefaction.vertical_settlement import (
@@ -338,7 +338,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
     
     def test_lateral_spread_displacements(self):
 
-        self.sites["lateral_spreading"] = lateral_spreading_nonparametric_general(
+        self.sites["lateral_spreading"] = Rathje2023_lateral_spreading_general(
             pga=self.pga, elevation=self.sites["elevation"], slope=self.sites["slope"], wtd=self.sites["gwd"], 
             dr=self.sites["dr"]
         )
