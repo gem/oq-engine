@@ -43,7 +43,7 @@ from openquake.sep.liquefaction.liquefaction import (
 )
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement,
-    lateral_spreading_nonparametric_general
+    Rathje2023_lateral_spreading_general
 )
 
 from openquake.sep.liquefaction.vertical_settlement import (
@@ -246,7 +246,7 @@ class Rathje2023LateralSpreadNonparametric(SecondaryPeril):
         out = []
         for im, gmf in imt_gmf:
             if im.string == 'PGA':
-                out_class = lateral_spreading_nonparametric_general(
+                out_class = Rathje2023_lateral_spreading_general(
                     pga=gmf, elevation=sites.vs30, slope=sites.slope, wtd=sites.gwd, dr=sites.dr)
             out.append(out_class)
         return out
