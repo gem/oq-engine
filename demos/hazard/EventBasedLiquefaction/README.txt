@@ -8,7 +8,7 @@ nodal plane distribution and hypocentral depth.
 We compute a Ground Motion Field, Liquefaction Occurence, and Probability of
 Liquefaction for each rupture.
 
-Expected runtime: ~5 minutes
+Expected runtime: ~1 minute
 Number of sites: 4154
 Number of logic tree realizations: 50
 GMPEs: AbrahamsonEtAL2014 (0.5), CauzziEtAl2014 (0.5)
