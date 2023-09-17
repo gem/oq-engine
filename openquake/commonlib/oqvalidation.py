@@ -450,10 +450,10 @@ max_aggregations:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
-max_gmvs_per_task:
+max_gmvs_per_chunk:
   Maximum number of rows of the gmf_data table per task.
-  Example: *max_gmvs_per_task = 200_000*
-  Default: 100_0000
+  Example: *max_gmvs_per_chunk = 200_000*
+  Default: 50_0000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -979,7 +979,7 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_per_task = valid.Param(valid.positiveint, 100_000)
+    max_gmvs_per_chunk = valid.Param(valid.positiveint, 50_000) # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)

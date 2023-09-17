@@ -180,7 +180,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     df = pandas.DataFrame(dic)
     del dic
     slices = performance.split_slices(
-        df.eid.to_numpy(), oqparam.max_gmvs_per_task)
+        df.eid.to_numpy(), oqparam.max_gmvs_per_chunk)
     for s0, s1 in slices:
         yield event_based_risk(df[s0:s1], oqparam, monitor)
 
