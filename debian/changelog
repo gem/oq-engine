@@ -1,3 +1,6 @@
+  [Michele Simionato, Paolo Tormene]
+  * Implemented AOP, EOP curves
+
   [Michele Simionato]
   * Internal: changed events.year to be in the range 1..eff_time
   * Enhanced `oq engine --delete-calculation` to remove calculation files
