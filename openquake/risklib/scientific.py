@@ -40,11 +40,8 @@ U16 = numpy.uint16
 U8 = numpy.uint8
 
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
-                      'fatalities', 'homeless', 'non_operational']
-for cons in KNOWN_CONSEQUENCES[:]:
-    KNOWN_CONSEQUENCES.append(cons + '_aep')
-    KNOWN_CONSEQUENCES.append(cons + '_oep')
+KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep', 'losses', 'collapsed',
+                      'injured', 'fatalities', 'homeless', 'non_operational']
 
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
