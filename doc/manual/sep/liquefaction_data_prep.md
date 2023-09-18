@@ -1,8 +1,8 @@
 # Site characterization for probabilistic liquefaction analysis
 
-There are many methods to calculate the probabilities and displacements that result from liquefaction.  In OpenQuake, we have implemented two of these, the methods developed by the US Federal Emergency Management Agency through their HAZUS project, and a statistical method developed by [Zhu et al (2015)][z15].
+There are many methods to calculate the probabilities and displacements that result from liquefaction.  In OpenQuake, we have several models, the methods developed by the US Federal Emergency Management Agency through their HAZUS project, and geospatial methods recently developed by [Zhu et al. (2015)][z15], [Zhu et al. (17)][z17], [Rashidian et al. (2020)][rb20], [Akhlagi et al. (2021)][akh21], [Bozzoni et al. (2021)][b21],[Allstadt et al. (2022)][all22], [Todorovic and Silva (2022)][ts22].
 
-These methods require different input datasets. The HAZUS methods are simplified from older, more comprehensive liquefaction evaluations that would be made at a single site following in-depth geotechnical analysis; the HAZUS methods retain their reliance upon geotechnical parameters that may be measured or inferred at the study sites. The methods by Zhu et al (2015) were developed to only use data that can be derived from a digital elevation model (DEM), but in practice, the datasets must be chosen carefully for the statistical relations to hold. Furthermore, Zhu's methods do not predict displacements from liquefaction, so the HAZUS site characterizations must be used for displacement calculations regardless of the methods used to calculate the probabilities of liquefaction.
+These methods require different input datasets. The HAZUS methods are simplified from older, more comprehensive liquefaction evaluations that would be made at a single site following in-depth geotechnical analysis; the HAZUS methods retain their reliance upon geotechnical parameters that may be measured or inferred at the study sites. The methods by [Zhu et al. (2015)][z15] were developed to only use data that can be derived from a digital elevation model (DEM), but in practice, the datasets must be chosen carefully for the statistical relations to hold. Furthermore, Zhu's methods do not predict displacements from liquefaction, so the HAZUS site characterizations must be used for displacement calculations regardless of the methods used to calculate the probabilities of liquefaction.
 
 ## General considerations
 
@@ -12,8 +12,7 @@ Much like traditional seismic hazard analysis, liquefaction analysis may range f
 
 Two of the major issues that can arise are the limited spatial resolutions of key datasets and the spatial misalignments of different datasets.
 
-Some datasets, particularly those derived from digital elevation models, must be of a specific resolution or source to be used accurately in these calculations. For example, if Vs30 is calculated from slope following methods developed by Wald and Allen (2007), the slope should be calculated from a DEM with a
-resolution of around 1 km. Higher resolution DEMs tend to have higher slopes at a given point because the slope is averaged over smaller areas. The mathematical correspondance between slope and Vs30 was developed for DEMs of about 1 km resolution, so if modern DEMs with resolutions of 90 m or less are used, the resulting Vs30 values will be too high.
+Some datasets, particularly those derived from digital elevation models, must be of a specific resolution or source to be used accurately in these calculations. For example, if Vs30 is calculated from slope following methods developed by [Wald and Allen (2007)][wa_07_paper], the slope should be calculated from a DEM with a resolution of around 1 km. Higher resolution DEMs tend to have higher slopes at a given point because the slope is averaged over smaller areas. The mathematical correspondance between slope and Vs30 was developed for DEMs of about 1 km resolution, so if modern DEMs with resolutions of 90 m or less are used, the resulting Vs30 values will be too high.
 
 In and of itself, this is not necessarily a problem.  The issues can arise when the average spacing of the sites is much lower than the resolution of the data, or the characteristics of the sites vary over spatial distances much less than the data, so that important variability between sites is lost.
 
@@ -75,7 +74,8 @@ data is quite challenging. It may range from less than a meter near major water
 bodies in humid regions to tens of meters in dry, rugged areas. Furthermore,
 this value may fluctuate with recent or seasonal rainfall. Sensitivity testing
 of this parameter throughout reasonable ranges of uncertainty for each site is
-recommended.
+recommended. For large scale application (e.g., in geospatial models), the
+ground water depth database compiled by [Fan et al. (2013)][f13] can be used.
 
 ### Lateral spreading
 
@@ -87,16 +87,16 @@ probabilities that do not use the HAZUS site classifications (such as Zhu et al
 displacements.
 
 
-## Zhu et al. 2015 (general model)
+## Geospatial models
 
-The liquefaction model by Zhu et al. (2015) calculates the probability of
-liquefaction via logistic regression of a few variables that are, in principle,
-easily derived from digital elevation data. In practice, there are strict
-requirements on the spatial resolution and sources of these data derivations,
-and deviations from this will yield values at each site that may be quite
-discrepant from those calculated 'correctly'. This may produce very inaccurate
-liquefaction probabilities, as the logistic coefficients will no longer be
-calibrated correctly.
+The geospatial liquefaction models (e.g, [Zhu et al. (2015)][z15], [Zhu et al. (17)][z17]) 
+calculates the probability of liquefaction via logistic regression of a few 
+variables that are, in principle, easily derived from digital elevation data. 
+In practice, there are strict requirements on the spatial resolution and sources 
+of these data derivations, and deviations from this will yield values at each site 
+that may be quite discrepant from those calculated 'correctly'. This may produce 
+very inaccurate liquefaction probabilities, as the logistic coefficients will no 
+longer be calibrated correctly.
 
 ### Getting raster values at sites
 
@@ -110,12 +110,11 @@ join, but following inconvenient historical precedent, this operation often
 produces new data files instead of simply appending the raster values to the
 point data file.
 
-Therefore we have implemented a simple function,
-[`openquake.sep.utils.sample_raster_at_points`][srap], to get the raster values.
-This function requires the filename of the raster, and the longitudes and
-latitudes of the sites, and returns a Numpy array with the raster values at each
-point. This function can be easily incorporated into a Python script or workflow
-in this manner.
+Therefore we have implemented a simple function, [`openquake.sep.utils.sample_raster_at_points`]
+[srap], to get the raster values. This function requires the filename of the raster, 
+and the longitudes and latitudes of the sites, and returns a Numpy array with the 
+raster values at each point. This function can be easily incorporated into a Python 
+script or workflow in this manner.
 
 ### Liquefaction probabilities
 
@@ -131,25 +130,37 @@ This method is implemented in the engine [here][wald_allen_07]. It requires
 that the slope is calculated as the gradient (dy/dx) rather than an angular
 unit, and the study area is categorized as tectonically `active` or `stable`. 
 
-A more general wrapper function has also been written [here]. This function can
+A more general wrapper function has also been written [here][wrapper]. This function can
 calculate gradient from the slope in degrees (a more common formulation), and
 will be able to use different formulas or relations between slope and Vs30 if
 and when those are implemented (we have no current plans for doing so).
 
 
-
-#### Compound Topographic Index
-
-
-
-### Lateral spreading
-
-Zhu et al. (2015) do not present a model for calculating lateral spreading.
-Therefore, if one requires displacements produced by liquefaction, another model
-must be used here, with attendant site characterization. Currently the
-engine only contains the HAZUS model, described above.
+#### Soil wetness proxies
+A set of candidate proxies are globally available to characterise the soil wetness.
+The general model by [Zhu et al. (2015)][z15] and [Bozzoni et al. (2021)][b21] used
+the compound topographic index, a proxy for soil wetness that relates the topographic
+slope of a point to the upstream drainage area of that point. This index can be obtained
+from dataset that has a global range of 0-20 [Marthews et al. (2015)][m15]. In more recent
+models, additional proxies were introduced such as distance to the nearest coast available 
+[here][dc], distance to the nearest river network available [here][dr], and precipitation
+available [here][precip].
 
 [z15]: https://journals.sagepub.com/doi/abs/10.1193/121912EQS353M
+[z17]: https://pubs.geoscienceworld.org/ssa/bssa/article-abstract/107/3/1365/354192/An-Updated-Geospatial-Liquefaction-Model-for?redirectedFrom=fulltext 
+[rb20]: https://www.sciencedirect.com/science/article/abs/pii/S0013795219312979
+[akh21]: https://earthquake.usgs.gov/cfusion/external_grants/reports/G20AP00029.pdf
+[b21]: https://link.springer.com/article/10.1007/s10518-020-01008-6
+[all22]: https://journals.sagepub.com/doi/10.1177/87552930211032685
+[ts22]: https://www.sciencedirect.com/science/article/abs/pii/S0267726122002792
 [hzm]: https://www.hsdl.org/?view&did=12760
 [wa_07_paper]: https://pubs.geoscienceworld.org/ssa/bssa/article/97/5/1379/146527
-[wald_allen_07]: ../openquake.sep.html#openquake.sep.utils.vs30_from_slope_wald_allen_2007
+[f13]: https://www.science.org/doi/10.1126/science.1229881
+[m15]: https://hess.copernicus.org/articles/19/91/2015/
+[dc]: https://oceancolor.gsfc.nasa.gov/#
+[dr]: https://www.hydrosheds.org/about
+[precip]: https://worldclim.org/data/worldclim21.html
+
+[srap]: https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L22
+[wald_allen_07]: https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L260
+[wrapper]: https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227
