@@ -1521,23 +1521,26 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, years, losses, aggregate_loss_curves_types, rlzi=0):
+    def build_curve(self, years, kind, losses, agg_types, rlzi=0):
         """
         Compute EP curves. If years is not None, also AEP and OEP curves.
         """
+        if kind == 'losses':  # for consequences
+            kind = 'loss'
         periods = self.return_periods
         ne = self.num_events[rlzi]
-        dic = {"ep": losses_by_period(losses, periods, ne, self.eff_time)}
+        dic = {kind: losses_by_period(losses, periods, ne, self.eff_time)}
         # NOTE: assuming 'ep' mandatory and 'oep' and 'aep' optional
-        if len(years):
-            dframe = pandas.DataFrame(dict(year=years, loss=losses))
-            agg_loss = dframe.groupby('year').agg(['max', 'sum'])['loss']
-            if '_oep' in aggregate_loss_curves_types:
-                oep = list(agg_loss['max'])
-                dic['oep'] = losses_by_period(oep, periods, ne, self.eff_time)
-            if '_aep' in aggregate_loss_curves_types:
-                aep = list(agg_loss['sum'])
-                dic['aep'] = losses_by_period(aep, periods, ne, self.eff_time)
+        if len(years) and kind == 'loss':
+            gby = pandas.DataFrame(
+                dict(year=years, loss=losses)).groupby('year')
+            # see specs in https://github.com/gem/oq-engine/issues/8971
+            if '_aep' in agg_types:
+                dic['loss_aep'] = losses_by_period(
+                    gby.loss.sum(), periods, ne, self.eff_time)
+            if '_oep' in agg_types:
+                dic['loss_oep'] = losses_by_period(
+                    gby.loss.max(), periods, ne, self.eff_time)
         return dic
 
 
@@ -1661,18 +1664,17 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    cons = consequence.removesuffix('_aep').removesuffix('_oep')
-    if cons in ['loss', 'losses']:
+    if consequence.startswith(('loss', 'losses')):
         return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif cons in ['collapsed', 'non_operational']:
+    elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
-    elif cons in ['injured', 'fatalities']:
+    elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         return dmgdist @ coeffs * asset[f'occupants_{time_event}']
-    elif cons == 'homeless':
+    elif consequence == 'homeless':
         return dmgdist @ coeffs * asset['value-residents']
     else:
-        raise NotImplementedError(cons)
+        raise NotImplementedError(consequence)
 
 
 def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
@@ -1682,23 +1684,22 @@ def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    cons = consequence.removesuffix('_aep').removesuffix('_oep')
     aval = agg_values[agg_id]
-    if cons in ['collapsed', 'non_operational']:
+    if consequence in ['collapsed', 'non_operational']:
         return aval['number']
-    elif cons in ['injured', 'fatalities']:
+    elif consequence in ['injured', 'fatalities']:
         # NOTE: time_event default is 'avg'
         return aval[f'occupants_{time_event}']
-    elif cons == 'homeless':
+    elif consequence == 'homeless':
         return aval['residents']
-    elif cons in ['loss', 'losses']:
+    elif consequence.startswith(('loss', 'losses')):
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type
             return sum(aval[lt] for lt in xltype.split('+'))
         return aval[xltype]
     else:
-        raise NotImplementedError(cons)
+        raise NotImplementedError(consequence)
 
 
 # ########################### u64_to_eal ################################# #

@@ -1,4 +1,4 @@
-                rlz_id  return_period   losses
+                rlz_id  return_period     loss
 agg_id loss_id                                
 0      3             0             50      0.0
        3             0            100    125.0

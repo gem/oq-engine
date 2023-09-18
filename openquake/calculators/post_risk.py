@@ -57,10 +57,10 @@ def save_curve_stats(dstore):
         ep_fields.append('loss_aep')
     if 'loss_oep' in aggcurves_df:
         ep_fields.append('loss_oep')
-    E = len(ep_fields)
+    EP = len(ep_fields)
     for lt in oq.ext_loss_types:
         loss_id = scientific.LOSSID[lt]
-        out = numpy.zeros((K + 1, S, P, E))
+        out = numpy.zeros((K + 1, S, P, EP))
         aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
         for agg_id, df in aggdf.groupby("agg_id"):
             for s, stat in enumerate(stats.values()):
@@ -72,7 +72,7 @@ def save_curve_stats(dstore):
                         out[agg_id, s, p, e] = stat(dfp[ep_field].to_numpy(),
                                                     ws)
         stat = 'agg_curves-stats/' + lt
-        dstore.create_dset(stat, F64, (K + 1, S, P, E))
+        dstore.create_dset(stat, F64, (K + 1, S, P, EP))
         dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
                                return_period=periods, ep_fields=ep_fields)
         dstore.set_attrs(stat, units=units)
@@ -215,7 +215,7 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
     for (agg_id, rlz_id, loss_id), data in items:
         year = data.pop('year', ())
         curve = {kind: builder.build_curve(
-                    year, data[kind], aggregate_loss_curves_types, rlz_id)
+                    year, kind, data[kind], aggregate_loss_curves_types, rlz_id)
                  for kind in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
@@ -224,14 +224,8 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
             dic['return_period'].append(period)
             for kind in data:
                 # NB: kind be ['fatalities', 'losses'] in a scenario_damage test
-                ep = curve[kind]['ep']
-                dic[kind].append(ep[p])
-                if 'aep' in curve[kind]:
-                    aep = curve[kind]['aep']
-                    dic[kind + '_aep'].append(aep[p])
-                if 'oep' in curve[kind]:
-                    oep = curve[kind]['oep']
-                    dic[kind + '_oep'].append(oep[p])
+                for k, c in curve[kind].items():
+                    dic[k].append(c[p])
     return dic
 
 
@@ -360,7 +354,7 @@ def build_reinsurance(dstore, num_events):
             else:
                 years = ()
             curve = {col: builder.build_curve(
-                        years, df[col].to_numpy(),
+                        years, col, df[col].to_numpy(),
                         oq.aggregate_loss_curves_types,
                         rlzid)
                      for col in columns}
@@ -368,14 +362,9 @@ def build_reinsurance(dstore, num_events):
                 dic['rlz_id'].append(rlzid)
                 dic['return_period'].append(period)
                 for col in curve:
-                    ep = curve[col]['ep']
-                    dic[col].append(ep[p])
-                    if 'aep' in curve[col]:
-                        aep = curve[col]['aep']
-                        dic[col + '_aep'].append(aep[p])
-                    if 'oep' in curve[col]:
-                        oep = curve[col]['oep']
-                        dic[col + '_oep'].append(oep[p])
+                    for k, c in curve[col].items():
+                        dic[k].append(c[p])
+
     dstore.create_df('reinsurance-avg_portfolio', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
