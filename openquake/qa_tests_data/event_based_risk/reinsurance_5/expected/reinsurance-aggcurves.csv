@@ -1,5 +1,5 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitc951e586b4', start_date='2023-09-18T07:07:33', checksum=1056964987"
-rlz_id,return_period,retention,retention_aep,retention_oep,claim,claim_aep,claim_oep
-0,5.00000E+01,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-0,1.00000E+02,1.07555E+02,1.07555E+02,1.07555E+02,1.07555E+02,1.07555E+02,1.07555E+02
-0,2.00000E+02,6.33285E+02,6.33285E+02,6.33285E+02,6.33285E+02,6.33285E+02,6.33285E+02
+#,,,"generated_by='OpenQuake engine 3.18.0-git00abdf97f8', start_date='2023-09-18T09:11:45', checksum=1056964987"
+rlz_id,return_period,retention,claim
+0,5.00000E+01,0.00000E+00,0.00000E+00
+0,1.00000E+02,1.07555E+02,1.07555E+02
+0,2.00000E+02,6.33285E+02,6.33285E+02
