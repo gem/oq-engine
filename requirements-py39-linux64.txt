@@ -10,7 +10,7 @@ https://wheelhouse.openquake.org/v3/linux/py39/scipy-1.8.1-cp39-cp39-manylinux_2
 
 # FIXME: use wheel instead
 # https://wheelhouse.openquake.org/v3/linux/py39/pandas-1.3.5-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-pandas == 2.1.0
+pandas == 2.0.3
 
 https://wheelhouse.openquake.org/v3/linux/py39/pyzmq-23.2.1-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/psutil-5.8.0-cp39-cp39-manylinux2010_x86_64.whl
