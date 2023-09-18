@@ -1,4 +1,4 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.18.0-git0163eacd01', start_date='2023-09-08T15:48:07', checksum=91486865, risk_investigation_time=5.0, num_events=124, effective_time=40.0, limit_states=''"
+#,,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitc951e586b4', start_date='2023-09-18T07:06:50', checksum=91486865, risk_investigation_time=5.0, num_events=124, effective_time=40.0, limit_states=''"
 return_period,loss_type,rlz_id,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
 1,structural,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
 2,structural,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
@@ -10,5 +10,5 @@ return_period,loss_type,rlz_id,loss_value,loss_ratio,loss_aep_value,loss_aep_rat
 2,structural,5,7.88148E+04,1.39659E-03,7.88148E+04,1.39659E-03,7.88148E+04,1.39659E-03
 5,structural,5,2.23212E+05,3.95530E-03,2.23212E+05,3.95530E-03,2.23212E+05,3.95530E-03
 1,structural,6,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-2,structural,6,1.04393E+05,1.84984E-03,4.15800E+04,7.36795E-04,4.15800E+04,7.36795E-04
-5,structural,6,8.89640E+06,1.57644E-01,9.04450E+06,1.60268E-01,8.89640E+06,1.57644E-01
+2,structural,6,1.04393E+05,1.84984E-03,1.04393E+05,1.84984E-03,1.04393E+05,1.84984E-03
+5,structural,6,8.89640E+06,1.57644E-01,8.89640E+06,1.57644E-01,8.89640E+06,1.57644E-01

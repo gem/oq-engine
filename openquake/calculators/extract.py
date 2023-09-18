@@ -761,18 +761,18 @@ def extract_agg_curves(dstore, what):
         P = len(rps)
         R = len(qdic['kind'])
         EP = len(ep_fields)
-        arr = numpy.zeros((P, R, EP))
+        arr = numpy.zeros((R, P, EP))
         for rlz in df.rlz_id.unique():
             for ep_field_idx, ep_field in enumerate(ep_fields):
                 # NB: df may contains zeros but there are no missing periods
                 # by construction (see build_aggcurves)
-                arr[:, rlz, ep_field_idx] = df[df.rlz_id == rlz][ep_field]
+                arr[rlz, :, ep_field_idx] = df[df.rlz_id == rlz][ep_field]
     else:
         name = 'agg_curves-stats/' + lts[0]
         shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
         rps = list(shape_descr['return_period'])
         units = dstore.get_attr(name, 'units').split()
-        arr = dstore[name][agg_id, k].T  # shape P, R
+        arr = dstore[name][agg_id, k]  # shape (P, S, EP)
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -780,9 +780,9 @@ def extract_agg_curves(dstore, what):
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
-    attrs = dict(shape_descr=['return_period', 'kind', 'ep_field'] + tagnames)
-    attrs['return_period'] = rps
+    attrs = dict(shape_descr=['kind', 'return_period', 'ep_field'] + tagnames)
     attrs['kind'] = qdic['kind']
+    attrs['return_period'] = rps
     attrs['units'] = units  # used by the QGIS plugin
     attrs['ep_field'] = ep_fields
     for tagname, tagvalue in zip(tagnames, tagvalues):

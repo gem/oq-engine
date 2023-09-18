@@ -766,6 +766,7 @@ class ArrayWrapper(object):
         for i, tagname in enumerate(shape_descr):
             values = getattr(self, tagname)
             if len(values) != shape[i]:
+                import pdb; pdb.set_trace()
                 raise ValueError(
                     'The tag %s with %d values is inconsistent with %s'
                     % (tagname, len(values), self))
