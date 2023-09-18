@@ -63,10 +63,12 @@ def hazus_vertical_settlement(
     if isinstance(liq_susc_cat, pd.Series):
         liq_susc_cat = liq_susc_cat.tolist()
 
+    liq_susc_cat = [x.encode() if isinstance(x, str) else x for x in liq_susc_cat]
+
     if isinstance(liq_susc_cat, list):
         vert_settlement = np.array([settlement_table[susc_cat] for susc_cat in liq_susc_cat])
     else:
-        vert_settlement = tuple(settlement_table[liq_susc_cat])
+        vert_settlement = settlement_table[liq_susc_cat]
 
     liquefaction_prob = hazus_liquefaction_probability(pga, mag, liq_susc_cat, 
                                                        groundwater_depth, do_map_proportion_correction)
