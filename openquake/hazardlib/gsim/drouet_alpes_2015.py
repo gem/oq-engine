@@ -116,7 +116,7 @@ class DrouetAlpes2015Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = _get_dist_type(self)
+        [dist_type] = _get_dist_type(gmpe=self)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, ctx.mag, getattr(ctx, dist_type))
@@ -671,45 +671,40 @@ class DrouetAlpes2015RrupHR_50bars(DrouetAlpes2015Rrup):
     """)
     
     
-def _get_dist_type(GMPE):
+def _get_dist_type(gmpe):
     """
     Get distance type required for the corresponding class of 
     Drouet and Cotton (2015)
     """
-    toml_str = GMPE._toml.split('\n')[0]
-    gmpe_str = str(GMPE).split('\n')[0]
+    # Get gsim class name
+    gsim = gmpe.__class__().__class__.__name__
     
-    repi_variants = [str(DrouetAlpes2015Repi()),
-                     str(DrouetAlpes2015RepiHR()),
-                     str(DrouetAlpes2015Repi_50bars())]
+    repi_variants = [DrouetAlpes2015Repi.__name__, 
+                     DrouetAlpes2015RepiHR.__name__,
+                     DrouetAlpes2015Repi_50bars.__name__]
     
-    for model in repi_variants:
-        if model == toml_str or model == gmpe_str:
-            dist_type = {'repi'}
+    rjb_variants = [DrouetAlpes2015Rjb.__name__,
+                    DrouetAlpes2015RjbHR.__name__, 
+                    DrouetAlpes2015Rjb_50bars.__name__,
+                    DrouetAlpes2015RjbHR_50bars.__name__]
     
-    rjb_variants = [str(DrouetAlpes2015Rjb()),
-                    str(DrouetAlpes2015RjbHR()), 
-                    str(DrouetAlpes2015Rjb_50bars()),
-                    str(DrouetAlpes2015RjbHR_50bars())]
+    rrup_variants = [DrouetAlpes2015Rrup.__name__,
+                     DrouetAlpes2015RrupHR.__name__,
+                     DrouetAlpes2015Rrup_50bars.__name__]
     
-    for model in rjb_variants:
-        if model == toml_str or model == gmpe_str:
-            dist_type = {'rjb'}
+        
+    rhypo_variants = [DrouetAlpes2015Rhyp.__name__,
+                      DrouetAlpes2015RhypHR.__name__,
+                      DrouetAlpes2015Rhyp_50bars.__name__]
     
-    rrup_variants = [str(DrouetAlpes2015Rrup()),
-                     str(DrouetAlpes2015RrupHR()),
-                     str(DrouetAlpes2015Rrup_50bars())]
-    
-    for model in rrup_variants:
-        if model == toml_str or model == gmpe_str:
-            dist_type = {'rrup'}
-    
-    rhypo_variants = [str(DrouetAlpes2015Rhyp()),
-                      str(DrouetAlpes2015RhypHR()),
-                      str(DrouetAlpes2015Rhyp_50bars())]
-    
-    for model in rhypo_variants:
-        if model == toml_str or model == gmpe_str:
-            dist_type = {'rhypo'}
+    # Get required dist type
+    if gsim in repi_variants:
+        dist_type = 'repi'
+    elif gsim in rjb_variants:
+        dist_type = 'rjb'
+    elif gsim in rrup_variants:
+        dist_type = 'rrup'
+    elif gsim in rhypo_variants:
+        dist_type = 'rhypo'
 
-    return dist_type
+    return [dist_type]

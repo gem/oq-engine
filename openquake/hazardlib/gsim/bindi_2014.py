@@ -114,32 +114,25 @@ def _get_style_of_faulting_term(C, ctx):
     return C["sofN"] * NS + C["sofR"] * RS + C["sofS"] * SS
 
 
-def _get_dist_type(GMPE):
+def _get_dist_type(gmpe):
     """
     Get distance type required for the corresponding class of 
     Bindi et al. (2014)
     """
-    # If gsim is [BindiEtAl2014RjbArmenia] strip to [BindiEtAl2014Rjb]
-    toml_str = GMPE._toml.split('\n')[0]
-    gmpe_str = str(GMPE).split('\n')[0].replace('Armenia','')
+    # Get gsim class name
+    gsim = gmpe.__class__().__class__.__name__
     
-    rjb_variants = [str(BindiEtAl2014Rjb()),
-                    str(BindiEtAl2014RjbEC8()), 
-                    str(BindiEtAl2014RjbEC8NoSOF())]
+    rhypo_variants = [BindiEtAl2014Rhyp.__name__,
+                      BindiEtAl2014RhypEC8.__name__,
+                      BindiEtAl2014RhypEC8NoSOF.__name__]
     
-    for model in rjb_variants:
-        if model == toml_str or model == gmpe_str:
-            dist_type = {'rjb'}
+    # Assign required distance type
+    if gsim in rhypo_variants:
+        dist_type = 'rhypo'
+    else:
+        dist_type = 'rjb'
     
-    rhypo_variants = [str(BindiEtAl2014Rhyp()),
-                      str(BindiEtAl2014RhypEC8()),
-                      str(BindiEtAl2014RhypEC8NoSOF())]
-    
-    for model in rhypo_variants:
-        if model == toml_str or model == gmpe_str:
-            dist_type = {'rhypo'}
-    
-    return dist_type
+    return [dist_type]
 
 
 class BindiEtAl2014Rjb(GMPE):
@@ -203,7 +196,7 @@ class BindiEtAl2014Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [self.dist_type] = _get_dist_type(self)
+        [self.dist_type] = _get_dist_type(gmpe=self)
         dists = getattr(ctx, self.dist_type)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]

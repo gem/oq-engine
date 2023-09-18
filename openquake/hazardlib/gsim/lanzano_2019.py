@@ -95,18 +95,25 @@ def _get_mechanism(ctx, C):
     return C['f1'] * SS + C['f2'] * TF
 
 
-def _get_dist_type(GMPE):
+def _get_dist_type(gmpe):
     """
     Get distance type required for the corresponding class of 
     Lanzano et al. 2019
     """
-    rrup_variant = str(LanzanoEtAl2019_RUP_OMO())
-    if rrup_variant in str(GMPE._toml) or GMPE == LanzanoEtAl2019_RUP_OMO():
-        dist_type = {'rrup'}
-    else:
-        dist_type = {'rjb'}
+    # Get gsim class names
+    gsim = gmpe.__class__().__class__.__name__
+
+    rjb_variants = [LanzanoEtAl2019_RJB_OMO.__name__,
+                    LanzanoEtAl2019_RJB_OMOscaled.__name__,
+                    LanzanoEtAl2019_RJB_OMO_RefRock.__name__]
+
+    # Get required distance type
+    if gsim == LanzanoEtAl2019_RUP_OMO.__name__:
+        dist_type = 'rrup'
+    elif gsim in rjb_variants:
+        dist_type = 'rjb'
     
-    return dist_type
+    return [dist_type]
 
 
 class LanzanoEtAl2019_RJB_OMO(GMPE):
@@ -156,7 +163,7 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = _get_dist_type(self)
+        [dist_type] = _get_dist_type(gmpe=self)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imean = (_compute_magnitude(ctx, C) +
