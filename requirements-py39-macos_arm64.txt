@@ -5,7 +5,7 @@
 
 # FIXME: use wheel instead
 # https://wheelhouse.openquake.org/macos/arm64/py39/pandas-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
-pandas == 2.1.0
+pandas == 2.0.3
 
 https://wheelhouse.openquake.org/macos/arm64/py39/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/matplotlib-3.5.2-cp39-cp39-macosx_11_0_arm64.whl

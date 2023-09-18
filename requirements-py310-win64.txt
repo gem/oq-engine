@@ -6,7 +6,7 @@
 
 # FIXME: use wheel instead
 # https://wheelhouse.openquake.org/v3/windows/py310/pandas-1.3.5-cp310-cp310-win_amd64.whl
-pandas == 2.1.0
+pandas == 2.0.3
 
 https://wheelhouse.openquake.org/v3/windows/py310/scipy-1.8.1-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/h5py-3.7.0-cp310-cp310-win_amd64.whl
