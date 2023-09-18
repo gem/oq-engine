@@ -42,8 +42,7 @@ from openquake.sep.liquefaction.liquefaction import (
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
 )
 from openquake.sep.liquefaction.lateral_spreading import (
-    hazus_lateral_spreading_displacement,
-    Rathje2023_lateral_spreading_general
+    hazus_lateral_spreading_displacement
 )
 
 from openquake.sep.liquefaction.vertical_settlement import (
@@ -226,29 +225,6 @@ class HazusDeformation(SecondaryPeril):
                     settlement_table=self.settlement_table,
                     return_unit=self.return_unit)
                 out.append(self.deformation_component(ls, vs))
-        return out
-
-
-class Rathje2023LateralSpreadNonparametric(SecondaryPeril):
-    """
-    Computes the lateral spreading class from PGA.
-    """
-    experimental = True
-    outputs = ["LSDClass"]
-
-    def __init__(self):
-        pass
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == 'PGA':
-                out_class = Rathje2023_lateral_spreading_general(
-                    pga=gmf, elevation=sites.vs30, slope=sites.slope, wtd=sites.gwd, dr=sites.dr)
-            out.append(out_class)
         return out
 
 

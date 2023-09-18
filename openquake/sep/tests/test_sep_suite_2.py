@@ -27,8 +27,7 @@ from openquake.sep.liquefaction import (
 )
 
 from openquake.sep.liquefaction.lateral_spreading import (
-    hazus_lateral_spreading_displacement,
-    Rathje2023_lateral_spreading_general
+    hazus_lateral_spreading_displacement
 )
 
 from openquake.sep.liquefaction.vertical_settlement import (
@@ -334,15 +333,3 @@ class test_liquefaction_cali_small(unittest.TestCase):
 ])
         
         np.testing.assert_array_almost_equal(self.sites["char_settlement"], disps)
-
-    
-    def test_lateral_spread_displacements(self):
-
-        self.sites["lateral_spreading"] = Rathje2023_lateral_spreading_general(
-            pga=self.pga, elevation=self.sites["elevation"], slope=self.sites["slope"], wtd=self.sites["gwd"], 
-            dr=self.sites["dr"]
-        )
-
-        disps = np.array([0, 0, 0, 0, 0, 0, 2, 2, 0, 0])
-
-        np.testing.assert_array_almost_equal(self.sites["lateral_spreading"], disps)
