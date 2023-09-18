@@ -205,7 +205,8 @@ def build_aggcurves(items, builder):
     """
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
-        curve = {kind: builder.build_curve(data[kind], rlz_id)
+        year = data.pop('year', ())
+        curve = {kind: builder.build_curve(year, data[kind], rlz_id)
                  for kind in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
@@ -213,7 +214,9 @@ def build_aggcurves(items, builder):
             dic['loss_id'].append(loss_id)
             dic['return_period'].append(period)
             for kind in data:
-                dic[kind].append(curve[kind][p])
+                # NB: kind be ['fatalities', 'losses'] in a scenario_damage test
+                c = curve[kind]['ep']
+                dic[kind].append(c[p])
     return dic
 
 
@@ -230,12 +233,12 @@ def build_store_agg(dstore, rbe_df, num_events):
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
-    rlz_id = dstore['events']['rlz_id']
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    del rbe_df['event_id']
     aggrisk = general.AccumDict(accum=[])
     columns = [col for col in rbe_df.columns if col not in {
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
@@ -271,11 +274,19 @@ def build_store_agg(dstore, rbe_df, num_events):
         logging.info('Building aggcurves')
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
+        try:
+            year = events['year']
+            if len(numpy.unique(year)) == 1:  # there is a single year
+                year = ()
+        except ValueError:  # missing in case of GMFs from CSV
+            year = ()
         items = []
         for agg_id in agg_ids:
             gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
             for (rlz_id, loss_id), df in gb:
                 data = {kind: df[kind].to_numpy() for kind in loss_kinds}
+                if len(year):
+                    data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
             build_aggcurves, (items, builder),
@@ -302,7 +313,14 @@ def build_reinsurance(dstore, num_events):
         tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
-    rlz_id = dstore['events']['rlz_id']
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
+    try:
+        year = events['year']
+        if len(numpy.unique(year)) == 1:  # there is a single year
+            year = ()
+    except ValueError:  # missing in case of GMFs from CSV
+        year = ()
     rbe_df = dstore.read_df('reinsurance-risk_by_event', 'event_id')
     columns = rbe_df.columns
     if len(num_events) > 1:
@@ -320,13 +338,17 @@ def build_reinsurance(dstore, num_events):
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
         if oq.investigation_time:
-            curve = {col: builder.build_curve(df[col].to_numpy(), rlzid)
+            if len(year):
+                years = year[df.index.to_numpy()]
+            else:
+                years = ()
+            curve = {col: builder.build_curve(years, df[col].to_numpy(), rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
                 dic['return_period'].append(period)
                 for col in curve:
-                    dic[col].append(curve[col][p])
+                    dic[col].append(curve[col]['ep'][p])
     dstore.create_df('reinsurance-avg_portfolio', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
