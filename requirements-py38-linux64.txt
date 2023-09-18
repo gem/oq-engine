@@ -10,7 +10,11 @@ https://wheelhouse.openquake.org/v3/linux/py38/setproctitle-1.2.2-cp38-cp38-many
 pandas == 2.1.0
 
 https://wheelhouse.openquake.org/v3/linux/py38/psutil-5.6.7-cp38-cp38-manylinux1_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py38/Shapely-1.8.0-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl
+
+# FIXME: use wheel instead:
+# https://wheelhouse.openquake.org/v3/linux/py38/Shapely-1.8.0-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl
+shapely == 2.0.1
+
 https://wheelhouse.openquake.org/v3/linux/py38/scipy-1.8.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/numpy-1.23.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/numba-0.56.2-cp38-cp38-manylinux2014_x86_64.manylinux_2_17_x86_64.whl

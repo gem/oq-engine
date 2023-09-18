@@ -15,7 +15,11 @@ https://wheelhouse.openquake.org/v3/macos/py310/kiwisolver-1.4.4-cp310-cp310-mac
 https://wheelhouse.openquake.org/v3/macos/py310/matplotlib-3.5.3-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/setproctitle-1.3.2-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pyzmq-23.2.1-cp310-cp310-macosx_10_9_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py310/Shapely-1.8.4-cp310-cp310-macosx_10_9_x86_64.whl
+
+# FIXME: use wheel instead:
+# https://wheelhouse.openquake.org/v3/macos/py310/Shapely-1.8.4-cp310-cp310-macosx_10_9_x86_64.whl
+shapely == 2.0.1
+
 https://wheelhouse.openquake.org/v3/macos/py310/llvmlite-0.39.1-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/numba-0.56.2-cp310-cp310-macosx_10_14_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/psutil-5.9.2-cp310-cp310-macosx_10_9_x86_64.whl

@@ -13,7 +13,11 @@ pandas == 2.1.0
 https://wheelhouse.openquake.org/v3/macos/py38/Pillow-9.2.0-cp38-cp38-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/pyzmq-23.2.1-cp38-cp38-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/psutil-5.6.7-cp38-cp38-macosx_10_9_intel.whl
-https://wheelhouse.openquake.org/v3/macos/py38/Shapely-1.8.4-cp38-cp38-macosx_10_9_x86_64.whl
+
+# FIXME: use wheel instead:
+# https://wheelhouse.openquake.org/v3/macos/py38/Shapely-1.8.4-cp38-cp38-macosx_10_9_x86_64.whl
+shapely == 2.0.1
+
 https://wheelhouse.openquake.org/v3/macos/py38/matplotlib-3.5.3-cp38-cp38-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/llvmlite-0.39.1-cp38-cp38-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/numba-0.56.2-cp38-cp38-macosx_10_14_x86_64.whl

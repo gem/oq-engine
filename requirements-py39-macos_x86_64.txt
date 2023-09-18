@@ -16,7 +16,11 @@ pandas == 2.1.0
 
 https://wheelhouse.openquake.org/v3/macos/py39/pyzmq-23.2.1-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/psutil-5.8.0-cp39-cp39-macosx_10_9_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py39/Shapely-1.8.4-cp39-cp39-macosx_10_9_x86_64.whl
+
+# FIXME: use wheel instead:
+# https://wheelhouse.openquake.org/v3/macos/py39/Shapely-1.8.4-cp39-cp39-macosx_10_9_x86_64.whl
+shapely == 2.0.1
+
 https://wheelhouse.openquake.org/v3/macos/py39/setproctitle-1.3.2-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/llvmlite-0.39.1-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/pyproj-3.4.0-cp39-cp39-macosx_10_10_x86_64.whl

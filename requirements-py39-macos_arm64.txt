@@ -9,7 +9,11 @@ pandas == 2.1.0
 
 https://wheelhouse.openquake.org/macos/arm64/py39/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/matplotlib-3.5.2-cp39-cp39-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py39/Shapely-1.8.2-cp39-cp39-macosx_11_0_arm64.whl
+
+# FIXME: use wheel instead:
+# https://wheelhouse.openquake.org/macos/arm64/py39/Shapely-1.8.2-cp39-cp39-macosx_11_0_arm64.whl
+shapely == 2.0.1
+
 https://wheelhouse.openquake.org/macos/arm64/py39/Pillow-9.1.1-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/scipy-1.8.1-cp39-cp39-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/numpy-1.23.3-cp39-cp39-macosx_11_0_arm64.whl
