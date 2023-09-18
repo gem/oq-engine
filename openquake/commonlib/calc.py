@@ -220,6 +220,7 @@ class RuptureImporter(object):
                              ne, nr, int(eff_time), mag))
 
     def _save_events(self, rup_array, rgetters):
+        oq  = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         events = numpy.zeros(E, rupture.events_dt)
@@ -253,13 +254,14 @@ class RuptureImporter(object):
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
 
         # set event year and event ses starting from 1
-        nses = self.oqparam.ses_per_logic_tree_path
+        nses = oq.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
 
-        rng = numpy.random.default_rng(self.oqparam.ses_seed)
-        if self.oqparam.investigation_time:
-            itime = int(self.oqparam.investigation_time)
-            extra['year'] = rng.choice(itime, len(events)) + 1
+        rng = numpy.random.default_rng(oq.ses_seed)
+        if oq.investigation_time:
+            eff_time = int(oq.investigation_time * oq.ses_per_logic_tree_path *
+                           len(self.datastore['weights']))
+            extra['year'] = rng.choice(eff_time, len(events)) + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
 
