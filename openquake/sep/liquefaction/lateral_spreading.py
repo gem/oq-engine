@@ -164,7 +164,7 @@ def Rathje2023_lateral_spreading_general(
     :param elevation:
         Ground elevation, measured in m
     :param slope:
-        Ground slope, in %
+        Ground slope, in degrees
     :param wtd:
         Global water table depth, measured in m
     :param dr:
@@ -175,13 +175,17 @@ def Rathje2023_lateral_spreading_general(
             Returns binary output 0 or 1, i.e., liquefaction nonoccurrence or
             liquefaction occurrence occurrence.      
     """
+
+    slope_per = np.tan(np.radians(slope)) * 100
+  
     dict = {
         'pga': pga,
         'elevation': elevation,
-        'slope': slope,
+        'slope_per': slope_per,
         'wtd': wtd,
         'dr': dr
     }
+
     df = pd.DataFrame(dict)
     model_file = 'data/lateral_spreading/lateral_spreading.pkl.gz'
     model_path = os.path.join(os.path.dirname(__file__), model_file)
