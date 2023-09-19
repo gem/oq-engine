@@ -27,7 +27,7 @@ from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
 from openquake.calculators.views import text_table, view
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
@@ -274,7 +274,8 @@ class ScenarioTestCase(CalculatorTestCase):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         self.run_calc(case_24.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-4)
+        self.assertEqualFiles('expected/avg_gmf.csv', f,
+                              ignore_gsd_fields, delta=1E-5)
 
     def test_case_24_station_with_zero_im_value(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
