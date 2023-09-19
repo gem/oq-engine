@@ -344,8 +344,11 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        pga = None
-        pgv = None
+        imts = dict(imt_gmf)
+        assert "PGA" in imts
+        assert "PGV" in imts
+        # pga = None
+        # pgv = None
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
                 pgv = gmf
@@ -386,8 +389,11 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        pga = None
-        pgv = None
+        imts = dict(imt_gmf)
+        assert "PGA" in imts
+        assert "PGV" in imts
+        # pga = None
+        # pgv = None
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
                 pgv = gmf
