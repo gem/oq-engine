@@ -77,7 +77,7 @@ HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 
 FT_PER_M = 3.28084
 CM_PER_M = 100
-
+NUM = 10 ** 2.24
 
 def sigmoid(x):
   return 1.0 / (1.0 + np.exp(-x))
@@ -92,7 +92,7 @@ def _idriss_magnitude_scaling_factor(mag: float):
     https://doi.org/10.1061/(asce)1090-0241(2001)127:4(297)
 
     """
-    return (10**2.24) / (mag**2.56)
+    return (NUM) / (mag**2.56)
 
 
 def _idriss_magnitude_weighting_factor(mag: float):
@@ -342,10 +342,10 @@ def rashidian_baise_2020(
     """
 
     precip = np.where(precip > 1700, 1700, precip)  
-    Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
-          + vs30_coeff * np.log(vs30) + precip_coeff * precip 
-          + dw_coeff * dw + wtd_coeff * wtd + intercept)
-    prob_liq = sigmoid(Xg)
+    prob_liq, _, _ = zhu_etal_2017_general(pgv, vs30, dw, wtd, precip, 
+                 intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
+                 pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, 
+                 dw_coeff=dw_coeff, wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
 
     # Zhu et al. 2017 heuristically assign zero to the predicted probability 
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
@@ -415,15 +415,10 @@ def allstadt_etal_2022(
     pgv = np.where(pgv > 150, 150, pgv)
     precip = np.where(precip > 2500, 2500, precip)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
-    Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
-          + vs30_coeff * np.log(vs30) + precip_coeff * precip 
-          + dw_coeff * dw + wtd_coeff * wtd + intercept)
-    prob_liq = sigmoid(Xg)
-
-    # prob_liq = rashidian_baise_2020_liquefaction_probability(pga, pgv, vs30, dw, wtd, precip, 
-    #              intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
-    #              pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, 
-    #              dw_coeff=dw_coeff, wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
+    prob_liq, _, _ = rashidian_baise_2020(pga, pgv, vs30, dw, wtd, precip, 
+                 intercept=intercept, pgv_scaling_factor=pgv_scaling_factor, 
+                 pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, 
+                 dw_coeff=dw_coeff, wtd_coeff=wtd_coeff, precip_coeff=precip_coeff)
     prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
