@@ -6,11 +6,6 @@
 https://wheelhouse.openquake.org/v3/windows/py39/h5py-3.1.0-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/setproctitle-1.2.2-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/numpy-1.23.3-cp39-cp39-win_amd64.whl
-
-# FIXME: use wheel instead
-#https://wheelhouse.openquake.org/v3/windows/py39/pandas-1.3.5-cp39-cp39-win_amd64.whl
-pandas == 2.0.3
-
 https://wheelhouse.openquake.org/v3/windows/py39/psutil-5.8.0-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/Shapely-1.8.0-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/kiwisolver-1.3.1-cp39-cp39-win_amd64.whl
@@ -23,6 +18,7 @@ https://wheelhouse.openquake.org/v3/windows/py39/scipy-1.8.1-cp39-cp39-win_amd64
 https://wheelhouse.openquake.org/v3/windows/py39/Pillow-9.2.0-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/numba-0.56.2-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/llvmlite-0.39.1-cp39-cp39-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py39/pandas-2.0.3-cp39-cp39-win_amd64.whl
 #
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl

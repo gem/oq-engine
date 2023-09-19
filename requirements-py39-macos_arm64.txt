@@ -2,11 +2,6 @@
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
 #
-
-# FIXME: use wheel instead
-# https://wheelhouse.openquake.org/macos/arm64/py39/pandas-1.4.2-cp39-cp39-macosx_11_0_arm64.whl
-pandas == 2.0.3
-
 https://wheelhouse.openquake.org/macos/arm64/py39/tornado-6.1-cp39-cp39-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/matplotlib-3.5.2-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/Shapely-1.8.2-cp39-cp39-macosx_11_0_arm64.whl
@@ -22,6 +17,7 @@ https://wheelhouse.openquake.org/macos/arm64/py39/psutil-5.9.3-cp39-cp39-macosx_
 https://wheelhouse.openquake.org/macos/arm64/py39/Fiona-1.8.21-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/GDAL-3.4.3-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/pyproj-3.4.0-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/pandas-2.0.3-cp39-cp39-macosx_11_0_arm64.whl
 #
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
