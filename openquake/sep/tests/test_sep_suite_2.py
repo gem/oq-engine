@@ -326,10 +326,10 @@ class test_liquefaction_cali_small(unittest.TestCase):
         self.sites["char_settlement"] = hazus_vertical_settlement(liq_susc_cat=self.sites["liq_susc_cat"],
                                                                   pga=self.pga, mag=self.mag, 
                                                                   groundwater_depth=self.sites["gwd"],
-                                                                  do_map_proportion_correction=self.map_proportion_flag )
+                                                                  do_map_proportion_correction=self.map_proportion_flag ,
+                                                                  )
         
-        disps = np.array([1.24264956, 0.04829711, 1.24264956, 0.04664702, 
-            1.24264956,	1.24264956,	0,	0,	0.04664702,	0.04664702
-])
+        disps = np.array([0.031563264, 0.001226741, 0.031563264, 0.001184827, 
+            0.031563264, 0.031563264, 0, 0,	0.001184827, 0.001184827])
         
         np.testing.assert_array_almost_equal(self.sites["char_settlement"], disps)
