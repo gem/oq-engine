@@ -21,7 +21,7 @@ import unittest
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -285,4 +285,5 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.run_calc(conditioned.__file__, 'job.ini',
                       hazard_calculation_id=hc_id)
         [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', fname, delta=1E-3)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname,
+                              ignore_gsd_fields, delta=1E-5)
