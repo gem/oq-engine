@@ -95,16 +95,6 @@ def _get_mechanism(ctx, C):
     return C['f1'] * SS + C['f2'] * TF
 
 
-def _get_dist_type(gmpe):
-    """
-    Get distance type required for the corresponding class of 
-    Lanzano et al. 2019
-    """
-    dist_type = 'rjb' if "RJB" in gmpe.__class__.__name__ else 'rrup'
-    
-    return dist_type
-
-
 class LanzanoEtAl2019_RJB_OMO(GMPE):
     """
     Implements GMPE developed by G.Lanzano, L.Luzi, F.Pacor, L.Luzi,
@@ -152,7 +142,7 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        dist_type = _get_dist_type(gmpe=self)
+        dist_type = 'rjb' if "RJB" in self.__class__.__name__ else 'rrup'
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imean = (_compute_magnitude(ctx, C) +

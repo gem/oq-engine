@@ -114,16 +114,6 @@ def _get_style_of_faulting_term(C, ctx):
     return C["sofN"] * NS + C["sofR"] * RS + C["sofS"] * SS
 
 
-def _get_dist_type(gmpe):
-    """
-    Get distance type required for the corresponding class of 
-    Bindi et al. (2014)
-    """
-    dist_type = 'rhypo' if  "Rhyp" in gmpe.__class__.__name__ else 'rjb'
-
-    return dist_type
-
-
 class BindiEtAl2014Rjb(GMPE):
     """
     Implements European GMPE:
@@ -185,8 +175,8 @@ class BindiEtAl2014Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        self.dist_type = _get_dist_type(gmpe=self)
-        dists = getattr(ctx, self.dist_type)
+        dist_type = 'rhypo' if  "Rhyp" in self.__class__.__name__ else 'rjb'
+        dists = getattr(ctx, dist_type)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imean = _get_mean(self.kind, self.sof, C, ctx, dists)

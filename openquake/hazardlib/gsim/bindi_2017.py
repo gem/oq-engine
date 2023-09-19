@@ -80,16 +80,6 @@ def _get_site_term(C, vs30):
     return C["sA"] * np.log(vs30 / 800.0)
 
 
-def _get_dist_type(gmpe):
-    """
-    Get distance type required for the corresponding class of 
-    Bindi et al. (2017)
-    """
-    dist_type = 'rjb' if "Rjb" in gmpe.__class__.__name__ else 'rhypo'
-    
-    return dist_type
-
-
 class BindiEtAl2017Rjb(GMPE):
     """
     Implements the European GMPE of Bindi et al. (2017) for use in
@@ -136,7 +126,7 @@ class BindiEtAl2017Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        dist_type = _get_dist_type(gmpe=self)
+        dist_type = 'rjb' if "Rjb" in self.__class__.__name__ else 'rhypo'
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
 
