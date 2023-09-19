@@ -76,8 +76,11 @@ def hazus_vertical_settlement(
     vert_settlement *= liquefaction_prob
 
     if return_unit == 'in':
-        vert_settlement *= 39.37  # Conversion factor from meters to inches
-    elif return_unit != 'm':
+        pass
+    elif return_unit == 'm':
+        vert_settlement /= INCH_PER_M
+    else:
         raise ValueError("Please choose 'm' or 'in' for return_unit.")
+
 
     return vert_settlement
