@@ -1,5 +1,5 @@
-#,,,"generated_by='OpenQuake engine 3.18.0-git347e75ee05', start_date='2023-09-19T09:34:14', checksum=1418786166"
+#,,,"generated_by='OpenQuake engine 3.18.0-git3201b0b06f', start_date='2023-09-19T10:22:40', checksum=3951097273, investigation_time=None, risk_investigation_time=None"
 loss_type,rlz_id,no_damage,complete
-structural,0,3.35E+02,1.47E+00
-structural,1,3.35E+02,6.12E-01
-structural,2,3.34E+02,1.55E+00
+structural,0,3.34526E+02,1.47400E+00
+structural,1,3.35388E+02,6.12000E-01
+structural,2,3.34452E+02,1.54800E+00
