@@ -3,11 +3,6 @@
 
 # GEM Mirror
 #
-
-# FIXME: use wheel instead
-# https://wheelhouse.openquake.org/v3/windows/py310/pandas-1.3.5-cp310-cp310-win_amd64.whl
-pandas == 2.0.3
-
 https://wheelhouse.openquake.org/v3/windows/py310/scipy-1.8.1-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/h5py-3.7.0-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/Pillow-9.2.0-cp310-cp310-win_amd64.whl
@@ -29,6 +24,7 @@ https://wheelhouse.openquake.org/v3/windows/py310/numpy-1.23.3-cp310-cp310-win_a
 https://wheelhouse.openquake.org/v3/windows/py310/pyproj-3.4.0-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/numba-0.56.2-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/llvmlite-0.39.1-cp310-cp310-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py310/pandas-2.0.3-cp310-cp310-win_amd64.whl
 #
 #python
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
