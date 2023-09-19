@@ -16,9 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import platform
-import unittest
 import numpy
 from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
@@ -30,7 +27,7 @@ from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
 from openquake.calculators.views import text_table, view
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
@@ -273,14 +270,12 @@ class ScenarioTestCase(CalculatorTestCase):
         with self.assertRaises(nrml.DuplicatedID):
             self.run_calc(case_23.__file__, 'job.ini')
 
-    @unittest.skipIf(
-        sys.platform == 'darwin' and platform.processor() == 'arm',
-        reason='Skipped on MacOS M1 (it would need delta=1E-4)')
     def test_case_24(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         self.run_calc(case_24.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f)
+        self.assertEqualFiles('expected/avg_gmf.csv', f,
+                              ignore_gsd_fields, delta=1E-5)
 
     def test_case_24_station_with_zero_im_value(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
@@ -294,11 +289,8 @@ class ScenarioTestCase(CalculatorTestCase):
             'stationlist_seismic_zero_im_value.csv',
             str(ctx.exception))
 
-    @unittest.skipIf(
-        sys.platform == 'darwin' and platform.processor() == 'arm',
-        reason='Skipped on MacOS M1 (it would need delta=1E-5)')
     def test_case_26(self):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
