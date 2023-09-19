@@ -4,13 +4,25 @@ A general rule is the more GB of RAM and the more GHz you have, the better it is
 
 ### Single node configuration
 
-Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4  physical cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve the overall performance.
+Small calculations can run on a laptop or an equivalent cloud server:
+8GB of RAM with 4 virtual cores can be enough. Unfortunately, recent
+processor comes with a large number of threads but not enough
+memory. For instance a Ryzen laptop with 12 threads and 16 GB of RAM
+of which 4 GB reserved for the graphic card / operating system /
+browser has only 1 GB per thread, which is not enough. For nontrivial
+calculations the engine requires 2 GB per thread. To save memory,
+it is recommended to disable hyperthreading, if possible. Otherwise, you
+can edit the openquake.cfg file and reduce the number of (virtual)
+cores used by the engine, thus saving memory at the cost of reducing
+the performance.  Please consider buying a memory expansion instead.
 
-Recent processor have a large number of threads but often not enough
-memory, i.e. less than 2 GB per thread. In that case it is recommended to
-disable hyperthreading to save memory.
-
-More serious calculations would be better handled by a powerful server. In spring 2022 we bought a single server with 128 AMD Epyc Rome CPUs and 512 GB of RAM. This is the best machine we have. Even half of such specs are enough for running most hazard models.
+Continental scale calculations would be better handled by a powerful
+server. In spring 2022 we bought a single server with 128 AMD Epyc
+Rome CPUs and 512 GB of RAM. This is the best machine we have. Even
+half of such specs are enough for running most hazard models. Recent
+versions of the engine (>=3.17) have strong memory optimizations
+so that you can run nearly anything on a regular desktop provided
+you have at least 64 GB of RAM.
 
 ### Multi-node configuration
 
