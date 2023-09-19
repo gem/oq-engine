@@ -623,7 +623,7 @@ class IterResult(object):
             nb = {k: humansize(v) for k, v in reversed(items)}
             recv = sum(self.nbytes.values())
             msg = nb if len(nb) < 10 else {'tot': humansize(recv)}
-            mean = recv / self.counts
+            mean = recv / (self.counts or 1)
             logging.info('Received %d * %s %s in %d seconds from %s',
                          self.counts, humansize(mean), msg,
                          time.time() - t0, self.name)
