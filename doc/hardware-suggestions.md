@@ -4,11 +4,14 @@ A general rule is the more GB of RAM and the more GHz you have, the better it is
 
 ### Single node configuration
 
-Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4  physical cores with several GB of disk space. Using >= 7.2k RPM disks or solid-state drives (SSD) will improve the overall performance.
+Small to medium hazard calculations and small risk calculations can run on a laptop or an equivalent cloud server: 8GB of RAM and 4  physical cores with several GB of disk space.
 
 Recent processor have a large number of threads but often not enough
-memory, i.e. less than 2 GB per thread. In that case it is recommended to
-disable hyperthreading to save memory.
+memory, i.e. less than 2 GB per thread. In that case it is recommended
+to disable hyperthreading, if possible. Otherwise, you can edit the
+openquake.cfg file and reduce the number of (virtual) cores used by
+the engine, thus saving memory at the cost of reducing the performance.
+Please consider buying a memory expansion instead.
 
 More serious calculations would be better handled by a powerful server. In spring 2022 we bought a single server with 128 AMD Epyc Rome CPUs and 512 GB of RAM. This is the best machine we have. Even half of such specs are enough for running most hazard models.
 
