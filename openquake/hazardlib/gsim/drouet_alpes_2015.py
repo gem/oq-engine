@@ -116,7 +116,7 @@ class DrouetAlpes2015Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = _get_dist_type(gmpe=self)
+        dist_type = _get_dist_type(gmpe=self)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, ctx.mag, getattr(ctx, dist_type))
@@ -676,35 +676,13 @@ def _get_dist_type(gmpe):
     Get distance type required for the corresponding class of 
     Drouet and Cotton (2015)
     """
-    # Get gsim class name
-    gsim = gmpe.__class__().__class__.__name__
-    
-    repi_variants = [DrouetAlpes2015Repi.__name__, 
-                     DrouetAlpes2015RepiHR.__name__,
-                     DrouetAlpes2015Repi_50bars.__name__]
-    
-    rjb_variants = [DrouetAlpes2015Rjb.__name__,
-                    DrouetAlpes2015RjbHR.__name__, 
-                    DrouetAlpes2015Rjb_50bars.__name__,
-                    DrouetAlpes2015RjbHR_50bars.__name__]
-    
-    rrup_variants = [DrouetAlpes2015Rrup.__name__,
-                     DrouetAlpes2015RrupHR.__name__,
-                     DrouetAlpes2015Rrup_50bars.__name__]
-    
-        
-    rhypo_variants = [DrouetAlpes2015Rhyp.__name__,
-                      DrouetAlpes2015RhypHR.__name__,
-                      DrouetAlpes2015Rhyp_50bars.__name__]
-    
-    # Get required dist type
-    if gsim in repi_variants:
+    if 'Repi' in gmpe.__class__.__name__:
         dist_type = 'repi'
-    elif gsim in rjb_variants:
+    elif 'Rjb' in gmpe.__class__.__name__:
         dist_type = 'rjb'
-    elif gsim in rrup_variants:
+    elif 'Rrup' in gmpe.__class__.__name__:
         dist_type = 'rrup'
-    elif gsim in rhypo_variants:
-        dist_type = 'rhypo'
+    else:
+        dist_type = 'rhypo' # Otherwise must be rhypo
 
-    return [dist_type]
+    return dist_type

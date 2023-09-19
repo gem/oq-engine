@@ -119,20 +119,9 @@ def _get_dist_type(gmpe):
     Get distance type required for the corresponding class of 
     Bindi et al. (2014)
     """
-    # Get gsim class name
-    gsim = gmpe.__class__().__class__.__name__
-    
-    rhypo_variants = [BindiEtAl2014Rhyp.__name__,
-                      BindiEtAl2014RhypEC8.__name__,
-                      BindiEtAl2014RhypEC8NoSOF.__name__]
-    
-    # Assign required distance type
-    if gsim in rhypo_variants:
-        dist_type = 'rhypo'
-    else:
-        dist_type = 'rjb'
-    
-    return [dist_type]
+    dist_type = 'rhypo' if  "Rhyp" in gmpe.__class__.__name__ else 'rjb'
+
+    return dist_type
 
 
 class BindiEtAl2014Rjb(GMPE):
@@ -196,7 +185,7 @@ class BindiEtAl2014Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [self.dist_type] = _get_dist_type(gmpe=self)
+        self.dist_type = _get_dist_type(gmpe=self)
         dists = getattr(ctx, self.dist_type)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]

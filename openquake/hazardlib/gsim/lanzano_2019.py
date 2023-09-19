@@ -100,20 +100,9 @@ def _get_dist_type(gmpe):
     Get distance type required for the corresponding class of 
     Lanzano et al. 2019
     """
-    # Get gsim class names
-    gsim = gmpe.__class__().__class__.__name__
-
-    rjb_variants = [LanzanoEtAl2019_RJB_OMO.__name__,
-                    LanzanoEtAl2019_RJB_OMOscaled.__name__,
-                    LanzanoEtAl2019_RJB_OMO_RefRock.__name__]
-
-    # Get required distance type
-    if gsim == LanzanoEtAl2019_RUP_OMO.__name__:
-        dist_type = 'rrup'
-    elif gsim in rjb_variants:
-        dist_type = 'rjb'
+    dist_type = 'rjb' if "RJB" in gmpe.__class__.__name__ else 'rrup'
     
-    return [dist_type]
+    return dist_type
 
 
 class LanzanoEtAl2019_RJB_OMO(GMPE):
@@ -163,7 +152,7 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = _get_dist_type(gmpe=self)
+        dist_type = _get_dist_type(gmpe=self)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imean = (_compute_magnitude(ctx, C) +

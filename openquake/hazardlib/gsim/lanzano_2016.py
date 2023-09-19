@@ -156,16 +156,9 @@ def _get_dist_type(gmpe):
     Get distance type required for the corresponding class of 
     Lanzano et al. 2016
     """
-    # Get gsim class name
-    gsim = gmpe.__class__().__class__.__name__
+    dist_type = 'rjb' if "RJB" in gmpe.__class__.__name__ else 'rhypo'
     
-    # Assign required distance type
-    if gsim == LanzanoEtAl2016_Rhypo.__name__:
-        dist_type = 'rhypo'
-    elif gsim == LanzanoEtAl2016_RJB.__name__:
-        dist_type = 'rjb'
-
-    return [dist_type]
+    return dist_type
 
 
 class LanzanoEtAl2016_RJB(GMPE):
@@ -215,7 +208,7 @@ class LanzanoEtAl2016_RJB(GMPE):
         """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            [dist_type] = _get_dist_type(gmpe=self)
+            dist_type = _get_dist_type(gmpe=self)
 
             imean = (_compute_magnitude(ctx, C) +
                      _compute_distance(dist_type, ctx, C) +
