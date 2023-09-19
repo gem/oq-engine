@@ -200,12 +200,12 @@ class HazusDeformation(SecondaryPeril):
         self.outputs = [deformation_component]
 
         if pga_threshold_table != HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE:
-            pga_threshold_table = {bytes(str(k), 'utf-8'): v
+            pga_threshold_table = {k.encode('utf-8'): v
                 for k, v in pga_threshold_table.items()}
         self.pga_threshold_table=pga_threshold_table
 
         if settlement_table != HAZUS_VERT_SETTLEMENT_TABLE:
-            settlement_table = {bytes(str(k), 'utf-8'): v
+            settlement_table = {k.encode('utf-8'): v
                 for k, v in settlement_table.items()}
         self.settlement_table=settlement_table
 
