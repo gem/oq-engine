@@ -27,6 +27,7 @@ import gzip
 import tempfile
 import string
 import random
+import logging
 
 import django
 from django.test import Client
@@ -230,8 +231,10 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
+        logging.disable(logging.CRITICAL)
         job_id = self.postzip('archive_err_1.zip')['job_id']
         self.wait()
+        logging.disable(logging.NOTSET)
 
         # there is no datastore since the calculation did not start
         resp = self.c.get('/v1/calc/%s/datastore' % job_id)
@@ -248,13 +251,17 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
+        logging.disable(logging.CRITICAL)
         resp = self.postzip('archive_err_2.zip')
+        logging.disable(logging.NOTSET)
         self.assertIn('No such file', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
 
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
+        logging.disable(logging.CRITICAL)
         resp = self.postzip('archive_err_3.zip')
+        logging.disable(logging.NOTSET)
         self.assertIn('There are no .ini files in the archive', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
 
