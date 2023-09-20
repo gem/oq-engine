@@ -22,7 +22,7 @@ import socket
 import cProfile
 import warnings
 import getpass
-from pandas.core.common import SettingWithCopyWarning
+from pandas.errors import SettingWithCopyWarning
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid

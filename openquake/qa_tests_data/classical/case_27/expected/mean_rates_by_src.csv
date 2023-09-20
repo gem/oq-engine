@@ -1,0 +1,5 @@
+#,,,"generated_by='OpenQuake engine 3.18.0-git6b799c22df', start_date='2023-09-11T08:26:57', checksum=3388380710, lon=135.68, lat=35.68"
+src_id,imt,iml,value
+case_01,PGV,2.00000E+01,5.98084E-02
+case_02,PGV,2.00000E+01,1.86467E-01
+gs_PSE_CPCF_2_100,PGV,2.00000E+01,2.40458E-03

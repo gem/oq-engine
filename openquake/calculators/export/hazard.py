@@ -411,6 +411,8 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
     sitecol = dstore['sitecol']
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']
     names = sitecol.array.dtype.names
     arr = sitecol[['lon', 'lat']]
     if 'custom_site_id' in names:
@@ -423,7 +425,7 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     if 'custom_site_id' in names:
-        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        df['csi'] = decode(sitecol.complete.custom_site_id[df.sid])
         ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
         del df['sid']
     else:
@@ -465,13 +467,15 @@ def export_gmf_data_hdf5(ekey, dstore):
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol'].complete
+    sitecol = dstore['sitecol']
+    if 'complete' in dstore.parent:
+        sitecol.complete = dstore.parent['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
-        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
+        dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
     else:
-        dic = dict(site_id=sitecol.sids)
-    dic['lon'] = sitecol.lons
-    dic['lat'] = sitecol.lats
+        dic = dict(site_id=sitecol.complete.sids)
+    dic['lon'] = sitecol.complete.lons
+    dic['lat'] = sitecol.complete.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
     for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
@@ -538,6 +542,7 @@ def export_mean_rates_by_src(ekey, dstore):
     for site in sitecol:
         df = rates_df[rates_df.site_id == site.id]
         del df['site_id']
+        df = df[df.value > 0]  # don't export zeros
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
@@ -552,6 +557,7 @@ def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
     aw = dstore['mean_disagg_by_src']
     df = aw.to_dframe()
+    df = df[df.value > 0]  # don't export zeros
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]

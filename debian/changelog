@@ -1,3 +1,15 @@
+  [Michele Simionato, Paolo Tormene]
+  * Implemented AEP, OEP curves
+
+  [Michele Simionato]
+  * Internal: changed events.year to be in the range 1..eff_time
+  * Enhanced `oq engine --delete-calculation` to remove calculation files
+    even if the DbServer is on a remote machine
+  * Fixed another site collection filtering bug in conditioned GMFs
+  * Fixed a regression in `oq reaggregate`
+  * Better error message for logic trees with branchsets exceeding the limit
+  * Fixed a bug with mutex sources and disagg_by_src
+
   [Manuela Villani, Kendra Johnson, Michele Simionato]
   * Implemented Risk Targeted Ground motion for the AELO project
 

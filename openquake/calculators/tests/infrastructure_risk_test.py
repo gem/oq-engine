@@ -46,7 +46,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
                 shutil.copy2(got_path, expected_path)
             else:
                 self.assertEqualFiles(
-                    got_path, expected_path, check_all_columns=True)
+                    got_path, expected_path, check_text=True)
         if replace_expected:
             raise ValueError('Remember to set replace_expected to False!')
 

@@ -151,7 +151,7 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     :param oqparam: OqParam instance
     :param dstore: DataStore instance from which to read the GMFs
     :param monitor: a Monitor instance
-    :returns: a dictionary of arrays, the output of event_based_risk
+    :yields: dictionary of arrays, the output of event_based_risk
     """
     if dstore.parent:
         dstore.parent.open('r')
@@ -175,11 +175,14 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
             if col == 'sid':
                 dic[col] = haz_sids[idx]
             else:
-                data = dstore['gmf_data/' + col][s0+start:s0+stop]
-                dic[col] = data[idx - start]
+                dset = dstore['gmf_data/' + col]
+                dic[col] = dset[s0+start:s0+stop][idx - start]
     df = pandas.DataFrame(dic)
-    for s0, s1 in performance.split_slices(
-            dic['eid'], oqparam.max_gmvs_per_task):
+    del dic
+    # if max_gmvs_chunk is too small, there is a huge data transfer in
+    # avg_losses and the calculation may hang; if too large, run out of memory
+    slices = performance.split_slices(df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    for s0, s1 in slices:
         yield event_based_risk(df[s0:s1], oqparam, monitor)
 
 
