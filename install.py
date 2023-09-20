@@ -44,6 +44,7 @@ import tempfile
 import argparse
 import platform
 import subprocess
+import requests
 from urllib.request import urlopen
 try:
     import ensurepip
@@ -209,7 +210,11 @@ def get_branch(version):
     Convert "version" into a branch name
     """
     if version is None:
-        return 'master'
+        # retrieve the tag name of the current stable version
+        resp = requests.get('https://pypi.org/pypi/openquake.engine/json')
+        stable_version_number = resp.json()['info']['version']
+        stable_version_tag_name = f'v{stable_version_number}'
+        return stable_version_tag_name
     mo = re.match(r'(\d+\.\d+)+', version)
     if mo:
         return 'engine-' + mo.group(0)
