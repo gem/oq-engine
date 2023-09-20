@@ -3,7 +3,6 @@
 
 # GEM Mirror
 #
-https://wheelhouse.openquake.org/v3/macos/py310/pandas-1.3.5-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/scipy-1.8.1-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/h5py-3.7.0-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/Pillow-9.2.0-cp310-cp310-macosx_10_10_x86_64.whl
@@ -11,7 +10,6 @@ https://wheelhouse.openquake.org/v3/macos/py310/kiwisolver-1.4.4-cp310-cp310-mac
 https://wheelhouse.openquake.org/v3/macos/py310/matplotlib-3.5.3-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/setproctitle-1.3.2-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pyzmq-23.2.1-cp310-cp310-macosx_10_9_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py310/Shapely-1.8.4-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/llvmlite-0.39.1-cp310-cp310-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/numba-0.56.2-cp310-cp310-macosx_10_14_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/psutil-5.9.2-cp310-cp310-macosx_10_9_x86_64.whl
@@ -19,6 +17,8 @@ https://wheelhouse.openquake.org/v3/macos/py310/numpy-1.23.3-cp310-cp310-macosx_
 https://wheelhouse.openquake.org/v3/macos/py310/Fiona-1.8.21-cp310-cp310-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/GDAL-3.4.3-cp310-cp310-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py310/pyproj-3.4.0-cp310-cp310-macosx_10_10_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py310/pandas-2.0.3-cp310-cp310-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py310/shapely-2.0.1-cp310-cp310-macosx_10_9_x86_64.whl
 #python
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl

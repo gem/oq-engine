@@ -47,6 +47,7 @@ MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
 
+
 class BBoxError(ValueError):
     """Bounding box too large"""
 
@@ -206,7 +207,8 @@ class _GeographicObjects(object):
                         'Could not find any asset within the region!')
                 mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
                 assets_by_site = numpy.array(assets_by_site)[ok]
-                logging.info('Discarded %d assets outside the region', len(out))
+                logging.info('Discarded %d assets outside the region',
+                             len(out))
         asset_dt = numpy.dtype(
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
@@ -279,7 +281,8 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
     for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
         point = geometry.Point(lon, lat)
         result = next((index_by_id[id(o)]
-                       for o in tree.query(point) if o.contains(point)), None)
+                       for o in tree.geometries[tree.query(point)]
+                       if o.contains(point)), None)
         if result is not None:
             # associate inside
             sites[sid] = data[result].copy()
@@ -819,4 +822,3 @@ def geohash(lons, lats, length):
                 ch = 0
                 i += 1
     return chars
-
