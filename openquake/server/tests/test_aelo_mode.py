@@ -175,10 +175,20 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         failure_reason = (
             f"Site at lon={params['lon']} lat={params['lat']}"
             f" is not covered by any model!")
+        sys.stdout.write('********************\n')
+        sys.stdout.write(
+            'EXPECTED: the site is not covered by any model,'
+            ' so an exception must be raised.\n')
         self.aelo_run_then_remove(params, failure_reason)
+        sys.stdout.write('********************\n')
 
     def aelo_invalid_input(self, params, expected_error):
+        sys.stdout.write('********************\n')
+        sys.stdout.write(
+            'EXPECTED: input parameters are invalid,'
+            ' so an exception must be raised.\n')
         resp = self.post('aelo_run', params)
+        sys.stdout.write('********************\n')
         self.assertEqual(resp.status_code, 400)
         resp_dict = json.loads(resp.content.decode('utf8'))
         print(resp_dict)
