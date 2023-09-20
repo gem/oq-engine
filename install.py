@@ -44,7 +44,6 @@ import tempfile
 import argparse
 import platform
 import subprocess
-import requests
 from urllib.request import urlopen
 try:
     import ensurepip
@@ -211,8 +210,9 @@ def get_branch(version):
     """
     if version is None:
         # retrieve the tag name of the current stable version
-        resp = requests.get('https://pypi.org/pypi/openquake.engine/json')
-        stable_version_number = resp.json()['info']['version']
+        with urlopen('https://pypi.org/pypi/openquake.engine/json') as resp:
+            content = resp.read()
+        stable_version_number = json.loads(content)['info']['version']
         stable_version_tag_name = f'v{stable_version_number}'
         return stable_version_tag_name
     mo = re.match(r'(\d+\.\d+)+', version)
