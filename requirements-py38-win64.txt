@@ -1,5 +1,7 @@
 # Suggested versions for development
 # GEM Mirror
+https://wheelhouse.openquake.org/v3/windows/py38/pandas-2.0.3-cp38-cp38-win_amd64.whl
+https://wheelhouse.openquake.org/v3/windows/py38/shapely-2.0.1-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.10.0-py2.py3-none-any.whl

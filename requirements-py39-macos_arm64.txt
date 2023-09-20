@@ -1,6 +1,8 @@
 # Suggested versions for development
 # !! must update pip first! so wheels will be used !!
 # GEM Mirror
+https://wheelhouse.openquake.org/macos/arm64/py39/pandas-2.0.3-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/shapely-2.0.1-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/cycler-0.10.0-py2.py3-none-any.whl
