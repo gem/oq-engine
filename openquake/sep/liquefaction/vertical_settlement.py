@@ -29,7 +29,7 @@ HAZUS_VERT_SETTLEMENT_TABLE = {
 
 
 def hazus_vertical_settlement(
-    liq_susc_cat: Union[str, List[str]],
+    liq_susc_cat: Union[str, List[Union[str, bytes]]],
     pga: Union[float, np.ndarray],
     mag: Union[float, np.ndarray],
     settlement_table: dict = HAZUS_VERT_SETTLEMENT_TABLE,
@@ -63,14 +63,22 @@ def hazus_vertical_settlement(
     if isinstance(liq_susc_cat, pd.Series):
         liq_susc_cat = liq_susc_cat.tolist()
 
-    liq_susc_cat = [x.encode() if isinstance(x, str) else x for x in liq_susc_cat]
+    if not isinstance(liq_susc_cat, list):
+        liq_susc_cat = [liq_susc_cat]
 
-    if isinstance(liq_susc_cat, list):
-        vert_settlement = np.array([settlement_table[susc_cat] for susc_cat in liq_susc_cat])
-    else:
-        vert_settlement = settlement_table[liq_susc_cat]
+    vert_settlement = []
 
-    liquefaction_prob = hazus_liquefaction_probability(pga, mag, liq_susc_cat, 
+    for susc_cat in liq_susc_cat:
+        if isinstance(susc_cat, str):
+            key = susc_cat.encode()
+        elif isinstance(susc_cat, bytes):
+            key = susc_cat
+        
+        vert_settlement.append(settlement_table[key])
+
+    vert_settlement = np.array(vert_settlement)
+
+    liquefaction_prob = hazus_liquefaction_probability(pga, mag, liq_susc_cat,
                                                        groundwater_depth, do_map_proportion_correction)
 
     vert_settlement *= liquefaction_prob
@@ -81,6 +89,5 @@ def hazus_vertical_settlement(
         vert_settlement /= INCH_PER_M
     else:
         raise ValueError("Please choose 'm' or 'in' for return_unit.")
-
 
     return vert_settlement
