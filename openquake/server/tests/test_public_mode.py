@@ -230,8 +230,13 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     def test_err_1(self):
         # the rupture XML file has a syntax error
+        sys.stdout.write('********************\n')
+        sys.stdout.write(
+            'EXPECTED: the XML file has a syntax error'
+            ' so a ValueError exception must be raised.\n')
         job_id = self.postzip('archive_err_1.zip')['job_id']
         self.wait()
+        sys.stdout.write('********************\n')
 
         # there is no datastore since the calculation did not start
         resp = self.c.get('/v1/calc/%s/datastore' % job_id)
@@ -248,13 +253,23 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     def test_err_2(self):
         # the file logic-tree-source-model.xml is missing
+        sys.stdout.write('********************\n')
+        sys.stdout.write(
+            'EXPECTED: the file logic-tree-source-mode.xml is missing,'
+            ' so an exception must be raised.\n')
         resp = self.postzip('archive_err_2.zip')
+        sys.stdout.write('********************\n')
         self.assertIn('No such file', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
 
     def test_err_3(self):
         # there is no file job.ini, job_hazard.ini or job_risk.ini
+        sys.stdout.write('********************\n')
+        sys.stdout.write(
+            'EXPECTED: there is no file job.ini, job_hazard.ini or'
+            ' job_risk.ini, so an exception must be raised.\n')
         resp = self.postzip('archive_err_3.zip')
+        sys.stdout.write('********************\n')
         self.assertIn('There are no .ini files in the archive', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
 
