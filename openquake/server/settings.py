@@ -20,6 +20,7 @@ import sys
 import os
 import socket
 import getpass
+import logging
 
 from openquake.baselib import config
 from openquake.commonlib import datastore
@@ -31,6 +32,8 @@ except ImportError:
     STANDALONE_APPS = ()
 
 TEST = 'test' in sys.argv
+if TEST:
+    logging.disable(logging.CRITICAL)
 
 INSTALLED_APPS = ('openquake.server.db',)
 
