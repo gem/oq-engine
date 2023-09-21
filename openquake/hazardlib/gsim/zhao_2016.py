@@ -589,7 +589,7 @@ class ZhaoEtAl2016Asc(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'rake'}
 
     #: Required distance measure is Rrup and Rvolc
-    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'clon', 'clat'}
+    REQUIRES_DISTANCES = {'rrup', 'rvolc'}
 
     def __init__(self, volc_arc_file=None, **kwargs):
         super().__init__(volc_arc_file=volc_arc_file, **kwargs)
@@ -952,7 +952,7 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat'}
 
     #: Required distance measure is Rrup, Rvolc and closest_point
-    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'closest_point'}
+    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'closest_point', 'clon', 'clat'}
     
     # Set coeff tables
     COEFFS = COEFFS_SLAB
