@@ -94,8 +94,10 @@ def split_by_occur(ctx):
         out.append(ctx[~nan])
         nonpoisson = ctx[nan]
         for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
+            # ctxs with the same shape of prob_occur are concatenated
             p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
-            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+            arr = numpy.concatenate(p_array, p_array[0].dtype)
+            out.append(arr.view(numpy.recarray))
     else:
         out.append(ctx)
     return out
