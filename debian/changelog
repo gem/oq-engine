@@ -1,3 +1,6 @@
+  [Paolo Tormene]
+  * Upgraded requirements: Shapely to version 2.0.1 and Pandas to version 2.0.3
+
   [Michele Simionato, Paolo Tormene]
   * Implemented AEP, OEP curves
 

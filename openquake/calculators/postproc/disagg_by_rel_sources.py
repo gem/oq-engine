@@ -19,7 +19,7 @@
 import logging
 import numpy
 import pandas
-from openquake.baselib import sap, hdf5, python3compat, parallel
+from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.logictree import FullLogicTree
@@ -56,17 +56,17 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
     :param imts: a list of IMTs
     :param imls: a list of IMLs
     :param threshold: fraction of the max rate, used to discard sources
-    :returns: list of relevant source IDs, sorted lexicographically
+    :returns: dictionary IMT -> relevant source IDs
     """
-    source_ids = set()
+    source_ids = general.AccumDict(accum=set())  # IMT -> src_ids
     for imt, iml in zip(imts, imls):
         aw = extract.extract(
             dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
         rates = aw.array['rate']  # for each source in decreasing order
         max_rate = rates[0]
         rel = aw.array[rates > threshold * max_rate]
-        source_ids.update(rel['src_id'])
-    return python3compat.decode(sorted(source_ids))
+        source_ids[imt].update(rel['src_id'])
+    return source_ids
 
 
 def middle(arr):
@@ -99,13 +99,15 @@ def main(dstore, csm, imts, imls):
     sitecol = parent['sitecol']
     assert len(sitecol) == 1, sitecol
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    rel_ids = get_rel_source_ids(dstore, imts, imls, threshold=.1)
-    logging.info('There are %d relevant sources: %s',
-                 len(rel_ids), ' '.join(rel_ids))
+    rel_ids_by_imt = get_rel_source_ids(dstore, imts, imls, threshold=.1)
+    for imt, ids in rel_ids_by_imt.items():
+        rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
+        logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
     imldic = dict(zip(imts, imls))
 
     src2idx = {}
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
+    rel_ids = set.union(*map(set, rel_ids_by_imt.values()))
     for idx, source_id in enumerate(rel_ids):
         src2idx[source_id] = idx
         smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
@@ -125,13 +127,17 @@ def main(dstore, csm, imts, imls):
         arr[idx] = rates4D
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-        source_id=rel_ids, imt=imts, iml=imls,
+        source_id=sorted(rel_ids), imt=imts, iml=imls,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
     aw = hdf5.ArrayWrapper(arr, dic)
     dstore['mean_disagg_by_src'] = aw
-    src_mutex = dstore['mutex_by_grp']['src_mutex'].any()
+    src_mutex = dstore['mutex_by_grp']['src_mutex'].any()  # True for Japan
     mag_dist_eps = get_mag_dist_eps_df(aw, 'max' if src_mutex else 'mean')
-    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
+    out = []
+    for imt, src_ids in rel_ids_by_imt.items():
+        df = mag_dist_eps[mag_dist_eps.imt == imt]
+        out.append(df[numpy.isin(df.src, src_ids)])
+    logging.info('mag_dist_eps=\n%s', pandas.concat(out))
 
 
 if __name__ == '__main__':
