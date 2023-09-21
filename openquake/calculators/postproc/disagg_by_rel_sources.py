@@ -29,9 +29,10 @@ from openquake.calculators import extract
 
 def get_mag_dist_eps_df(mean_disagg_by_src, operation):
     """
-    Compute mag, dist, eps using the rates as weights
-    :param mean_disagg_by_src: ArrayWrapper of rates
-    :param operation: the string 'mean' or 'mode
+    Compute mag, dist, eps using the rates as weights.
+
+    :param mean_disagg_by_src: ArrayWrapper of rates (src, mag, dst, eps, imt)
+    :param operation: the string 'mean' or 'mode'
     :returns: a DataFrame with columns src, imt, mag, dst, eps
     """
     assert operation in {'mean', 'mode'}, operation
@@ -148,7 +149,8 @@ def main(dstore, csm, imts, imls):
     for imt, src_ids in rel_ids_by_imt.items():
         df = mag_dist_eps[mag_dist_eps.imt == imt]
         out.append(df[numpy.isin(df.src, src_ids)])
-    logging.info('mag_dist_eps=\n%s', pandas.concat(out))
+    mag_dist_eps = pandas.concat(out)
+    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
 
 
 if __name__ == '__main__':
