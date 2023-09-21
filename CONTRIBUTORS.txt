@@ -7,36 +7,37 @@ think a name is missing or a date is incorrect, please let us know. =)
 Code
 ----
 Marco Pagani             (@mmpagani)            July 2010
-Andy Smith                                      August 2010
-Fabian Euchner                                  August 2010
+Andy Smith               (@termie)              August 2010
+Fabian Euchner           (@feuchner)            August 2010
 Gaya Moemke                                     August 2010
-Joshua McKenty                                  August 2010
-Philip Kaestli                                  August 2010
-Christopher MacGown                             November 2010
-Lars Butler                                     November 2010
+Joshua McKenty           (@joshuamckenty)       August 2010
+Philipp Kästli           (@kaestli)             August 2010
+Christopher MacGown      (@ChristopherMacGown)  November 2010
+Lars Butler              (@larsbutler)          November 2010
 Roland Siegert                                  November 2010
-Andrea Cerisara                                 December 2010
-Marco Milanesi                                  February 2011
-Muharem Hrnjadovic                              February 2011
-Damiano Monelli                                 May 2011
-Gabriele Favalessa                              June 2011
-Mattia Barbon                                   June 2011
-Giuseppe Vallarelli                             July 2011
-Anton Gritsay                                   August 2011
-Luigi Panzeri                                   August 2012
+Andrea Cerisara          (@acerisara)           December 2010
+Marco Milanesi           (@kpanic)              February 2011
+Muharem Hrnjadovic       (@arbeit)              February 2011
+Damiano Monelli          (@monellid)            May 2011
+Gabriele Favalessa       (@favalex)             June 2011
+Mattia Barbon            (@mbarbon)             June 2011
+Giuseppe Vallarelli      (@gvallarelli)         July 2011
+Anton Gritsay            (@angri)               August 2011
+Luigi Panzeri            (@matley)              August 2012
 Matteo Nastasi           (@nastasi-oq)          November 2012
 Michele Simionato        (@micheles)            December 2012
-Luis Rodríguez                                  December 2012
+Luis Rodríguez           (@luisera)             December 2012
 Daniele Viganò           (@daniviga)            April 2013
 Graeme Weatherill        (@g-weatherill)        September 2013
 Paolo Tormene            (@ptormene)            October 2013
 Yen-Shin Chen            (@vup1120)             November 2013
 Julio Garcia             (@julgp)               March 2014
 Laurentiu Danciu         (@danciul)             August 2014
-Nick Horspool                                   September 2014
+Nick Horspool            (@nickhorspool)        September 2014
 Anirudh Rao              (@raoanirudh)          January 2015
+C. Bruce Worden          (@cbworden)            August 2015
 Robin Gee                (@rcgee)               September 2015
-Catalina Yepes           (@CatalinaYepes)       November 2015
+Catalina Yepes-Estrada   (@CatalinaYepes)       November 2015
 Silvia Canessa           (@silviacanessa)       December 2015
 Nick Ackerley            (@nackerley)           December 2015
 Trevor Allen             (@treviallen)          July 2016
@@ -57,8 +58,9 @@ Richard Styron           (@cossatot)            July 2019
 Kris Vanneste            (@krisvanneste)        September 2019
 Alberto Chiusole         (@bebosudo)            November 2019
 Iason Grigoratos         (@jasongrig)           April 2020
-Francis Jenner Bernales                         August 2020
+Francis Jenner Bernales  (@ftbernales)          August 2020
 Athanasios Papadopoulos  (@thpap)               September 2020
+Viktor Polak             (@viktor76525)         November 2020
 Thomas Chartier          (@tomchartier)         December 2020
 Claudia Mascandola       (@mascandola)          December 2020
 Nicolas Schmid           (@schmidni)            March 2021
@@ -72,16 +74,19 @@ Manuela Villani          (@mvillani)            January 2022
 Prajakta Jadhav          (@Prajakta-Jadhav-25)  February 2022
 Dharma Wijewickreme      (@Dharma-Wijewickreme) February 2022
 Tom Son                  (@SnowNooDLe)          March 2022
-Julián Montejo Espitia                          May 2022
+Julián Montejo Espitia   (@SantiMon1417)        May 2022
 Pablo Iturrieta          (@pabloitu)            June 2022
 Anne Hulsey              (@annehulsey)          July 2022
 Nicole Paul              (@nicolepaul)          May 2023
 Claudio Schill           (@claudio525)          June 2023
 Astha Poudel             (@asthapoudel)         July 2023
+Lana Todorovich          (@LanaTodorovic93)     August 2023
+Christopher Brooks       (@CB-quakemodel)       September 2023
+Manuela Villani          (@ManuelaVillani)      September 2023
 
 Project management
 ------------------
-Joshua McKenty                                  August 2010
+Joshua McKenty           (@joshuamckenty)       August 2010
 John Tarter                                     November 2010
 Paul Henshaw             (@pslh)                February 2012
 

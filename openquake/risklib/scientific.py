@@ -40,8 +40,9 @@ U16 = numpy.uint16
 U8 = numpy.uint8
 
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
-                      'fatalities', 'homeless', 'non_operational']
+KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep', 'losses', 'collapsed',
+                      'injured', 'fatalities', 'homeless', 'non_operational']
+
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -1517,9 +1518,27 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, losses, rlzi=0):
-        return losses_by_period(
-            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
+    def build_curve(self, years, kind, losses, agg_types, rlzi=0):
+        """
+        Compute EP curves. If years is not None, also AEP and OEP curves.
+        """
+        if kind == 'losses':  # for consequences
+            kind = 'loss'
+        periods = self.return_periods
+        ne = self.num_events[rlzi]
+        dic = {kind: losses_by_period(losses, periods, ne, self.eff_time)}
+        # NOTE: assuming 'ep' mandatory and 'oep' and 'aep' optional
+        if len(years) and kind == 'loss':
+            gby = pandas.DataFrame(
+                dict(year=years, loss=losses)).groupby('year')
+            # see specs in https://github.com/gem/oq-engine/issues/8971
+            if '_aep' in agg_types:
+                dic['loss_aep'] = losses_by_period(
+                    gby.loss.sum(), periods, ne, self.eff_time)
+            if '_oep' in agg_types:
+                dic['loss_oep'] = losses_by_period(
+                    gby.loss.max(), periods, ne, self.eff_time)
+        return dic
 
 
 def _agg(loss_dfs, weights=None):
@@ -1631,7 +1650,7 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
@@ -1642,33 +1661,35 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence == 'losses':
+    if consequence.startswith(('loss', 'losses')):
         return dmgdist @ coeffs * asset['value-' + loss_type]
     elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
-    elif consequence == 'injured':
-        return dmgdist @ coeffs * asset['occupants_night']
-    elif consequence == 'fatalities':
-        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_avg']
+        return dmgdist @ coeffs * asset['value-residents']
+    else:
+        raise NotImplementedError(consequence)
 
 
-def get_agg_value(consequence, agg_values, agg_id, xltype):
+def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
     if consequence in ['collapsed', 'non_operational']:
         return aval['number']
-    elif consequence == 'injured':
-        return aval['occupants_night']
-    elif consequence == 'fatalities':
-        return aval['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return aval[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return aval['occupants_night']
-    elif consequence in ('loss', 'losses'):
+        return aval['residents']
+    elif consequence.startswith(('loss', 'losses')):
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type

@@ -13,6 +13,8 @@ jobs:
       matrix:
         os: [ubuntu-22.04]
         python-version: ["3.10"]
+    env:
+      GITHUB_HEAD_REF:  ${{ github.head_ref }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -21,13 +23,13 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        python install.py devel --version=$GITHUB_HEAD_REF
     - name: Calculators and documentation tests
       run: |
         source ~/openquake/bin/activate
-        pip install pytest
+        pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
-        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
+        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage' && pytest doc/adv-manual/*.rst
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -35,6 +37,8 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.10"]
+    env:
+      GITHUB_HEAD_REF:  ${{ github.head_ref }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -43,14 +47,15 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        python install.py devel --version=$GITHUB_HEAD_REF
     - name: Hazardlib tests
       run: |
         source ~/openquake/bin/activate
-        pip install pyshp pytest flake8
+        pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
         cd openquake
-        pytest -x --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+        pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
+        pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
@@ -58,6 +63,8 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.10"]
+    env:
+      GITHUB_HEAD_REF:  ${{ github.head_ref }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -66,7 +73,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        python install.py devel --version=$GITHUB_HEAD_REF
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -79,6 +86,8 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.10"]
+    env:
+      GITHUB_HEAD_REF:  ${{ github.head_ref }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -87,7 +96,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        python install.py devel --version=$GITHUB_HEAD_REF
     - name: Server 'READ_ONLY' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -100,6 +109,8 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: ["3.10"]
+    env:
+      GITHUB_HEAD_REF:  ${{ github.head_ref }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -108,7 +119,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel
+        python install.py devel --version=$GITHUB_HEAD_REF
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate

@@ -30,7 +30,7 @@ from openquake.engine import engine
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
 
-def get_params_from(inputs):
+def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     """
     :param inputs: a dictionary with lon, lat, vs30, siteid
 
@@ -39,21 +39,33 @@ def get_params_from(inputs):
     """
     getter = mosaic.MosaicGetter()
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
-    ini = os.path.join(
-        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
         params['description'] += ' (%(lon)s, %(lat)s)' % inputs
-    params['ps_grid_spacing'] = '0.'
+    params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['disagg_by_src'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
-    params['postproc_func'] = 'disagg_by_rel_sources.main'
+    params['distance_bin_width'] = '20'
+    params['num_epsilon_bins'] = '10'
+    params['mag_bin_width'] = '0.1'
+    params['epsilon_star'] = True
+    params['postproc_func'] = 'compute_rtgm.main'
+    print(params['investigation_time'])
+    if params['investigation_time'] == '1.0':
+        params['poes'] = '0.000404 0.001025 0.002105 0.004453 0.013767'
+        
+    elif params['investigation_time'] == '50.0':
+        params['poes'] = '0.02 0.05 0.10 0.20 0.50'
+    else: 
+        raise ValueError('Invalid investigation time = '% params['investigation_time'])
+        
     # params['cachedir'] = datastore.get_datadir()
     return params
 

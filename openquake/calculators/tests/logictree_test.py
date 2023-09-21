@@ -111,8 +111,7 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.run_calc(case_04.__file__, 'job.ini',
                       calculation_mode='preclassical')
         hc_id = str(self.calc.datastore.calc_id)
-        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id,
-                      postproc_func='disagg_by_rel_sources.main')
+        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curve-mean.csv', fname)
@@ -153,6 +152,10 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.assertEqual(info.loc[b'1'].weight, 276)
         self.assertEqual(info.loc[b'2'].weight, 177)
         self.assertEqual(info.loc[b'3'].weight, 5871)
+
+        # testing view_relevant_sources
+        arr = view('relevant_sources:PGA', self.calc.datastore)
+        self.assertEqual(decode(arr['src_id']), ['1', '2'])
 
     def test_case_07_bis(self):
         # same as 07 but with sampling
@@ -199,7 +202,8 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_12(self):
         # akin to NAF model
-        self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
+        self.assert_curves_ok(
+            ['mean_rates.csv'], case_12.__file__, delta=1E-15)
 
     def test_case_12_bis(self):
         # test reduction with empty branches
@@ -332,7 +336,7 @@ hazard_uhs-std.csv
         mean_rates = to_rates(mean_poes)
         rates_by_source = self.calc.datastore[
             'mean_rates_by_src'][0]  # (M, L1, Ns)
-        aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
+        aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
 
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
@@ -384,16 +388,12 @@ hazard_uhs-std.csv
         ae(dbs.src_id, ['CHAR1', 'COMFLT1', 'SFLT1'])
 
         # testing extract_mean_rates_by_src
-        aw = extract(self.calc.datastore, 'mean_rates_by_src?imt=PGA&poe=1E-3')
+        aw = extract(self.calc.datastore, 'mean_rates_by_src?imt=PGA&iml=1E-2')
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
-        self.assertEqual(aw.poe, .001)
-        # the numbers are quite different on macOS, 6.461143e-05 :-(
-        aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-7)
-
-        # testing view_relevant_sources
-        arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
-        self.assertEqual(decode(arr['src_id']), ['SFLT1'])
+        self.assertEqual(aw.iml, .01)
+        # the numbers are quite different on macOS
+        aac(aw.array['rate'], [0.02 , 0.015, 0.015], atol=1E-6)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration

@@ -22,13 +22,14 @@ import operator
 import numpy
 import h5py
 from openquake.baselib import general, parallel, hdf5
-from openquake.hazardlib import pmf, geo
+from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
-from openquake.hazardlib.calc.filters import split_source, SourceFilter
+from openquake.hazardlib.calc.filters import (
+    getdefault, split_source, SourceFilter)
 from openquake.hazardlib.scalerel.point import PointMSR
 from openquake.commonlib import readinput
 from openquake.calculators import base
@@ -81,17 +82,29 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
+def _filter(srcs, min_mag, fraction=1.):
+    # filter by magnitude and optionally sample source
+    # count the ruptures
+    mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
+    if fraction < 1.:
+        srcs = general.random_filter(srcs, fraction)
+    out = [src for src in srcs if src.get_mags()[-1] >= mmag]
+    for ss in out:
+        ss.num_ruptures = ss.count_ruptures()
+    return out
+
+
 def preclassical(srcs, sites, cmaker, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
-    split_sources = []
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites:
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
+    splits = []
     for src in srcs:
         if sites:
             # NB: this is approximate, since the sites are sampled
@@ -100,25 +113,25 @@ def preclassical(srcs, sites, cmaker, monitor):
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
         # performance reasons (think of Ecuador in SAM)
-        splits = split_source(src) if (
-            cmaker.split_sources and src.nsites) else [src]
-        for ss in splits:
-            ss.num_ruptures = ss.count_ruptures()
-        split_sources.extend(splits)
+        if cmaker.split_sources and src.nsites:
+            splits.extend(split_source(src))
+        else:
+            splits.append(src)
+    splits = _filter(splits, cmaker.oq.minimum_magnitude, cmaker.fraction)
     mon = monitor('weighting sources', measuremem=False)
     if sites is None or spacing == 0:
         if sites is None:
-            for src in split_sources:
+            for src in splits:
                 src.weight = .01
         else:
-            cmaker.set_weight(split_sources, sf, multiplier, mon)
-        dic = {grp_id: split_sources}
+            cmaker.set_weight(splits, sf, multiplier, mon)
+        dic = {grp_id: splits}
         dic['before'] = len(srcs)
-        dic['after'] = len(split_sources)
+        dic['after'] = len(splits)
         yield dic
     else:
         cnt = 0
-        for msr, block in groupby(split_sources, msr_name).items():
+        for msr, block in groupby(splits, msr_name).items():
             dic = grid_point_sources(block, spacing, msr, cnt, monitor)
             cnt = dic.pop('cnt')
             for src in dic[grp_id]:
@@ -192,7 +205,10 @@ class PreClassicalCalculator(base.HazardCalculator):
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
+        ss = os.environ.get('OQ_SAMPLE_SOURCES')
         for grp_id, srcs in sources_by_key.items():
+            cmaker = cmakers[grp_id]
+            cmaker.fraction = float(ss) if ss else 1.
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
@@ -200,21 +216,20 @@ class PreClassicalCalculator(base.HazardCalculator):
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
                 elif src.code in b'CFN':  # send the heavy sources
-                    smap.submit(([src], sites, cmakers[grp_id]))
+                    smap.submit(([src], sites, cmaker))
                 else:
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
                 if oq.ps_grid_spacing:
                     # do not split the pointsources
-                    smap.submit(
-                        (pointsources + pointlike, sites, cmakers[grp_id]))
+                    smap.submit((pointsources + pointlike, sites, cmaker))
                 else:
                     for block in block_splitter(pointsources, 1000):
-                        smap.submit((block, sites, cmakers[grp_id]))
+                        smap.submit((block, sites, cmaker))
                     others.extend(pointlike)
             for block in block_splitter(others, 20):
-                smap.submit((block, sites, cmakers[grp_id]))
+                smap.submit((block, sites, cmaker))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
@@ -238,11 +253,6 @@ class PreClassicalCalculator(base.HazardCalculator):
                 srcs.sort(key=operator.attrgetter('source_id'))
             # srcs can be empty if the minimum_magnitude filter is on
             if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
-                # check if OQ_SAMPLE_SOURCES is set
-                ss = os.environ.get('OQ_SAMPLE_SOURCES')
-                if ss:
-                    logging.info('Sampled sources for group #%d', grp_id)
-                    srcs = general.random_filter(srcs, float(ss)) or [srcs[0]]
                 newsg = SourceGroup(srcs[0].tectonic_region_type)
                 newsg.sources = srcs
                 csm.src_groups[grp_id] = newsg
@@ -290,10 +300,11 @@ class PreClassicalCalculator(base.HazardCalculator):
         """
         Raise an error if the sources were all discarded
         """
-        if 'source_info' in self.datastore:
-            num_sites = self.datastore['source_info']['num_sites']
-            if (num_sites == 0).all():
-                raise RuntimeError('There are no sources close to the site(s)')
+        totsites = sum(row[source_reader.NUM_SITES]
+                       for row in self.csm.source_info.values())
+        if totsites == 0:
+            raise RuntimeError('There are no sources close to the site(s)! '
+                               'Use oq plot sources? to debug')
 
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':

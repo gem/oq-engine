@@ -52,21 +52,29 @@ def save_curve_stats(dstore):
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
+    ep_fields = ['loss']
+    if 'loss_aep' in aggcurves_df:
+        ep_fields.append('loss_aep')
+    if 'loss_oep' in aggcurves_df:
+        ep_fields.append('loss_oep')
+    EP = len(ep_fields)
     for lt in oq.ext_loss_types:
         loss_id = scientific.LOSSID[lt]
-        out = numpy.zeros((K + 1, S, P))
+        out = numpy.zeros((K + 1, S, P, EP))
         aggdf = aggcurves_df[aggcurves_df.loss_id == loss_id]
         for agg_id, df in aggdf.groupby("agg_id"):
             for s, stat in enumerate(stats.values()):
                 for p in range(P):
-                    dfp = df[df.return_period == periods[p]]
-                    ws = weights[dfp.rlz_id.to_numpy()]
-                    ws /= ws.sum()
-                    out[agg_id, s, p] = stat(dfp.loss.to_numpy(), ws)
+                    for e, ep_field in enumerate(ep_fields):
+                        dfp = df[df.return_period == periods[p]]
+                        ws = weights[dfp.rlz_id.to_numpy()]
+                        ws /= ws.sum()
+                        out[agg_id, s, p, e] = stat(dfp[ep_field].to_numpy(),
+                                                    ws)
         stat = 'agg_curves-stats/' + lt
-        dstore.create_dset(stat, F64, (K + 1, S, P))
+        dstore.create_dset(stat, F64, (K + 1, S, P, EP))
         dstore.set_shape_descr(stat, agg_id=K+1, stat=list(stats),
-                               return_period=periods)
+                               return_period=periods, ep_fields=ep_fields)
         dstore.set_attrs(stat, units=units)
         dstore[stat][:] = out
 
@@ -198,14 +206,16 @@ def fix_dtypes(dic):
     fix_dtype(dic, F32, floatcolumns)
 
 
-def build_aggcurves(items, builder):
+def build_aggcurves(items, builder, aggregate_loss_curves_types):
     """
     :param items: a list of pairs ((agg_id, rlz_id, loss_id), losses)
     :param builder: a :class:`LossCurvesMapsBuilder` instance
     """
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
-        curve = {kind: builder.build_curve(data[kind], rlz_id)
+        year = data.pop('year', ())
+        curve = {kind: builder.build_curve(
+                    year, kind, data[kind], aggregate_loss_curves_types, rlz_id)
                  for kind in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
@@ -213,7 +223,9 @@ def build_aggcurves(items, builder):
             dic['loss_id'].append(loss_id)
             dic['return_period'].append(period)
             for kind in data:
-                dic[kind].append(curve[kind][p])
+                # NB: kind be ['fatalities', 'losses'] in a scenario_damage test
+                for k, c in curve[kind].items():
+                    dic[k].append(c[p])
     return dic
 
 
@@ -230,12 +242,12 @@ def build_store_agg(dstore, rbe_df, num_events):
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
-    rlz_id = dstore['events']['rlz_id']
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
     else:
         rbe_df['rlz_id'] = 0
-    del rbe_df['event_id']
     aggrisk = general.AccumDict(accum=[])
     columns = [col for col in rbe_df.columns if col not in {
         'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
@@ -266,24 +278,35 @@ def build_store_agg(dstore, rbe_df, num_events):
         'aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
 
     loss_kinds = [col for col in columns if not col.startswith('dmg_')]
+    # can be ['fatalities', 'losses'] in a scenario_damage test
     if oq.investigation_time and loss_kinds:  # build aggcurves
         logging.info('Building aggcurves')
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
+        try:
+            year = events['year']
+            if len(numpy.unique(year)) == 1:  # there is a single year
+                year = ()
+        except ValueError:  # missing in case of GMFs from CSV
+            year = ()
         items = []
         for agg_id in agg_ids:
             gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
             for (rlz_id, loss_id), df in gb:
                 data = {kind: df[kind].to_numpy() for kind in loss_kinds}
+                if len(year):
+                    data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
-            build_aggcurves, (items, builder),
+            build_aggcurves, (items, builder, oq.aggregate_loss_curves_types),
             concurrent_tasks=oq.concurrent_tasks,
             h5=dstore.hdf5).reduce()
         fix_dtypes(dic)
+        ep_fields = ['loss' + suffix
+                     for suffix in oq.aggregate_loss_curves_types.split(',')]
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states),
-                         units=units)
+                         units=units, ep_fields=ep_fields)
     return aggrisk
 
 
@@ -301,7 +324,14 @@ def build_reinsurance(dstore, num_events):
         tr = oq.time_ratio  # risk_invtime / (haz_invtime * num_ses)
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
-    rlz_id = dstore['events']['rlz_id']
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
+    try:
+        year = events['year']
+        if len(numpy.unique(year)) == 1:  # there is a single year
+            year = ()
+    except ValueError:  # missing in case of GMFs from CSV
+        year = ()
     rbe_df = dstore.read_df('reinsurance-risk_by_event', 'event_id')
     columns = rbe_df.columns
     if len(num_events) > 1:
@@ -319,13 +349,22 @@ def build_reinsurance(dstore, num_events):
             agg = df[col].sum()
             avg[col].append(agg * tr if oq.investigation_time else agg / ne)
         if oq.investigation_time:
-            curve = {col: builder.build_curve(df[col].to_numpy(), rlzid)
+            if len(year):
+                years = year[df.index.to_numpy()]
+            else:
+                years = ()
+            curve = {col: builder.build_curve(
+                        years, col, df[col].to_numpy(),
+                        oq.aggregate_loss_curves_types,
+                        rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
                 dic['return_period'].append(period)
                 for col in curve:
-                    dic[col].append(curve[col][p])
+                    for k, c in curve[col].items():
+                        dic[k].append(c[p])
+
     dstore.create_df('reinsurance-avg_portfolio', pandas.DataFrame(avg),
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
@@ -356,7 +395,6 @@ def build_reinsurance(dstore, num_events):
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
 
-
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -374,8 +412,8 @@ class PostRiskCalculator(base.RiskCalculator):
                 ds, self.assetcol, oq.loss_types,
                 oq.aggregate_by, oq.max_aggregations)
             aggby = ds.parent['oqparam'].aggregate_by
-            self.reaggreate = (
-                aggby and oq.aggregate_by and oq.aggregate_by[0] not in aggby)
+            self.reaggreate = (aggby and oq.aggregate_by and
+                               set(oq.aggregate_by[0]) < set(aggby[0]))
             if self.reaggreate:
                 [names] = aggby
                 self.num_tags = dict(
@@ -448,7 +486,7 @@ class PostRiskCalculator(base.RiskCalculator):
             return 0
         if self.reaggreate:
             idxs = numpy.concatenate([
-                reagg_idxs(self.num_tags, oq.aggregate_by),
+                reagg_idxs(self.num_tags, oq.aggregate_by[0]),
                 numpy.array([K], int)])
             rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
             rbe_df = rbe_df.groupby(
@@ -518,8 +556,13 @@ def post_aggregate(calc_id: int, aggregate_by):
     parent = datastore.read(calc_id)
     oqp = parent['oqparam']
     aggby = aggregate_by.split(',')
-    if aggby and aggby[0] not in asset.tagset(oqp.aggregate_by):
-        raise ValueError('%r not in %s' % (aggby, oqp.aggregate_by))
+    parent_tags = asset.tagset(oqp.aggregate_by)
+    if aggby and not parent_tags:
+        raise ValueError('Cannot reaggregate from a parent calculation '
+                         'without aggregate_by')
+    for tag in aggby:
+        if tag not in parent_tags:
+            raise ValueError('%r not in %s' % (tag, oqp.aggregate_by[0]))
     dic = dict(
         calculation_mode='reaggregate',
         description=oqp.description + '[aggregate_by=%s]' % aggregate_by,

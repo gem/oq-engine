@@ -33,6 +33,8 @@ aac = numpy.testing.assert_allclose
 
 class InfrastructureRiskTestCase(CalculatorTestCase):
 
+    # TODO: we need tests also for event-based
+
     def _check_csv_outputs(self, outputs_list, datastore, testcase,
                            replace_expected=False):
         for output in outputs_list:
@@ -44,7 +46,7 @@ class InfrastructureRiskTestCase(CalculatorTestCase):
                 shutil.copy2(got_path, expected_path)
             else:
                 self.assertEqualFiles(
-                    got_path, expected_path, check_all_columns=True)
+                    got_path, expected_path, check_text=True)
         if replace_expected:
             raise ValueError('Remember to set replace_expected to False!')
 

@@ -154,7 +154,8 @@ def event_based_damage(df, oqparam, dstore, monitor):
                                     d3[a, :, d] *= dprobs
 
                         csq = crmodel.compute_csq(
-                            asset, d3[a, :, :D] / number[a], lt)
+                            asset, d3[a, :, :D] / number[a], lt,
+                            oqparam.time_event)
                         for name, values in csq.items():
                             d3[a, :, ci[name]] = values
                     if R == 1:
@@ -220,7 +221,8 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.investigation_time:  # event based
             self.builder = get_loss_builder(self.datastore)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
-        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore)
+        smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore,
+                                      self._monitor)
         smap.monitor.save('assets', self.assetcol.to_dframe('id'))
         smap.monitor.save('crmodel', self.crmodel)
         return smap.reduce(self.combine)
@@ -289,6 +291,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         if (hasattr(oq, 'infrastructure_connectivity_analysis')
                 and oq.infrastructure_connectivity_analysis):
 
+            logging.info('Running connectivity analysis')
             conn_results = connectivity.analysis(self.datastore)
             self._store_connectivity_analysis_results(conn_results)
 

@@ -17,14 +17,14 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import operator
 import functools
-from unittest.mock import Mock
 import numpy
 
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import EBRupture, events_dt, get_eid_rlz
+from openquake.hazardlib.source.rupture import events_dt, get_eid_rlz
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -42,6 +42,7 @@ I32 = numpy.int32
 U32 = numpy.uint32
 F32 = numpy.float32
 U64 = numpy.uint64
+I64 = numpy.int64
 F64 = numpy.float64
 
 code2cls = rupture.BaseRupture.init()
@@ -219,6 +220,7 @@ class RuptureImporter(object):
                              ne, nr, int(eff_time), mag))
 
     def _save_events(self, rup_array, rgetters):
+        oq  = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         events = numpy.zeros(E, rupture.events_dt)
@@ -252,13 +254,14 @@ class RuptureImporter(object):
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
 
         # set event year and event ses starting from 1
-        nses = self.oqparam.ses_per_logic_tree_path
+        nses = oq.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
 
-        rng = numpy.random.default_rng(self.oqparam.ses_seed)
-        if self.oqparam.investigation_time:
-            itime = int(self.oqparam.investigation_time)
-            extra['year'] = rng.choice(itime, len(events)) + 1
+        rng = numpy.random.default_rng(oq.ses_seed)
+        if oq.investigation_time:
+            eff_time = int(oq.investigation_time * oq.ses_per_logic_tree_path *
+                           len(self.datastore['weights']))
+            extra['year'] = rng.choice(eff_time, len(events)) + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
 
@@ -360,27 +363,70 @@ def build_slice_by_event(eids, offset=0):
     return sbe
 
 
-def starmap_from_gmfs(task_func, oq, dstore):
+def get_counts(idxs, N):
+    """
+    :param idxs: indices in the range 0..N-1
+    :param N: size of the returned array
+    :returns: an array of size N with the counts of the indices
+    """
+    counts = numpy.zeros(N, int)
+    uni, cnt = numpy.unique(idxs, return_counts=True)
+    counts[uni] = cnt
+    return counts
+
+
+def get_slices(sbe, data, num_assets):
+    """
+    :returns: a list of triple (start, stop, weight)
+    """
+    out = numpy.zeros(
+        len(sbe), [('start', I64), ('stop', I64), ('weight', float)])
+    start = sbe[0]['start']
+    stop = sbe[-1]['stop']
+    sids = data['sid'][start:stop]
+    for i, rec in enumerate(sbe):
+        s0, s1 = rec['start'], rec['stop']
+        out[i]['start'] = s0
+        out[i]['stop'] = s1
+        out[i]['weight'] = num_assets[sids[s0-start:s1-start]].sum()
+    return out
+
+
+def starmap_from_gmfs(task_func, oq, dstore, mon):
     """
     :param task_func: function or generator with signature (gmf_df, oq, dstore)
     :param oq: an OqParam instance
     :param dstore: DataStore instance where the GMFs are stored
     :returns: a Starmap object used for event based calculations
     """
+    data = dstore['gmf_data']
     if 'gmf_data' in dstore.parent:
         ds = dstore.parent
+        gb = sum(data[k].nbytes for k in data) / 1024 ** 3
+        logging.info('There are %.1f GB of GMFs', gb)
     else:
         ds = dstore
-    data = ds['gmf_data']
-    try:
-        sbe = data['slice_by_event'][:]
-    except KeyError:
-        sbe = build_slice_by_event(data['eid'][:])
-    nrows = sbe[-1]['stop'] - sbe[0]['start']
-    maxweight = numpy.ceil(nrows / (oq.concurrent_tasks or 1))
+    N = ds['sitecol'].sids.max() + 1
+    if 'site_model' in ds:
+        N = max(N, len(ds['site_model']))
+    with mon('computing event impact', measuremem=True):
+        num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
+        try:
+            sbe = data['slice_by_event'][:]
+        except KeyError:
+            sbe = build_slice_by_event(data['eid'][:])
+        slices = []
+        logging.info('Reading event weights')
+        for slc in general.gen_slices(0, len(sbe), 100_000):
+            slices.append(get_slices(sbe[slc], data, num_assets))
+        slices = numpy.concatenate(slices, dtype=slices[0].dtype)
+    dstore.swmr_on()
+    maxw = slices['weight'].sum()/ (oq.concurrent_tasks or 1) or 1.
+    logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
-        task_func, (sbe, oq, ds),
-        weight=lambda rec: rec['stop']-rec['start'],
-        maxweight=numpy.clip(maxweight, 1000, 10_000_000),
+        task_func, (slices, oq, ds),
+        # maxweight=200M is the limit to run Chile with 2 GB per core
+        maxweight=min(maxw, 200_000_000),
+        weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)
     return smap

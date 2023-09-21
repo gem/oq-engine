@@ -783,7 +783,7 @@ def check_exposure_for_infr_conn_analysis(df, fname):
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                 check_dupl=True, by_country=False, asset_prefix='',
                 tagcol=None, errors=None, infr_conn_analysis=False,
-                monitor=None):
+                aggregate_by=None, monitor=None):
     logging.info('Reading %s', fname)
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
@@ -817,7 +817,15 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                                'value-number': df['value-number']})
         if infr_conn_analysis:
             check_exposure_for_infr_conn_analysis(df, fname)
-
+        if aggregate_by:
+            for taglist in aggregate_by:
+                for tag in taglist:
+                    if tag == 'site_id':
+                        # 'site_id' is added later in _get_mesh_assets
+                        continue
+                    if (tag not in df.columns
+                            and f'value-{tag}' not in df.columns):
+                        raise InvalidFile(f'Missing tag "{tag}" in {fname}')
         df['id'] = asset_prefix + df.id
         dfs.append(df)
 
@@ -893,7 +901,7 @@ class Exposure(object):
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
                  check_dupl=True, tagcol=None, by_country=False, errors=None,
-                 infr_conn_analysis=False):
+                 infr_conn_analysis=False, aggregate_by=None):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
@@ -917,7 +925,7 @@ class Exposure(object):
                 prefix = ''
             allargs.append((fname, calculation_mode, ignore_missing_costs,
                             check_dupl, by_country, prefix, tagcol, errors,
-                            infr_conn_analysis))
+                            infr_conn_analysis, aggregate_by))
         exp = None
         dfs = []
         for exposure, df in itertools.starmap(read_exp_df, allargs):
@@ -1042,7 +1050,10 @@ class Exposure(object):
 
     def associate(self, haz_sitecol, haz_distance, region=None):
         """
-        Associate the a exposure to the given site collection
+        Associate the exposure to the given site collection within
+        the given distance.
+
+        :returns: filtered site collection, discarded assets
         """
         return geo.utils._GeographicObjects(
             haz_sitecol).assoc2(self, haz_distance, region, 'filter')

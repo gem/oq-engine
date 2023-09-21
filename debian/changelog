@@ -1,4 +1,53 @@
+  [Paolo Tormene]
+  * Upgraded requirements: Shapely to version 2.0.1 and Pandas to version 2.0.3
+
+  [Michele Simionato, Paolo Tormene]
+  * Implemented AEP, OEP curves
+
   [Michele Simionato]
+  * Internal: changed events.year to be in the range 1..eff_time
+  * Enhanced `oq engine --delete-calculation` to remove calculation files
+    even if the DbServer is on a remote machine
+  * Fixed another site collection filtering bug in conditioned GMFs
+  * Fixed a regression in `oq reaggregate`
+  * Better error message for logic trees with branchsets exceeding the limit
+  * Fixed a bug with mutex sources and disagg_by_src
+
+  [Manuela Villani, Kendra Johnson, Michele Simionato]
+  * Implemented Risk Targeted Ground motion for the AELO project
+
+  [Paolo Tormene]
+  * Fixed consequence calculations for 'homeless', 'fatality' and 'injury'
+    with/without a specified 'time_event'
+  * Raise an early error if any station data has zero intensity value
+
+  [Michele Simionato, Paolo Tormene]
+  * Internal: checking encoding and newlines of all CSV files in the repository
+
+  [Christopher Brooks]
+  * Implemented the Atkinson (2015) GMPE with the alt. eff. depth model
+
+  [Michele Simionato]
+  * Fixed a bug in event based risk calculations with
+    aggregate_by(parent) != aggregate_by(child)
+  * Fixed a bug when exporting `risk_by_event` in absence of ruptures
+  * Fixed a bug by not exporting `event_based_mfd` in absence of ruptures
+  * Enabled the pointsource_distance approximation by default at 100 km
+  * Fixed an error with sources below the minimum_magnitude
+  * Introduced support for SLURM (experimental)
+  * Fixed bug in conditioned GMFs, due to the station sites being excluded
+    from the complete site collection
+  * Reduced slow tasks and memory consumption
+    in the event_based_risk calculator (3x for Chile)
+
+  [Paolo Tormene]
+  * Raise an error if files specified in site_model_file do not have the same
+    headers
+  * Give a better error message for risk calculations where the aggregate_by
+    tag is specified but it doesn't exist in the exposure model
+
+  [Michele Simionato]
+  * Improved error message when quantiles are not supported in event based risk
   * Reduced memory consumption in the master node in post_risk
   * Reduced slow tasks in the ebrisk calculator and memory consumption
     in the master node

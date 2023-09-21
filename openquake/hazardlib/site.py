@@ -24,7 +24,9 @@ from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
+    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian,
+    get_middle_point)
+from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -65,6 +67,10 @@ def calculate_z2pt5(vs30):
     c1 = 7.089
     c2 = -1.144
     return numpy.exp(c1 + numpy.log(vs30) * c2)
+
+
+def rnd5(lons):
+    return numpy.round(lons, 5)
 
 
 class Site(object):
@@ -297,9 +303,15 @@ class SiteCollection(object):
         elif hasattr(sitemodel, 'reference_vs30_value'):
             self.set_global_params(sitemodel, req_site_params)
         else:
-            for name in sitemodel.dtype.names:
+            if hasattr(sitemodel, 'dtype'):
+                names = set(sitemodel.dtype.names)
+                sm = sitemodel
+            else:
+                sm = vars(sitemodel)
+                names = set(sm) & set(req_site_params)
+            for name in names:
                 if name not in ('lon', 'lat'):
-                    self._set(name, sitemodel[name])
+                    self._set(name, sm[name])
         dupl = get_duplicates(self.array, 'lon', 'lat')
         if dupl:
             # raise a decent error message displaying only the first 9
@@ -310,6 +322,52 @@ class SiteCollection(object):
             raise ValueError('There are %d duplicate sites %s%s' %
                              (n, items, dots))
         return self
+
+    @classmethod
+    def from_planar(cls, rup, point='TC', toward_azimuth=90,
+                    direction='positive', hdist=100, step=5.,
+                    req_site_params=()):
+        """
+        :param rup: a rupture built with `rupture.get_planar`
+        :return: a :class:`openquake.hazardlib.site.SiteCollection` instance
+        """
+        sfc = rup.surface
+        if point == 'TC':
+            pnt = sfc._get_top_edge_centroid()
+            lon, lat = pnt.x, pnt.y
+        elif point == 'BC':
+            lon, lat = get_middle_point(
+                sfc.corner_lons[2], sfc.corner_lats[2],
+                sfc.corner_lons[3], sfc.corner_lats[3])
+        else:
+            idx = {'TL': 0, 'TR': 1, 'BR': 2, 'BL': 3}[point]
+            lon = sfc.corner_lons[idx]
+            lat = sfc.corner_lats[idx]
+        depth = 0
+        vdist = 0
+        npoints = hdist / step
+        strike = rup.surface.strike
+
+        pointsp = []
+        pointsn = []
+        if direction in ['positive', 'both']:
+            azi = (strike + toward_azimuth) % 360
+            pointsp = npoints_towards(
+                lon, lat, depth, azi, hdist, vdist, npoints)
+
+        if direction in ['negative', 'both']:
+            idx = 0 if direction == 'negative' else 1
+            azi = (strike + toward_azimuth + 180) % 360
+            pointsn = npoints_towards(
+                lon, lat, depth, azi, hdist, vdist, npoints)
+
+        if len(pointsn):
+            lons = reversed(pointsn[0][idx:])
+            lats = reversed(pointsn[1][idx:])
+        else:
+            lons = pointsp[0]
+            lats = pointsp[1]
+        return cls.from_points(lons, lats, None, rup, req_site_params)
 
     def _set(self, param, value):
         if param not in self.array.dtype.names:
@@ -576,6 +634,29 @@ class SiteCollection(object):
                 raise ValueError('The site parameter %s is always zero: please '
                                  'check the site model' % param)
         return site_model
+
+    def extend(self, lons, lats):
+        """
+        Extend the site collection to additional (and different) points.
+        Used for station_data in conditioned GMFs.
+        """
+        assert len(lons) == len(lats), (len(lons), len(lats))
+        orig = set(zip(rnd5(self.lons), rnd5(self.lats)))
+        new = set(zip(rnd5(lons), rnd5(lats))) - orig
+        if not new:
+            return self
+        lons, lats = zip(*sorted(new))
+        N1 = len(self)
+        N2 = len(lons)
+        array = numpy.zeros(N1 + N2, self.array.dtype)
+        array[:N1] = self.array
+        array[N1:]['sids'] = numpy.arange(N1, N1+N2)
+        array[N1:]['lon'] = lons
+        array[N1:]['lat'] = lats
+        sitecol = object.__new__(self.__class__)
+        sitecol.array = array
+        sitecol.complete = sitecol
+        return sitecol
 
     def within(self, region):
         """
