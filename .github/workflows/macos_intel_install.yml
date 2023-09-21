@@ -92,6 +92,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine
+          # -v 2 also logs the test names
           OQ_APPLICATION_MODE=public ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
       - name: Run tests for the engine server in read-only mode to test installation
@@ -99,6 +100,7 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           cd ~/work/oq-engine/oq-engine
+          # -v 2 also logs the test names
           OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
 
       # NOTE: we shouldn't need to install the engine in AELO mode on mac
@@ -107,4 +109,5 @@ jobs:
       #   run: |
       #     source ~/openquake/bin/activate
       #     cd ~/work/oq-engine/oq-engine
+      #     -v 2 also logs the test names
       #     OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode

@@ -179,6 +179,7 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.aelo_run_then_remove(params, failure_reason)
 
     def aelo_invalid_input(self, params, expected_error):
+        # NOTE: avoiding to print the expected traceback
         logging.disable(logging.CRITICAL)
         resp = self.post('aelo_run', params)
         logging.disable(logging.NOTSET)

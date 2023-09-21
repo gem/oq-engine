@@ -78,6 +78,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
+        # -v 2 also logs the test names
         OQ_APPLICATION_MODE=public ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
   server_read_only_mode:
@@ -101,6 +102,7 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
+        # -v 2 also logs the test names
         OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
 
   server_aelo_mode:
@@ -124,4 +126,5 @@ jobs:
       run: |
         source ~/openquake/bin/activate
         oq dbserver start
+        # -v 2 also logs the test names
         OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
