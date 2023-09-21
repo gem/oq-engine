@@ -21,8 +21,6 @@ from matplotlib import pyplot
 
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.source.rupture import get_planar
-from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.scalerel import WC1994
 from openquake.hazardlib.const import TRT
@@ -32,86 +30,6 @@ from openquake.hazardlib.gsim.zhao_2016 import ZhaoEtAl2016SSlab
 
 DATA_FOLDER = os.path.join(os.path.dirname(__file__),'data', 'ZHAO16PERG',
                            'unit_test_volc.geojson')
-
-def _get_first_point(rup, from_point):
-    """
-    :param rup:
-    :param from_point:
-    """
-    sfc = rup.surface
-    if from_point == 'TC':
-        return sfc._get_top_edge_centroid()
-    elif from_point == 'BC':
-        lon, lat = geo_utils.get_middle_point(
-            sfc.corner_lons[2], sfc.corner_lats[2],
-            sfc.corner_lons[3], sfc.corner_lats[3]
-        )
-        return Point(lon, lat, sfc.corner_depths[2])
-    elif from_point == 'TL':
-        idx = 0
-    elif from_point == 'TR':
-        idx = 1
-    elif from_point == 'BR':
-        idx = 2
-    elif from_point == 'BL':
-        idx = 3
-    else:
-        raise ValueError('Unsupported option from first point')
-    return Point(sfc.corner_lons[idx],
-                 sfc.corner_lats[idx],
-                 sfc.corner_depths[idx])
-
-def get_sites_from_rupture(rup, from_point='TC', toward_azimuth=90,
-                           direction='positive', hdist=100, step=5.,
-                           site_props=''):
-    """
-    :param rup:
-    :param from_point:
-        A string. Options: 'TC', 'TL', 'TR'
-    :return:
-        A :class:`openquake.hazardlib.site.SiteCollection` instance
-    """
-    from_pnt = _get_first_point(rup, from_point)
-    lon = from_pnt.longitude
-    lat = from_pnt.latitude
-    depth = 0
-    vdist = 0
-    npoints = hdist / step
-    strike = rup.surface.strike
-    pointsp = []
-    pointsn = []
-
-    if not len(site_props):
-        raise ValueError()
-
-    if direction in ['positive', 'both']:
-        azi = (strike+toward_azimuth) % 360
-        pointsp = npoints_towards(lon, lat, depth, azi, hdist, vdist, npoints)
-
-    if direction in ['negative', 'both']:
-        idx = 0 if direction == 'negative' else 1
-        azi = (strike+toward_azimuth+180) % 360
-        pointsn = npoints_towards(lon, lat, depth, azi, hdist, vdist, npoints)
-
-    sites = []
-    keys = set(site_props.keys()) - set(['vs30', 'z1pt0', 'z2pt5'])
-
-    if len(pointsn):
-        for lon, lat in reversed(pointsn[0][idx:], pointsn[1])[idx:]:
-            site = Site(Point(lon, lat, 0.0), vs30=site_props['vs30'],
-                        z1pt0=site_props['z1pt0'], z2pt5=site_props['z2pt5'])
-            for key in list(keys):
-                setattr(site, key, site_props[key])
-            sites.append(site)
-
-    for lon, lat in zip(pointsp[0], pointsp[1]):
-        site = Site(Point(lon, lat, 0.0), vs30=site_props['vs30'],
-                    z1pt0=site_props['z1pt0'], z2pt5=site_props['z2pt5'])
-        for key in list(keys):
-            setattr(site, key, site_props[key])
-        sites.append(site)
-
-    return SiteCollection(sites)
 
 
 def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
@@ -189,6 +107,16 @@ class TestZhao2016PErg(unittest.TestCase):
                               strike=270.0, dip=30.0, rake=90.0,
                               trt=TRT.SUBDUCTION_INTERFACE, ztor=0.0)
         
+        # Set site params
+        self.site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
+                       'backarc': False, 'vs30measured': True}
+        
+        # Constants throughout tests
+        self.from_point = 'TC'
+        self.direction = 'positive'
+        self.hdist = 5000
+        self.step = 25
+        
         # Get implementations of Zhao et al. (2016) intra-slab GMM
         volc_arc_fname = DATA_FOLDER
         self.gmm_perg = ZhaoEtAl2016SSlabPErg(volc_arc_fname)
@@ -201,18 +129,10 @@ class TestZhao2016PErg(unittest.TestCase):
         """
         # General inputs
         imt = 'SA(0.5)'
-        
-        # Get sites from rupture
-        from_point = 'TC'
         azimuth = 90 # relative to strike of slab
-        direction = 'positive'
-        hdist = 500
-        step = 25
-        site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
-                       'backarc': False, 'vs30measured': True, 'clon':0, 'clat':0}
-
-        sites = get_sites_from_rupture(self.rup, from_point, azimuth, direction,
-                                       hdist, step, site_params)
+        sites = SiteCollection.from_planar(self.rup, self.from_point, azimuth,
+                                           self.direction, self.hdist,
+                                           self.step, self.site_params)
         
         # Get non-ergodic and ergodic results 
         mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
@@ -225,19 +145,10 @@ class TestZhao2016PErg(unittest.TestCase):
         """
         # General inputs
         imt = 'PGA'
-        
-        # Get sites from rupture
-        from_point = 'TC'
         azimuth = 135 # relative to strike of slab
-        direction = 'positive'
-        hdist = 5000
-        step = 25
-        site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
-                       'backarc': False, 'vs30measured': True}
-        
-
-        sites = get_sites_from_rupture(self.rup, from_point, azimuth, direction,
-                                       hdist, step, site_params)
+        sites = SiteCollection.from_planar(self.rup, self.from_point, azimuth,
+                                           self.direction, self.hdist,
+                                           self.step, self.site_params)
 
         # Get non-ergodic and ergodic results 
         mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
@@ -250,19 +161,10 @@ class TestZhao2016PErg(unittest.TestCase):
         """
         # General inputs
         imt = 'SA(0.2)'
-        
-        # Get sites from rupture
-        from_point = 'TC'
         azimuth = 160 # relative to strike of slab
-        direction = 'positive'
-        hdist = 5000
-        step = 25
-        site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
-                       'backarc': False, 'vs30measured': True}
-
-        sites = get_sites_from_rupture(self.rup, from_point, azimuth, direction,
-                                       hdist, step, site_params)
-
+        sites = SiteCollection.from_planar(self.rup, self.from_point, azimuth,
+                                           self.direction, self.hdist,
+                                           self.step, self.site_params)
         # Get non-ergodic and ergodic results 
         mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
                                            self.gmm, azimuth)     
@@ -276,18 +178,10 @@ class TestZhao2016PErg(unittest.TestCase):
         """
         # General inputs
         imt = 'SA(1.0)'
-        
-        # Get sites from rupture
-        from_point = 'TC'
         azimuth = 350 # relative to strike of slab
-        direction = 'positive'
-        hdist = 5000
-        step = 25
-        site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
-                       'backarc': False, 'vs30measured': True}
-
-        sites = get_sites_from_rupture(self.rup, from_point, azimuth, direction,
-                                       hdist, step, site_params)
+        sites = SiteCollection.from_planar(self.rup, self.from_point, azimuth,
+                                           self.direction, self.hdist,
+                                           self.step, self.site_params)
 
         # Get non-ergodic and ergodic results 
         mean_perg, mean = get_gms_from_ctx(imt, self.rup, sites, self.gmm_perg,
