@@ -29,24 +29,35 @@ from openquake.calculators import extract
 
 def get_mag_dist_eps_df(mean_disagg_by_src, operation):
     """
-    :param mean_disagg_by_src: ArrayWrapper
-    :param operation: the string 'mean' or 'max'
-    :returns: a DataFrame with columns src, imt, mag, dist, eps
+    Compute mag, dist, eps using the rates as weights
+    :param mean_disagg_by_src: ArrayWrapper of rates
+    :param operation: the string 'mean' or 'mode
+    :returns: a DataFrame with columns src, imt, mag, dst, eps
     """
-    assert operation in 'mean max', operation
+    assert operation in {'mean', 'mode'}, operation
     mag = mean_disagg_by_src.mag
-    dist = mean_disagg_by_src.dist
+    dst = mean_disagg_by_src.dist
     eps = mean_disagg_by_src.eps
-    dic = dict(src=[], imt=[], mag=[], dist=[], eps=[])
+    dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
-            mmax = getattr(mean_disagg_by_src[s, :, :, :, m], operation)
+            rates_mag = mean_disagg_by_src[s, :, :, :, m].sum((1, 2))
+            rates_dst = mean_disagg_by_src[s, :, :, :, m].sum((0, 2))
+            rates_eps = mean_disagg_by_src[s, :, :, :, m].sum((0, 1))
             dic['src'].append(src)
             dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
-            dic['mag'].append(numpy.average(mag, weights=mmax(axis=(1, 2))))
-            dic['dist'].append(numpy.average(dist, weights=mmax(axis=(0, 2))))
-            dic['eps'].append(numpy.average(eps, weights=mmax(axis=(0, 1))))
+            if operation == 'mean':
+                mmag = numpy.average(mag, weights=rates_mag)
+                mdst = numpy.average(dst, weights=rates_dst)
+                meps = numpy.average(eps, weights=rates_eps)
+            else:  # mode
+                mmag = mag[rates_mag.argmax()]
+                mdst = dst[rates_dst.argmax()]
+                meps = eps[rates_eps.argmax()]
+            dic['mag'].append(mmag)
+            dic['dst'].append(mdst)
+            dic['eps'].append(meps)
     return pandas.DataFrame(dic)
 
 
@@ -132,7 +143,7 @@ def main(dstore, csm, imts, imls):
     aw = hdf5.ArrayWrapper(arr, dic)
     dstore['mean_disagg_by_src'] = aw
     src_mutex = dstore['mutex_by_grp']['src_mutex'].any()  # True for Japan
-    mag_dist_eps = get_mag_dist_eps_df(aw, 'max' if src_mutex else 'mean')
+    mag_dist_eps = get_mag_dist_eps_df(aw, 'mode' if src_mutex else 'mean')
     out = []
     for imt, src_ids in rel_ids_by_imt.items():
         df = mag_dist_eps[mag_dist_eps.imt == imt]

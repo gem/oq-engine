@@ -1523,13 +1523,13 @@ def view_MPL(token, dstore):
 @view.add('mag_dist_eps')
 def view_mag_dist_eps(token, dstore):
     """
-    Compute mean or max mag-dist-eps from mean_disagg_by_src.
+    Compute mean or mode mag-dist-eps from mean_disagg_by_src.
     Example: oq show mag_dist_eps:mean
     """
     if ':' not in token:
         return view_mag_dist_eps.__doc__
     op = token.split(':')[1]
-    if op not in {'mean', 'max'}:
+    if op not in {'mean', 'mode'}:
         return view_mag_dist_eps.__doc__
     return disagg_by_rel_sources.get_mag_dist_eps_df(
         dstore["mean_disagg_by_src"], op)
