@@ -797,8 +797,8 @@ def write_source_model(dest, sources_or_groups, name=None,
                                          compression_opts=9)
                         h[key][:] = v
                     elif k == 'rupture_idxs' and prefix:
-                        h[key] =  [' '.join(prefix + r for r in ridxs.split())
-                                   for ridxs in v]
+                        h[key] = [' '.join(prefix + r for r in ridxs.split())
+                                  for ridxs in v]
                     else:
                         h[key] = v
         out.append(dest5)

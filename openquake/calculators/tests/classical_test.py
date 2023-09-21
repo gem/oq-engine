@@ -18,7 +18,8 @@
 
 import gzip
 import numpy
-from openquake.baselib import parallel, general
+from unittest import mock
+from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.hazardlib.source.rupture import get_ruptures
@@ -28,7 +29,7 @@ from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase
 from openquake.qa_tests_data.classical import (
-    case_01, case_02, case_12, case_18, case_22, case_23,
+    case_01, case_02, case_03, case_12, case_18, case_22, case_23,
     case_24, case_25, case_26, case_27, case_29, case_32, case_33,
     case_34, case_35, case_37, case_38, case_40, case_41,
     case_42, case_43, case_44, case_47, case_48, case_49,
@@ -98,6 +99,10 @@ class ClassicalTestCase(CalculatorTestCase):
         # test for Lanzano2019 with vs30 > 1500
         self.assert_curves_ok(['hazard_curve-PGA.csv'], case_02.__file__)
 
+    def test_case_03(self):
+        # test for min_mag, https://github.com/gem/oq-engine/issues/8941
+        self.assert_curves_ok(['hazard_curve-PGA.csv'], case_03.__file__)
+
     def test_wrong_smlt(self):
         with self.assertRaises(InvalidFile):
             self.run_calc(case_01.__file__, 'job_wrong.ini')
@@ -149,12 +154,16 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_22(self):
         # crossing date line calculation for Alaska
         # this also tests the splitting in two tiles
-        self.assert_curves_ok([
-            '/hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1)',
-            'hazard_curve-mean-SA(0.2).csv', 'hazard_curve-mean-SA(0.5).csv',
-            'hazard_curve-mean-SA(1.0).csv', 'hazard_curve-mean-SA(2.0).csv',
+        with mock.patch.dict(config.memory, {'pmap_max_gb': 1E-5}):
+            self.assert_curves_ok([
+                '/hazard_curve-mean-PGA.csv',
+                'hazard_curve-mean-SA(0.1)',
+                'hazard_curve-mean-SA(0.2).csv',
+                'hazard_curve-mean-SA(0.5).csv',
+                'hazard_curve-mean-SA(1.0).csv',
+                'hazard_curve-mean-SA(2.0).csv',
         ], case_22.__file__, delta=1E-6)
-        self.assertEqual(self.calc.ntiles, 2)
+        self.assertGreater(self.calc.ntiles, 2)
 
     def test_case_23(self):  # filtering away on TRT
         self.assert_curves_ok(['hazard_curve.csv'],
@@ -194,7 +203,11 @@ class ClassicalTestCase(CalculatorTestCase):
         tot_probs_occur = sum(len(po) for po in probs_occur)
         self.assertEqual(tot_probs_occur, 4)  # 2 x 2
 
-        # make sure the disaggregation works
+        # check mean_rates_by_src
+        [fname] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles("expected/mean_rates_by_src.csv", fname)
+
+        # make sure the disaggregation runs
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_27.__file__, 'job.ini',
                       hazard_calculation_id=hc_id,
@@ -445,6 +458,12 @@ class ClassicalTestCase(CalculatorTestCase):
                                "hazard_curve-rlz-003-SA(0.5).csv"],
                               case_54.__file__)
 
+        # check that disabling the stats causes an error
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_54.__file__, 'job.ini',
+                          individual_rlzs='false')
+        self.assertIn('you disabled all statistics', str(ctx.exception))
+
     def test_case_55(self):
         # test with amplification function == 1
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv'], case_55.__file__)
@@ -641,6 +660,7 @@ class ClassicalTestCase(CalculatorTestCase):
             disagg_outputs='Dist',
             disagg_bin_edges='{"dist": [0, 15, 30]}',
             hazard_calculation_id=hc_str)
+
         dbm = view('disagg:Dist', self.calc.datastore)
         fname = general.gettemp(text_table(dbm, ext='org'))
         self.assertEqualFiles('expected/disagg_by_dist.org', fname)

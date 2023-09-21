@@ -41,7 +41,6 @@ from openquake.hazardlib.gsim.base import (
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
@@ -753,6 +752,7 @@ def extract_agg_curves(dstore, what):
         agg_id = lst.index(','.join(tagvalues))
     else:
         agg_id = 0  # total aggregation
+    ep_fields = dstore.get_attr('aggcurves', 'ep_fields')
     if qdic['rlzs']:
         [li] = qdic['loss_type']  # loss type index
         units = dstore.get_attr('aggcurves', 'units').split()
@@ -760,17 +760,19 @@ def extract_agg_curves(dstore, what):
         rps = list(df.return_period.unique())
         P = len(rps)
         R = len(qdic['kind'])
-        arr = numpy.zeros((P, R))
+        EP = len(ep_fields)
+        arr = numpy.zeros((R, P, EP))
         for rlz in df.rlz_id.unique():
-            # NB: df may contains zeros but there are no missing periods
-            # by construction (see build_aggcurves)
-            arr[:, rlz] = df[df.rlz_id == rlz].loss
+            for ep_field_idx, ep_field in enumerate(ep_fields):
+                # NB: df may contains zeros but there are no missing periods
+                # by construction (see build_aggcurves)
+                arr[rlz, :, ep_field_idx] = df[df.rlz_id == rlz][ep_field]
     else:
         name = 'agg_curves-stats/' + lts[0]
         shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
         rps = list(shape_descr['return_period'])
         units = dstore.get_attr(name, 'units').split()
-        arr = dstore[name][agg_id, k].T  # shape P, R
+        arr = dstore[name][agg_id, k]  # shape (P, S, EP)
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -778,10 +780,11 @@ def extract_agg_curves(dstore, what):
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
-    attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
-    attrs['return_period'] = rps
+    attrs = dict(shape_descr=['kind', 'return_period', 'ep_field'] + tagnames)
     attrs['kind'] = qdic['kind']
+    attrs['return_period'] = rps
     attrs['units'] = units  # used by the QGIS plugin
+    attrs['ep_field'] = ep_fields
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
@@ -1178,26 +1181,25 @@ def norm(qdict, params):
 def extract_mean_rates_by_src(dstore, what):
     """
     Extract the mean_rates_by_src information.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/mean_rates_by_src?site_id=0&imt=PGA&poe=.001
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/mean_rates_by_src?site_id=0&imt=PGA&iml=.001
     """
     qdict = parse(what)
     dset = dstore['mean_rates_by_src/array']
     oq = dstore['oqparam']
     src_id = dstore['mean_rates_by_src/src_id'][:]
     [imt] = qdict['imt']
-    [poe] = qdict['poe']
+    [iml] = qdict['iml']
     [site_id] = qdict.get('site_id', ['0'])
     site_id = int(site_id)
-    mean = dstore.sel(
-        'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
-    lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
-    rates = dset[site_id, imt_id, lvl_id]  # shape Ns
-    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('poe', '<f8')])
+    rates = dset[site_id, imt_id]
+    L1, Ns = rates.shape
+    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('rate', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = rates
-    arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
+    arr['rate'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
+                   for i in range(Ns)]
+    arr.sort(order='rate')
+    return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, iml=iml))
 
 
 # TODO: extract from disagg-stats, avoid computing means on the fly

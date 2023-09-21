@@ -93,8 +93,12 @@ def export_hmaps_csv(key, dest, sitemesh, array, comment):
 
 def add_imt(fname, imt):
     """
-    >>> add_imt('/path/to/hcurve_23.csv', 'SA(0.1)')
-    '/path/to/hcurve-SA(0.1)_23.csv'
+    >>> orig_path = '/path/to/hcurve_23.csv'
+    >>> new_path = add_imt(orig_path, 'SA(0.1)')
+    >>> os.path.dirname(new_path) == os.path.dirname(orig_path)
+    True
+    >>> os.path.basename(new_path)
+    'hcurve-SA(0.1)_23.csv'
     """
     name = os.path.basename(fname)
     newname = re.sub(r'(_\d+\.)', '-%s\\1' % imt, name)
@@ -407,6 +411,8 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
     sitecol = dstore['sitecol']
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']
     names = sitecol.array.dtype.names
     arr = sitecol[['lon', 'lat']]
     if 'custom_site_id' in names:
@@ -419,7 +425,7 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     if 'custom_site_id' in names:
-        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        df['csi'] = decode(sitecol.complete.custom_site_id[df.sid])
         ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
         del df['sid']
     else:
@@ -461,13 +467,15 @@ def export_gmf_data_hdf5(ekey, dstore):
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol'].complete
+    sitecol = dstore['sitecol']
+    if 'complete' in dstore.parent:
+        sitecol.complete = dstore.parent['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
-        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
+        dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
     else:
-        dic = dict(site_id=sitecol.sids)
-    dic['lon'] = sitecol.lons
-    dic['lat'] = sitecol.lats
+        dic = dict(site_id=sitecol.complete.sids)
+    dic['lon'] = sitecol.complete.lons
+    dic['lat'] = sitecol.complete.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
     for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
@@ -534,6 +542,7 @@ def export_mean_rates_by_src(ekey, dstore):
     for site in sitecol:
         df = rates_df[rates_df.site_id == site.id]
         del df['site_id']
+        df = df[df.value > 0]  # don't export zeros
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
@@ -546,11 +555,15 @@ def export_mean_rates_by_src(ekey, dstore):
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
-    df = dstore['mean_disagg_by_src'].to_dframe()
+    aw = dstore['mean_disagg_by_src']
+    df = aw.to_dframe()
+    df = df[df.value > 0]  # don't export zeros
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
     com['lat'] = sitecol.lats[0]
+    com['vs30'] = sitecol.vs30[0]
+    com['iml_disagg'] = dict(zip(aw.imt, aw.iml))
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, fname, comment=com)
     return [fname]
@@ -650,6 +663,9 @@ def export_events(ekey, dstore):
 
 @export.add(('event_based_mfd', 'csv'))
 def export_event_based_mfd(ekey, dstore):
+    if dstore['oqparam'].investigation_time is None:
+        # there is no MFD in scenario calculation
+        return []
     aw = extract(dstore, 'event_based_mfd?')
     path = dstore.export_path('event_based_mfd.csv')
     magfreq = numpy.zeros(len(aw.mag), [('mag', float), ('freq', float)])
@@ -666,3 +682,13 @@ def export_fullreport(ekey, dstore):
     with open(dstore.export_path('report.rst'), 'w') as f:
         f.write(view('fullreport', dstore))
     return [f.name]
+
+
+@export.add(('rtgm', 'csv'))
+def export_rtgm(ekey, dstore):
+    df = dstore.read_df('rtgm')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('rtgm.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]

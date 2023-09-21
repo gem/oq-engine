@@ -1,20 +1,14 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-git09efc1e422', start_date='2023-04-26T10:15:31', checksum=91486865, risk_investigation_time=5.0, num_events=124, effective_time=40.0, limit_states=''"
-return_period,loss_type,rlz_id,loss_value,loss_ratio
-1,structural,2,0.00000E+00,0.00000E+00
-2,structural,2,0.00000E+00,0.00000E+00
-5,structural,2,1.75276E+05,3.10588E-03
-1,structural,3,0.00000E+00,0.00000E+00
-2,structural,3,0.00000E+00,0.00000E+00
-5,structural,3,1.94363E+04,3.44409E-04
-1,structural,4,0.00000E+00,0.00000E+00
-2,structural,4,0.00000E+00,0.00000E+00
-5,structural,4,2.23212E+05,3.95530E-03
-1,structural,5,0.00000E+00,0.00000E+00
-2,structural,5,0.00000E+00,0.00000E+00
-5,structural,5,1.48100E+05,2.62432E-03
-1,structural,6,0.00000E+00,0.00000E+00
-2,structural,6,3.08835E+04,5.47253E-04
-5,structural,6,8.89640E+06,1.57644E-01
-1,structural,7,0.00000E+00,0.00000E+00
-2,structural,7,6.56662E+03,1.16360E-04
-5,structural,7,2.77325E+04,4.91417E-04
+#,,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitc951e586b4', start_date='2023-09-18T07:06:50', checksum=91486865, risk_investigation_time=5.0, num_events=124, effective_time=40.0, limit_states=''"
+return_period,loss_type,rlz_id,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
+1,structural,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
+2,structural,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
+5,structural,0,1.46035E+04,2.58773E-04,1.46035E+04,2.58773E-04,1.46035E+04,2.58773E-04
+1,structural,4,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
+2,structural,4,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
+5,structural,4,2.77325E+04,4.91417E-04,2.77325E+04,4.91417E-04,2.77325E+04,4.91417E-04
+1,structural,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
+2,structural,5,7.88148E+04,1.39659E-03,7.88148E+04,1.39659E-03,7.88148E+04,1.39659E-03
+5,structural,5,2.23212E+05,3.95530E-03,2.23212E+05,3.95530E-03,2.23212E+05,3.95530E-03
+1,structural,6,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
+2,structural,6,1.04393E+05,1.84984E-03,1.04393E+05,1.84984E-03,1.04393E+05,1.84984E-03
+5,structural,6,8.89640E+06,1.57644E-01,8.89640E+06,1.57644E-01,8.89640E+06,1.57644E-01

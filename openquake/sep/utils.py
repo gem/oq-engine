@@ -1,6 +1,8 @@
 from typing import Callable, Union
 
 import os
+import tempfile
+import logging
 import numpy as np
 import pandas as pd
 import pyproj as pj
@@ -177,7 +179,7 @@ def rolling_raster_operation(
         if write == True:
             raise ValueError("Must specify raster outfile")
         else:
-            outfile = "./tmp.tiff"
+            outfile_handler, outfile = tempfile.mkstemp(suffix='.tiff')
 
     ds = gdal.Open(in_raster)
 
@@ -188,6 +190,7 @@ def rolling_raster_operation(
 
     drv = gdal.GetDriverByName("GTiff")
 
+    logging.info(f'Writing {outfile}')
     new_ds = drv.Create(
         outfile,
         xsize=new_arr.shape[1],

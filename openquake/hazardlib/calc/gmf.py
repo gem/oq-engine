@@ -193,6 +193,11 @@ class GmfComputer(object):
                         # gmv can be zero due to the minimum_intensity, coming
                         # from the job.ini or from the vulnerability functions
                 n += len(eids)
+        for key, val in sorted(data.items()):
+            if key in 'eid sid rlz':
+                data[key] = U32(data[key])
+            else:
+                data[key] = F32(data[key])
         return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mean_stds):

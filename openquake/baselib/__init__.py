@@ -109,8 +109,7 @@ def read(*paths, **validators):
 # NB: duplicated in commands/engine.py!!
 config.read = read
 config.read(limit=int, soft_mem_limit=int, hard_mem_limit=int, port=int,
-            serialize_jobs=positiveint, strict=positiveint, code=exec,
-            slowdown_rate=float)
+            serialize_jobs=positiveint, strict=positiveint, code=exec)
 
 if config.directory.custom_tmp:
     os.environ['TMPDIR'] = config.directory.custom_tmp
@@ -131,4 +130,4 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.17.0'
+__version__ = '3.18.0'

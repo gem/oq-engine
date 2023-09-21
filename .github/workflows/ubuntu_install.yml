@@ -70,7 +70,13 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       timeout-minutes: 15
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-    - name: Run tests
+    - name: Run demos
+      run: |
+        source ~/openquake/bin/activate
+        oq dbserver start
+        cd ~/work/oq-engine/oq-engine
+        OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+    - name: Run a small subset of tests
       run: |
         source ~/openquake/bin/activate
         pip install pytest
@@ -78,8 +84,9 @@ jobs:
         cd ~/work/oq-engine/oq-engine
         #
         export MPLBACKEND=Agg
-        pytest -vsx --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py
-        pytest -vsx --color=yes openquake/sep/tests/test_utils.py
-        pytest -vsx --color=yes openquake/sep
-        #
+        pytest -vs --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py openquake/sep/tests/test_utils.py openquake/sep
+    - name: Run risk_test via https
+      run: |
+        source ~/openquake/bin/activate
+        oq dbserver start
         oq engine --run https://downloads.openquake.org/jobs/risk_test.zip

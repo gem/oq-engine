@@ -30,6 +30,7 @@ from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.imt import from_string
 
 
+
 class ModifiableGMPEAlAtik2015SigmaTest(unittest.TestCase):
 
     def setUp(self):

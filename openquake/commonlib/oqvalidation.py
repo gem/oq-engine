@@ -61,6 +61,14 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+aggregate_loss_curves_types:
+  Used for event-based risk and damage calculations, to estimate the aggregated
+  loss Exceedance Probability (EP) only or to also calculate (if possible) the
+  Occurrence Exceedance Probability (OEP) and/or the Aggregate Exceedance
+  Probability (AEP).
+  Example: *aggregate_loss_curves_types = ,_oep,_aep*.
+  Default: ,_oep,_aep
+
 reaggregate_by:
   Used to perform additional aggregations in risk calculations. Takes in
   input a proper subset of the tags in the aggregate_by option.
@@ -386,6 +394,11 @@ infer_occur_rates:
    Example: *infer_occur_rates = true*
    Default: False
 
+infrastructure_connectivity_analysis:
+    If set, run the infrastructure connectivity analysis.
+    Example: *infrastructure_connectivity_analysis = true*
+    Default: False
+
 inputs:
   INTERNAL. Dictionary with the input files paths.
 
@@ -445,10 +458,10 @@ max_aggregations:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
-max_gmvs_per_task:
+max_gmvs_chunk:
   Maximum number of rows of the gmf_data table per task.
-  Example: *max_gmvs_per_task = 100_000*
-  Default: 1_000_0000
+  Example: *max_gmvs_chunk = 200_000*
+  Default: 100_000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -466,14 +479,6 @@ max_sites_disagg:
   *max_sites_disagg*, that must be greater or equal to the number of sites.
   Example: *max_sites_disagg = 100*
   Default: 10
-
-pmap_max_gb:
-   Control the memory used in large classical calculations. The default is .4
-   (meant for people with 2 GB per core or less) but you can increase it if you
-   have plenty of memory, thus producing less tiles and making the calculation
-   more efficient. For small calculations it has no effect.
-   Example: *pmap_max_gb = 2*
-   Default: .4
 
 max_weight:
   INTERNAL
@@ -562,7 +567,7 @@ pointsource_distance:
   Used in classical calculations to collapse the point sources. Can also be
   used in conjunction with *ps_grid_spacing*.
   Example: *pointsource_distance = 50*.
-  Default: {'default': 1000}
+  Default: {'default': 100}
 
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
@@ -773,8 +778,8 @@ time_event:
 time_per_task:
   Used in calculations with task splitting. If a task slice takes longer
   then *time_per_task* seconds, then spawn subtasks for the other slices.
-  Example: *time_per_task=600*
-  Default: 2000
+  Example: *time_per_task=1000*
+  Default: 1200
 
 total_losses:
   Used in event based risk calculations to compute total losses and
@@ -810,10 +815,7 @@ width_of_mfd_bin:
   Default: None
 """ % __version__
 
-try:
-    PSDIST = config.performance.pointsource_distance
-except AttributeError:
-    PSDIST = 1000
+PSDIST = float(config.performance.pointsource_distance)
 GROUND_MOTION_CORRELATION_MODELS = ['JB2009', 'HM2018']
 TWO16 = 2 ** 16  # 65536
 TWO32 = 2 ** 32
@@ -909,6 +911,13 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_loss_curves_types = valid.Param(
+        valid.Choice('',
+                     ',_oep',
+                     ',_aep',
+                     ',_oep,_aep',
+                     ',_aep,_oep'),
+        ',_oep,_aep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
@@ -970,6 +979,7 @@ class OqParam(valid.ParamSet):
     inputs = valid.Param(dict, {})
     ash_wet_amplification_factor = valid.Param(valid.positivefloat, 1.0)
     infer_occur_rates = valid.Param(valid.boolean, False)
+    infrastructure_connectivity_analysis = valid.Param(valid.boolean, False)
     intensity_measure_types = valid.Param(valid.intensity_measure_types, '')
     intensity_measure_types_and_levels = valid.Param(
         valid.intensity_measure_types_and_levels, None)
@@ -984,11 +994,10 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
+    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000) # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
-    pmap_max_gb = valid.Param(valid.positivefloat, .4)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
@@ -1055,7 +1064,8 @@ class OqParam(valid.ParamSet):
     outs_per_task = valid.Param(valid.positiveint, 4)
     ebrisk_maxsize = valid.Param(valid.positivefloat, 2E10)  # used in ebrisk
     time_event = valid.Param(str, 'avg')
-    time_per_task = valid.Param(valid.positivefloat, 2000)
+    time_per_task = valid.Param(valid.positivefloat, 1200)
+    # NB: time_per_task > 1200 breaks oq1 (OOM on the master) for Canada EBR
     total_losses = valid.Param(valid.Choice(*ALL_COST_TYPES), None)
     truncation_level = valid.Param(lambda s: valid.positivefloat(s) or 1E-9)
     uniform_hazard_spectra = valid.Param(valid.boolean, False)
@@ -1856,7 +1866,7 @@ class OqParam(valid.ParamSet):
         """
         if self.ground_motion_correlation_model:
             for imt in self.imtls:
-                if not (imt.startswith('SA') or imt == 'PGA'):
+                if not (imt.startswith('SA') or imt in ['PGA', 'PGV']):
                     raise ValueError(
                         'Correlation model %s does not accept IMT=%s' % (
                             self.ground_motion_correlation_model, imt))
@@ -1935,8 +1945,8 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights, only the mean is available,
-        and number_of_logic_tree_samples must be greater than 1.
+        sampling_method must be early_weights and number_of_logic_tree_samples
+        must be greater than 1.
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
@@ -1955,8 +1965,10 @@ class OqParam(valid.ParamSet):
                 raise ValueError('Please specify number_of_logic_tree_samples'
                                  '=%d' % n)
         hstats = list(self.hazard_stats())
-        nostats = not hstats or hstats == ['mean']
-        return nostats and self.number_of_logic_tree_samples > 1 and (
+        if hstats and hstats != ['mean']:
+            msg = '%s: quantiles are not supported with collect_rlzs=true'
+            raise InvalidFile(msg % self.inputs['job_ini'])
+        return self.number_of_logic_tree_samples > 1 and (
             self.sampling_method == 'early_weights')
 
     def check_aggregate_by(self):

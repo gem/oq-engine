@@ -214,7 +214,7 @@ def update_mrd_indirect(ctx, cm, corrm, be_mea, be_sig, mrd, monitor=Monitor()):
 def calc_mean_rate_dist(ctx, nsites, cmaker, crosscorr, imt1, imt2,
                         bins_mea, bins_sig, method='indirect', mon=Monitor()):
     """
-    :param ctx: a sequence of parametric sources
+    :param ctx: a context array
     :param num_sites: total number of sites (small)
     :param cmaker: a ContextMaker instance
     :param crosscorr: a CrossCorrelation instance

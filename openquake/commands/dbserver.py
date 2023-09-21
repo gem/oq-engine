@@ -38,9 +38,9 @@ def main(cmd,
 
     if config.multi_user:
         user = getpass.getuser()
-        if user != 'openquake':
-            sys.exit('Only user openquake can start the dbserver but you are '
-                     + user)
+        if user != config.dbserver.user:
+            sys.exit(f'Only user {config.dbserver.user} can start the dbserver '
+                     f'but you are {user}')
 
     status = dbserver.get_status()
     if cmd == 'status':

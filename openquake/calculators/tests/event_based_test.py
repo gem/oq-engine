@@ -400,14 +400,10 @@ class EventBasedTestCase(CalculatorTestCase):
             'hazard_curve-rlz-004.csv',
         ]
         # test the --hc functionality, i.e. that ruptures are read correctly
-        out = self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
-        fnames = out['hcurves', 'csv']
+        self.run_calc(case_17.__file__, 'job.ini,job.ini', exports='csv')
+        fnames = export(('hcurves', 'csv'), self.calc.datastore)
         for exp, got in zip(expected, fnames):
             self.assertEqualFiles('expected/%s' % exp, got)
-
-        # check that GMFs are not stored
-        with self.assertRaises(KeyError):
-            self.calc.datastore['gmf_data']
 
     def test_case_18(self):  # oversampling, 3 realizations
         out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
@@ -463,7 +459,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # testing slowest ruptures
         df = view('rup_info', self.calc.datastore)
-        self.assertEqual(list(df.columns), ['n_occ', 'mag', 'nsites',
+        self.assertEqual(list(df.columns), ['n_occ', 'nsites', 'mag',
                                             'rrup', 'time', 'surface'])
 
     def test_case_23(self):

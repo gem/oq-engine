@@ -269,7 +269,7 @@ def view_rup_info(token, dstore, maxrows=25):
     """
     if not code2cls:
         code2cls.update(source.rupture.BaseRupture.init())
-    fields = ['code', 'n_occ', 'mag']
+    fields = ['code', 'n_occ', 'nsites', 'mag']
     rups = dstore.read_df('ruptures', 'id')[fields]
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = rups.join(info).sort_values('time', ascending=False)
@@ -392,9 +392,10 @@ def view_job_info(token, dstore):
     for task, dic in task_sent.items():
         sent = sorted(dic.items(), key=operator.itemgetter(1), reverse=True)
         sent = ['%s=%s' % (k, humansize(v)) for k, v in sent[:3]]
-        recv = get_array(task_info, taskname=encode(task))['received'].sum()
-        data.append((task, ' '.join(sent), humansize(recv)))
-    return numpy.array(data, dt('task sent received'))
+        recv = get_array(task_info, taskname=encode(task))['received']
+        data.append((task, ' '.join(sent),
+                     humansize(recv.sum()), humansize(recv.mean())))
+    return numpy.array(data, dt('task sent received mean_recv'))
 
 
 @view.add('avglosses_data_transfer')
@@ -1182,7 +1183,7 @@ def view_risk_by_event(token, dstore):
     del df['agg_id']
     out = io.StringIO()
     df[:30].to_csv(out, sep='\t', index=False, float_format='%.1f',
-                   line_terminator='\r\n')
+                   lineterminator='\r\n')
     return out.getvalue()
 
 
@@ -1207,8 +1208,7 @@ def view_risk_by_rup(token, dstore):
     rdf = dstore.read_df('ruptures', 'id')
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     df = loss_by_rup.join(rdf).join(info)[
-        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2',
-         'nsites', 'rrup']]
+        ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2', 'rrup']]
     for field in df.columns:
         if field not in ('mag', 'n_occ'):
             df[field] = numpy.round(F64(df[field]), 1)
@@ -1472,11 +1472,11 @@ def view_relevant_sources(token, dstore):
     of the highest source.
     """
     imt = token.split(':')[1]
-    poe = dstore['oqparam'].poes[0]
-    aw = extract(dstore, f'mean_rates_by_src?imt={imt}&poe={poe}')
-    poes = aw.array['poe']  # for each source in decreasing order
-    max_poe = poes[0]
-    return aw.array[poes > .1 * max_poe]
+    kw = dstore['oqparam'].postproc_args
+    iml = dict(zip(kw['imts'], kw['imls']))[imt]
+    aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+    rates = aw.array['rate']  # for each source in decreasing order
+    return aw.array[rates > .1 * rates[0]]
 
 
 def shorten(lst):
@@ -1501,3 +1501,20 @@ def view_sources_branches(token, dstore):
     out = [(t, ' '.join(shorten(s)), b)
            for ((b, t), s) in sorted(acc.items())]
     return numpy.array(sorted(out), dt('trt sources branches'))
+
+
+@view.add('MPL')
+def view_MPL(token, dstore):
+    """
+    Maximum Probable Loss at a given return period
+    """
+    rp = int(token.split(':')[1])
+    K = dstore['risk_by_event'].attrs['K']
+    ltypes = list(dstore['agg_curves-stats'])
+    out = numpy.zeros(1, [(lt, float) for lt in ltypes])
+    for ltype in ltypes:
+        # shape (K+1, S, P)
+        arr = dstore.sel(f'agg_curves-stats/{ltype}',
+                         stat='mean', agg_id=K, return_period=rp)
+        out[ltype] = arr
+    return out
