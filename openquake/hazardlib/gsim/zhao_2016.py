@@ -272,8 +272,8 @@ get_distance_term = CallableDict()
 
 
 @get_distance_term.add(const.TRT.ACTIVE_SHALLOW_CRUST)
-def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store = None,
-                          pgn_per_zone = None):
+def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store=None,
+                          pgn_per_zone=None):
     """
     Returns the distance scaling term defined in equation 3
     """
@@ -296,8 +296,8 @@ def get_distance_term_asc(trt, C, ctx, volc_arc_str=None, pgn_store = None,
 
 
 @get_distance_term.add(const.TRT.UPPER_MANTLE)
-def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store = None,
-                         pgn_per_zone = None):
+def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store=None,
+                         pgn_per_zone=None):
     """
     Returns the distance attenuation term
     """
@@ -317,8 +317,8 @@ def get_distance_term_um(trt, C, ctx, volc_arc_str=None, pgn_store = None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTERFACE)
-def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store = None,
-                             pgn_per_zone = None):
+def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store=None,
+                             pgn_per_zone=None):
     """
     Returns distance scaling term, dependent on top of rupture depth,
     as described in equation 6
@@ -340,8 +340,8 @@ def get_distance_term_SInter(trt, C, ctx, volc_arc_str=None, pgn_store = None,
 
 
 @get_distance_term.add(const.TRT.SUBDUCTION_INTRASLAB)
-def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store = None,
-                            pgn_per_zone = None):
+def get_distance_term_sslab(trt, C, ctx, volc_arc_str=None, pgn_store=None,
+                            pgn_per_zone=None):
     """
     Returns the distance scaling term in equation 2a
 
@@ -589,7 +589,7 @@ class ZhaoEtAl2016Asc(GMPE):
     REQUIRES_RUPTURE_PARAMETERS = {'mag', 'ztor', 'rake'}
 
     #: Required distance measure is Rrup and Rvolc
-    REQUIRES_DISTANCES = {'rrup', 'rvolc'}
+    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'clon', 'clat'}
 
     def __init__(self, volc_arc_file=None, **kwargs):
         super().__init__(volc_arc_file=volc_arc_file, **kwargs)

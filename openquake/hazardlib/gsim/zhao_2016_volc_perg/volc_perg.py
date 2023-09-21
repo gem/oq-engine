@@ -45,8 +45,7 @@ def discretise_lines(ctx):
     return l_mesh
 
 
-def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone,
-                                ctx):
+def get_dist_traversed_per_zone(l_mesh, pgn_store, pgn_zone, ctx):
     """
     Find the intercepts of the line from each rupture surface to each site within
     each volcanic zone polygon (if present) and returns the distance traversed

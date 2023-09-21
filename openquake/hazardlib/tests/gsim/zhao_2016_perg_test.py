@@ -21,7 +21,7 @@ from matplotlib import pyplot
 
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.source.rupture import BaseRupture
+from openquake.hazardlib.source.rupture import BaseRupture, get_planar
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.site import Site, SiteCollection
@@ -114,17 +114,6 @@ def get_sites_from_rupture(rup, from_point='TC', toward_azimuth=90,
 
     return SiteCollection(sites)
 
-def get_rupture(lon, lat, dep, msr, mag, aratio, strike, dip, rake, trt,
-                ztor=None):
-    """
-    Creates a rupture given the hypocenter position
-    """
-    hypoc = Point(lon, lat, dep)
-    srf = PlanarSurface.from_hypocenter(hypoc, msr, mag, aratio, strike, dip,
-                                        rake, ztor)
-    rup = BaseRupture(mag, rake, trt, hypoc, srf)
-    rup.hypo_depth = dep
-    return rup
 
 def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     """
@@ -196,19 +185,10 @@ class TestZhao2016PErg(unittest.TestCase):
         of Zhao et al. (2016) intra-slab GMM.
         """
         # Get rupture
-        lon = 108.08
-        lat = 28.328
-        dep = 10.0
-        msr = WC1994()
-        mag = 7.0
-        aratio = 2.0
-        strike = 270.0
-        dip = 30.0
-        rake = 90.0
-        trt = TRT.SUBDUCTION_INTERFACE
-        ztor = 0.0
-        self.rup = get_rupture(lon, lat, dep, msr, mag, aratio, strike, dip,
-                          rake, trt, ztor)
+        hypo = Site(Point(108.08, 28.328, 10.0))
+        self.rup = get_planar(hypo, msr=WC1994(), mag=7.0,aratio=2.0,
+                              strike=270.0, dip=30.0, rake=90.0,
+                              trt=TRT.SUBDUCTION_INTERFACE, ztor=0.0)
         
         # Get implementations of Zhao et al. (2016) intra-slab GMM
         volc_arc_fname = DATA_FOLDER
@@ -227,7 +207,7 @@ class TestZhao2016PErg(unittest.TestCase):
         from_point = 'TC'
         azimuth = 90 # relative to strike of slab
         direction = 'positive'
-        hdist = 5000
+        hdist = 500
         step = 25
         site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
                        'backarc': False, 'vs30measured': True, 'clon':0, 'clat':0}
@@ -255,6 +235,7 @@ class TestZhao2016PErg(unittest.TestCase):
         step = 25
         site_params = {'vs30': 800, 'z1pt0': 31.07, 'z2pt5': 0.57,
                        'backarc': False, 'vs30measured': True}
+        
 
         sites = get_sites_from_rupture(self.rup, from_point, azimuth, direction,
                                        hdist, step, site_params)
