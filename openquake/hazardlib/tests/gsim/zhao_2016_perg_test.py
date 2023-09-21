@@ -20,8 +20,7 @@ import numpy as np
 from matplotlib import pyplot
 
 from openquake.hazardlib.geo import Point
-from openquake.hazardlib.geo.surface import PlanarSurface
-from openquake.hazardlib.source.rupture import BaseRupture, get_planar
+from openquake.hazardlib.source.rupture import get_planar
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.site import Site, SiteCollection
