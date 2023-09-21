@@ -1524,19 +1524,19 @@ def view_mean_mag_dist_eps(token, dstore):
     """
     Compute mean mag-dist-eps from mean_disagg_by_src
     """
-    arraywrapper=dstore["mean_disagg_by_src"]
-    
-    out = []
-    for m, imt in enumerate(arraywrapper.imt):
-        for s, source in enumerate(arraywrapper.source_id):
-            #print(imt,arraywrapper[s,:,:,:,m])
+    arraywrapper = dstore["mean_disagg_by_src"]
+    mag = arraywrapper.mag
+    dist = arraywrapper.dist
+    eps = arraywrapper.eps
+    dic = dict(src=[], imt=[], mag=[], dist=[], eps=[])
+    for s, src in enumerate(arraywrapper.source_id):
+        for m, imt in enumerate(arraywrapper.imt):
+            dic['src'].append(src)
+            dic['imt'].append(imt)
             rates_mag = arraywrapper[s,:,:,:,m].sum(axis=(1,2))
-            mean_mag = numpy.average(arraywrapper.mag,weights=rates_mag)
+            dic['mag'].append(numpy.average(mag, weights=rates_mag))
             rates_dist = arraywrapper[s,:,:,:,m].sum(axis=(0,2))
-            mean_dist = numpy.average(arraywrapper.dist,weights=rates_dist)
+            dic['dist'].append(numpy.average(dist, weights=rates_dist))
             rates_eps = arraywrapper[s,:,:,:,m].sum(axis=(0,1))
-            mean_eps = numpy.average(arraywrapper.eps,weights=rates_eps)
-            
-            out.append((source, imt, mean_mag,mean_dist,mean_eps))
-
-    return  numpy.array(sorted(out), dt('source imt mean_mag mean_dist mean_eps'))
+            dic['eps'].append(numpy.average(eps, weights=rates_eps))
+    return pandas.DataFrame(dic)
