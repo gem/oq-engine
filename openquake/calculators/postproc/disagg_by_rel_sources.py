@@ -18,12 +18,36 @@
 
 import logging
 import numpy
+import pandas
 from openquake.baselib import sap, hdf5, python3compat, parallel
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
+
+
+def get_mag_dist_eps_df(mean_disagg_by_src, operation):
+    """
+    :param mean_disagg_by_src: ArrayWrapper
+    :param operation: the string 'mean' or 'max'
+    :returns: a DataFrame with columns src, imt, mag, dist, eps
+    """
+    assert operation in 'mean max', operation
+    mag = mean_disagg_by_src.mag
+    dist = mean_disagg_by_src.dist
+    eps = mean_disagg_by_src.eps
+    dic = dict(src=[], imt=[], mag=[], dist=[], eps=[])
+    for s, src in enumerate(mean_disagg_by_src.source_id):
+        for m, imt in enumerate(mean_disagg_by_src.imt):
+            mmax = getattr(mean_disagg_by_src[s, :, :, :, m], operation)
+            dic['src'].append(src)
+            dic['imt'].append(imt)
+            # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
+            dic['mag'].append(numpy.average(mag, weights=mmax(axis=(1, 2))))
+            dic['dist'].append(numpy.average(dist, weights=mmax(axis=(0, 2))))
+            dic['eps'].append(numpy.average(eps, weights=mmax(axis=(0, 1))))
+    return pandas.DataFrame(dic)
 
 
 def get_rel_source_ids(dstore, imts, imls, threshold):
@@ -68,7 +92,6 @@ def main(dstore, csm, imts, imls):
         if imt not in oq.imtls:
             raise InvalidFile('%s: %s is not a known IMT' %
                               (oq.inputs['job_ini'], imt))
-    # oq.cachedir = datastore.get_datadir()
     parent = dstore.parent or dstore
     oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
@@ -104,7 +127,11 @@ def main(dstore, csm, imts, imls):
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, imt=imts, iml=imls,
         mag=middle(mags), dist=middle(dists), eps=middle(eps))
-    dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(arr, dic)
+    aw = hdf5.ArrayWrapper(arr, dic)
+    dstore['mean_disagg_by_src'] = aw
+    src_mutex = dstore['mutex_by_grp']['src_mutex'].any()
+    mag_dist_eps = get_mag_dist_eps_df(aw, 'max' if src_mutex else 'mean')
+    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
 
 
 if __name__ == '__main__':

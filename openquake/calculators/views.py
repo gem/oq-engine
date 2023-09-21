@@ -45,6 +45,7 @@ from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
+from openquake.calculators.postproc import disagg_by_rel_sources
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -1519,24 +1520,17 @@ def view_MPL(token, dstore):
         out[ltype] = arr
     return out
 
-@view.add('mean_mag_dist_eps')
-def view_mean_mag_dist_eps(token, dstore):
+@view.add('mag_dist_eps')
+def view_mag_dist_eps(token, dstore):
     """
-    Compute mean mag-dist-eps from mean_disagg_by_src
+    Compute mean or max mag-dist-eps from mean_disagg_by_src.
+    Example: oq show mag_dist_eps:mean
     """
-    arraywrapper = dstore["mean_disagg_by_src"]
-    mag = arraywrapper.mag
-    dist = arraywrapper.dist
-    eps = arraywrapper.eps
-    dic = dict(src=[], imt=[], mag=[], dist=[], eps=[])
-    for s, src in enumerate(arraywrapper.source_id):
-        for m, imt in enumerate(arraywrapper.imt):
-            dic['src'].append(src)
-            dic['imt'].append(imt)
-            rates_mag = arraywrapper[s,:,:,:,m].sum(axis=(1,2))
-            dic['mag'].append(numpy.average(mag, weights=rates_mag))
-            rates_dist = arraywrapper[s,:,:,:,m].sum(axis=(0,2))
-            dic['dist'].append(numpy.average(dist, weights=rates_dist))
-            rates_eps = arraywrapper[s,:,:,:,m].sum(axis=(0,1))
-            dic['eps'].append(numpy.average(eps, weights=rates_eps))
-    return pandas.DataFrame(dic)
+    if ':' not in token:
+        return view_mag_dist_eps.__doc__
+    op = token.split(':')[1]
+    if op not in {'mean', 'max'}:
+        return view_mag_dist_eps.__doc__
+    return disagg_by_rel_sources.get_mag_dist_eps_df(
+        dstore["mean_disagg_by_src"], op)
+
