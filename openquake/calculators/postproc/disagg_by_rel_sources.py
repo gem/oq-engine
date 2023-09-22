@@ -85,6 +85,7 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
         source_ids[imt].update(rel['src_id'])
     return source_ids
 
+
 def get_detMCE(src_mag_dist_eps, imts, prob_mce, sigma_by_src):
     from scipy.interpolate import RegularGridInterpolator
     from openquake.commonlib import datastore
@@ -93,11 +94,11 @@ def get_detMCE(src_mag_dist_eps, imts, prob_mce, sigma_by_src):
     sigma_df
     breakpoint()
     for i in imt:
-        for src in src_mag_dist_eps
         for s, sig in zip(sigma_by_src.source_id, sigma_by_src.array):
             df = src_mag_dist_eps[src_mag_dist_eps.src == s] 
             df = src_mag_dist_eps[src_mag_dist_eps.imt == i] 
-            sig_interp = RegularGridInterpolator((sigma_by_src.mag, sigma_by_src.dist), sig)
+            sig_interp = RegularGridInterpolator((
+                sigma_by_src.mag, sigma_by_src.dist), sig)
             sigma = sig_interp((mag,dist))
 
 
@@ -185,7 +186,7 @@ def main(dstore, csm, imts, imls, prob_mce):
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps = pandas.concat(out)
     logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    det = get_detMCE(mag_dist_eps, imts, prob_mce, sigma_by_src)
+    # det = get_detMCE(mag_dist_eps, imts, prob_mce, sigma_by_src)
 
 
 if __name__ == '__main__':
