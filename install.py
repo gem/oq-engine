@@ -204,11 +204,13 @@ def ensure(pip=None, pyvenv=None):
                    % sys.executable))
 
 
-def get_branch(version):
+def get_branch(version, inst):
     """
     Convert "version" into a branch name
     """
     if version is None:
+        if (inst is devel or inst is devel_server):
+            return 'master'
         # retrieve the tag name of the current stable version
         with urlopen('https://pypi.org/pypi/openquake.engine/json') as resp:
             content = resp.read()
@@ -381,7 +383,7 @@ def install(inst, version):
                                    'pip', 'wheel'])
 
     # install the requirements
-    branch = get_branch(version)
+    branch = get_branch(version, inst)
     if sys.platform == 'darwin':
         mac = '_' + platform.machine(),  # x86_64 or arm64
     else:
