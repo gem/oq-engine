@@ -170,9 +170,7 @@ def _dict_to_coeffs_table(input_dict, name):
     Transform a dictionary of parameters organised by IMT into a
     coefficient table
     """
-    coeff_dict = {}
-    for key in input_dict:
-        coeff_dict[from_string(key)] = {name: input_dict[key]}
+    coeff_dict = {from_string(k): {name: input_dict[k]} for k in input_dict}
     return {name: CoeffsTable.fromdict(coeff_dict)}
 
 

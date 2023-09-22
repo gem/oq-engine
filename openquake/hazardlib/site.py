@@ -24,7 +24,9 @@ from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian)
+    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian,
+    get_middle_point)
+from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
@@ -301,9 +303,15 @@ class SiteCollection(object):
         elif hasattr(sitemodel, 'reference_vs30_value'):
             self.set_global_params(sitemodel, req_site_params)
         else:
-            for name in sitemodel.dtype.names:
+            if hasattr(sitemodel, 'dtype'):
+                names = set(sitemodel.dtype.names)
+                sm = sitemodel
+            else:
+                sm = vars(sitemodel)
+                names = set(sm) & set(req_site_params)
+            for name in names:
                 if name not in ('lon', 'lat'):
-                    self._set(name, sitemodel[name])
+                    self._set(name, sm[name])
         dupl = get_duplicates(self.array, 'lon', 'lat')
         if dupl:
             # raise a decent error message displaying only the first 9
@@ -314,6 +322,52 @@ class SiteCollection(object):
             raise ValueError('There are %d duplicate sites %s%s' %
                              (n, items, dots))
         return self
+
+    @classmethod
+    def from_planar(cls, rup, point='TC', toward_azimuth=90,
+                    direction='positive', hdist=100, step=5.,
+                    req_site_params=()):
+        """
+        :param rup: a rupture built with `rupture.get_planar`
+        :return: a :class:`openquake.hazardlib.site.SiteCollection` instance
+        """
+        sfc = rup.surface
+        if point == 'TC':
+            pnt = sfc._get_top_edge_centroid()
+            lon, lat = pnt.x, pnt.y
+        elif point == 'BC':
+            lon, lat = get_middle_point(
+                sfc.corner_lons[2], sfc.corner_lats[2],
+                sfc.corner_lons[3], sfc.corner_lats[3])
+        else:
+            idx = {'TL': 0, 'TR': 1, 'BR': 2, 'BL': 3}[point]
+            lon = sfc.corner_lons[idx]
+            lat = sfc.corner_lats[idx]
+        depth = 0
+        vdist = 0
+        npoints = hdist / step
+        strike = rup.surface.strike
+
+        pointsp = []
+        pointsn = []
+        if direction in ['positive', 'both']:
+            azi = (strike + toward_azimuth) % 360
+            pointsp = npoints_towards(
+                lon, lat, depth, azi, hdist, vdist, npoints)
+
+        if direction in ['negative', 'both']:
+            idx = 0 if direction == 'negative' else 1
+            azi = (strike + toward_azimuth + 180) % 360
+            pointsn = npoints_towards(
+                lon, lat, depth, azi, hdist, vdist, npoints)
+
+        if len(pointsn):
+            lons = reversed(pointsn[0][idx:])
+            lats = reversed(pointsn[1][idx:])
+        else:
+            lons = pointsp[0]
+            lats = pointsp[1]
+        return cls.from_points(lons, lats, None, rup, req_site_params)
 
     def _set(self, param, value):
         if param not in self.array.dtype.names:

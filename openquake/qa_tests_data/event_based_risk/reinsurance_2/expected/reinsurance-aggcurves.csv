@@ -1,4 +1,4 @@
-#,,,,,,,,,,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:54:58', checksum=1441981914"
+#,,,,,,,,,,,"generated_by='OpenQuake engine 3.18.0-git00abdf97f8', start_date='2023-09-18T09:11:51', checksum=2491672072"
 rlz_id,return_period,retention,claim,treaty_1,treaty_2,xlr1,CatXL1,CatXL2,overspill_treaty_1,overspill_treaty_2,overspill_CatXL2
 0,5.00000E+01,5.50000E+02,2.41014E+03,1.63280E+02,5.00000E+02,5.05591E+02,2.46486E+02,6.50000E+02,0.00000E+00,2.50000E+02,2.50000E+02
 0,1.00000E+02,5.50000E+02,3.55715E+03,2.50000E+02,5.00000E+02,8.92644E+02,7.02289E+02,6.50000E+02,3.54189E+01,2.50000E+02,2.50000E+02

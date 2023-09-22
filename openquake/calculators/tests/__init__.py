@@ -47,6 +47,16 @@ def strip_calc_id(fname):
     return re.sub(r'_\d+', '', name)
 
 
+def ignore_gsd_fields(header, lines):
+    # strip columns starting with gsd_ (used when checking avg_gmf)
+    h = header.split(',')
+    for i, line in enumerate(lines):
+        stripped = [val for col, val in zip(h, line.split(','))
+                    if not col.startswith('gsd_')]
+        lines[i] = ','.join(stripped)
+    return lines
+
+
 def columns(line):
     numeric_columns = []
     textual_columns = []
@@ -170,22 +180,22 @@ class CalculatorTestCase(unittest.TestCase):
         self.calc.pre_execute()
         return self.calc.execute()
 
-    def practicallyEqual(self, line1, line2, delta, check_all_columns=False):
+    def practicallyEqual(self, line1, line2, delta, check_text=False):
         """
         Compare lines containing numbers up to the given delta
-        If check_all_columns is True, also textual values are compared
+        If check_text is True, also textual values are compared
         """
         num_columns1, txt_columns1 = columns(line1)
         num_columns2, txt_columns2 = columns(line2)
         for c1, c2 in zip(num_columns1, num_columns2):
             numpy.testing.assert_allclose(c1, c2, atol=delta, rtol=delta)
-        if check_all_columns:
+        if check_text:
             for txt_c1, txt_c2 in zip(txt_columns1, txt_columns2):
                 self.assertEqual(txt_c1, txt_c2)
 
     def assertEqualFiles(
-            self, fname1, fname2, make_comparable=lambda lines: lines,
-            delta=1E-6, lastline=None, check_all_columns=False):
+            self, fname1, fname2, make_comparable=lambda header, lines: lines,
+            delta=1E-6, lastline=None, check_text=False):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -212,12 +222,13 @@ class CalculatorTestCase(unittest.TestCase):
                 actual_lines.append(line)
         try:
             self.assertEqual(len(expected_lines), len(actual_lines))
-            if expected_lines[0][0] != '+':  # header unless .rst table
-                self.assertEqual(expected_lines[0], actual_lines[0])
-            for exp, got in zip(make_comparable(expected_lines),
-                                make_comparable(actual_lines)):
+            header = expected_lines[0]
+            if header[0] != '+':  # header unless .rst table
+                self.assertEqual(header, actual_lines[0])
+            for exp, got in zip(make_comparable(header, expected_lines),
+                                make_comparable(header, actual_lines)):
                 if delta:
-                    self.practicallyEqual(exp, got, delta, check_all_columns)
+                    self.practicallyEqual(exp, got, delta, check_text)
                 else:
                     self.assertEqual(exp, got)
         except AssertionError:

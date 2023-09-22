@@ -452,7 +452,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
-                               'investigation time is too short')
+                               'effective investigation time is too short')
 
         # don't change the order of the 3 things below!
         self.store_source_info(source_data)
@@ -620,7 +620,7 @@ class EventBasedCalculator(base.HazardCalculator):
             logging.warning(
                 f'There are more than {humansize(maxsize)} of GMFs,'
                 ' not computing avg_gmf')
-            return numpy.unique(self.datastore['gmf_data/eid'][:])
+            return
 
         rlzs = self.datastore['events']['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
@@ -644,7 +644,6 @@ class EventBasedCalculator(base.HazardCalculator):
                 gmf_df, self.weights, self.oqparam.min_iml).items():
             avg_gmf[:, sid] = avgstd
         self.datastore['avg_gmf'] = avg_gmf
-        return rel_events
 
     def post_execute(self, dummy):
         oq = self.oqparam

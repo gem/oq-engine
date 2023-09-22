@@ -52,36 +52,37 @@ def loss_agg_value_func(aval, xltype):
 
 # NOTE: in order to add a new consequence, it should be sufficient to add a
 # new item into the KNOWN_CONSEQUENCES dict, specifying the asset field to be
-# used in multiplication and the function to be used for the aggregation
-# FIXME: give proper names to asset_field and agg_value_func
+# used in multiplication and the function to be used for the aggregation. The
+# asset field may depend from the loss_type or the time_event, so these values
+# are passed as parameters to a lambda function.
 # asset_field is used in consequence to compute:
 #     dmgdist @ coeffs * asset[asset_field]
-# agg_value_func is uded in get_agg_value to computer:
+# agg_value_func is uded in get_agg_value to compute:
 #     aval = agg_values[agg_id]
 #     agg_value_func(aval, xltype)
 KNOWN_CONSEQUENCES = {
-    'loss': {
-        'asset_field': 'value-%s',  # converted using loss_type
-        'agg_value_func': loss_agg_value_func},
-    'losses': {
-        'asset_field': 'value-%s',  # converted using loss_type
-        'agg_value_func': loss_agg_value_func},
-    'collapsed': {
-        'asset_field': 'value-number',
-        'agg_value_func': lambda aval, xltype: aval['number']},
-    'non_operational': {
-        'asset_field': 'value-number',
-        'agg_value_func': lambda aval, xltype: aval['number']},
-    'injured': {
-        'asset_field': 'occupants_night',
-        'agg_value_func': lambda aval, xltype: aval['occupants_night']},
-    'fatalities': {
-        'asset_field': 'occupants_night',
-        'agg_value_func': lambda aval, xltype: aval['occupants_night']},
     'homeless': {
-        'asset_field': 'residents',
-        'agg_value_func': lambda aval, xltype: aval['residents']},
+        'asset_field': lambda loss_type, time_event: 'value-residents',
+        'agg_value_func': lambda aval, xltype, time_event: aval['residents']
+    }
 }
+for cons in ('loss', 'loss_aep', 'loss_oep', 'losses'):
+    KNOWN_CONSEQUENCES[cons] = {
+        'asset_field': lambda loss_type, time_event: f'value-{loss_type}',
+        'agg_value_func': loss_agg_value_func
+    }
+for cons in ('collapsed', 'non_operational'):
+    KNOWN_CONSEQUENCES[cons] = {
+        'asset_field': lambda loss_type, time_event: 'value-number',
+        'agg_value_func': lambda aval, xltype, time_event: aval['number']
+    }
+for cons in ('injured', 'fatalities'):
+    # NOTE: time_event default is 'avg'
+    KNOWN_CONSEQUENCES[cons] = {
+        'asset_field': lambda loss_type, time_event: f'occupants_{time_event}',
+        'agg_value_func': lambda aval, xltype, time_event: aval[
+            f'occupants_{time_event}']
+    }
 
 
 LOSSTYPE = numpy.array('''\
@@ -1559,9 +1560,27 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, losses, rlzi=0):
-        return losses_by_period(
-            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
+    def build_curve(self, years, kind, losses, agg_types, rlzi=0):
+        """
+        Compute EP curves. If years is not None, also AEP and OEP curves.
+        """
+        if kind == 'losses':  # for consequences
+            kind = 'loss'
+        periods = self.return_periods
+        ne = self.num_events[rlzi]
+        dic = {kind: losses_by_period(losses, periods, ne, self.eff_time)}
+        # NOTE: assuming 'ep' mandatory and 'oep' and 'aep' optional
+        if len(years) and kind == 'loss':
+            gby = pandas.DataFrame(
+                dict(year=years, loss=losses)).groupby('year')
+            # see specs in https://github.com/gem/oq-engine/issues/8971
+            if '_aep' in agg_types:
+                dic['loss_aep'] = losses_by_period(
+                    gby.loss.sum(), periods, ne, self.eff_time)
+            if '_oep' in agg_types:
+                dic['loss_oep'] = losses_by_period(
+                    gby.loss.max(), periods, ne, self.eff_time)
+        return dic
 
 
 def _agg(loss_dfs, weights=None):
@@ -1673,40 +1692,38 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
     :param asset: asset record
     :param dmgdist: an array of probabilies of shape (E, D - 1)
     :param loss_type: loss type string
+    :param time_event: time of day at which the event occurrs (default avg)
     :returns: array of shape E
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    try:
-        asset_field = KNOWN_CONSEQUENCES[
-            consequence]['asset_field'] % loss_type
-    except TypeError:
-        # when the asset_field string does not require the loss_type
-        asset_field = KNOWN_CONSEQUENCES[consequence]['asset_field']
+    asset_field = KNOWN_CONSEQUENCES[
+        consequence]['asset_field'](loss_type, time_event)
     return dmgdist @ coeffs * asset[asset_field]
 
 
-def get_agg_value(consequence, agg_values, agg_id, xltype):
+def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     """
-    FIXME: describe params
     :param consequence: kind of consequence
     :param agg_values: FIXME
     :param agg_id: FIXME
     :param xltype: FIXME
+    :param time_event: time of day at which the event occurrs (default avg)
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
-    return KNOWN_CONSEQUENCES[consequence]['agg_value_func'](aval, xltype)
+    return KNOWN_CONSEQUENCES[consequence]['agg_value_func'](
+        aval, xltype, time_event)
 
 
 # ########################### u64_to_eal ################################# #

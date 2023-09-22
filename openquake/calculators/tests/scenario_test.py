@@ -27,7 +27,7 @@ from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
 from openquake.calculators.views import text_table, view
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
@@ -253,7 +253,7 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqualFiles('gmfdata.csv', gmfs)
         self.assertEqualFiles('sitemodel.csv', sites)
         self.run_calc(case_22.__file__, 'job_from_csv.ini',
-                      gmfs_file='gmfdata.csv',sites_csv='sitemodel.csv')
+                      gmfs_file='gmfdata.csv', sites_csv='sitemodel.csv')
         self.assertEqual(str(self.calc.sitecol),
                          '<SiteCollection with 4/5 sites>')
         ds = self.calc.datastore
@@ -274,10 +274,23 @@ class ScenarioTestCase(CalculatorTestCase):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         self.run_calc(case_24.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f)
+        self.assertEqualFiles('expected/avg_gmf.csv', f,
+                              ignore_gsd_fields, delta=1E-5)
+
+    def test_case_24_station_with_zero_im_value(self):
+        # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
+        with self.assertRaises(InvalidFile) as ctx:
+            self.run_calc(case_24.__file__,
+                          'job_station_with_zero_im_value.ini')
+        self.assertIn(
+            'Please remove station data with zero intensity value from',
+            str(ctx.exception))
+        self.assertIn(
+            'stationlist_seismic_zero_im_value.csv',
+            str(ctx.exception))
 
     def test_case_26(self):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)

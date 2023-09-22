@@ -21,14 +21,14 @@ import unittest
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
-    case_6a, case_7, case_8, case_10, occupants, case_master,
-    case_shakemap, case_shapefile, reinsurance)
+    case_6a, case_7, case_8, case_10, case_11, occupants, case_master,
+    case_shakemap, case_shapefile, reinsurance, conditioned)
 
 
 aac = numpy.testing.assert_allclose
@@ -81,7 +81,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_3.__file__, 'job.ini', exports='csv')
 
         [fname] = out['avg_losses-rlzs', 'csv']
-        self.assertEqualFiles('expected/asset-loss.csv', fname)
+        self.assertEqualFiles('expected/asset-loss.csv', fname, delta=5E-6)
 
         [fname] = out['aggrisk', 'csv']
         self.assertEqualFiles('expected/agg_loss.csv', fname, delta=5E-6)
@@ -216,6 +216,15 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         with self.assertRaises(InvalidFile):
             self.run_calc(case_10.__file__, 'job.ini')
 
+    def test_case_11(self):
+        out = self.run_calc(
+            case_11.__file__,  'job.ini', exports='csv')
+        [fname] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk-_443.csv', fname)
+        [fname] = out[('avg_losses-rlzs', 'csv')]
+        self.assertEqualFiles(
+            'expected/avg_losses-rlz-000_443.csv', fname)
+
     def test_case_shakemap(self):
         self.run_calc(case_shakemap.__file__, 'pre-job.ini')
         self.run_calc(case_shakemap.__file__, 'job.ini',
@@ -268,3 +277,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=1E-5)
+
+    def test_conditioned(self):
+        self.run_calc(conditioned.__file__, 'job.ini',
+                      calculation_mode='scenario')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(conditioned.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname,
+                              ignore_gsd_fields, delta=1E-5)

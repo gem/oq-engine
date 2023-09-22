@@ -209,7 +209,12 @@ def get_branch(version):
     Convert "version" into a branch name
     """
     if version is None:
-        return 'master'
+        # retrieve the tag name of the current stable version
+        with urlopen('https://pypi.org/pypi/openquake.engine/json') as resp:
+            content = resp.read()
+        stable_version_number = json.loads(content)['info']['version']
+        stable_version_tag_name = f'v{stable_version_number}'
+        return stable_version_tag_name
     mo = re.match(r'(\d+\.\d+)+', version)
     if mo:
         return 'engine-' + mo.group(0)

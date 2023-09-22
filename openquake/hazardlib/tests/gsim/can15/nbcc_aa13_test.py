@@ -57,7 +57,7 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
             fname = 'NBCC2015_AA13_%s.csv' % cmaker.trt.replace(' ', '')
             path = os.path.join(CWD, 'data', 'CAN15', fname)
             if OVERWRITE:
-                gmfdata.to_csv(path, index=False, line_terminator='\r\n')
+                gmfdata.to_csv(path, index=False, lineterminator='\r\n')
             else:
                 expected = pandas.read_csv(path)
                 for col in expected.columns:

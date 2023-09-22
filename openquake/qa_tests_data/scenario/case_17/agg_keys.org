@@ -1,4 +1,4 @@
-| ['name_1']       |
-|------------------|
-| REGIN DE TARAPAC |
-| REGIN DE UBLE    |
+| ['name_1']         |
+|--------------------|
+| REGIÓN DE TARAPACÁ |
+| REGIÓN DE ÑUBLE    |
