@@ -104,6 +104,7 @@ def main(dstore, csm, imts, imls):
         if imt not in oq.imtls:
             raise InvalidFile('%s: %s is not a known IMT' %
                               (oq.inputs['job_ini'], imt))
+
     parent = dstore.parent or dstore
     oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
@@ -119,11 +120,13 @@ def main(dstore, csm, imts, imls):
 
     src2idx = {}
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
-    rel_ids = set.union(*map(set, rel_ids_by_imt.values()))
+    rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
+    weights = {}  # src_id -> weights
     for idx, source_id in enumerate(rel_ids):
         src2idx[source_id] = idx
         smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
+        weights[source_id] = [rlz.weight['weight'] for rlz in gslt]
         relt = FullLogicTree(smlt, gslt)
         Z = relt.get_num_paths()
         assert Z, relt  # sanity check
@@ -132,25 +135,25 @@ def main(dstore, csm, imts, imls):
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, (edges, shp), oq, imldic))
     mags, dists, lons, lats, eps, trts = edges
-    arr = numpy.zeros(
-        (len(rel_ids), shp['mag'], shp['dist'], shp['eps'], len(imldic)))
-    for srcid, rates4D, rates2D in smap:
+    Ns, M1 = len(rel_ids), len(imldic)
+    rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
+    std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
+    for srcid, std4D, rates4D, rates2D in smap:
         idx = src2idx[basename(srcid, '!;')]
-        arr[idx] = rates4D
+        rates[idx] += rates4D
+        std[idx] += std4D @ weights[srcid] # shape (Ma, D, M, G) -> (Ma, D, M)
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-        source_id=sorted(rel_ids), imt=imts, iml=imls,
-        mag=middle(mags), dist=middle(dists), eps=middle(eps))
-    aw = hdf5.ArrayWrapper(arr, dic)
-    dstore['mean_disagg_by_src'] = aw
-    src_mutex = dstore['mutex_by_grp']['src_mutex'].any()  # True for Japan
-    mag_dist_eps = get_mag_dist_eps_df(aw, 'mode' if src_mutex else 'mean')
-    out = []
-    for imt, src_ids in rel_ids_by_imt.items():
-        df = mag_dist_eps[mag_dist_eps.imt == imt]
-        out.append(df[numpy.isin(df.src, src_ids)])
-    mag_dist_eps = pandas.concat(out)
-    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
+        source_id=rel_ids, mag=middle(mags), dist=middle(dists),
+        eps=middle(eps), imt=imts, iml=imls)
+    dstore.close()
+    dstore.open('r+')
+    dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(rates, dic)
+    dic2 = dict(
+        shape_descr=['source_id', 'mag', 'dist', 'imt'],
+        source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
+    dstore['sigma_by_src'] = hdf5.ArrayWrapper(std, dic2)
+    return rel_ids_by_imt
 
 
 if __name__ == '__main__':
