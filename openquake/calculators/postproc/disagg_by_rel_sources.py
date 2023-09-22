@@ -109,8 +109,10 @@ def main(dstore, csm, imts, imls):
         std[idx] += std4D @ weights[srcid] # shape (Ma, D, M, G) -> (Ma, D, M)
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-        source_id=rel_ids, imt=imts, iml=imls,
-        mag=middle(mags), dist=middle(dists), eps=middle(eps))
+        source_id=rel_ids, mag=middle(mags), dist=middle(dists),
+        eps=middle(eps), imt=imts, iml=imls)
+    dstore.close()
+    dstore.open('r+')
     dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(rates, dic)
     dic2 = dict(
         shape_descr=['source_id', 'mag', 'dist', 'imt'],

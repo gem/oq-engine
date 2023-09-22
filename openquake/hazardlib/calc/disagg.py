@@ -661,17 +661,23 @@ def collect_std(disaggs):
     :returns: an array of shape (G, M', Ma, D)
     """
     assert len(disaggs)
-    out = {}  # (magi, dsti) -> stddev
+    gsims = set()
+    for dis in disaggs:
+        gsims.update(dis.cmaker.gsims)
+    gidx = {gsim: g for g, gsim in enumerate(sorted(gsims))}
+    G, M = len(gidx), len(dis.cmaker.imts)
+    out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
     cnt = collections.Counter()  # (magi, dsti)
     for dis in disaggs:
-        for magi, std in dis.std.items():  # shape (G, M, U) -> (U, G, M)
-            for dsti, val in zip(dis.dist_idx[magi], std.transpose(2, 0, 1)):
-                if (magi, dsti) in out:
-                    out[magi, dsti] += val  # shape (G, M)
-                else:
-                    out[magi, dsti] = val.copy()
-                cnt[magi, dsti] += 1
-    G, M = val.shape
+        for magi in dis.std:
+            for gsim, std in zip(dis.cmaker.gsims, dis.std[magi]):
+                g = gidx[gsim]  # std has shape (M, U)
+                for dsti, val in zip(dis.dist_idx[magi], std.T):
+                    if (magi, dsti) in out:
+                        out[magi, dsti][g] += val  # shape M
+                    else:
+                        out[magi, dsti][g] = val.copy()
+                    cnt[magi, dsti] += 1 / G
     res = numpy.zeros((dis.Ma, dis.D, M, G))
     for (magi, dsti), v in out.items():
         res[magi, dsti] = v.T / cnt[magi, dsti]
@@ -704,6 +710,7 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     ws = reduced_lt.rlzs['weight']
     disaggs = []
     for ctx, cmaker in zip(ctxs, cmakers):
+        print(cmaker.gsims)
         dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
         drates4D += dis.disagg_mag_dist_eps(imldic, ws)
         disaggs.append(dis)
