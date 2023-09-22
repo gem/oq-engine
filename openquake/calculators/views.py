@@ -36,7 +36,7 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
+from openquake.hazardlib.contexts import KNOWN_DISTANCES, read_ctx_by_grp
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util
 from openquake.risklib.scientific import (
@@ -1524,13 +1524,53 @@ def view_MPL(token, dstore):
 def view_mag_dist_eps(token, dstore):
     """
     Compute mean or mode mag-dist-eps from mean_disagg_by_src.
-    Example: oq show mag_dist_eps:mean
+    Example: oq show mag_dist_eps
     """
-    if ':' not in token:
-        return view_mag_dist_eps.__doc__
-    op = token.split(':')[1]
-    if op not in {'mean', 'mode'}:
-        return view_mag_dist_eps.__doc__
-    return disagg_by_rel_sources.get_mag_dist_eps_df(
-        dstore["mean_disagg_by_src"], op)
 
+    return disagg_by_rel_sources.get_mag_dist_eps_df(
+        dstore["mean_disagg_by_src"], dstore)
+
+@view.add('sigma_from_rup')
+def view_sigma_from_rup(token, dstore):
+    """
+    """
+    
+    
+    from openquake.hazardlib.site import Site
+    from openquake.hazardlib.geo import Point
+    from openquake.hazardlib.scalerel import WC1994
+    from openquake.hazardlib.contexts import read_cmakers
+    
+    
+    src, mag, dist = token.split(':')[1:]
+    mag = float(mag)
+    dist = float(dist)
+    
+    cmakers = read_cmakers(dstore)
+    dset = dstore['source_info']
+    grp_id = {src.decode('utf8'):grp for src, grp in zip(dset['source_id'],dset['grp_id'])}
+    cmaker = cmakers[grp_id[src]]
+    
+    rup_df = dstore.read_df('rup')
+    dset = dstore['source_info']
+    sitecol = dstore['sitecol']
+    src_idx = {src.decode('utf8'):s for s, src in enumerate(dset['source_id'])}
+    rup_src = rup_df[rup_df.src_id == src_idx[src]].sort_values('mag').reset_index()
+    #idx = numpy.searchsorted(rup_src.mag, mag)
+    #rup = rup_src[rup_src.index == idx]
+    rake =  rup_src.rake.mean()
+    dip =  rup_src.dip.mean()
+    hypo_depth =  rup_src.hypo_depth.mean()
+    vs30 = sitecol.vs30.mean()
+    z1pt0=sitecol.z1pt0.mean()
+    z2pt5 = []
+    
+    s = Site(Point(0, 0), vs30=vs30,
+                      vs30measured=False, z1pt0=z1pt0)
+    f_interp = cmaker.get_att_curves(s , WC1994(), mag, aratio=2, strike=0.,
+                       dip=dip, rake=rake)[1]
+    sigma = f_interp(dist)
+    print(sigma.shape)
+    print(cmaker.gsims)
+
+    return  sigma
