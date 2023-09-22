@@ -19,7 +19,8 @@
 from typing import Union
 import numpy as np
 import pandas as pd
-import gzip, os, pickle
+import gzip, os
+import onnxruntime
 
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
@@ -616,23 +617,20 @@ def todorovic_silva_2022_nonparametric_general(
             liquefaction occurrence occurrence.
         out_prob: ndarray of len(sitemodel)
             Returns probability of belonging to class 1.
-        
+        d32b421
+
     """
     strain_proxy = pgv / (CM_PER_M * vs30)
-    dict = {
-        'strain_proxy': strain_proxy,
-        'dw': dw,
-        'wtd': wtd,
-        'precip': precip
-    }
-    df = pd.DataFrame(dict)
-    model_file = 'data/todorovic_silva_2022/todorovic_silva_2022.pkl.gz'
+    matrix = np.array([strain_proxy, dw, wtd, precip]).T
+    
+    model_file = 'data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz'
     model_path = os.path.join(os.path.dirname(__file__), model_file)
     with gzip.open(model_path, 'rb') as gzipped_file:
         file = gzipped_file.read()
-        model = pickle.loads(file)            
-        out_class = model.predict(df)
-        out_prob = model.predict_proba(df)[:, 1]
+        providers = ['CPUExecutionProvider', 'AzureExecutionProvider']
+        session = onnxruntime.InferenceSession(file, providers=providers)
+        out_class = session.run(None, {"X": matrix})[0]
+        out_prob = [_[1] for _ in session.run(None, {"X":matrix})[1]]
         return out_class, out_prob
 
 
