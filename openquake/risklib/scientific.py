@@ -69,7 +69,8 @@ KNOWN_CONSEQUENCES = {
 for cons in ('loss', 'loss_aep', 'loss_oep', 'losses'):
     KNOWN_CONSEQUENCES[cons] = {
         'asset_field': lambda loss_type, time_event: f'value-{loss_type}',
-        'agg_value_func': loss_agg_value_func
+        'agg_value_func': lambda aval, xltype, time_event: loss_agg_value_func(
+            aval, xltype)
     }
 for cons in ('collapsed', 'non_operational'):
     KNOWN_CONSEQUENCES[cons] = {
