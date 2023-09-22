@@ -50,7 +50,7 @@ def loss_agg_value_func(aval, xltype):
     return aval[xltype]
 
 
-# NOTE: in order to add a new consequence, it should be sufficient to add a
+# NOTE: in order to add a new consequence, add a
 # new item into the KNOWN_CONSEQUENCES dict, specifying the asset field to be
 # used in multiplication and the function to be used for the aggregation. The
 # asset field may depend from the loss_type or the time_event, so these values
