@@ -31,6 +31,7 @@ import logging
 
 import django
 from django.test import Client
+from unittest import skipIf
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
@@ -341,6 +342,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
 
+    @skipIf(sys.platform == 'win32', 'Causing PermissionError on Windows')
     def test_check_fs_access(self):
         with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
             filename = f.name
