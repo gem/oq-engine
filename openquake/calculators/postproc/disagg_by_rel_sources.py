@@ -85,6 +85,24 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
         source_ids[imt].update(rel['src_id'])
     return source_ids
 
+def get_detMCE(src_mag_dist_eps, imts, prob_mce, sigma_by_src):
+    from scipy.interpolate import RegularGridInterpolator
+    from openquake.commonlib import datastore
+    
+    sigma_df = sigma_by_src.to_dframe()
+    sigma_df
+    breakpoint()
+    for i in imt:
+        for src in src_mag_dist_eps
+        for s, sig in zip(sigma_by_src.source_id, sigma_by_src.array):
+            df = src_mag_dist_eps[src_mag_dist_eps.src == s] 
+            df = src_mag_dist_eps[src_mag_dist_eps.imt == i] 
+            sig_interp = RegularGridInterpolator((sigma_by_src.mag, sigma_by_src.dist), sig)
+            sigma = sig_interp((mag,dist))
+
+
+    print(sigma)
+
 
 def middle(arr):
     """
@@ -94,7 +112,7 @@ def middle(arr):
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls):
+def main(dstore, csm, imts, imls, prob_mce):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -158,7 +176,7 @@ def main(dstore, csm, imts, imls):
     dic2 = dict(
         shape_descr=['source_id', 'mag', 'dist', 'imt'],
         source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
-    dstore['sigma_by_src'] = hdf5.ArrayWrapper(std, dic2)
+    dstore['sigma_by_src'] = sigma_by_src = hdf5.ArrayWrapper(std, dic2)
     
     mag_dist_eps = get_mag_dist_eps_df(aw, dstore)
     out = []
@@ -167,6 +185,7 @@ def main(dstore, csm, imts, imls):
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps = pandas.concat(out)
     logging.info('mag_dist_eps=\n%s', mag_dist_eps)
+    det = get_detMCE(mag_dist_eps, imts, prob_mce, sigma_by_src)
 
 
 if __name__ == '__main__':
