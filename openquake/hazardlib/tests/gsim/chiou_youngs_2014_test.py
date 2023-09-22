@@ -16,20 +16,26 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import copy
+import numpy as np
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect,
     ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan)
 
+from openquake.hazardlib.gsim.chiou_youngs_2014 import (
+    _get_delta_cm, get_magnitude_scaling)
+
+from openquake.hazardlib import const
+from openquake.hazardlib.imt import PGV, from_string
+from openquake.hazardlib.geo.line import Line
+from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.contexts import ContextMaker
+from openquake.hazardlib.site import Site, SiteCollection
+from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 from openquake.hazardlib.calc.gmf import ground_motion_fields
-from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGV
-from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture
-from openquake.hazardlib.tom import PoissonTOM
-from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.point import Point
 
 
 class ChiouYoungs2014TestCase(BaseGSIMTestCase):
@@ -149,36 +155,37 @@ class ChiouYoungs2014NearFaultTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.05)
 
 
+def _make_rupture():
+    # Create the rupture surface.
+    upper_seismogenic_depth = 3.
+    lower_seismogenic_depth = 15.
+    dip = 90.
+    mesh_spacing = 1.
+
+    fault_trace_start = Point(28.531397, 40.8790859336)
+    fault_trace_end = Point(28.85, 40.9)
+    fault_trace = Line([fault_trace_start, fault_trace_end])
+    default_arguments = {
+        'mag': 6.5,
+        'rake': 180.,
+        'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+        'hypocenter': Point(28.709146553353872, 40.890863701462457, 11.0),
+        'surface': SimpleFaultSurface.from_fault_data(
+            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+            dip=dip, mesh_spacing=mesh_spacing),
+        'rupture_slip_direction': 0.,
+        'occurrence_rate': 0.01,
+        'temporal_occurrence_model': PoissonTOM(50)
+    }
+    kwargs = default_arguments
+    rupture = ParametricProbabilisticRupture(**kwargs)
+    return rupture
+
+
 class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
 
-    def make_rupture(self):
-        # Create the rupture surface.
-        upper_seismogenic_depth = 3.
-        lower_seismogenic_depth = 15.
-        dip = 90.
-        mesh_spacing = 1.
-
-        fault_trace_start = Point(28.531397, 40.8790859336)
-        fault_trace_end = Point(28.85, 40.9)
-        fault_trace = Line([fault_trace_start, fault_trace_end])
-        default_arguments = {
-            'mag': 6.5,
-            'rake': 180.,
-            'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
-            'hypocenter': Point(28.709146553353872, 40.890863701462457, 11.0),
-            'surface': SimpleFaultSurface.from_fault_data(
-                fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-                dip=dip, mesh_spacing=mesh_spacing),
-            'rupture_slip_direction': 0.,
-            'occurrence_rate': 0.01,
-            'temporal_occurrence_model': PoissonTOM(50)
-        }
-        kwargs = default_arguments
-        rupture = ParametricProbabilisticRupture(**kwargs)
-        return rupture
-
     def test_mean_nearfault_distance_taper(self):
-        rupture = self.make_rupture()
+        rupture = _make_rupture()
         site1 = Site(location=Point(27.9, 41), vs30=1200.,
                      vs30measured=True, z1pt0=2.36, z2pt5=2.)
         site2 = Site(location=Point(28.1, 41), vs30=1200.,
@@ -191,3 +198,51 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
         gmf = fields[PGV()]
         self.assertAlmostEqual(2.27395, gmf[0], delta=1e-4)
         self.assertAlmostEqual(3.38409, gmf[1], delta=1e-4)
+
+
+class BooreEtAl2022StressParameter(BaseGSIMTestCase):
+
+    def test_stress_adjustment(self):
+
+        # Create GMMs
+        gmm_ori = ChiouYoungs2014()
+        gmm_adj = ChiouYoungs2014(stress_par_host=100, stress_par_target=120)
+
+        # Settings
+        imt_str = 'SA(0.1)'
+        imt = from_string('SA(0.1)')
+        rupa = _make_rupture()
+        rupb = copy.copy(rupa)
+        rups = [rupa, rupb]
+        site1 = Site(location=Point(27.9, 41), vs30=1200., vs30measured=True,
+                     z1pt0=25.0, z2pt5=1.)
+        mags_str = [f'{r.mag:.2f}' for r in rups]
+        oqp = {'imtls': {k: [] for k in [imt_str]}, 'mags': mags_str}
+
+        # ContextMaker for the ORIGINAL version of CY14
+        ctxm_ori = ContextMaker('fake', [gmm_ori], oqp)
+        ctxs_ori = ctxm_ori.get_ctxs(rups, SiteCollection([site1]))
+
+        # ContextMaker for the ADJUSTED version of CY14
+        ctxm_adj = ContextMaker('fake', [gmm_adj], oqp)
+        ctxs_adj = ctxm_adj.get_ctxs(rups, SiteCollection([site1]))
+
+        # Compute median values of ground motion
+        [mea_ori, _, _, _] = ctxm_ori.get_mean_stds(ctxs_ori)
+        [mea_adj, _, _, _] = ctxm_adj.get_mean_stds(ctxs_adj)
+
+        # Test delta_cm term
+        delta_cm = _get_delta_cm(gmm_adj.conf, imt)
+        expected_delta_cm = 0.149652555  # from hand-made calc
+        msg = f"The value of the computed delta_cm {delta_cm} is different \n"
+        msg += f"than the expected one {expected_delta_cm}"
+        self.assertAlmostEqual(delta_cm, expected_delta_cm, msg=msg)
+
+        # Test scaling term
+        C = gmm_ori.COEFFS[imt]
+        scalf_adj = get_magnitude_scaling(C, ctxs_adj[0].mag, delta_cm)
+        expected_scalf_adj = np.array([0.665226, 0.665226])
+        msg = f"The value of the scaling factor {scalf_adj} is different \n"
+        msg += f"than the expected one {expected_scalf_adj}"
+        np.testing.assert_almost_equal(
+            scalf_adj, expected_scalf_adj, err_msg=msg)
