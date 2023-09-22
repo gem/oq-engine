@@ -342,6 +342,8 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
 
+    # NOTE: on_same_fs is an internal feature developed in the context of
+    # hybridge, so it is not a problem skipping it on windows
     @skipIf(sys.platform == 'win32', 'Causing PermissionError on Windows')
     def test_check_fs_access(self):
         with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
