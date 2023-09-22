@@ -397,7 +397,6 @@ class DisaggregationCalculator(base.HazardCalculator):
         else:
             Z = 1  # only mean is supported
         out = output_dict(self.shapedic, oq.disagg_outputs, Z)
-        count = numpy.zeros(len(self.sitecol), U16)
         _disagg_trt = numpy.zeros(self.N, [(trt, float) for trt in self.trts])
         best_rlzs = self.datastore['best_rlzs'][:]  # (shape N, Z)
         for (s, z), mat8 in sorted(results.items()):
