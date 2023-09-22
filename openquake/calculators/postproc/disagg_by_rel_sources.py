@@ -41,9 +41,11 @@ def get_mag_dist_eps_df(mean_disagg_by_src, dstore):
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
     src_mutex = dstore['mutex_by_grp']['src_mutex']  
     dset = dstore['source_info']
-    grp_id = {src.decode('utf8'):grp for src, grp in zip(dset['source_id'],dset['grp_id'])}
+    grp = {}
+    for src_id, grp_id in zip(dset['source_id'], dset['grp_id']):
+        src = basename(src_id.decode('utf8'), '!;')
+        grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
-        
         for m, imt in enumerate(mean_disagg_by_src.imt):
             rates_mag = mean_disagg_by_src[s, :, :, :, m].sum((1, 2))
             rates_dst = mean_disagg_by_src[s, :, :, :, m].sum((0, 2))
@@ -51,12 +53,11 @@ def get_mag_dist_eps_df(mean_disagg_by_src, dstore):
             dic['src'].append(src)
             dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
-            
-            if not src_mutex[grp_id[src]]: # compute the mean
+            if not src_mutex[grp[src]]: # compute the mean
                 mmag = numpy.average(mag, weights=rates_mag)
                 mdst = numpy.average(dst, weights=rates_dst)
                 meps = numpy.average(eps, weights=rates_eps)
-            else:  # mode
+            else:  # compute the mode
                 mmag = mag[rates_mag.argmax()]
                 mdst = dst[rates_dst.argmax()]
                 meps = eps[rates_eps.argmax()]
@@ -166,6 +167,7 @@ def main(dstore, csm, imts, imls):
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps = pandas.concat(out)
     logging.info('mag_dist_eps=\n%s', mag_dist_eps)
+
 
 if __name__ == '__main__':
     sap.run(main)
