@@ -27,20 +27,23 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
 
 
-def get_mag_dist_eps_df(mean_disagg_by_src, operation):
+def get_mag_dist_eps_df(mean_disagg_by_src, dstore):
     """
     Compute mag, dist, eps using the rates as weights.
 
     :param mean_disagg_by_src: ArrayWrapper of rates (src, mag, dst, eps, imt)
-    :param operation: the string 'mean' or 'mode'
+    :param dstore: datastore object
     :returns: a DataFrame with columns src, imt, mag, dst, eps
     """
-    assert operation in {'mean', 'mode'}, operation
     mag = mean_disagg_by_src.mag
     dst = mean_disagg_by_src.dist
     eps = mean_disagg_by_src.eps
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
+    src_mutex = dstore['mutex_by_grp']['src_mutex']  
+    dset = dstore['source_info']
+    grp_id = {src.decode('utf8'):grp for src, grp in zip(dset['source_id'],dset['grp_id'])}
     for s, src in enumerate(mean_disagg_by_src.source_id):
+        
         for m, imt in enumerate(mean_disagg_by_src.imt):
             rates_mag = mean_disagg_by_src[s, :, :, :, m].sum((1, 2))
             rates_dst = mean_disagg_by_src[s, :, :, :, m].sum((0, 2))
@@ -48,7 +51,8 @@ def get_mag_dist_eps_df(mean_disagg_by_src, operation):
             dic['src'].append(src)
             dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
-            if operation == 'mean':
+            
+            if not src_mutex[grp_id[src]]: # compute the mean
                 mmag = numpy.average(mag, weights=rates_mag)
                 mdst = numpy.average(dst, weights=rates_dst)
                 meps = numpy.average(eps, weights=rates_eps)
@@ -148,13 +152,20 @@ def main(dstore, csm, imts, imls):
         eps=middle(eps), imt=imts, iml=imls)
     dstore.close()
     dstore.open('r+')
-    dstore['mean_disagg_by_src'] = hdf5.ArrayWrapper(rates, dic)
+    aw = hdf5.ArrayWrapper(rates, dic)
+    dstore['mean_disagg_by_src'] = aw
     dic2 = dict(
         shape_descr=['source_id', 'mag', 'dist', 'imt'],
         source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
     dstore['sigma_by_src'] = hdf5.ArrayWrapper(std, dic2)
-    return rel_ids_by_imt
-
+    
+    mag_dist_eps = get_mag_dist_eps_df(aw, dstore)
+    out = []
+    for imt, src_ids in rel_ids_by_imt.items():
+        df = mag_dist_eps[mag_dist_eps.imt == imt]
+        out.append(df[numpy.isin(df.src, src_ids)])
+    mag_dist_eps = pandas.concat(out)
+    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
 
 if __name__ == '__main__':
     sap.run(main)
