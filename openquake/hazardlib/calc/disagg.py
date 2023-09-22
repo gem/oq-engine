@@ -658,7 +658,7 @@ def disaggregation(
 
 def collect_std(disaggs):
     """
-    :returns: an array of shape (G, M', Ma, D)
+    :returns: an array of shape (Ma, D, M', G)
     """
     assert len(disaggs)
     gsims = set()
