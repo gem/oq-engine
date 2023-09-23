@@ -253,7 +253,7 @@ class GsimLogicTree(object):
                 for gsim in gsims:
                     for k, v in gsim.kwargs.items():
                         if k.endswith(('_file', '_table')):
-                            if v is None: # if volc_arc_file is None (Z16 gsim)
+                            if v is None: # if volc_arc_file is None
                                 pass
                             else:
                                 fname = os.path.join(dirname, v)
@@ -275,7 +275,7 @@ class GsimLogicTree(object):
                 gsim = valid.gsim(branch['uncertainty'], dirname)
                 for k, v in gsim.kwargs.items():
                     if k.endswith(('_file', '_table')):
-                        if v is None: # if volc_arc_file is None (Z16 gsim)
+                        if v is None: # if volc_arc_file is None
                            pass
                         else:
                             arr = numpy.asarray(dic[os.path.basename(v)][()])
