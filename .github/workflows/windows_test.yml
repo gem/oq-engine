@@ -132,8 +132,9 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd D:\a\oq-engine\oq-engine
-          set OQ_APPLICATION_MODE=public
-          .\openquake\server\manage.py test tests.test_public_mode
+          $Env:OQ_APPLICATION_MODE='public'
+          # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_public_mode
 
       - name: Run tests for the engine server in read-only mode to test installation
         if: always()
@@ -143,8 +144,9 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd D:\a\oq-engine\oq-engine
-          set OQ_APPLICATION_MODE=read_only
-          .\openquake\server\manage.py test tests.test_read_only_mode
+          $Env:OQ_APPLICATION_MODE='read_only'
+          # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_read_only_mode
 
       - name: Run tests for the engine server in aelo mode to test installation
         if: always()
@@ -154,6 +156,7 @@ jobs:
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           sleep 10
           cd D:\a\oq-engine\oq-engine
-          set OQ_APPLICATION_MODE=aelo
-          set OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg
-          .\openquake\server\manage.py test tests.test_aelo_mode
+          $Env:OQ_APPLICATION_MODE='aelo'
+          $Env:OQ_CONFIG_FILE='openquake\server\tests\data\openquake.cfg'
+          # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_aelo_mode
