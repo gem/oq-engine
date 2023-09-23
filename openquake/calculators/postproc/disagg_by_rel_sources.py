@@ -19,6 +19,7 @@
 import logging
 import numpy
 import pandas
+from scipy.interpolate import RegularGridInterpolator
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import basename
@@ -86,23 +87,21 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
     return source_ids
 
 
-def get_detMCE(src_mag_dist_eps, imts, prob_mce, sigma_by_src):
-    from scipy.interpolate import RegularGridInterpolator
-    from openquake.commonlib import datastore
-    
-    sigma_df = sigma_by_src.to_dframe()
-    sigma_df
-    breakpoint()
-    for i in imt:
-        for s, sig in zip(sigma_by_src.source_id, sigma_by_src.array):
-            df = src_mag_dist_eps[src_mag_dist_eps.src == s] 
-            df = src_mag_dist_eps[src_mag_dist_eps.imt == i] 
-            sig_interp = RegularGridInterpolator((
-                sigma_by_src.mag, sigma_by_src.dist), sig)
-            sigma = sig_interp((mag,dist))
+def get_detMCE(prob_mce, mag_dist_eps, sigma_by_src):
+    """
+    :returns: a dictionary (src, imt) -> MCE
+    """
+    MCE = {}  # src, imt -> MCE
+    srcidx = {src: i for i, src in enumerate(sigma_by_src.source_id)}
+    imtidx = {imt: i for i, imt in enumerate(sigma_by_src.imt)}
+    for src, imt, mag, dist, eps in mag_dist_eps:
+        m = imtidx[imt]
+        sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
+        sigma = RegularGridInterpolator((
+            sigma_by_src.mag, sigma_by_src.dist), sig)((mag, dist))
+        MCE[src, imt] = prob_mce[m] * numpy.exp(sigma) / numpy.exp(eps*sigma)
+    return MCE
 
-
-    print(sigma)
 
 
 def middle(arr):
@@ -186,7 +185,9 @@ def main(dstore, csm, imts, imls, prob_mce):
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps = pandas.concat(out)
     logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    # det = get_detMCE(mag_dist_eps, imts, prob_mce, sigma_by_src)
+    detMCE = get_detMCE(prob_mce, mag_dist_eps.to_numpy(), sigma_by_src)
+    for (src, imt), mce in detMCE.items():
+        logging.info('%s,%s: %s', src, imt, mce)
 
 
 if __name__ == '__main__':
