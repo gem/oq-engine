@@ -195,15 +195,22 @@ class Line(object):
 
         return Line(resampled_points)
 
-    def resample(self, sect_len: float, extend=True):
+    def resample(self, sect_len: float, orig_extremes=False):
         """
-        Implements a new method for resampling a line. This method compared
-        to the original one does not implicitly assume that the sampling
-        distance used for the digitizing the line is larger than the
-        `sect_len` provided as input.
+        Resample this line into sections.  The first point in the resampled
+        line corresponds to the first point in the original line.  Starting
+        from the first point in the original line, a line segment is defined as
+        the line connecting the last point in the resampled line and the next
+        point in the original line.
+
 
         :param float sect_len:
             The length of the section, in km.
+        :param bool original_extremes:
+            A boolean controlling the way in which the last point is added.
+            When true the first and last point match the original extremes.
+            When false the last point is at a `sect_len` distance from the
+            previous one, before or after the last point.
         :returns:
             A new line resampled into sections based on the given length.
         """
@@ -303,7 +310,7 @@ class Line(object):
             else:
 
                 # Adding one point
-                if tot_len - inc_len > 0.5 * sect_len and extend:
+                if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
 
                     # Adding more points still on the same segment
                     Δx = (txy[-1, 0] - txy[-2, 0])
@@ -326,6 +333,11 @@ class Line(object):
 
                     # Updating incremental length
                     inc_len += sect_len
+
+                else:
+
+                    # Adding last point
+                    rtra.append(Point(coo[-1, 0], coo[-1, 1], coo[-1, 2]))
 
                 break
 
