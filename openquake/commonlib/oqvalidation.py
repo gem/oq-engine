@@ -61,6 +61,14 @@ aggregate_by:
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
 
+aggregate_loss_curves_types:
+  Used for event-based risk and damage calculations, to estimate the aggregated
+  loss Exceedance Probability (EP) only or to also calculate (if possible) the
+  Occurrence Exceedance Probability (OEP) and/or the Aggregate Exceedance
+  Probability (AEP).
+  Example: *aggregate_loss_curves_types = ,_oep,_aep*.
+  Default: ,_oep,_aep
+
 reaggregate_by:
   Used to perform additional aggregations in risk calculations. Takes in
   input a proper subset of the tags in the aggregate_by option.
@@ -450,10 +458,10 @@ max_aggregations:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
-max_gmvs_per_chunk:
+max_gmvs_chunk:
   Maximum number of rows of the gmf_data table per task.
-  Example: *max_gmvs_per_chunk = 200_000*
-  Default: 50_0000
+  Example: *max_gmvs_chunk = 200_000*
+  Default: 100_000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -903,6 +911,13 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_loss_curves_types = valid.Param(
+        valid.Choice('',
+                     ',_oep',
+                     ',_aep',
+                     ',_oep,_aep',
+                     ',_aep,_oep'),
+        ',_oep,_aep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
@@ -979,7 +994,7 @@ class OqParam(valid.ParamSet):
     max = valid.Param(valid.boolean, False)
     max_aggregations = valid.Param(valid.positivefloat, 100_000)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_per_chunk = valid.Param(valid.positiveint, 50_000) # for 2GB limit
+    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000) # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)

@@ -1,6 +1,12 @@
   [Marco Pagani]
   * Fixed a bug in the code that resamples a line
 
+  [Paolo Tormene]
+  * Upgraded requirements: Shapely to version 2.0.1 and Pandas to version 2.0.3
+
+  [Michele Simionato, Paolo Tormene]
+  * Implemented AEP, OEP curves
+
   [Michele Simionato]
   * Internal: changed events.year to be in the range 1..eff_time
   * Enhanced `oq engine --delete-calculation` to remove calculation files

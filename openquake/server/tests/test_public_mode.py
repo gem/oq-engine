@@ -27,9 +27,11 @@ import gzip
 import tempfile
 import string
 import random
+import logging
 
 import django
 from django.test import Client
+from unittest import skipIf
 from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
@@ -229,9 +231,12 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         print(resp.content.decode('utf8'))
 
     def test_err_1(self):
+        # NOTE: avoiding to print the expected traceback
+        logging.disable(logging.CRITICAL)
         # the rupture XML file has a syntax error
         job_id = self.postzip('archive_err_1.zip')['job_id']
         self.wait()
+        logging.disable(logging.NOTSET)
 
         # there is no datastore since the calculation did not start
         resp = self.c.get('/v1/calc/%s/datastore' % job_id)
@@ -247,14 +252,20 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.assertFalse(job_id in job_ids)
 
     def test_err_2(self):
+        # NOTE: avoiding to print the expected traceback
+        logging.disable(logging.CRITICAL)
         # the file logic-tree-source-model.xml is missing
         resp = self.postzip('archive_err_2.zip')
+        logging.disable(logging.NOTSET)
         self.assertIn('No such file', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
 
     def test_err_3(self):
+        # NOTE: avoiding to print the expected traceback
+        logging.disable(logging.CRITICAL)
         # there is no file job.ini, job_hazard.ini or job_risk.ini
         resp = self.postzip('archive_err_3.zip')
+        logging.disable(logging.NOTSET)
         self.assertIn('There are no .ini files in the archive', resp['tb_str'])
         self.post('%s/remove' % resp['job_id'])
 
@@ -331,6 +342,9 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.assertEqual(resp.content,
                          b'Please provide the "xml_text" parameter')
 
+    # NOTE: on_same_fs is an internal feature developed in the context of
+    # hybridge, so it is not a problem skipping it on windows
+    @skipIf(sys.platform == 'win32', 'Causing PermissionError on Windows')
     def test_check_fs_access(self):
         with tempfile.NamedTemporaryFile(buffering=0, prefix='oq-test_') as f:
             filename = f.name
