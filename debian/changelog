@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed a bug in the code that resamples a line
+
   [Michele Simionato]
   * Internal: changed events.year to be in the range 1..eff_time
   * Enhanced `oq engine --delete-calculation` to remove calculation files
