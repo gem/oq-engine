@@ -85,23 +85,37 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
         source_ids[imt].update(rel['src_id'])
     return source_ids
 
-def get_detMCE(src_mag_dist_eps, imts, prob_mce, sigma_by_src):
-    from scipy.interpolate import RegularGridInterpolator
-    from openquake.commonlib import datastore
+def get_mce(src_mag_dist_eps, imts, prob_mce, sigma_by_src, DLLs):
     
-    sigma_df = sigma_by_src.to_dframe()
-    sigma_df
-    breakpoint()
-    for i in imt:
-        for src in src_mag_dist_eps
-        for s, sig in zip(sigma_by_src.source_id, sigma_by_src.array):
-            df = src_mag_dist_eps[src_mag_dist_eps.src == s] 
-            df = src_mag_dist_eps[src_mag_dist_eps.imt == i] 
-            sig_interp = RegularGridInterpolator((sigma_by_src.mag, sigma_by_src.dist), sig)
-            sigma = sig_interp((mag,dist))
+    from scipy.interpolate import RegularGridInterpolator
+    import pandas as pd
+    #from openquake.commonlib import datastore
+    
+    det_mce, det_imt, mce = [], [], []
+    
+    for imt in imts:
+        det_imt_src = []
+        for src, mag, dist, eps, i in zip(src_mag_dist_eps.src, 
+                                          src_mag_dist_eps.mag, src_mag_dist_eps.dst, 
+                                          src_mag_dist_eps.eps, src_mag_dist_eps.imt):
+            if i == imt:
+                for s, sig in zip(sigma_by_src.source_id, sigma_by_src.array):
+                    if src == s:
+                        sig_interp = RegularGridInterpolator((sigma_by_src.mag, sigma_by_src.dist), sig)
+                        sigma = sig_interp((mag,dist))
 
+                    xx = imts.index(i)
+                    det_imt_src.append(prob_mce[xx] * numpy.exp(sigma[xx])/numpy.exp(eps*sigma[xx]))
+                    
+        det_imt.append(numpy.max(det_imt_src))
+        det_mce.append(numpy.max([numpy.max(det_imt_src),DLLs[xx]]))
+        mce.append(numpy.min([prob_mce[xx],numpy.max([numpy.max(det_imt_src),DLLs[xx]])]))
+        
+    data = {'imt': imts, 'prob_mce': prob_mce, 'det': det_imt, 'dlls': DLLs,  'det_mce': det_mce, 'mce': mce}
+    mce_all =  pd.DataFrame(data)
 
-    print(sigma)
+    
+    return mce_all
 
 
 def middle(arr):
@@ -112,7 +126,7 @@ def middle(arr):
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls, prob_mce):
+def main(dstore, csm, imts, imls, prob_mce, DLLs):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -185,7 +199,7 @@ def main(dstore, csm, imts, imls, prob_mce):
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps = pandas.concat(out)
     logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    det = get_detMCE(mag_dist_eps, imts, prob_mce, sigma_by_src)
+    mce_all = get_mce(mag_dist_eps, imts, prob_mce, sigma_by_src,DLLs)
 
 
 if __name__ == '__main__':
