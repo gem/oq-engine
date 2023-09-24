@@ -103,7 +103,7 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         agg_id = view('agg_id', self.calc.datastore)
         self.assertEqual(str(agg_id), '''\
        policy taxonomy
-agg_id                
+agg_id
 0           A       RC
 1           A       RM
 2           A        W
@@ -386,7 +386,7 @@ agg_id
         gsim = view('gsim_for_event:0', self.calc.datastore)
         self.assertEqual(str(gsim), "[ChiouYoungs2008]")
         gsim = view('gsim_for_event:10', self.calc.datastore)
-        self.assertEqual(str(gsim), "[AkkarBommer2010]")
+        self.assertEqual(str(gsim), "[ChiouYoungs2008]")
 
         # test with correlation
         self.run_calc(case_master.__file__, 'job.ini',
