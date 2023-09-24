@@ -334,7 +334,7 @@ class Line(object):
                     # Updating incremental length
                     inc_len += sect_len
 
-                else:
+                elif orig_extremes:
 
                     # Adding last point
                     rtra.append(Point(coo[-1, 0], coo[-1, 1], coo[-1, 2]))
