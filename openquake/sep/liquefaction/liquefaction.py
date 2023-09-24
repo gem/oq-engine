@@ -612,13 +612,9 @@ def todorovic_silva_2022_nonparametric_general(
         Mean annual precipitation, measured in mm
 
     :returns:
-        out_class: ndarray of len(sitemodel)  
-            Returns binary output 0 or 1, i.e., liquefaction nonoccurrence or
-            liquefaction occurrence occurrence.
-        out_prob: ndarray of len(sitemodel)
-            Returns probability of belonging to class 1.
-        d32b421
-
+        out_class: Returns binary output 0 or 1, i.e., liquefaction nonoccurrence 
+                   or liquefaction occurrence occurrence.
+        out_prob: Returns probability of belonging to class 1.
     """
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
@@ -629,8 +625,9 @@ def todorovic_silva_2022_nonparametric_general(
         file = gzipped_file.read()
         providers = ['CPUExecutionProvider', 'AzureExecutionProvider']
         session = onnxruntime.InferenceSession(file, providers=providers)
-        out_class = session.run(None, {"X": matrix})[0]
-        out_prob = [_[1] for _ in session.run(None, {"X":matrix})[1]]
+        results = session.run(None, {"X": matrix})
+        out_class = results[0]
+        out_prob = [p[1] for p in results[1]]
         return out_class, out_prob
 
 
