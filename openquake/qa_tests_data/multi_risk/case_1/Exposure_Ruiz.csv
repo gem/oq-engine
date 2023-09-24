@@ -1,0 +1,374 @@
+id,lon,lat,taxonomy,number,structural,night,id_2,name_2,id_1,NAME_1
+a_227,-75.87657,4.407,Moderate_roof,1,10000,1,AREA # 76736,Sevilla,AREA # 76,Valle del Cauca
+a_325,-75.88047,4.41034,Heavy_roof,1,20000,7,AREA # 76895,Zarzal,AREA # 76,Valle del Cauca
+a_1107,-75.84704,4.4377,Heavy_roof,1,20000,1,AREA # 63401,La Tebaida,AREA # 63,Quindio
+a_1337,-75.83253,4.446,Weak_roof,1,5000,5,AREA # 63401,La Tebaida,AREA # 63,Quindio
+a_1428,-75.75868,4.44984,Heavy_roof,1,20000,5,AREA # 63401,La Tebaida,AREA # 63,Quindio
+a_18541,-74.86636,4.40959,Weak_roof,1,5000,2,AREA # 73200,Coello,AREA # 73,Tolima
+a_18742,-74.84055,4.42145,Weak_roof,1,5000,5,AREA # 73200,Coello,AREA # 73,Tolima
+a_19073,-74.8785,4.43978,Slab_roof,1,20000,5,AREA # 73200,Coello,AREA # 73,Tolima
+a_19817,-74.89802,4.47923,Moderate_roof,1,10000,4,AREA # 73200,Coello,AREA # 73,Tolima
+a_18546,-74.46376,4.41011,Weak_roof,1,5000,5,AREA # 25878,Viotá,AREA # 25,Cundinamarca
+a_19534,-74.51853,4.46496,Moderate_roof,1,10000,3,AREA # 25878,Viotá,AREA # 25,Cundinamarca
+a_1996,-76.05601,4.46998,Slab_roof,1,20000,7,AREA # 76403,La Victoria,AREA # 76,Valle del Cauca
+a_2877,-75.92017,4.50422,Slab_roof,1,20000,4,AREA # 76403,La Victoria,AREA # 76,Valle del Cauca
+a_3014,-75.96242,4.51128,Weak_roof,1,5000,1,AREA # 76403,La Victoria,AREA # 76,Valle del Cauca
+a_3042,-76.02475,4.51294,Moderate_roof,1,10000,4,AREA # 76403,La Victoria,AREA # 76,Valle del Cauca
+a_1734,-75.68482,4.46038,Slab_roof,1,20000,7,AREA # 63130,Calarca,AREA # 63,Quindio
+a_3314,-75.85662,4.52699,Weak_roof,1,5000,6,AREA # 63470,Montenegro,AREA # 63,Quindio
+a_3447,-75.77817,4.53495,Weak_roof,1,5000,3,AREA # 63470,Montenegro,AREA # 63,Quindio
+a_3952,-75.81518,4.56568,Slab_roof,1,20000,4,AREA # 63470,Montenegro,AREA # 63,Quindio
+a_616,-75.4004,4.4212,Moderate_roof,1,10000,6,AREA # 73124,Cajamarca,AREA # 73,Tolima
+a_649,-75.4546,4.42226,Moderate_roof,1,10000,6,AREA # 73124,Cajamarca,AREA # 73,Tolima
+a_816,-75.39945,4.42783,Slab_roof,1,20000,4,AREA # 73124,Cajamarca,AREA # 73,Tolima
+a_1041,-75.37217,4.43519,Heavy_roof,1,20000,1,AREA # 73124,Cajamarca,AREA # 73,Tolima
+a_1762,-75.41933,4.46125,Moderate_roof,1,10000,2,AREA # 73124,Cajamarca,AREA # 73,Tolima
+a_3124,-75.41933,4.46125,Moderate_roof,1,10000,6,AREA # 73124,Cajamarca,AREA # 73,Tolima
+a_3702,-75.51547,4.5502,Weak_roof,1,5000,4,AREA # 73124,Cajamarca,AREA # 73,Tolima
+a_1147,-75.75776,4.4392,Slab_roof,1,20000,7,AREA # 63001,Armenia,AREA # 63,Quindio
+a_1318,-75.75731,4.44531,Weak_roof,1,5000,5,AREA # 63001,Armenia,AREA # 63,Quindio
+a_1761,-75.71425,4.46122,Slab_roof,1,20000,1,AREA # 63001,Armenia,AREA # 63,Quindio
+a_3350,-75.76601,4.52926,Weak_roof,1,5000,5,AREA # 63001,Armenia,AREA # 63,Quindio
+a_3443,-75.76179,4.53459,Weak_roof,1,5000,5,AREA # 63001,Armenia,AREA # 63,Quindio
+a_3513,-75.73058,4.53919,Moderate_roof,1,10000,7,AREA # 63001,Armenia,AREA # 63,Quindio
+a_4160,-76.06803,4.58124,Moderate_roof,1,10000,6,AREA # 76400,La Unión,AREA # 76,Valle del Cauca
+a_18569,-74.59387,4.41119,Heavy_roof,1,20000,6,AREA # 25815,Tocaima,AREA # 25,Cundinamarca
+a_19255,-74.66526,4.44897,Moderate_roof,1,10000,5,AREA # 25815,Tocaima,AREA # 25,Cundinamarca
+a_19262,-74.66599,4.44937,Moderate_roof,1,10000,2,AREA # 25815,Tocaima,AREA # 25,Cundinamarca
+a_19656,-74.67148,4.47082,Moderate_roof,1,10000,1,AREA # 25815,Tocaima,AREA # 25,Cundinamarca
+a_20287,-74.66627,4.5125,Heavy_roof,1,20000,5,AREA # 25815,Tocaima,AREA # 25,Cundinamarca
+a_20921,-74.46335,4.5514,Weak_roof,1,5000,4,AREA # 25245,El Colegio,AREA # 25,Cundinamarca
+a_20649,-74.58464,4.53605,Slab_roof,1,20000,1,AREA # 25599,Apulo,AREA # 25,Cundinamarca
+a_21081,-74.60469,4.55864,Weak_roof,1,5000,3,AREA # 25599,Apulo,AREA # 25,Cundinamarca
+a_21939,-74.59258,4.61572,Slab_roof,1,20000,2,AREA # 25599,Apulo,AREA # 25,Cundinamarca
+a_18650,-74.95999,4.41692,Moderate_roof,1,10000,6,AREA # 73547,Piedras,AREA # 73,Tolima
+a_19538,-74.93919,4.46523,Weak_roof,1,5000,4,AREA # 73547,Piedras,AREA # 73,Tolima
+a_19743,-74.9553,4.47535,Slab_roof,1,20000,7,AREA # 73547,Piedras,AREA # 73,Tolima
+a_19907,-74.95976,4.48407,Slab_roof,1,20000,2,AREA # 73547,Piedras,AREA # 73,Tolima
+a_20278,-74.83646,4.51168,Heavy_roof,1,20000,7,AREA # 73547,Piedras,AREA # 73,Tolima
+a_21267,-74.87248,4.56663,Slab_roof,1,20000,5,AREA # 73547,Piedras,AREA # 73,Tolima
+a_21302,-74.87241,4.56802,Slab_roof,1,20000,1,AREA # 73547,Piedras,AREA # 73,Tolima
+a_21327,-74.86978,4.56935,Slab_roof,1,20000,6,AREA # 73547,Piedras,AREA # 73,Tolima
+a_21348,-74.89759,4.57085,Slab_roof,1,20000,6,AREA # 73547,Piedras,AREA # 73,Tolima
+a_20291,-74.51259,4.51281,Weak_roof,1,5000,4,AREA # 25035,Anapoima,AREA # 25,Cundinamarca
+a_20963,-74.50841,4.55351,Weak_roof,1,5000,3,AREA # 25035,Anapoima,AREA # 25,Cundinamarca
+a_20708,-74.69455,4.53957,Slab_roof,1,20000,3,AREA # 25368,Jerusalén,AREA # 25,Cundinamarca
+a_4163,-75.75728,4.58132,Slab_roof,1,20000,5,AREA # 63594,Quimbaya,AREA # 63,Quindio
+a_4407,-75.76887,4.5979,Slab_roof,1,20000,3,AREA # 63594,Quimbaya,AREA # 63,Quindio
+a_4476,-75.71502,4.60047,Slab_roof,1,20000,2,AREA # 63594,Quimbaya,AREA # 63,Quindio
+a_4739,-75.78267,4.61099,Heavy_roof,1,20000,5,AREA # 63594,Quimbaya,AREA # 63,Quindio
+a_5295,-75.76966,4.63213,Slab_roof,1,20000,4,AREA # 63594,Quimbaya,AREA # 63,Quindio
+a_5372,-75.80845,4.6349,Heavy_roof,1,20000,1,AREA # 63594,Quimbaya,AREA # 63,Quindio
+a_4385,-75.9906,4.59711,Slab_roof,1,20000,2,AREA # 76497,Obando,AREA # 76,Valle del Cauca
+a_5241,-75.92804,4.63012,Slab_roof,1,20000,5,AREA # 76497,Obando,AREA # 76,Valle del Cauca
+a_5547,-75.99175,4.64271,Slab_roof,1,20000,5,AREA # 76497,Obando,AREA # 76,Valle del Cauca
+a_4223,-75.66688,4.58514,Slab_roof,1,20000,5,AREA # 63190,Circasia,AREA # 63,Quindio
+a_5277,-75.6225,4.63157,Heavy_roof,1,20000,4,AREA # 63190,Circasia,AREA # 63,Quindio
+a_136,-75.16455,4.40406,Moderate_roof,1,10000,5,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_1855,-75.25854,4.46431,Heavy_roof,1,20000,5,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_2038,-75.18183,4.47134,Moderate_roof,1,10000,7,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_2127,-75.27445,4.47418,Slab_roof,1,20000,2,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_2432,-75.25732,4.48651,Heavy_roof,1,20000,1,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_2482,-75.25168,4.48844,Weak_roof,1,5000,6,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_3320,-75.31515,4.52727,Slab_roof,1,20000,1,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_3332,-75.16572,4.52789,Moderate_roof,1,10000,6,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_3504,-75.31622,4.53871,Moderate_roof,1,10000,6,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_3627,-75.33026,4.54521,Slab_roof,1,20000,4,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_4204,-75.39363,4.58388,Moderate_roof,1,10000,6,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_5494,-75.40904,4.64048,Slab_roof,1,20000,6,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_5973,-75.38309,4.67447,Slab_roof,1,20000,1,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_19564,-75.12832,4.46641,Heavy_roof,1,20000,7,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_19706,-75.10713,4.47343,Slab_roof,1,20000,4,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_20068,-75.09662,4.49461,Weak_roof,1,5000,4,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_20517,-75.0917,4.52742,Heavy_roof,1,20000,1,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_20899,-75.1124,4.54988,Moderate_roof,1,10000,1,AREA # 73001,Ibagué,AREA # 73,Tolima
+a_20570,-75.04182,4.53055,Moderate_roof,1,10000,1,AREA # 73026,Alvarado,AREA # 73,Tolima
+a_20738,-74.95443,4.54097,Moderate_roof,1,10000,7,AREA # 73026,Alvarado,AREA # 73,Tolima
+a_20771,-74.97739,4.54294,Heavy_roof,1,20000,1,AREA # 73026,Alvarado,AREA # 73,Tolima
+a_21337,-74.99832,4.57003,Weak_roof,1,5000,1,AREA # 73026,Alvarado,AREA # 73,Tolima
+a_21654,-74.91925,4.58956,Weak_roof,1,5000,7,AREA # 73026,Alvarado,AREA # 73,Tolima
+a_22389,-74.98914,4.64722,Heavy_roof,1,20000,6,AREA # 73026,Alvarado,AREA # 73,Tolima
+a_22973,-75.01278,4.68101,Heavy_roof,1,20000,6,AREA # 73026,Alvarado,AREA # 73,Tolima
+a_5570,-76.13329,4.64405,Moderate_roof,1,10000,7,AREA # 76863,Versalles,AREA # 76,Valle del Cauca
+a_4571,-75.45192,4.60355,Heavy_roof,1,20000,7,AREA # 63690,Salento,AREA # 63,Quindio
+a_5777,-75.45485,4.65612,Heavy_roof,1,20000,6,AREA # 63690,Salento,AREA # 63,Quindio
+a_4823,-75.18217,4.61435,Heavy_roof,1,20000,2,AREA # 73043,Anzoátegui,AREA # 73,Tolima
+a_5192,-75.24385,4.6282,Weak_roof,1,5000,2,AREA # 73043,Anzoátegui,AREA # 73,Tolima
+a_6079,-75.30795,4.68274,Slab_roof,1,20000,2,AREA # 73043,Anzoátegui,AREA # 73,Tolima
+a_21354,-75.1179,4.5713,Heavy_roof,1,20000,4,AREA # 73043,Anzoátegui,AREA # 73,Tolima
+a_21580,-75.14194,4.5846,Slab_roof,1,20000,2,AREA # 73043,Anzoátegui,AREA # 73,Tolima
+a_21646,-75.1421,4.58872,Heavy_roof,1,20000,2,AREA # 73043,Anzoátegui,AREA # 73,Tolima
+a_22050,-75.11496,4.62392,Moderate_roof,1,10000,4,AREA # 73043,Anzoátegui,AREA # 73,Tolima
+a_5871,-75.76448,4.66548,Weak_roof,1,5000,2,AREA # 76020,Alcalá,AREA # 76,Valle del Cauca
+a_6065,-75.75759,4.68202,Slab_roof,1,20000,1,AREA # 76020,Alcalá,AREA # 76,Valle del Cauca
+a_6146,-75.81952,4.68662,Weak_roof,1,5000,6,AREA # 76020,Alcalá,AREA # 76,Valle del Cauca
+a_6171,-75.78247,4.68824,Moderate_roof,1,10000,2,AREA # 76020,Alcalá,AREA # 76,Valle del Cauca
+a_6650,-75.82135,4.72165,Heavy_roof,1,20000,2,AREA # 76845,Ulloa,AREA # 76,Valle del Cauca
+a_22482,-74.72508,4.65267,Moderate_roof,1,10000,3,AREA # 25580,Pulí,AREA # 25,Cundinamarca
+a_22594,-74.7216,4.65907,Moderate_roof,1,10000,1,AREA # 25580,Pulí,AREA # 25,Cundinamarca
+a_23574,-74.74016,4.71457,Heavy_roof,1,20000,1,AREA # 25580,Pulí,AREA # 25,Cundinamarca
+a_23848,-74.7448,4.72944,Heavy_roof,1,20000,2,AREA # 25580,Pulí,AREA # 25,Cundinamarca
+a_23397,-74.47975,4.70618,Heavy_roof,1,20000,4,AREA # 25123,Cachipay,AREA # 25,Cundinamarca
+a_23806,-74.47965,4.72741,Heavy_roof,1,20000,5,AREA # 25123,Cachipay,AREA # 25,Cundinamarca
+a_22506,-74.58438,4.65367,Heavy_roof,1,20000,1,AREA # 25596,Quipile,AREA # 25,Cundinamarca
+a_22740,-74.58331,4.66707,Slab_roof,1,20000,6,AREA # 25596,Quipile,AREA # 25,Cundinamarca
+a_23828,-74.54531,4.72881,Moderate_roof,1,10000,6,AREA # 25596,Quipile,AREA # 25,Cundinamarca
+a_24216,-74.55775,4.75162,Weak_roof,1,5000,6,AREA # 25596,Quipile,AREA # 25,Cundinamarca
+a_5863,-75.92794,4.6645,Weak_roof,1,5000,6,AREA # 76147,Cartago,AREA # 76,Valle del Cauca
+a_6357,-75.9307,4.70191,Weak_roof,1,5000,6,AREA # 76147,Cartago,AREA # 76,Valle del Cauca
+a_6479,-75.31225,4.71126,Moderate_roof,1,10000,2,AREA # 73686,Santa Isabel,AREA # 73,Tolima
+a_22192,-74.88141,4.63407,Moderate_roof,1,10000,3,AREA # 73861,Venadillo,AREA # 73,Tolima
+a_22641,-74.87714,4.66148,Heavy_roof,1,20000,3,AREA # 73861,Venadillo,AREA # 73,Tolima
+a_23553,-74.98342,4.71356,Slab_roof,1,20000,5,AREA # 73861,Venadillo,AREA # 73,Tolima
+a_22670,-74.78671,4.66335,Moderate_roof,1,10000,4,AREA # 25086,Beltrán,AREA # 25,Cundinamarca
+a_24112,-74.46659,4.74546,Moderate_roof,1,10000,1,AREA # 25040,Anolaima,AREA # 25,Cundinamarca
+a_24190,-74.48163,4.74965,Slab_roof,1,20000,2,AREA # 25040,Anolaima,AREA # 25,Cundinamarca
+a_24272,-74.50312,4.75522,Slab_roof,1,20000,4,AREA # 25040,Anolaima,AREA # 25,Cundinamarca
+a_8747,-76.01818,4.81572,Moderate_roof,1,10000,7,AREA # 76041,Ansermanuevo,AREA # 76,Valle del Cauca
+a_9574,-75.92429,4.85744,Heavy_roof,1,20000,4,AREA # 76041,Ansermanuevo,AREA # 76,Valle del Cauca
+a_9603,-76.01072,4.85874,Moderate_roof,1,10000,5,AREA # 76041,Ansermanuevo,AREA # 76,Valle del Cauca
+a_9066,-75.69465,4.83155,Moderate_roof,1,10000,7,AREA # 66170,Dosquebradas,AREA # 66,Risaralda
+a_9477,-75.6401,4.85262,Weak_roof,1,5000,2,AREA # 66170,Dosquebradas,AREA # 66,Risaralda
+a_9789,-75.66801,4.86816,Weak_roof,1,5000,2,AREA # 66170,Dosquebradas,AREA # 66,Risaralda
+a_6653,-75.69576,4.72171,Slab_roof,1,20000,1,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_6700,-75.79759,4.72538,Slab_roof,1,20000,2,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_6927,-75.67189,4.73969,Weak_roof,1,5000,6,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_6963,-75.80212,4.74146,Weak_roof,1,5000,5,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7121,-75.7182,4.75024,Slab_roof,1,20000,7,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7234,-75.74512,4.75407,Slab_roof,1,20000,4,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7244,-75.60576,4.75426,Slab_roof,1,20000,4,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7359,-75.70151,4.75759,Slab_roof,1,20000,7,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7384,-75.74548,4.75847,Slab_roof,1,20000,6,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7490,-75.90754,4.76168,Weak_roof,1,5000,5,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7562,-75.70271,4.76323,Weak_roof,1,5000,5,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7699,-75.89485,4.76707,Weak_roof,1,5000,2,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7857,-75.7098,4.77283,Weak_roof,1,5000,2,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7866,-75.91228,4.77325,Moderate_roof,1,10000,2,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_7951,-75.70481,4.77703,Slab_roof,1,20000,1,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_8187,-75.80479,4.78769,Moderate_roof,1,10000,6,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_8253,-75.7284,4.79062,Slab_roof,1,20000,7,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_8457,-75.79299,4.80206,Slab_roof,1,20000,1,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_8785,-75.85138,4.81763,Moderate_roof,1,10000,5,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_8865,-75.83695,4.82149,Slab_roof,1,20000,4,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_9221,-75.77467,4.84004,Slab_roof,1,20000,6,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_9456,-75.86902,4.85211,Heavy_roof,1,20000,7,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_10261,-75.81774,4.89448,Moderate_roof,1,10000,3,AREA # 66001,Pereira,AREA # 66,Risaralda
+a_8287,-75.16108,4.79231,Moderate_roof,1,10000,2,AREA # 73461,Murillo,AREA # 73,Tolima
+a_8554,-75.21959,4.8076,Moderate_roof,1,10000,5,AREA # 73461,Murillo,AREA # 73,Tolima
+a_8692,-75.21985,4.8138,Moderate_roof,1,10000,7,AREA # 73461,Murillo,AREA # 73,Tolima
+a_24806,-75.12834,4.79797,Slab_roof,1,20000,4,AREA # 73461,Murillo,AREA # 73,Tolima
+a_25845,-75.14467,4.8782,Slab_roof,1,20000,4,AREA # 73461,Murillo,AREA # 73,Tolima
+a_25513,-74.51615,4.8513,Slab_roof,1,20000,4,AREA # 25095,Bituima,AREA # 25,Cundinamarca
+a_25921,-74.5256,4.88467,Slab_roof,1,20000,5,AREA # 25095,Bituima,AREA # 25,Cundinamarca
+a_26407,-74.97754,4.92723,Moderate_roof,1,10000,7,AREA # 73408,Lérida,AREA # 73,Tolima
+a_6821,-75.58126,4.73322,Moderate_roof,1,10000,6,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_9064,-75.44041,4.83143,Slab_roof,1,20000,1,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_9378,-75.61623,4.84743,Heavy_roof,1,20000,4,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_9414,-75.63191,4.84979,Moderate_roof,1,10000,4,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_9643,-75.62493,4.86075,Weak_roof,1,5000,3,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_9732,-75.51442,4.86473,Weak_roof,1,5000,7,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_9903,-75.60069,4.8741,Weak_roof,1,5000,1,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_10439,-75.58405,4.90715,Heavy_roof,1,20000,5,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_11075,-75.64715,4.94936,Slab_roof,1,20000,2,AREA # 66682,Santa Rosa de Cabal,AREA # 66,Risaralda
+a_24774,-74.59872,4.79512,Heavy_roof,1,20000,7,AREA # 25662,San Juan de Río Seco,AREA # 25,Cundinamarca
+a_25331,-74.62788,4.83534,Heavy_roof,1,20000,7,AREA # 25662,San Juan de Río Seco,AREA # 25,Cundinamarca
+a_25855,-74.70297,4.87887,Slab_roof,1,20000,3,AREA # 25662,San Juan de Río Seco,AREA # 25,Cundinamarca
+a_24868,-75.0969,4.80328,Weak_roof,1,5000,3,AREA # 73411,Líbano,AREA # 73,Tolima
+a_25339,-75.07032,4.83636,Weak_roof,1,5000,3,AREA # 73411,Líbano,AREA # 73,Tolima
+a_25374,-75.09535,4.83999,Slab_roof,1,20000,4,AREA # 73411,Líbano,AREA # 73,Tolima
+a_25646,-75.0873,4.8623,Moderate_roof,1,10000,6,AREA # 73411,Líbano,AREA # 73,Tolima
+a_25647,-75.00782,4.86231,Slab_roof,1,20000,6,AREA # 73411,Líbano,AREA # 73,Tolima
+a_25665,-74.98264,4.86382,Moderate_roof,1,10000,2,AREA # 73411,Líbano,AREA # 73,Tolima
+a_26016,-74.99267,4.89195,Moderate_roof,1,10000,6,AREA # 73411,Líbano,AREA # 73,Tolima
+a_26200,-75.0754,4.90773,Slab_roof,1,20000,3,AREA # 73411,Líbano,AREA # 73,Tolima
+a_26566,-75.07612,4.94324,Heavy_roof,1,20000,1,AREA # 73411,Líbano,AREA # 73,Tolima
+a_27289,-75.04623,4.9832,Heavy_roof,1,20000,6,AREA # 73411,Líbano,AREA # 73,Tolima
+a_26535,-74.58212,4.94046,Slab_roof,1,20000,6,AREA # 25168,Chaguaní,AREA # 25,Cundinamarca
+a_27580,-74.56516,4.99463,Weak_roof,1,5000,4,AREA # 25168,Chaguaní,AREA # 25,Cundinamarca
+a_26555,-74.46585,4.94246,Moderate_roof,1,10000,1,AREA # 25718,Sasaima,AREA # 25,Cundinamarca
+a_9553,-76.03991,4.85644,Heavy_roof,1,20000,2,AREA # 76243,El Águila,AREA # 76,Valle del Cauca
+a_10715,-76.07276,4.9246,Weak_roof,1,5000,7,AREA # 76243,El Águila,AREA # 76,Valle del Cauca
+a_11688,-75.97817,4.99315,Slab_roof,1,20000,7,AREA # 66383,La Celia,AREA # 66,Risaralda
+a_10042,-75.76151,4.88233,Heavy_roof,1,20000,3,AREA # 66440,Marsella,AREA # 66,Risaralda
+a_10588,-75.75331,4.91547,Slab_roof,1,20000,2,AREA # 66440,Marsella,AREA # 66,Risaralda
+a_10642,-75.74367,4.91919,Weak_roof,1,5000,2,AREA # 66440,Marsella,AREA # 66,Risaralda
+a_10764,-75.7358,4.92821,Moderate_roof,1,10000,2,AREA # 66440,Marsella,AREA # 66,Risaralda
+a_10259,-75.44053,4.89428,Weak_roof,1,5000,5,AREA # 17873,Villamaría,AREA # 17,Caldas
+a_11058,-75.43786,4.94799,Weak_roof,1,5000,2,AREA # 17873,Villamaría,AREA # 17,Caldas
+a_11188,-75.50579,4.959,Heavy_roof,1,20000,6,AREA # 17873,Villamaría,AREA # 17,Caldas
+a_11363,-75.54919,4.97085,Weak_roof,1,5000,1,AREA # 17873,Villamaría,AREA # 17,Caldas
+a_11389,-75.57193,4.97293,Weak_roof,1,5000,1,AREA # 17873,Villamaría,AREA # 17,Caldas
+a_11464,-75.5428,4.97836,Slab_roof,1,20000,5,AREA # 17873,Villamaría,AREA # 17,Caldas
+a_11575,-75.4987,4.98521,Slab_roof,1,20000,7,AREA # 17873,Villamaría,AREA # 17,Caldas
+a_10724,-75.18639,4.92531,Moderate_roof,1,10000,4,AREA # 73870,Villahermosa,AREA # 73,Tolima
+a_26522,-75.13649,4.93858,Weak_roof,1,5000,1,AREA # 73870,Villahermosa,AREA # 73,Tolima
+a_26786,-75.08075,4.96418,Heavy_roof,1,20000,3,AREA # 73870,Villahermosa,AREA # 73,Tolima
+a_26976,-75.07534,4.97152,Heavy_roof,1,20000,6,AREA # 73870,Villahermosa,AREA # 73,Tolima
+a_27187,-75.09433,4.9792,Weak_roof,1,5000,1,AREA # 73870,Villahermosa,AREA # 73,Tolima
+a_28008,-75.0791,5.01278,Heavy_roof,1,20000,4,AREA # 73870,Villahermosa,AREA # 73,Tolima
+a_28339,-75.08531,5.02785,Moderate_roof,1,10000,4,AREA # 73870,Villahermosa,AREA # 73,Tolima
+a_11785,-75.85218,5.00156,Weak_roof,1,5000,2,AREA # 17088,Belalcázar,AREA # 17,Caldas
+a_11925,-75.82204,5.01089,Slab_roof,1,20000,3,AREA # 17088,Belalcázar,AREA # 17,Caldas
+a_12118,-75.78448,5.02828,Moderate_roof,1,10000,2,AREA # 17088,Belalcázar,AREA # 17,Caldas
+a_26655,-74.48415,4.95342,Slab_roof,1,20000,6,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_26759,-74.5073,4.9626,Slab_roof,1,20000,2,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_27515,-74.50395,4.99195,Slab_roof,1,20000,7,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_27676,-74.52356,4.99842,Heavy_roof,1,20000,7,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_27803,-74.52723,5.00345,Heavy_roof,1,20000,7,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_28454,-74.53563,5.03406,Weak_roof,1,5000,4,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_28757,-74.46573,5.04732,Slab_roof,1,20000,4,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_28799,-74.46862,5.04905,Weak_roof,1,5000,1,AREA # 25875,Villeta,AREA # 25,Cundinamarca
+a_11167,-75.66154,4.95583,Slab_roof,1,20000,7,AREA # 17174,Chinchiná,AREA # 17,Caldas
+a_11402,-75.67185,4.97369,Heavy_roof,1,20000,5,AREA # 17174,Chinchiná,AREA # 17,Caldas
+a_11469,-75.6756,4.97866,Slab_roof,1,20000,2,AREA # 17174,Chinchiná,AREA # 17,Caldas
+a_11982,-75.71507,5.01452,Weak_roof,1,5000,4,AREA # 17174,Chinchiná,AREA # 17,Caldas
+a_12436,-75.73696,5.05465,Heavy_roof,1,20000,2,AREA # 17174,Chinchiná,AREA # 17,Caldas
+a_11165,-75.31311,4.95899,Moderate_roof,1,10000,4,AREA # 73152,Casabianca,AREA # 73,Tolima
+a_29050,-75.08287,5.06193,Moderate_roof,1,10000,5,AREA # 73152,Casabianca,AREA # 73,Tolima
+a_29192,-75.10793,5.06777,Slab_roof,1,20000,5,AREA # 73152,Casabianca,AREA # 73,Tolima
+a_29990,-75.08162,5.10538,Moderate_roof,1,10000,1,AREA # 73152,Casabianca,AREA # 73,Tolima
+a_12318,-75.96517,5.04449,Moderate_roof,1,10000,1,AREA # 66687,Santuario,AREA # 66,Risaralda
+a_11929,-75.66703,5.01143,Moderate_roof,1,10000,7,AREA # 17524,Palestina,AREA # 17,Caldas
+a_12135,-75.63288,5.02908,Weak_roof,1,5000,7,AREA # 17524,Palestina,AREA # 17,Caldas
+a_12525,-75.66329,5.06089,Moderate_roof,1,10000,4,AREA # 17524,Palestina,AREA # 17,Caldas
+a_12829,-75.67844,5.07887,Heavy_roof,1,20000,1,AREA # 17524,Palestina,AREA # 17,Caldas
+a_35812,-75.65846,5.00191,Slab_roof,1,20000,5,AREA # 17524,Palestina,AREA # 17,Caldas
+a_29523,-75.01963,5.08281,Heavy_roof,1,20000,6,AREA # 73520,Palocabildo,AREA # 73,Tolima
+a_30010,-75.03877,5.10606,Heavy_roof,1,20000,5,AREA # 73520,Palocabildo,AREA # 73,Tolima
+a_30094,-74.98565,5.10995,Slab_roof,1,20000,5,AREA # 73520,Palocabildo,AREA # 73,Tolima
+a_30337,-75.03107,5.12116,Heavy_roof,1,20000,2,AREA # 73520,Palocabildo,AREA # 73,Tolima
+a_26809,-74.91271,4.96511,Heavy_roof,1,20000,3,AREA # 73055,Armero,AREA # 73,Tolima
+a_26921,-74.90027,4.96932,Slab_roof,1,20000,7,AREA # 73055,Armero,AREA # 73,Tolima
+a_27349,-74.78841,4.98532,Slab_roof,1,20000,5,AREA # 73055,Armero,AREA # 73,Tolima
+a_27406,-74.97001,4.98772,Weak_roof,1,5000,2,AREA # 73055,Armero,AREA # 73,Tolima
+a_27489,-74.9769,4.9906,Weak_roof,1,5000,1,AREA # 73055,Armero,AREA # 73,Tolima
+a_29371,-74.86295,5.07502,Slab_roof,1,20000,3,AREA # 73055,Armero,AREA # 73,Tolima
+a_30171,-74.88937,5.11391,Slab_roof,1,20000,6,AREA # 73055,Armero,AREA # 73,Tolima
+a_29199,-74.52915,5.06798,Heavy_roof,1,20000,2,AREA # 25592,Quebradanegra,AREA # 25,Cundinamarca
+a_29595,-74.52502,5.08641,Heavy_roof,1,20000,3,AREA # 25592,Quebradanegra,AREA # 25,Cundinamarca
+a_30419,-74.48441,5.12412,Weak_roof,1,5000,1,AREA # 25592,Quebradanegra,AREA # 25,Cundinamarca
+a_12543,-75.54147,5.06188,Weak_roof,1,5000,2,AREA # 17001,Manizales,AREA # 17,Caldas
+a_12762,-75.56095,5.07356,Slab_roof,1,20000,7,AREA # 17001,Manizales,AREA # 17,Caldas
+a_12923,-75.61175,5.08429,Moderate_roof,1,10000,6,AREA # 17001,Manizales,AREA # 17,Caldas
+a_13093,-75.45908,5.09376,Weak_roof,1,5000,4,AREA # 17001,Manizales,AREA # 17,Caldas
+a_13409,-75.51067,5.11439,Heavy_roof,1,20000,6,AREA # 17001,Manizales,AREA # 17,Caldas
+a_13458,-75.5038,5.11792,Heavy_roof,1,20000,5,AREA # 17001,Manizales,AREA # 17,Caldas
+a_13493,-75.50216,5.12089,Heavy_roof,1,20000,4,AREA # 17001,Manizales,AREA # 17,Caldas
+a_13513,-75.47261,5.12282,Slab_roof,1,20000,5,AREA # 17001,Manizales,AREA # 17,Caldas
+a_35909,-75.58337,4.99552,Heavy_roof,1,20000,4,AREA # 17001,Manizales,AREA # 17,Caldas
+a_11288,-75.345,4.96335,Weak_roof,1,5000,1,AREA # 73347,Herveo,AREA # 73,Tolima
+a_29117,-75.15679,5.06482,Heavy_roof,1,20000,5,AREA # 73347,Herveo,AREA # 73,Tolima
+a_29927,-75.1276,5.10221,Slab_roof,1,20000,5,AREA # 73347,Herveo,AREA # 73,Tolima
+a_28249,-74.97346,5.02397,Heavy_roof,1,20000,6,AREA # 73270,Falan,AREA # 73,Tolima
+a_28557,-75.03662,5.03837,Heavy_roof,1,20000,6,AREA # 73270,Falan,AREA # 73,Tolima
+a_29485,-74.94209,5.08104,Slab_roof,1,20000,1,AREA # 73270,Falan,AREA # 73,Tolima
+a_30439,-74.95354,5.12489,Slab_roof,1,20000,2,AREA # 73270,Falan,AREA # 73,Tolima
+a_30653,-74.90785,5.13426,Heavy_roof,1,20000,3,AREA # 73270,Falan,AREA # 73,Tolima
+a_31236,-74.50985,5.16602,Heavy_roof,1,20000,4,AREA # 25851,Útica,AREA # 25,Cundinamarca
+a_13926,-75.48332,5.14801,Weak_roof,1,5000,7,AREA # 17486,Neira,AREA # 17,Caldas
+a_14015,-75.47288,5.15252,Weak_roof,1,5000,5,AREA # 17486,Neira,AREA # 17,Caldas
+a_14357,-75.65295,5.17335,Weak_roof,1,5000,6,AREA # 17486,Neira,AREA # 17,Caldas
+a_14451,-75.52098,5.17846,Slab_roof,1,20000,6,AREA # 17486,Neira,AREA # 17,Caldas
+a_14556,-75.54828,5.1848,Weak_roof,1,5000,3,AREA # 17486,Neira,AREA # 17,Caldas
+a_14668,-75.52204,5.1912,Weak_roof,1,5000,1,AREA # 17486,Neira,AREA # 17,Caldas
+a_15390,-75.65931,5.25319,Moderate_roof,1,10000,4,AREA # 17486,Neira,AREA # 17,Caldas
+a_13549,-75.7087,5.12551,Moderate_roof,1,10000,5,AREA # 17042,Anserma,AREA # 17,Caldas
+a_35684,-75.69838,5.24531,Weak_roof,1,5000,5,AREA # 17042,Anserma,AREA # 17,Caldas
+a_30446,-75.10564,5.12499,Moderate_roof,1,10000,1,AREA # 73283,Fresno,AREA # 73,Tolima
+a_30476,-75.088,5.12626,Heavy_roof,1,20000,5,AREA # 73283,Fresno,AREA # 73,Tolima
+a_30625,-75.05741,5.13284,Heavy_roof,1,20000,7,AREA # 73283,Fresno,AREA # 73,Tolima
+a_31200,-75.02155,5.16431,Slab_roof,1,20000,4,AREA # 73283,Fresno,AREA # 73,Tolima
+a_31694,-75.03728,5.19267,Weak_roof,1,5000,4,AREA # 73283,Fresno,AREA # 73,Tolima
+a_31919,-75.01945,5.20439,Weak_roof,1,5000,2,AREA # 73283,Fresno,AREA # 73,Tolima
+a_32042,-75.04557,5.21117,Heavy_roof,1,20000,3,AREA # 73283,Fresno,AREA # 73,Tolima
+a_32189,-75.06906,5.21962,Moderate_roof,1,10000,5,AREA # 73283,Fresno,AREA # 73,Tolima
+a_32678,-75.06193,5.2513,Heavy_roof,1,20000,6,AREA # 73283,Fresno,AREA # 73,Tolima
+a_33119,-75.02658,5.27674,Heavy_roof,1,20000,5,AREA # 73283,Fresno,AREA # 73,Tolima
+a_15023,-75.1927,5.22074,Slab_roof,1,20000,1,AREA # 17433,Manzanares,AREA # 17,Caldas
+a_15025,-75.22025,5.22104,Slab_roof,1,20000,2,AREA # 17433,Manzanares,AREA # 17,Caldas
+a_31191,-75.11892,5.16395,Weak_roof,1,5000,2,AREA # 17433,Manzanares,AREA # 17,Caldas
+a_31911,-75.15807,5.20399,Weak_roof,1,5000,6,AREA # 17433,Manzanares,AREA # 17,Caldas
+a_32818,-75.09686,5.26034,Moderate_roof,1,10000,1,AREA # 17433,Manzanares,AREA # 17,Caldas
+a_32970,-75.10258,5.26844,Slab_roof,1,20000,5,AREA # 17433,Manzanares,AREA # 17,Caldas
+a_33076,-75.0829,5.27396,Moderate_roof,1,10000,1,AREA # 17433,Manzanares,AREA # 17,Caldas
+a_31257,-74.92539,5.16749,Slab_roof,1,20000,2,AREA # 73443,Mariquita,AREA # 73,Tolima
+a_31529,-74.89046,5.18189,Moderate_roof,1,10000,5,AREA # 73443,Mariquita,AREA # 73,Tolima
+a_31565,-74.93961,5.18409,Moderate_roof,1,10000,1,AREA # 73443,Mariquita,AREA # 73,Tolima
+a_31635,-74.86098,5.18889,Heavy_roof,1,20000,1,AREA # 73443,Mariquita,AREA # 73,Tolima
+a_32332,-74.97722,5.2286,Slab_roof,1,20000,2,AREA # 73443,Mariquita,AREA # 73,Tolima
+a_33210,-74.94415,5.2818,Weak_roof,1,5000,3,AREA # 73443,Mariquita,AREA # 73,Tolima
+a_32048,-74.76156,5.21152,Weak_roof,1,5000,6,AREA # 73349,Honda,AREA # 73,Tolima
+a_15203,-75.54209,5.24173,Slab_roof,1,20000,2,AREA # 17050,Aranzazu,AREA # 17,Caldas
+a_15414,-75.50099,5.25274,Moderate_roof,1,10000,1,AREA # 17050,Aranzazu,AREA # 17,Caldas
+a_15733,-75.50928,5.27352,Heavy_roof,1,20000,6,AREA # 17050,Aranzazu,AREA # 17,Caldas
+a_33595,-75.00059,5.30478,Heavy_roof,1,20000,5,AREA # 17444,Marquetalia,AREA # 17,Caldas
+a_15174,-75.62637,5.23922,Slab_roof,1,20000,2,AREA # 17272,Filadelfia,AREA # 17,Caldas
+a_15472,-75.54454,5.25868,Heavy_roof,1,20000,4,AREA # 17272,Filadelfia,AREA # 17,Caldas
+a_15497,-75.62768,5.25978,Moderate_roof,1,10000,4,AREA # 17272,Filadelfia,AREA # 17,Caldas
+a_15678,-75.53329,5.27097,Moderate_roof,1,10000,2,AREA # 17272,Filadelfia,AREA # 17,Caldas
+a_35923,-75.56711,5.25362,Moderate_roof,1,10000,4,AREA # 17272,Filadelfia,AREA # 17,Caldas
+a_12979,-75.33824,5.08712,Heavy_roof,1,20000,1,AREA # 17446,Marulanda,AREA # 17,Caldas
+a_15746,-75.2792,5.27416,Slab_roof,1,20000,5,AREA # 17446,Marulanda,AREA # 17,Caldas
+a_15806,-75.24787,5.27743,Heavy_roof,1,20000,1,AREA # 17446,Marulanda,AREA # 17,Caldas
+a_16338,-75.78318,5.31147,Moderate_roof,1,10000,3,AREA # 66318,Guática,AREA # 66,Risaralda
+a_16384,-75.81959,5.31622,Slab_roof,1,20000,3,AREA # 66318,Guática,AREA # 66,Risaralda
+a_16751,-75.80811,5.33843,Slab_roof,1,20000,4,AREA # 66318,Guática,AREA # 66,Risaralda
+a_16862,-75.80941,5.3445,Slab_roof,1,20000,4,AREA # 66318,Guática,AREA # 66,Risaralda
+a_15686,-75.71325,5.27135,Moderate_roof,1,10000,2,AREA # 66594,Quinchía,AREA # 66,Risaralda
+a_16437,-75.76703,5.32225,Weak_roof,1,5000,7,AREA # 66594,Quinchía,AREA # 66,Risaralda
+a_16484,-75.75027,5.32539,Heavy_roof,1,20000,6,AREA # 66594,Quinchía,AREA # 66,Risaralda
+a_17449,-75.73845,5.37883,Moderate_roof,1,10000,3,AREA # 66594,Quinchía,AREA # 66,Risaralda
+a_33870,-74.4572,5.3228,Moderate_roof,1,10000,5,AREA # 25394,La Palma,AREA # 25,Cundinamarca
+a_27108,-74.5452,4.97579,Moderate_roof,1,10000,2,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_27906,-74.60615,5.00796,Slab_roof,1,20000,5,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_28111,-74.72027,5.01747,Weak_roof,1,5000,4,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_28392,-74.54993,5.03038,Slab_roof,1,20000,6,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_28413,-74.65359,5.03165,Heavy_roof,1,20000,5,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_28594,-74.72003,5.04063,Moderate_roof,1,10000,5,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_28810,-74.72242,5.0498,Heavy_roof,1,20000,3,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_30025,-74.54439,5.10689,Weak_roof,1,5000,3,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_30260,-74.64168,5.11773,Slab_roof,1,20000,5,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_30694,-74.60137,5.13642,Moderate_roof,1,10000,6,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_31351,-74.64017,5.17204,Slab_roof,1,20000,7,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_31362,-74.55018,5.1727,Weak_roof,1,5000,7,AREA # 25320,Guaduas,AREA # 25,Cundinamarca
+a_15208,-76.04734,5.24211,Moderate_roof,1,10000,6,AREA # 66572,Pueblo Rico,AREA # 66,Risaralda
+a_16020,-75.37027,5.28925,Slab_roof,1,20000,4,AREA # 17653,Salamina,AREA # 17,Caldas
+a_17133,-75.39898,5.36152,Weak_roof,1,5000,1,AREA # 17653,Salamina,AREA # 17,Caldas
+a_17785,-75.38191,5.4019,Weak_roof,1,5000,5,AREA # 17653,Salamina,AREA # 17,Caldas
+a_18094,-75.43511,5.42586,Weak_roof,1,5000,4,AREA # 17653,Salamina,AREA # 17,Caldas
+a_18220,-75.59624,5.43593,Moderate_roof,1,10000,6,AREA # 17777,Supía,AREA # 17,Caldas
+a_18233,-75.60109,5.43723,Moderate_roof,1,10000,5,AREA # 17777,Supía,AREA # 17,Caldas
+a_17621,-75.28134,5.39021,Slab_roof,1,20000,5,AREA # 17541,Pensilvania,AREA # 17,Caldas
+a_34584,-75.06041,5.38466,Slab_roof,1,20000,4,AREA # 17541,Pensilvania,AREA # 17,Caldas
+a_35309,-75.12847,5.44212,Moderate_roof,1,10000,7,AREA # 17541,Pensilvania,AREA # 17,Caldas
+a_32545,-74.51463,5.24306,Heavy_roof,1,20000,3,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_32965,-74.52606,5.2682,Weak_roof,1,5000,5,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_33201,-74.55537,5.28093,Weak_roof,1,5000,5,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_33556,-74.47586,5.30243,Weak_roof,1,5000,5,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_33596,-74.47714,5.30483,Heavy_roof,1,20000,1,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_33671,-74.52959,5.30902,Weak_roof,1,5000,1,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_33673,-74.48052,5.30912,Heavy_roof,1,20000,1,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_33961,-74.5197,5.33211,Moderate_roof,1,10000,4,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_34078,-74.52129,5.34284,Weak_roof,1,5000,3,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_34319,-74.50619,5.36344,Weak_roof,1,5000,6,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_34505,-74.46129,5.37841,Slab_roof,1,20000,3,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_34750,-74.46413,5.39604,Slab_roof,1,20000,1,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_35204,-74.51501,5.43403,Slab_roof,1,20000,6,AREA # 25148,Caparrapí,AREA # 25,Cundinamarca
+a_15903,-75.87697,5.28256,Weak_roof,1,5000,2,AREA # 66456,Mistrató,AREA # 66,Risaralda
+a_16550,-75.88846,5.32876,Weak_roof,1,5000,3,AREA # 66456,Mistrató,AREA # 66,Risaralda
+a_17519,-75.94953,5.38343,Heavy_roof,1,20000,7,AREA # 66456,Mistrató,AREA # 66,Risaralda
+a_17573,-75.90104,5.38721,Moderate_roof,1,10000,4,AREA # 66456,Mistrató,AREA # 66,Risaralda
+a_17644,-75.91075,5.3919,Moderate_roof,1,10000,1,AREA # 66456,Mistrató,AREA # 66,Risaralda
+a_33597,-74.89566,5.30494,Weak_roof,1,5000,6,AREA # 17867,Victoria,AREA # 17,Caldas
+a_34228,-74.9444,5.3571,Slab_roof,1,20000,3,AREA # 17867,Victoria,AREA # 17,Caldas
+a_35135,-74.90778,5.4299,Slab_roof,1,20000,2,AREA # 17867,Victoria,AREA # 17,Caldas
+a_35180,-74.91676,5.43238,Moderate_roof,1,10000,1,AREA # 17867,Victoria,AREA # 17,Caldas
+a_34191,-74.96736,5.35384,Slab_roof,1,20000,1,AREA # 17662,Samaná,AREA # 17,Caldas
+a_34226,-75.02933,5.35663,Slab_roof,1,20000,1,AREA # 17662,Samaná,AREA # 17,Caldas
+a_34799,-74.98328,5.40097,Slab_roof,1,20000,5,AREA # 17662,Samaná,AREA # 17,Caldas
+a_34834,-74.95627,5.40451,Weak_roof,1,5000,2,AREA # 17662,Samaná,AREA # 17,Caldas
+a_34044,-74.71153,5.33957,Slab_roof,1,20000,4,AREA # 17380,La Dorada,AREA # 17,Caldas
+a_35604,-74.68214,5.42402,Slab_roof,1,20000,1,AREA # 17380,La Dorada,AREA # 17,Caldas
+a_20324,-74.75599,4.51473,Weak_roof,1,5000,4,AREA # 25324,Guataquí,AREA # 25,Cundinamarca
+a_18384,-74.80498,4.4014,Slab_roof,1,20000,1,AREA # 25483,Nariño,AREA # 25,Cundinamarca
+a_18385,-75.31414,4.89775,Slab_roof,1,20000,1,AREA # 25483,Nariño,AREA # 25,Cundinamarca

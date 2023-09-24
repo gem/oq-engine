@@ -1,7 +1,7 @@
-#,,"generated_by='OpenQuake engine 3.17.0-git55f5880caf', start_date='2023-04-25T06:53:55', checksum=2185046518"
+#,,"generated_by='OpenQuake engine 3.18.0-git994900aaa0', start_date='2023-09-24T19:04:16', checksum=2185046518"
 event_id,gmv_PGA,custom_site_id
-0,2.63060E-01,9qc0zf62
-1,9.63779E-02,9qc0zf62
-2,1.20826E+00,9qc0zf62
-3,3.31533E-01,9qc0zf62
-4,2.52095E-01,9qc0zf62
+0,9.17781E-02,9qc0zf62
+1,1.70137E-01,9qc0zf62
+2,1.73151E-01,9qc0zf62
+3,1.20026E-01,9qc0zf62
+4,1.23080E-01,9qc0zf62

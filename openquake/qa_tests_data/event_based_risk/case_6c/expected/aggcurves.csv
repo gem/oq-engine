@@ -1,7 +1,7 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitc951e586b4', start_date='2023-09-18T07:07:14', checksum=1764635623, risk_investigation_time=1.0, num_events=36, effective_time=1000.0, limit_states=''"
+#,,,,,,,"generated_by='OpenQuake engine 3.18.0-git994900aaa0', start_date='2023-09-24T19:04:30', checksum=1764635623, risk_investigation_time=1.0, num_events=36, effective_time=1000.0, limit_states=''"
 return_period,loss_type,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
-50,structural,1.71525E+03,2.45036E-02,1.71525E+03,2.45036E-02,1.71525E+03,2.45036E-02
-100,structural,2.72072E+03,3.88674E-02,2.72072E+03,3.88674E-02,2.72072E+03,3.88674E-02
-200,structural,3.41402E+03,4.87717E-02,3.41402E+03,4.87717E-02,3.41402E+03,4.87717E-02
-500,structural,3.75408E+03,5.36298E-02,3.94078E+03,5.62969E-02,3.75408E+03,5.36298E-02
-1000,structural,3.94078E+03,5.62969E-02,4.98705E+03,7.12436E-02,3.94078E+03,5.62969E-02
+50,structural,1.74876E+03,2.49823E-02,1.73313E+03,2.47590E-02,1.73313E+03,2.47590E-02
+100,structural,2.80898E+03,4.01283E-02,2.80898E+03,4.01283E-02,2.80898E+03,4.01283E-02
+200,structural,3.79983E+03,5.42833E-02,3.79983E+03,5.42833E-02,3.79983E+03,5.42833E-02
+500,structural,4.13164E+03,5.90235E-02,4.25709E+03,6.08155E-02,4.13164E+03,5.90235E-02
+1000,structural,4.25709E+03,6.08155E-02,6.02151E+03,8.60215E-02,4.25709E+03,6.08155E-02
