@@ -1,17 +1,17 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitc771776529', start_date='2023-09-18T08:35:29', checksum=210043009, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
+#,,,,,,,,,"generated_by='OpenQuake engine 3.18.0-git8976a080ec', start_date='2023-09-24T18:43:52', checksum=210043009, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
 county,taxonomy,return_period,loss_type,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
 Contra Costa,tax1,50,structural,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03
 Contra Costa,tax1,100,structural,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03
 Contra Costa,tax1,200,structural,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03
 Contra Costa,tax3,50,structural,6.07736E+02,3.79835E-03,6.07736E+02,3.79835E-03,6.07736E+02,3.79835E-03
-Contra Costa,tax3,100,structural,6.07736E+02,3.79835E-03,6.07736E+02,3.79835E-03,6.07736E+02,3.79835E-03
-Contra Costa,tax3,200,structural,6.07736E+02,3.79835E-03,6.07736E+02,3.79835E-03,6.07736E+02,3.79835E-03
+Contra Costa,tax3,100,structural,6.78226E+02,4.23891E-03,6.78226E+02,4.23891E-03,6.78226E+02,4.23891E-03
+Contra Costa,tax3,200,structural,1.54409E+03,9.65055E-03,1.54409E+03,9.65055E-03,1.54409E+03,9.65055E-03
 Marin,tax1,50,structural,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03
 Marin,tax1,100,structural,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03
 Marin,tax1,200,structural,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03,9.41111E+02,6.27408E-03
 Solano,tax1,50,structural,8.78371E+02,6.27408E-03,8.78371E+02,6.27408E-03,8.78371E+02,6.27408E-03
 Solano,tax1,100,structural,8.78371E+02,6.27408E-03,8.78371E+02,6.27408E-03,8.78371E+02,6.27408E-03
-Solano,tax1,200,structural,4.77793E+03,3.41281E-02,4.77793E+03,3.41281E-02,4.77793E+03,3.41281E-02
+Solano,tax1,200,structural,8.78371E+02,6.27408E-03,8.78371E+02,6.27408E-03,8.78371E+02,6.27408E-03
 Solano,tax2,50,structural,1.77647E+03,7.40194E-03,1.77647E+03,7.40194E-03,1.77647E+03,7.40194E-03
 Solano,tax2,100,structural,1.77647E+03,7.40194E-03,1.77647E+03,7.40194E-03,1.77647E+03,7.40194E-03
-Solano,tax2,200,structural,1.86057E+03,7.75239E-03,1.86057E+03,7.75239E-03,1.86057E+03,7.75239E-03
+Solano,tax2,200,structural,1.77647E+03,7.40194E-03,1.77647E+03,7.40194E-03,1.77647E+03,7.40194E-03
