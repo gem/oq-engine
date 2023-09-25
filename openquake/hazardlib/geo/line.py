@@ -689,13 +689,15 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
     if chk < 0:
         return None
 
-    # Computing the points of interesection
+    # Computing the points of intersection
     pu = (-pb + (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)
     x = x1 + pu * (x2 - x1)
     y = y1 + pu * (y2 - y1)
     z = z1 + pu * (z2 - z1)
 
-    if x >= np.min([x1, x2]) and x <= np.max([x1, x2]):
+    if (x >= np.min([x1, x2]) and x <= np.max([x1, x2]) and
+            y >= np.min([y1, y2]) and y <= np.max([y1, y2]) and
+            z >= np.min([z1, z2]) and z <= np.max([z1, z2])):
         out = [x, y, z]
     else:
         pu = (-pb - (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)
