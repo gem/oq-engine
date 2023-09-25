@@ -220,6 +220,40 @@ def get_mce(prob_mce, det_imt, DLLs):
         mce[imt] = min(prob_mce[i], det_mce[imt])    
     return mce, det_mce
 
+def get_asce41(dstore, mce, facts):
+    """
+    :returns: 
+    """
+    dset = dstore["hmaps-stats"][:, 0]
+    oq = dstore['oqparam']
+    imtls = oq.imtls
+    poes = oq.poes
+    imts = list(imtls.keys())
+    id02 = imts.index('SA(0.2)')
+    id1 = imts.index('SA(1.0)')
+    id_5_50 = poes.index(0.001025)
+    id_20_50 = poes.index(0.004453)
+    print(facts)
+    
+    BSE2N_Ss = mce['SA(0.2)']
+    Ss_5_50 = dset[0][id02][id_5_50] * facts[1] # this is hard coded 1 but when we extended this should correspond to id02
+    BSE2E_Ss = min(Ss_5_50,BSE2N_Ss)
+    BSE1N_Ss = 2/3 * BSE2N_Ss
+    Ss_20_50 = dset[0][id02][id_20_50]  * facts[1]
+    BSE1E_Ss = min(Ss_20_50,BSE1N_Ss)
+    
+    BSE2N_S1 = mce['SA(1.0)']
+    S1_5_50 = dset[0][id1][id_5_50]  * facts[2] # this is hard coded 1 but when we extended this should correspond to id1
+    BSE2E_S1 = min(S1_5_50,BSE2N_S1)
+    BSE1N_S1 = 2/3 * BSE2N_S1
+    S1_20_50 = dset[0][id1][id_20_50] * facts[2]
+    BSE1E_S1 = min(S1_20_50,BSE1N_S1)
+
+    asce41 = [BSE2N_Ss,  Ss_5_50, BSE2E_Ss, BSE1E_Ss, Ss_20_50,  BSE1E_Ss, BSE2N_S1, S1_5_50, 
+         BSE2E_S1, BSE1E_S1, S1_20_50,  BSE1E_S1]
+    
+    return asce41
+
 
 def main(dstore, csm):
     """
@@ -252,3 +286,6 @@ def main(dstore, csm):
     mce, det_mce = get_mce(prob_mce, det_imt, DLLs)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
+    asce41 = get_asce41(dstore, mce, facts)
+    print(asce41)
+    
