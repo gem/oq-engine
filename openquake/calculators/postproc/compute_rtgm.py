@@ -236,14 +236,14 @@ def get_asce41(dstore, mce, facts):
     print(facts)
     
     BSE2N_Ss = mce['SA(0.2)']
-    Ss_5_50 = dset[0][id02][id_5_50] * facts[1] # this is hard coded 1 but when we extended this should correspond to id02
+    Ss_5_50 = dset[0][id02][id_5_50] * facts[1] # this is hard coded 1 but when we extend this should correspond to id02
     BSE2E_Ss = min(Ss_5_50,BSE2N_Ss)
     BSE1N_Ss = 2/3 * BSE2N_Ss
     Ss_20_50 = dset[0][id02][id_20_50]  * facts[1]
     BSE1E_Ss = min(Ss_20_50,BSE1N_Ss)
     
     BSE2N_S1 = mce['SA(1.0)']
-    S1_5_50 = dset[0][id1][id_5_50]  * facts[2] # this is hard coded 1 but when we extended this should correspond to id1
+    S1_5_50 = dset[0][id1][id_5_50]  * facts[2] # this is hard coded 2 but when we extend this should correspond to id1
     BSE2E_S1 = min(S1_5_50,BSE2N_S1)
     BSE1N_S1 = 2/3 * BSE2N_S1
     S1_20_50 = dset[0][id1][id_20_50] * facts[2]
