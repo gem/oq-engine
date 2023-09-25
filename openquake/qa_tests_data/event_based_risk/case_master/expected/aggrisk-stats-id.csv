@@ -1,15 +1,15 @@
-#,,,"generated_by='OpenQuake engine 3.18.0-git778ba9b53a', start_date='2023-09-24T21:21:44', checksum=3727381189"
+#,,,"generated_by='OpenQuake engine 3.18.0-git7a2b0a808f', start_date='2023-09-25T06:18:43', checksum=3727381189"
 loss_type,loss,stat,id
-business_interruption,61.17490867332176,quantile-0.5,a3
-contents,324.33427372685185,quantile-0.5,a3
-nonstructural,485.0033998842593,quantile-0.5,a3
-occupants,0.0011987593714837676,quantile-0.5,a3
-structural+nonstructural+contents,809.3376736111111,quantile-0.5,a3
+business_interruption,49.70461329707391,quantile-0.5,a3
+contents,263.52159740306706,quantile-0.5,a3
+nonstructural,394.06526240596054,quantile-0.5,a3
+occupants,0.000973991989330561,quantile-0.5,a3
+structural+nonstructural+contents,657.5868598090276,quantile-0.5,a3
 business_interruption,237.01419632523147,quantile-0.5,a2
 contents,1437.656394675926,quantile-0.5,a2
-nonstructural,2123.797905815972,quantile-0.5,a2
+nonstructural,2123.797706886574,quantile-0.5,a2
 occupants,0.00486170816131764,quantile-0.5,a2
-structural,566.7208184136284,quantile-0.5,a2
+structural,587.9649454752604,quantile-0.5,a2
 structural+nonstructural+contents,4093.845269097222,quantile-0.5,a2
 business_interruption,123.25343492296007,quantile-0.5,a5
 contents,732.4415328414352,quantile-0.5,a5
@@ -21,7 +21,7 @@ business_interruption,509.82101101345484,quantile-0.5,a4
 contents,868.4633879484953,quantile-0.5,a4
 nonstructural,1953.4797182436341,quantile-0.5,a4
 occupants,0.010435524741532627,quantile-0.5,a4
-structural,1025.9186265733506,quantile-0.5,a4
+structural,1105.247890896267,quantile-0.5,a4
 structural+nonstructural+contents,4517.192491319444,quantile-0.5,a4
 business_interruption,354.09918099862557,quantile-0.5,a1
 contents,2332.1199092158563,quantile-0.5,a1
@@ -33,11 +33,11 @@ business_interruption,203.067785192419,quantile-0.5,a6
 contents,1931.3249059606483,quantile-0.5,a6
 nonstructural,2752.633373119213,quantile-0.5,a6
 occupants,0.0040308210170931285,quantile-0.5,a6
-structural,573.5549429434317,quantile-0.5,a6
+structural,155.04300265842008,quantile-0.5,a6
 structural+nonstructural+contents,5038.341959635416,quantile-0.5,a6
-business_interruption,336.49554330331307,quantile-0.5,a7
-contents,2475.53106463397,quantile-0.5,a7
-nonstructural,3346.2793240017363,quantile-0.5,a7
+business_interruption,336.49556138780383,quantile-0.5,a7
+contents,2475.5312093098955,quantile-0.5,a7
+nonstructural,3346.279613353588,quantile-0.5,a7
 occupants,0.0061713228588578875,quantile-0.5,a7
-structural,1601.5215047200522,quantile-0.5,a7
-structural+nonstructural+contents,7423.331868489584,quantile-0.5,a7
+structural,2238.6305881076387,quantile-0.5,a7
+structural+nonstructural+contents,7423.3324471932865,quantile-0.5,a7

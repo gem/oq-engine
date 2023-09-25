@@ -1,5 +1,4 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.18.0-git46b470bf91', start_date='2023-09-24T18:55:01', checksum=2174348292, risk_investigation_time=50.0, num_events=5, effective_time=20.0, limit_states=''"
+#,,,,,,,"generated_by='OpenQuake engine 3.18.0-git7a2b0a808f', start_date='2023-09-25T06:20:15', checksum=2174348292, risk_investigation_time=50.0, num_events=2, effective_time=20.0, limit_states=''"
 return_period,loss_type,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
-5,structural,4.48113E+02,1.12028E-02,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-10,structural,8.39118E+02,2.09780E-02,1.02459E+03,2.56147E-02,8.39118E+02,2.09780E-02
-20,structural,1.02459E+03,2.56147E-02,1.41173E+03,3.52932E-02,1.02459E+03,2.56147E-02
+10,structural,5.93898E+02,1.48474E-02,5.93898E+02,1.48474E-02,5.93898E+02,1.48474E-02
+20,structural,7.47429E+02,1.86857E-02,7.47429E+02,1.86857E-02,7.47429E+02,1.86857E-02

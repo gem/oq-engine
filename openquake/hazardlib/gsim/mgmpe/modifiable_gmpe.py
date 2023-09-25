@@ -85,6 +85,27 @@ def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
     me[:] += ctx.amplfactor
 
 
+def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
+    """
+    Adjust Swiss GMPEs to add amplification and correct intra-event residuals
+    """
+
+    if imt.period == 0.3:
+        phis2s = ctx.ch_phis2s03
+        phiss = ctx.ch_phiss03
+        me[:] += ctx.ch_ampl03
+    elif imt.period == 0.6:
+        phis2s = ctx.ch_phis2s06
+        phiss = ctx.ch_phiss06
+        me[:] += ctx.ch_ampl06
+
+    phi_star = np.sqrt(phis2s**2 + phiss**2)
+    total_stddev_star = np.sqrt(ta**2 + phi_star**2)
+
+    ph[:] = phi_star
+    si[:] = total_stddev_star
+
+
 def set_between_epsilon(ctx, imt, me, si, ta, ph, epsilon_tau):
     """
     :param epsilon_tau:
@@ -195,7 +216,7 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
- 
+
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters

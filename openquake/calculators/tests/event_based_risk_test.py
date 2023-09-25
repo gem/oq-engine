@@ -100,16 +100,11 @@ class EventBasedRiskTestCase(CalculatorTestCase):
         self.run_calc(case_1.__file__, 'job_ins.ini', concurrent_tasks='4')
 
         # testing the view agg_id
-        agg_id = view('agg_id', self.calc.datastore)
-        self.assertEqual(str(agg_id), '''\
-       policy taxonomy
-agg_id
-0           A       RC
-1           A       RM
-2           A        W
-3           B       RC
-4           B       RM
-5           B        W''')
+        dic = view('agg_id', self.calc.datastore).to_dict()
+        self.assertEqual(dic['policy'],
+                         {0: 'A', 1: 'A', 2: 'A', 3: 'B', 4: 'B', 5: 'B'})
+        self.assertEqual(dic['taxonomy'],
+                         {0: 'RC', 1: 'RM', 2: 'W', 3: 'RC', 4: 'RM', 5: 'W'})
 
         [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/%s' % strip_calc_id(fname), fname,
