@@ -623,8 +623,7 @@ def todorovic_silva_2022_nonparametric_general(
     model_path = os.path.join(os.path.dirname(__file__), model_file)
     with gzip.open(model_path, 'rb') as gzipped_file:
         file = gzipped_file.read()
-        providers = ['CPUExecutionProvider', 'AzureExecutionProvider']
-        session = onnxruntime.InferenceSession(file, providers=providers)
+        session = onnxruntime.InferenceSession(file, providers=onnxruntime.get_available_providers())
         results = session.run(None, {"X": matrix})
         out_class = results[0]
         out_prob = [p[1] for p in results[1]]
