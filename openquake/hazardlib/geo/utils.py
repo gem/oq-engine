@@ -206,7 +206,7 @@ class _GeographicObjects(object):
                     raise RuntimeError(
                         'Could not find any asset within the region!')
                 mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
-                assets_by_site = numpy.array(assets_by_site, dtype=object)[ok]
+                assets_by_site = numpy.array(assets_by_site)[ok]
                 logging.info('Discarded %d assets outside the region',
                              len(out))
         asset_dt = numpy.dtype(
