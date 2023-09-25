@@ -34,14 +34,11 @@ from openquake.hazardlib.scalerel import PeerMSR, PointMSR
 from openquake.hazardlib.gsim.sadigh_1997 import SadighEtAl1997
 from openquake.hazardlib.calc.hazard_curve import calc_hazard_curves
 from openquake.hazardlib.tom import PoissonTOM
-
 from openquake.hazardlib.tests.acceptance import _peer_test_data as test_data
 
 
 def assert_hazard_curve_is(testcase, actual, expected, atol, rtol):
-    actual, expected = numpy.array(actual), numpy.array(expected)
-    testcase.assertTrue(numpy.allclose(actual, expected, atol=atol, rtol=rtol),
-                        "%s != %s" % (actual, expected))
+    numpy.testing.assert_allclose(actual, expected, atol=atol, rtol=rtol)
 
 
 class Set1TestCase(unittest.TestCase):
