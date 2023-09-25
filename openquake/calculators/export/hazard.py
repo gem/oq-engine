@@ -280,7 +280,7 @@ def export_uhs_xml(ekey, dstore):
 
 class Location(object):
     def __init__(self, xyz):
-        self.x, self.y = tuple(xyz)[:2]
+        self.x, self.y = xyz['lon'], xyz['lat']
         self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
 

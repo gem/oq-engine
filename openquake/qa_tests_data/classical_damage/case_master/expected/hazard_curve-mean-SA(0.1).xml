@@ -17,7 +17,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <hazardCurve>
             <gml:Point>
                 <gml:pos>
-                    b'9qbbff70' -122.57
+                    -122.57 38.113
                 </gml:pos>
             </gml:Point>
             <poEs>
@@ -27,7 +27,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <hazardCurve>
             <gml:Point>
                 <gml:pos>
-                    b'9qc0v4r2' -122.114
+                    -122.114 38.113
                 </gml:pos>
             </gml:Point>
             <poEs>
@@ -37,7 +37,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <hazardCurve>
             <gml:Point>
                 <gml:pos>
-                    b'9q9pxv63' -122.0
+                    -122.0 37.91
                 </gml:pos>
             </gml:Point>
             <poEs>
@@ -47,7 +47,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <hazardCurve>
             <gml:Point>
                 <gml:pos>
-                    b'9qc0pvdq' -122.0
+                    -122.0 38.0
                 </gml:pos>
             </gml:Point>
             <poEs>
@@ -57,7 +57,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <hazardCurve>
             <gml:Point>
                 <gml:pos>
-                    b'9qc0zf62' -122.0
+                    -122.0 38.113
                 </gml:pos>
             </gml:Point>
             <poEs>
@@ -67,7 +67,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <hazardCurve>
             <gml:Point>
                 <gml:pos>
-                    b'9qc1rydk' -122.0
+                    -122.0 38.225
                 </gml:pos>
             </gml:Point>
             <poEs>
@@ -77,7 +77,7 @@ xmlns:gml="http://www.opengis.net/gml"
         <hazardCurve>
             <gml:Point>
                 <gml:pos>
-                    b'9qc2f6m2' -121.886
+                    -121.886 38.113
                 </gml:pos>
             </gml:Point>
             <poEs>
