@@ -455,7 +455,6 @@ class PostRiskCalculator(base.RiskCalculator):
             smap = parallel.Starmap(reinsurance.reins_by_policy, allargs,
                                     h5=self.datastore.hdf5)
             rbp = pandas.concat(list(smap))
-            import pdb; pdb.set_trace()
             if len(rbp) == 0:
                 raise ValueError('No data in risk_by_event for %r' % lt)
             rbe = reinsurance.by_event(rbp, self.treaty_df, self._monitor)
