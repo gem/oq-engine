@@ -126,39 +126,16 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-# tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls, DLLs=None, prob_mce=None):
+def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
     """
-    Compute and store the mean disaggregation by Mag_Dist_Eps for
-    each relevant source in the source model. Assume there is a single site.
+    Disaggregate by relevant sources.
 
-    :param dstore: a DataStore instance
-    :param csm: a CompositeSourceModel instance
-    :param imts: a list of IMTs (subset of the IMTs in the job.ini)
-    :param imls: a list of IMLs (Risk Targeted Ground Motion in AELO)
+    :returns: mean_disagg_by_src and sigma_by_src
     """
-    oq = dstore['oqparam']
-    for imt in imts:
-        if imt not in oq.imtls:
-            raise InvalidFile('%s: %s is not a known IMT' %
-                              (oq.inputs['job_ini'], imt))
-
-    parent = dstore.parent or dstore
-    oq.mags_by_trt = {
-                trt: python3compat.decode(dset[:])
-                for trt, dset in parent['source_mags'].items()}
-    sitecol = parent['sitecol']
-    assert len(sitecol) == 1, sitecol
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    rel_ids_by_imt = get_rel_source_ids(dstore, imts, imls, threshold=.1)
-    for imt, ids in rel_ids_by_imt.items():
-        rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
-        logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
     imldic = dict(zip(imts, imls))
-
     src2idx = {}
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
-    rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     weights = {}  # src_id -> weights
     for idx, source_id in enumerate(rel_ids):
         src2idx[source_id] = idx
@@ -188,12 +165,45 @@ def main(dstore, csm, imts, imls, DLLs=None, prob_mce=None):
     dic2 = dict(
         shape_descr=['source_id', 'mag', 'dist', 'imt'],
         source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
-    
+    sigma_by_src = hdf5.ArrayWrapper(std, dic2)
     dstore.close()
     dstore.open('r+')
     dstore['mean_disagg_by_src'] = mean_disagg_by_src
-    dstore['sigma_by_src'] = sigma_by_src = hdf5.ArrayWrapper(std, dic2)
+    dstore['sigma_by_src'] = sigma_by_src
+    return mean_disagg_by_src, sigma_by_src
+
+
+# tested in LogicTreeTestCase::test_case_05, case_07, case_12
+def main(dstore, csm, imts, imls, DLLs=None, prob_mce=None):
+    """
+    Compute and store the mean disaggregation by Mag_Dist_Eps for
+    each relevant source in the source model. Assume there is a single site.
+
+    :param dstore: a DataStore instance
+    :param csm: a CompositeSourceModel instance
+    :param imts: a list of IMTs (subset of the IMTs in the job.ini)
+    :param imls: a list of IMLs (Risk Targeted Ground Motion in AELO)
+    """
+    oq = dstore['oqparam']
+    for imt in imts:
+        if imt not in oq.imtls:
+            raise InvalidFile('%s: %s is not a known IMT' %
+                              (oq.inputs['job_ini'], imt))
+
+    parent = dstore.parent or dstore
+    oq.mags_by_trt = {
+                trt: python3compat.decode(dset[:])
+                for trt, dset in parent['source_mags'].items()}
+    sitecol = parent['sitecol']
+    assert len(sitecol) == 1, sitecol
+    rel_ids_by_imt = get_rel_source_ids(dstore, imts, imls, threshold=.1)
+    for imt, ids in rel_ids_by_imt.items():
+        rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
+        logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
     
+    rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
+    mean_disagg_by_src, sigma_by_src = disagg_sources(
+        csm, rel_ids, imts, imls, oq, sitecol, dstore)    
     mag_dist_eps = get_mag_dist_eps_df(mean_disagg_by_src, dstore)
     out = []
     for imt, src_ids in rel_ids_by_imt.items():
@@ -204,11 +214,10 @@ def main(dstore, csm, imts, imls, DLLs=None, prob_mce=None):
     if prob_mce is not None:
         det_imt = get_deterministic(
             prob_mce, mag_dist_eps.to_numpy(), sigma_by_src)
-        for imt, mce in det_imt.items():
-            logging.info('%s: %s', imt, mce)   
+        logging.info(f'{det_imt=}')
         mce, det_mce = get_mce(prob_mce, det_imt, DLLs)
-        for imt, mce in det_mce.items():
-            logging.info('%s: %s', imt, mce)
+        logging.info(f'{mce=}')
+        logging.info(f'{det_mce=}')
 
 
 if __name__ == '__main__':
