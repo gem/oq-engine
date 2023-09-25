@@ -157,9 +157,9 @@ class EdwardsFah2013Alpine10Bars(GMPE):
     #: :attr:`~openquake.hazardlib.const.IMC.GEOMETRIC_MEAN`
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GEOMETRIC_MEAN
 
-    #: Supported standard deviation type is total,
-    #: Carlo Cauzzi - Personal Communication
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    #: Supported standard deviation type is total, inter-event and intra-event
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
