@@ -19,7 +19,6 @@
 import logging
 import numpy
 import pandas
-from scipy.interpolate import RegularGridInterpolator
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import basename
@@ -87,38 +86,6 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
     return source_ids
 
 
-def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
-    """
-    :returns: a dictionary imt -> deterministic MCE
-    """
-    srcs, imts, dets = [], [], []
-    srcidx = {src: i for i, src in enumerate(sigma_by_src.source_id)}
-    imtidx = {imt: i for i, imt in enumerate(sigma_by_src.imt)}
-    for src, imt, mag, dist, eps in mag_dist_eps:
-        m = imtidx[imt]
-        sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
-        sigma = RegularGridInterpolator((
-            sigma_by_src.mag, sigma_by_src.dist), sig)((mag, dist))
-        srcs.append(src)
-        imts.append(imt)
-        dets.append(prob_mce[m] * numpy.exp(sigma) / numpy.exp(eps*sigma))
-    df = pandas.DataFrame(dict(src=srcs, imt=imts, det=dets))
-    det = df.groupby('imt').det.max()
-    return det.to_dict()
-
-
-def get_mce(prob_mce, det_imt, DLLs):
-    """
-    :returns: a dictionary imt -> MCE
-    """
-    det_mce = {}
-    mce = {}  # imt -> MCE
-    for i, imt in enumerate(det_imt):
-        det_mce[imt] = max(det_imt[imt], DLLs[i])
-        mce[imt] = min(prob_mce[i], det_mce[imt])    
-    return mce, det_mce
-
-
 def middle(arr):
     """
     :returns: middle values of an array (length N -> N-1)
@@ -174,7 +141,7 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls, DLLs=None, prob_mce=None):
+def main(dstore, csm, imts, imls):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -211,13 +178,7 @@ def main(dstore, csm, imts, imls, DLLs=None, prob_mce=None):
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps = pandas.concat(out)
     logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    if prob_mce is not None:
-        det_imt = get_deterministic(
-            prob_mce, mag_dist_eps.to_numpy(), sigma_by_src)
-        logging.info(f'{det_imt=}')
-        mce, det_mce = get_mce(prob_mce, det_imt, DLLs)
-        logging.info(f'{mce=}')
-        logging.info(f'{det_mce=}')
+    return mag_dist_eps.to_numpy(), sigma_by_src
 
 
 if __name__ == '__main__':

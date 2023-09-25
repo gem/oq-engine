@@ -40,6 +40,7 @@ import logging
 import numpy as np
 import pandas as pd
 from scipy import interpolate
+from scipy.interpolate import RegularGridInterpolator
 try:
     import rtgmpy
 except ImportError:
@@ -188,6 +189,38 @@ def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
     return hazdic, np.array(facts)
 
 
+def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
+    """
+    :returns: a dictionary imt -> deterministic MCE
+    """
+    srcs, imts, dets = [], [], []
+    srcidx = {src: i for i, src in enumerate(sigma_by_src.source_id)}
+    imtidx = {imt: i for i, imt in enumerate(sigma_by_src.imt)}
+    for src, imt, mag, dist, eps in mag_dist_eps:
+        m = imtidx[imt]
+        sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
+        sigma = RegularGridInterpolator((
+            sigma_by_src.mag, sigma_by_src.dist), sig)((mag, dist))
+        srcs.append(src)
+        imts.append(imt)
+        dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
+    df = pd.DataFrame(dict(src=srcs, imt=imts, det=dets))
+    det = df.groupby('imt').det.max()
+    return det.to_dict()
+
+
+def get_mce(prob_mce, det_imt, DLLs):
+    """
+    :returns: a dictionary imt -> MCE
+    """
+    det_mce = {}
+    mce = {}  # imt -> MCE
+    for i, imt in enumerate(det_imt):
+        det_mce[imt] = max(det_imt[imt], DLLs[i])
+        mce[imt] = min(prob_mce[i], det_mce[imt])    
+    return mce, det_mce
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -210,6 +243,12 @@ def main(dstore, csm):
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         return
     facts[0] = 1 # for PGA the Prob MCE is already geometric mean
-    imls_disagg = rtgm_df.ProbMCE.to_numpy()/facts
-    postproc.disagg_by_rel_sources.main(
-        dstore, csm, imts, imls_disagg, DLLs, rtgm_df.ProbMCE.to_numpy())
+    imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
+    prob_mce = rtgm_df.ProbMCE.to_numpy()
+    mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
+        dstore, csm, imts, imls_disagg)
+    det_imt = get_deterministic(prob_mce, mag_dist_eps, sigma_by_src)
+    logging.info(f'{det_imt=}')
+    mce, det_mce = get_mce(prob_mce, det_imt, DLLs)
+    logging.info(f'{mce=}')
+    logging.info(f'{det_mce=}')
