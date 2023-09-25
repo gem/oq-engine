@@ -87,38 +87,37 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
     return source_ids
 
 
-def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src, imts):
+def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     """
-    :returns: a dictionary (imt) -> deterministic MCE
+    :returns: a dictionary imt -> deterministic MCE
     """
-    det_imt = {}  # imt -> MCE
-    det_src_imt = {}  # src, imt -> MCE
+    srcs, imts, dets = [], [], []
     srcidx = {src: i for i, src in enumerate(sigma_by_src.source_id)}
     imtidx = {imt: i for i, imt in enumerate(sigma_by_src.imt)}
-    for i in imts:
-        det_src = []
-        for src, imt, mag, dist, eps in mag_dist_eps:
-            m = imtidx[imt]
-            sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
-            sigma = RegularGridInterpolator((
-                sigma_by_src.mag, sigma_by_src.dist), sig)((mag, dist))
-            det_src_imt[src, imt] = prob_mce[m] * numpy.exp(sigma) / numpy.exp(eps*sigma)
-            det_src.append(prob_mce[m] * numpy.exp(sigma) / numpy.exp(eps*sigma))
-        det_imt[i] = numpy.max(det_src)
+    for src, imt, mag, dist, eps in mag_dist_eps:
+        m = imtidx[imt]
+        sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
+        sigma = RegularGridInterpolator((
+            sigma_by_src.mag, sigma_by_src.dist), sig)((mag, dist))
+        srcs.append(src)
+        imts.append(imt)
+        dets.append(prob_mce[m] * numpy.exp(sigma) / numpy.exp(eps*sigma))
+    df = pandas.DataFrame(dict(src=srcs, imt=imts, det=dets))
+    det = df.groupby('imt').det.max()
+    return det.to_dict()
 
-    return det_imt, det_src_imt
 
-def get_mce(prob_mce, det_imt, DLLs, imts):
+def get_mce(prob_mce, det_imt, DLLs):
     """
-    :returns: a dictionary (imt) -> MCE
+    :returns: a dictionary imt -> MCE
     """
     det_mce = {}
     mce = {}  # imt -> MCE
-    for i, imt in enumerate(imts):
-        det_mce[imt] = numpy.max([det_imt[imt],DLLs[i]])
-        mce[imt] = numpy.min([prob_mce[i],det_mce[imt]])
-    
+    for i, imt in enumerate(det_imt):
+        det_mce[imt] = max(det_imt[imt], DLLs[i])
+        mce[imt] = min(prob_mce[i], det_mce[imt])    
     return mce, det_mce
+
 
 def middle(arr):
     """
@@ -128,7 +127,7 @@ def middle(arr):
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls, prob_mce, DLLs):
+def main(dstore, csm, imts, imls, DLLs=None, prob_mce=None):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -185,28 +184,31 @@ def main(dstore, csm, imts, imls, prob_mce, DLLs):
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, mag=middle(mags), dist=middle(dists),
         eps=middle(eps), imt=imts, iml=imls)
-    dstore.close()
-    dstore.open('r+')
-    aw = hdf5.ArrayWrapper(rates, dic)
-    dstore['mean_disagg_by_src'] = aw
+    mean_disagg_by_src = hdf5.ArrayWrapper(rates, dic)
     dic2 = dict(
         shape_descr=['source_id', 'mag', 'dist', 'imt'],
         source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
+    
+    dstore.close()
+    dstore.open('r+')
+    dstore['mean_disagg_by_src'] = mean_disagg_by_src
     dstore['sigma_by_src'] = sigma_by_src = hdf5.ArrayWrapper(std, dic2)
     
-    mag_dist_eps = get_mag_dist_eps_df(aw, dstore)
+    mag_dist_eps = get_mag_dist_eps_df(mean_disagg_by_src, dstore)
     out = []
     for imt, src_ids in rel_ids_by_imt.items():
         df = mag_dist_eps[mag_dist_eps.imt == imt]
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps = pandas.concat(out)
     logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    det_imt, det_src_imt = get_deterministic(prob_mce, mag_dist_eps.to_numpy(), sigma_by_src, imts)
-    for (src, imt), mce in det_src_imt.items():
-        logging.info('%s,%s: %s', src, imt, mce)   
-    mce, det_mce = get_mce(prob_mce, det_imt, DLLs, imts)
-    for imt, mce in mce.items():
-        logging.info('%s: %s', imt, mce)
+    if prob_mce is not None:
+        det_imt = get_deterministic(
+            prob_mce, mag_dist_eps.to_numpy(), sigma_by_src)
+        for imt, mce in det_imt.items():
+            logging.info('%s: %s', imt, mce)   
+        mce, det_mce = get_mce(prob_mce, det_imt, DLLs)
+        for imt, mce in det_mce.items():
+            logging.info('%s: %s', imt, mce)
 
 
 if __name__ == '__main__':

@@ -187,6 +187,7 @@ def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
                       for m, imt in enumerate(imtls) if imt in imts}}
     return hazdic, np.array(facts)
 
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -210,4 +211,5 @@ def main(dstore, csm):
         return
     facts[0] = 1 # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy()/facts
-    postproc.disagg_by_rel_sources.main(dstore, csm, imts, imls_disagg, rtgm_df.ProbMCE.to_numpy(), DLLs)
+    postproc.disagg_by_rel_sources.main(
+        dstore, csm, imts, imls_disagg, DLLs, rtgm_df.ProbMCE.to_numpy())
