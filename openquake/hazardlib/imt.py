@@ -295,12 +295,6 @@ def LSD():
     return IMT('LSD')   
 
 
-def LSDClass():
-    """
-    Liquefaction-induced lateral spread displacement class.
-    """
-    return IMT('LSDClass') 
-
 def PGDGeomMean(vert_settlement, lat_spread):
     """
     Geometric mean between vert_settlement and lat_spread
