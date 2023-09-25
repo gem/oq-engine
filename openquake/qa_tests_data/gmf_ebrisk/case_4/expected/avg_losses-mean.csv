@@ -1,5 +1,5 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.18.0-git7a2b0a808f', start_date='2023-09-25T06:20:15', checksum=2174348292, investigation_time=1.0, risk_investigation_time=50.0"
+#,,,,,,,"generated_by='OpenQuake engine 3.18.0-gite5c5311bd8', start_date='2023-09-25T18:50:49', checksum=2174348292, investigation_time=1.0, risk_investigation_time=50.0"
 asset_id,cresta,site_id,state,taxonomy,lon,lat,structural
-a2,0.11,0,01,tax1,-122.00000,38.10000,1.54724E+03
-a3,0.11,0,01,tax1,-122.00000,38.10000,8.42368E+02
-a1,0.11,1,01,tax1,-122.00000,38.11300,9.63713E+02
+a2,0.11,0,01,tax1,-122.00000,38.10000,5.00210E+03
+a3,0.11,0,01,tax1,-122.00000,38.10000,2.56594E+03
+a1,0.11,1,01,tax1,-122.00000,38.11300,2.58181E+03
