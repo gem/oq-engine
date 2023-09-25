@@ -21,6 +21,18 @@ from openquake.hazardlib import geo
 PLOTTING = False
 
 
+def _plott(rtra_prj, txy):
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1, 1)
+    tt = np.array(rtra_prj)
+    plt.plot(txy[:, 0], txy[:, 1], '-')
+    plt.plot(txy[:, 0], txy[:, 1], 'x', ms=2.0)
+    plt.plot(tt[:, 0], tt[:, 1], 'o')
+    for i, t in enumerate(tt):
+        plt.text(t[0], t[1], f'{i}')
+    ax.axis('equal')
+    plt.show()
+
 class LineResampleTestCase(unittest.TestCase):
 
     def test_resample(self):
@@ -36,6 +48,23 @@ class LineResampleTestCase(unittest.TestCase):
         p6 = geo.Point(0.134899286793, 0.262081472606, 35.3553390593)
         expected = geo.Line([p1, p2, p3, p4, p5, p6])
         self.assertEqual(expected, resampled)
+
+    def test_resample_dense_trace(self):
+        from .surface.data import atf_haiyuan_data
+        # Create the line
+        dat = atf_haiyuan_data.trace
+        line = geo.Line([geo.Point(p[0], p[1]) for p in dat])
+        # Resample
+        computed = line.resample(2.)
+        zro = np.zeros_like(computed.coo[:-1, 0])
+        # Computing distances
+        dst = geo.geodetic.distance(computed.coo[:-1, 0],
+                                    computed.coo[:-1, 1], zro,
+                                    computed.coo[1:, 0],
+                                    computed.coo[1:, 1], zro)
+        np.testing.assert_allclose(dst, 2.0, atol=0.02)
+        if PLOTTING:
+            _plott(computed.coo, line.coo)
 
     def test_resample_2(self):
         """
@@ -383,7 +412,7 @@ class ComputeWeightsTest(unittest.TestCase):
         sid = 2
         expected = (np.arctan((segl[i] - ui[i, sid]) / ti[i, sid]) -
                     np.arctan(- ui[i, sid] / ti[i, sid]))
-        expected *= 1/ti[i, sid]
+        expected *= 1 / ti[i, sid]
         msg = 'Weight for site 2 is wrong'
         self.assertAlmostEqual(expected, wei[i, sid], msg)
 
@@ -446,6 +475,21 @@ class ComputeWeightsTest(unittest.TestCase):
             plot_pattern(lons, lats, np.log10(wei[2]), plons, plats, label)
             label = 'test_weights_figure04 - sum of weights'
             plot_pattern(lons, lats, np.log10(weit), plons, plats, label)
+
+
+class LineSphereIntersectionTest(unittest.TestCase):
+
+    def test01(self):
+        """ See example https://www.geogebra.org/m/mwanwvwj """
+        pnt0 = np.array([13, 2, 9])
+        # pnt1 = np.array([7, -4, 6])
+        pnt1 = np.array([5, -6, 5])
+        ref_pnt = np.array([0, 0, 0])
+        distance = 10.
+        from openquake.hazardlib.geo.line import find_t
+        computed = find_t(pnt0, pnt1, ref_pnt, distance)
+        expected = np.array([6.92, -4.08, 5.96])
+        np.testing.assert_almost_equal(computed, expected, decimal=1)
 
 
 def get_figure04_line():
@@ -535,3 +579,6 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     if show:
         plt.show()
     return ax
+
+
+
