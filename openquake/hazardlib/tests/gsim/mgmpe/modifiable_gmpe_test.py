@@ -25,8 +25,6 @@ from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.gsim.boore_2014 import BooreEtAl2014
 from openquake.hazardlib.imt import from_string
 
 

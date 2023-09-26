@@ -1,14 +1,14 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitc951e586b4', start_date='2023-09-18T07:07:33', checksum=861356502, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states=''"
-return_period,loss_type,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
-50,contents,1.92066E+03,5.48760E-02,1.92066E+03,5.48760E-02,1.92066E+03,5.48760E-02
-100,contents,2.65960E+03,7.59887E-02,2.65960E+03,7.59887E-02,2.65960E+03,7.59887E-02
-200,contents,2.76029E+03,7.88654E-02,2.76029E+03,7.88654E-02,2.76029E+03,7.88654E-02
-50,nonstructural,2.85198E+03,2.71617E-02,2.85198E+03,2.71617E-02,2.85198E+03,2.71617E-02
-100,nonstructural,3.44818E+03,3.28398E-02,3.44818E+03,3.28398E-02,3.44818E+03,3.28398E-02
-200,nonstructural,3.58468E+03,3.41398E-02,3.58468E+03,3.41398E-02,3.58468E+03,3.41398E-02
-50,structural,9.71950E+02,1.38850E-02,9.71950E+02,1.38850E-02,9.71950E+02,1.38850E-02
-100,structural,1.21820E+03,1.74028E-02,1.21820E+03,1.74028E-02,1.21820E+03,1.74028E-02
-200,structural,1.33519E+03,1.90742E-02,1.33519E+03,1.90742E-02,1.33519E+03,1.90742E-02
-50,structural+contents,2.89261E+03,2.75487E-02,2.89261E+03,2.75487E-02,2.89261E+03,2.75487E-02
-100,structural+contents,3.80762E+03,3.62630E-02,3.80762E+03,3.62630E-02,3.80762E+03,3.62630E-02
-200,structural+contents,4.09548E+03,3.90046E-02,4.09548E+03,3.90046E-02,4.09548E+03,3.90046E-02
+#,,,"generated_by='OpenQuake engine 3.18.0-gitfdc364228a', start_date='2023-09-26T09:33:02', checksum=861356502, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states=''"
+return_period,loss_type,loss_value,loss_ratio
+50,contents,1.92066E+03,5.48760E-02
+100,contents,2.65960E+03,7.59887E-02
+200,contents,2.76029E+03,7.88654E-02
+50,nonstructural,2.85198E+03,2.71617E-02
+100,nonstructural,3.44818E+03,3.28398E-02
+200,nonstructural,3.58468E+03,3.41398E-02
+50,structural,9.71950E+02,1.38850E-02
+100,structural,1.21820E+03,1.74028E-02
+200,structural,1.33519E+03,1.90742E-02
+50,structural+contents,2.89261E+03,2.75487E-02
+100,structural+contents,3.80762E+03,3.62630E-02
+200,structural+contents,4.09548E+03,3.90046E-02
