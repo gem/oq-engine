@@ -25,6 +25,8 @@ from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.mgmpe.modifiable_gmpe import (
     ModifiableGMPE, _dict_to_coeffs_table)
+from openquake.hazardlib.imt import from_string
+
 
 
 class ModifiableGMPEAlAtik2015SigmaTest(unittest.TestCase):
@@ -289,7 +291,10 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
         ctx.hypo_depth = 10.
         ctx.occurrence_rate = .001
         sites = Dummy.get_site_collection(
-            4, amplfactor=[-1.0, 1.5, 0.00, -1.99])
+            4, amplfactor=[-1.0, 1.5, 0.00, -1.99],
+            ch_ampl03=[-0.2, 0.4, 0.6, 0],
+            ch_phis2s03=[0.3, 0.4, 0.5, 0.2],
+            ch_phiss03=[0.2, 0.1, 0.3, 0.4])
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
         ctx.rhypo = ctx.rrup = ctx.repi = np.array([1., 10., 30., 70.])
@@ -315,3 +320,28 @@ class ModifiableGMPETestSwissAmpl(unittest.TestCase):
 
             # Check the computed mean + amplification
             np.testing.assert_almost_equal(mean, exp_mean)
+
+        for gmpe_name in ['EdwardsFah2013Alpine10Bars',
+                          'EdwardsFah2013Foreland60Bars',
+                          'ChiouYoungs2008SWISS01']:
+
+            self.imt = from_string('SA(0.3)')
+            gmm = ModifiableGMPE(gmpe={gmpe_name: {}},
+                                 apply_swiss_amplification_sa={})
+            mean, intra_stdev = gmm.get_mean_and_stddevs(
+                                 self.ctx, self.ctx, self.ctx,
+                                 self.imt, [const.StdDev.INTRA_EVENT])
+
+            gmpe = registry[gmpe_name]()
+            emean = get_mean_stds(gmpe, self.ctx, [self.imt],
+                                  truncation_level=0)[0]
+
+            exp_mean = emean + np.array([-0.2, 0.4, 0.6, 0])
+            exp_stdev = np.sqrt(np.array([0.3, 0.4, 0.5, 0.2])**2 +
+                                np.array([0.2, 0.1, 0.3, 0.4])**2)
+
+            # Check the computed mean + amplification
+            np.testing.assert_almost_equal(mean, exp_mean[0])
+
+            # Check the computed intra-event stdev
+            np.testing.assert_almost_equal(intra_stdev[0], exp_stdev)

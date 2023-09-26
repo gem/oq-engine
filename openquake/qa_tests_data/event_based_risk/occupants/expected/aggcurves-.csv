@@ -1,10 +1,10 @@
-#,,,,,,,"generated_by='OpenQuake engine 3.18.0-git0163eacd01', start_date='2023-09-08T15:50:06', checksum=2507932484, risk_investigation_time=1.0, num_events=372, effective_time=10000.0, limit_states=''"
-return_period,loss_type,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
-50,occupants,8.81304E-03,3.18544E-04,8.79099E-03,3.17747E-04,8.79099E-03,3.17747E-04
-100,occupants,1.23800E-02,4.47471E-04,1.23931E-02,4.47945E-04,1.23564E-02,4.46616E-04
-200,occupants,1.65084E-02,5.96691E-04,1.68025E-02,6.07318E-04,1.65084E-02,5.96691E-04
-500,occupants,2.53652E-02,9.16815E-04,2.75022E-02,9.94056E-04,2.53652E-02,9.16815E-04
-1000,occupants,4.07966E-02,1.47457E-03,4.07966E-02,1.47457E-03,4.07966E-02,1.47457E-03
-2000,occupants,5.25585E-02,1.89971E-03,5.25585E-02,1.89971E-03,5.25585E-02,1.89971E-03
-5000,occupants,6.53285E-02,2.36127E-03,6.53285E-02,2.36127E-03,6.53285E-02,2.36127E-03
-10000,occupants,7.01989E-02,2.53731E-03,7.01989E-02,2.53731E-03,7.01989E-02,2.53731E-03
+#,,,"generated_by='OpenQuake engine 3.18.0-gitfdc364228a', start_date='2023-09-26T09:33:00', checksum=2507932484, risk_investigation_time=1.0, num_events=372, effective_time=10000.0, limit_states=''"
+return_period,loss_type,loss_value,loss_ratio
+50,occupants,8.81317E-03,3.18548E-04
+100,occupants,1.23800E-02,4.47472E-04
+200,occupants,1.65084E-02,5.96691E-04
+500,occupants,2.53652E-02,9.16815E-04
+1000,occupants,4.07966E-02,1.47457E-03
+2000,occupants,5.25582E-02,1.89969E-03
+5000,occupants,6.53289E-02,2.36128E-03
+10000,occupants,7.01980E-02,2.53728E-03

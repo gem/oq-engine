@@ -1,14 +1,14 @@
-#,,,,,,,,,"generated_by='OpenQuake engine 3.18.0-gitc951e586b4', start_date='2023-09-18T07:06:50', checksum=91486865, risk_investigation_time=5.0, num_events=124, effective_time=40.0, limit_states=''"
-id,return_period,loss_type,rlz_id,loss_value,loss_ratio,loss_aep_value,loss_aep_ratio,loss_oep_value,loss_oep_ratio
-a2371,1,structural,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-a2371,2,structural,0,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-a2371,5,structural,0,1.46035E+04,2.58773E-04,1.46035E+04,2.58773E-04,1.46035E+04,2.58773E-04
-a2371,1,structural,4,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-a2371,2,structural,4,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-a2371,5,structural,4,2.77325E+04,4.91417E-04,2.77325E+04,4.91417E-04,2.77325E+04,4.91417E-04
-a2371,1,structural,5,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-a2371,2,structural,5,7.88148E+04,1.39659E-03,7.88148E+04,1.39659E-03,7.88148E+04,1.39659E-03
-a2371,5,structural,5,2.23212E+05,3.95530E-03,2.23212E+05,3.95530E-03,2.23212E+05,3.95530E-03
-a2371,1,structural,6,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00,0.00000E+00
-a2371,2,structural,6,1.04393E+05,1.84984E-03,1.04393E+05,1.84984E-03,1.04393E+05,1.84984E-03
-a2371,5,structural,6,8.89640E+06,1.57644E-01,8.89640E+06,1.57644E-01,8.89640E+06,1.57644E-01
+#,,,,,"generated_by='OpenQuake engine 3.18.0-gitfdc364228a', start_date='2023-09-26T09:32:24', checksum=91486865, risk_investigation_time=5.0, num_events=124, effective_time=40.0, limit_states=''"
+id,return_period,loss_type,rlz_id,loss_value,loss_ratio
+a2371,1,structural,0,0.00000E+00,0.00000E+00
+a2371,2,structural,0,0.00000E+00,0.00000E+00
+a2371,5,structural,0,1.46035E+04,2.58773E-04
+a2371,1,structural,4,0.00000E+00,0.00000E+00
+a2371,2,structural,4,0.00000E+00,0.00000E+00
+a2371,5,structural,4,2.77325E+04,4.91417E-04
+a2371,1,structural,5,0.00000E+00,0.00000E+00
+a2371,2,structural,5,7.88148E+04,1.39659E-03
+a2371,5,structural,5,2.23212E+05,3.95530E-03
+a2371,1,structural,6,0.00000E+00,0.00000E+00
+a2371,2,structural,6,1.04393E+05,1.84984E-03
+a2371,5,structural,6,8.89640E+06,1.57644E-01
