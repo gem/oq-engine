@@ -224,30 +224,28 @@ def get_asce41(dstore, mce, facts):
     """
     :returns: a dictionary with the ASCE-41 parameters
     """
-    hmap = dstore["hmaps-stats"][0, 0]  # mean hazard map on the site
+    fact = dict(zip(mce, facts))
+    hmap = dstore["hmaps-stats"][0, 0]  # mean hazard on the site, shape (M, P)
     oq = dstore['oqparam']
-    imtls = oq.imtls
     poes = oq.poes
-    imts = list(imtls)
-    id02 = imts.index('SA(0.2)')
-    id1 = imts.index('SA(1.0)')
-    id_5_50 = poes.index(0.001025)
-    id_20_50 = poes.index(0.004453)
-    
+    imts = list(oq.imtls)
+    sa02 = imts.index('SA(0.2)')
+    sa10 = imts.index('SA(1.0)')
+    poe5_50 = poes.index(0.001025)  # NB: not existing in Japan!!
+    poe20_50 = poes.index(0.004453)  # NB: not existing in Japan!!
+
     BSE2N_Ss = mce['SA(0.2)']
-    Ss_5_50 = hmap[id02][id_5_50] * facts[1]
-    # NB: facts[1] is hard coded but it will correspond to id02
+    Ss_5_50 = hmap[sa02, poe5_50] * fact['SA(0.2)']
     BSE2E_Ss = min(Ss_5_50, BSE2N_Ss)
     BSE1N_Ss = 2/3 * BSE2N_Ss
-    Ss_20_50 = hmap[id02][id_20_50]  * facts[1]
+    Ss_20_50 = hmap[sa02, poe20_50] * fact['SA(0.2)']
     BSE1E_Ss = min(Ss_20_50,BSE1N_Ss)
     
     BSE2N_S1 = mce['SA(1.0)']
-    S1_5_50 = hmap[id1][id_5_50]  * facts[2]
-    # NB: facts[2] is hard coded but it will correspond to id1
+    S1_5_50 = hmap[sa10, poe5_50] * fact['SA(1.0)']
     BSE2E_S1 = min(S1_5_50, BSE2N_S1)
     BSE1N_S1 = 2/3 * BSE2N_S1
-    S1_20_50 = hmap[id1][id_20_50] * facts[2]
+    S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
     
     return {'BSE2N_Ss': BSE2N_Ss,
@@ -256,6 +254,7 @@ def get_asce41(dstore, mce, facts):
             'BSE1E_Ss': BSE1E_Ss,
             'Ss_20_50': Ss_20_50,
             'BSE1E_Ss': BSE1E_Ss,
+
             'BSE2N_S1': BSE2N_S1,
             'S1_5_50': S1_5_50,
             'BSE2E_S1': BSE2E_S1,
