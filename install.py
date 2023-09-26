@@ -210,7 +210,7 @@ def get_requirements_branch(version, inst, repository):
     """
     repository_owner, repository_name = repository.split('/')
     # in forks of oq-engine, always read requirements from master
-    if (repository_owner != 'gem' and repository_name == 'oq-engine'):
+    if repository_owner != 'gem' and repository_name == 'oq-engine':
         return 'master'
     # in cases such as 'install.py user', for instance while running tests from
     # another gem repository, we need requirements to be read from the latest
