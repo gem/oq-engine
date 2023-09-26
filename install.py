@@ -537,7 +537,8 @@ if __name__ == '__main__':
     parser.add_argument("--dbport",
                         help="DbServer port (default 1907 or 1908)")
     parser.add_argument("--repository",
-                        help="gem/oq-engine or a fork",
+                        help=("The owner and repository name. For example,"
+                              " 'gem/oq-engine' or 'forkowner/oq-engine'"),
                         default='gem/oq-engine')
     args = parser.parse_args()
     if args.inst:
