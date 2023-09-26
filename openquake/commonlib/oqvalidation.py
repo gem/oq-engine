@@ -66,7 +66,7 @@ aggregate_loss_curves_types:
   loss Exceedance Probability (EP) only or to also calculate (if possible) the
   Occurrence Exceedance Probability (OEP) and/or the Aggregate Exceedance
   Probability (AEP).
-  Example: *aggregate_loss_curves_types = ep, oep, aep*.
+  Example: *aggregate_loss_curves_types = ep, aep, oep*.
   Default: ep
 
 reaggregate_by:
