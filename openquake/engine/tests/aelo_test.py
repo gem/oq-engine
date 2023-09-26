@@ -33,7 +33,7 @@ MOSAIC_DIR = os.path.dirname(mosaic.__file__)
 aae = numpy.testing.assert_allclose
 
 SITES = ['close -85.071 10.606'.split(), 'far -90.071 16.60'.split()]
-EXPECTED = [[0.763373, 1.84959, 1.28969], [0.318191, 0.661792, 0.758443]]
+EXPECTED = [[0.763378, 1.8496, 1.28972], [0.320343, 0.66725, 0.761115]]
 
 
 def test_CCA():
