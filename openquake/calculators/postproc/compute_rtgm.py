@@ -222,37 +222,46 @@ def get_mce(prob_mce, det_imt, DLLs):
 
 def get_asce41(dstore, mce, facts):
     """
-    :returns: 
+    :returns: a dictionary with the ASCE-41 parameters
     """
-    dset = dstore["hmaps-stats"][:, 0]
+    hmap = dstore["hmaps-stats"][0, 0]  # mean hazard map on the site
     oq = dstore['oqparam']
     imtls = oq.imtls
     poes = oq.poes
-    imts = list(imtls.keys())
+    imts = list(imtls)
     id02 = imts.index('SA(0.2)')
     id1 = imts.index('SA(1.0)')
     id_5_50 = poes.index(0.001025)
     id_20_50 = poes.index(0.004453)
-    print(facts)
     
     BSE2N_Ss = mce['SA(0.2)']
-    Ss_5_50 = dset[0][id02][id_5_50] * facts[1] # this is hard coded 1 but when we extend this should correspond to id02
-    BSE2E_Ss = min(Ss_5_50,BSE2N_Ss)
+    Ss_5_50 = hmap[id02][id_5_50] * facts[1]
+    # NB: facts[1] is hard coded but it will correspond to id02
+    BSE2E_Ss = min(Ss_5_50, BSE2N_Ss)
     BSE1N_Ss = 2/3 * BSE2N_Ss
-    Ss_20_50 = dset[0][id02][id_20_50]  * facts[1]
+    Ss_20_50 = hmap[id02][id_20_50]  * facts[1]
     BSE1E_Ss = min(Ss_20_50,BSE1N_Ss)
     
     BSE2N_S1 = mce['SA(1.0)']
-    S1_5_50 = dset[0][id1][id_5_50]  * facts[2] # this is hard coded 2 but when we extend this should correspond to id1
-    BSE2E_S1 = min(S1_5_50,BSE2N_S1)
+    S1_5_50 = hmap[id1][id_5_50]  * facts[2]
+    # NB: facts[2] is hard coded but it will correspond to id1
+    BSE2E_S1 = min(S1_5_50, BSE2N_S1)
     BSE1N_S1 = 2/3 * BSE2N_S1
-    S1_20_50 = dset[0][id1][id_20_50] * facts[2]
-    BSE1E_S1 = min(S1_20_50,BSE1N_S1)
-
-    asce41 = [BSE2N_Ss,  Ss_5_50, BSE2E_Ss, BSE1E_Ss, Ss_20_50,  BSE1E_Ss, BSE2N_S1, S1_5_50, 
-         BSE2E_S1, BSE1E_S1, S1_20_50,  BSE1E_S1]
+    S1_20_50 = hmap[id1][id_20_50] * facts[2]
+    BSE1E_S1 = min(S1_20_50, BSE1N_S1)
     
-    return asce41
+    return {'BSE2N_Ss': BSE2N_Ss,
+            'Ss_5_50': Ss_5_50,
+            'BSE2E_Ss': BSE2E_Ss,
+            'BSE1E_Ss': BSE1E_Ss,
+            'Ss_20_50': Ss_20_50,
+            'BSE1E_Ss': BSE1E_Ss,
+            'BSE2N_S1': BSE2N_S1,
+            'S1_5_50': S1_5_50,
+            'BSE2E_S1': BSE2E_S1,
+            'BSE1E_S1': BSE1E_S1,
+            'S1_20_50': S1_20_50,
+            'BSE1E_S1': BSE1E_S1}
 
 
 def main(dstore, csm):
@@ -287,5 +296,5 @@ def main(dstore, csm):
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     asce41 = get_asce41(dstore, mce, facts)
-    print(asce41)
+    logging.info(asce41)
     
