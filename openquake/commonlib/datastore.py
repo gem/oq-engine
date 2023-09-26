@@ -76,8 +76,6 @@ def extract_calc_id_datadir(filename):
 def _read(calc_id: int, datadir, mode, haz_id=None):
     # low level function to read a datastore file
     ddir = datadir or get_datadir()
-    if not os.path.exists(ddir):
-        raise OSError(ddir)
     ppath = None
     if calc_id < 0:  # look at the old calculations of the current user
         calc_ids = get_calc_ids(ddir)
@@ -127,11 +125,8 @@ def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
-    if read_parent and hc_id and parentdir:
-        dstore.ppath = os.path.join(parentdir, 'calc_%d.hdf5' % hc_id)
-        dstore.parent = DataStore(dstore.ppath, mode='r')
-    elif read_parent and hc_id:
-        dstore.parent = _read(hc_id, datadir, 'r')
+    if read_parent and hc_id:
+        dstore.parent = _read(hc_id, datadir, mode='r')
         dstore.ppath = dstore.parent.filename
     return dstore.open(mode)
 
