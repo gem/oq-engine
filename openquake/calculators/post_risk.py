@@ -304,7 +304,7 @@ def build_store_agg(dstore, rbe_df, num_events):
         fix_dtypes(dic)
         suffix = {'ep': '', 'aep': '_aep', 'oep': '_oep'}
         ep_fields = ['loss' + suffix[a]
-                     for a in oq.aggregate_loss_curves_types.split(',')]
+                     for a in oq.aggregate_loss_curves_types.split(', ')]
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states),
                          units=units, ep_fields=ep_fields)
