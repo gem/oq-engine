@@ -20,6 +20,7 @@ import sys
 import os
 import socket
 import getpass
+import tempfile
 
 from openquake.baselib import config
 from openquake.commonlib import datastore
@@ -221,7 +222,7 @@ if TEST and APPLICATION_MODE.upper() == 'AELO':
     #        We should redefine it to a different directory for each test,
     #        in order to avoid concurrency issues in case tests run in
     #        parallel
-    EMAIL_FILE_PATH = '/tmp/app-messages'
+    EMAIL_FILE_PATH = os.path.join(tempfile.gettempdir(), 'app-messages')
 
 if APPLICATION_MODE.upper() in ('RESTRICTED', 'AELO'):
     LOCKDOWN = True
