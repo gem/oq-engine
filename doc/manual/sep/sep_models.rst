@@ -340,30 +340,6 @@ Table 3: Ground settlements amplitudes for
 liquefaction susceptibility categories.
 
 
-Nonparametric model for lateral spreading
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In 2021 Durante et al. (2021) explored potential use of machine learning
-in predicting the lateral spreading on national scale. Later, in 2023
-Professor Rathje presented at GEM Conference a more general model, with
-global applicability. Similar to geospatial liquefaction models, it uses
-globally available inputs as first-order proxies to characterise the
-features that govern lateral spreading. The database used for training 
-the model is a compilation of data obtained from the Next Generation 
-Liquefaction (NGL) initiative and the Canterbury geotechnical database.
-The optimal features are :math:`pga [g]`, ground elevation :math:`[m]`, 
-slope :math:`[%]`, distance to the closest river :math:`d_{r} [m]`, 
-and ground water depth :math:`gwd [m]`. Model's output is categorical,
-i.e., each instance belongs to either of the classes: :math:`0`: small 
-displacements, :math"`1`: medium displacements, :math"`2`: large displa-
-cements. 
-This model is labelled with an experimental tag as the updated model is
-not obtained from the original authors, but has been trained by GEM 
-members with reference to the work of Durante et al. (2021) and Prof.
-Rathje presentation (2023).  
-
-
-
 Landslide models
 ----------------
 
@@ -512,18 +488,14 @@ Reference
 [11] Todorovic, L., Silva, V. (2022). A liquefaction occurrence model for regional analysis. 
      Soil Dynamics and Earthquake Engineering, 161, 1–12. https://doi.org/10.1016/j.soildyn.2022.107430
 
-[12] Durante, M.G., & Rathje, M.E. (2021). An exploration of the use of machine learning to 
-     predict lateral spreading. Earthquake Spectra, 37(4), 1-27. 
-     https://doi.org/10.1177/87552930211004613
+[12] Newmark, N.M., 1965. Effects of earthquakes on dams and embankments. Geotechnique 15, 139–159.
 
-[13] Newmark, N.M., 1965. Effects of earthquakes on dams and embankments. Geotechnique 15, 139–159.
-
-[14] Jibson, R.W., Harp, E.L., & Michael, J.A. (2000). A method for producing digital probabilistic 
+[13] Jibson, R.W., Harp, E.L., & Michael, J.A. (2000). A method for producing digital probabilistic 
      seismic landslide hazard maps. Engineering Geology, 58(3-4), 271-289.
      https://doi.org/10.1016/S0013-7952(00)00039-9 
 
-[15] Jibson, R.W. (2007). Regression models for estimating coseismic landslide displacement.
+[14] Jibson, R.W. (2007). Regression models for estimating coseismic landslide displacement.
      Engineering Geology, 91(2-4), 209-218. https://doi.org/10.1016/j.enggeo.2007.01.013 
 
-[16] Grant, A., Wartman, J., & Grace, A.J. (2016). Multimodal method for coseismic landslide 
+[15] Grant, A., Wartman, J., & Grace, A.J. (2016). Multimodal method for coseismic landslide 
      hazard assessment. Engineering Geology, 212, 146-160. https://doi.org/10.1016/j.enggeo.2016.08.005
