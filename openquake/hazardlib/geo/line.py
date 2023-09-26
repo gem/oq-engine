@@ -313,17 +313,17 @@ class Line(object):
                 if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
 
                     # Adding more points still on the same segment
-                    Δx = (txy[-1, 0] - txy[-2, 0])
-                    Δy = (txy[-1, 1] - txy[-2, 1])
-                    Δz = (txy[-1, 2] - txy[-2, 2])
-                    chk_dst = (Δx**2 + Δy**2 + Δz**2)**0.5
-                    Δx_ratio = Δx / chk_dst
-                    Δy_ratio = Δy / chk_dst
-                    Δz_ratio = Δz / chk_dst
+                    dx = (txy[-1, 0] - txy[-2, 0])
+                    dy = (txy[-1, 1] - txy[-2, 1])
+                    dz = (txy[-1, 2] - txy[-2, 2])
+                    chk_dst = (dx**2 + dy**2 + dz**2)**0.5
+                    dx_ratio = dx / chk_dst
+                    dy_ratio = dy / chk_dst
+                    dz_ratio = dz / chk_dst
 
-                    x_pnt = rtra_prj[-1][0] + Δx_ratio * sect_len
-                    y_pnt = rtra_prj[-1][1] + Δy_ratio * sect_len
-                    z_pnt = rtra_prj[-1][2] + Δz_ratio * sect_len
+                    x_pnt = rtra_prj[-1][0] + dx_ratio * sect_len
+                    y_pnt = rtra_prj[-1][1] + dy_ratio * sect_len
+                    z_pnt = rtra_prj[-1][2] + dz_ratio * sect_len
 
                     # New point
                     xg, yg = proj(np.array([x_pnt]), np.array([y_pnt]),
