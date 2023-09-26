@@ -338,7 +338,7 @@ def fix_version(commit, venv):
         f.write(''.join(lines))
 
 
-def install(inst, version, repository='gem/oq-engine'):
+def install(inst, version, repository):
     """
     Install the engine in one of the three possible modes
     """
@@ -548,6 +548,6 @@ if __name__ == '__main__':
         if args.remove:
             remove(inst)
         else:
-            install(inst, args.version)
+            install(inst, args.version, args.repository)
     else:
         sys.exit("Please specify the kind of installation")
