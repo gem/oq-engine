@@ -1,12 +1,16 @@
+  [Marco Pagani]
+  * Fixed a bug in the code that resamples a line, with a negligible effect
+    on the hazard of models containing simple fault sources
+
   [Athanasios Papadopoulos]
   * Adjusted the Swiss-specific implementations of the GMPEs used
     in the Swiss national seismic hazard (SUIhaz15) and risk (ERM-CH23) models.
     The new implementation returns all of total, intra- and inter-event sigmas,
-    rather than just the total one.  
-  * Extended the ModifiableGMPE class by adding an 
+    rather than just the total one.
+  * Extended the ModifiableGMPE class by adding an
     apply_swiss_amplification_sa method that is used in ERM-CH23 to
     apply site specific adjustments for site effects and intra-event
-    uncertainty. 
+    uncertainty.
   * Added ch_ampl03, ch_ampl06, ch_phis2s03, ch_phis2s06,
     ch_phisss03, ch_phis2s06 site parameters to the site.py file.
     These parameters are required by the apply_swiss_amplification_sa method.
