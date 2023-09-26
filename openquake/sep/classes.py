@@ -510,8 +510,9 @@ supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):
     """
-    Computes the liquefaction probability from PGV and transforms it
-    to binary output via the predefined probability threshold.
+    Computes the liquefaction occurrence from PGV and transforms it
+    to probability of belonging to positive class, i.e., liquefaction
+    occurrence.
     """
     outputs = ["LiqOccur", "LiqProb"]
 
