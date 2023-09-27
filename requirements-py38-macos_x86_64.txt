@@ -49,3 +49,4 @@ https://wheelhouse.openquake.org/v3/py/fonttools-4.38.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-5.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/zipp-3.10.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/Django-3.2.21-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl
