@@ -59,7 +59,8 @@ def get_epicenters(df):
 def chk(gmm, tags, ctx, subset_df, sigma):
     periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
                SA(period=1.0), SA(period=2.0)]
-    stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT]
+    stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
+            const.StdDev.INTRA_EVENT]
     # Compute and check results for the NON ergodic model
     for i in range(len(periods)):
         imt = periods[i]
