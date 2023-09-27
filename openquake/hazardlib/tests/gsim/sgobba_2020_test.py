@@ -56,25 +56,24 @@ def get_epicenters(df):
     return epicenters
 
 
-def chk(gmm, tags, ctx, subset_df, sigma):
-    periods = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
-               SA(period=1.0), SA(period=2.0)]
+def chk(gmm, tags, ctx, subset_df, what):
+    imts = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
+            SA(period=1.0), SA(period=2.0)]
     stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
             const.StdDev.INTRA_EVENT]
     # Compute and check results for the NON ergodic model
-    for i in range(len(periods)):
-        imt = periods[i]
+    for i, imt in enumerate(imts):
         tag = tags[i]
         mean, stddevs = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-        if sigma == "1":  # checking the Total stddev
+        if what == "sig":  # checking the Total stddev
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
             computed = stddevs[0]  # in ln
-        elif sigma == "2":  # checking tau
+        elif what == "tau":  # checking tau
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
             computed = stddevs[1]  # in ln
-        elif sigma == "3":  # checking phi
+        elif what == "phi":  # checking phi
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
             computed = stddevs[2]  # in ln
@@ -129,32 +128,32 @@ class Sgobba2020Test(unittest.TestCase):
             subset_df = df.loc[idx]
             ctx = get_ctx(subset_df)
             tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-            chk(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, sigma="0")
+            chk(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, what="mea")
 
     def test_NON_ERGODIC(self):
         fname = 'ValidationTable_MEAN_NERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, sigma="0")
+            chk(gmm, tags, ctx, subset_df, what="mea")
 
-    def test_SIGMAtot(self):
+    def test_WHATtot(self):
         fname = 'ValidationTable_STD_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, sigma="1")
+            chk(gmm, tags, ctx, subset_df, what="sig")
 
     def test_tau(self):
         fname = 'ValidationTable_STD_tau.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, sigma="2")
+            chk(gmm, tags, ctx, subset_df, what="tau")
 
     def test_phi(self):
         fname = 'ValidationTable_STD_phi.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
         for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, sigma="3")
+            chk(gmm, tags, ctx, subset_df, what="phi")
