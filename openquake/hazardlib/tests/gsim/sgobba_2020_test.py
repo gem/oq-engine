@@ -33,7 +33,12 @@ DATA_FOLDER = os.path.join(CDIR, 'data', 'SEA20')
 DATA_FOLDER2 = os.path.join(CDIR, '..', '..', 'gsim', 'sgobba_2020')
 
 
-def get_ctx(subset_df):
+def get_epicenters(df):
+    epicenters = df[['lon_epi', 'lat_epi']].to_numpy()
+    return np.unique(epicenters, axis=0)
+
+
+def chk(gmm, tags, subset_df, what):
     locs = []
     rjb = []
     for idx, row in subset_df.iterrows():
@@ -43,16 +48,7 @@ def get_ctx(subset_df):
     rup = Dummy.get_rupture(
         mag=row.rup_mag, hypo_lat=row.lat_epi, hypo_lon=row.lon_epi)
     rup.rjb = rup.rrup = np.array(rjb)
-    return contexts.full_context(sites, rup)
-
-
-def get_epicenters(df):
-    epicenters = df[['lon_epi', 'lat_epi']].to_numpy()
-    return np.unique(epicenters, axis=0)
-
-
-def chk(gmm, tags, subset_df, what):
-    ctx = get_ctx(subset_df)
+    ctx = contexts.full_context(sites, rup)
 
     imts = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
             SA(period=1.0), SA(period=2.0)]
