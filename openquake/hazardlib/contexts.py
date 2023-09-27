@@ -301,6 +301,15 @@ def _interp(param, name, trt):
     return mdd
 
 
+def test_cmaker(gsims, imts, **params):
+    """
+    :returns: a simplified ContextMaker for use in the tests
+    """
+    dic = dict(imtls={imt: [0] for imt in imts})
+    dic.update(**params)
+    return ContextMaker('*', gsims, dic)
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -326,7 +335,7 @@ class ContextMaker(object):
         if isinstance(oq, dict):
             param = oq
             oq = Oq(**param)
-            self.mags = param.get('mags', ())
+            self.mags = param.get('mags', ())  # list of strings %.2f
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
