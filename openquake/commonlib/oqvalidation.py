@@ -912,7 +912,14 @@ class OqParam(valid.ParamSet):
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
     aggregate_loss_curves_types = valid.Param(
-        valid.Choice('ep', 'aep', 'oep', 'aep, oep'), 'ep')
+        # accepting all comma-separated permutations of 1, 2 or 3 elements
+        # of the list ['ep', 'aep' 'oep']
+        # e.g. 'ep, aep' or 'ep, aep, oep' are valid
+        valid.Choice(
+            *list(', '.join(perm) for perm in itertools.chain.from_iterable(
+                [itertools.permutations(['ep', 'aep', 'oep'], i)
+                    for i in range(1, 4)]))),
+        'ep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
