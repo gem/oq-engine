@@ -151,7 +151,7 @@ class ModifiableGMPETest(unittest.TestCase):
         # Check adding/removing a delta std to the total std
         mea, sig, tau, phi = self.get_mean_stds(
             add_delta_std_to_total_std={"delta": -0.20})
-            
+
         aae(sig[ORIG, 0], 0.712105)
         aae(sig[MODI, 0], 0.68344277)
 
