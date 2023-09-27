@@ -35,7 +35,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
-    KNOWN_DISTANCES, full_context, ContextMaker)
+    KNOWN_DISTANCES, full_context, simple_cmaker)
 from openquake.hazardlib.contexts import *  # for backward compatibility
 
 
@@ -364,10 +364,10 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
             ctx = full_context(sites, rup, dists)
         else:
             ctx = rup  # rup is already a good object
-        if self.compute.__annotations__.get("ctx") is numpy.recarray:
-            cmaker = ContextMaker('*', [self], {'imtls': {imt.string: [0]}})
-            if not isinstance(ctx, numpy.ndarray):
-                ctx = cmaker.recarray([ctx])
+        assert self.compute.__annotations__.get("ctx") is numpy.recarray
+        cmaker = simple_cmaker([self], [imt.string])
+        if not isinstance(ctx, numpy.ndarray):
+            ctx = cmaker.recarray([ctx])
         self.compute(ctx, [imt], mean, sig, tau, phi)
         stddevs = []
         for stddev_type in stddev_types:

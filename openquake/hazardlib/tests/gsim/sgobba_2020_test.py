@@ -32,6 +32,8 @@ DATA_FOLDER = os.path.join(CDIR, 'data', 'SEA20')
 # Residuals
 DATA_FOLDER2 = os.path.join(CDIR, '..', '..', 'gsim', 'sgobba_2020')
 
+IMTS = ['PGA', 'SA(0.2)', 'SA(0.50251256281407)', 'SA(1.0)', 'SA(2.0']
+
 
 def get_epicenters(df):
     epicenters = df[['lon_epi', 'lat_epi']].to_numpy()
@@ -39,6 +41,15 @@ def get_epicenters(df):
 
 
 def chk(gmm, tags, subset_df, what):
+    '''
+    cmaker = contexts.simple_cmaker([gmm], IMTS)
+    ctxt = cmaker.new_ctx(len(subset_df))
+    ctxt.vs30 = 800.
+    ctxt.rjb = ctxt.rrup = subset_df.dist_jb
+    ctxt.mag = subset_df.rup_mag
+    ctxt.hypo_lon = subset_df.lon_epi
+    ctxt.hypo_lat = subset_df.lat_epi
+    '''
     locs = []
     rjb = []
     for idx, row in subset_df.iterrows():
@@ -54,6 +65,7 @@ def chk(gmm, tags, subset_df, what):
             SA(period=1.0), SA(period=2.0)]
     stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
             const.StdDev.INTRA_EVENT]
+
     # Compute and check results for the NON ergodic model
     for i, imt in enumerate(imts):
         tag = tags[i]
@@ -100,8 +112,8 @@ def gen_data(df):
                 ev_id = df2['id'][idx2]
             else:
                 ev_id = None
-            print('event_id: '+str(ev_id))
-            print('flag_bedrock: '+str(i))
+            print('event_id: %s' % ev_id)
+            print('flag_bedrock: %s' % i)
             gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
             yield gmm, subset_df
 
