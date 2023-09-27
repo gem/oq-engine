@@ -301,7 +301,7 @@ def _interp(param, name, trt):
     return mdd
 
 
-def test_cmaker(gsims, imts, **params):
+def simple_cmaker(gsims, imts, **params):
     """
     :returns: a simplified ContextMaker for use in the tests
     """
