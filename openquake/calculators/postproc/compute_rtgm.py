@@ -45,6 +45,7 @@ try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
+from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -295,5 +296,6 @@ def main(dstore, csm):
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     asce41 = get_asce41(dstore, mce, facts)
+    dstore['asce41'] = hdf5.dumps(asce41)
     logging.info(asce41)
     
