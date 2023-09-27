@@ -209,16 +209,66 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     return det.to_dict()
 
 
-def get_mce(prob_mce, det_imt, DLLs):
+def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     """
     :returns: a dictionary imt -> MCE
+    :returns: a dictionary imt -> det MCE
+    :returns: a dictionary all ASCE7 parameters
     """
+    rtgm = dstore['rtgm']
+    imts = rtgm['IMT']
+    for i, imt in enumerate(imts):
+        if imt == b'SA0P2':
+            crs = rtgm['RiskCoeff'][i]
+        elif imt == b'SA1P0':
+            cr1 = rtgm['RiskCoeff'][i]
+            
     det_mce = {}
     mce = {}  # imt -> MCE
     for i, imt in enumerate(det_imt):
         det_mce[imt] = max(det_imt[imt], DLLs[i])
-        mce[imt] = min(prob_mce[i], det_mce[imt])    
-    return mce, det_mce
+        mce[imt] = min(prob_mce[i], det_mce[imt])   
+
+    if mce['SA(0.2)']<0.25:
+        SS_seismicity = "Low"
+    elif mce['SA(0.2)'] <0.5:
+        SS_seismicity = "Moderate"
+    elif mce['SA(0.2)'] <1:
+        SS_seismicity = "Moderately High"
+    elif mce['SA(0.2)']  <1.5:
+        SS_seismicity = "High"
+    else:
+        SS_seismicity = "Very High"
+
+    if mce['SA(1.0)'] < 0.1:
+        S1_seismicity = "Low"
+    elif mce['SA(1.0)'] < 0.2:
+        S1_seismicity = "Moderate"
+    elif mce['SA(1.0)'] < 0.4:
+        S1_seismicity = "Moderately High"
+    elif mce['SA(1.0)']< 0.6:
+        S1_seismicity = "High"
+    else:
+        S1_seismicity = "Very High"
+        
+    asce7 = {'PGA_2_50': prob_mce['PGA'],
+            'PGA_84th': det_mce['PGA'],
+            'PGA': mce['PGA'],
+            
+            'SS_RT': prob_mce['SA(0.2)'],
+            'CRS': crs,
+            'SS_84th': det_mce['SA(0.2)'],
+            'SS': mce['SA(0.2)'],
+            'SS_seismicity': SS_seismicity,
+
+            'S1_RT': prob_mce['SA(1.0)'],
+            'CR1': cr1,
+            'S1_84th': det_mce['SA(1.0)'],
+            'S1': mce['SA(1.0)'],
+            'S1_seismicity': S1_seismicity,
+            }
+
+    return mce, det_mce, asce7
 
 def get_asce41(dstore, mce, facts):
     """
@@ -231,8 +281,12 @@ def get_asce41(dstore, mce, facts):
     imts = list(oq.imtls)
     sa02 = imts.index('SA(0.2)')
     sa10 = imts.index('SA(1.0)')
-    poe5_50 = poes.index(0.001025)  # NB: not existing in Japan!!
-    poe20_50 = poes.index(0.004453)  # NB: not existing in Japan!!
+    if int(oq.investigation_time) == 1:
+        poe5_50 = poes.index(0.001025)  
+        poe20_50 = poes.index(0.004453) 
+    elif int(oq.investigation_time) == 50:
+        poe5_50 = poes.index(0.05)  
+        poe20_50 = poes.index(0.2)  
 
     BSE2N_Ss = mce['SA(0.2)']
     Ss_5_50 = hmap[sa02, poe5_50] * fact['SA(0.2)']
@@ -291,9 +345,11 @@ def main(dstore, csm):
         dstore, csm, imts, imls_disagg)
     det_imt = get_deterministic(prob_mce, mag_dist_eps, sigma_by_src)
     logging.info(f'{det_imt=}')
-    mce, det_mce = get_mce(prob_mce, det_imt, DLLs)
+    mce, det_mce, asce7 = get_mce(prob_mce, det_imt, DLLs)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     asce41 = get_asce41(dstore, mce, facts)
+    dstore.create_df('asce41', asce41)
+    dstore.create_df('asce7', asce7)
     logging.info(asce41)
     
