@@ -51,7 +51,9 @@ def get_epicenters(df):
     return np.unique(epicenters, axis=0)
 
 
-def chk(gmm, tags, ctx, subset_df, what):
+def chk(gmm, tags, subset_df, what):
+    ctx = get_ctx(subset_df)
+
     imts = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
             SA(period=1.0), SA(period=2.0)]
     stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
@@ -104,9 +106,8 @@ def gen_data(df):
                 ev_id = None
             print('event_id: '+str(ev_id))
             print('flag_bedrock: '+str(i))
-            ctx = get_ctx(subset_df)
             gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
-            yield gmm, ctx, subset_df
+            yield gmm, subset_df
 
 
 class Sgobba2020Test(unittest.TestCase):
@@ -117,34 +118,33 @@ class Sgobba2020Test(unittest.TestCase):
         for lon, lat in get_epicenters(df):
             idx = (df['lat_epi'] == lat) & (df['lon_epi'] == lon)
             subset_df = df.loc[idx]
-            ctx = get_ctx(subset_df)
             tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-            chk(SgobbaEtAl2020(cluster=0), tags, ctx, subset_df, what="mea")
+            chk(SgobbaEtAl2020(cluster=0), tags, subset_df, what="mea")
 
     def test_NON_ERGODIC(self):
         fname = 'ValidationTable_MEAN_NERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
-        for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, what="mea")
+        for gmm, subset_df in gen_data(df):
+            chk(gmm, tags, subset_df, what="mea")
 
-    def test_WHATtot(self):
+    def test_sigmatot(self):
         fname = 'ValidationTable_STD_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
-        for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, what="sig")
+        for gmm, subset_df in gen_data(df):
+            chk(gmm, tags, subset_df, what="sig")
 
     def test_tau(self):
         fname = 'ValidationTable_STD_tau.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
-        for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, what="tau")
+        for gmm, subset_df in gen_data(df):
+            chk(gmm, tags, subset_df, what="tau")
 
     def test_phi(self):
         fname = 'ValidationTable_STD_phi.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
         tags = ['PGA', 'SA02', 'SA05', 'SA10', 'SA20']
-        for gmm, ctx, subset_df in gen_data(df):
-            chk(gmm, tags, ctx, subset_df, what="phi")
+        for gmm, subset_df in gen_data(df):
+            chk(gmm, tags, subset_df, what="phi")
