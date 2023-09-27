@@ -214,9 +214,11 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
     dic = general.AccumDict(accum=[])
     for (agg_id, rlz_id, loss_id), data in items:
         year = data.pop('year', ())
-        curve = {kind: builder.build_curve(
-                    year, kind, data[kind], aggregate_loss_curves_types, rlz_id)
-                 for kind in data}
+        curve = {
+            kind: builder.build_curve(
+                year, kind, data[kind], aggregate_loss_curves_types,
+                scientific.LOSSTYPE[loss_id], rlz_id)
+            for kind in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
             dic['rlz_id'].append(rlz_id)
@@ -357,7 +359,7 @@ def build_reinsurance(dstore, num_events):
             curve = {col: builder.build_curve(
                         years, col, df[col].to_numpy(),
                         oq.aggregate_loss_curves_types,
-                        rlzid)
+                        'total', rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
