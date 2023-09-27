@@ -26,11 +26,11 @@ from openquake.hazardlib.geo import Point
 from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
 from openquake.hazardlib.gsim.sgobba_2020 import SgobbaEtAl2020
 
-# folder Verif Tables
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'data', 'SEA20')
-# folder Residuals
-DATA_FOLDER2 = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'gsim', 'sgobba_2020')
+CDIR = os.path.dirname(__file__)
+# Verification Tables
+DATA_FOLDER = os.path.join(CDIR, 'data', 'SEA20')
+# Residuals
+DATA_FOLDER2 = os.path.join(CDIR, '..', '..', 'gsim', 'sgobba_2020')
 
 
 def get_ctx(subset_df):
