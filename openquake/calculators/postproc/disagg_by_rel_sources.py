@@ -121,9 +121,10 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
     rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
     std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
     for srcid, std4D, rates4D, rates2D in smap:
-        idx = src2idx[basename(srcid, '!;')]
+        bname = basename(srcid, '!;')
+        idx = src2idx[bname]
         rates[idx] += rates4D
-        std[idx] += std4D @ weights[srcid] # shape (Ma, D, M, G) -> (Ma, D, M)
+        std[idx] += std4D @ weights[bname] # shape (Ma, D, M, G) -> (Ma, D, M)
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, mag=middle(mags), dist=middle(dists),
