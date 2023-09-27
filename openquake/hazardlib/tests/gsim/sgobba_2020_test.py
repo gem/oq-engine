@@ -46,14 +46,9 @@ def get_ctx(subset_df):
     return contexts.full_context(sites, rup)
 
 
-# legacy horrible implementation
 def get_epicenters(df):
-    epicenters = []
-    for idx, row in df.iterrows():
-        x = Point(row.lon_epi, row.lat_epi)
-        if x not in epicenters:
-            epicenters.append(x)
-    return epicenters
+    epicenters = df[['lon_epi', 'lat_epi']].to_numpy()
+    return np.unique(epicenters, axis=0)
 
 
 def chk(gmm, tags, ctx, subset_df, what):
@@ -87,11 +82,8 @@ def gen_data(df):
     df2 = pd.read_csv(os.path.join(DATA_FOLDER2, 'event.csv'),
                       dtype={'id': str})
     epicenters = get_epicenters(df)
-
     # For each event check Validation
-    for i in range(len(epicenters)):
-        LON = epicenters[i].x
-        LAT = epicenters[i].y
+    for LON, LAT in epicenters:
         idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON))
         subset_df = df.loc[idx]
         flag_b = subset_df['flag_bedrock']
@@ -122,9 +114,8 @@ class Sgobba2020Test(unittest.TestCase):
     def test_ERGODIC(self):
         fname = 'ValidationTable_MEAN_ERG_full.csv'
         df = pd.read_csv(os.path.join(DATA_FOLDER, fname))
-        epicenters = get_epicenters(df)
-        for epi in epicenters:
-            idx = (df['lat_epi'] == epi.y) & (df['lon_epi'] == epi.x)
+        for lon, lat in get_epicenters(df):
+            idx = (df['lat_epi'] == lat) & (df['lon_epi'] == lon)
             subset_df = df.loc[idx]
             ctx = get_ctx(subset_df)
             tags = ['gmm_PGA', 'gmm_SA02', 'gmm_SA05', 'gmm_SA10', 'gmm_SA20']
