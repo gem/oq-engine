@@ -83,8 +83,8 @@ def gen_data(df):
                       dtype={'id': str})
     epicenters = get_epicenters(df)
     # For each event check Validation
-    for LON, LAT in epicenters:
-        idx = np.where((df['lat_epi'] == LAT) & (df['lon_epi'] == LON))
+    for lon, lat in epicenters:
+        idx = np.where((df['lat_epi'] == lat) & (df['lon_epi'] == lon))
         subset_df = df.loc[idx]
         flag_b = subset_df['flag_bedrock']
         if sum(flag_b) > 0:
@@ -92,11 +92,11 @@ def gen_data(df):
         else:
             bedrock = [0]
         for i in bedrock:
-            idx = np.where((df['lat_epi'] == LAT) &
-                           (df['lon_epi'] == LON) &
+            idx = np.where((df['lat_epi'] == lat) &
+                           (df['lon_epi'] == lon) &
                            (df['flag_bedrock'] == i))
             subset_df = df.loc[idx]
-            idx2 = np.where((df2['Ev_lat'] == LAT) & (df2['Ev_lon'] == LON))[0]
+            idx2 = np.where((df2['Ev_lat'] == lat) & (df2['Ev_lon'] == lon))[0]
             if len(idx2) > 0:
                 idx2 = idx2[0]
                 ev_id = df2['id'][idx2]
