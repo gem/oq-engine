@@ -41,7 +41,7 @@
       <tbody>
         <% _.each(outputs, function(output) { %>
         {% if application_mode == 'AELO' %}
-        <% if (output.get('type') == 'hmaps' || output.get('type') == 'realizations') { %>
+        <% if (['hmaps', 'realizations'].indexOf(output.get('type')) >= 0) { %>
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {% endif %}
