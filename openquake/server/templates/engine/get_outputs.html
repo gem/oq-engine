@@ -40,6 +40,11 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
+        {% if application_mode == 'AELO' %}
+        <% if (output.get('type') == 'hmaps' || output.get('type') == 'realizations') { %>
+        <%   return; // works like continue in underscore.js %>
+        <% }%>
+        {% endif %}
         <tr class="success">
           <td><%= output.get('id') || 'New' %></td>
           <td><%= output.get('name') %></td>
