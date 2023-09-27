@@ -261,14 +261,9 @@ class RuptureImporter(object):
         if oq.investigation_time:
             R = len(self.datastore['weights'])
             etime = int(oq.investigation_time * oq.ses_per_logic_tree_path)
-            eff_time = etime * R
-            if oq.collect_rlzs:
-                extra['year'] = rng.choice(eff_time, len(events)) + 1
-            else:
-                for r in range(R):
-                    ok, = numpy.where(events['rlz_id'] == r)
-                    extra['year'][ok] = rng.choice(
-                        etime, len(ok)) + r * etime + 1
+            for r in range(R):
+                ok, = numpy.where(events['rlz_id'] == r)
+                extra['year'][ok] = rng.choice(etime, len(ok)) + r * etime + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
 
