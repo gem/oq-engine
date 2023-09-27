@@ -215,6 +215,8 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     :returns: a dictionary imt -> det MCE
     :returns: a dictionary all ASCE7 parameters
     """
+    
+    
     rtgm = dstore['rtgm']
     imts = rtgm['IMT']
     for i, imt in enumerate(imts):
@@ -251,17 +253,17 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     else:
         S1_seismicity = "Very High"
         
-    asce7 = {'PGA_2_50': prob_mce['PGA'],
+    asce7 = {'PGA_2_50': prob_mce[0],
             'PGA_84th': det_mce['PGA'],
             'PGA': mce['PGA'],
             
-            'SS_RT': prob_mce['SA(0.2)'],
+            'SS_RT': prob_mce[1],
             'CRS': crs,
             'SS_84th': det_mce['SA(0.2)'],
             'SS': mce['SA(0.2)'],
             'SS_seismicity': SS_seismicity,
 
-            'S1_RT': prob_mce['SA(1.0)'],
+            'S1_RT': prob_mce[2],
             'CR1': cr1,
             'S1_84th': det_mce['SA(1.0)'],
             'S1': mce['SA(1.0)'],
@@ -345,11 +347,11 @@ def main(dstore, csm):
         dstore, csm, imts, imls_disagg)
     det_imt = get_deterministic(prob_mce, mag_dist_eps, sigma_by_src)
     logging.info(f'{det_imt=}')
-    mce, det_mce, asce7 = get_mce(prob_mce, det_imt, DLLs)
+    mce, det_mce, asce7 = get_mce_asce7(prob_mce, det_imt, DLLs,dstore)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     asce41 = get_asce41(dstore, mce, facts)
-    dstore.create_df('asce41', asce41)
-    dstore.create_df('asce7', asce7)
+
     logging.info(asce41)
+    logging.info(asce7)
     
