@@ -94,7 +94,7 @@ ENGINE = "python -m openquake.engine.engine".split()
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Vs30 (default 760 m/s)',
+    'vs30': 'Vs30 (currently set to 760 m/s)',  # FIXME: (default 760 m/s)
     'siteid': 'Site name',
 }
 
