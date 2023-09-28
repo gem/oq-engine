@@ -1,5 +1,6 @@
 # Suggested versions for development
 # GEM Mirror
+https://wheelhouse.openquake.org/v3/windows/py38/onnxruntime-1.16.0-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/setproctitle-1.2.2-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/h5py-3.1.0-cp38-cp38-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py38/numpy-1.23.3-cp38-cp38-win_amd64.whl

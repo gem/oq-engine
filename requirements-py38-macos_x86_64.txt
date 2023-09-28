@@ -2,6 +2,7 @@
 #
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/macos/py38/onnxruntime-1.16.0-cp38-cp38-macosx_10_15_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/h5py-3.7.0-cp38-cp38-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/numpy-1.23.3-cp38-cp38-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/scipy-1.8.1-cp38-cp38-macosx_10_9_x86_64.whl

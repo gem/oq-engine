@@ -3,6 +3,7 @@
 
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/macos/py39/onnxruntime-1.16.0-cp39-cp39-macosx_10_15_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/kiwisolver-1.4.4-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/Pillow-9.2.0-cp39-cp39-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/matplotlib-3.5.3-cp39-cp39-macosx_10_9_x86_64.whl

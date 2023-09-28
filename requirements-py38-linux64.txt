@@ -2,6 +2,7 @@
 # !! must update pip first! so wheels will be used !!
 #
 # GEM Mirror
+https://wheelhouse.openquake.org/v3/linux/py38/onnxruntime-1.16.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/h5py-3.7.0-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/setproctitle-1.2.2-cp38-cp38-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py38/psutil-5.6.7-cp38-cp38-manylinux1_x86_64.whl

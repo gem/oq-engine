@@ -3,6 +3,7 @@
 
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/macos/arm64/py310/onnxruntime-1.16.0-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/scipy-1.8.1-cp310-cp310-macosx_12_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/h5py-3.7.0-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/Pillow-9.2.0-cp310-cp310-macosx_11_0_arm64.whl

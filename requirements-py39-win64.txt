@@ -3,6 +3,7 @@
 
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/windows/py39/onnxruntime-1.16.0-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/h5py-3.1.0-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/setproctitle-1.2.2-cp39-cp39-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py39/numpy-1.23.3-cp39-cp39-win_amd64.whl

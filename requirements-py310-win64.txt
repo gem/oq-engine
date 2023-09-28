@@ -3,6 +3,7 @@
 
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/windows/py310/onnxruntime-1.16.0-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/scipy-1.8.1-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/h5py-3.7.0-cp310-cp310-win_amd64.whl
 https://wheelhouse.openquake.org/v3/windows/py310/Pillow-9.2.0-cp310-cp310-win_amd64.whl
