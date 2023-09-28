@@ -3,7 +3,7 @@
     (the old default can be obtained setting ACL_ON = False)
 
   [Manuela Villani, Michele Simionato]
-  * Computed ASCE-41 outputs for AELO project
+  * Produced ASCE-7 and ASCE-41 outputs for the AELO project
 
   [Athanasios Papadopoulos]
   * Adjusted the Swiss-specific implementations of the GMPEs used
