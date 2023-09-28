@@ -77,17 +77,22 @@ class Dummy:
         return rup
 
 
-def new_ctx(cmaker, n, mag=6., rake=0.):
+def new_ctx(cmaker, n, mag=6., rake=0., lons=(), lats=()):
     """
     Build a context array starting from a fake rupture and site collection
     """
-    hyp = Point(0, 0.5)
-    trc = Line([Point(0, 0), Point(0, 1)])
+    if len(lons) or len(lats):
+        assert len(lons) == len(lats) == n
+    else:
+        lons = lats = np.zeros(n)
+    lon, lat = lons[0], lats[0]
+    hyp = Point(lon, lat + 0.5)
+    trc = Line([Point(lon, lat), Point(lon, lat + 1.)])
     sfc = SimpleFaultSurface.from_fault_data(
         fault_trace=trc, upper_seismogenic_depth=0,
         lower_seismogenic_depth=15, dip=90., mesh_spacing=10.)
     rup = BaseRupture(mag, rake, '*', hyp, sfc)
     rup.rup_id = 1
-    sitecol = SiteCollection([Site(Point(0, 0)) for _ in range(n)])
+    sitecol = SiteCollection([Site(Point(*ll)) for ll in zip(lons, lats)])
     rctxs = cmaker.gen_contexts([[[rup], sitecol]], src_id=0)
     return cmaker.recarray(list(rctxs))

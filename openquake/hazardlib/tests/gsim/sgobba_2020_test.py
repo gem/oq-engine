@@ -20,10 +20,8 @@ import os
 import unittest
 import numpy as np
 import pandas as pd
-from openquake.hazardlib import const, contexts
-from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.geo import Point
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib import contexts
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import new_ctx
 from openquake.hazardlib.gsim.sgobba_2020 import SgobbaEtAl2020
 
 CDIR = os.path.dirname(__file__)
@@ -41,50 +39,35 @@ def get_epicenters(df):
 
 
 def chk(gmm, tags, subset_df, what):
-    '''
     cmaker = contexts.simple_cmaker([gmm], IMTS)
-    ctxt = cmaker.new_ctx(len(subset_df))
-    ctxt.vs30 = 800.
-    ctxt.rjb = ctxt.rrup = subset_df.dist_jb
-    ctxt.mag = subset_df.rup_mag
-    ctxt.hypo_lon = subset_df.lon_epi
-    ctxt.hypo_lat = subset_df.lat_epi
-    '''
-    locs = []
-    rjb = []
-    for idx, row in subset_df.iterrows():
-        locs.append(Point(row.lon_sites, row.lat_sites))
-        rjb.append(row.dist_jb)
-    sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
-    rup = Dummy.get_rupture(
-        mag=row.rup_mag, hypo_lat=row.lat_epi, hypo_lon=row.lon_epi)
-    rup.rjb = rup.rrup = np.array(rjb)
-    ctx = contexts.full_context(sites, rup)
-
-    imts = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
-            SA(period=1.0), SA(period=2.0)]
-    stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
-            const.StdDev.INTRA_EVENT]
+    ctx = new_ctx(cmaker, len(subset_df),
+                  lons=subset_df.lon_sites.to_numpy(),
+                  lats=subset_df.lat_sites.to_numpy())
+    ctx.vs30 = 800.
+    ctx.rjb = ctx.rrup = subset_df.dist_jb
+    ctx.mag = subset_df.rup_mag
+    ctx.hypo_lon = subset_df.lon_epi
+    ctx.hypo_lat = subset_df.lat_epi
+    mea, sig, tau, phi = cmaker.get_mean_stds([ctx])
 
     # Compute and check results for the NON ergodic model
-    for i, imt in enumerate(imts):
-        tag = tags[i]
-        mean, stddevs = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
+    for m, imt in enumerate(IMTS):
+        tag = tags[m]
         if what == "sig":  # checking the Total stddev
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = stddevs[0]  # in ln
+            computed = sig[0, m]  # in ln
         elif what == "tau":  # checking tau
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = stddevs[1]  # in ln
+            computed = tau[0, m]  # in ln
         elif what == "phi":  # checking phi
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = stddevs[2]  # in ln
+            computed = phi[0, m]  # in ln
         else:  # checking the mean
             expected = subset_df[tag].to_numpy()  # Verif Table in g unit
-            computed = np.exp(mean)  # in OQ are computed in g Units in ln
+            computed = np.exp(mea[0, m])  # in OQ are computed in g Units in ln
         np.testing.assert_allclose(computed, expected, rtol=1e-5)
 
 
