@@ -31,7 +31,7 @@ class CY14SiteTermTestCase(unittest.TestCase):
 
     def test_instantiation(self):
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
-        #
+
         # Check the assigned IMTs
         expected = set([PGA, SA, PGV])
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES == expected,
@@ -45,7 +45,7 @@ class CY14SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT ==
                         expected, msg='The IM component is wrong')
         # Check the required distances
-        expected = set(['rrup', 'rjb', 'rx'])
+        expected = {'rrup', 'rjb', 'rx'}
         self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
                         msg='The assigned distance types are wrong')
 
@@ -75,8 +75,8 @@ class CY14SiteTermTestCase(unittest.TestCase):
         aae(mea[0], mea[1], decimal=7)
         aae(sig[0], sig[1], decimal=2)
 
-        # Test that for reference soil conditions the modified GMPE gives the
-        # similar results as the original gmpe
+        # Test that for reference soil conditions the modified GMPE gives
+        # similar results to the original gmpe
         ctx.vs30 = 400.
         mea, sig, _, _ = cmaker.get_mean_stds([ctx])
         aae(mea[0], mea[1], decimal=7)
