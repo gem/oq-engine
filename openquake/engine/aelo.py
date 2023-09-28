@@ -28,7 +28,11 @@ from openquake.commonlib import readinput, mosaic
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
-
+IMTLS = IMTLS = '''\
+{"PGA": logscale(0.005, 3.00, 25),
+ "SA(0.2)": logscale(0.005, 9.00, 25),
+ "SA(1.0)": logscale(0.005, 3.60, 25)}
+'''
 
 def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     """
@@ -47,6 +51,7 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
         params['description'] += ' (%(lon)s, %(lat)s)' % inputs
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
+    params['intensity_measure_types_and_levels'] = IMTLS
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
