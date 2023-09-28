@@ -17,52 +17,35 @@
 import numpy as np
 import unittest
 
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import new_ctx
 from openquake.hazardlib.gsim.atkinson_boore_2006 import AtkinsonBoore2006
 from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
-from openquake.hazardlib.contexts import RuptureContext, get_mean_stds
+from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, NRCan15SiteTermLinear)
 
 
-def check(mgmpe, ctx, imt=PGA(), gmpe=AtkinsonBoore2006(), slc=slice(None),
-          atol=0.):
+def check(n, mgmpe, imt='PGA', gmpe=AtkinsonBoore2006(), slc=slice(None),
+          atol=0., **kw):
     # Test that for reference soil conditions the modified GMPE gives the
     # same results of the original gmpe
-    mea, std, _, _ = get_mean_stds(mgmpe, ctx, [imt])
-    mea_expected, std_expected, _, _ = get_mean_stds(gmpe, ctx, [imt])
-    np.testing.assert_allclose(mea[slc], mea_expected[slc], atol=atol)
-    np.testing.assert_allclose(std[slc], std_expected[slc], atol=atol)
+
+    cmaker = simple_cmaker([gmpe, mgmpe], [imt])
+    ctx = new_ctx(cmaker, n)
+    for k, v in kw.items():
+        setattr(ctx, k, v)
+    mea, std, _, _ = cmaker.get_mean_stds([ctx])  # shape (G=2, M=1, N=n)
+    np.testing.assert_allclose(mea[0, 0, slc], mea[1, 0, slc], atol=atol)
+    np.testing.assert_allclose(std[0, 0, slc], std[1, 0, slc], atol=atol)
 
 
 class NRCan15SiteTermTestCase(unittest.TestCase):
 
-    def ctx(self, nsites, vs30):
-        sites = Dummy.get_site_collection(nsites, vs30=vs30)
-        rup = Dummy.get_rupture(mag=6.0)
-        ctx = RuptureContext()
-        vars(ctx).update(vars(rup))
-        for name in sites.array.dtype.names:
-            setattr(ctx, name, sites[name])
-        return ctx
-
-    def test_gm_calculationAB06_hard_bedrock(self):
-        mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
-        ctx = self.ctx(4, 1999.)
-        ctx.rrup = np.array([10., 20., 30., 40.])
-        check(mgmpe, ctx)
-
-    def test_gm_calculationAB06(self):
-        mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
-        ctx = self.ctx(4, [1000., 1500., 1000., 1500.])
-        ctx.rrup = np.array([10., 10., 40., 40.])
-        check(mgmpe, ctx)
-
     def test_instantiation(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreEtAl2014')
-        #
+
         # Check the assigned IMTs
         expected = {PGA, SA, PGV}
         self.assertEqual(mgmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES, expected)
@@ -80,37 +63,37 @@ class NRCan15SiteTermTestCase(unittest.TestCase):
         expected = {'rjb'}
         self.assertEqual(mgmpe.REQUIRES_DISTANCES, expected)
 
+    def test_gm_calculationAB06_hard_bedrock(self):
+        mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
+        check(4, mgmpe, vs30=1999, rrup=[10., 20., 30., 40.])
+
+    def test_gm_calculationAB06(self):
+        mgmpe = NRCan15SiteTerm(gmpe_name='AtkinsonBoore2006')
+        check(4, mgmpe, vs30=[1000., 1500., 1000., 1500.],
+              rrup=[10., 10., 40., 40.])
+
     def test_gm_calculation_soilBC(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
-        ctx = self.ctx(4, vs30=760.)
-        ctx.rrup = np.array([1., 10., 30., 70.])
-        check(mgmpe, ctx)
+        check(4, mgmpe, vs30=760, rrup=[1., 10., 30., 70.])
 
     def test_gm_calculation_hard_rock(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='AtkinsonBoore2006')
-        ctx = self.ctx(2, vs30=[760, 2010])
-        ctx.rrup = np.array([15., 15.])
-        ctx.mag = 7.0
-        for imt in [PGA(), SA(1.0), SA(5.0)]:
-            check(mgmpe, ctx, imt, atol=.1)
+        for imt in ['PGA', 'SA(1.0)', 'SA(5.0)']:
+            check(2, mgmpe, atol=.1, vs30=[760, 2010], rrup=[15, 15], mag=7)
 
     def test_gm_calculationBA08(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
-        ctx = self.ctx(4, vs30=400.)
-        ctx.rjb = ctx.rrup = np.array([1., 10., 30., 70.])
-        check(mgmpe, ctx, gmpe=BooreAtkinson2008())
+        check(4, mgmpe, gmpe=BooreAtkinson2008(), vs30=400,
+              rjb=[1, 10, 30, 70], rrup=[1, 10, 30, 70])
 
     def test_gm_calculationBA08_1site(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
-        ctx = self.ctx(1, vs30=400.)
-        ctx.rjb = ctx.rrup = np.array([10])
-        check(mgmpe, ctx, gmpe=BooreAtkinson2008())
+        check(1, mgmpe, gmpe=BooreAtkinson2008(), vs30=400, rjb=10, rrup=10)
 
     def test_gm_calculationBA08_vs30variable(self):
         mgmpe = NRCan15SiteTermLinear(gmpe_name='BooreAtkinson2008')
-        ctx = self.ctx(3, vs30=[400., 600, 1000])
-        ctx.rjb = ctx.rrup = np.array([10., 10., 10.])
-        check(mgmpe, ctx, gmpe=BooreAtkinson2008(), slc=slice(0, -1))
+        check(3, mgmpe, gmpe=BooreAtkinson2008(), slc=slice(0, -1),
+              vs30=[400., 600, 1000], rjb=[10, 10, 10], rrup=[10, 10, 10])
 
     def test_raise_error(self):
         with self.assertRaises(AttributeError):

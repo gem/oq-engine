@@ -30,14 +30,20 @@ from openquake.calculators.export import export
 from openquake.engine.aelo import get_params_from
 
 MOSAIC_DIR = os.path.dirname(mosaic.__file__)
-aae = numpy.testing.assert_allclose
+aac = numpy.testing.assert_allclose
 
-SITES = ['close -85.071 10.606'.split(), 'far -90.071 16.60'.split()]
-EXPECTED = [[0.763378, 1.8496, 1.28972], [0.320343, 0.66725, 0.761115]]
+
+SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
+EXPECTED = [[0.318191, 0.661792, 0.758443], [0.763373, 1.84959, 1.28969]]
+ASCE7 = ['0.78388', '0.50000', '0.50000', '1.84959', '0.95914', '1.50000',
+         '1.50000', 'Very High', '1.28969', '0.95669', '0.60000', '0.60000',
+         'Very High']
+ASCE41 = [1.5, 1.45972, 1.45972, 0.83824, 0.83824, 1., 0.6,
+          1.00811, 0.6 , 0.4, 0.57329, 0.4]
 
 
 def test_CCA():
-    # RTGM over and under the deterministic limit
+    # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
     for (site, lon, lat), expected in zip(SITES, EXPECTED):
         dic = dict(lon=lon, lat=lat, site=site, vs30='760')
@@ -48,4 +54,19 @@ def test_CCA():
         if rtgmpy:
             [fname] = export(('rtgm', 'csv'), calc.datastore)
             df = pandas.read_csv(fname, skiprows=1)
-            aae(df.RTGM, expected, atol=1E-6)
+            aac(df.RTGM, expected, atol=1E-6)
+
+    if rtgmpy:
+        # check asce7 exporter
+        [fname] = export(('asce7', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        numpy.testing.assert_equal(df.value.to_numpy(), ASCE7)
+
+        # check asce41 exporter
+        [fname] = export(('asce41', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        aac(df.value, ASCE41)
+
+        # run mag_dst_eps_sig exporter
+        [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
+        pandas.read_csv(fname, skiprows=1)
