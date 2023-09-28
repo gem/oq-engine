@@ -18,7 +18,6 @@ https://wheelhouse.openquake.org/v3/macos/py38/GDAL-3.4.3-cp38-cp38-macosx_10_10
 https://wheelhouse.openquake.org/v3/macos/py38/pyproj-3.4.0-cp38-cp38-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/pandas-2.0.3-cp38-cp38-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py38/shapely-2.0.1-cp38-cp38-macosx_10_9_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py38/scikit_learn-1.3.0-cp38-cp38-macosx_10_9_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl

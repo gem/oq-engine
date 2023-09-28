@@ -19,7 +19,6 @@ https://wheelhouse.openquake.org/macos/arm64/py310/pyproj-3.4.0-cp310-cp310-maco
 https://wheelhouse.openquake.org/macos/arm64/py310/psutil-5.9.3-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/pandas-2.0.3-cp310-cp310-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py310/shapely-2.0.1-cp310-cp310-macosx_11_0_arm64.whl
-https://wheelhouse.openquake.org/macos/arm64/py310/scikit_learn-1.3.0-cp310-cp310-macosx_12_0_arm64.whl
 #python
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
