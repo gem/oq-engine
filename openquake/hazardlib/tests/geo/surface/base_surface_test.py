@@ -25,6 +25,8 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 
 from openquake.hazardlib.tests.geo.surface import _planar_test_data
 
+PLOTTING = True
+
 
 class FakeSurface(BaseSurface):
     def __init__(self, coordinates_list):
@@ -335,7 +337,7 @@ class GetResampledTopEdge(unittest.TestCase):
         lower_seismogenic_depth = 40.
         dip = 90.
 
-        mesh_spacing = 11.5
+        mesh_spacing = 10.0
         fault_trace = Line([Point(0.0, 0.0), Point(0.5, 0.5), Point(1.5, 1.0)])
 
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
@@ -345,7 +347,12 @@ class GetResampledTopEdge(unittest.TestCase):
 
         ref = Line([Point(0., 0.), Point(0.5, 0.5), Point(1.5, 1.0)])
         result = whole_fault_surface.get_resampled_top_edge()
-        breakpoint()
+
+        if PLOTTING:
+            import matplotlib.pyplot as plt
+            plt.plot(result.coo[:, 0], result.coo[:, 1], 'o')
+            plt.plot(fault_trace.coo[:, 0], fault_trace.coo[:, 1], 'o')
+            plt.show()
 
         for ref_point, result_point in zip(ref.points, result.points):
             self.assertAlmostEqual(ref_point.longitude,

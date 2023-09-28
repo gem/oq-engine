@@ -394,7 +394,7 @@ class BaseSurface:
         return (self._boundaries('lons'), self._boundaries('lats'),
                 self._boundaries('depths'))
 
-    def get_resampled_top_edge(self, angle_var=0.1):
+    def get_resampled_top_edge(self, angle_var=3.0):
         """
         This methods computes a simplified representation of a fault top edge
         by removing the points that are not describing a change of direction,
