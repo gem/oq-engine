@@ -423,10 +423,6 @@ class GMPE(GroundShakingIntensityModel):
     Ground-Motion Prediction Equation is a subclass of generic
     :class:`GroundShakingIntensityModel` with a distinct feature
     that the intensity values are log-normally distributed.
-
-    Method :meth:`~GroundShakingIntensityModel.get_mean_and_stddevs`
-    of actual GMPE implementations is supposed to return the mean
-    value as a natural logarithm of intensity.
     """
     def set_parameters(self):
         """
