@@ -17,11 +17,10 @@
 import numpy as np
 import unittest
 
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy, new_ctx
-from openquake.hazardlib.contexts import full_context, simple_cmaker
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import new_ctx
+from openquake.hazardlib.contexts import simple_cmaker
 from openquake.hazardlib.imt import PGA, PGV, SA
-from openquake.hazardlib.const import TRT, IMC, StdDev
-
+from openquake.hazardlib.const import TRT, IMC
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import CY14SiteTerm
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
