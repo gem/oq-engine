@@ -141,11 +141,9 @@ class ClassicalTestCase(CalculatorTestCase):
         self.calc.datastore.close()
         self.calc.datastore.open('r')
 
-        # check exporting a single realization in CSV and XML
+        # check exporting a single realization in CSV
         [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
-        [fname] = export(('uhs/rlz-001', 'xml'),  self.calc.datastore)
-        self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
 
         # extracting hmaps
         hmaps = extract(self.calc.datastore, 'hmaps')['all']['mean']
