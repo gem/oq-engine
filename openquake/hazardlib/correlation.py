@@ -171,17 +171,11 @@ class HM2018CorrelationModel(BaseCorrelationModel):
 
     def apply_correlation(self, sites, imt, residuals, stddev_intra):
         """
-        Apply correlation to randomly sampled residuals.
-
-        See Parent function
+        Apply correlation to randomly sampled residuals
         """
-        # stddev_intra is repeated if there is only one value
-        if len(stddev_intra) == 1:
-            stddev_intra = numpy.full(len(sites.complete), stddev_intra)
-        # Reshape 'stddev_intra' if needed
-        stddev_intra = stddev_intra.squeeze()
-        if not stddev_intra.shape:
-            stddev_intra = stddev_intra[None]
+        if sites is not sites.complete:
+            # I don't know how to manage filtered site collections
+            raise NotImplementedError(sites)
 
         if self.uncertainty_multiplier == 0:   # No uncertainty
 
@@ -209,7 +203,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             return numpy.dot(cormaLow, residuals_norm)
 
         else:   # Variability (uncertainty) is included
-            nsim = len(residuals[1])
+            nsim = residuals.shape[1]
             nsites = len(residuals)
 
             # Re-sample all the residuals
@@ -218,6 +212,8 @@ class HM2018CorrelationModel(BaseCorrelationModel):
                 corma = self._get_correlation_matrix(sites, imt)
                 cov = (numpy.diag(stddev_intra[sites.sids]) @ corma @
                        numpy.diag(stddev_intra[sites.sids]))
+
+                # FIXME: the seed is not set!
                 residuals_correlated[0:, isim] = (
                     numpy.random.multivariate_normal(
                         numpy.zeros(nsites), cov, 1))
