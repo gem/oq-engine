@@ -37,7 +37,7 @@ jobs:
         source ~/openquake/bin/activate
         pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
-        pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
+        pytest --doctest-modules --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
   hazardlib:
     runs-on: ${{ matrix.os }}
@@ -63,7 +63,7 @@ jobs:
         pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
         cd openquake
-        pytest --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
+        pytest --doctest-modules --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
