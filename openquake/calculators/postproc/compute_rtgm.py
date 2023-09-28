@@ -231,7 +231,7 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     for i, imt in enumerate(det_imt):
         det_mce[imt] = max(det_imt[imt], DLLs[i])
         mce[imt] = min(prob_mce[i], det_mce[imt]) 
-        prob_mce_out[imt] = prob_mce[i]
+        prob_mce_out[imt] = prob_mce[i]  # I think we should have the same number of IMTs everywhere as in the job.ini. For this first year we strat with 3 and then they'll become many later. 
 
     if mce['SA(0.2)'] < 0.25:
         SS_seismicity = "Low"
@@ -311,14 +311,14 @@ def get_asce41(dstore, mce, facts):
             'BSE2E_Ss': BSE2E_Ss,
             'BSE1E_Ss': BSE1E_Ss,
             'Ss_20_50': Ss_20_50,
-            'BSE1E_Ss': BSE1E_Ss,
+            'BSE1N_Ss': BSE1N_Ss,
 
             'BSE2N_S1': BSE2N_S1,
             'S1_5_50': S1_5_50,
             'BSE2E_S1': BSE2E_S1,
             'BSE1E_S1': BSE1E_S1,
             'S1_20_50': S1_20_50,
-            'BSE1E_S1': BSE1E_S1}
+            'BSE1N_S1': BSE1N_S1}
 
 
 def main(dstore, csm):
