@@ -101,8 +101,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     """
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        See :meth:`superclass method <.base.GMPE.compute>`
         for spec of input and result values.
 
         CanadaSHM6 edits: limited to the period range of 0.05 - 10s

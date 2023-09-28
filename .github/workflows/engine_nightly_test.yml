@@ -1,10 +1,17 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# This workflow will install Python dependencies, run tests and lint with multiple versions of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: hazardlib + engine + server tests
 
 on:
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      git-ref:
+        description: Git Ref
+        default: master
+        required: true
+  schedule:
+    - cron: "00 22 * * *"
 
 jobs:
   engine:
@@ -12,9 +19,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04]
-        python-version: ["3.10"]
+        python-version: [3.8, 3.9, "3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -23,22 +31,23 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF
+        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
     - name: Calculators and documentation tests
       run: |
         source ~/openquake/bin/activate
         pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
-        pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage' && pytest doc/adv-manual/*.rst
+        pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
   hazardlib:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: [3.8, 3.9, "3.10"]
     env:
-      GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_HEAD_REF: ${{ github.head_ref }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -47,24 +56,24 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF
+        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
     - name: Hazardlib tests
       run: |
         source ~/openquake/bin/activate
         pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
         cd openquake
-        pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
-        pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
+        pytest --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
   server_public_mode:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: [3.8, 3.9, "3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -73,7 +82,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF
+        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -86,9 +95,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: [3.8, 3.9, "3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -97,7 +107,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF
+        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
     - name: Server 'READ_ONLY' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -110,9 +120,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: [3.8, 3.9, "3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -121,7 +132,7 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF
+        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate

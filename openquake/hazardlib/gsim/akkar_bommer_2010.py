@@ -287,7 +287,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
@@ -309,8 +310,8 @@ class AkkarBommer2010SWISS01(AkkarBommer2010):
                 AkkarBommer2010.COEFFS, self.COEFFS_FS_ROCK[imt], tau_ss,
                 mean[m], sig[m], tau[m], phi[m], ctx, ctx.rjb, imt, log_phi_ss)
             sig[m] = np.log(10 ** sig[m])
-            #tau[m] = np.log(10 ** tau[m])
-            #phi[m] = np.log(10 ** phi[m])
+            tau[m] = np.log(10 ** tau[m])
+            phi[m] = np.log(10 ** phi[m])
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 
@@ -320,7 +321,8 @@ class AkkarBommer2010SWISS04(AkkarBommer2010SWISS01):
     This class extends :class:`AkkarBommer2010` following same strategy
     as for :class:`AkkarBommer2010SWISS01`
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}   
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS04
 
@@ -331,6 +333,7 @@ class AkkarBommer2010SWISS08(AkkarBommer2010SWISS01):
     as for :class:`AkkarBommer2010SWISS01` to be used for the
     Swiss Hazard Model [2014].
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT} 
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS08

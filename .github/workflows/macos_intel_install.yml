@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-13]
-        python-version: [3.9, "3.10"]
+        python-version: [3.8, 3.9, "3.10"]
     steps:
     # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)

@@ -48,6 +48,7 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['disagg_by_src'] = 'true'
+    params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
@@ -55,16 +56,15 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['distance_bin_width'] = '20'
     params['num_epsilon_bins'] = '10'
     params['mag_bin_width'] = '0.1'
-    params['epsilon_star'] = True
+    params['epsilon_star'] = 'true'
     params['postproc_func'] = 'compute_rtgm.main'
-    print(params['investigation_time'])
     if params['investigation_time'] == '1.0':
         params['poes'] = '0.000404 0.001025 0.002105 0.004453 0.013767'
-        
     elif params['investigation_time'] == '50.0':
         params['poes'] = '0.02 0.05 0.10 0.20 0.50'
     else: 
-        raise ValueError('Invalid investigation time = '% params['investigation_time'])
+        raise ValueError('Invalid investigation time %(investigation_time)s'
+                         % params)
         
     # params['cachedir'] = datastore.get_datadir()
     return params
