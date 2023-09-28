@@ -132,6 +132,7 @@ def calc_rtgm_df(rtgm_haz, facts, oq):
     :param oq: OqParam instance
     """
     M = len(imts)
+    assert len(oq.imtls) == M
     riskCoeff, RTGM, UHGM, RTGM_max, MCE = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M))
     results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
@@ -215,13 +216,11 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
 
 
 def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
-    
     """
     :returns: a dictionary imt -> MCE
     :returns: a dictionary imt -> det MCE
     :returns: a dictionary all ASCE7 parameters
     """
-    
     rtgm = dstore['rtgm']
     imts = rtgm['IMT']
     for i, imt in enumerate(imts):
@@ -236,7 +235,7 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     for i, imt in enumerate(det_imt):
         det_mce[imt] = max(det_imt[imt], DLLs[i])
         mce[imt] = min(prob_mce[i], det_mce[imt]) 
-        prob_mce_out[imt] = prob_mce[i]  # I think we should have the same number of IMTs everywhere as in the job.ini. For this first year we strat with 3 and then they'll become many later. 
+        prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
         SS_seismicity = "Low"
@@ -278,6 +277,7 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
             }
 
     return prob_mce_out, mce, det_mce, asce7
+
 
 def get_asce41(dstore, mce, facts):
     """
