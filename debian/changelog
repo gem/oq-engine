@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * In the WebUI users are not allowed to see other users outputs by default
+    (the old default can be obtained setting ACL_ON = False)
+
   [Manuela Villani, Michele Simionato]
   * Computed ASCE-41 outputs for AELO project
 
