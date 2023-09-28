@@ -111,8 +111,8 @@ MIDDLEWARE = (
 
 # Authentication is not enabled by default
 LOCKDOWN = False
-# Allow all users to see other users outputs by default
-ACL_ON = False
+# Forbid users to see other users outputs by default
+ACL_ON = True
 
 # Add additional paths (as regular expressions) that don't require
 # authentication.
