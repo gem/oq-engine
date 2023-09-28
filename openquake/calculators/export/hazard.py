@@ -705,3 +705,13 @@ def export_asce41(ekey, dstore):
     writer.save(dic.items(), fname, header=['parameter', 'value'],
                 comment=comment)
     return [fname]
+
+
+@export.add(('mag_dst_eps_sig', 'csv'))
+def export_mag_dst_eps_sig(ekey, dstore):
+    data = dstore[ekey[0]][:]
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    writer.save(data, fname, comment=comment)
+    return [fname]

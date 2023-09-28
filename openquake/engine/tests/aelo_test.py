@@ -53,6 +53,11 @@ def test_CCA():
             aac(df.RTGM, expected, atol=1E-6)
 
     if rtgmpy:
+        # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
         aac(df.value, ASCE41)
+
+        # run mag_dst_eps_sig exporter
+        [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
+        pandas.read_csv(fname, skiprows=1)

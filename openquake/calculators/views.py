@@ -45,7 +45,6 @@ from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
-from openquake.calculators.postproc import disagg_by_rel_sources
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -1519,14 +1518,3 @@ def view_MPL(token, dstore):
                          stat='mean', agg_id=K, return_period=rp)
         out[ltype] = arr
     return out
-
-
-@view.add('mag_dist_eps')
-def view_mag_dist_eps(token, dstore):
-    """
-    Compute mean or mode mag-dist-eps from mean_disagg_by_src.
-    Example: oq show mag_dist_eps
-    """
-    return disagg_by_rel_sources.get_mag_dist_eps_df(
-        dstore["mean_disagg_by_src"], dstore)
-
