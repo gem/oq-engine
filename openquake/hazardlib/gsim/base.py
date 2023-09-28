@@ -367,8 +367,6 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         if self.compute.__annotations__.get("ctx") is numpy.recarray:
             cmaker = ContextMaker('*', [self], {'imtls': {imt.string: [0]},
                                                 'mags': ['%.2f' % rup.mag]})
-            if not isinstance(ctx, numpy.ndarray):
-                ctx = cmaker.recarray([ctx])
         assert self.compute.__annotations__.get("ctx") is numpy.recarray
         cmaker = simple_cmaker([self], [imt.string])
         if not isinstance(ctx, numpy.ndarray):
