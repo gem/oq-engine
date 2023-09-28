@@ -17,13 +17,15 @@
 import numpy as np
 import unittest
 
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
-from openquake.hazardlib.contexts import full_context
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy, new_ctx
+from openquake.hazardlib.contexts import full_context, simple_cmaker
 from openquake.hazardlib.imt import PGA, PGV, SA
 from openquake.hazardlib.const import TRT, IMC, StdDev
 
 from openquake.hazardlib.gsim.mgmpe.cy14_site_term import CY14SiteTerm
 from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
+
+aae = np.testing.assert_almost_equal
 
 
 class CY14SiteTermTestCase(unittest.TestCase):
@@ -66,112 +68,42 @@ class CY14SiteTermTestCase(unittest.TestCase):
         self.assertTrue(mgmpe.REQUIRES_DISTANCES == expected,
                         msg='The assigned distance types are wrong')
 
-    def test_gm_calculation_soil_reference(self):
-        # Modified gmpe
-        mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
-
-        # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=1130., vs30measured=True,
-                                          z1pt0=0.)
-        rup = Dummy.get_rupture(mag=6.0)
-        rup.dip = 90.
-        rup.ztor = 0.
-        rup.rrup = np.array([1., 10., 30., 70.])
-        rup.rx = np.array([1., 10., 30., 70.])
-        rup.rjb = np.array([1., 10., 30., 70.])
-        ctx = full_context(sites, rup)
-        imt = PGA()
-        stdt = [StdDev.TOTAL]
-
-        # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-
-        # Compute the expected results
-        gmpe = ChiouYoungs2014()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
-            ctx, ctx, ctx, imt, stdt)
+    def test_all(self):
         # Test that for reference soil conditions the modified GMPE gives the
         # same results of the original gmpe
-        np.testing.assert_almost_equal(mean, mean_expected)
-        np.testing.assert_almost_equal(stds, stds_expected)
-
-    def test_gm_calculation_soil_BC(self):
-        # Modified gmpe
-        mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
-
-        # Set parameters
-        sites = Dummy.get_site_collection(4, vs30=760., vs30measured=True,
-                                          z1pt0=0.)
-        rup = Dummy.get_rupture(mag=6.0)
-        rup.dip = 90.
-        rup.ztor = 0.
-        rup.rrup = np.array([1., 10., 30., 70.])
-        rup.rx = np.array([1., 10., 30., 70.])
-        rup.rjb = np.array([1., 10., 30., 70.])
-        ctx = full_context(sites, rup)
-        imt = PGA()
-        stdt = [StdDev.TOTAL]
-
-        # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
-
-        # Compute the expected results
-        gmpe = ChiouYoungs2014()
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
-            ctx, ctx, ctx, imt, stdt)
-
-        # Test that for reference soil conditions the modified GMPE gives the
-        # same results of the original gmpe
-        np.testing.assert_almost_equal(mean, mean_expected, decimal=7)
-        np.testing.assert_almost_equal(stds, stds_expected, decimal=2)
-
-    def test_gm_calculation_soil(self):
-        # Modified gmpe
         gmpe = ChiouYoungs2014()
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
-        imt = PGA()
 
-        # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(
-            self.ctx, self.ctx, self.ctx, imt, self.stdt)
+        cmaker = simple_cmaker([gmpe, mgmpe], ['PGA', 'SA(1.0)'])
+        ctx = new_ctx(cmaker, 4)
+        ctx.dip = 90.
+        ctx.z1pt0 = 0.
+        ctx.rrup = np.array([1., 10., 30., 70.])
+        ctx.rx = np.array([1., 10., 30., 70.])
+        ctx.rjb = np.array([1., 10., 30., 70.])
+        ctx.vs30 = 1130.
+        ctx.vs30measured = 1
+        mea, sig, _, _ = cmaker.get_mean_stds([ctx])
+        aae(mea[0], mea[1])
+        aae(sig[0], sig[1])
 
-        # Compute the expected results
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
-            self.ctx, self.ctx, self.ctx, imt, self.stdt)
+        # Test that for reference soil conditions the modified GMPE gives
+        # similar results to the original gmpe
+        ctx.vs30 = 760.
+        mea, sig, _, _ = cmaker.get_mean_stds([ctx])
+        aae(mea[0], mea[1], decimal=7)
+        aae(sig[0], sig[1], decimal=2)
 
         # Test that for reference soil conditions the modified GMPE gives the
-        # same results of the original gmpe
-        np.testing.assert_almost_equal(mean, mean_expected, decimal=7)
-
+        # similar results as the original gmpe
+        ctx.vs30 = 400.
+        mea, sig, _, _ = cmaker.get_mean_stds([ctx])
+        aae(mea[0], mea[1], decimal=7)
         # Here we use a quite large tolerance since in the site term we take
         # the std from the calculation of motion on reference rock. This
         # does not match the std that the same GMM computes for soft soils
         # with the same remaining conditions
-        np.testing.assert_almost_equal(stds, stds_expected, decimal=1)
-
-    def test_gm_calculation_soil_SA(self):
-        # Modified gmpe
-        gmpe = ChiouYoungs2014()
-        mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
-        imt = SA(1.0)
-
-        # Compute results
-        mean, stds = mgmpe.get_mean_and_stddevs(
-            self.ctx, self.ctx, self.ctx, imt, self.stdt)
-
-        # Compute the expected results
-        mean_expected, stds_expected = gmpe.get_mean_and_stddevs(
-            self.ctx, self.ctx, self.ctx, imt, self.stdt)
-
-        # Test that for reference soil conditions the modified GMPE gives the
-        # same results of the original gmpe
-        np.testing.assert_almost_equal(mean, mean_expected, decimal=7)
-
-        # Here we use a quite large tolerance since in the site term we take
-        # the std from the calculation of motion on reference rock. This
-        # does not match the std that the same GMM computes for soft soils
-        # with the same remaining conditions
-        np.testing.assert_almost_equal(stds, stds_expected, decimal=1)
+        aae(sig[0], sig[1], decimal=1)
 
     def test_raise_error(self):
         self.assertRaises(ValueError, CY14SiteTerm, 'AbrahamsonEtAl2014')
