@@ -218,7 +218,7 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
         year = data.pop('year', ())
         curve = {
             kind: builder.build_curve(
-                year, kind, data[kind], aggregate_loss_curves_types,
+                year, 'loss', data[kind], aggregate_loss_curves_types,
                 scientific.LOSSTYPE[loss_id], rlz_id)
             for kind in data}
         for p, period in enumerate(builder.return_periods):

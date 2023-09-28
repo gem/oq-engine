@@ -1524,8 +1524,6 @@ class LossCurvesMapsBuilder(object):
         (AEP and OEP curves only if years is not None)
         """
         # NB: agg_types can be the string "ep, aep, oep"
-        if loss_type != 'reinsurance':
-            col = 'loss'
         periods = self.return_periods
         ne = self.num_events[rlzi]
         dic = {}
