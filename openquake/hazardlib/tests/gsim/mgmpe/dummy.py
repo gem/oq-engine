@@ -21,62 +21,6 @@ from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
 
 
-class Dummy:
-
-    @classmethod
-    def get_site_collection(cls, nelements, **kwargs):
-        """
-        Returns a site collection.
-
-        :param int nelements:
-            Number of sites included in the site collection
-        """
-        sites = []
-        for n in range(nelements):
-            s = Site(Point(0, 0))
-            for key in kwargs:
-                if np.size(kwargs[key]) > 1:
-                    setattr(s, key, kwargs[key][n])
-                else:
-                    setattr(s, key, kwargs[key])
-            sites.append(s)
-        return SiteCollection(sites)
-
-    @classmethod
-    def get_surface(self):
-        hyp = Point(0, 0.5)
-        trc = Line([Point(0, 0), Point(0, 1)])
-        sfc = SimpleFaultSurface.from_fault_data(fault_trace=trc,
-                                                 upper_seismogenic_depth=0,
-                                                 lower_seismogenic_depth=15,
-                                                 dip=90.,
-                                                 mesh_spacing=10.)
-        return sfc, hyp
-
-    @classmethod
-    def get_rupture(self, **kwargs):
-        # Parameters
-        if 'mag' in kwargs:
-            mag = kwargs['mag']
-        else:
-            mag = 6.0
-        if 'rake' in kwargs:
-            rake = kwargs['rake']
-        else:
-            rake = 0
-        if 'trt' in kwargs:
-            trt = kwargs['trt']
-        else:
-            trt = 0
-        # Get surface
-        sfc, hyp = self.get_surface()
-        # Create rupture
-        rup = BaseRupture(mag, rake, trt, hyp, sfc)
-        vars(rup).update(kwargs)
-        # Set attributes
-        return rup
-
-
 def new_ctx(cmaker, n, mag=6., rake=0., lons=(), lats=()):
     """
     Build a context array starting from a fake rupture and site collection
