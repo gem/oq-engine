@@ -42,7 +42,6 @@ Advisors
 .. image:: https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/oneconcern.png
 .. image:: https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/guycarpenter.png
 .. image:: https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/partnerRe.png
-.. image:: https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/global_parametrics.png
 .. image:: https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/safehub.png
 .. image:: https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/wtw.png
 

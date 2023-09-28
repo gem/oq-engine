@@ -301,6 +301,15 @@ def _interp(param, name, trt):
     return mdd
 
 
+def simple_cmaker(gsims, imts, **params):
+    """
+    :returns: a simplified ContextMaker for use in the tests
+    """
+    dic = dict(imtls={imt: [0] for imt in imts})
+    dic.update(**params)
+    return ContextMaker('*', gsims, dic)
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -326,7 +335,7 @@ class ContextMaker(object):
         if isinstance(oq, dict):
             param = oq
             oq = Oq(**param)
-            self.mags = param.get('mags', ())
+            self.mags = param.get('mags', ())  # list of strings %.2f
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
@@ -405,6 +414,13 @@ class ContextMaker(object):
                     reqset.update(gsim.gmpe.REQUIRES_SITES_PARAMETERS)
                     if 'apply_swiss_amplification' in gsim.params:
                         reqset.add('amplfactor')
+                    if ('apply_swiss_amplification_sa' in gsim.params):
+                        reqset.add('ch_ampl03')
+                        reqset.add('ch_ampl06')
+                        reqset.add('ch_phis2s03')
+                        reqset.add('ch_phis2s06')
+                        reqset.add('ch_phiss03')
+                        reqset.add('ch_phiss06')
             setattr(self, 'REQUIRES_' + req, reqset)
         try:
             self.min_iml = param['min_iml']

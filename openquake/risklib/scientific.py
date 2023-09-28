@@ -1518,10 +1518,11 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, years, kind, losses, agg_types, rlzi=0):
+    def build_curve(self, years, kind, losses, agg_types, loss_type, rlzi=0):
         """
         Compute EP curves. If years is not None, also AEP and OEP curves.
         """
+        # NB: agg_types is normally the string "aep, oep"
         if kind == 'losses':  # for consequences
             kind = 'loss'
         periods = self.return_periods
@@ -1532,10 +1533,10 @@ class LossCurvesMapsBuilder(object):
             gby = pandas.DataFrame(
                 dict(year=years, loss=losses)).groupby('year')
             # see specs in https://github.com/gem/oq-engine/issues/8971
-            if '_aep' in agg_types:
+            if 'aep' in agg_types:
                 dic['loss_aep'] = losses_by_period(
                     gby.loss.sum(), periods, ne, self.eff_time)
-            if '_oep' in agg_types:
+            if 'oep' in agg_types:
                 dic['loss_oep'] = losses_by_period(
                     gby.loss.max(), periods, ne, self.eff_time)
         return dic

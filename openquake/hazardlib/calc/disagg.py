@@ -710,7 +710,6 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     ws = reduced_lt.rlzs['weight']
     disaggs = []
     for ctx, cmaker in zip(ctxs, cmakers):
-        print(cmaker.gsims)
         dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
         drates4D += dis.disagg_mag_dist_eps(imldic, ws)
         disaggs.append(dis)
