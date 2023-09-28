@@ -335,7 +335,7 @@ class GetResampledTopEdge(unittest.TestCase):
         lower_seismogenic_depth = 40.
         dip = 90.
 
-        mesh_spacing = 10.
+        mesh_spacing = 11.5
         fault_trace = Line([Point(0.0, 0.0), Point(0.5, 0.5), Point(1.5, 1.0)])
 
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
@@ -345,8 +345,9 @@ class GetResampledTopEdge(unittest.TestCase):
 
         ref = Line([Point(0., 0.), Point(0.5, 0.5), Point(1.5, 1.0)])
         result = whole_fault_surface.get_resampled_top_edge()
-        for ref_point, result_point in zip(ref.points, result.points):
+        breakpoint()
 
+        for ref_point, result_point in zip(ref.points, result.points):
             self.assertAlmostEqual(ref_point.longitude,
                                    result_point.longitude, delta=0.1)
             self.assertAlmostEqual(ref_point.latitude,

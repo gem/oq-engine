@@ -58,7 +58,7 @@ def _find_turning_points(mesh, tol=1.0):
     idx2 = numpy.isfinite(mesh.lons[0, 1:])
     idx = numpy.where(numpy.logical_and(idx1, idx2))[0]
     azimuths = geodetic.azimuth(mesh.lons[0, idx], mesh.lats[0, idx],
-                                mesh.lons[0, idx+1], mesh.lats[0, idx+1])
+                                mesh.lons[0, idx + 1], mesh.lats[0, idx + 1])
     naz = len(azimuths)
     azim = azimuths[0]
     # Retain initial point
@@ -244,7 +244,7 @@ class BaseSurface:
 
             if ((self.__class__.__name__ == 'KiteSurface') and
                 (numpy.isnan(top_edge.lons[0, i]) or
-                 numpy.isnan(top_edge.lons[0, i+1]))):
+                 numpy.isnan(top_edge.lons[0, i + 1]))):
                 msg = 'Rx calculation. Top of rupture has less than two points'
                 raise ValueError(msg)
 
@@ -267,7 +267,7 @@ class BaseSurface:
 
                 if ((self.__class__.__name__ == 'KiteSurface') and
                     (numpy.isnan(top_edge.lons[0, i]) or
-                     numpy.isnan(top_edge.lons[0, i+1]))):
+                     numpy.isnan(top_edge.lons[0, i + 1]))):
                     continue
 
                 p1 = Point(
@@ -418,7 +418,6 @@ class BaseSurface:
             angle = math.degrees(numpy.arctan2(sinang, cosang))
 
             if abs(angle) > angle_var:
-
                 top_edge.append(Point(mesh.lons[0][i + 1],
                                       mesh.lats[0][i + 1],
                                       mesh.depths[0][i + 1]))

@@ -344,6 +344,10 @@ class Line(object):
             # Updating index
             idx_vtx = idx + 1
 
+        # TODO remove
+        # from openquake.hazardlib.tests.geo.line_test import _plott
+        # _plott(Line(rtra).coo, coo)
+
         return Line(rtra)
 
     def get_lengths(self) -> np.ndarray:
