@@ -19,6 +19,7 @@
 import re
 import os
 import sys
+import json
 import itertools
 import collections
 import numpy
@@ -691,4 +692,26 @@ def export_rtgm(ekey, dstore):
     fname = dstore.export_path('rtgm.csv')
     comment = dstore.metadata.copy()
     writer.save(df, fname, comment=comment)
+    return [fname]
+
+
+@export.add(('asce41', 'csv'))
+def export_asce41(ekey, dstore):
+    js = dstore[ekey[0]][()].decode('utf8')
+    dic = json.loads(js)
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    writer.save(dic.items(), fname, header=['parameter', 'value'],
+                comment=comment)
+    return [fname]
+
+
+@export.add(('mag_dst_eps_sig', 'csv'))
+def export_mag_dst_eps_sig(ekey, dstore):
+    data = dstore[ekey[0]][:]
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    writer.save(data, fname, comment=comment)
     return [fname]

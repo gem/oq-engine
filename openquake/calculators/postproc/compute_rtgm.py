@@ -45,6 +45,7 @@ try:
     import rtgmpy
 except ImportError:
     rtgmpy = None
+from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -196,6 +197,7 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     srcs, imts, dets = [], [], []
     srcidx = {src: i for i, src in enumerate(sigma_by_src.source_id)}
     imtidx = {imt: i for i, imt in enumerate(sigma_by_src.imt)}
+    mag_dist_eps_sig = []
     for src, imt, mag, dist, eps in mag_dist_eps:
         m = imtidx[imt]
         sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
@@ -204,9 +206,12 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
         srcs.append(src)
         imts.append(imt)
         dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
+        mag_dist_eps_sig.append((src, mag, dist, eps, sigma, imt))
     df = pd.DataFrame(dict(src=srcs, imt=imts, det=dets))
     det = df.groupby('imt').det.max()
-    return det.to_dict()
+    dt = [('src', hdf5.vstr), ('mag', float), ('dst', float),
+          ('eps', float), ('sig', float), ('imt', hdf5.vstr)]
+    return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
 
 def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
@@ -347,13 +352,15 @@ def main(dstore, csm):
     prob_mce = rtgm_df.ProbMCE.to_numpy()
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
         dstore, csm, imts, imls_disagg)
-    det_imt = get_deterministic(prob_mce, mag_dist_eps, sigma_by_src)
+    det_imt, mag_dst_eps_sig = get_deterministic(
+        prob_mce, mag_dist_eps, sigma_by_src)
+    dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
     logging.info(f'{det_imt=}')
     prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(prob_mce, det_imt, DLLs,dstore)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     asce41 = get_asce41(dstore, mce, facts)
-    
+    dstore['asce41'] = hdf5.dumps(asce41)
     logging.info(asce41)
     logging.info(asce7)
     

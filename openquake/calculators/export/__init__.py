@@ -22,6 +22,7 @@ from openquake.baselib.writers import write_csv
 
 
 DISPLAY_NAME = {
+    'asce41': 'ASCE-41 Parameters',
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
