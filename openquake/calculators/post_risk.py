@@ -52,7 +52,9 @@ def save_curve_stats(dstore):
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    ep_fields = ['loss']
+    ep_fields = []
+    if 'loss' in aggcurves_df:
+        ep_fields = ['loss']
     if 'loss_aep' in aggcurves_df:
         ep_fields.append('loss_aep')
     if 'loss_oep' in aggcurves_df:
