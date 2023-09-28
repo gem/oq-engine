@@ -20,10 +20,8 @@ import os
 import unittest
 import numpy as np
 import pandas as pd
-from openquake.hazardlib import const, contexts
-from openquake.hazardlib.imt import PGA, SA
-from openquake.hazardlib.geo import Point
-from openquake.hazardlib.tests.gsim.mgmpe.dummy import Dummy
+from openquake.hazardlib import contexts
+from openquake.hazardlib.tests.gsim.mgmpe.dummy import new_ctx
 from openquake.hazardlib.gsim.sgobba_2020 import SgobbaEtAl2020
 
 CDIR = os.path.dirname(__file__)
@@ -32,18 +30,7 @@ DATA_FOLDER = os.path.join(CDIR, 'data', 'SEA20')
 # Residuals
 DATA_FOLDER2 = os.path.join(CDIR, '..', '..', 'gsim', 'sgobba_2020')
 
-
-def get_ctx(subset_df):
-    locs = []
-    rjb = []
-    for idx, row in subset_df.iterrows():
-        locs.append(Point(row.lon_sites, row.lat_sites))
-        rjb.append(row.dist_jb)
-    sites = Dummy.get_site_collection(len(rjb), vs30=800., location=locs)
-    rup = Dummy.get_rupture(
-        mag=row.rup_mag, hypo_lat=row.lat_epi, hypo_lon=row.lon_epi)
-    rup.rjb = rup.rrup = np.array(rjb)
-    return contexts.full_context(sites, rup)
+IMTS = ['PGA', 'SA(0.2)', 'SA(0.50251256281407)', 'SA(1.0)', 'SA(2.0']
 
 
 def get_epicenters(df):
@@ -52,31 +39,35 @@ def get_epicenters(df):
 
 
 def chk(gmm, tags, subset_df, what):
-    ctx = get_ctx(subset_df)
+    cmaker = contexts.simple_cmaker([gmm], IMTS)
+    ctx = new_ctx(cmaker, len(subset_df),
+                  lons=subset_df.lon_sites.to_numpy(),
+                  lats=subset_df.lat_sites.to_numpy())
+    ctx.vs30 = 800.
+    ctx.rjb = ctx.rrup = subset_df.dist_jb
+    ctx.mag = subset_df.rup_mag
+    ctx.hypo_lon = subset_df.lon_epi
+    ctx.hypo_lat = subset_df.lat_epi
+    mea, sig, tau, phi = cmaker.get_mean_stds([ctx])
 
-    imts = [PGA(), SA(period=0.2), SA(period=0.50251256281407),
-            SA(period=1.0), SA(period=2.0)]
-    stdt = [const.StdDev.TOTAL, const.StdDev.INTER_EVENT,
-            const.StdDev.INTRA_EVENT]
     # Compute and check results for the NON ergodic model
-    for i, imt in enumerate(imts):
-        tag = tags[i]
-        mean, stddevs = gmm.get_mean_and_stddevs(ctx, ctx, ctx, imt, stdt)
+    for m, imt in enumerate(IMTS):
+        tag = tags[m]
         if what == "sig":  # checking the Total stddev
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = stddevs[0]  # in ln
+            computed = sig[0, m]  # in ln
         elif what == "tau":  # checking tau
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = stddevs[1]  # in ln
+            computed = tau[0, m]  # in ln
         elif what == "phi":  # checking phi
             expected = np.log(10.0**subset_df[tag].to_numpy())
             # in VerifTable are in log10
-            computed = stddevs[2]  # in ln
+            computed = phi[0, m]  # in ln
         else:  # checking the mean
             expected = subset_df[tag].to_numpy()  # Verif Table in g unit
-            computed = np.exp(mean)  # in OQ are computed in g Units in ln
+            computed = np.exp(mea[0, m])  # in OQ are computed in g Units in ln
         np.testing.assert_allclose(computed, expected, rtol=1e-5)
 
 
@@ -104,8 +95,8 @@ def gen_data(df):
                 ev_id = df2['id'][idx2]
             else:
                 ev_id = None
-            print('event_id: '+str(ev_id))
-            print('flag_bedrock: '+str(i))
+            print('event_id: %s' % ev_id)
+            print('flag_bedrock: %s' % i)
             gmm = SgobbaEtAl2020(event_id=ev_id, site=True, bedrock=i > 0)
             yield gmm, subset_df
 
