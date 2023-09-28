@@ -914,11 +914,11 @@ class OqParam(valid.ParamSet):
     aggregate_loss_curves_types = valid.Param(
         # accepting all comma-separated permutations of 1, 2 or 3 elements
         # of the list ['ep', 'aep' 'oep']
-        # e.g. 'ep, aep' or 'ep, aep, oep' are valid
         valid.Choice(
-            *list(', '.join(perm) for perm in itertools.chain.from_iterable(
-                [itertools.permutations(['ep', 'aep', 'oep'], i)
-                    for i in range(1, 4)]))),
+            'ep', 'aep', 'oep',
+            'ep, aep', 'ep, oep', 'aep, ep', 'aep, oep', 'oep, ep', 'oep, aep',
+            'ep, aep, oep', 'ep, oep, aep', 'aep, ep, oep', 'aep, oep, ep',
+            'oep, ep, aep', 'oep, aep, ep'),
         'ep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
