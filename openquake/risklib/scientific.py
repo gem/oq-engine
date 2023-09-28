@@ -1518,29 +1518,29 @@ class LossCurvesMapsBuilder(object):
                 - risk_investigation_time / return_periods)
 
     # used in post_risk
-    def build_curve(self, years, kind, losses, agg_types, loss_type, rlzi=0):
+    def build_curve(self, years, tag, losses, agg_types, loss_type, rlzi=0):
         """
         Compute the requested curves
         (AEP and OEP curves only if years is not None)
         """
-        # NB: agg_types is normally the string "aep, oep"
-        if kind == 'losses':  # for consequences
-            kind = 'loss'
+        # NB: agg_types can be the string "ep, aep, oep"
+        if loss_type != 'reinsurance':
+            tag = 'loss'
         periods = self.return_periods
         ne = self.num_events[rlzi]
         dic = {}
         agg_types_list = agg_types.split(', ')
         if 'ep' in agg_types_list:
-            dic[kind] = losses_by_period(losses, periods, ne, self.eff_time)
-        if len(years) and kind == 'loss':
+            dic[tag] = losses_by_period(losses, periods, ne, self.eff_time)
+        if len(years):
             gby = pandas.DataFrame(
                 dict(year=years, loss=losses)).groupby('year')
             # see specs in https://github.com/gem/oq-engine/issues/8971
             if 'aep' in agg_types_list:
-                dic['loss_aep'] = losses_by_period(
+                dic[tag + '_aep'] = losses_by_period(
                     gby.loss.sum(), periods, ne, self.eff_time)
             if 'oep' in agg_types_list:
-                dic['loss_oep'] = losses_by_period(
+                dic[tag + '_oep'] = losses_by_period(
                     gby.loss.max(), periods, ne, self.eff_time)
         return dic
 

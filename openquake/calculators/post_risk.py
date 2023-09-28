@@ -361,7 +361,7 @@ def build_reinsurance(dstore, num_events):
             curve = {col: builder.build_curve(
                         years, col, df[col].to_numpy(),
                         oq.aggregate_loss_curves_types,
-                        'total', rlzid)
+                        'reinsurance', rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
