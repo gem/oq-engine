@@ -356,11 +356,12 @@ def main(dstore, csm):
         prob_mce, mag_dist_eps, sigma_by_src)
     dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
     logging.info(f'{det_imt=}')
-    prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(prob_mce, det_imt, DLLs,dstore)
+    prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(
+        prob_mce, det_imt, DLLs,dstore)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
+    dstore['asce7'] = hdf5.dumps(asce7)
     asce41 = get_asce41(dstore, mce, facts)
     dstore['asce41'] = hdf5.dumps(asce41)
     logging.info(asce41)
     logging.info(asce7)
-    

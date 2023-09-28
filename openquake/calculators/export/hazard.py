@@ -695,8 +695,8 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
-@export.add(('asce41', 'csv'))
-def export_asce41(ekey, dstore):
+@export.add(('asce7', 'csv'), ('asce41', 'csv'))
+def export_asce(ekey, dstore):
     js = dstore[ekey[0]][()].decode('utf8')
     dic = json.loads(js)
     writer = writers.CsvWriter(fmt='%.5f')
