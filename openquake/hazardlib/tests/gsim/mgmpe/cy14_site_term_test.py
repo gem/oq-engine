@@ -30,24 +30,6 @@ aae = np.testing.assert_almost_equal
 
 class CY14SiteTermTestCase(unittest.TestCase):
 
-    def setUp(self):
-        # Set parameters - Setting z1pt0 does not make sense but here we
-        # want to make sure that the modified gmm provided GM amplified
-        # by the site term exactly as the original model.
-        sites = Dummy.get_site_collection(4, vs30=400., vs30measured=True,
-                                          z1pt0=0.)
-        rup = Dummy.get_rupture(mag=6.0)
-        rup.dip = 90.
-        rup.ztor = 0.
-        rup.rrup = np.array([1., 10., 30., 70.])
-        rup.rx = np.array([1., 10., 30., 70.])
-        rup.rjb = np.array([1., 10., 30., 70.])
-        stdt = [StdDev.TOTAL]
-
-        self.ctx = full_context(sites, rup)
-        self.stdt = stdt
-        self.sites = sites
-
     def test_instantiation(self):
         mgmpe = CY14SiteTerm(gmpe_name='ChiouYoungs2014')
         #
