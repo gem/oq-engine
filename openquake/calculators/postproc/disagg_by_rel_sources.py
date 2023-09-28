@@ -27,22 +27,22 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
 
 
-def get_mag_dist_eps_df(mean_disagg_by_src, dstore):
+def get_mag_dist_eps_df(
+        mean_disagg_by_src, src_mutex, src_info):
     """
-    Compute mag, dist, eps using the rates as weights.
+    Compute mag, dist, eps, sig for each (src, imt) combination.
 
     :param mean_disagg_by_src: ArrayWrapper of rates (src, mag, dst, eps, imt)
-    :param dstore: datastore object
-    :returns: a DataFrame with columns src, imt, mag, dst, eps
+    :param src_mutex: array grp_id -> boolean
+    :param src_info: source_info dataset
+    :returns: a DataFrame with columns src, imt, mag, dst, eps, sig
     """
     mag = mean_disagg_by_src.mag
     dst = mean_disagg_by_src.dist
     eps = mean_disagg_by_src.eps
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
-    src_mutex = dstore['mutex_by_grp']['src_mutex']  
-    dset = dstore['source_info']
     grp = {}
-    for src_id, grp_id in zip(dset['source_id'], dset['grp_id']):
+    for src_id, grp_id in zip(src_info['source_id'], src_info['grp_id']):
         src = basename(src_id.decode('utf8'), '!;')
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
@@ -171,8 +171,10 @@ def main(dstore, csm, imts, imls):
     
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mean_disagg_by_src, sigma_by_src = disagg_sources(
-        csm, rel_ids, imts, imls, oq, sitecol, dstore)    
-    mag_dist_eps = get_mag_dist_eps_df(mean_disagg_by_src, dstore)
+        csm, rel_ids, imts, imls, oq, sitecol, dstore)
+    src_mutex = dstore['mutex_by_grp']['src_mutex']  
+    mag_dist_eps = get_mag_dist_eps_df(
+        mean_disagg_by_src, src_mutex, dstore['source_info'])
     out = []
     for imt, src_ids in rel_ids_by_imt.items():
         df = mag_dist_eps[mag_dist_eps.imt == imt]
