@@ -58,3 +58,4 @@ https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/sympy-1.12-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/humanfriendly-10.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/mpmath-1.3.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/protobuf-4.24.3-py3-none-any.whl
