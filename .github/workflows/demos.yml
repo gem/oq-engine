@@ -27,6 +27,7 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
+      GITHUB_INPUT_REF: ${{ github.event.inputs.git-ref }}
 
     steps:
       - name: Check out the codebase (Master)
@@ -48,7 +49,7 @@ jobs:
           pip install pydata-sphinx-theme
       - name: Install OpenQuake engine
         run: |
-          python install.py devel
+          python install.py devel --version ${GITHUB_INPUT_REF}
           source ~/openquake/bin/activate
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
           deactivate
