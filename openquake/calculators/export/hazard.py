@@ -253,7 +253,6 @@ def get_metadata(rlzs, kind):
     return metadata
 
 
-@export.add(('uhs', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
@@ -289,7 +288,6 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@export.add(('hcurves', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -328,7 +326,6 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hmaps', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)

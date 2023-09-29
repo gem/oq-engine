@@ -1,7 +1,11 @@
-
   [Marco Pagani]
   * Fixed a bug in the code that resamples a line, with a negligible effect
     on the hazard of models containing simple fault sources
+
+  [Michele Simionato]
+  * Fixed a bug in avg_gmf causing the average to be computed incorrectly
+  * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
+    after 7 years of deprecation
 
   [Paolo Tormene]
   * In the WebUI users are not allowed to see other users outputs by default
