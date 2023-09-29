@@ -229,7 +229,7 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
             dic['loss_id'].append(loss_id)
             dic['return_period'].append(period)
             for col in data:
-                # NB: col be ['fatalities', 'losses'] in a scenario_damage test
+                # NB: 'fatalities' in EventBasedDamageTestCase.test_case_15
                 for k, c in curve[col].items():
                     dic[k].append(c[p])
     return dic
