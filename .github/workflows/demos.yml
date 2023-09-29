@@ -28,7 +28,6 @@ jobs:
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
       GITHUB_INPUT_REF: ${{ github.event.inputs.git-ref }}
-
     steps:
       - name: Check out the codebase (Master)
         if: github.event.inputs.git-ref == ''
@@ -48,8 +47,19 @@ jobs:
           pip install --default-timeout=100 -U pip
           pip install pydata-sphinx-theme
       - name: Install OpenQuake engine
+        #    env:
+        #      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+        #      GITHUB_REF:  ${{ github.ref }}
         run: |
-          python install.py devel --version ${GITHUB_INPUT_REF}
+          if [ -z "$GITHUB_INPUT_REF" ]
+          then
+              echo " Is not a workflow_dispatch RUN, use: $GITHUB_DEF_BR "
+              python install.py devel --version ${GITHUB_DEF_BR}
+          else
+              echo " Is a workflow_dispatch RUN, use: $GITHUB_INPUT_REF "
+              GITHUB_BR=`echo ${{ github.head_ref }}`
+              python install.py devel --version ${GITHUB_INPUT_REF}
+          fi
           source ~/openquake/bin/activate
           python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
           deactivate
