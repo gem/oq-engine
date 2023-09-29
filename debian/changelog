@@ -1,5 +1,5 @@
   [Marco Pagani]
-  * Fixed a bug in the code that resamples a line, with a negligible effect
+  * Fixed a bug in the code that resamples a line, with a small effect
     on the hazard of models containing simple fault sources
 
   [Michele Simionato]
