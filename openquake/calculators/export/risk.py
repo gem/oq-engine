@@ -582,8 +582,13 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    cols = [col for col in dataf.columns if col not in consequences
-            and col not in ('agg_id', 'rlz_id', 'loss_id')]
+    def fix(col):
+        if col.endswith(('_aep', '_oep')):
+            return col[:-4]  # strip suffix
+        return col
+    cols = [col for col in dataf.columns if
+            fix(col) not in consequences and
+            col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
     manyrlzs = not oq.collect_rlzs and R > 1
     fnames = []
