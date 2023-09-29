@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed a bug in avg_gmf causing the average to be computed incorrectly
   * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
     after 7 years of deprecation
 
