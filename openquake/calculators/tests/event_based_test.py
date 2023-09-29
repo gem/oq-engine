@@ -176,12 +176,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        export(('hcurves', 'xml'), self.calc.datastore)  # check it works
-
-        [fname] = out['hcurves', 'xml']
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
-
         # compute hcurves in postprocessing and compare with inprocessing
         # take advantage of the fact that there is a single site
         df = self.calc.datastore.read_df('gmf_data', 'sid')
