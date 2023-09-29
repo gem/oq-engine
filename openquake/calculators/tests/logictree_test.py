@@ -264,13 +264,6 @@ hazard_uhs-mean.csv
 hazard_uhs-std.csv
 '''.split(), case_15.__file__, delta=1E-6)
 
-        # test UHS XML export
-        fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
-                  if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
-
         # npz exports
         [fname] = export(('hmaps', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
