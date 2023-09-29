@@ -9,8 +9,9 @@
   * In the WebUI users are not allowed to see other users outputs by default
     (the old default can be obtained setting ACL_ON = False)
 
-  [Manuela Villani, Michele Simionato]
-  * Produced ASCE-7 and ASCE-41 outputs for the AELO project
+  [Manuela Villani, Michele Simionato, Paolo Tormene]
+  * Produced ASCE-7 and ASCE-41 outputs for the AELO project and hidden
+    a few internal outputs
 
   [Athanasios Papadopoulos]
   * Adjusted the Swiss-specific implementations of the GMPEs used
