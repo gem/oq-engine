@@ -40,7 +40,7 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
             represents sites (the length as ``sites`` parameter) and
             second one represents different realizations (samples).
         :param stddev_intra:
-            Intra-event standard deviation array. Note that different sites do
+            Intra-event standard deviation array (phi). Different sites do
             not necessarily have the same intra-event standard deviation.
         :returns:
             Array of the same structure and semantics as ``residuals``
@@ -174,9 +174,11 @@ class HM2018CorrelationModel(BaseCorrelationModel):
         Apply correlation to randomly sampled residuals
         """
         # TODO: the case of filtered sites is probably managed incorrectly
+        # NB: this is ABSURDELY SLOW and we cannot use the cache as in
+        # JB2009 because we are not using the complete site collection
         nsites = len(sites)
         assert len(residuals) == len(stddev_intra) == nsites
-        D = numpy.diag(stddev_intra)
+        D = numpy.diag(stddev_intra)  # phi as a diagonal matrix
 
         if self.uncertainty_multiplier == 0:   # No uncertainty
 
@@ -187,16 +189,12 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             # corresponding standard deviation element.
             residuals_norm = residuals / stddev_intra[:, None]
 
-            # Lower diagonal of the Cholesky decomposition from/to cache
-            try:
-                cormaLow = self.cache[imt]
-            except KeyError:
-                # Note that instead of computing the whole correlation matrix
-                # corresponding to sites.complete, here we compute only the
-                # correlation matrix corresponding to sites
-                cormaLow = numpy.linalg.cholesky(
-                       D @ self._get_correlation_matrix(sites, imt) @ D)
-                self.cache[imt] = cormaLow
+            # Lower diagonal of the Cholesky decomposition
+            # Note that instead of computing the whole correlation matrix
+            # corresponding to sites.complete, here we compute only the
+            # correlation matrix corresponding to sites
+            cormaLow = numpy.linalg.cholesky(
+                D @ self._get_correlation_matrix(sites, imt) @ D)
 
             # Apply correlation
             return cormaLow @ residuals_norm
