@@ -173,9 +173,10 @@ class HM2018CorrelationModel(BaseCorrelationModel):
         """
         Apply correlation to randomly sampled residuals
         """
-        if sites is not sites.complete:
-            # I don't know how to manage filtered site collections
-            raise NotImplementedError(sites)
+        # TODO: the case of filtered sites is probably managed incorrectly
+        nsites = len(sites)
+        assert len(residuals) == len(stddev_intra) == nsites
+        D = numpy.diag(stddev_intra)
 
         if self.uncertainty_multiplier == 0:   # No uncertainty
 
@@ -184,7 +185,7 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             # normalized, sampled from a standard normal distribution.
             # For this, every row of 'residuals' (every site) is divided by its
             # corresponding standard deviation element.
-            residuals_norm = residuals / stddev_intra[sites.sids, None]
+            residuals_norm = residuals / stddev_intra[:, None]
 
             # Lower diagonal of the Cholesky decomposition from/to cache
             try:
@@ -192,31 +193,26 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             except KeyError:
                 # Note that instead of computing the whole correlation matrix
                 # corresponding to sites.complete, here we compute only the
-                # correlation matrix corresponding to sites.
+                # correlation matrix corresponding to sites
                 cormaLow = numpy.linalg.cholesky(
-                       numpy.diag(stddev_intra[sites.sids]) @
-                       self._get_correlation_matrix(sites, imt) @
-                       numpy.diag(stddev_intra[sites.sids]))
+                       D @ self._get_correlation_matrix(sites, imt) @ D)
                 self.cache[imt] = cormaLow
 
             # Apply correlation
-            return numpy.dot(cormaLow, residuals_norm)
+            return cormaLow @ residuals_norm
 
         else:   # Variability (uncertainty) is included
             nsim = residuals.shape[1]
-            nsites = len(residuals)
 
             # Re-sample all the residuals
             residuals_correlated = residuals * 0
             for isim in range(0, nsim):
-                corma = self._get_correlation_matrix(sites, imt)
-                cov = (numpy.diag(stddev_intra[sites.sids]) @ corma @
-                       numpy.diag(stddev_intra[sites.sids]))
-
                 # FIXME: the seed is not set!
+                corma = self._get_correlation_matrix(sites, imt)
+                # NB: corma is different at each loop since contains randomicity
                 residuals_correlated[0:, isim] = (
                     numpy.random.multivariate_normal(
-                        numpy.zeros(nsites), cov, 1))
+                        numpy.zeros(nsites), D @ corma @ D, 1))
 
             return residuals_correlated
 
