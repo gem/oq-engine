@@ -1,5 +1,13 @@
+  [Michele Simionato]
+  * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
+    after 7 years of deprecation
+
+  [Paolo Tormene]
+  * In the WebUI users are not allowed to see other users outputs by default
+    (the old default can be obtained setting ACL_ON = False)
+
   [Manuela Villani, Michele Simionato]
-  * Computed ASCE-41 outputs for AELO project
+  * Produced ASCE-7 and ASCE-41 outputs for the AELO project
 
   [Athanasios Papadopoulos]
   * Adjusted the Swiss-specific implementations of the GMPEs used

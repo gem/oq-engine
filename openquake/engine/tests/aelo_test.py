@@ -34,8 +34,11 @@ aac = numpy.testing.assert_allclose
 
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
 EXPECTED = [[0.318191, 0.661792, 0.758443], [0.763373, 1.84959, 1.28969]]
-ASCE41 = [1.5, 1.45972, 1.45972, 0.83824, 0.83824,
-          0.6, 1.00811, 0.6, 0.4, 0.57329]
+ASCE7 = ['0.78388', '0.50000', '0.50000', '1.84959', '0.95914', '1.50000',
+         '1.50000', 'Very High', '1.28969', '0.95669', '0.60000', '0.60000',
+         'Very High']
+ASCE41 = [1.5, 1.45972, 1.45972, 0.83824, 0.83824, 1., 0.6,
+          1.00811, 0.6 , 0.4, 0.57329, 0.4]
 
 
 def test_CCA():
@@ -53,6 +56,16 @@ def test_CCA():
             aac(df.RTGM, expected, atol=1E-6)
 
     if rtgmpy:
+        # check asce7 exporter
+        [fname] = export(('asce7', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        numpy.testing.assert_equal(df.value.to_numpy(), ASCE7)
+
+        # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
         aac(df.value, ASCE41)
+
+        # run mag_dst_eps_sig exporter
+        [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
+        pandas.read_csv(fname, skiprows=1)
