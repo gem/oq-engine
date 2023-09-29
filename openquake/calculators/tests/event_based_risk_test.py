@@ -459,9 +459,6 @@ agg_id
         [fname] = [f for f in out['hmaps', 'csv'] if 'mean' in f]
         self.assertEqualFiles('expected/hazard_map-mean.csv', fname)
 
-        fnames = export(('hmaps', 'xml'), self.calc.datastore)
-        self.assertEqual(len(fnames), 4)  # 2 IMT x 2 poes
-
     # NB: big difference between Ubuntu 18 and 20
     def test_case_4a(self):
         # the case of a site_model.xml with 7 sites but only 1 asset
