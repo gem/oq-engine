@@ -600,7 +600,6 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_31(self):
         # HM2018CorrelationModel with filtered site collection
-        self.run_calc(case_31.__file__, 'job.ini', exports='csv',
-                      concurrent_tasks='0')  # broken otherwise!!
+        self.run_calc(case_31.__file__, 'job.ini', exports='csv')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f)
