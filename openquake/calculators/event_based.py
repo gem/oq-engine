@@ -185,11 +185,8 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     M = len(min_iml)
     for sid, df in gmf_df.groupby(gmf_df.index):
         eid = df.pop('eid')
-        if len(df) < E:
-            gmvs = numpy.ones((E, M), F32) * min_iml
-            gmvs[eid.to_numpy()] = df.to_numpy()
-        else:
-            gmvs = df.to_numpy()
+        gmvs = numpy.ones((E, M), F32) * min_iml
+        gmvs[eid.to_numpy()] = df.to_numpy()
         dic[sid] = geom_avg_std(gmvs, weights)
     return dic
 

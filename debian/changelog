@@ -2,6 +2,7 @@
   * Upgraded Django version to version 3.2.21 with a security fix
 
   [Michele Simionato]
+  * Backported fix to `avg_gmf`
   * Backported a fix to `oq reaggregate`
   * Backported fix to event based risk calculations with
     aggregate_by(parent) != aggregate_by(child)
