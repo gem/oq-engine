@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.18.0-git1b0eacd567', start_date='2023-09-28T14:13:18', checksum=486406261"
+#,,,"generated_by='OpenQuake engine 3.18.0-git3b049493d5', start_date='2023-09-29T03:39:17', checksum=486406261"
 rlz_id,return_period,retention,claim
 0,5.00000E+01,5.47169E+01,5.47169E+01
 0,1.00000E+02,5.59046E+02,5.59046E+02
