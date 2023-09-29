@@ -456,7 +456,7 @@ class PostRiskCalculator(base.RiskCalculator):
                         '\n$ oq show delta_loss:%d %d', ln, li,
                         self.datastore.calc_id)
         logging.info('Sanity check on avg_losses and aggrisk')
-        if 'avg_losses-rlzs' in self.datastore:
+        if 'avg_losses-rlzs' in set(self.datastore):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
             K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0
