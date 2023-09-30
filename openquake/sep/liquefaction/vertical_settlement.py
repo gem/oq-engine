@@ -1,11 +1,8 @@
 from typing import Union, List
 
 import numpy as np
-import pandas as pd
 
-from openquake.sep.liquefaction.liquefaction import hazus_liquefaction_probability
 from openquake.sep.liquefaction import FT_PER_M
-
 
 INCH_PER_M = FT_PER_M * 12.
 
@@ -28,53 +25,38 @@ HAZUS_VERT_SETTLEMENT_TABLE = {
 }
 
 
-def hazus_vertical_settlement(
-    liq_susc_cat: Union[str, List[str]],
-    pga: Union[float, np.ndarray],
-    mag: Union[float, np.ndarray],
+
+def hazus_vertical_settlement(liq_susc_cat: Union[str, List[str]],
     settlement_table: dict = HAZUS_VERT_SETTLEMENT_TABLE,
-    return_unit: str = 'm',
-    groundwater_depth: float = 1.524,
-    do_map_proportion_correction: bool = True
-) -> Union[float, np.ndarray]:
+    return_unit: str = 'm')-> Union[float, np.ndarray]:
     """
-    Distance of vertical settlement from Hazus.
+    Distance of vertical settlement from Hazus 
+    (https://www.hsdl.org/?view&did=12760)
 
     :param liq_susc_cat:
-        Liquefaction susceptibility category
-    :param pga:
-        Peak Ground Acceleration, measured in g
-    :param mag:
-        Magnitude of causative earthquake
-    :param settlement_table:
-        Dictionary of settlement values
+        Liquefaction susceptibility category (LSC). This is a category denoting
+        the susceptibility of a site to liquefaction, independent of the
+        ground motions or earthquake magnitude. Acceptable values are:
+            `vh`: Very high
+            `h` : High
+            `m` : Medium
+            `l` : Low
+            `vl`: Very low
+            `n` : No suceptibility.
+
     :param return_unit:
         Specifies the distance unit for the vertical settlement. Options
         are `in` and `m` (default).
-    :param groundwater_depth:
-        Depth to the groundwater from the earth surface in meters
-    :param do_map_proportion_correction:
-        Flag to apply an additional LSC-based probability or coefficent to
-        the conditional probability
 
     :returns:
         Displacements from vertical settlement in meters or inches.
     """
-    
-    if isinstance(liq_susc_cat, pd.Series):
-        liq_susc_cat = liq_susc_cat.tolist()
-
-    liq_susc_cat = [x.encode() if isinstance(x, str) else x for x in liq_susc_cat]
-
-    if isinstance(liq_susc_cat, list):
-        vert_settlement = np.array([settlement_table[susc_cat] for susc_cat in liq_susc_cat])
-    else:
+    if isinstance(liq_susc_cat, str):
         vert_settlement = settlement_table[liq_susc_cat]
-
-    liquefaction_prob = hazus_liquefaction_probability(pga, mag, liq_susc_cat, 
-                                                       groundwater_depth, do_map_proportion_correction)
-
-    vert_settlement *= liquefaction_prob
+    else:
+        vert_settlement = np.array(
+            [settlement_table[susc_cat] for susc_cat in liq_susc_cat]
+        )
 
     if return_unit == 'in':
         pass
@@ -82,6 +64,5 @@ def hazus_vertical_settlement(
         vert_settlement /= INCH_PER_M
     else:
         raise ValueError("Please choose 'm' or 'in' for return_unit.")
-
 
     return vert_settlement
