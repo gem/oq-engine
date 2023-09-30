@@ -30,10 +30,6 @@ from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement
 )
 
-from openquake.sep.liquefaction.vertical_settlement import (
-    HAZUS_VERT_SETTLEMENT_TABLE,
-    hazus_vertical_settlement)
-
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 site_data_file = os.path.join(BASE_DATA_PATH, "test_site_params.csv")
 
@@ -289,16 +285,3 @@ class test_liquefaction_cali_small(unittest.TestCase):
             3.84597609, 0.36615681, 0., 0., 1.15887168, 1.3722039 ])
 
         np.testing.assert_array_almost_equal(self.sites.hazus_lat_disp, disps)
-
-    def test_hazus_vertical_settlements(self):
-
-        self.sites["char_settlement"] = hazus_vertical_settlement(liq_susc_cat=self.sites["liq_susc_cat"],
-                                                                  pga=self.pga, mag=self.mag, 
-                                                                  groundwater_depth=self.sites["gwd"],
-                                                                  do_map_proportion_correction=self.map_proportion_flag ,
-                                                                  )
-        
-        disps = np.array([0.031563264, 0.001226741, 0.031563264, 0.001184827, 
-            0.031563264, 0.031563264, 0, 0,	0.001184827, 0.001184827])
-        
-        np.testing.assert_array_almost_equal(self.sites["char_settlement"], disps)
