@@ -193,8 +193,7 @@ class HazusDeformation(SecondaryPeril):
     Computes PGDMax or PGDGeomMean from PGA
     """
     def __init__(self, return_unit='m', deformation_component='PGDMax',
-        pga_threshold_table=HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
-        settlement_table=HAZUS_VERT_SETTLEMENT_TABLE):
+        pga_threshold_table=HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE):
         self.return_unit = return_unit
         self.deformation_component = getattr(imt, deformation_component)
         self.outputs = [deformation_component]
@@ -203,11 +202,6 @@ class HazusDeformation(SecondaryPeril):
             pga_threshold_table = {k.encode('utf-8'): v
                 for k, v in pga_threshold_table.items()}
         self.pga_threshold_table=pga_threshold_table
-
-        if settlement_table != HAZUS_VERT_SETTLEMENT_TABLE:
-            settlement_table = {k.encode('utf-8'): v
-                for k, v in settlement_table.items()}
-        self.settlement_table=settlement_table
 
     def prepare(self, sites):
         pass
@@ -220,10 +214,8 @@ class HazusDeformation(SecondaryPeril):
                     mag=mag, pga=gmf, liq_susc_cat=sites.liq_susc_cat,
                     pga_threshold_table=self.pga_threshold_table,
                     return_unit=self.return_unit)
-                vs = hazus_vertical_settlement(mag=mag,pga=gmf, 
-                    liq_susc_cat = sites.liq_susc_cat, 
-                    settlement_table=self.settlement_table,
-                    return_unit=self.return_unit)
+                vs = hazus_vertical_settlement(
+                    sites.liq_susc_cat, return_unit=self.return_unit)
                 out.append(self.deformation_component(ls, vs))
         return out
 
