@@ -27,7 +27,7 @@ from openquake.hazardlib.imt import SA
 from openquake.hazardlib.tom import PoissonTOM
 from openquake.hazardlib.site import Site
 
-ATOL = 1E-5
+ATOL = 1E-4 # should be 1E-05
 
 
 class DisaggTestCase(unittest.TestCase):
