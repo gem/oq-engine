@@ -568,7 +568,7 @@ class ContextMaker(object):
             shps = [ctx.probs_occur.shape for ctx in ctxs]
             np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
-        if self.fewsites:
+        if self.fewsites:  # must be at the end
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
         C = sum(len(ctx) for ctx in ctxs)
