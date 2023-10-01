@@ -593,7 +593,7 @@ agg_id
 
 class ReinsuranceTestCase(CalculatorTestCase):
 
-    def test_reinsurance(self):
+    def test_reinsurance_gmfs(self):
         # many tests have to be kept together since the parallelization
         # does not work with h5py.ExternalLink (used here to read gmfs.hdf5)
 
