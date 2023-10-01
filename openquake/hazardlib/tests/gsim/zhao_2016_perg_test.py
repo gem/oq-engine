@@ -70,7 +70,6 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     pyplot.title('Test scenario for imt = %s and site azimuth = %s$^o$' %(
         imt, azimuth))
     pyplot.legend()
-    pyplot.show()
     
     return mean_perg, mean
     
