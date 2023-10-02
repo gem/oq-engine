@@ -873,6 +873,8 @@ def _read_csv(fileobj, compositedt):
     conv = {}
     for name in compositedt.names:
         dt = compositedt[name]
+        # NOTE: pandas.read_csv raises a warning and ignores a field dtype if a
+        # converter for the same field is given
         if dt.kind == 'S':  # limit of the length of byte-fields
             conv[name] = check_length(name, dt.itemsize)
         else:
