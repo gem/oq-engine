@@ -665,7 +665,7 @@ class ClassicalCalculator(base.HazardCalculator):
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         poes_gb = self.datastore.getsize('_poes') / 1024**3
         if poes_gb < 1:
-            ct = int(poes_gb * 32)
+            ct = int(poes_gb * 32) or 1
         else:
             ct = int(poes_gb) + 32  # number of tasks > number of GB
         if ct > 1:
