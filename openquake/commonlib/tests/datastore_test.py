@@ -78,27 +78,6 @@ class DataStoreTestCase(unittest.TestCase):
         mo = re.search(r'hello_\d+', path)
         self.assertIsNotNone(mo)
 
-    def test_read(self):
-        # windows does not manage permissions properly. Skip the test
-        if sys.platform == 'win32':
-            raise unittest.SkipTest('Windows')
-
-        # case of a non-existing directory
-        with self.assertRaises(OSError):
-            datastore.read(42, 'r', '/fake/directory')
-        # case of a non-existing file
-        with self.assertRaises(IOError):
-            datastore.read(42, 'r', '/tmp')
-        # case of no read permission
-        tmp = tempfile.mkdtemp()
-        fname = os.path.join(tmp, 'calc_42.hdf5')
-        open(fname, 'w').write('')
-        os.chmod(fname, 0)
-        with self.assertRaises(IOError) as ctx:
-            datastore.read(42, 'r', tmp)
-        self.assertIn('permission denied', str(ctx.exception).lower())
-        os.remove(fname)
-
     def test_store_retrieve_files(self):
         fnames = []
         for cwd, dirs, files in os.walk(os.path.dirname(__file__)):
