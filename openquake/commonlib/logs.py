@@ -204,14 +204,15 @@ class LogContext:
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
+            datadir = get_datadir()
             self.calc_id = dbcmd(
-                'create_job',
-                get_datadir(),
+                'create_job', datadir,
                 self.params['calculation_mode'],
                 self.params.get('description', 'test'),
-                user_name,
-                hc_id,
-                host)
+                user_name, hc_id, host)
+            path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
+            if os.path.exists(path):  # sanity check on the calculation ID
+                raise RuntimeError('There is a pre-existing file %s' % path)
             self.usedb = True
         elif calc_id == -1:
             # only works in single-user situations
@@ -274,10 +275,10 @@ class LogContext:
                                       self.calc_id, hc_id)
 
 
-def init(job_or_calc, job_ini, log_level='info', log_file=None,
+def init(dummy, job_ini, log_level='info', log_file=None,
          user_name=None, hc_id=None, host=None, tag=''):
     """
-    :param job_or_calc: the string "job" or "calcXXX"
+    :param dummy: ignored parameter, exists for backward compatibility
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
@@ -292,13 +293,5 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     3. create a job in the database if job_or_calc == "job"
     4. return a LogContext instance associated to a calculation ID
     """
-    if job_or_calc == "job":
-        calc_id = 0
-    elif job_or_calc == "calc":
-        calc_id = -1
-    elif job_or_calc.startswith("calc"):
-        calc_id = int(job_or_calc[4:])
-    else:
-        raise ValueError(job_or_calc)
-    return LogContext(job_ini, calc_id, log_level, log_file,
+    return LogContext(job_ini, 0, log_level, log_file,
                       user_name, hc_id, host, tag)

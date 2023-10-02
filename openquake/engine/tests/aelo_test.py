@@ -46,7 +46,7 @@ def test_CCA():
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
     for (site, lon, lat), expected in zip(SITES, EXPECTED):
         dic = dict(lon=lon, lat=lat, site=site, vs30='760')
-        with logs.init('calc', job_ini) as log:
+        with logs.init('job', job_ini) as log:
             log.params.update(get_params_from(dic, MOSAIC_DIR))
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()

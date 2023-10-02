@@ -293,8 +293,8 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            sap.runline('openquake.commands export hcurves -e csv '
-                        f'--export-dir={tempdir}')
+            sap.runline(f'openquake.commands export hcurves {self.calc_id}'
+                        f' -e csv --export-dir={tempdir}')
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)

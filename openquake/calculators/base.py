@@ -1217,6 +1217,8 @@ def import_gmfs_hdf5(dstore, oqparam):
     :param oqparam: an OqParam instance
     :returns: event_ids
     """
+    # NB: you cannot access an external link if the file it points to is already open,
+    # therefore you cannot run in parallel two calculations starting from the same GMFs
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
