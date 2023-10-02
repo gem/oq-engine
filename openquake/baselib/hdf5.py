@@ -872,9 +872,11 @@ def _read_csv(fileobj, compositedt):
     dic = {}
     conv = {}
     for name in compositedt.names:
-        dic[name] = dt = compositedt[name]
+        dt = compositedt[name]
         if dt.kind == 'S':  # limit of the length of byte-fields
             conv[name] = check_length(name, dt.itemsize)
+        else:
+            dic[name] = dt
     df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
                          dtype=dic, keep_default_na=False, na_filter=False)
     arr = numpy.zeros(len(df), compositedt)
