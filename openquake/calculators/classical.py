@@ -30,8 +30,7 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import (
-    performance, parallel, hdf5, config, python3compat, workerpool as w)
+from openquake.baselib import performance, parallel, hdf5, config, python3compat
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import InvalidFile
@@ -665,12 +664,10 @@ class ClassicalCalculator(base.HazardCalculator):
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
         poes_gb = self.datastore.getsize('_poes') / 1024**3
-        if poes_gb < .1:
-            ct = 1
-        elif poes_gb < 2:
-            ct = int(poes_gb * 10)
+        if poes_gb < 1:
+            ct = int(poes_gb * 32) or 1
         else:
-            ct = int(poes_gb) + 18  # number of tasks > number of GB
+            ct = int(poes_gb) + 32  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
         if '_poes' in set(self.datastore):
