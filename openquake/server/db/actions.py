@@ -113,9 +113,10 @@ def create_job(db, datadir, calculation_mode='to be set',
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
                ds_calc_dir=datadir, hazard_calculation_id=hc_id, host=host)
-    job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()).lastrowid
+    job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
+                ).lastrowid
     db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
-       os.path.join(datadir, 'calc_%s' % job_id), job_id)
+       os.path.join(datadir, 'calc_%s.hdf5' % job_id), job_id)
     return job_id
 
 

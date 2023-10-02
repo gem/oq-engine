@@ -204,14 +204,15 @@ class LogContext:
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
+            datadir = get_datadir()
             self.calc_id = dbcmd(
-                'create_job',
-                get_datadir(),
+                'create_job', datadir,
                 self.params['calculation_mode'],
                 self.params.get('description', 'test'),
-                user_name,
-                hc_id,
-                host)
+                user_name, hc_id, host)
+            path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
+            if os.path.exists(path):  # sanity check on the calculation ID
+                raise RuntimeError('There is a pre-existing file %s' % path)
             self.usedb = True
         elif calc_id == -1:
             # only works in single-user situations
