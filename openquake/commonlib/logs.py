@@ -274,10 +274,10 @@ class LogContext:
                                       self.calc_id, hc_id)
 
 
-def init(job_or_calc, job_ini, log_level='info', log_file=None,
+def init(dummy, job_ini, log_level='info', log_file=None,
          user_name=None, hc_id=None, host=None, tag=''):
     """
-    :param job_or_calc: the string "job" or "calcXXX"
+    :param dummy: ignored parameter, exists for backward compatibility
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
@@ -292,13 +292,5 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     3. create a job in the database if job_or_calc == "job"
     4. return a LogContext instance associated to a calculation ID
     """
-    assert job_or_calc != 'calc'
-    if job_or_calc == "job":
-        calc_id = 0
-    elif job_or_calc.startswith("calc"):
-        1/0
-        calc_id = int(job_or_calc[4:])
-    else:
-        raise ValueError(job_or_calc)
-    return LogContext(job_ini, calc_id, log_level, log_file,
+    return LogContext(job_ini, 0, log_level, log_file,
                       user_name, hc_id, host, tag)
