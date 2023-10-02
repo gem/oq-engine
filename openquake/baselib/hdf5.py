@@ -666,7 +666,7 @@ class ArrayWrapper(object):
             if isinstance(v, h5py.Dataset):
                 arr = v[()]
                 if isinstance(arr, INT):
-                    arr = numpy.arange(arr)  
+                    arr = numpy.arange(arr)
                 elif len(arr) and isinstance(arr[0], bytes):
                     arr = decode(arr)
                 setattr(self, k, arr)
