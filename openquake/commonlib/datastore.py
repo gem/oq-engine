@@ -26,7 +26,7 @@ import h5py
 
 from openquake.baselib import hdf5, performance, general
 from openquake.commonlib.logs import (
-    get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd, init)
+    get_datadir, get_last_calc_id, CALC_REGEX, dbcmd, init)
 
 
 # FIXME: you should never use this
@@ -80,8 +80,8 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
     ppath = None
     # look in the db
     job = dbcmd('get_job', calc_id)
-    jid = job.id
     if job:
+        jid = job.id
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
@@ -94,7 +94,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
             else:
                 ppath = os.path.join(ddir, 'calc_%d.hdf5' % hc_id)
     else:  # when using oq run there is no job in the db
-        path = os.path.join(ddir, 'calc_%s.hdf5' % jid)
+        path = os.path.join(ddir, 'calc_%s.hdf5' % calc_id)
     return DataStore(path, ppath, mode)
 
 
