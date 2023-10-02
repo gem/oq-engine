@@ -355,9 +355,9 @@ class Amplifier(object):
 
         if len(coeff) == 1:  # there is single coefficient for all levels
             ones = numpy.ones_like(imls)
-            ialpha = float(coeff[imt_str]) * ones
+            ialpha = coeff[imt_str].iloc[0] * ones
             try:
-                isigma = float(coeff['sigma_' + imt_str]) * ones
+                isigma = coeff['sigma_' + imt_str].iloc[0] * ones
             except KeyError:
                 isigma = numpy.zeros_like(imls)  # shape E
         else:
