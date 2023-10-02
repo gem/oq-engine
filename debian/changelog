@@ -1,3 +1,16 @@
+  [Lana Todorovic, Anirudh Rao]
+  * Added several regional liquefaction models to the secondary perils module, including:
+    ZhuEtAl2017LiquefactionCoastal and ZhuEtAl2017LiquefactionGeneral, 
+    RashidianBaise2020Liquefaction, AllstadtEtAl2022Liquefaction,
+    AkhlagiEtAl2021LiquefactionA and AkhlagiEtAl2021LiquefactionB (experimental),
+    Bozzoni2021LiquefactionEurope, TodorovicSilva2022NonParametric
+  * Added new site parameters required by some of these new models to site.py
+  * Added LiqOccur as a valid IMT, referring to the occurrence or non-occurrence 
+    of liquefaction at a site
+  * Added basic documentation for the secondary perils module 
+    (originally written by @cossatot and extended by @LanaTodorovic93)
+  * Added rock-slope co-seismic failure computation of Grant et al. (2016)
+
   [Michele Simionato]
   * Fixed sanity check on avg_losses and aggrisk breaking for event_based_damage
     calculations following event_based_risk calculations

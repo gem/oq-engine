@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+        name="Colombia redux model for Antioquia - area shallows sources - CGS, subduction zones - SARA - one layer for volume sources"
+    >
+        <sourceGroup
+        name="group 1"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <areaSource
+            id="CC_68"
+            name="CC_68"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <Polygon>
+                        <exterior>
+                            <LinearRing>
+                                <posList>
+                                    -75.392424241 4.438283263 -75.692598006 4.252161823 -76.153261657 3.490734301 -76.276993629 3.064334889 -76.436893409 2.637935477 -76.661514528 2.255318147 -77.074588958 1.512926313 -78.3840565897 0.744490220413 -77.364477371 2.166780166 -76.871928942 2.906792538 -76.446005422 3.737224429 -76.065291661 4.47247788 -76.012943519 4.560517937 -75.88735213 4.971282528 -75.392424241 4.438283263
+                                </posList>
+                            </LinearRing>
+                        </exterior>
+                    </Polygon>
+                    <upperSeismoDepth>
+                        1.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        30.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="2.51730824764" bValue="0.705120640517" maxMag="6.51" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="75.0" probability="0.5" rake="175.0" strike="26.0"/>
+                    <nodalPlane dip="70.0" probability="0.5" rake="-150.0" strike="110.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth
+                    depth="5.0"
+                    probability="0.851"
+                    >
+                        0.851 5.0
+                    </hypoDepth>
+                    <hypoDepth
+                    depth="15.0"
+                    probability="0.149"
+                    >
+                        0.149 15.0
+                    </hypoDepth>
+                </hypoDepthDist>
+            </areaSource>
+            <areaSource
+            id="CC_71"
+            name="CC_71"
+            tectonicRegion="Active Shallow Crust"
+            >
+                <areaGeometry>
+                    <Polygon>
+                        <exterior>
+                            <LinearRing>
+                                <posList>
+                                    -76.065291661 4.47247788 -76.446005422 3.737224429 -76.752856313 3.138950905 -76.871928942 2.906792538 -77.364477371 2.166780166 -78.3840565897 0.744490220413 -79.027971825 1.06165616818 -78.02395292 2.698256576 -77.644190943 3.36069852 -77.544269444 3.643156404 -77.058859399 3.938209569 -76.600099317 4.145698569 -76.21367485 4.313212624 -76.065291661 4.47247788
+                                </posList>
+                            </LinearRing>
+                        </exterior>
+                    </Polygon>
+                    <upperSeismoDepth>
+                        1.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        35.0
+                    </lowerSeismoDepth>
+                </areaGeometry>
+                <magScaleRel>
+                    WC1994
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1.0
+                </ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="3.7775518824" bValue="1.02241618624" maxMag="6.5" minMag="4.0"/>
+                <nodalPlaneDist>
+                    <nodalPlane dip="40.0" probability="1.0" rake="135.0" strike="60.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth
+                    depth="5.0"
+                    probability="0.552"
+                    >
+                        0.552 5.0
+                    </hypoDepth>
+                    <hypoDepth
+                    depth="15.0"
+                    probability="0.305"
+                    >
+                        0.305 15.0
+                    </hypoDepth>
+                    <hypoDepth
+                    depth="25.0"
+                    probability="0.143"
+                    >
+                        0.143 25.0
+                    </hypoDepth>
+                </hypoDepthDist>
+            </areaSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
