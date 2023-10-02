@@ -29,6 +29,7 @@ from openquake.commonlib.logs import (
     get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd, init)
 
 
+# FIXME: you should never use this
 def hdf5new(datadir=None):
     """
     Return a new `hdf5.File by` instance with name determined by the last
@@ -77,18 +78,9 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
     # low level function to read a datastore file
     ddir = datadir or get_datadir()
     ppath = None
-    if calc_id < 0:  # look at the old calculations of the current user
-        calc_ids = get_calc_ids(ddir)
-        try:
-            jid = calc_ids[calc_id]
-        except IndexError:
-            raise IndexError(
-                'There are %d old calculations, cannot '
-                'retrieve the %s' % (len(calc_ids), calc_id))
-    else:
-        jid = calc_id
     # look in the db
-    job = dbcmd('get_job', jid)
+    job = dbcmd('get_job', calc_id)
+    jid = job.id
     if job:
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
@@ -153,7 +145,7 @@ def build_dstore_log(description='custom calculation', parent=()):
     :returns: DataStore instance associated to the .calc_id
     """
     dic = dict(description=description, calculation_mode='custom')
-    log = init('calc', dic)
+    log = init('job', dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
     return dstore, log
