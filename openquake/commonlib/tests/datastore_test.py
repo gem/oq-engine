@@ -41,7 +41,8 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
-        self.assertEqual(len(self.dstore), 4)
+        lst = ['oqparam', 'performance_data', 'task_info', 'task_sent']
+        self.assertEqual(sorted(self.dstore), lst)
         # performance_data, task_info, task_sent
         self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
