@@ -33,7 +33,8 @@ class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
         log = logs.init(
             "job", {'calculation_mode': 'scenario', 'sites': '0 0'})
-        self.dstore = datastore.new(log.calc_id, log.get_oqparam())
+        with log:
+            self.dstore = datastore.new(log.calc_id, log.get_oqparam())
 
     def tearDown(self):
         self.dstore.close()

@@ -292,11 +292,11 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     3. create a job in the database if job_or_calc == "job"
     4. return a LogContext instance associated to a calculation ID
     """
+    assert job_or_calc != 'calc'
     if job_or_calc == "job":
         calc_id = 0
-    elif job_or_calc == "calc":
-        calc_id = -1
     elif job_or_calc.startswith("calc"):
+        1/0
         calc_id = int(job_or_calc[4:])
     else:
         raise ValueError(job_or_calc)
