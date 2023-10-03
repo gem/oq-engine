@@ -338,13 +338,13 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurve):
+    def amplify(self, ampl_code, hcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param pcurve: a ProbabilityCurve of shape (L*M, R)
+        :param hcurve: a ProbabilityCurve of shape (L*M, R)
         :returns: amplified ProbabilityCurve of shape (A*M, R)
         """
-        new = [self.amplify_one(ampl_code, imt, pcurve.array[self.imtls(imt)])
+        new = [self.amplify_one(ampl_code, imt, hcurve.array[self.imtls(imt)])
                for imt in self.imtls]
         return ProbabilityCurve(numpy.concatenate(new))
 

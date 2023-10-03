@@ -177,10 +177,10 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
-            pc = pgetter.get_pcurve(sid)  # shape (L, R)
+            pc = pgetter.get_hcurve(sid)  # shape (L, R)
             if amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
-                # NB: the pcurve have soil levels != IMT levels
+                # NB: the hcurve have soil levels != IMT levels
         if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:

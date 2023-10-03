@@ -40,11 +40,11 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(pcurve, imtls, stat, weights, use_rates=False):
+def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
-    poes = pcurve.array.T  # shape R, L
+    poes = hcurve.array.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
@@ -215,9 +215,9 @@ class PmapGetter(object):
             # classical_risk/case_3 for the first site
             return probability_map.ProbabilityCurve(
                 numpy.zeros((self.L, self.num_rlzs)))
-        return self.get_pcurve(self.sids[0])
+        return self.get_hcurve(self.sids[0])
 
-    def get_pcurve(self, sid):  # used in classical
+    def get_hcurve(self, sid):  # used in classical
         """
         :returns: a ProbabilityCurve of shape L, R
         """
@@ -226,9 +226,12 @@ class PmapGetter(object):
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in pmap:  # no hazard for sid
             return pc0
-        for g, trs in enumerate(self.trt_rlzs):
-            probability_map.combine_probs(
-                pc0.array, pmap[sid].array[:, g], trs % TWO24)
+        for g, t_rlzs in enumerate(self.trt_rlzs):
+            rlzs = t_rlzs % TWO24
+            rates = to_rates(pmap[sid].array[:, g])
+            for rlz in rlzs:
+                pc0.array[:, rlz] += rates
+        pc0.array = to_probs(pc0.array)
         return pc0
 
     def get_mean(self):
@@ -243,16 +246,16 @@ class PmapGetter(object):
         if len(self.weights) == 1:  # one realization
             # the standard deviation is zero
             pmap = self.get(0)
-            for sid, pcurve in pmap.items():
-                array = numpy.zeros(pcurve.array.shape)
-                array[:, 0] = pcurve.array[:, 0]
-                pcurve.array = array
+            for sid, hcurve in pmap.items():
+                array = numpy.zeros(hcurve.array.shape)
+                array[:, 0] = hcurve.array[:, 0]
+                hcurve.array = array
             return pmap
         L = self.imtls.size
         pmap = probability_map.ProbabilityMap(self.sids, L, 1)
         for sid in self.sids:
             pmap[sid] = build_stat_curve(
-                self.get_pcurve(sid),
+                self.get_hcurve(sid),
                 self.imtls, stats.mean_curve, self.weights)
         return pmap
 
