@@ -61,12 +61,16 @@ def _find_turning_points(mesh, tol=1.0):
                                 mesh.lons[0, idx + 1], mesh.lats[0, idx + 1])
     naz = len(azimuths)
     azim = azimuths[0]
+
     # Retain initial point
     idx = [0]
+
+    # Add more points
     for i in range(1, naz):
-        if numpy.fabs(azimuths[i] - azim) > tol:
+        if numpy.fabs((azimuths[i] - azim) % 360) > tol:
             idx.append(i)
             azim = azimuths[i]
+
     # Add on last point - if not already in the set
     if idx[-1] != mesh.lons.shape[1] - 1:
         idx.append(mesh.lons.shape[1] - 1)
@@ -100,6 +104,7 @@ def downsample_trace(mesh, tol=1.0):
     :returns:
         Downsampled edge as a numpy array of [long, lat, depth]
     """
+
     idx = _find_turning_points(mesh, tol)
     if mesh.depths is not None:
         return numpy.column_stack([mesh.lons[0, idx],

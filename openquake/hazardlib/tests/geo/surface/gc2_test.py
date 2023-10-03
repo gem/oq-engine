@@ -41,6 +41,8 @@ PNT5 = Point(-65.00000,  0.00000, 0.0)
 AS_ARRAY = numpy.array([[pnt.longitude, pnt.latitude, pnt.depth]
                         for pnt in [PNT1, PNT2, PNT3, PNT4, PNT5]])
 
+PLOTTING = False
+
 
 class CartesianTestingMultiSurface(MultiSurface):
     """
@@ -177,6 +179,7 @@ def _setup_peer_test_bending_fault_config():
     frankel_fault2 = MultiSurface(frankel_discordant)
     return simple_fault1, stirling_fault1, frankel_fault1, frankel_fault2
 
+
 SFLT1, STIRFLT1, FRANK1, FRANK2 = _setup_peer_test_bending_fault_config()
 
 
@@ -187,8 +190,19 @@ class TraceDownSamplingTestCase(unittest.TestCase):
     def test_downsample_trace(self):
         # Use the simple fault case with a tolerance of 1.0 degree
         downsampled_trace = downsample_trace(SFLT1.mesh, 1.0)
+
+        if PLOTTING:
+            import matplotlib.pyplot as plt
+            plt.plot(SFLT1.mesh.lons[0, :], SFLT1.mesh.lats[0, :], '-')
+            ds = downsampled_trace
+            plt.plot(ds[:, 0], ds[:, 1], 'o')
+            for i_coo, coo in enumerate(zip(ds[:, 0], ds[:, 1])):
+                plt.text(coo[0], coo[1], f'{i_coo}')
+            plt.show()
+
         # Top edge of downsampled mesh should correspond to the five
         # points of the simple fault
+
         # Check longitudes
         numpy.testing.assert_array_almost_equal(downsampled_trace[:, 0],
                                                 AS_ARRAY[:, 0],
