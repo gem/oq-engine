@@ -69,7 +69,7 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
 
         # check the cutoff in classical.fix_ones
-        df = self.calc.datastore.read_df('_poes')
+        df = self.calc.datastore.read_df('_rates')
         num_ones = (df.poe == 1.).sum()
         self.assertEqual(num_ones, 0)
 

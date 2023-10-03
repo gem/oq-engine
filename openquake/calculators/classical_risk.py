@@ -92,7 +92,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         super().pre_execute()
-        if '_poes' not in self.datastore:  # when building short report
+        if '_rates' not in self.datastore:  # when building short report
             return
         full_lt = self.datastore['full_lt']
         self.realizations = full_lt.get_realizations()

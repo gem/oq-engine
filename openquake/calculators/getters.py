@@ -99,7 +99,7 @@ class HcurvesGetter(object):
         assert ';' in src_id, src_id  # must be a realization specific src_id
         imt_slc = self.imtls(imt) if imt else slice(None)
         start, gsims, weights = self.bysrc[src_id]
-        dset = self.dstore['_poes']
+        dset = self.dstore['_rates']
         if gsim_idx is None:
             curves = dset[start:start + len(gsims), site_id, imt_slc]
             return weights @ curves
@@ -192,7 +192,7 @@ class PmapGetter(object):
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
-                poes_df = dstore.read_df('_poes', slc=slice(start, stop))
+                poes_df = dstore.read_df('_rates', slc=slice(start, stop))
                 for sid, df in poes_df.groupby('sid'):
                     try:
                         array = self._pmap[sid].array

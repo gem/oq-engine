@@ -620,7 +620,7 @@ class ClassicalTestCase(CalculatorTestCase):
         L1 = L // len(oq.imtls)
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
-        df = self.calc.datastore.read_df('_poes')
+        df = self.calc.datastore.read_df('_rates')
         del df['sid']
         for g, gsim in enumerate(gsims):
             curve = numpy.zeros(L1, oq.imt_dt())

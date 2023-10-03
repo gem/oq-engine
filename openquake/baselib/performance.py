@@ -447,7 +447,7 @@ else:
         return lambda func: func
 
 
-# used when reading _poes/sid
+# used when reading _rates/sid
 @compile(["int64[:, :](uint8[:])",
           "int64[:, :](uint16[:])",
           "int64[:, :](uint32[:])",

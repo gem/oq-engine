@@ -574,7 +574,7 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore.create_df('_poes',
+            self.datastore.create_df('_rates',
                                      readinput.Global.pmap.to_dframe())
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
@@ -1059,7 +1059,7 @@ class RiskCalculator(HazardCalculator):
         full_lt = dstore['full_lt'].init()
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        slices = performance.get_slices(dstore['_poes/sid'][:])
+        slices = performance.get_slices(dstore['_rates/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             getter = getters.PmapGetter(
