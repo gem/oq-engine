@@ -30,7 +30,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
 TWO24 = 2 ** 24
-poes_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'poe': F64}
+rates_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'rate': F64}
 
 
 if numba:
@@ -425,16 +425,15 @@ class ProbabilityMap(object):
         """
         :returns: a DataFrame with fields sid, gid, lid, poe
         """
-        dic = dict(sid=[], gid=[], lid=[], poe=[])
+        dic = dict(sid=[], gid=[], lid=[], rate=[])
         for sid, arr in zip(self.sids, self.array):
-            for (lid, gid), poe in numpy.ndenumerate(arr):
+            for (lid, gid), rate in numpy.ndenumerate(arr):
                 dic['sid'].append(sid)
                 dic['gid'].append(gid)
                 dic['lid'].append(lid)
-                dic['poe'].append(poe)
-        for key, dt in poes_dt.items():
+                dic['rate'].append(rate)
+        for key, dt in rates_dt.items():
             dic[key] = dt(dic[key])
-        dic['poe'][dic['poe'] == 1.] = .9999999999999999  # avoids log(0)
         return pandas.DataFrame(dic)
 
     def multiply_pnes(self, other, g, i):

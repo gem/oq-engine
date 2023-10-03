@@ -37,7 +37,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
+from openquake.hazardlib.probability_map import ProbabilityMap, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters
 
@@ -177,10 +177,10 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
-            pc = pgetter.get_pcurve(sid)  # shape (L, R)
+            pc = pgetter.get_hcurve(sid)  # shape (L, R)
             if amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
-                # NB: the pcurve have soil levels != IMT levels
+                # NB: the hcurve have soil levels != IMT levels
         if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:
@@ -265,7 +265,7 @@ class Hazard:
 
     def store_poes(self, pnes, the_sids, gid=0):
         """
-        Store 1-pnes inside the _poes dataset
+        Store 1-pnes inside the _rates dataset
         """
         avg_poe = 0
         # store by IMT to save memory
@@ -286,15 +286,16 @@ class Hazard:
             if len(idxs) == 0:  # happens in case_60
                 return 0
             sids = the_sids[idxs]
-            hdf5.extend(self.datastore['_poes/sid'], sids)
-            hdf5.extend(self.datastore['_poes/gid'], gids + gid)
-            hdf5.extend(self.datastore['_poes/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
+            hdf5.extend(self.datastore['_rates/sid'], sids)
+            hdf5.extend(self.datastore['_rates/gid'], gids + gid)
+            hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
+            hdf5.extend(self.datastore['_rates/rate'],
+                        disagg.to_rates(poes[idxs, lids, gids]))
 
             # slice_by_sid contains 3x6=18 slices in classical/case_22
             # which has 6 IMTs each one with 20 levels
             sbs = build_slice_by_sid(sids, self.offset)
-            hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+            hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
             self.offset += len(sids)
             avg_poe += poes.mean(axis=(0, 2)) @ self.level_weights[slc]
         self.acc['avg_poe'] = avg_poe
@@ -395,8 +396,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_poes', poes_dt.items())
-        self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
+        self.datastore.create_df('_rates', rates_dt.items())
+        self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
         oq = self.oqparam
@@ -444,7 +445,7 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if '_poes' in parent:
+            if '_rates' in parent:
                 self.build_curves_maps()  # repeat post-processing
                 return {}
         else:
@@ -475,7 +476,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
-        if '_poes' in self.datastore:
+        if '_rates' in self.datastore:
             self.build_curves_maps()
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
@@ -663,19 +664,19 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_curves:  # do nothing
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        poes_gb = self.datastore.getsize('_poes') / 1024**3
+        poes_gb = self.datastore.getsize('_rates') / 1024**3
         if poes_gb < 1:
             ct = int(poes_gb * 32) or 1
         else:
             ct = int(poes_gb) + 32  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
-        if '_poes' in set(self.datastore):
+        if '_rates' in set(self.datastore):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
         sites_per_task = int(numpy.ceil(self.N / ct))
-        sbs = dstore['_poes/slice_by_sid'][:]
+        sbs = dstore['_rates/slice_by_sid'][:]
         sbs['sid'] //= sites_per_task
         # NB: there is a genious idea here, to split in tasks by using
         # the formula ``taskno = sites_ids // sites_per_task`` and then
