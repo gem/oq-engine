@@ -30,7 +30,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
 TWO24 = 2 ** 24
-rates_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'rate': F64}
+rates_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'rate': F32}
 
 
 if numba:
