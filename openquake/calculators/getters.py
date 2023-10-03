@@ -23,7 +23,7 @@ from openquake.baselib import general, hdf5
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, EBRupture, get_ebr)
+    BaseRupture, RuptureProxy, get_ebr)
 from openquake.commonlib import datastore
 
 U16 = numpy.uint16
@@ -103,7 +103,7 @@ class HcurvesGetter(object):
         if gsim_idx is None:
             curves = dset[start:start + len(gsims), site_id, imt_slc]
             return weights @ curves
-        return dset[start + gsim_idx, site_id, imt_slc]
+        return to_probs(dset[start + gsim_idx, site_id, imt_slc])
 
     # NB: not used right now
     def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
@@ -192,15 +192,15 @@ class PmapGetter(object):
         G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
-                poes_df = dstore.read_df('_rates', slc=slice(start, stop))
-                for sid, df in poes_df.groupby('sid'):
+                rates_df = dstore.read_df('_rates', slc=slice(start, stop))
+                for sid, df in rates_df.groupby('sid'):
                     try:
                         array = self._pmap[sid].array
                     except KeyError:
                         array = numpy.zeros((self.L, G))
                         self._pmap[sid] = probability_map.ProbabilityCurve(
                             array)
-                    array[df.lid, df.gid] = df.poe
+                    array[df.lid, df.gid] = to_probs(df.poe)
         return self._pmap
 
     # used in risk calculations where there is a single site per getter

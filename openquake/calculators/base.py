@@ -40,6 +40,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
+from openquake.hazardlib.calc.disagg import to_rates
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
@@ -574,8 +575,9 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore.create_df('_rates',
-                                     readinput.Global.pmap.to_dframe())
+            df = readinput.Global.pmap.to_dframe()
+            df.poe = to_rates(df.poe)
+            self.datastore.create_df('_rates', df)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
@@ -1217,8 +1219,9 @@ def import_gmfs_hdf5(dstore, oqparam):
     :param oqparam: an OqParam instance
     :returns: event_ids
     """
-    # NB: you cannot access an external link if the file it points to is already open,
-    # therefore you cannot run in parallel two calculations starting from the same GMFs
+    # NB: you cannot access an external link if the file it points to is
+    # already open, therefore you cannot run in parallel two calculations
+    # starting from the same GMFs
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}

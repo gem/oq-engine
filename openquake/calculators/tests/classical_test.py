@@ -21,7 +21,7 @@ import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib import InvalidFile, nrml, calc
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
@@ -626,7 +626,7 @@ class ClassicalTestCase(CalculatorTestCase):
             curve = numpy.zeros(L1, oq.imt_dt())
             df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
-            poes[df_for_g.lid] = df_for_g.poe
+            poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.poe)
             for im in oq.imtls:
                 curve[im] = poes[oq.imtls(im)]
             gs = gsim.__class__.__name__
