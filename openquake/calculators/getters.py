@@ -217,9 +217,11 @@ class PmapGetter(object):
                 numpy.zeros((self.L, self.num_rlzs)))
         return self.get_hcurve(self.sids[0])
 
-    def get_hcurve(self, sid):  # used in classical
+    def get_hcurve(self, sid, use_rates=False):  # used in classical
         """
-        :returns: a ProbabilityCurve of shape L, R
+        :param sid: a site ID
+        :param use_rates: if True, return a curve of rates, else of PoEs
+        :returns: a ProbabilityCurve of shape L, R for the given site ID
         """
         pmap = self.init()
         pc0 = probability_map.ProbabilityCurve(
@@ -231,7 +233,8 @@ class PmapGetter(object):
             rates = to_rates(pmap[sid].array[:, g])
             for rlz in rlzs:
                 pc0.array[:, rlz] += rates
-        pc0.array = to_probs(pc0.array)
+        if use_rates is False:
+            pc0.array = to_probs(pc0.array)
         return pc0
 
     def get_mean(self):
