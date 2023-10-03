@@ -161,7 +161,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/TRT-0.csv', fname)
 
         # test conditional disaggregation
-        # raise unittest.SkipTest('Non-reproducible issue on CI :-(')
         [fname] = export(('disagg-rlzs-traditional', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/TRT-traditional-0.csv', fname)

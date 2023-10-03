@@ -420,7 +420,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                             pprod(mat8[..., 0, 0], axis=(1, 2, 3, 4, 5)))
                     poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
                     if name.endswith('-rlzs'):
-                        self.datastore['poe4'][s, m, p, z] = poe_agg
+                        self.datastore['poe4'][s, m, p, z] = max(poe_agg, 1E-12)
 
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
