@@ -67,7 +67,9 @@ def _find_turning_points(mesh, tol=1.0):
 
     # Add more points
     for i in range(1, naz):
-        if numpy.fabs((azimuths[i] - azim) % 360) > tol:
+        dff = azimuths[i] - azim
+        dff = (dff + 180) % 360 - 180
+        if dff > tol:
             idx.append(i)
             azim = azimuths[i]
 
