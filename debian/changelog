@@ -3,6 +3,27 @@
     on the hazard of models containing simple fault sources
 
   [Michele Simionato]
+  * Optimized the calculation of quantile hazard maps (7x)
+  * Internal: stored `_rates` instead of `_poes` in classical calculations
+
+  [Lana Todorovic, Anirudh Rao]
+  * Added several regional liquefaction models to the secondary perils module,
+    including:
+    ZhuEtAl2017LiquefactionCoastal and ZhuEtAl2017LiquefactionGeneral,
+    RashidianBaise2020Liquefaction, AllstadtEtAl2022Liquefaction,
+    AkhlagiEtAl2021LiquefactionA and AkhlagiEtAl2021LiquefactionB
+    (experimental),
+    Bozzoni2021LiquefactionEurope, TodorovicSilva2022NonParametric
+  * Added new site parameters required by some of these new models to site.py
+  * Added LiqOccur as a valid IMT, referring to the occurrence or
+    non-occurrence of liquefaction at a site
+  * Added basic documentation for the secondary perils module
+    (originally written by @cossatot and extended by @LanaTodorovic93)
+  * Added rock-slope co-seismic failure computation of Grant et al. (2016)
+
+  [Michele Simionato]
+  * Fixed sanity check on avg_losses and aggrisk breaking for event_based_damage
+    calculations following event_based_risk calculations
   * Fixed a bug in avg_gmf causing the average to be computed incorrectly
   * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
     after 7 years of deprecation
@@ -11,8 +32,9 @@
   * In the WebUI users are not allowed to see other users outputs by default
     (the old default can be obtained setting ACL_ON = False)
 
-  [Manuela Villani, Michele Simionato]
-  * Produced ASCE-7 and ASCE-41 outputs for the AELO project
+  [Manuela Villani, Michele Simionato, Paolo Tormene]
+  * Produced ASCE-7 and ASCE-41 outputs for the AELO project and hidden
+    a few internal outputs
 
   [Athanasios Papadopoulos]
   * Adjusted the Swiss-specific implementations of the GMPEs used

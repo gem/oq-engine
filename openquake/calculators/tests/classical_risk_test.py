@@ -68,11 +68,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         # test with different curve resolution for different taxonomies
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
 
-        # check the cutoff in classical.fix_ones
-        df = self.calc.datastore.read_df('_poes')
-        num_ones = (df.poe == 1.).sum()
-        self.assertEqual(num_ones, 0)
-
         # check mean loss curves
         [fname] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-mean.csv', fname)

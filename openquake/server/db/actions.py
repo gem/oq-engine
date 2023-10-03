@@ -108,16 +108,16 @@ def create_job(db, datadir, calculation_mode='to be set',
     :returns:
         the job ID
     """
-    calc_id = get_calc_id(db, datadir) + 1
     # NB: is_running=1 is needed to make views_test.py happy on Jenkins
-    job = dict(id=calc_id, is_running=1, description=description,
+    job = dict(is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
-               hazard_calculation_id=hc_id,
-               ds_calc_dir=os.path.join(datadir, 'calc_%s' % calc_id),
-               host=host)
-    return db('INSERT INTO job (?S) VALUES (?X)',
-              job.keys(), job.values()).lastrowid
+               ds_calc_dir=datadir, hazard_calculation_id=hc_id, host=host)
+    job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
+                ).lastrowid
+    db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
+       os.path.join(datadir, 'calc_%s.hdf5' % job_id), job_id)
+    return job_id
 
 
 def import_job(db, calc_id, calc_mode, description, user_name, status,
@@ -180,27 +180,6 @@ def get_job(db, job_id, username=None):
         return
     else:
         return joblist[-1]
-
-
-def get_calc_id(db, datadir, job_id=None):
-    """
-    Return the latest calc_id by looking both at the datastore
-    and the database.
-
-    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
-    :param datadir: the directory containing the datastores
-    :param job_id: a job ID; if None, returns the latest job ID
-    """
-    from openquake.commonlib import datastore  # avoid circular import
-    calcs = datastore.get_calc_ids(datadir)
-    calc_id = 0 if not calcs else calcs[-1]
-    if job_id is None:
-        try:
-            job_id = db('SELECT seq FROM sqlite_sequence WHERE name="job"',
-                        scalar=True)
-        except NotFound:
-            job_id = 0
-    return max(calc_id, job_id)
 
 
 def get_weight(db, job_id):

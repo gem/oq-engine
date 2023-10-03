@@ -5,14 +5,16 @@ import numpy as np
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement,
     hazus_lateral_spreading_displacement_fn,
-    hazus_disp_mag_correction_factor_spreading
+    _hazus_displacement_correction_factor
 )
 
 class test_lateral_spreading(unittest.TestCase):
 
-    def test_hazus_disp_mag_correction_factor_spreading(self):
+    def test_hazus_displacement_correction_factor(self):
         """
-        Replicates Figure 4.10 in the HAZUS manual
+        Replicates Figure 4.10 in the HAZUS manual: Displacement Correction Factor, 
+        KΔ for Lateral Spreading Displacement Relationships (after Seed & Idriss, 1982).
+
         """
         mags = np.linspace(4., 8.5, num=20)
         corrs = np.array([-0.0163 , 0.02033406, 0.05897747, 0.10031577,
@@ -21,8 +23,8 @@ class test_lateral_spreading(unittest.TestCase):
             0.92896085, 1.05610908, 1.19486408, 1.34591138, 1.50993651, 1.687625
             ])
 
-        mag_corr = hazus_disp_mag_correction_factor_spreading(mags)
-        np.testing.assert_array_almost_equal(mag_corr, corrs)
+        disp_corr = _hazus_displacement_correction_factor(mags)
+        np.testing.assert_array_almost_equal(disp_corr, corrs)
 
     def test_hazus_lateral_spreading_displacements_fn(self):
         """

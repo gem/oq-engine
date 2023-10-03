@@ -232,11 +232,11 @@ class CollapseTestCase(unittest.TestCase):
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        pcurve0 = cmaker.get_pmap(ctxs).array[0]
+        hcurve0 = cmaker.get_pmap(ctxs).array[0]
         cmaker.collapser.cfactor = numpy.zeros(3)
         cmaker.collapser.collapse_level = 1
-        pcurve1 = cmaker.get_pmap(ctxs).array[0]
-        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-9)
+        hcurve1 = cmaker.get_pmap(ctxs).array[0]
+        self.assertLess(numpy.abs(hcurve0 - hcurve1).sum(), 1E-9)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [94, 11616, 2])
 
     def test_collapse_azimuth(self):

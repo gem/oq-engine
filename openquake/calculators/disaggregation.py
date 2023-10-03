@@ -167,9 +167,9 @@ class DisaggregationCalculator(base.HazardCalculator):
         :returns: a list of Z arrays of PoEs
         """
         poes = []
-        pcurve = self.pgetter.get_pcurve(sid)
+        hcurve = self.pgetter.get_hcurve(sid)
         for z, rlz in enumerate(rlzs):
-            pc = pcurve.extract(rlz)
+            pc = hcurve.extract(rlz)
             if z == 0:
                 self.curves.append(pc.array[:, 0])
             poes.append(pc.array[:, 0])
@@ -197,7 +197,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         self.M = len(self.imts)
         dstore = (self.datastore.parent if self.datastore.parent
                   else self.datastore)
-        nrows = len(dstore['_poes/sid'])
+        nrows = len(dstore['_rates/sid'])
         self.pgetter = getters.PmapGetter(
             dstore, full_lt, [(0, nrows + 1)], oq.imtls, oq.poes)
 
@@ -207,12 +207,12 @@ class DisaggregationCalculator(base.HazardCalculator):
             rlzs = numpy.zeros((self.N, Z), int)
             if self.R > 1:
                 for sid in self.sitecol.sids:
-                    pcurve = self.pgetter.get_pcurve(sid)
+                    hcurve = self.pgetter.get_hcurve(sid)
                     mean = getters.build_stat_curve(
-                        pcurve, oq.imtls, stats.mean_curve, full_lt.weights)
+                        hcurve, oq.imtls, stats.mean_curve, full_lt.weights)
                     # get the closest realization to the mean
                     rlzs[sid] = util.closest_to_ref(
-                        pcurve.array.T, mean.array)[:Z]
+                        hcurve.array.T, mean.array)[:Z]
             self.datastore['best_rlzs'] = rlzs
         else:
             Z = len(oq.rlz_index)

@@ -67,12 +67,12 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
         for iml in imls:
             lst.append(('%s-%.3f' % (imt, iml), F32))
     curves = numpy.zeros(nsites, numpy.dtype(lst))
-    for sid, pcurve in pmap.items():
+    for sid, hcurve in pmap.items():
         curve = curves[sid]
         idx = 0
         for imt, imls in imtls.items():
             for iml in imls:
-                curve['%s-%.3f' % (imt, iml)] = pcurve.array[idx, inner_idx]
+                curve['%s-%.3f' % (imt, iml)] = hcurve.array[idx, inner_idx]
                 idx += 1
     return curves
 
