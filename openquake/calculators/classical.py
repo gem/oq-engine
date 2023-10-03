@@ -37,7 +37,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
+from openquake.hazardlib.probability_map import ProbabilityMap, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters
 
@@ -289,7 +289,7 @@ class Hazard:
             hdf5.extend(self.datastore['_rates/sid'], sids)
             hdf5.extend(self.datastore['_rates/gid'], gids + gid)
             hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_rates/poe'],
+            hdf5.extend(self.datastore['_rates/rate'],
                         disagg.to_rates(poes[idxs, lids, gids]))
 
             # slice_by_sid contains 3x6=18 slices in classical/case_22
@@ -396,7 +396,7 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_rates', poes_dt.items())
+        self.datastore.create_df('_rates', rates_dt.items())
         self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 

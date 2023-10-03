@@ -576,7 +576,7 @@ class HazardCalculator(BaseCalculator):
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             df = readinput.Global.pmap.to_dframe()
-            df.poe = to_rates(df.poe)
+            df.rate = to_rates(df.rate)
             self.datastore.create_df('_rates', df)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
