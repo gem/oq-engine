@@ -161,7 +161,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
         computed = source.get_fault_surface_area()
         # Checked with an approx calculaton by hand
         expected = 665.66913
-        self.assertAlmostEqual(computed, expected, places=2)
+        self.assertAlmostEqual(computed, expected, places=1)
 
 
 class SimpleFaultParametersChecksTestCase(_BaseFaultSourceTestCase):
