@@ -286,11 +286,11 @@ class Hazard:
             if len(idxs) == 0:  # happens in case_60
                 return 0
             sids = the_sids[idxs]
+            rate = disagg.to_rates(poes[idxs, lids, gids])
             hdf5.extend(self.datastore['_rates/sid'], sids)
             hdf5.extend(self.datastore['_rates/gid'], gids + gid)
             hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_rates/rate'],
-                        disagg.to_rates(poes[idxs, lids, gids]))
+            hdf5.extend(self.datastore['_rates/rate'], rate)
 
             # slice_by_sid contains 3x6=18 slices in classical/case_22
             # which has 6 IMTs each one with 20 levels
