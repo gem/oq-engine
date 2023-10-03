@@ -625,7 +625,6 @@ def export_disagg_csv(ekey, dstore):
             imt_idx = [imt2idx[imt] for imt in df.imt]
             poe_idx = [poe2idx[poe] for poe in df.poe]
             df['iml'] = iml2[imt_idx, poe_idx]
-
             df = pandas.DataFrame(
                 {col: df[col] for col in cols}).sort_values(['imt', 'poe'])
             if len(df):
