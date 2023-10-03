@@ -263,30 +263,20 @@ class Hazard:
                 out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
         return out.reshape((self.N, self.M, self.L1))
 
-    def store_rates(self, pnes, the_sids, gid=0):
+    def store_rates(self, pnemap, the_sids, gid=0):
         """
-        Store 1-pnes inside the _rates dataset
+        Store pnes inside the _rates dataset
         """
-        avg_poe = 0
+        avg_rate = 0
         # store by IMT to save memory
         for imt in self.imtls:
             slc = self.imtls(imt)
-            poes = 1. - pnes[:, slc]
-            # Physically, an extremely small intensity measure level can have an
-            # extremely large probability of exceedence,however that probability
-            # cannot be exactly 1 unless the level is exactly 0. Numerically,
-            # the PoE can be 1 and this give issues when calculating the damage:
-            # there is a log(0) in scientific.annual_frequency_of_exceedence.
-            # Here we solve the issue by replacing the unphysical probabilities
-            # 1 with .9999999999999999 (the float64 closest to 1).
-            poes[poes == 1.] = .9999999999999999
-            # the nonzero below uses a lot of memory, however it is useful
-            # to reduce the storage a lot (~3 times for EUR)
-            idxs, lids, gids = poes.nonzero()
+            rates = pnemap.to_rates(slc)  # shape (N, L1, G)
+            idxs, lids, gids = rates.nonzero()
             if len(idxs) == 0:  # happens in case_60
                 return 0
             sids = the_sids[idxs]
-            rate = disagg.to_rates(poes[idxs, lids, gids])
+            rate = rates[idxs, lids, gids]
             hdf5.extend(self.datastore['_rates/sid'], sids)
             hdf5.extend(self.datastore['_rates/gid'], gids + gid)
             hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
@@ -297,8 +287,8 @@ class Hazard:
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
             self.offset += len(sids)
-            avg_poe += poes.mean(axis=(0, 2)) @ self.level_weights[slc]
-        self.acc['avg_poe'] = avg_poe
+            avg_rate += rates.mean(axis=(0, 2)) @ self.level_weights[slc]
+        self.acc['avg_rate'] = avg_rate
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
@@ -519,7 +509,7 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing PoEs', measuremem=True):
-            nbytes = self.haz.store_rates(self.pmap.array, self.pmap.sids)
+            nbytes = self.haz.store_rates(self.pmap, self.pmap.sids)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
         if self.oqparam.disagg_by_src:
@@ -554,7 +544,7 @@ class ClassicalCalculator(base.HazardCalculator):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
-            nbytes = self.haz.store_rates(pnemap.array, pnemap.sids, gid)
+            nbytes = self.haz.store_rates(pnemap, pnemap.sids, gid)
         logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
