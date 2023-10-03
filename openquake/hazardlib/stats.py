@@ -203,7 +203,7 @@ def quantile_curve(quantile, curves, weights=None):
         assert len(weights) == R, (len(weights), R)
     result = numpy.zeros(curves.shape[1:])
     for idx, _ in numpy.ndenumerate(result):
-        data = numpy.array([a[idx] for a in curves])
+        data = curves[(slice(None), ) + idx]
         sorted_idxs = numpy.argsort(data)
         cum_weights = numpy.cumsum(weights[sorted_idxs])
         # get the quantile from the interpolated CDF
