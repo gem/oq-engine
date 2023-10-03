@@ -28,14 +28,13 @@ from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
 from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats, probability_map, valid
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import (
     read_cmakers, read_src_mutex, read_ctx_by_grp)
 from openquake.commonlib import util
 from openquake.calculators import getters
 from openquake.calculators import base
 
-CUTOFF = 1E-12  # to avoid log(0) in poe_agg
 POE_TOO_BIG = '''\
 Site #%d: you are trying to disaggregate for poe=%s.
 However the source model produces at most probabilities
@@ -421,7 +420,8 @@ class DisaggregationCalculator(base.HazardCalculator):
                             pprod(mat8[..., 0, 0], axis=(1, 2, 3, 4, 5)))
                     poe_agg = pprod(mat6, axis=(0, 1, 2, 3, 4, 5))
                     if name.endswith('-rlzs'):
-                        self.datastore['poe4'][s, m, p, z] = max(poe_agg, CUTOFF)
+                        self.datastore['poe4'][s, m, p, z] = max(
+                            poe_agg, mean_rates.CUTOFF)
 
         self.datastore[name] = out
         # below a dataset useful for debugging, at minimum IMT and maximum RP
