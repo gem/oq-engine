@@ -67,8 +67,7 @@ def _find_turning_points(mesh, tol=1.0):
 
     # Add more points
     for i in range(1, naz):
-        dff = azimuths[i] - azim
-        dff = (dff + 180) % 360 - 180
+        dff = _angle_difference(azimuths[i], azim)
         if dff > tol:
             idx.append(i)
             azim = azimuths[i]
@@ -77,6 +76,12 @@ def _find_turning_points(mesh, tol=1.0):
     if idx[-1] != mesh.lons.shape[1] - 1:
         idx.append(mesh.lons.shape[1] - 1)
     return numpy.array(idx)
+
+
+def _angle_difference(a_a, a_b):
+    """ Computes the absolute difference between angle `a_a` and `a_b` """
+    dff = a_a - a_b
+    return (dff + 540) % 360 - 180
 
 
 def downsample_mesh(mesh, tol=1.0):
