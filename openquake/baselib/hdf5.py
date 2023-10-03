@@ -782,7 +782,7 @@ class ArrayWrapper(object):
                 if sum(tup):
                     out.append(values + tup)
             else:
-                out.append(values + tup)
+                out.append(values + tuple(0 if x == 0 else x for x in tup))
         return pandas.DataFrame(out, columns=fields)
 
     def to_dict(self):
