@@ -32,7 +32,9 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
     as ppr
 
 
-def _gen_meshes(omsh, rup_s, rup_d, f_strike, f_dip):
+def _get_meshes(omsh, rup_s, rup_d, f_strike, f_dip):
+    meshes = []
+
     # When f_strike is negative, the floating distance is interpreted as
     # a fraction of the rupture length (i.e. a multiple of the sampling
     # distance)
@@ -74,7 +76,8 @@ def _gen_meshes(omsh, rup_s, rup_d, f_strike, f_dip):
                 msh = Mesh(omsh.lons[j:j + rup_d, i:i + rup_s],
                            omsh.lats[j:j + rup_d, i:i + rup_s],
                            omsh.depths[j:j + rup_d, i:i + rup_s])
-                yield msh
+                meshes.append(msh)
+    return meshes
 
 
 class KiteFaultSource(ParametricSeismicSource):
@@ -164,14 +167,13 @@ class KiteFaultSource(ParametricSeismicSource):
         """
         # Set magnitude scaling relationship, temporal occurrence model and
         # mesh of the fault surface
-        msr = self.magnitude_scaling_relationship
-        tom = self.temporal_occurrence_model
         surface = self.surface
         step = kwargs.get('step', 1)
         for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
 
             # Compute the area, length and width of the ruptures
-            area = msr.get_median_area(mag=mag, rake=self.rake)
+            area = self.magnitude_scaling_relationship.get_median_area(
+                mag=mag, rake=self.rake)
             lng, wdt = get_discrete_dimensions(
                 area, self.rupture_mesh_spacing,
                 self.rupture_aspect_ratio, self.profiles_sampling)
@@ -200,19 +202,16 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
-            meshes = list(_gen_meshes(surface.mesh, rup_len, rup_wid,
-                                      fstrike, fdip))
-            if len(meshes) < 1:
-                continue
-            occurrence_rate = mag_occ_rate / len(meshes)
-
-            # Rupture generator
-            for msh in meshes[::step]:
-                surf = KiteSurface(msh)
-                hypocenter = surf.get_center()
-                # Yield an instance of a ParametricProbabilisticRupture
-                yield ppr(mag, self.rake, self.tectonic_region_type,
-                          hypocenter, surf, occurrence_rate, tom)
+            meshes = _get_meshes(surface.mesh, rup_len, rup_wid, fstrike, fdip)
+            if len(meshes):
+                occurrence_rate = mag_occ_rate / len(meshes)
+                for msh in meshes[::step]:
+                    surf = KiteSurface(msh)
+                    hypocenter = surf.get_center()
+                    # Yield an instance of a ParametricProbabilisticRupture
+                    yield ppr(mag, self.rake, self.tectonic_region_type,
+                              hypocenter, surf, occurrence_rate,
+                              self.temporal_occurrence_model)
 
     def get_fault_surface_area(self) -> float:
         """
