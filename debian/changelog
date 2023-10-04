@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Speeding up `count_ruptures` for multifault sources, which gives a *huge*
+    in some calculations (like event_based for Dominican Republic)
+
   [Marco Pagani]
   * Fixed a bug in the code that resamples a line, with a small effect
     on the hazard of models containing simple fault sources
