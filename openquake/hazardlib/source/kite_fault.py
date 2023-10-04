@@ -32,6 +32,51 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
     as ppr
 
 
+def _gen_meshes(omsh, rup_s, rup_d, f_strike, f_dip):
+    # When f_strike is negative, the floating distance is interpreted as
+    # a fraction of the rupture length (i.e. a multiple of the sampling
+    # distance)
+    if f_strike < 0:
+        f_strike = int(np.floor(rup_s * abs(f_strike) + 1e-5))
+        if f_strike < 1:
+            f_strike = 1
+
+    # See f_strike comment above
+    if f_dip < 0:
+        f_dip = int(np.floor(rup_d * abs(f_dip) + 1e-5))
+        if f_dip < 1:
+            f_dip = 1
+
+    # Float the rupture on the mesh describing the surface of the fault
+    mesh_x_len = omsh.lons.shape[1] - rup_s + 1
+    mesh_y_len = omsh.lons.shape[0] - rup_d + 1
+    x_nodes = np.arange(0, mesh_x_len, f_strike)
+    y_nodes = np.arange(0, mesh_y_len, f_dip)
+
+    while (len(x_nodes) > 0 and f_strike > 1
+            and x_nodes[-1] != omsh.lons.shape[1] - rup_s):
+        f_strike -= 1
+        x_nodes = np.arange(0, mesh_x_len, f_strike)
+
+    while (len(y_nodes) > 0 and f_dip > 1
+            and y_nodes[-1] != omsh.lons.shape[0] - rup_d):
+        f_dip -= 1
+        y_nodes = np.arange(0, mesh_y_len, f_dip)
+
+    for i in x_nodes:
+        for j in y_nodes:
+            nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
+            nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
+            prc = nna / nel * 100.
+
+            # Yield only the ruptures that do not contain NaN
+            if prc > 99.99 and nna >= 4:
+                msh = Mesh(omsh.lons[j:j + rup_d, i:i + rup_s],
+                           omsh.lats[j:j + rup_d, i:i + rup_s],
+                           omsh.depths[j:j + rup_d, i:i + rup_s])
+                yield msh, j, i
+
+
 class KiteFaultSource(ParametricSeismicSource):
     """
     Kite fault source
@@ -155,84 +200,41 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
-            ruptures = []
-            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid,
-                                          f_strike=fstrike, f_dip=fdip):
-                ruptures.append(rup)
-            if len(ruptures) < 1:
+            triples = []
+            for triple in self._gen_triples(surface.mesh, rup_len, rup_wid,
+                                         f_strike=fstrike, f_dip=fdip):
+                triples.append(triple)
+            if len(triples) < 1:
                 continue
-            occurrence_rate = mag_occ_rate / len(ruptures)
+            occurrence_rate = mag_occ_rate / len(triples)
 
             # Rupture generator
-            for rup in ruptures[::step]:
-                hypocenter = rup[0].get_center()
+            for surf, j, i in triples[::step]:
+                hypocenter = surf.get_center()
                 # Yield an instance of a ParametricProbabilisticRupture
                 yield ppr(mag, self.rake, self.tectonic_region_type,
-                          hypocenter, rup[0], occurrence_rate, tom)
+                          hypocenter, surf, occurrence_rate, tom)
 
-    def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
-        """
-        Returns all the ruptures admitted by a given geometry i.e. number of
-        nodes along strike and dip
+    def _gen_triples(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
+        # Returns all the surfaces admitted by a given geometry i.e. number of
+        # nodes along strike and dip
 
-        :param omsh:
-            A :class:`~openquake.hazardlib.geo.mesh.Mesh` instance describing
-            the fault surface
-        :param rup_s:
-            Number of cols composing the rupture
-        :param rup_d:
-            Number of rows composing the rupture
-        :param f_strike:
-            Floating distance along strike (multiple of sampling distance)
-        :param f_dip:
-            Floating distance along dip (multiple of sampling distance)
-        :returns:
-            A tuple containing the rupture and the indexes of the top right
-            node of the mesh representing the rupture.
-        """
-
-        # When f_strike is negative, the floating distance is interpreted as
-        # a fraction of the rupture length (i.e. a multiple of the sampling
-        # distance)
-        if f_strike < 0:
-            f_strike = int(np.floor(rup_s * abs(f_strike) + 1e-5))
-            if f_strike < 1:
-                f_strike = 1
-
-        # See f_strike comment above
-        if f_dip < 0:
-            f_dip = int(np.floor(rup_d * abs(f_dip) + 1e-5))
-            if f_dip < 1:
-                f_dip = 1
-
-        # Float the rupture on the mesh describing the surface of the fault
-        mesh_x_len = omsh.lons.shape[1] - rup_s + 1
-        mesh_y_len = omsh.lons.shape[0] - rup_d + 1
-        x_nodes = np.arange(0, mesh_x_len, f_strike)
-        y_nodes = np.arange(0, mesh_y_len, f_dip)
-
-        while (len(x_nodes) > 0 and f_strike > 1
-                and x_nodes[-1] != omsh.lons.shape[1] - rup_s):
-            f_strike -= 1
-            x_nodes = np.arange(0, mesh_x_len, f_strike)
-
-        while (len(y_nodes) > 0 and f_dip > 1
-                and y_nodes[-1] != omsh.lons.shape[0] - rup_d):
-            f_dip -= 1
-            y_nodes = np.arange(0, mesh_y_len, f_dip)
-
-        for i in x_nodes:
-            for j in y_nodes:
-                nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
-                nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
-                prc = nna/nel*100.
-
-                # Yield only the ruptures that do not contain NaN
-                if prc > 99.99 and nna >= 4:
-                    msh = Mesh(omsh.lons[j:j + rup_d, i:i + rup_s],
-                               omsh.lats[j:j + rup_d, i:i + rup_s],
-                               omsh.depths[j:j + rup_d, i:i + rup_s])
-                    yield (KiteSurface(msh), j, i)
+        # :param omsh:
+        #     A :class:`~openquake.hazardlib.geo.mesh.Mesh` instance describing
+        #     the fault surface
+        # :param rup_s:
+        #     Number of cols composing the rupture
+        # :param rup_d:
+        #     Number of rows composing the rupture
+        # :param f_strike:
+        #     Floating distance along strike (multiple of sampling distance)
+        # :param f_dip:
+        #     Floating distance along dip (multiple of sampling distance)
+        # :returns:
+        #     A tuple containing the surface and the indexes of the top right
+        #     node of the mesh representing the rupture.
+        for msh, j, i in _gen_meshes(omsh, rup_s, rup_d, f_strike, f_dip):
+            yield KiteSurface(msh), j, i
 
     def get_fault_surface_area(self) -> float:
         """
