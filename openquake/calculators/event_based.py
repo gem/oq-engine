@@ -396,6 +396,7 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
+        logging.info('Counting the ruptures in the CompositeSourceModel')
         self.csm.fix_src_offset()  # NB: essential
         sources = self.csm.get_sources()
 
