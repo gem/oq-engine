@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 :class:`KiteFaultSource`.
 """
 import copy
+import collections
 import numpy as np
 from typing import Tuple
 from openquake.hazardlib import mfd
@@ -31,11 +32,58 @@ from openquake.hazardlib.source.rupture import ParametricProbabilisticRupture \
     as ppr
 
 
+def _get_meshes(omsh, rup_s, rup_d, f_strike, f_dip):
+    meshes = []
+
+    # When f_strike is negative, the floating distance is interpreted as
+    # a fraction of the rupture length (i.e. a multiple of the sampling
+    # distance)
+    if f_strike < 0:
+        f_strike = int(np.floor(rup_s * abs(f_strike) + 1e-5))
+        if f_strike < 1:
+            f_strike = 1
+
+    # See f_strike comment above
+    if f_dip < 0:
+        f_dip = int(np.floor(rup_d * abs(f_dip) + 1e-5))
+        if f_dip < 1:
+            f_dip = 1
+
+    # Float the rupture on the mesh describing the surface of the fault
+    mesh_x_len = omsh.lons.shape[1] - rup_s + 1
+    mesh_y_len = omsh.lons.shape[0] - rup_d + 1
+    x_nodes = np.arange(0, mesh_x_len, f_strike)
+    y_nodes = np.arange(0, mesh_y_len, f_dip)
+
+    while (len(x_nodes) > 0 and f_strike > 1
+            and x_nodes[-1] != omsh.lons.shape[1] - rup_s):
+        f_strike -= 1
+        x_nodes = np.arange(0, mesh_x_len, f_strike)
+
+    while (len(y_nodes) > 0 and f_dip > 1
+            and y_nodes[-1] != omsh.lons.shape[0] - rup_d):
+        f_dip -= 1
+        y_nodes = np.arange(0, mesh_y_len, f_dip)
+
+    for i in x_nodes:
+        for j in y_nodes:
+            nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
+            nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
+            prc = nna / nel * 100.
+
+            # Yield only the ruptures that do not contain NaN
+            if prc > 99.99 and nna >= 4:
+                msh = Mesh(omsh.lons[j:j + rup_d, i:i + rup_s],
+                           omsh.lats[j:j + rup_d, i:i + rup_s],
+                           omsh.depths[j:j + rup_d, i:i + rup_s])
+                meshes.append(msh)
+    return meshes
+
+
 class KiteFaultSource(ParametricSeismicSource):
     """
     Kite fault source
     """
-
     code = b'K'
     MODIFICATIONS = {'adjust_mfd_from_slip'}
 
@@ -53,13 +101,10 @@ class KiteFaultSource(ParametricSeismicSource):
         # TODO add checks
         self.profiles = profiles
         if profiles_sampling is None:
-            self.profiles_sampling = (rupture_mesh_spacing /
-                                      rupture_aspect_ratio)
+            self.profiles_sampling = rupture_mesh_spacing / rupture_aspect_ratio
         self.rake = rake
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
-
-        min_mag, max_mag = self.mfd.get_min_max_mag()
 
     @classmethod
     def as_simple_fault(cls, source_id, name, tectonic_region_type,
@@ -102,42 +147,43 @@ class KiteFaultSource(ParametricSeismicSource):
         :returns:
             The number of ruptures that this source generates
         """
-
+        if self.num_ruptures:
+            return self.num_ruptures
+    
         # Counting ruptures and rates
-        rates = {}
-        count = {}
-        for rup in self.iter_ruptures():
-            mag = rup.mag
-            mag_lab = '{:.2f}'.format(mag)
-            if mag_lab in rates:
-                count[mag_lab] += 1
-                rates[mag_lab] += rup.occurrence_rate
-            else:
-                count[mag_lab] = 1
-                rates[mag_lab] = rup.occurrence_rate
-
-        # Saving
-        self._rupture_rates = rates
-        self._rupture_count = count
-
-        return sum(count[k] for k in count)
+        self._rupture_count = collections.Counter()
+        self._rupture_rates = collections.Counter()
+        for mag, occ_rate, meshes in self._gen_meshes():
+            n = len(meshes)
+            mag_str = '{:.2f}'.format(mag)
+            self._rupture_count[mag_str] += n
+            self._rupture_rates[mag_str] += occ_rate * n
+        return sum(self._rupture_count.values())
 
     def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
         """
-
         # Set magnitude scaling relationship, temporal occurrence model and
         # mesh of the fault surface
-        msr = self.magnitude_scaling_relationship
-        tom = self.temporal_occurrence_model
-        surface = self.surface
         step = kwargs.get('step', 1)
+        for mag, occ_rate, meshes in self._gen_meshes(step):
+            for msh in meshes[::step]:
+                surf = KiteSurface(msh)
+                hypocenter = surf.get_center()
+                # Yield an instance of a ParametricProbabilisticRupture
+                yield ppr(mag, self.rake, self.tectonic_region_type,
+                          hypocenter, surf, occ_rate,
+                          self.temporal_occurrence_model)
+
+    def _gen_meshes(self, step=1):
+        surface = self.surface
         for mag, mag_occ_rate in self.get_annual_occurrence_rates()[::step]:
 
             # Compute the area, length and width of the ruptures
-            area = msr.get_median_area(mag=mag, rake=self.rake)
+            area = self.magnitude_scaling_relationship.get_median_area(
+                mag=mag, rake=self.rake)
             lng, wdt = get_discrete_dimensions(
                 area, self.rupture_mesh_spacing,
                 self.rupture_aspect_ratio, self.profiles_sampling)
@@ -166,84 +212,9 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
-            ruptures = []
-            for rup in self._get_ruptures(surface.mesh, rup_len, rup_wid,
-                                          f_strike=fstrike, f_dip=fdip):
-                ruptures.append(rup)
-            if len(ruptures) < 1:
-                continue
-            occurrence_rate = mag_occ_rate / len(ruptures)
-
-            # Rupture generator
-            for rup in ruptures[::step]:
-                hypocenter = rup[0].get_center()
-                # Yield an instance of a ParametricProbabilisticRupture
-                yield ppr(mag, self.rake, self.tectonic_region_type,
-                          hypocenter, rup[0], occurrence_rate, tom)
-
-    def _get_ruptures(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
-        """
-        Returns all the ruptures admitted by a given geometry i.e. number of
-        nodes along strike and dip
-
-        :param omsh:
-            A :class:`~openquake.hazardlib.geo.mesh.Mesh` instance describing
-            the fault surface
-        :param rup_s:
-            Number of cols composing the rupture
-        :param rup_d:
-            Number of rows composing the rupture
-        :param f_strike:
-            Floating distance along strike (multiple of sampling distance)
-        :param f_dip:
-            Floating distance along dip (multiple of sampling distance)
-        :returns:
-            A tuple containing the rupture and the indexes of the top right
-            node of the mesh representing the rupture.
-        """
-
-        # When f_strike is negative, the floating distance is interpreted as
-        # a fraction of the rupture length (i.e. a multiple of the sampling
-        # distance)
-        if f_strike < 0:
-            f_strike = int(np.floor(rup_s * abs(f_strike) + 1e-5))
-            if f_strike < 1:
-                f_strike = 1
-
-        # See f_strike comment above
-        if f_dip < 0:
-            f_dip = int(np.floor(rup_d * abs(f_dip) + 1e-5))
-            if f_dip < 1:
-                f_dip = 1
-
-        # Float the rupture on the mesh describing the surface of the fault
-        mesh_x_len = omsh.lons.shape[1] - rup_s + 1
-        mesh_y_len = omsh.lons.shape[0] - rup_d + 1
-        x_nodes = np.arange(0, mesh_x_len, f_strike)
-        y_nodes = np.arange(0, mesh_y_len, f_dip)
-
-        while (len(x_nodes) > 0 and f_strike > 1
-                and x_nodes[-1] != omsh.lons.shape[1] - rup_s):
-            f_strike -= 1
-            x_nodes = np.arange(0, mesh_x_len, f_strike)
-
-        while (len(y_nodes) > 0 and f_dip > 1
-                and y_nodes[-1] != omsh.lons.shape[0] - rup_d):
-            f_dip -= 1
-            y_nodes = np.arange(0, mesh_y_len, f_dip)
-
-        for i in x_nodes:
-            for j in y_nodes:
-                nel = np.size(omsh.lons[j:j + rup_d, i:i + rup_s])
-                nna = np.sum(np.isfinite(omsh.lons[j:j + rup_d, i:i + rup_s]))
-                prc = nna/nel*100.
-
-                # Yield only the ruptures that do not contain NaN
-                if prc > 99.99 and nna >= 4:
-                    msh = Mesh(omsh.lons[j:j + rup_d, i:i + rup_s],
-                               omsh.lats[j:j + rup_d, i:i + rup_s],
-                               omsh.depths[j:j + rup_d, i:i + rup_s])
-                    yield (KiteSurface(msh), j, i)
+            meshes = _get_meshes(surface.mesh, rup_len, rup_wid, fstrike, fdip)
+            if len(meshes):
+                yield mag, mag_occ_rate / len(meshes), meshes
 
     def get_fault_surface_area(self) -> float:
         """
@@ -261,13 +232,13 @@ class KiteFaultSource(ParametricSeismicSource):
         if len(self._rupture_rates) == 1:  # not splittable
             yield self
             return
-        for mag_lab in self._rupture_count:
-            if self._rupture_rates[mag_lab] == 0:
+        for mag_str in self._rupture_count:
+            if self._rupture_rates[mag_str] == 0:
                 continue
             src = copy.copy(self)
-            mag = float(mag_lab)
-            src.mfd = mfd.ArbitraryMFD([mag], [self._rupture_rates[mag_lab]])
-            src.num_ruptures = self._rupture_count[mag_lab]
+            mag = float(mag_str)
+            src.mfd = mfd.ArbitraryMFD([mag], [self._rupture_rates[mag_str]])
+            src.num_ruptures = self._rupture_count[mag_str]
             yield src
 
     @property
