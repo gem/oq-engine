@@ -396,23 +396,21 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        logging.info('Counting the ruptures in the CompositeSourceModel')
-        with self.monitor('counting ruptures', measuremem=True):
-            self.csm.fix_src_offset()  # NB: essential
         sources = self.csm.get_sources()
 
-        # weighting the heavy sources
+        logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
-        nrups = parallel.Starmap(
-            count_ruptures, [(src,) for src in sources if src.code in b'AMC'],
+        nrups = parallel.Starmap( # weighting the heavy sources
+            count_ruptures, [(src,) for src in sources if src.code != b'P'],
             progress=logging.debug
         ).reduce()
         for src in sources:
             try:
                 src.num_ruptures = nrups[src.source_id]
-            except KeyError:  # light source
+            except KeyError:  # point source
                 src.num_ruptures = src.count_ruptures()
             src.weight = src.num_ruptures
+        self.csm.fix_src_offset()  # NB: essential
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
