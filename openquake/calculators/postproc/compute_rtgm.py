@@ -84,18 +84,21 @@ D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in imts]
 assert DLLs == [0.5, 1.5, 0.6]
 
+
 def norm_imt(imt):
     """
     Normalize the imt string to the USGS format, for instance SA(1.1) -> SA1P1
     """
     return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
+
 f1 = interpolate.interp1d([0.2, 1], [1.1, 1.3])
 f2 = interpolate.interp1d([1, 5], [1.3, 1.5])
 f3 = interpolate.interp1d([0.2, 1], [1.2, 1.25])
 f4 = interpolate.interp1d([0.2, 1], [1.1, 1.3])
 
-def _find_fact_maxC(T,code):
+
+def _find_fact_maxC(T, code):
     # find the factor to convert to maximum component based on
     # ASCE7-16 and ASCE7-22
     if code == 'ASCE7-16':
@@ -149,16 +152,16 @@ def calc_rtgm_df(rtgm_haz, facts, oq):
         # geometric mean
         if IMT == 'PGA':
             RTGM[m] = UHGM[m]
-            MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg   
+            MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg
         else:
             RTGM[m] = rtgmCalc['rtgm'] / facts[m]  # for geometric mean
             MCE[m] = RTGM_max[m]
-    dic =  {'IMT': IMTs,
-            'UHGM_2475yr-GM': UHGM,
-            'RTGM': RTGM_max,
-            'ProbMCE': MCE,
-            'RiskCoeff': riskCoeff,
-            'DLL': DLLs}
+    dic = {'IMT': IMTs,
+           'UHGM_2475yr-GM': UHGM,
+           'RTGM': RTGM_max,
+           'ProbMCE': MCE,
+           'RiskCoeff': riskCoeff,
+           'DLL': DLLs}
     return pd.DataFrame(dic)
 
 
@@ -176,7 +179,7 @@ def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
         fact = _find_fact_maxC(T, 'ASCE7-16')
         facts.append(fact)
         new_imtls[imt] = imtls[imt]*fact
-    
+
     [site] = sitecol  # there must be a single site
     hazdic = {
         'site': {'name': 'site',
@@ -228,22 +231,22 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
             crs = rtgm['RiskCoeff'][i]
         elif imt == b'SA1P0':
             cr1 = rtgm['RiskCoeff'][i]
-            
+
     det_mce = {}
     mce = {}  # imt -> MCE
     prob_mce_out = {}
     for i, imt in enumerate(det_imt):
         det_mce[imt] = max(det_imt[imt], DLLs[i])
-        mce[imt] = min(prob_mce[i], det_mce[imt]) 
+        mce[imt] = min(prob_mce[i], det_mce[imt])
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
         SS_seismicity = "Low"
-    elif mce['SA(0.2)'] <0.5:
+    elif mce['SA(0.2)'] < 0.5:
         SS_seismicity = "Moderate"
-    elif mce['SA(0.2)'] <1:
+    elif mce['SA(0.2)'] < 1:
         SS_seismicity = "Moderately High"
-    elif mce['SA(0.2)']  <1.5:
+    elif mce['SA(0.2)'] < 1.5:
         SS_seismicity = "High"
     else:
         SS_seismicity = "Very High"
@@ -254,27 +257,27 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
         S1_seismicity = "Moderate"
     elif mce['SA(1.0)'] < 0.4:
         S1_seismicity = "Moderately High"
-    elif mce['SA(1.0)']< 0.6:
+    elif mce['SA(1.0)'] < 0.6:
         S1_seismicity = "High"
     else:
         S1_seismicity = "Very High"
-        
-    asce7 = {'PGA_2_50': prob_mce_out['PGA'],
-            'PGA_84th': det_mce['PGA'],
-            'PGA': mce['PGA'],
-            
-            'SS_RT': prob_mce_out['SA(0.2)'],
-            'CRS': crs,
-            'SS_84th': det_mce['SA(0.2)'],
-            'SS': mce['SA(0.2)'],
-            'SS_seismicity': SS_seismicity,
 
-            'S1_RT': prob_mce_out['SA(1.0)'],
-            'CR1': cr1,
-            'S1_84th': det_mce['SA(1.0)'],
-            'S1': mce['SA(1.0)'],
-            'S1_seismicity': S1_seismicity,
-            }
+    asce7 = {'PGA_2_50': prob_mce_out['PGA'],
+             'PGA_84th': det_mce['PGA'],
+             'PGA': mce['PGA'],
+
+             'SS_RT': prob_mce_out['SA(0.2)'],
+             'CRS': crs,
+             'SS_84th': det_mce['SA(0.2)'],
+             'SS': mce['SA(0.2)'],
+             'SS_seismicity': SS_seismicity,
+
+             'S1_RT': prob_mce_out['SA(1.0)'],
+             'CR1': cr1,
+             'S1_84th': det_mce['SA(1.0)'],
+             'S1': mce['SA(1.0)'],
+             'S1_seismicity': S1_seismicity,
+             }
 
     return prob_mce_out, mce, det_mce, asce7
 
@@ -291,26 +294,26 @@ def get_asce41(dstore, mce, facts):
     sa02 = imts.index('SA(0.2)')
     sa10 = imts.index('SA(1.0)')
     if int(oq.investigation_time) == 1:
-        poe5_50 = poes.index(0.001025)  
-        poe20_50 = poes.index(0.004453) 
+        poe5_50 = poes.index(0.001025)
+        poe20_50 = poes.index(0.004453)
     elif int(oq.investigation_time) == 50:
-        poe5_50 = poes.index(0.05)  
-        poe20_50 = poes.index(0.2)  
+        poe5_50 = poes.index(0.05)
+        poe20_50 = poes.index(0.2)
 
     BSE2N_Ss = mce['SA(0.2)']
     Ss_5_50 = hmap[sa02, poe5_50] * fact['SA(0.2)']
     BSE2E_Ss = min(Ss_5_50, BSE2N_Ss)
     BSE1N_Ss = 2/3 * BSE2N_Ss
     Ss_20_50 = hmap[sa02, poe20_50] * fact['SA(0.2)']
-    BSE1E_Ss = min(Ss_20_50,BSE1N_Ss)
-    
+    BSE1E_Ss = min(Ss_20_50, BSE1N_Ss)
+
     BSE2N_S1 = mce['SA(1.0)']
     S1_5_50 = hmap[sa10, poe5_50] * fact['SA(1.0)']
     BSE2E_S1 = min(S1_5_50, BSE2N_S1)
     BSE1N_S1 = 2/3 * BSE2N_S1
     S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
-    
+
     return {'BSE2N_Ss': BSE2N_Ss,
             'Ss_5_50': Ss_5_50,
             'BSE2E_Ss': BSE2E_Ss,
@@ -342,12 +345,12 @@ def main(dstore, csm):
     hazdic, facts = get_hazdic_facts(
         hcurves, oq.imtls, oq.investigation_time, sitecol)
     rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
-    rtgm_df = calc_rtgm_df(rtgm_haz, facts, oq)    
+    rtgm_df = calc_rtgm_df(rtgm_haz, facts, oq)
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         return
-    facts[0] = 1 # for PGA the Prob MCE is already geometric mean
+    facts[0] = 1  # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
     prob_mce = rtgm_df.ProbMCE.to_numpy()
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
@@ -357,7 +360,7 @@ def main(dstore, csm):
     dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
     logging.info(f'{det_imt=}')
     prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(
-        prob_mce, det_imt, DLLs,dstore)
+        prob_mce, det_imt, DLLs, dstore)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     dstore['asce7'] = hdf5.dumps(asce7)
