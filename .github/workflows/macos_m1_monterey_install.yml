@@ -105,14 +105,14 @@ jobs:
         run: |
           source ~/openquake/bin/activate
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
+          pytest --doctest-modules --color=yes --durations=10 openquake/calculators && pytest doc/adv-manual/*.rst
 
       - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
         if: always()
         run: |
           source ~/openquake/bin/activate
           cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/openquake/
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+          pytest --doctest-modules --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
 
       - name: Run tests for the engine server in public mode to test installation
         if: always()
