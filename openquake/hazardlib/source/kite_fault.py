@@ -18,6 +18,7 @@ Module :mod:`openquake.hazardlib.source.kite_fault` defines
 :class:`KiteFaultSource`.
 """
 import copy
+import collections
 import numpy as np
 from typing import Tuple
 from openquake.hazardlib import mfd
@@ -35,7 +36,6 @@ class KiteFaultSource(ParametricSeismicSource):
     """
     Kite fault source
     """
-
     code = b'K'
     MODIFICATIONS = {'adjust_mfd_from_slip'}
 
@@ -53,13 +53,10 @@ class KiteFaultSource(ParametricSeismicSource):
         # TODO add checks
         self.profiles = profiles
         if profiles_sampling is None:
-            self.profiles_sampling = (rupture_mesh_spacing /
-                                      rupture_aspect_ratio)
+            self.profiles_sampling = rupture_mesh_spacing / rupture_aspect_ratio
         self.rake = rake
         self.floating_x_step = floating_x_step
         self.floating_y_step = floating_y_step
-
-        min_mag, max_mag = self.mfd.get_min_max_mag()
 
     @classmethod
     def as_simple_fault(cls, source_id, name, tectonic_region_type,
@@ -102,32 +99,24 @@ class KiteFaultSource(ParametricSeismicSource):
         :returns:
             The number of ruptures that this source generates
         """
-
+        if self.num_ruptures:
+            return self.num_ruptures
+    
         # Counting ruptures and rates
-        rates = {}
-        count = {}
+        self._rupture_count = collections.Counter()
+        self._rupture_rates = collections.Counter()
         for rup in self.iter_ruptures():
-            mag = rup.mag
-            mag_lab = '{:.2f}'.format(mag)
-            if mag_lab in rates:
-                count[mag_lab] += 1
-                rates[mag_lab] += rup.occurrence_rate
-            else:
-                count[mag_lab] = 1
-                rates[mag_lab] = rup.occurrence_rate
+            mag_lab = '{:.2f}'.format(rup.mag)
+            self._rupture_count[mag_lab] += 1
+            self._rupture_rates[mag_lab] += rup.occurrence_rate
 
-        # Saving
-        self._rupture_rates = rates
-        self._rupture_count = count
-
-        return sum(count[k] for k in count)
+        return sum(self._rupture_count.values())
 
     def iter_ruptures(self, **kwargs):
         """
         See :meth:
         `openquake.hazardlib.source.base.BaseSeismicSource.iter_ruptures`.
         """
-
         # Set magnitude scaling relationship, temporal occurrence model and
         # mesh of the fault surface
         msr = self.magnitude_scaling_relationship
