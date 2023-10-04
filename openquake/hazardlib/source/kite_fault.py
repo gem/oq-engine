@@ -151,9 +151,9 @@ class KiteFaultSource(ParametricSeismicSource):
         self._rupture_count = collections.Counter()
         self._rupture_rates = collections.Counter()
         for rup in self.iter_ruptures():
-            mag_lab = '{:.2f}'.format(rup.mag)
-            self._rupture_count[mag_lab] += 1
-            self._rupture_rates[mag_lab] += rup.occurrence_rate
+            mag_str = '{:.2f}'.format(rup.mag)
+            self._rupture_count[mag_str] += 1
+            self._rupture_rates[mag_str] += rup.occurrence_rate
 
         return sum(self._rupture_count.values())
 
@@ -250,13 +250,13 @@ class KiteFaultSource(ParametricSeismicSource):
         if len(self._rupture_rates) == 1:  # not splittable
             yield self
             return
-        for mag_lab in self._rupture_count:
-            if self._rupture_rates[mag_lab] == 0:
+        for mag_str in self._rupture_count:
+            if self._rupture_rates[mag_str] == 0:
                 continue
             src = copy.copy(self)
-            mag = float(mag_lab)
-            src.mfd = mfd.ArbitraryMFD([mag], [self._rupture_rates[mag_lab]])
-            src.num_ruptures = self._rupture_count[mag_lab]
+            mag = float(mag_str)
+            src.mfd = mfd.ArbitraryMFD([mag], [self._rupture_rates[mag_str]])
+            src.num_ruptures = self._rupture_count[mag_str]
             yield src
 
     @property
