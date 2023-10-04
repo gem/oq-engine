@@ -116,7 +116,7 @@ def create_job(db, datadir, calculation_mode='to be set',
     job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
                 ).lastrowid
     db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
-       os.path.join(datadir, 'calc_%s.hdf5' % job_id), job_id)
+       os.path.join(datadir, 'calc_%s' % job_id), job_id)
     return job_id
 
 
