@@ -39,6 +39,7 @@ import io
 import logging
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from scipy import interpolate
 from scipy.interpolate import RegularGridInterpolator
 try:
@@ -49,6 +50,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
+from openquake.calculators.extract import get_info, _get_dict
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
@@ -329,6 +331,50 @@ def get_asce41(dstore, mce, facts):
             'BSE1N_S1': BSE1N_S1}
 
 
+def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
+                          imt_list):
+    # plotting function
+
+    plt.figure(figsize=(12, 9))
+    plt.rcParams.update({'font.size': 15})
+
+    for i, imt in enumerate(imt_list):
+
+        plt.loglog(imls[i], AFE[i], label='Mean ' + imt, linewidth=3)
+        plt.loglog([np.min(imls[i]), UHGM_RP[i]], [afe_RP, afe_RP], 'k--',
+                   linewidth=2)
+        plt.loglog([UHGM_RP[i], UHGM_RP[i]], [0, afe_RP], 'k--', linewidth=2)
+        plt.loglog([UHGM_RP[i]], [afe_RP], 'ko', linewidth=2)
+
+        plt.loglog([np.min(imls[i]), RTGM[i]], [afe_RTGM[i], afe_RTGM[i]],
+                   'r--', linewidth=2)
+        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'r--', linewidth=2)
+        plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ro', linewidth=2)
+
+    plt.grid('both')
+    plt.legend(fontsize=16)
+    plt.xlabel('Acceleration (g)', fontsize=20)
+    plt.ylabel('Annual frequency of exceedance', fontsize=20)
+    plt.legend(loc="best", fontsize='16')
+    plt.ylim([10E-6, 1])
+    plt.xlim([np.min(imls[i]), 4])
+    plt.savefig('HazardCurves.png', bbox_inches='tight')
+    # plt.show()
+
+
+def _poe2afe(poes, window):
+    # convert from poe to rates of exceedance
+    afe = [-np.log(1-p)/window for p in poes]
+    return afe
+
+
+def _find_afe_target(imls, afe, sa_target):
+    # find the target afe (or poe) for a given acceleration
+    f = interpolate.interp1d(np.log(imls), np.log(afe))
+    afe_target = np.exp(f(np.log(sa_target)))
+    return afe_target
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -368,3 +414,49 @@ def main(dstore, csm):
     dstore['asce41'] = hdf5.dumps(asce41)
     logging.info(asce41)
     logging.info(asce7)
+
+    # TODO: move to a separate function
+    # plot curves
+    dinfo = get_info(dstore)
+
+    # site is always 0 for a single-site calculation
+    site = 0
+
+    # get imls and imts, make arrays
+    imtls = dinfo['imtls']
+    imts_, AFE, afe_target, imls, facts = [], [], [], [], []
+
+    for imt, iml in imtls.items():
+        imls.append([im for im in iml])
+        imts_.append(imt)
+
+        # get factors for converting back to geom mean
+        T = from_string(imt).period
+        facts.append(_find_fact_maxC(T, 'ASCE7-16'))
+
+    # update factor for PGA to 1
+    facts[0] = 1
+
+    # get rtgm ouptut from the datastore
+    rtgm_df = dstore.read_df('rtgm')
+
+    # get the IML for the 2475 RP
+    UHGM_RP = rtgm_df['UHGM_2475yr-GM']
+
+    # for the rtgm, convert back to the geometric mean
+    RTGM = [r/f for r, f in zip(rtgm_df['ProbMCE'], facts)]
+
+    # get investigation time
+    window = dinfo['investigation_time']
+
+    # get hazard curves, put into rates
+    dic = _get_dict(dstore, 'hcurves-stats', dinfo['imtls'], dinfo['stats'])
+    # hcurves = dic.items()
+    for i, mhc in enumerate(list(dic['mean'][site])):
+        mhc_rate = _poe2afe(mhc, window)
+        AFE.append(mhc_rate)
+        # get the AFE of the iml that will be disaggregated for each IMT
+        afe_target.append(_find_afe_target(imls[i], AFE[i], RTGM[i]))
+
+    # make plot
+    plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, 1/2475, RTGM, afe_target, imts_)
