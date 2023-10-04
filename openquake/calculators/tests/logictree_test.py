@@ -43,8 +43,6 @@ aac = numpy.testing.assert_allclose
 class LogicTreeTestCase(CalculatorTestCase):
 
     def assert_curves_ok(self, expected, test_dir, delta=None, **kw):
-        if delta is None and sys.platform == 'darwin':
-            delta = 1e-4
         kind = kw.pop('kind', '')
         self.run_calc(test_dir, 'job.ini', **kw)
         ds = self.calc.datastore

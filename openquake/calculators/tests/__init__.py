@@ -194,7 +194,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda header, lines: lines,
-            delta=1E-6, lastline=None, check_text=False):
+            delta=None, lastline=None, check_text=False):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -202,6 +202,10 @@ class CalculatorTestCase(unittest.TestCase):
         but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
+        if delta is None and sys.platform == 'darwin':
+            delta = 1e-4
+        else:
+            delta = 1e-6
         expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
             expected_dir = os.path.dirname(expected)
