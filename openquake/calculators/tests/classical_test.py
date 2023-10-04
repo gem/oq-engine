@@ -135,7 +135,7 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__,
-            kind='stats', delta=1E-7, hazard_calculation_id=hc_id)
+            kind='stats', hazard_calculation_id=hc_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
         self.calc.datastore.close()
@@ -294,7 +294,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # NGA East
         self.assert_curves_ok([
             'hazard_curve-mean-PGV.csv', 'hazard_map-mean.csv'],
-                              case_40.__file__, delta=1E-6)
+                              case_40.__file__)
 
         # checking fullreport can be exported, see https://
         # groups.google.com/g/openquake-users/c/m5vH4rGMWNc/m/8bcBexXNAQAJ

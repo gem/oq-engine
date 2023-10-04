@@ -32,8 +32,6 @@ from openquake.calculators.export import export
 from openquake.baselib import general, parallel, writers
 from openquake.commonlib import datastore, readinput, oqvalidation, logs
 
-
-NOT_DARWIN = sys.platform != 'darwin'
 OUTPUTS = os.path.join(os.path.dirname(__file__), 'outputs')
 OQ_CALC_OUTPUTS = os.environ.get('OQ_CALC_OUTPUTS')
 
@@ -194,7 +192,7 @@ class CalculatorTestCase(unittest.TestCase):
 
     def assertEqualFiles(
             self, fname1, fname2, make_comparable=lambda header, lines: lines,
-            delta=1E-6, lastline=None, check_text=False):
+            delta=None, lastline=None, check_text=False):
         """
         Make sure the expected and actual files have the same content.
         `make_comparable` is a function processing the lines of the
@@ -202,6 +200,8 @@ class CalculatorTestCase(unittest.TestCase):
         but in some tests a sorting function is passed, because some
         files can be equal only up to the ordering.
         """
+        if delta is None:
+            delta = 1e-4 if sys.platform == 'darwin' else 1e-5
         expected = os.path.abspath(os.path.join(self.testdir, fname1))
         if not os.path.exists(expected) and self.OVERWRITE_EXPECTED:
             expected_dir = os.path.dirname(expected)

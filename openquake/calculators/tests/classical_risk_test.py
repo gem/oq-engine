@@ -18,8 +18,7 @@
 
 from openquake.qa_tests_data.classical_risk import (
     case_2, case_3, case_4, case_5, case_master)
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 
 

@@ -400,17 +400,20 @@ class EventBasedCalculator(base.HazardCalculator):
 
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
-        nrups = parallel.Starmap( # weighting the heavy sources
-            count_ruptures, [(src,) for src in sources if src.code != b'P'],
-            progress=logging.debug
-        ).reduce()
-        for src in sources:
-            try:
-                src.num_ruptures = nrups[src.source_id]
-            except KeyError:  # point source
-                src.num_ruptures = src.count_ruptures()
-            src.weight = src.num_ruptures
-        self.csm.fix_src_offset()  # NB: essential
+        with self.monitor('counting ruptures', measuremem=True):
+            nrups = parallel.Starmap( # weighting the heavy sources
+                count_ruptures, [(src,) for src in sources
+                                 if src.code == b'AMSC'],
+                progress=logging.debug).reduce()
+            # NB: multifault sources must be considered light to avoid a large
+            # data transfer, even if .count_ruptures can be slow
+            for src in sources:
+                try:
+                    src.num_ruptures = nrups[src.source_id]
+                except KeyError:  # light sources
+                    src.num_ruptures = src.count_ruptures()
+                src.weight = src.num_ruptures
+            self.csm.fix_src_offset()  # NB: must be AFTER count_ruptures
         maxweight = sum(sg.weight for sg in self.csm.src_groups) / (
             self.oqparam.concurrent_tasks or 1)
         eff_ruptures = AccumDict(accum=0)  # grp_id => potential ruptures
