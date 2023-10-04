@@ -202,8 +202,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_12(self):
         # akin to NAF model
-        self.assert_curves_ok(
-            ['mean_rates.csv'], case_12.__file__, delta=1E-15)
+        self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
 
     def test_case_12_bis(self):
         # test reduction with empty branches
@@ -347,7 +346,7 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
-            case_20.__file__, delta=1E-7)
+            case_20.__file__)
         # there are 3 sources x 12 sm_rlzs
         sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
         self.assertEqual(len(sgs), 7)
@@ -418,7 +417,7 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip30-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
-            case_21.__file__, delta=1E-7)
+            case_21.__file__)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
