@@ -153,11 +153,11 @@ class KiteFaultSource(ParametricSeismicSource):
         # Counting ruptures and rates
         self._rupture_count = collections.Counter()
         self._rupture_rates = collections.Counter()
-        for rup in self.iter_ruptures():
-            mag_str = '{:.2f}'.format(rup.mag)
-            self._rupture_count[mag_str] += 1
-            self._rupture_rates[mag_str] += rup.occurrence_rate
-
+        for mag, occ_rate, meshes in self._gen_meshes():
+            n = len(meshes)
+            mag_str = '{:.2f}'.format(mag)
+            self._rupture_count[mag_str] += n
+            self._rupture_rates[mag_str] += occ_rate * n
         return sum(self._rupture_count.values())
 
     def iter_ruptures(self, **kwargs):
