@@ -358,11 +358,8 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     M = len(min_iml)
     for sid, df in gmf_df.groupby(gmf_df.index):
         eid = df.pop('eid')
-        if len(df) < E:
-            gmvs = numpy.ones((E, M), F32) * min_iml
-            gmvs[eid.to_numpy()] = df.to_numpy()
-        else:
-            gmvs = df.to_numpy()
+        gmvs = numpy.ones((E, M), F32) * min_iml
+        gmvs[eid.to_numpy()] = df.to_numpy()
         dic[sid] = geom_avg_std(gmvs, weights)
     return dic
 
@@ -399,7 +396,9 @@ class EventBasedCalculator(base.HazardCalculator):
         Prefilter the composite source model and store the source_info
         """
         oq = self.oqparam
-        self.csm.fix_src_offset()  # NB: essential
+        logging.info('Counting the ruptures in the CompositeSourceModel')
+        with self.monitor('counting ruptures', measuremem=True):
+            self.csm.fix_src_offset()  # NB: essential
         sources = self.csm.get_sources()
 
         # weighting the heavy sources
