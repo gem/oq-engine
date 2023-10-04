@@ -82,7 +82,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
     job = dbcmd('get_job', calc_id)
     if job:
         jid = job.id
-        path = job.ds_calc_dir
+        path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
             dbcmd('update_job', jid, {'hazard_calculation_id': haz_id})
@@ -90,7 +90,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
         if hc_id and hc_id != jid:
             hc = dbcmd('get_job', hc_id)
             if hc:
-                ppath = hc.ds_calc_dir
+                ppath = hc.ds_calc_dir + '.hdf5'
             else:
                 ppath = os.path.join(ddir, 'calc_%d.hdf5' % hc_id)
     else:  # when using oq run there is no job in the db
