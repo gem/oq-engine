@@ -200,22 +200,20 @@ class KiteFaultSource(ParametricSeismicSource):
 
             # Get the geometry of all the ruptures that the fault surface
             # accommodates
-            triples = []
-            for triple in self._gen_triples(surface.mesh, rup_len, rup_wid,
-                                         f_strike=fstrike, f_dip=fdip):
-                triples.append(triple)
-            if len(triples) < 1:
+            surfaces = list(self._gen_surfaces(surface.mesh, rup_len, rup_wid,
+                                               f_strike=fstrike, f_dip=fdip))
+            if len(surfaces) < 1:
                 continue
-            occurrence_rate = mag_occ_rate / len(triples)
+            occurrence_rate = mag_occ_rate / len(surfaces)
 
             # Rupture generator
-            for surf, j, i in triples[::step]:
+            for surf in surfaces[::step]:
                 hypocenter = surf.get_center()
                 # Yield an instance of a ParametricProbabilisticRupture
                 yield ppr(mag, self.rake, self.tectonic_region_type,
                           hypocenter, surf, occurrence_rate, tom)
 
-    def _gen_triples(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
+    def _gen_surfaces(self, omsh, rup_s, rup_d, f_strike=1, f_dip=1):
         # Returns all the surfaces admitted by a given geometry i.e. number of
         # nodes along strike and dip
 
@@ -234,7 +232,7 @@ class KiteFaultSource(ParametricSeismicSource):
         #     A tuple containing the surface and the indexes of the top right
         #     node of the mesh representing the rupture.
         for msh, j, i in _gen_meshes(omsh, rup_s, rup_d, f_strike, f_dip):
-            yield KiteSurface(msh), j, i
+            yield KiteSurface(msh)
 
     def get_fault_surface_area(self) -> float:
         """
