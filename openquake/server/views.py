@@ -370,6 +370,31 @@ def hmap_png(request, calc_id, imt_id, poe_id):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
+def meanHCs_afe_RTGM_png(request, calc_id):
+    """
+    Get a PNG image with the relevant meanHCs_afe_RTGM, if available
+    """
+    job = logs.dbcmd('get_job', int(calc_id))
+    if job is None:
+        return HttpResponseNotFound()
+    if not utils.user_has_permission(request, job.user_name):
+        return HttpResponseForbidden()
+    try:
+        from PIL import Image
+        response = HttpResponse(content_type="image/png")
+        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+            arr = ds['img/meanHCs_afe_RTGM'][:]
+        Image.fromarray(arr).save(response, format='png')
+        return response
+    except Exception as exc:
+        tb = ''.join(traceback.format_tb(exc.__traceback__))
+        return HttpResponse(
+            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
+            content_type='text/plain', status=500)
+
+
+@require_http_methods(['GET'])
+@cross_domain_ajax
 def calc(request, calc_id):
     """
     Get a JSON blob containing all of parameters for the given calculation
@@ -962,9 +987,11 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         hmaps = 'png' in ds
+        meanHCs_afe_RTGM = 'img/meanHCs_afe_RTGM' in ds
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
+                       meanHCs_afe_RTGM=meanHCs_afe_RTGM,
                        application_mode=application_mode))
 
 

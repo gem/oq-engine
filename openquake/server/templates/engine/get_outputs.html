@@ -20,6 +20,12 @@
                   Show hazard map</a>
               </div>
               {% endif %}
+              {% if meanHCs_afe_RTGM %}
+              <div id="my-hmaps">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/meanHCs_afe_RTGM" class="btn btn-sm">
+                  Show meanHCs_afe_RTGM</a>
+              </div>
+              {% endif %}
           </div>
         </div>
       </div>
