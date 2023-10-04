@@ -27,8 +27,7 @@ from openquake.hazardlib.calc.mean_rates import (
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_04, case_05, case_06, case_07, case_08, case_09,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -449,7 +448,7 @@ hazard_uhs-std.csv
     def test_case_30(self):
         # point on the international data line
         # this is also a test with IMT-dependent weights
-        if NOT_DARWIN:  # broken on macOS
+        if sys.platform != 'darwin':  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
@@ -458,13 +457,12 @@ hazard_uhs-std.csv
         # IMT-dependent weights with sampling by cheating
         self.assert_curves_ok(
             ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-            case_30.__file__, number_of_logic_tree_samples='10', delta=1E-5)
+            case_30.__file__, number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
-                               'hazard_curve-std-PGA.csv'], case_31.__file__,
-                              delta=1E-5)
+                               'hazard_curve-std-PGA.csv'], case_31.__file__)
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
