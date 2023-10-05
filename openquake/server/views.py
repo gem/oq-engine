@@ -345,34 +345,9 @@ def validate_zip(request):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def hmap_png(request, calc_id, imt_id, poe_id):
+def download_png(request, calc_id, what):
     """
-    Get a PNG image with the relevant mean hazard map, if available
-    """
-    job = logs.dbcmd('get_job', int(calc_id))
-    if job is None:
-        return HttpResponseNotFound()
-    if not utils.user_has_permission(request, job.user_name):
-        return HttpResponseForbidden()
-    try:
-        from PIL import Image
-        response = HttpResponse(content_type="image/png")
-        with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            arr = ds['png/hmap_%s_%s' % (imt_id, poe_id)][:]
-        Image.fromarray(arr).save(response, format='png')
-        return response
-    except Exception as exc:
-        tb = ''.join(traceback.format_tb(exc.__traceback__))
-        return HttpResponse(
-            content='%s: %s\n%s' % (exc.__class__.__name__, exc, tb),
-            content_type='text/plain', status=500)
-
-
-@require_http_methods(['GET'])
-@cross_domain_ajax
-def meanHCs_afe_RTGM_png(request, calc_id):
-    """
-    Get a PNG image with the relevant meanHCs_afe_RTGM, if available
+    Get a PNG image with the relevant name, if available
     """
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
@@ -383,7 +358,7 @@ def meanHCs_afe_RTGM_png(request, calc_id):
         from PIL import Image
         response = HttpResponse(content_type="image/png")
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            arr = ds['img/meanHCs_afe_RTGM'][:]
+            arr = ds['png/%s' % what][:]
         Image.fromarray(arr).save(response, format='png')
         return response
     except Exception as exc:
@@ -986,8 +961,8 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     application_mode = settings.APPLICATION_MODE.upper()
     job = logs.dbcmd('get_job', calc_id)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        hmaps = 'png' in ds
-        meanHCs_afe_RTGM = 'img/meanHCs_afe_RTGM' in ds
+        hmaps = 'png' in ds and any([k.startswith('hmap') for k in ds['png']])
+        meanHCs_afe_RTGM = 'png/meanHCs_afe_RTGM' in ds
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,

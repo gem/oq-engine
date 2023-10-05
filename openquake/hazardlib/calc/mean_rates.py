@@ -120,6 +120,7 @@ def main(job_ini):
     print('Mean hazard rates for the first site')
     print(text_table(mrates[0], ext='org'))
 
+
 main.job_ini = 'path to a job.ini file'
 
 

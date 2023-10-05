@@ -399,8 +399,8 @@ def plot_curves(dstore):
     # make plot
     img = plot_meanHCs_afe_RTGM(
         imls, AFE, UHGM_RP, 1/2475, RTGM, afe_target, imt_list)
-    logging.info('Storing img/meanHCs_afe_RTGM')
-    dstore['img/meanHCs_afe_RTGM'] = img
+    logging.info('Storing png/meanHCs_afe_RTGM')
+    dstore['png/meanHCs_afe_RTGM'] = img
 
 
 def main(dstore, csm):
