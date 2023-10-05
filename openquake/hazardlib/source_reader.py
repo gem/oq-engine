@@ -239,9 +239,7 @@ def find_false_duplicates(smdict):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)
             add_checksums(srcs)
-            gb = general.AccumDict(accum=[])
-            for src in srcs:
-                gb[checksum(src)].append(src)
+            gb = general.groupby(srcs, checksum)
             if len(gb) > 1:
                 for i, same_checksum in enumerate(gb.values()):
                     # sources with the same checksum get the same ID
