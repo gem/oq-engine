@@ -21,7 +21,7 @@ import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib import InvalidFile, nrml, calc
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
@@ -135,17 +135,15 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__,
-            kind='stats', delta=1E-7, hazard_calculation_id=hc_id)
+            kind='stats', hazard_calculation_id=hc_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
         self.calc.datastore.close()
         self.calc.datastore.open('r')
 
-        # check exporting a single realization in CSV and XML
+        # check exporting a single realization in CSV
         [fname] = export(('uhs/rlz-001', 'csv'),  self.calc.datastore)
         self.assertEqualFiles('expected/uhs-rlz-1.csv', fname)
-        [fname] = export(('uhs/rlz-001', 'xml'),  self.calc.datastore)
-        self.assertEqualFiles('expected/uhs-rlz-1.xml', fname)
 
         # extracting hmaps
         hmaps = extract(self.calc.datastore, 'hmaps')['all']['mean']
@@ -296,7 +294,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # NGA East
         self.assert_curves_ok([
             'hazard_curve-mean-PGV.csv', 'hazard_map-mean.csv'],
-                              case_40.__file__, delta=1E-6)
+                              case_40.__file__)
 
         # checking fullreport can be exported, see https://
         # groups.google.com/g/openquake-users/c/m5vH4rGMWNc/m/8bcBexXNAQAJ
@@ -622,13 +620,13 @@ class ClassicalTestCase(CalculatorTestCase):
         L1 = L // len(oq.imtls)
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
-        df = self.calc.datastore.read_df('_poes')
+        df = self.calc.datastore.read_df('_rates')
         del df['sid']
         for g, gsim in enumerate(gsims):
             curve = numpy.zeros(L1, oq.imt_dt())
             df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
-            poes[df_for_g.lid] = df_for_g.poe
+            poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
             for im in oq.imtls:
                 curve[im] = poes[oq.imtls(im)]
             gs = gsim.__class__.__name__

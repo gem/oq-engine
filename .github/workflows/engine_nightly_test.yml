@@ -31,7 +31,12 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ "$GITHUB_HEAD_REF" != "" ]]
+        then
+          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        else
+          python install.py devel --repository=$GITHUB_REPOSITORY
+        fi
     - name: Calculators and documentation tests
       run: |
         source ~/openquake/bin/activate
@@ -56,7 +61,12 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ "$GITHUB_HEAD_REF" != "" ]]
+        then
+          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        else
+          python install.py devel --repository=$GITHUB_REPOSITORY
+        fi
     - name: Hazardlib tests
       run: |
         source ~/openquake/bin/activate
@@ -82,7 +92,12 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ "$GITHUB_HEAD_REF" != "" ]]
+        then
+          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        else
+          python install.py devel --repository=$GITHUB_REPOSITORY
+        fi
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -107,7 +122,12 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ "$GITHUB_HEAD_REF" != "" ]]
+        then
+          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        else
+          python install.py devel --repository=$GITHUB_REPOSITORY
+        fi
     - name: Server 'READ_ONLY' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -132,7 +152,12 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ "$GITHUB_HEAD_REF" != "" ]]
+        then
+          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        else
+          python install.py devel --repository=$GITHUB_REPOSITORY
+        fi
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate

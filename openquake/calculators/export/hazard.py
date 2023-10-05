@@ -253,7 +253,6 @@ def get_metadata(rlzs, kind):
     return metadata
 
 
-@export.add(('uhs', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
@@ -281,7 +280,7 @@ def export_uhs_xml(ekey, dstore):
 
 class Location(object):
     def __init__(self, xyz):
-        self.x, self.y = tuple(xyz)[:2]
+        self.x, self.y = xyz['lon'], xyz['lat']
         self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
 
@@ -289,7 +288,6 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@export.add(('hcurves', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -328,7 +326,6 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hmaps', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -628,7 +625,6 @@ def export_disagg_csv(ekey, dstore):
             imt_idx = [imt2idx[imt] for imt in df.imt]
             poe_idx = [poe2idx[poe] for poe in df.poe]
             df['iml'] = iml2[imt_idx, poe_idx]
-
             df = pandas.DataFrame(
                 {col: df[col] for col in cols}).sort_values(['imt', 'poe'])
             if len(df):
@@ -695,8 +691,8 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
-@export.add(('asce41', 'csv'))
-def export_asce41(ekey, dstore):
+@export.add(('asce7', 'csv'), ('asce41', 'csv'))
+def export_asce(ekey, dstore):
     js = dstore[ekey[0]][()].decode('utf8')
     dic = json.loads(js)
     writer = writers.CsvWriter(fmt='%.5f')
@@ -704,4 +700,14 @@ def export_asce41(ekey, dstore):
     comment = dstore.metadata.copy()
     writer.save(dic.items(), fname, header=['parameter', 'value'],
                 comment=comment)
+    return [fname]
+
+
+@export.add(('mag_dst_eps_sig', 'csv'))
+def export_mag_dst_eps_sig(ekey, dstore):
+    data = dstore[ekey[0]][:]
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    writer.save(data, fname, comment=comment)
     return [fname]

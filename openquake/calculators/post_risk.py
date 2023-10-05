@@ -52,7 +52,9 @@ def save_curve_stats(dstore):
     aggcurves_df = dstore.read_df('aggcurves')
     periods = aggcurves_df.return_period.unique()
     P = len(periods)
-    ep_fields = ['loss']
+    ep_fields = []
+    if 'loss' in aggcurves_df:
+        ep_fields = ['loss']
     if 'loss_aep' in aggcurves_df:
         ep_fields.append('loss_aep')
     if 'loss_oep' in aggcurves_df:
@@ -215,18 +217,20 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
     for (agg_id, rlz_id, loss_id), data in items:
         year = data.pop('year', ())
         curve = {
-            kind: builder.build_curve(
-                year, kind, data[kind], aggregate_loss_curves_types,
+            col: builder.build_curve(
+                # col is 'losses' in the case of consequences
+                year, 'loss' if col == 'losses' else col,
+                data[col], aggregate_loss_curves_types,
                 scientific.LOSSTYPE[loss_id], rlz_id)
-            for kind in data}
+            for col in data}
         for p, period in enumerate(builder.return_periods):
             dic['agg_id'].append(agg_id)
             dic['rlz_id'].append(rlz_id)
             dic['loss_id'].append(loss_id)
             dic['return_period'].append(period)
-            for kind in data:
-                # NB: kind be ['fatalities', 'losses'] in a scenario_damage test
-                for k, c in curve[kind].items():
+            for col in data:
+                # NB: 'fatalities' in EventBasedDamageTestCase.test_case_15
+                for k, c in curve[col].items():
                     dic[k].append(c[p])
     return dic
 
@@ -278,10 +282,9 @@ def build_store_agg(dstore, rbe_df, num_events):
     aggrisk = pandas.DataFrame(aggrisk)
     dstore.create_df(
         'aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
-
-    loss_kinds = [col for col in columns if not col.startswith('dmg_')]
+    loss_cols = [col for col in columns if not col.startswith('dmg_')]
     # can be ['fatalities', 'losses'] in a scenario_damage test
-    if oq.investigation_time and loss_kinds:  # build aggcurves
+    if oq.investigation_time and loss_cols:  # build aggcurves
         logging.info('Building aggcurves')
         units = dstore['cost_calculator'].get_units(oq.loss_types)
         builder = get_loss_builder(dstore, num_events=num_events)
@@ -295,7 +298,7 @@ def build_store_agg(dstore, rbe_df, num_events):
         for agg_id in agg_ids:
             gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
             for (rlz_id, loss_id), df in gb:
-                data = {kind: df[kind].to_numpy() for kind in loss_kinds}
+                data = {col: df[col].to_numpy() for col in loss_cols}
                 if len(year):
                     data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
@@ -359,7 +362,7 @@ def build_reinsurance(dstore, num_events):
             curve = {col: builder.build_curve(
                         years, col, df[col].to_numpy(),
                         oq.aggregate_loss_curves_types,
-                        'total', rlzid)
+                        'reinsurance', rlzid)
                      for col in columns}
             for p, period in enumerate(builder.return_periods):
                 dic['rlz_id'].append(rlzid)
@@ -518,7 +521,7 @@ class PostRiskCalculator(base.RiskCalculator):
                         '\n$ oq show delta_loss:%d %d', ln, li,
                         self.datastore.calc_id)
         logging.info('Sanity check on avg_losses and aggrisk')
-        if 'avg_losses-rlzs' in self.datastore:
+        if 'avg_losses-rlzs' in set(self.datastore):
             url = ('https://docs.openquake.org/oq-engine/advanced/'
                    'addition-is-non-associative.html')
             K = len(self.datastore['agg_keys']) if oq.aggregate_by else 0

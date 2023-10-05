@@ -338,13 +338,13 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurve):
+    def amplify(self, ampl_code, hcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param pcurve: a ProbabilityCurve of shape (L*M, R)
+        :param hcurve: a ProbabilityCurve of shape (L*M, R)
         :returns: amplified ProbabilityCurve of shape (A*M, R)
         """
-        new = [self.amplify_one(ampl_code, imt, pcurve.array[self.imtls(imt)])
+        new = [self.amplify_one(ampl_code, imt, hcurve.array[self.imtls(imt)])
                for imt in self.imtls]
         return ProbabilityCurve(numpy.concatenate(new))
 
@@ -355,9 +355,9 @@ class Amplifier(object):
 
         if len(coeff) == 1:  # there is single coefficient for all levels
             ones = numpy.ones_like(imls)
-            ialpha = float(coeff[imt_str]) * ones
+            ialpha = coeff[imt_str].iloc[0] * ones
             try:
-                isigma = float(coeff['sigma_' + imt_str]) * ones
+                isigma = coeff['sigma_' + imt_str].iloc[0] * ones
             except KeyError:
                 isigma = numpy.zeros_like(imls)  # shape E
         else:

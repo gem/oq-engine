@@ -553,6 +553,12 @@ def export_agg_risk_csv(ekey, dstore):
     return [fname]
 
 
+# used in export_aggcurves_csv
+def _fix(col):
+    if col.endswith(('_aep', '_oep')):
+        return col[:-4]  # strip suffix
+    return col
+
 @export.add(('aggcurves', 'csv'))
 def export_aggcurves_csv(ekey, dstore):
     """
@@ -570,7 +576,7 @@ def export_aggcurves_csv(ekey, dstore):
     K = len(dstore['agg_values']) - 1
     dataf = dstore.read_df('aggcurves')
     consequences = [col for col in dataf.columns
-                    if col in scientific.KNOWN_CONSEQUENCES]
+                    if _fix(col) in scientific.KNOWN_CONSEQUENCES]
     dest = dstore.export_path('%s-{}.%s' % ekey)
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     md = dstore.metadata
@@ -582,8 +588,9 @@ def export_aggcurves_csv(ekey, dstore):
     md['limit_states'] = dstore.get_attr('aggcurves', 'limit_states')
 
     # aggcurves
-    cols = [col for col in dataf.columns if col not in consequences
-            and col not in ('agg_id', 'rlz_id', 'loss_id')]
+    cols = [col for col in dataf.columns if
+            _fix(col) not in consequences and
+            col not in ('agg_id', 'rlz_id', 'loss_id')]
     edic = general.AccumDict(accum=[])
     manyrlzs = not oq.collect_rlzs and R > 1
     fnames = []
@@ -605,14 +612,15 @@ def export_aggcurves_csv(ekey, dstore):
                 for tagname, tag in zip(tagnames, aggtags[agg_id]):
                     edic[tagname].extend([tag] * len(d))
             for col in cols:
-                edic[col].extend(d[col])
+                if not col.endswith(('_aep', '_oep')):
+                    edic[col].extend(d[col])
             edic['loss_type'].extend([LT[loss_id]] * len(d))
             if manyrlzs:
                 edic['rlz_id'].extend([rlz_id] * len(d))
             for cons in consequences:
                 edic[cons + '_value'].extend(d[cons])
                 aval = scientific.get_agg_value(
-                    cons, agg_values, agg_id, lt, oq.time_event)
+                    _fix(cons), agg_values, agg_id, lt, oq.time_event)
                 edic[cons + '_ratio'].extend(d[cons] / aval)
         fname = dest.format('-'.join(tagnames))
         writer.save(pandas.DataFrame(edic), fname, comment=md)

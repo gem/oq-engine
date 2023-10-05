@@ -58,19 +58,30 @@ def _find_turning_points(mesh, tol=1.0):
     idx2 = numpy.isfinite(mesh.lons[0, 1:])
     idx = numpy.where(numpy.logical_and(idx1, idx2))[0]
     azimuths = geodetic.azimuth(mesh.lons[0, idx], mesh.lats[0, idx],
-                                mesh.lons[0, idx+1], mesh.lats[0, idx+1])
+                                mesh.lons[0, idx + 1], mesh.lats[0, idx + 1])
     naz = len(azimuths)
     azim = azimuths[0]
+
     # Retain initial point
     idx = [0]
+
+    # Add more points
     for i in range(1, naz):
-        if numpy.fabs(azimuths[i] - azim) > tol:
+        dff = _angle_difference(azimuths[i], azim)
+        if dff > tol:
             idx.append(i)
             azim = azimuths[i]
+
     # Add on last point - if not already in the set
     if idx[-1] != mesh.lons.shape[1] - 1:
         idx.append(mesh.lons.shape[1] - 1)
     return numpy.array(idx)
+
+
+def _angle_difference(a_a, a_b):
+    """ Computes the absolute difference between angle `a_a` and `a_b` """
+    dff = a_a - a_b
+    return (dff + 540) % 360 - 180
 
 
 def downsample_mesh(mesh, tol=1.0):
@@ -100,6 +111,7 @@ def downsample_trace(mesh, tol=1.0):
     :returns:
         Downsampled edge as a numpy array of [long, lat, depth]
     """
+
     idx = _find_turning_points(mesh, tol)
     if mesh.depths is not None:
         return numpy.column_stack([mesh.lons[0, idx],
@@ -244,7 +256,7 @@ class BaseSurface:
 
             if ((self.__class__.__name__ == 'KiteSurface') and
                 (numpy.isnan(top_edge.lons[0, i]) or
-                 numpy.isnan(top_edge.lons[0, i+1]))):
+                 numpy.isnan(top_edge.lons[0, i + 1]))):
                 msg = 'Rx calculation. Top of rupture has less than two points'
                 raise ValueError(msg)
 
@@ -267,7 +279,7 @@ class BaseSurface:
 
                 if ((self.__class__.__name__ == 'KiteSurface') and
                     (numpy.isnan(top_edge.lons[0, i]) or
-                     numpy.isnan(top_edge.lons[0, i+1]))):
+                     numpy.isnan(top_edge.lons[0, i + 1]))):
                     continue
 
                 p1 = Point(
@@ -394,7 +406,7 @@ class BaseSurface:
         return (self._boundaries('lons'), self._boundaries('lats'),
                 self._boundaries('depths'))
 
-    def get_resampled_top_edge(self, angle_var=0.1):
+    def get_resampled_top_edge(self, angle_var=3.0):
         """
         This methods computes a simplified representation of a fault top edge
         by removing the points that are not describing a change of direction,

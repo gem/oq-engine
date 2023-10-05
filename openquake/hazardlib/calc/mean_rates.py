@@ -23,6 +23,8 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.contexts import get_cmakers
 
+CUTOFF = 1E-12
+
 
 def to_rates(probs, itime=1, minrate=0.):
     """
@@ -35,7 +37,7 @@ def to_rates(probs, itime=1, minrate=0.):
     pnes[pnes == 0] = 1E-45  # mininum 32 bit float
     # NB: the test most sensitive to 1E-45 and 1E-12 is case_78
     probs = - numpy.log(pnes) / itime
-    probs[probs < 1E-12] = minrate
+    probs[probs < CUTOFF] = minrate
     probs[probs > 100.] = 100.
     return probs
 
