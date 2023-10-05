@@ -310,7 +310,7 @@ def compare_sources(calc_ids: int):
     """
     ds0 = datastore.read(calc_ids[0])
     ds1 = datastore.read(calc_ids[1])
-    header = ['source_id', 'grp_id', 'code', 'weight']
+    header = ['source_id', 'grp_id', 'code', 'num_ruptures']
     df0 = ds0.read_df('source_info')[header]
     df1 = ds1.read_df('source_info')[header]
     df = df0.compare(df1)
