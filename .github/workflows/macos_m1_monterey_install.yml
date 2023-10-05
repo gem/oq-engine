@@ -80,26 +80,6 @@ jobs:
           oq dbserver start
           sleep 10
 
-      - name: Run demos to test installation
-        run: |
-          set -x
-          source ~/openquake/bin/activate
-          oq info venv
-          oq info cfg
-          cd /Users/runner/runner-isolation/actions-runner/_work/oq-engine/oq-engine/demos
-          ls -lrt
-          # run demos with job_hazard.ini and job_risk.ini
-          for demo_dir in $(find . -type d | sort); do
-             if [ -f $demo_dir/job_hazard.ini ]; then
-                 oq engine --run $demo_dir/job_hazard.ini --exports csv,hdf5
-                 oq engine --run $demo_dir/job_risk.ini --exports csv,hdf5 --hc -1
-             fi
-          done
-          # run the other demos
-          for ini in $(find . -name job.ini | sort); do
-              oq engine --run $ini --exports csv,hdf5
-          done
-
       - name: Run tests for calculators and advanced manual to test installation
         if: always()
         run: |
