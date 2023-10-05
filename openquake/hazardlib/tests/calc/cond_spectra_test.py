@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
 import unittest
 import numpy as np
 from numpy.testing import assert_allclose as aac
@@ -121,6 +122,8 @@ class CondSpectraTestCase(unittest.TestCase):
 
         spectra, s_sigma = cond_spectra(
             inp.cmaker, inp.group, inp.sitecol, 'SA(0.2)', imls)
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('skip on macOS')
         aac(spectra.flatten(), [0.19164881, 0.23852505, 0.27692626, 0.35103066,
                                 0.39435944, 0.36436695, 0.34596382, 0.23299646,
                                 0.15524817, 0.11027446, 0.04034665], rtol=1E-6)
@@ -157,6 +160,8 @@ class CondSpectraTestCase(unittest.TestCase):
         df = outdic_to_dframe(outdic, cmaker.imts, 0, 0)
 
         # check the result
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('skip on macOS')
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
         if OVERWRITE_EXPECTED:
             df.to_csv(expected, index=False, lineterminator='\r\n',

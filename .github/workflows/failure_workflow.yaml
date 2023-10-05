@@ -1,0 +1,31 @@
+---
+name: Failure on Workflow
+
+on:
+  workflow_run:
+    workflows:
+      - "Build Image Nightly for Docker"
+      - "hazardlib + engine + server tests"
+      - "MacOS Intel install and test"
+      - "MacOS Monterey M1"
+      - "RockyLinux OS test of OpenQuake Engine"
+      - "RPM build of engine in Fedora Copr"
+      - "Ubuntu test of OpenQuake Engine"
+      - "Upgrade procedure for engine from 3.16 to Latest Release"
+      - "Windows full tests of OpenQuake Engine"
+    types:
+      - completed
+
+jobs:
+  on-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    steps:
+    - uses: ravsamhq/notify-slack-action@v2
+      with:
+        status: ${{ github.event.workflow_run.conclusion }}
+        notification_title: " ${{github.event.workflow_run.name}} - ${{github.event.workflow_run.conclusion}} on ${{github.event.workflow_run.head_branch}} - <${{github.server_url}}/${{github.repository}}/actions/runs/${{github.event.workflow_run.id}}|View Failure>"
+        message_format: ":fire: *${{github.event.workflow_run.name}}* ${{github.event.workflow_run.conclusion}} in <${{github.server_url}}/${{github.repository}}/${{github.event.workflow_run.head_branch}}|${{github.repository}}>"
+        footer: "Linked Repo <${{github.server_url}}/${{github.repository}}|${{github.repository}}> | <${{github.server_url}}/${{github.repository}}/actions/runs/${{github.event.workflow_run.id}}|View Failure>"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.MONITORING_SLACK }}
