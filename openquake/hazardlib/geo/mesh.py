@@ -110,7 +110,7 @@ class Mesh(object):
         except IndexError:
             return numpy.zeros(self.shape)
 
-    def __init__(self, lons, lats, depths=None):
+    def __init__(self, lons, lats, depths=None, round=None):
         assert ((lons.shape == lats.shape) and len(lons.shape) in (1, 2)
                 and (depths is None or depths.shape == lats.shape)
                 ), (lons.shape, lats.shape)
@@ -119,6 +119,8 @@ class Mesh(object):
             self.array = numpy.array([lons, lats])
         else:
             self.array = numpy.array([lons, lats, depths])
+        if round is not None:
+            numpy.round(self.array, round, self.array)
 
     @classmethod
     def from_coords(cls, coords, sort=True):
@@ -141,7 +143,7 @@ class Mesh(object):
         return cls(numpy.array(lons), numpy.array(lats), depths)
 
     @classmethod
-    def from_points_list(cls, points):
+    def from_points_list(cls, points, round=None):
         """
         Create a mesh object from a collection of points.
 
@@ -161,7 +163,7 @@ class Mesh(object):
         if not depths.any():
             # all points have zero depth, no need to waste memory
             depths = None
-        return cls(lons, lats, depths)
+        return cls(lons, lats, depths, round)
 
     @property
     def shape(self):
@@ -485,12 +487,12 @@ class RectangularMesh(Mesh):
     of points but rather a sort of table of points, where index of the point
     in a mesh is related to it's position with respect to neighbouring points.
     """
-    def __init__(self, lons, lats, depths=None):
-        super().__init__(lons, lats, depths)
+    def __init__(self, lons, lats, depths=None, round=None):
+        super().__init__(lons, lats, depths, round)
         assert lons.ndim == 2
 
     @classmethod
-    def from_points_list(cls, points):
+    def from_points_list(cls, points, round=None):
         """
         Create a rectangular mesh object from a list of lists of points.
         Lists in a list are supposed to have the same length.
@@ -514,7 +516,7 @@ class RectangularMesh(Mesh):
                 depths[i, j] = point.depth
         if not depths.any():
             depths = None
-        return cls(lons, lats, depths)
+        return cls(lons, lats, depths, round)
 
     def get_middle_point(self):
         """
