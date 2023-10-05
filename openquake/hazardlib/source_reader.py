@@ -185,6 +185,7 @@ def get_csm(oq, full_lt, dstore=None):
         allargs.append((fname, converter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=dstore if dstore else None).reduce()
+    smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, dstore)
 
