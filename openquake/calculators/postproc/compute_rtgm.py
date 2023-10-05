@@ -361,12 +361,6 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     return Image.open(bio)
 
 
-def _poe2afe(poes, window):
-    # convert from poe to rates of exceedance
-    afe = [-np.log(1-p)/window for p in poes]
-    return afe
-
-
 def _find_afe_target(imls, afe, sa_target):
     # find the target afe (or poe) for a given acceleration
     f = interpolate.interp1d(np.log(imls), np.log(afe))
@@ -377,7 +371,6 @@ def _find_afe_target(imls, afe, sa_target):
 def plot_curves(dstore):
     dinfo = get_info(dstore)
     # site is always 0 for a single-site calculation
-    site = 0
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     imt_list, AFE, afe_target, imls, facts = [], [], [], [], []
@@ -398,13 +391,11 @@ def plot_curves(dstore):
     # get investigation time
     window = dinfo['investigation_time']
     # get hazard curves, put into rates
-    dic = _get_dict(dstore, 'hcurves-stats', dinfo['imtls'], dinfo['stats'])
-    # hcurves = dic.items()
-    for i, mhc in enumerate(list(dic['mean'][site])):
-        mhc_rate = _poe2afe(mhc, window)
-        AFE.append(mhc_rate)
+    mean = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
+    for m, hcurve in enumerate(mean):
+        AFE.append(to_rates(hcurve, window))
         # get the AFE of the iml that will be disaggregated for each IMT
-        afe_target.append(_find_afe_target(imls[i], AFE[i], RTGM[i]))
+        afe_target.append(_find_afe_target(imls[m], AFE[m], RTGM[m]))
     # make plot
     img = plot_meanHCs_afe_RTGM(
         imls, AFE, UHGM_RP, 1/2475, RTGM, afe_target, imt_list)
