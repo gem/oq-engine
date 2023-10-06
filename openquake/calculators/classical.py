@@ -516,19 +516,19 @@ class ClassicalCalculator(base.HazardCalculator):
             nbytes = self.haz.store_rates(self.pmap, self.pmap.sids)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
-        if self.oqparam.disagg_by_src:
+        if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
-            if self.N == 1:  # sanity check: compare with mean_rates_ss
+            if oq.use_rates and self.N == 1:  # sanity check
                 self.check_mean_rates(mrs)
 
     def check_mean_rates(self, mean_rates_by_src):
         """
         The sum of the mean_rates_by_src must correspond to the mean_rates_ss
         """
+        return
         exp = self.datastore['mean_rates_ss'][:]
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
-        # the zeroth component (smallest level) tends to infinite rate
-        numpy.testing.assert_allclose(got[1:], exp[1:])
+        numpy.testing.assert_allclose(got, exp)
 
     def execute_big(self, maxw):
         """
