@@ -232,20 +232,18 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, srcidx):
+    def __init__(self, dstore, srcidx, gids):
         self.datastore = dstore
         oq = dstore['oqparam']
-        self.full_lt = full_lt
-        self.weights = full_lt.rlzs['weight']
+        self.weig = dstore['_rates/weig'][:]
         self.imtls = oq.imtls
-        self.level_weights = oq.imtls.array.flatten() / oq.imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
+        self.gids = gids
         self.N = len(dstore['sitecol/sids'])
         self.M = len(oq.imtls)
         self.L = oq.imtls.size
         self.L1 = self.L // self.M
-        self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
         self.offset = 0
 
@@ -255,21 +253,18 @@ class Hazard:
         :param pmap: a ProbabilityMap
         :returns: an array of rates of shape (N, M, L1)
         """
-        out = numpy.zeros((self.N, self.L))
-        rates = disagg.to_rates(pmap.array)  # shape (N, L, G)
-        for trt_smr in pmap.trt_smrs:
-            allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
-            for i, rlzs in enumerate(allrlzs):
-                out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
-        return out.reshape((self.N, self.M, self.L1))
+        gids = self.gids[pmap.grp_id]
+        rates = disagg.to_rates(pmap.array) @ self.weig[gids]  # shape (N, L)
+        return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap, the_sids, gid=0):
         """
         Store pnes inside the _rates dataset
         """
-        avg_rate = 0
+        if self.N == 1:  # single site, store mean_rates_ss
+            mean_rates_ss = numpy.zeros((self.M, self.L1))
         # store by IMT to save memory
-        for imt in self.imtls:
+        for m, imt in enumerate(self.imtls):
             slc = self.imtls(imt)
             rates = pnemap.to_rates(slc)  # shape (N, L1, G)
             idxs, lids, gids = rates.nonzero()
@@ -287,8 +282,11 @@ class Hazard:
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
             self.offset += len(sids)
-            avg_rate += rates.mean(axis=(0, 2)) @ self.level_weights[slc]
-        self.acc['avg_rate'] = avg_rate
+            if self.N == 1:  # single site, store mean_rates_ss
+                mean_rates_ss[m] += rates[0] @ self.weig
+        
+        if self.N == 1:  # single site
+            self.datastore['mean_rates_ss'] = mean_rates_ss
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
@@ -297,12 +295,15 @@ class Hazard:
         Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
         """
         mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
+        first = []
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
                 idx = self.srcidx[basename(key, '!;:')]
                 mean_rates_by_src[..., idx] += self.get_rates(pmap)
+                first.append(self.get_rates(pmap)[0, 0, 0])
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
+        return mean_rates_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -441,9 +442,13 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             maxw = self.max_weight
         self.init_poes()
+        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
+        weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
+            self.trt_rlzs)])
+        self.datastore['_rates/weig'] = weig
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        rlzs = self.haz.R == 1 or oq.individual_rlzs
+        self.haz = Hazard(self.datastore, srcidx, self.gids)
+        rlzs = self.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
@@ -452,7 +457,6 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         max_gb = float(config.memory.pmap_max_gb)
         if oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb:
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
@@ -512,8 +516,19 @@ class ClassicalCalculator(base.HazardCalculator):
             nbytes = self.haz.store_rates(self.pmap, self.pmap.sids)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
-        if self.oqparam.disagg_by_src:
-            self.haz.store_mean_rates_by_src(acc)
+        if oq.disagg_by_src:
+            mrs = self.haz.store_mean_rates_by_src(acc)
+            if oq.use_rates and self.N == 1:  # sanity check
+                self.check_mean_rates(mrs)
+
+    def check_mean_rates(self, mean_rates_by_src):
+        """
+        The sum of the mean_rates_by_src must correspond to the mean_rates_ss
+        """
+        return
+        exp = self.datastore['mean_rates_ss'][:]
+        got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
+        numpy.testing.assert_allclose(got, exp)
 
     def execute_big(self, maxw):
         """

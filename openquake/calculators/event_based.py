@@ -403,7 +403,7 @@ class EventBasedCalculator(base.HazardCalculator):
         with self.monitor('counting ruptures', measuremem=True):
             nrups = parallel.Starmap( # weighting the heavy sources
                 count_ruptures, [(src,) for src in sources
-                                 if src.code == b'AMSC'],
+                                 if src.code in b'AMSC'],
                 progress=logging.debug).reduce()
             # NB: multifault sources must be considered light to avoid a large
             # data transfer, even if .count_ruptures can be slow
