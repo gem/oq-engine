@@ -232,15 +232,15 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, srcidx):
+    def __init__(self, dstore, full_lt, srcidx, gids):
         self.datastore = dstore
         oq = dstore['oqparam']
         self.full_lt = full_lt
-        self.weights = full_lt.rlzs['weight']
         self.weig = dstore['_rates/weig'][:]
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
+        self.gids = gids
         self.N = len(dstore['sitecol/sids'])
         self.M = len(oq.imtls)
         self.L = oq.imtls.size
@@ -255,13 +255,9 @@ class Hazard:
         :param pmap: a ProbabilityMap
         :returns: an array of rates of shape (N, M, L1)
         """
-        out = numpy.zeros((self.N, self.L))
-        rates = disagg.to_rates(pmap.array)  # shape (N, L, G)
-        for trt_smr in pmap.trt_smrs:
-            allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
-            for i, rlzs in enumerate(allrlzs):
-                out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
-        return out.reshape((self.N, self.M, self.L1))
+        gids = self.gids[pmap.grp_id]
+        rates = disagg.to_rates(pmap.array) @ self.weig[gids]  # shape (N, L)
+        return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap, the_sids, gid=0):
         """
@@ -450,7 +446,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.trt_rlzs)])
         self.datastore['_rates/weig'] = weig
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, self.full_lt, srcidx)
+        self.haz = Hazard(self.datastore, self.full_lt, srcidx, self.gids)
         rlzs = self.haz.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
