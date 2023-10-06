@@ -278,19 +278,19 @@ class Line(object):
                 inc_len += sect_len
 
                 # Adding more points still on the same segment
-                Δx = (txy[idx + 1, 0] - rtra_prj[-1][0])
-                Δy = (txy[idx + 1, 1] - rtra_prj[-1][1])
-                Δz = (txy[idx + 1, 2] - rtra_prj[-1][2])
-                chk_dst = (Δx**2 + Δy**2 + Δz**2)**0.5
-                Δx_ratio = Δx / chk_dst
-                Δy_ratio = Δy / chk_dst
-                Δz_ratio = Δz / chk_dst
+                Dx = (txy[idx + 1, 0] - rtra_prj[-1][0])
+                Dy = (txy[idx + 1, 1] - rtra_prj[-1][1])
+                Dz = (txy[idx + 1, 2] - rtra_prj[-1][2])
+                chk_dst = (Dx**2 + Dy**2 + Dz**2)**0.5
+                Dx_ratio = Dx / chk_dst
+                Dy_ratio = Dy / chk_dst
+                Dz_ratio = Dz / chk_dst
 
                 while chk_dst > sect_len * 0.9999:
 
-                    x_pnt = rtra_prj[-1][0] + Δx_ratio * sect_len
-                    y_pnt = rtra_prj[-1][1] + Δy_ratio * sect_len
-                    z_pnt = rtra_prj[-1][2] + Δz_ratio * sect_len
+                    x_pnt = rtra_prj[-1][0] + Dx_ratio * sect_len
+                    y_pnt = rtra_prj[-1][1] + Dy_ratio * sect_len
+                    z_pnt = rtra_prj[-1][2] + Dz_ratio * sect_len
 
                     # New point
                     xg, yg = proj(np.array([x_pnt]), np.array([y_pnt]),
