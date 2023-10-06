@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Disabled SLOW MODE on macOS, since the free memory is not to be trusted
   * Speeding up `count_ruptures` for multifault sources, which gives a *huge*
     in some calculations (like event_based for Dominican Republic)
 
