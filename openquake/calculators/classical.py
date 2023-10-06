@@ -237,8 +237,8 @@ class Hazard:
         oq = dstore['oqparam']
         self.full_lt = full_lt
         self.weights = full_lt.rlzs['weight']
+        self.weig = dstore['_rates/weig'][:]
         self.imtls = oq.imtls
-        self.level_weights = oq.imtls.array.flatten() / oq.imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
         self.N = len(dstore['sitecol/sids'])
@@ -267,9 +267,10 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        avg_rate = 0
+        if self.N == 1:  # single site, store mean_rates_ss
+            mean_rates_ss = numpy.zeros((self.M, self.L1))
         # store by IMT to save memory
-        for imt in self.imtls:
+        for m, imt in enumerate(self.imtls):
             slc = self.imtls(imt)
             rates = pnemap.to_rates(slc)  # shape (N, L1, G)
             idxs, lids, gids = rates.nonzero()
@@ -287,8 +288,11 @@ class Hazard:
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
             self.offset += len(sids)
-            avg_rate += rates.mean(axis=(0, 2)) @ self.level_weights[slc]
-        self.acc['avg_rate'] = avg_rate
+            if self.N == 1:  # single site, store mean_rates_ss
+                mean_rates_ss[m] += rates[0] @ self.weig
+        
+        if self.N == 1:  # single site
+            self.datastore['mean_rates_ss'] = mean_rates_ss
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
@@ -441,6 +445,10 @@ class ClassicalCalculator(base.HazardCalculator):
         else:
             maxw = self.max_weight
         self.init_poes()
+        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
+        weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
+            self.trt_rlzs)])
+        self.datastore['_rates/weig'] = weig
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
         self.haz = Hazard(self.datastore, self.full_lt, srcidx)
         rlzs = self.haz.R == 1 or oq.individual_rlzs
@@ -452,7 +460,6 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         max_gb = float(config.memory.pmap_max_gb)
         if oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb:
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
