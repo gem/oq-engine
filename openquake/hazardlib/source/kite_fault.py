@@ -21,6 +21,7 @@ import copy
 import collections
 import numpy as np
 from typing import Tuple
+from openquake.baselib import general
 from openquake.hazardlib import mfd
 from openquake.hazardlib.geo import Point, Polygon
 from openquake.hazardlib.geo.mesh import Mesh
@@ -129,7 +130,7 @@ class KiteFaultSource(ParametricSeismicSource):
                    floating_y_step)
         return self
 
-    @property
+    @general.cached_property
     def surface(self) -> KiteSurface:
         """
         :returns:
