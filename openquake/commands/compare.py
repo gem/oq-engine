@@ -304,6 +304,32 @@ def compare_risk_by_event(event: int, calc_ids: int, *,
     print(df1)
 
 
+def compare_sources(calc_ids: int):
+    """
+    Compare source_info DataFrames
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    header = ['source_id', 'grp_id', 'code', 'num_ruptures']
+    df0 = ds0.read_df('source_info')[header]
+    df1 = ds1.read_df('source_info')[header]
+    df = df0.compare(df1)
+    print(df)
+
+
+def compare_events(calc_ids: int):
+    """
+    Compare events DataFrames
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    df0 = ds0.read_df('events', 'rup_id')
+    df1 = ds1.read_df('events', 'rup_id')
+    df = df0.compare(df1)
+    print(df)
+
+
+
 main = dict(rups=compare_rups,
             cumtime=compare_cumtime,
             uhs=compare_uhs,
@@ -311,10 +337,13 @@ main = dict(rups=compare_rups,
             hcurves=compare_hcurves,
             avg_gmf=compare_avg_gmf,
             med_gmv=compare_med_gmv,
-            risk_by_event=compare_risk_by_event)
+            risk_by_event=compare_risk_by_event,
+            sources=compare_sources,
+            events=compare_events)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
-          compare_med_gmv, compare_risk_by_event):
+          compare_med_gmv, compare_risk_by_event, compare_sources,
+          compare_events):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:
