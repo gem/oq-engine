@@ -470,7 +470,10 @@ class HazardCalculator(BaseCalculator):
         dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
         required = .5 * (1 if dist == 'no' else parallel.Starmap.num_cores)
-        if dist == 'processpool' and avail < required:
+        if (dist == 'processpool' and avail < required and
+                sys.platform != 'darwin'):
+            # macos tells that there is no memory when there is, so we
+            # must not enter in SLOW MODE there
             msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
                    'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
                    'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
