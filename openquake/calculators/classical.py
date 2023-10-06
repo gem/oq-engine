@@ -232,7 +232,7 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, R, srcidx, gids):
+    def __init__(self, dstore, srcidx, gids):
         self.datastore = dstore
         oq = dstore['oqparam']
         self.weig = dstore['_rates/weig'][:]
@@ -244,7 +244,6 @@ class Hazard:
         self.M = len(oq.imtls)
         self.L = oq.imtls.size
         self.L1 = self.L // self.M
-        self.R = R
         self.acc = AccumDict(accum={})
         self.offset = 0
 
@@ -448,8 +447,8 @@ class ClassicalCalculator(base.HazardCalculator):
             self.trt_rlzs)])
         self.datastore['_rates/weig'] = weig
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, self.R, srcidx, self.gids)
-        rlzs = self.haz.R == 1 or oq.individual_rlzs
+        self.haz = Hazard(self.datastore, srcidx, self.gids)
+        rlzs = self.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
