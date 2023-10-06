@@ -297,12 +297,15 @@ class Hazard:
         Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
         """
         mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
+        first = []
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
                 idx = self.srcidx[basename(key, '!;:')]
                 mean_rates_by_src[..., idx] += self.get_rates(pmap)
+                first.append(self.get_rates(pmap)[0, 0, 0])
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
+        return mean_rates_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -516,7 +519,18 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
         if self.oqparam.disagg_by_src:
-            self.haz.store_mean_rates_by_src(acc)
+            mrs = self.haz.store_mean_rates_by_src(acc)
+            if self.N == 1:  # sanity check: compare with mean_rates_ss
+                self.check_mean_rates(mrs)
+
+    def check_mean_rates(self, mean_rates_by_src):
+        """
+        The sum of the mean_rates_by_src must correspond to the mean_rates_ss
+        """
+        exp = self.datastore['mean_rates_ss'][:]
+        got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
+        # the zeroth component (smallest level) tends to infinite rate
+        numpy.testing.assert_allclose(got[1:], exp[1:])
 
     def execute_big(self, maxw):
         """
