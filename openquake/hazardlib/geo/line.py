@@ -221,12 +221,11 @@ class Line(object):
         sbb = utils.get_spherical_bounding_box
         west, east, north, south = sbb(self.coo[:, 0], self.coo[:, 1])
         proj = utils.OrthographicProjection(west, east, north, south)
-
-        tmp = self.points
-        coo = np.array([[p.longitude, p.latitude, p.depth] for p in tmp])
+        coo = np.array([[p.longitude, p.latitude, p.depth]
+                        for p in self.points])
 
         # Project the coordinates of the trace
-        txy = copy.copy(coo)
+        txy = coo.copy()
         txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
 
         # Initialise the list where we store the coordinates of the resampled
@@ -262,8 +261,8 @@ class Line(object):
             # compute the new sample by interpolation
             if idx < len(dis) - 1:
 
-                tmp = [rtra_prj[-1][0], rtra_prj[-1][1], rtra_prj[-1][2]]
-                pnt = find_t(txy[idx + 1, :], txy[idx, :], tmp, sect_len)
+                pnt = find_t(
+                    txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
 
                 if pnt is None:
                     raise ValueError('Did not find the intersection')
