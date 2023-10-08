@@ -20,7 +20,7 @@
 """
 import copy
 import numpy as np
-from scipy.spatial.distance import cdist
+from scipy.spatial.distance import cdist, euclidean
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
@@ -302,9 +302,7 @@ class Line(object):
 
                     # This is the distance between the last resampled point
                     # and the second vertex of the segment
-                    chk_dst = ((txy[idx + 1, 0] - rtra_prj[-1][0])**2 +
-                               (txy[idx + 1, 1] - rtra_prj[-1][1])**2 +
-                               (txy[idx + 1, 2] - rtra_prj[-1][2])**2)**0.5
+                    chk_dst = euclidean(txy[idx + 1], rtra_prj[-1])
 
             else:
 
