@@ -277,25 +277,19 @@ class Line(object):
                 inc_len += sect_len
 
                 # Adding more points still on the same segment
-                Dx = (txy[idx + 1, 0] - rtra_prj[-1][0])
-                Dy = (txy[idx + 1, 1] - rtra_prj[-1][1])
-                Dz = (txy[idx + 1, 2] - rtra_prj[-1][2])
-                chk_dst = (Dx**2 + Dy**2 + Dz**2)**0.5
-                Dx_ratio = Dx / chk_dst
-                Dy_ratio = Dy / chk_dst
-                Dz_ratio = Dz / chk_dst
+                delta = txy[idx + 1] - rtra_prj[-1]
+                chk_dst = euclidean(txy[idx + 1], rtra_prj[-1])
+                ratio = delta / chk_dst
 
                 while chk_dst > sect_len * 0.9999:
 
-                    x_pnt = rtra_prj[-1][0] + Dx_ratio * sect_len
-                    y_pnt = rtra_prj[-1][1] + Dy_ratio * sect_len
-                    z_pnt = rtra_prj[-1][2] + Dz_ratio * sect_len
+                    pnt = rtra_prj[-1] + ratio * sect_len
 
                     # New point
-                    xg, yg = proj(np.array([x_pnt]), np.array([y_pnt]),
+                    xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
                                   reverse=True)
-                    rtra.append(Point(xg[0], yg[0], z_pnt))
-                    rtra_prj.append([x_pnt, y_pnt, z_pnt])
+                    rtra.append(Point(xg[0], yg[0], pnt[2]))
+                    rtra_prj.append(pnt)
 
                     # Updating incremental length
                     inc_len += sect_len
