@@ -304,23 +304,15 @@ class Line(object):
                 if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
 
                     # Adding more points still on the same segment
-                    dx = (txy[-1, 0] - txy[-2, 0])
-                    dy = (txy[-1, 1] - txy[-2, 1])
-                    dz = (txy[-1, 2] - txy[-2, 2])
-                    chk_dst = (dx**2 + dy**2 + dz**2)**0.5
-                    dx_ratio = dx / chk_dst
-                    dy_ratio = dy / chk_dst
-                    dz_ratio = dz / chk_dst
-
-                    x_pnt = rtra_prj[-1][0] + dx_ratio * sect_len
-                    y_pnt = rtra_prj[-1][1] + dy_ratio * sect_len
-                    z_pnt = rtra_prj[-1][2] + dz_ratio * sect_len
-
+                    delta = txy[-1] - txy[-2]
+                    chk_dst = euclidean(txy[-1], txy[-2])
+                    ratio = delta / chk_dst
+                    pnt = rtra_prj[-1] + ratio * sect_len
                     # New point
-                    xg, yg = proj(np.array([x_pnt]), np.array([y_pnt]),
+                    xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
                                   reverse=True)
-                    rtra.append(Point(xg[0], yg[0], z_pnt))
-                    rtra_prj.append([x_pnt, y_pnt, z_pnt])
+                    rtra.append(Point(xg[0], yg[0], pnt[2]))
+                    rtra_prj.append(pnt)
 
                     # Updating incremental length
                     inc_len += sect_len
