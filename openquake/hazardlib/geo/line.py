@@ -44,12 +44,20 @@ class Line(object):
         list of :class:`~openquake.hazardlib.geo.point.Point` instances
     """
 
+    @classmethod
+    def from_coo(cls, coo):
+        self = cls.__new__(cls)
+        self.coo = coo
+        self.coo.flags.writeable = False  # avoid dirty coding
+        return self
+
     def __init__(self, points):
         self.points = utils.clean_points(points)  # can remove points!
         if len(self.points) < 2:
             raise ValueError(
                 "At least two distinct points are needed for a line!")
-        self.coo = np.array([[p.longitude, p.latitude] for p in self.points])
+        self.coo = np.array([[p.longitude, p.latitude, p.depth]
+                             for p in self.points])
         self.coo.flags.writeable = False  # avoid dirty coding
 
     def __eq__(self, other):
@@ -221,15 +229,13 @@ class Line(object):
             raise ValueError('The line contains less than two points')
 
         # Project the coordinates
-        sbb = utils.get_spherical_bounding_box
-        west, east, north, south = sbb(self.coo[:, 0], self.coo[:, 1])
+        west, east, north, south = utils.get_spherical_bounding_box(
+            self.coo[:, 0], self.coo[:, 1])
         proj = utils.OrthographicProjection(west, east, north, south)
-        coo = np.array([[p.longitude, p.latitude, p.depth]
-                        for p in self.points])
 
         # Project the coordinates of the trace
-        txy = coo.copy()
-        txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
+        txy = self.coo.copy()
+        txy[:, 0], txy[:, 1] = proj(self.coo[:, 0], self.coo[:, 1])
 
         # Initialise the list where we store the coordinates of the resampled
         # trace
@@ -299,7 +305,6 @@ class Line(object):
                     chk_dst = euclidean(txy[idx + 1], rtra_prj[-1])
 
             else:
-
                 # Adding one point
                 if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
 
@@ -318,10 +323,10 @@ class Line(object):
                     inc_len += sect_len
 
                 elif orig_extremes:
-
                     # Adding last point
-                    rtra.append(Point(coo[-1, 0], coo[-1, 1], coo[-1, 2]))
-
+                    rtra.append(
+                        Point(self.coo[-1, 0], self.coo[-1, 1],
+                              self.coo[-1, 2]))
                 break
 
             # Updating index
