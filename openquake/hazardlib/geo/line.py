@@ -83,8 +83,8 @@ class Line(object):
     def __len__(self):
         return len(self.points)
 
-    def __getitem__(self, key):
-        return self.points.__getitem__(key)
+    def __getitem__(self, i):
+        return Point(*self.coo[i])
 
     def flip(self):
         """
@@ -122,7 +122,7 @@ class Line(object):
         :returns bool:
             True if this line is horizontal, false otherwise.
         """
-        return all(p.depth == self[0].depth for p in self)
+        return all(p.depth == self.coo[0, 2] for p in self)
 
     def get_azimuths(self):
         """
@@ -240,7 +240,7 @@ class Line(object):
         # Initialise the list where we store the coordinates of the resampled
         # trace
         rtra_prj = [txy[0]]
-        rtra = [self.points[0]]
+        rtra = [self.coo[0]]
 
         # Compute the total length of the original trace
         N = len(self.coo)
@@ -275,7 +275,7 @@ class Line(object):
                 # Update the list of coordinates
                 xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
                               reverse=True)
-                rtra.append(Point(xg, yg, pnt[2]))
+                rtra.append(np.array([xg, yg, pnt[2]]))
                 rtra_prj.append(pnt)
 
                 # Updating incremental length
@@ -293,7 +293,7 @@ class Line(object):
                     # New point
                     xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
                                   reverse=True)
-                    rtra.append(Point(xg[0], yg[0], pnt[2]))
+                    rtra.append(np.array([xg[0], yg[0], pnt[2]]))
                     rtra_prj.append(pnt)
 
                     # Updating incremental length
@@ -315,7 +315,7 @@ class Line(object):
                     # New point
                     xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
                                   reverse=True)
-                    rtra.append(Point(xg[0], yg[0], pnt[2]))
+                    rtra.append(np.array([xg[0], yg[0], pnt[2]]))
                     rtra_prj.append(pnt)
 
                     # Updating incremental length
@@ -323,15 +323,13 @@ class Line(object):
 
                 elif orig_extremes:
                     # Adding last point
-                    rtra.append(
-                        Point(self.coo[-1, 0], self.coo[-1, 1],
-                              self.coo[-1, 2]))
+                    rtra.append(self.coo[-1])
                 break
 
             # Updating index
             idx_vtx = idx + 1
 
-        return Line(rtra)
+        return Line.from_coo(np.array(rtra))
 
     def get_lengths(self) -> np.ndarray:
         """
