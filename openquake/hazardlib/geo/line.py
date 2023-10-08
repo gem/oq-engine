@@ -68,7 +68,7 @@ class Line(object):
         >>> Line(points) == Line(list(reversed(points)))
         False
         """
-        return self.points == other.points
+        return np.allclose(self.coo, other.coo, atol=1E-6)
 
     def __ne__(self, other):
         """
@@ -81,7 +81,7 @@ class Line(object):
         return not self.__eq__(other)
 
     def __len__(self):
-        return len(self.points)
+        return len(self.coo)
 
     def __getitem__(self, i):
         return Point(*self.coo[i])
@@ -275,7 +275,7 @@ class Line(object):
                 # Update the list of coordinates
                 xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
                               reverse=True)
-                rtra.append(np.array([xg, yg, pnt[2]]))
+                rtra.append(np.array([xg[0], yg[0], pnt[2]]))
                 rtra_prj.append(pnt)
 
                 # Updating incremental length
