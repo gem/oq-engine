@@ -20,12 +20,15 @@
 """
 import copy
 import numpy as np
-
+from scipy.spatial.distance import cdist
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
 
 TOLERANCE = 0.1
+
+def dist3D(points, point):
+    return cdist(points, np.array([point]))[:, 0]  # shape N
 
 
 class Line(object):
@@ -244,9 +247,7 @@ class Line(object):
         while 1:
 
             # Computing distances from the reference point
-            dis = ((txy[:, 0] - rtra_prj[-1][0])**2 +
-                   (txy[:, 1] - rtra_prj[-1][1])**2 +
-                   (txy[:, 2] - rtra_prj[-1][2])**2)**0.5
+            dis = dist3D(txy, rtra_prj[-1])
 
             # Fixing distances for points before the index
             if idx_vtx > 0:
@@ -254,8 +255,7 @@ class Line(object):
 
             # Index of the point on the trace with a distance just below the
             # sampling distance
-            tmp = dis - sect_len
-            idx = np.where(tmp <= 0, dis, -np.inf).argmax()
+            idx = np.where(dis <= sect_len, dis, -np.inf).argmax()
 
             # If the pick a point that is not the last one on the trace we
             # compute the new sample by interpolation
