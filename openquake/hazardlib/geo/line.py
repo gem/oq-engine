@@ -243,10 +243,9 @@ class Line(object):
         rtra = [self.points[0]]
 
         # Compute the total length of the original trace
-        tot_len = np.sum(((txy[:-1, 0] - txy[1:, 0])**2 +
-                          (txy[:-1, 1] - txy[1:, 1])**2 +
-                          (txy[:-1, 2] - txy[1:, 2])**2)**0.5)
-        inc_len = 0.0
+        N = len(self.coo)
+        tot_len = sum(euclidean(txy[i], txy[i-1]) for i in range(1, N))
+        inc_len = 0.
 
         # Resampling
         idx_vtx = -1
