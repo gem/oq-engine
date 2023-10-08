@@ -233,7 +233,7 @@ class Line(object):
 
         # Initialise the list where we store the coordinates of the resampled
         # trace
-        rtra_prj = [[txy[0, 0], txy[0, 1], txy[0, 2]]]
+        rtra_prj = [txy[0]]
         rtra = [self.points[0]]
 
         # Compute the total length of the original trace
@@ -271,7 +271,7 @@ class Line(object):
                 xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
                               reverse=True)
                 rtra.append(Point(xg, yg, pnt[2]))
-                rtra_prj.append(list(pnt))
+                rtra_prj.append(pnt)
 
                 # Updating incremental length
                 inc_len += sect_len
