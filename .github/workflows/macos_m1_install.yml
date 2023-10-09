@@ -1,4 +1,4 @@
-name: MacOS Monterey M1
+name: MacOS M1
 'on':
   workflow_dispatch:
     inputs:
