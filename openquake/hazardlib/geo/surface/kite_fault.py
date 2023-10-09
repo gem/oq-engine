@@ -1164,13 +1164,14 @@ def update_rdist(rdist, az12, angle, sd):
 
 def get_coo(g, pl, az12, ndists, hdist, vdist, tdist, new_rdist, sd, idl):
     coo = np.zeros((ndists, 3))
+    vhratio = vdist / hdist
+    htratio = hdist / tdist
     for j in range(ndists):
         tmp = (j+1) * sd - new_rdist
-        lo, la, _ = g.fwd(pl[0], pl[1], az12,
-                          tmp * hdist / tdist * 1e3)
+        lo, la, _ = g.fwd(pl[0], pl[1], az12, tmp * htratio * 1e3)
         coo[j, 0] = fix_idl(lo, idl)
         coo[j, 1] = la
-        coo[j, 2] = pl[2] + tmp*vdist/hdist
+        coo[j, 2] = pl[2] + tmp * vhratio
     return coo
 
 
