@@ -54,7 +54,6 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['intensity_measure_types_and_levels'] = IMTLS
-    params['truncation_level'] = '3'
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
