@@ -585,7 +585,6 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     :returns:
         An instance of  :class:`openquake.hazardlib.geo.Mesh`
     """
-
     # Create the mesh in the forward direction
     prfr = []
     if ref_idx < len(rprof)-1:
