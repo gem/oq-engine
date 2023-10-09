@@ -1013,7 +1013,7 @@ def get_mesh(pfs, rfi, sd, idl):
             if x in cmmi and np.isnan(laidx[x]):
                 iii = []
                 for li, lv in enumerate(laidx):
-                    if lv is not None:
+                    if not np.isnan(lv):
                         iii.append(li)
                 iii = np.array(iii)
                 minidx = np.argmin(abs(iii-x))
@@ -1022,7 +1022,7 @@ def get_mesh(pfs, rfi, sd, idl):
                 angle[x] = angle[minidx]
             elif x not in cmmi:
                 laidx[x] = np.nan
-                rdist[x] = 0
+                rdist[x] = 0.
                 angle[x] = np.nan
 
         # Loop over the indexes of the edges in common for the two profiles
@@ -1213,7 +1213,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
         cmmi = np.nonzero(cmm)[0].astype(int)
         mxx = 0
         for ll in laidx:
-            if ll is not None:
+            if not np.isnan(ll):
                 mxx = max(mxx, ll)
 
         # For each edge in the right profile we compute
@@ -1232,9 +1232,9 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
                 rdist[x] = rdist[minidx]
                 angle[x] = angle[minidx]
             elif x not in cmmi:
-                laidx[x] = None
+                laidx[x] = np.nan
                 rdist[x] = 0
-                angle[x] = None
+                angle[x] = np.nan
 
         # Loop over the points in common between the two profiles
         for k in list(np.nonzero(cmm)[0]):
@@ -1264,7 +1264,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
                 # fix distance
                 tmp = (j+1)*sd - new_rdist
                 lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
-                                  tmp*hdist/tdist*1e3)
+                                  tmp * hdist / tdist * 1e3)
                 lo = fix_idl(lo, idl)
 
                 de = pl[k, 2] + tmp*vdist/hdist
