@@ -26,8 +26,8 @@ import collections
 
 import numpy
 from scipy.spatial import cKDTree
+from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry
-
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
@@ -46,6 +46,18 @@ SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
+
+
+def get_dist(array, point):
+    """
+    :param array: an array of shape (3,) or (N, 3)
+    :param point: an array of shape (3)
+    :returns: distances(s) from the reference point
+    """
+    assert len(point.shape) == 1, 'Expected a vector'
+    if len(array.shape) == 1:
+        return euclidean(array, point)
+    return cdist(array, numpy.array([point]))[:, 0]  # shape N
 
 
 class BBoxError(ValueError):

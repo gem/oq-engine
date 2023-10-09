@@ -20,15 +20,11 @@
 """
 import copy
 import numpy as np
-from scipy.spatial.distance import cdist, euclidean
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
 
 TOLERANCE = 0.1
-
-def dist3D(points, point):
-    return cdist(points, np.array([point]))[:, 0]  # shape N
 
 
 class Line(object):
@@ -252,7 +248,7 @@ class Line(object):
         while 1:
 
             # Computing distances from the reference point
-            dis = dist3D(txy, rtra_prj[-1])
+            dis = get_dist(txy, rtra_prj[-1])
 
             # Fixing distances for points before the index
             if idx_vtx > 0:
@@ -283,7 +279,7 @@ class Line(object):
 
                 # Adding more points still on the same segment
                 delta = txy[idx + 1] - rtra_prj[-1]
-                chk_dst = euclidean(txy[idx + 1], rtra_prj[-1])
+                chk_dst = get_dist(txy[idx + 1], rtra_prj[-1])
                 ratio = delta / chk_dst
 
                 while chk_dst > sect_len * 0.9999:
@@ -301,7 +297,7 @@ class Line(object):
 
                     # This is the distance between the last resampled point
                     # and the second vertex of the segment
-                    chk_dst = euclidean(txy[idx + 1], rtra_prj[-1])
+                    chk_dst = get_dist(txy[idx + 1], rtra_prj[-1])
 
             else:
                 # Adding one point
@@ -309,7 +305,7 @@ class Line(object):
 
                     # Adding more points still on the same segment
                     delta = txy[-1] - txy[-2]
-                    chk_dst = euclidean(txy[-1], txy[-2])
+                    chk_dst = get_dist(txy[-1], txy[-2])
                     ratio = delta / chk_dst
                     pnt = rtra_prj[-1] + ratio * sect_len
                     # New point
