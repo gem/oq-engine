@@ -961,21 +961,15 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
     # Find the index of the profiles previously analysed and with at least
     # a node in common with the current profile (i.e. with a continuity in
     # the mesh)
-    mxx = 0
-    for ll in laidx:
-        if ll is not None:
-            mxx = max(mxx, ll)
+    mxx = max(ll for ll in laidx if ll is not None)
 
     # Loop over the points in the right profile
     for x in range(0, len(pr[:, 2])):
 
         # If true this edge connects the right and left profiles
         if x in cmmi and laidx[x] is None:
-            iii = []
-            for li, lv in enumerate(laidx):
-                if lv is not None:
-                    iii.append(li)
-            iii = np.array(iii)
+            iii = np.array([li for li, lv in enumerate(laidx)
+                            if lv is not None])
             minidx = np.argmin(abs(iii - x))
             laidx[x] = mxx
             rdist[x] = rdist[minidx]
