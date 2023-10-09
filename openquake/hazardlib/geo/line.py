@@ -240,7 +240,7 @@ class Line(object):
 
         # Compute the total length of the original trace
         N = len(self.coo)
-        tot_len = sum(euclidean(txy[i], txy[i-1]) for i in range(1, N))
+        tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
         inc_len = 0.
 
         # Resampling
@@ -248,7 +248,7 @@ class Line(object):
         while 1:
 
             # Computing distances from the reference point
-            dis = get_dist(txy, rtra_prj[-1])
+            dis = utils.get_dist(txy, rtra_prj[-1])
 
             # Fixing distances for points before the index
             if idx_vtx > 0:
@@ -279,7 +279,7 @@ class Line(object):
 
                 # Adding more points still on the same segment
                 delta = txy[idx + 1] - rtra_prj[-1]
-                chk_dst = get_dist(txy[idx + 1], rtra_prj[-1])
+                chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
                 ratio = delta / chk_dst
 
                 while chk_dst > sect_len * 0.9999:
@@ -297,7 +297,7 @@ class Line(object):
 
                     # This is the distance between the last resampled point
                     # and the second vertex of the segment
-                    chk_dst = get_dist(txy[idx + 1], rtra_prj[-1])
+                    chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
 
             else:
                 # Adding one point
@@ -305,7 +305,7 @@ class Line(object):
 
                     # Adding more points still on the same segment
                     delta = txy[-1] - txy[-2]
-                    chk_dst = get_dist(txy[-1], txy[-2])
+                    chk_dst = utils.get_dist(txy[-1], txy[-2])
                     ratio = delta / chk_dst
                     pnt = rtra_prj[-1] + ratio * sect_len
                     # New point
