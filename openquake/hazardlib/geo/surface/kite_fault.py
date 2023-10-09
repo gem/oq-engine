@@ -15,15 +15,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
 """
 Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 :class:`KiteSurface`.
 """
-
-import copy
 import numpy as np
-
 from pyproj import Geod
 from shapely.geometry import Polygon
 
@@ -970,12 +966,12 @@ def get_mesh(pfs, rfi, sd, idl):
         :class:`openquake.hazardlib.geo.line.Line` instances
     """
     g = Geod(ellps='WGS84')
+    n = len(pfs[0])
 
-    # Instantiate lists with the residual distance and the last profile index
-    # with a finite value at a given depth
-    rdist = [0 for _ in range(0, len(pfs[0]))]
-    laidx = [0 for _ in range(0, len(pfs[0]))]
-    angle = [0 for _ in range(0, len(pfs[0]))]
+    # Initialize residual distance and last index
+    rdist = np.zeros(n)
+    angle = np.zeros(n)
+    laidx = [0 for _ in range(n)]
 
     # Creating a new list used to collect the new profiles which will describe
     # the mesh. We start with the initial profile i.e. the one identified by
@@ -983,7 +979,7 @@ def get_mesh(pfs, rfi, sd, idl):
     npr = [pfs[rfi].copy()]
 
     # Run for all the profiles 'after' the reference one
-    for i in range(rfi, len(pfs)-1):
+    for i in range(rfi, len(pfs) - 1):
 
         # Profiles: left and right
         pr = pfs[i+1]
@@ -1016,7 +1012,7 @@ def get_mesh(pfs, rfi, sd, idl):
                     if lv is not None:
                         iii.append(li)
                 iii = np.array(iii)
-                minidx = np.argmin(abs(iii-x))
+                minidx = np.argmin(abs(iii - x))
                 laidx[x] = mxx
                 rdist[x] = rdist[minidx]
                 angle[x] = angle[minidx]
@@ -1106,7 +1102,7 @@ def get_mesh(pfs, rfi, sd, idl):
                 de = deps[tidx]
 
                 # Updating the new profile
-                npr[laidx[k]+1][k] = [lo, la, de]
+                npr[laidx[k] + 1][k] = [lo, la, de]
                 if (k > 0 and np.all(np.isfinite(npr[laidx[k]+1][k])) and
                         np.all(np.isfinite(npr[laidx[k]][k]))):
 
@@ -1188,9 +1184,9 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
     n = len(pfs[0])
 
     # Initialize residual distance and last index lists
-    rdist = [0 for _ in range(n)]
+    rdist = np.zeros(n)
+    angle = np.zeros(n)
     laidx = [0 for _ in range(n)]
-    angle = [0 for _ in range(n)]
 
     # Create list containing the new profiles. We start by adding the
     # reference profile
