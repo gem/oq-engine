@@ -649,8 +649,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
 
     # Check that in each profile the points are equally spaced
     for pro in rprofiles:
-        pnts = [(p.longitude, p.latitude, p.depth) for p in pro.points]
-        pnts = np.array(pnts)
+        pnts = pro.coo
 
         # Check that the profile is not crossing the IDL and compute the
         # distance between consecutive points along the profile
@@ -752,9 +751,9 @@ def _resample_profile(line, sampling_dist):
     :returns:
         An instance of :class:`openquake.hazardlib.geo.line.Line`
     """
-    lo = [pnt.longitude for pnt in line.points]
-    la = [pnt.latitude for pnt in line.points]
-    de = [pnt.depth for pnt in line.points]
+    lo = [pnt.longitude for pnt in line]
+    la = [pnt.latitude for pnt in line]
+    de = [pnt.depth for pnt in line]
 
     # Set projection
     g = Geod(ellps='WGS84')
@@ -894,8 +893,8 @@ def profiles_depth_alignment(pro1, pro2):
     """
 
     # Create two numpy.ndarray with the coordinates of the two profiles
-    coo1 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro1.points]
-    coo2 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro2.points]
+    coo1 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro1]
+    coo2 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro2]
     coo1 = np.array(coo1)
     coo2 = np.array(coo2)
 
@@ -944,7 +943,7 @@ def get_coords(line, idl):
         A list with the 3D coordinates of the line.
     """
     tmp = []
-    for p in line.points:
+    for p in line:
         if p is not None:
             if idl:
                 p.longitude = (p.longitude+360 if p.longitude < 0

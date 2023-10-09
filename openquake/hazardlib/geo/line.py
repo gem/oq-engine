@@ -168,7 +168,6 @@ class Line(object):
         """
         Inverts the order of the points composing the line
         """
-        self.points.reverse()
         self.coo = np.flip(self.coo, axis=0)
 
     @classmethod
@@ -190,7 +189,7 @@ class Line(object):
         :returns bool:
             True if this line is on the surface, false otherwise.
         """
-        return all(point.on_surface() for point in self.points)
+        return all(point.on_surface() for point in self)
 
     def horizontal(self):
         """
@@ -206,8 +205,8 @@ class Line(object):
         """
         Return the azimuths of all the segments omposing the polyline
         """
-        if len(self.points) == 2:
-            return self.points[0].azimuth(self.points[1])
+        if len(self.coo) == 2:
+            return self[0].azimuth(self[1])
         lons = self.coo[:, 0]
         lats = self.coo[:, 1]
         return geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
@@ -261,9 +260,6 @@ class Line(object):
         :rtype:
             An instance of :class:`Line`
         """
-        if len(self.points) < 2:
-            return Line(self.points)
-
         resampled_points = []
         # 1. Resample the first section. 2. Loop over the remaining points
         # in the line and resample the remaining sections.
@@ -271,13 +267,12 @@ class Line(object):
         # (because it's already contained in the previous set of
         # resampled points).
         resampled_points.extend(
-            self.points[0].equally_spaced_points(self.points[1],
-                                                 section_length))
+            self[0].equally_spaced_points(self[1], section_length))
 
         # Skip the first point, it's already resampled
-        for i in range(2, len(self.points)):
+        for i in range(2, len(self)):
             points = resampled_points[-1].equally_spaced_points(
-                self.points[i], section_length)
+                self[i], section_length)
             resampled_points.extend(points[1:])
 
         return Line(resampled_points)
@@ -312,9 +307,9 @@ class Line(object):
             Segments length in km.
         """
         lengths = []
-        for i, point in enumerate(self.points):
+        for i, point in enumerate(self):
             if i != 0:
-                lengths.append(point.distance(self.points[i - 1]))
+                lengths.append(point.distance(self[i - 1]))
         return np.array(lengths)
 
     def get_length(self) -> float:
@@ -335,8 +330,7 @@ class Line(object):
         :param delta:
             An angle in decimal degrees
         """
-        coo = np.array([[p.longitude, p.latitude, p.depth] for p in
-                        self.points])
+        coo = self.coo
         # Compute the azimuth of all the segments
         azim = geodetic.azimuth(coo[:-1, 0], coo[:-1, 1],
                                 coo[1:, 0], coo[1:, 1])
@@ -354,21 +348,21 @@ class Line(object):
         :returns:
             A new line with that many points as requested.
         """
-        assert len(self.coo) > 1, "can not resample the line of one point"
+        assert len(self) > 1, "can not resample the line of one point"
         section_length = self.get_length() / (num_points - 1)
-        resampled_points = [self.points[0]]
+        resampled_points = [self[0]]
         segment = 0
         acc_length = 0
         last_segment_length = 0
+        points = self.points
         for i in range(num_points - 1):
             tot_length = (i + 1) * section_length
-            while tot_length > acc_length and segment < len(self.points) - 1:
-                last_segment_length = self.points[segment].distance(
-                    self.points[segment + 1]
-                )
+            while tot_length > acc_length and segment < len(points) - 1:
+                last_segment_length = points[segment].distance(
+                    points[segment + 1])
                 acc_length += last_segment_length
                 segment += 1
-            p1, p2 = self.points[segment - 1:segment + 1]
+            p1, p2 = points[segment - 1:segment + 1]
             offset = tot_length - (acc_length - last_segment_length)
             if offset < 1e-5:
                 # forward geodetic transformations for very small distances
