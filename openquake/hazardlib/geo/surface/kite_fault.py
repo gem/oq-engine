@@ -893,10 +893,8 @@ def profiles_depth_alignment(pro1, pro2):
     """
 
     # Create two numpy.ndarray with the coordinates of the two profiles
-    coo1 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro1]
-    coo2 = [(pnt.longitude, pnt.latitude, pnt.depth) for pnt in pro2]
-    coo1 = np.array(coo1)
-    coo2 = np.array(coo2)
+    coo1 = pro1.coo
+    coo2 = pro2.coo
 
     # Set the profile with the smaller number of points as the first one
     swap = 1
@@ -924,9 +922,9 @@ def profiles_depth_alignment(pro1, pro2):
         amin = np.amin(dff)
         res = indexes[np.amax(np.nonzero(dff == amin))] * swap
     else:
-        d1 = np.zeros((len(coo2)-len(coo1)+1, len(coo1)))
-        d2 = np.zeros((len(coo2)-len(coo1)+1, len(coo1)))
-        for i in np.arange(0, len(coo2)-len(coo1)+1):
+        d1 = np.zeros((len(coo2)-len(coo1) + 1, len(coo1)))
+        d2 = np.zeros((len(coo2)-len(coo1) + 1, len(coo1)))
+        for i in np.arange(0, len(coo2) - len(coo1) + 1):
             d2[i, :] = [coo2[d, 2] for d in range(i, i+len(coo1))]
             d1[i, :] = coo1[:, 2]
         res = np.argmin(np.sum(abs(d2-d1), axis=1))
@@ -944,11 +942,10 @@ def get_coords(line, idl):
     """
     tmp = []
     for p in line:
-        if p is not None:
-            if idl:
-                p.longitude = (p.longitude+360 if p.longitude < 0
-                               else p.longitude)
-            tmp.append([p.longitude, p.latitude, p.depth])
+        if idl:
+            p.longitude = (p.longitude+360 if p.longitude < 0
+                           else p.longitude)
+        tmp.append([p.longitude, p.latitude, p.depth])
     return tmp
 
 
