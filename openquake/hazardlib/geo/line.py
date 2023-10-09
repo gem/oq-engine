@@ -27,10 +27,88 @@ from openquake.hazardlib.geo import Point
 TOLERANCE = 0.1
 
 
-def update(rtra, rtra_prj, proj, pnt):
+def _update(rtra, rtra_prj, proj, pnt):
     xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]), reverse=True)
     rtra.append(np.array([xg[0], yg[0], pnt[2]]))
     rtra_prj.append(pnt)
+
+
+def _resample(coo, sect_len, orig_extremes):
+    N = len(coo)
+    if N < 2:
+        raise ValueError('The line contains less than two points')
+
+    # Project the coordinates
+    west, east, north, south = utils.get_spherical_bounding_box(
+        coo[:, 0], coo[:, 1])
+    proj = utils.OrthographicProjection(west, east, north, south)
+
+    # Project the coordinates of the trace
+    txy = coo.copy()
+    txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
+
+    # Initialise the list where we store the coordinates of the resampled
+    # trace
+    rtra_prj = [txy[0]]
+    rtra = [coo[0]]
+
+    # Compute the total length of the original trace
+    tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
+    inc_len = 0.
+
+    # Resampling
+    idx_vtx = -1
+    while True:
+
+        # Computing distances from the reference point
+        dis = utils.get_dist(txy, rtra_prj[-1])
+
+        # Fixing distances for points before the index
+        if idx_vtx > 0:
+            dis[0:idx_vtx] = 100000
+
+        # Index of the point on the trace with a distance just below the
+        # sampling distance
+        idx = np.where(dis <= sect_len, dis, -np.inf).argmax()
+
+        # If the pick a point that is not the last one on the trace we
+        # compute the new sample by interpolation
+        if idx < len(dis) - 1:
+            pnt = find_t(
+                txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
+            if pnt is None:
+                raise ValueError('Did not find the intersection')
+            _update(rtra, rtra_prj, proj, pnt)
+            inc_len += sect_len
+
+            # Adding more points still on the same segment
+            delta = txy[idx + 1] - rtra_prj[-1]
+            chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+            rat = delta / chk_dst
+            while chk_dst > sect_len * 0.9999:
+                _update(rtra, rtra_prj, proj, rtra_prj[-1] + sect_len * rat)
+                inc_len += sect_len
+                # This is the distance between the last resampled point
+                # and the second vertex of the segment
+                chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+        else:
+            # Adding one point
+            if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
+                # Adding more points still on the same segment
+                delta = txy[-1] - txy[-2]
+                chk_dst = utils.get_dist(txy[-1], txy[-2])
+                _update(rtra, rtra_prj, proj, rtra_prj[-1] +
+                       sect_len * delta / chk_dst)
+                inc_len += sect_len
+            elif orig_extremes:
+                # Adding last point
+                rtra.append(coo[-1])
+            break
+
+        # Updating index
+        idx_vtx = idx + 1
+
+    return np.array(rtra)
 
 
 class Line(object):
@@ -227,81 +305,7 @@ class Line(object):
         :returns:
             A new line resampled into sections based on the given length.
         """
-        N = len(self.coo)
-        if N < 2:
-            raise ValueError('The line contains less than two points')
-
-        # Project the coordinates
-        west, east, north, south = utils.get_spherical_bounding_box(
-            self.coo[:, 0], self.coo[:, 1])
-        proj = utils.OrthographicProjection(west, east, north, south)
-
-        # Project the coordinates of the trace
-        txy = self.coo.copy()
-        txy[:, 0], txy[:, 1] = proj(self.coo[:, 0], self.coo[:, 1])
-
-        # Initialise the list where we store the coordinates of the resampled
-        # trace
-        rtra_prj = [txy[0]]
-        rtra = [self.coo[0]]
-
-        # Compute the total length of the original trace
-        tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
-        inc_len = 0.
-
-        # Resampling
-        idx_vtx = -1
-        while 1:
-
-            # Computing distances from the reference point
-            dis = utils.get_dist(txy, rtra_prj[-1])
-
-            # Fixing distances for points before the index
-            if idx_vtx > 0:
-                dis[0:idx_vtx] = 100000
-
-            # Index of the point on the trace with a distance just below the
-            # sampling distance
-            idx = np.where(dis <= sect_len, dis, -np.inf).argmax()
-
-            # If the pick a point that is not the last one on the trace we
-            # compute the new sample by interpolation
-            if idx < len(dis) - 1:
-                pnt = find_t(
-                    txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
-                if pnt is None:
-                    raise ValueError('Did not find the intersection')
-                update(rtra, rtra_prj, proj, pnt)
-                inc_len += sect_len
-
-                # Adding more points still on the same segment
-                delta = txy[idx + 1] - rtra_prj[-1]
-                chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
-                rat = delta / chk_dst
-                while chk_dst > sect_len * 0.9999:
-                    update(rtra, rtra_prj, proj, rtra_prj[-1] + sect_len * rat)
-                    inc_len += sect_len
-                    # This is the distance between the last resampled point
-                    # and the second vertex of the segment
-                    chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
-            else:
-                # Adding one point
-                if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
-                    # Adding more points still on the same segment
-                    delta = txy[-1] - txy[-2]
-                    chk_dst = utils.get_dist(txy[-1], txy[-2])
-                    update(rtra, rtra_prj, proj, rtra_prj[-1] +
-                           sect_len * delta / chk_dst)
-                    inc_len += sect_len
-                elif orig_extremes:
-                    # Adding last point
-                    rtra.append(self.coo[-1])
-                break
-
-            # Updating index
-            idx_vtx = idx + 1
-
-        return Line.from_coo(np.array(rtra))
+        return Line.from_coo(_resample(self.coo, sect_len, orig_extremes))
 
     def get_lengths(self) -> np.ndarray:
         """
