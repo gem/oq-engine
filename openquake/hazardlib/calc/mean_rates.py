@@ -36,10 +36,10 @@ def to_rates(probs, itime=1, minrate=0.):
     pnes = 1. - probs
     pnes[pnes == 0] = 1E-45  # mininum 32 bit float
     # NB: the test most sensitive to 1E-45 and 1E-12 is case_78
-    probs = - numpy.log(pnes) / itime
-    probs[probs < CUTOFF] = minrate
-    probs[probs > 100.] = 100.
-    return probs
+    rates = - numpy.log(pnes) / itime
+    rates[rates < CUTOFF] = minrate
+    rates[rates > 100.] = 100.
+    return rates
 
 
 def to_probs(rates, itime=1):

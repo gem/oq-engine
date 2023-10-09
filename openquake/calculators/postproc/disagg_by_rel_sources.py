@@ -27,8 +27,7 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
 
 
-def get_mag_dist_eps_df(
-        mean_disagg_by_src, src_mutex, src_info):
+def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     """
     Compute mag, dist, eps, sig for each (src, imt) combination.
 
@@ -47,9 +46,12 @@ def get_mag_dist_eps_df(
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
-            rates_mag = mean_disagg_by_src[s, :, :, :, m].sum((1, 2))
-            rates_dst = mean_disagg_by_src[s, :, :, :, m].sum((0, 2))
-            rates_eps = mean_disagg_by_src[s, :, :, :, m].sum((0, 1))
+            rates = mean_disagg_by_src[s, :, :, :, m]
+            if (rates == 0).all():
+                continue # no contribution from this imt
+            rates_mag = rates.sum((1, 2))
+            rates_dst = rates.sum((0, 2))
+            rates_eps = rates.sum((0, 1))
             dic['src'].append(src)
             dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array

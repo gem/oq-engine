@@ -410,6 +410,9 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
+    if dstore['mean_rates_ss'][:].max() < 1E-3:
+        logging.warning('Ultra-low hazard: skipping AELO calculation')
+        return
     logging.info('Computing Risk Targeted Ground Motion')
     oq = dstore['oqparam']
     stats = list(oq.hazard_stats())

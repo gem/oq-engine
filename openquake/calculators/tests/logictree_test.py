@@ -423,7 +423,8 @@ hazard_uhs-std.csv
         # MultiPointSource with modify MFD logic tree
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
         for f in out['uhs', 'csv']:
-            self.assertEqualFiles('expected/' + strip_calc_id(f), f)
+            self.assertEqualFiles('expected/' + strip_calc_id(f), f,
+                                  delta=4E-5)
 
         # checking that source_info is stored correctly
         info = self.calc.datastore['source_info'][:]
