@@ -589,13 +589,13 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     # Create the mesh in the forward direction
     prfr = []
     if ref_idx < len(rprof)-1:
-        prfr = get_mesh(rprof, ref_idx, edge_sd, idl)
+        prfr = get_new_profiles(rprof, ref_idx, edge_sd, idl)
 
     # Create the mesh in the backward direction
     prfl = []
     last = False if ref_idx < len(rprof) - 1 else True
     if ref_idx > 0:
-        prfl = get_mesh(rprof, ref_idx, edge_sd, idl, last)
+        prfl = get_new_profiles(rprof, ref_idx, edge_sd, idl, last)
     prf = prfl + prfr
 
     # Create the whole mesh
@@ -1030,11 +1030,8 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
         assert rdist[k] < sd
     
 
-def get_mesh(pfs, rfi, sd, idl, last=None):
+def get_new_profiles(pfs, rfi, sd, idl, last=None):
     """
-    From a set of profiles creates the mesh in the forward direction from the
-    reference profile.
-
     :param pfs:
         List of :class:`openquake.hazardlib.geo.line.Line` instances
     :param rfi:
@@ -1043,9 +1040,10 @@ def get_mesh(pfs, rfi, sd, idl, last=None):
         Sampling distance [km] for the edges
     :param idl:
         Boolean indicating the need to account for the IDL
+    :param last:
+        If None create the mesh in the forward direction, otherwise backward
     :returns:
-        An updated list of the profiles i.e. a list of
-        :class:`openquake.hazardlib.geo.line.Line` instances
+        A new list of profiles
     """
     forw = last is None
     g = Geod(ellps='WGS84')
