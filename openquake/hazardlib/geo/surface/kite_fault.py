@@ -600,11 +600,8 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
 
     # Create the whole mesh
     if len(prf) > 1:
-
         msh = np.array(prf)
-
     else:
-
         # Check the profiles have the same number of samples
         chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
         top_depths = np.array([p[0, 0] for p in rprof])
@@ -892,7 +889,6 @@ def profiles_depth_alignment(pro1, pro2):
     :returns:
         An integer
     """
-
     # Create two numpy.ndarray with the coordinates of the two profiles
     coo1 = pro1.coo
     coo2 = pro2.coo
@@ -1063,7 +1059,7 @@ def get_mesh(pfs, rfi, sd, idl):
     # the reference index rfi
     npr = [pfs[rfi].copy()]
     for i in range(rfi, len(pfs) - 1):
-        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, idl, 'forw')
+        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, idl, True)
     return npr
 
 
@@ -1097,7 +1093,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
     # reference profile
     npr = [pfs[rfi].copy()]
     for i in range(rfi, 0, -1):
-        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i-1], sd, idl, 'back')
+        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i-1], sd, idl, False)
 
     return [npr[i] for i in range(len(npr) - 1, -1 if last else 0, -1)]
 
@@ -1132,12 +1128,10 @@ def update_rdist(rdist, az12, angle, sd):
     return rdist_new
 
 
-def get_coo(what, g, pl, pr, az12, hdist, vdist, tdist, new_rdist, sd, idl):
-    # what is 'forw' or 'back'
-
+def get_coo(forward, g, pl, pr, az12, hdist, vdist, tdist, new_rdist, sd, idl):
     ndists = int(np.floor((tdist + new_rdist) / sd))
     coo = np.zeros((ndists, 3))
-    if what == 'forw':
+    if forward:
         # Calculate points between the corresponding nodes on the
         # two profiles
         ll = g.npts(pl[0], pl[1], pr[0], pr[1],
@@ -1182,7 +1176,7 @@ def get_coo(what, g, pl, pr, az12, hdist, vdist, tdist, new_rdist, sd, idl):
             # Computing depths
             coo[j, 2] = deps[tidx]
 
-    elif what == 'back':
+    else:
         vhratio = vdist / hdist
         htratio = hdist / tdist
         for j in range(ndists):
