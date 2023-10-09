@@ -227,7 +227,8 @@ class Line(object):
         :returns:
             A new line resampled into sections based on the given length.
         """
-        if len(self.points) < 2:
+        N = len(self.coo)
+        if N < 2:
             raise ValueError('The line contains less than two points')
 
         # Project the coordinates
@@ -245,7 +246,6 @@ class Line(object):
         rtra = [self.coo[0]]
 
         # Compute the total length of the original trace
-        N = len(self.coo)
         tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
         inc_len = 0.
 
