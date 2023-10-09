@@ -35,10 +35,7 @@ def _update(rtra, rtra_prj, proj, pnt):
 
 def _resample(coo, sect_len, orig_extremes):
     # returns array of resampled trace coordinates
-
     N = len(coo)
-    if N < 2:
-        raise ValueError('The line contains less than two points')
 
     # Project the coordinates of the trace
     sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
@@ -261,7 +258,6 @@ class Line(object):
         :rtype:
             An instance of :class:`Line`
         """
-
         if len(self.points) < 2:
             return Line(self.points)
 
@@ -273,13 +269,12 @@ class Line(object):
         # resampled points).
         resampled_points.extend(
             self.points[0].equally_spaced_points(self.points[1],
-                                                 section_length)
-        )
+                                                 section_length))
+
         # Skip the first point, it's already resampled
         for i in range(2, len(self.points)):
             points = resampled_points[-1].equally_spaced_points(
-                self.points[i], section_length
-            )
+                self.points[i], section_length)
             resampled_points.extend(points[1:])
 
         return Line(resampled_points)
