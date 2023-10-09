@@ -30,7 +30,7 @@ import scipy.spatial.distance as dst
 def get_xyz_from_ll(projected, reference):
     """
     This method computes the x, y and z coordinates of a set of points
-    provided a reference point
+    provided a reference point.
 
     :param projected:
         :class:`~openquake.hazardlib.geo.point.Point` object
@@ -38,11 +38,7 @@ def get_xyz_from_ll(projected, reference):
     :param reference:
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the coordinates of the reference point.
-
-    :returns:
-            x
-            y
-            z
+    :returns: a 3D vector
     """
 
     azims = geod.azimuth(reference.longitude, reference.latitude,
@@ -52,9 +48,9 @@ def get_xyz_from_ll(projected, reference):
                                    reference.latitude,
                                    projected.longitude,
                                    projected.latitude)
-    return (dists * math.sin(math.radians(azims)),
-            dists * math.cos(math.radians(azims)),
-            depths)
+    return np.array([dists * math.sin(math.radians(azims)),
+                     dists * math.cos(math.radians(azims)),
+                     depths])
 
 
 def get_plane_equation(p0, p1, p2, reference):
