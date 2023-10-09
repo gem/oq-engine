@@ -1294,19 +1294,14 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
                 laidx[k] += 1
 
             # Updating residual distances and angle (i.e. azimuth)
-            rdist[k] = tdist - sd*ndists + new_rdist
+            rdist[k] = tdist - sd * ndists + new_rdist
             angle[k] = az12
 
             # Checking that the residual distance is lower than the sampling
             # distance
             assert rdist[k] < sd
 
-    tmp = []
-    to_idx = -1 if last else 0
-    for i in range(len(npr)-1, to_idx, -1):
-        tmp.append(npr[i])
-
-    return tmp
+    return [npr[i] for i in range(len(npr) - 1, -1 if last else 0, -1)]
 
 
 def add_empty_profile(npr, idx=-1):
