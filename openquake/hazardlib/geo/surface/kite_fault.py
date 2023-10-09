@@ -19,6 +19,7 @@
 Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 :class:`KiteSurface`.
 """
+import numba
 import numpy as np
 from pyproj import Geod
 from shapely.geometry import Polygon
@@ -31,7 +32,7 @@ from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
-    npoints_towards, distance, azimuth)
+    npoints_towards, distance, azimuth, fast_azimuth)
 
 TOL = 0.4
 VERY_SMALL = 1e-20
@@ -44,6 +45,7 @@ def fix_idl(lon, idl):
     return lon + 360 if idl and lon < 0 else lon
 
 
+@numba.njit
 def _fix_right_hand(lons, lats, depths):
     """
     This method fixes the mesh used to represent the grid surface so
@@ -52,26 +54,22 @@ def _fix_right_hand(lons, lats, depths):
     found = False
     irow = 0
     icol = 0
+    n, m = lons.shape
     while not found:
         if np.all(np.isfinite(lons[irow:irow+2, icol:icol+2])):
             found = True
         else:
             icol += 1
-            if icol + 1 >= lons.shape[1]:
+            if icol + 1 >= m:
                 irow += 1
                 icol = 1
-                if irow + 1 >= lons.shape[0]:
+                if irow + 1 >= n:
                     break
     if found:
-        azi_strike = azimuth(lons[irow, icol],
-                             lats[irow, icol],
-                             lons[irow, icol+1],
-                             lats[irow, icol+1])
-        azi_dip = azimuth(lons[irow, icol],
-                          lats[irow, icol],
-                          lons[irow+1, icol],
-                          lats[irow+1, icol])
-
+        lo = np.array([lons[irow, icol+1], lons[irow+1, icol]])
+        la = np.array([lats[irow, icol+1], lats[irow+1, icol]])
+        azi_strike, azi_dip = fast_azimuth(
+            lons[irow, icol], lats[irow, icol], lo, la)
         if abs((azi_strike - 90) % 360 - azi_dip) < 40:
             tlo = np.fliplr(lons)
             tla = np.fliplr(lats)
