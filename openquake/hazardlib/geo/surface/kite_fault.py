@@ -1118,9 +1118,7 @@ def get_coo(forward, g, pl, pr, az12, hdist, vdist, tdist, new_rdist, sd, idl):
 
         # Compute distance between nodels at depth 'k' on the two
         # consecutive profiles
-        dd = distance(pl[0], pl[1], pl[2],
-                      pr[0], pr[1], pr[2])
-
+        dd = distance(pl[0], pl[1], pl[2], pr[0], pr[1], pr[2])
         # Check that the actual distance between these nodes is similar to
         # the one originally defined
         if abs(dd - tdist) > 0.1*tdist:
