@@ -41,6 +41,12 @@ TOL = 0.4
 VERY_SMALL = 1e-20
 ALMOST_RIGHT_ANGLE = 89.9
 
+def fix_idl(lon, idl):
+    """
+    Fix the longitude in proximity of the international date line
+    """
+    return lon + 360 if idl and lon < 0 else lon
+
 
 def profile_node(points):
     """
@@ -725,18 +731,19 @@ def get_profiles_from_simple_fault_data(
         dip = 89.9
 
     # Get simple fault surface
-    srfc = SimpleFaultSurface.from_fault_data(fault_trace,
-                                              upper_seismogenic_depth,
-                                              lower_seismogenic_depth,
-                                              dip,
-                                              rupture_mesh_spacing*1.01)
+    srfc = SimpleFaultSurface.from_fault_data(
+        fault_trace, upper_seismogenic_depth,lower_seismogenic_depth,
+        dip, rupture_mesh_spacing*1.01)
+
     # Creating profiles
     profiles = []
     for i in range(srfc.mesh.shape[1]):
-        tmp = [Point(lo, la, de) for lo, la, de
-               in zip(srfc.mesh.lons[:, i], srfc.mesh.lats[:, i],
-                      srfc.mesh.depths[:, i])]
-        profiles.append(Line(tmp))
+        n = len(srfc.mesh.lons)
+        coo = np.zeros((n, 3))
+        coo[:, 0] = srfc.mesh.lons[:, i]
+        coo[:, 1] = srfc.mesh.lats[:, i]
+        coo[:, 2] = srfc.mesh.depths[:, i]
+        profiles.append(Line.from_coo(coo))
 
     return profiles
 
@@ -940,9 +947,7 @@ def get_coords(line, idl):
     """
     tmp = []
     for p in line:
-        if idl:
-            p.longitude = (p.longitude+360 if p.longitude < 0
-                           else p.longitude)
+        p.longitude = fix_idl(p.longitude, idl)
         tmp.append([p.longitude, p.latitude, p.depth])
     return tmp
 
@@ -985,11 +990,8 @@ def get_mesh(pfs, rfi, sd, idl):
         pl = pfs[i]
 
         # Fixing IDL case
-        if idl:
-            for vpl, ii in enumerate(pl):
-                ptmp = vpl[0]
-                ptmp = ptmp+360 if ptmp < 0 else ptmp
-                pl[ii][0] = ptmp
+        for ii, vpl in enumerate(pl):
+            pl[ii][0] = fix_idl(vpl[0], idl)
 
         # Points in common on the two profiles i.e. points with finite
         # coordinates on both of them
@@ -1001,14 +1003,14 @@ def get_mesh(pfs, rfi, sd, idl):
         # the mesh)
         mxx = 0
         for ll in laidx:
-            if ll is not None:
+            if not np.isnan(ll):
                 mxx = max(mxx, ll)
 
         # Loop over the points in the right profile
         for x in range(0, len(pr[:, 2])):
 
             # If true this edge connects the right and left profiles
-            if x in cmmi and laidx[x] is None:
+            if x in cmmi and np.isnan(laidx[x]):
                 iii = []
                 for li, lv in enumerate(laidx):
                     if lv is not None:
@@ -1019,9 +1021,9 @@ def get_mesh(pfs, rfi, sd, idl):
                 rdist[x] = rdist[minidx]
                 angle[x] = angle[minidx]
             elif x not in cmmi:
-                laidx[x] = None
+                laidx[x] = np.nan
                 rdist[x] = 0
-                angle[x] = None
+                angle[x] = np.nan
 
         # Loop over the indexes of the edges in common for the two profiles
         # starting from the top and going down
@@ -1097,8 +1099,7 @@ def get_mesh(pfs, rfi, sd, idl):
                 la = ll[tidx, 1]
 
                 # Fix longitudes in proximity of the IDL
-                if idl:
-                    lo = lo+360 if lo < 0 else lo
+                lo = fix_idl(lo, idl)
 
                 # Computing depths
                 de = pl[k, 2] + tmp*vdist/hdist
@@ -1219,12 +1220,12 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
         # For each edge in the right profile we compute
         for x in range(0, len(pr[:, 2])):
 
-            # If this index is in cmmi and last index is None the mesh at this
+            # If this index is in cmmi and last index is nan the mesh at this
             # depth starts from this profile
-            if x in cmmi and laidx[x] is None:
+            if x in cmmi and np.isnan(laidx[x]):
                 iii = []
                 for li, lv in enumerate(laidx):
-                    if lv is not None:
+                    if not np.isnan(lv):
                         iii.append(li)
                 iii = np.array(iii)
                 minidx = np.argmin(abs(iii-x))
@@ -1265,9 +1266,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
                 tmp = (j+1)*sd - new_rdist
                 lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
                                   tmp*hdist/tdist*1e3)
-
-                if idl:
-                    lo = lo+360 if lo < 0 else lo
+                lo = fix_idl(lo, idl)
 
                 de = pl[k, 2] + tmp*vdist/hdist
                 npr[laidx[k]+1][k] = [lo, la, de]
@@ -1282,7 +1281,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
                     # This checks that the size of each newly created cell
                     # is similar (within some tolerance) to the intial mesh
                     # size provided by the user
-                    if abs(d-sd) > TOL*sd:
+                    if abs(d - sd) > TOL * sd:
                         tmpf = 'd: {:f} diff: {:f} tol: {:f} sd:{:f}'
                         tmpf += '\nresidual: {:f}'
                         tmps = tmpf.format(d, d-sd, TOL*sd, sd, new_rdist)
