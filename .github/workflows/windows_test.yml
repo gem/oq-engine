@@ -145,7 +145,6 @@ jobs:
       - name: Run all demos
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           Write-Host "Run all demos having only job.ini"
