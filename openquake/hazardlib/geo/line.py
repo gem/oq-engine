@@ -289,17 +289,8 @@ class Line(object):
                 ratio = delta / chk_dst
 
                 while chk_dst > sect_len * 0.9999:
-                    pnt = rtra_prj[-1] + ratio * sect_len
-
-                    # New point
-                    xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
-                                  reverse=True)
-                    rtra.append(np.array([xg[0], yg[0], pnt[2]]))
-                    rtra_prj.append(pnt)
-
-                    # Updating incremental length
+                    update(rtra, rtra_prj, proj, sect_len * ratio)
                     inc_len += sect_len
-
                     # This is the distance between the last resampled point
                     # and the second vertex of the segment
                     chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
