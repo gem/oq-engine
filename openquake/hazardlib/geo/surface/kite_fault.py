@@ -741,23 +741,10 @@ def get_profiles_from_simple_fault_data(
     return profiles
 
 
-def _resample_profile(line, sampling_dist):
-    # TODO split this function into smaller components.
-    """
-    :parameter line:
-        An instance of :class:`openquake.hazardlib.geo.line.Line`
-    :parameter sampling_dist:
-        A scalar defining the distance [km] used to sample the profile
-    :returns:
-        An instance of :class:`openquake.hazardlib.geo.line.Line`
-    """
+def _lo_la_de(line, sampling_dist, g):
     lo = line.coo[:, 0].copy()
     la = line.coo[:, 1].copy()
     de = line.coo[:, 2].copy()
-
-    # Set projection
-    g = Geod(ellps='WGS84')
-
     # Add a tolerance length to the last point of the profile
     # check that final portion of the profile is not vertical
     if abs(lo[-2] - lo[-1]) > 1e-5 and abs(la[-2] - la[-1]) > 1e-5:
@@ -778,8 +765,25 @@ def _resample_profile(line, sampling_dist):
         assert abs(slope-slopec) < 1e-3
     else:
         de[-1] = de[-1] + TOL * sampling_dist
+    return lo, la, de
 
-    # Initialise the cumulated distance
+    
+def _resample_profile(line, sampling_dist):
+    """
+    :parameter line:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    :parameter sampling_dist:
+        A scalar defining the distance [km] used to sample the profile
+    :returns:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    """
+    # Set projection
+    g = Geod(ellps='WGS84')
+
+    # Initialize lo, la, de
+    lo, la, de = _lo_la_de(line, sampling_dist, g)
+
+    # Initialize the cumulated distance
     cdist = 0.
 
     # Get the azimuth of the profile
@@ -795,12 +799,7 @@ def _resample_profile(line, sampling_dist):
     sde = de[idx]
 
     # Resampling
-    while 1:
-
-        # Check loop exit condition
-        if idx > len(lo)-2:
-            break
-
+    while idx <= len(lo) - 2:
         # Compute the distance between the starting point and the next point
         # on the profile
         segment_len = distance(slo, sla, sde, lo[idx+1], la[idx+1], de[idx+1])
@@ -808,7 +807,6 @@ def _resample_profile(line, sampling_dist):
 
         # Search for the point along the profile
         if cdist + segment_len > sampling_dist:
-
             # This is the length of the last segment-fraction needed to
             # obtain the sampling distance
             delta = sampling_dist - cdist
@@ -833,10 +831,9 @@ def _resample_profile(line, sampling_dist):
             if segment_slope > ALMOST_RIGHT_ANGLE:
                 pnts = [np.array([slo, slo]),
                         np.array([sla, sla]),
-                        np.array([sde, sde+delta_v])]
+                        np.array([sde, sde + delta_v])]
             else:
-                pnts = npoints_towards(slo, sla, sde,
-                                       azim, delta_h, delta_v, 2)
+                pnts = npoints_towards(slo, sla, sde, azim, delta_h, delta_v, 2)
 
             # Update the starting point
             slo = pnts[0][-1]
@@ -846,7 +843,6 @@ def _resample_profile(line, sampling_dist):
 
             # Reset the cumulative distance
             cdist = 0.
-
         else:
             cdist += segment_len
             idx += 1
@@ -854,12 +850,17 @@ def _resample_profile(line, sampling_dist):
             sla = la[idx]
             sde = de[idx]
 
-    # Check the distances along the profile
     coo = np.array(resampled_cs)
-    for i in range(0, coo.shape[0]-1):
+    _check_distances(coo, sampling_dist)
+    return Line.from_coo(coo)
+
+
+def _check_distances(coo, sampling_dist):
+    # Check the distances along the profile
+    for i in range(coo.shape[0] - 1):
         dst = distance(coo[i, 0], coo[i, 1], coo[i, 2],
                        coo[i+1, 0], coo[i+1, 1], coo[i+1, 2])
-        if abs(dst-sampling_dist) > 0.1*sampling_dist:
+        if abs(dst - sampling_dist) > 0.1 * sampling_dist:
             msg = 'Distance between points along the profile larger than 10%'
 
             fmt = '\n   Expected {:.2f} Computed {:.2f}'
@@ -873,9 +874,7 @@ def _resample_profile(line, sampling_dist):
             msg += ' points along the profile'
             raise ValueError(msg)
 
-    return Line.from_coo(np.array(resampled_cs))
-
-
+    
 def profiles_depth_alignment(pro1, pro2):
     """
     Find the indexes needed to align the profiles i.e. define profiles whose
