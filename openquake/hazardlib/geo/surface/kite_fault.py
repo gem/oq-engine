@@ -965,7 +965,6 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
 
     # Loop over the points in the right profile
     for x in range(0, len(pr[:, 2])):
-
         # If true this edge connects the right and left profiles
         if x in cmmi and laidx[x] is None:
             iii = np.array([li for li, lv in enumerate(laidx)
@@ -981,7 +980,7 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
 
     # Loop over the indexes of the edges in common for the two profiles
     # starting from the top and going down
-    for k in list(np.nonzero(cmm)[0]):
+    for k in np.nonzero(cmm)[0]:
 
         # Compute distance [km] and azimuth between the corresponding
         # points on the two consecutive profiles
@@ -1001,7 +1000,6 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
                       new_rdist, sd, idl)
         # Adding new points along the edge with index k
         for pnt in coo:
-
             # Add new profile to 'npr' i.e. the list containing the new
             # set of profiles
             if len(npr) - 1 < laidx[k] + 1:
