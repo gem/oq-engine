@@ -1185,15 +1185,16 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
 
     # Projection
     g = Geod(ellps='WGS84')
+    n = len(pfs[0])
 
     # Initialize residual distance and last index lists
-    rdist = [0 for _ in range(0, len(pfs[0]))]
-    laidx = [0 for _ in range(0, len(pfs[0]))]
-    angle = [0 for _ in range(0, len(pfs[0]))]
+    rdist = [0 for _ in range(n)]
+    laidx = [0 for _ in range(n)]
+    angle = [0 for _ in range(n)]
 
     # Create list containing the new profiles. We start by adding the
     # reference profile
-    npr = list([copy.deepcopy(pfs[rfi])])
+    npr = list([pfs[rfi].copy()])
 
     # Run for all the profiles from the reference one backward
     for i in range(rfi, 0, -1):
