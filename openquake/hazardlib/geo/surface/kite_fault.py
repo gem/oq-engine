@@ -1194,7 +1194,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
 
     # Create list containing the new profiles. We start by adding the
     # reference profile
-    npr = list([pfs[rfi].copy()])
+    npr = [pfs[rfi].copy()]
 
     # Run for all the profiles from the reference one backward
     for i in range(rfi, 0, -1):
