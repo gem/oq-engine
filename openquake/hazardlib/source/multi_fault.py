@@ -120,6 +120,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         :param sections: a list of N surfaces
         """
+        import pdb; pdb.set_trace()
         assert sections
 
         # this is fundamental for the distance cache.

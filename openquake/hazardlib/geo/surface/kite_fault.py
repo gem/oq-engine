@@ -44,6 +44,45 @@ def fix_idl(lon, idl):
     return lon + 360 if idl and lon < 0 else lon
 
 
+def _fix_right_hand(mesh):
+    """
+    This method fixes the mesh used to represent the grid surface so
+    that it complies with the right hand rule.
+    """
+    found = False
+    irow = 0
+    icol = 0
+    while not found:
+        if np.all(np.isfinite(mesh.lons[irow:irow+2, icol:icol+2])):
+            found = True
+        else:
+            icol += 1
+            if (icol+1) >= mesh.lons.shape[1]:
+                irow += 1
+                icol = 1
+                if irow + 1 >= mesh.lons.shape[0]:
+                    break
+    if found:
+        azi_strike = azimuth(mesh.lons[irow, icol],
+                             mesh.lats[irow, icol],
+                             mesh.lons[irow, icol+1],
+                             mesh.lats[irow, icol+1])
+        azi_dip = azimuth(mesh.lons[irow, icol],
+                          mesh.lats[irow, icol],
+                          mesh.lons[irow+1, icol],
+                          mesh.lats[irow+1, icol])
+
+        if abs((azi_strike - 90) % 360 - azi_dip) < 40:
+            tlo = np.fliplr(mesh.lons)
+            tla = np.fliplr(mesh.lats)
+            tde = np.fliplr(mesh.depths)
+            return RectangularMesh(tlo, tla, tde)
+        return mesh
+    else:
+        msg = 'Could not find a valid quadrilateral for strike calculation'
+        raise ValueError(msg)
+
+
 def profile_node(points):
     """
     :param points: a list of Point objects
@@ -93,7 +132,7 @@ class KiteSurface(BaseSurface):
             "Mesh must have at least 2 nodes along strike and dip.")
 
         # Make sure the mesh respects the right hand rule
-        self._fix_right_hand()
+        self.mesh = _fix_right_hand(self.mesh)
         self.strike = self.dip = None
         self.width = None
 
@@ -293,44 +332,6 @@ class KiteSurface(BaseSurface):
             polygon, mesh_xx, mesh_yy)
 
         return distances
-
-    def _fix_right_hand(self):
-        """
-        This method fixes the mesh used to represent the grid surface so
-        that it complies with the right hand rule.
-        """
-        found = False
-        irow = 0
-        icol = 0
-        while not found:
-            if np.all(np.isfinite(self.mesh.lons[irow:irow+2, icol:icol+2])):
-                found = True
-            else:
-                icol += 1
-                if (icol+1) >= self.mesh.lons.shape[1]:
-                    irow += 1
-                    icol = 1
-                    if (irow+1) >= self.mesh.lons.shape[0]:
-                        break
-        if found:
-            azi_strike = azimuth(self.mesh.lons[irow, icol],
-                                 self.mesh.lats[irow, icol],
-                                 self.mesh.lons[irow, icol+1],
-                                 self.mesh.lats[irow, icol+1])
-            azi_dip = azimuth(self.mesh.lons[irow, icol],
-                              self.mesh.lats[irow, icol],
-                              self.mesh.lons[irow+1, icol],
-                              self.mesh.lats[irow+1, icol])
-
-            if abs((azi_strike - 90) % 360 - azi_dip) < 40:
-                tlo = np.fliplr(self.mesh.lons)
-                tla = np.fliplr(self.mesh.lats)
-                tde = np.fliplr(self.mesh.depths)
-                mesh = RectangularMesh(tlo, tla, tde)
-                self.mesh = mesh
-        else:
-            msg = 'Could not find a valid quadrilateral for strike calculation'
-            raise ValueError(msg)
 
     def get_width(self) -> float:
         # TODO this method is provisional.  It works correctly for simple and
@@ -1103,8 +1104,7 @@ def get_coo(forward, g, pl, pr, az12, hdist, vdist, tdist, new_rdist, sd, idl):
     if forward:
         # Calculate points between the corresponding nodes on the
         # two profiles
-        ll = g.npts(pl[0], pl[1], pr[0], pr[1],
-                    np.ceil(tdist)*20)
+        ll = g.npts(pl[0], pl[1], pr[0], pr[1], np.ceil(tdist)*20)
         ll = np.array(ll)
         lll = np.ones_like(ll)
         lll[:, 0] = pl[0]
