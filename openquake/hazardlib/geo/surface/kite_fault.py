@@ -1058,7 +1058,7 @@ def get_mesh(pfs, rfi, sd, idl, last=None):
     # Creating a new list used to collect the new profiles which will describe
     # the mesh. We start with the initial profile i.e. the one identified by
     # the reference index rfi
-    npr = [pfs[rfi].copy()]
+    npr = [pfs[rfi]]
     if forw:
         for i in range(rfi, len(pfs) - 1):
             _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, idl,
