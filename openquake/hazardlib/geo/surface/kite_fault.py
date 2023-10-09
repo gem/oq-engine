@@ -1162,6 +1162,18 @@ def update_rdist(rdist, az12, angle, sd):
     return rdist_new
 
 
+def get_coo(g, pl, az12, ndists, hdist, vdist, tdist, new_rdist, sd, idl):
+    coo = np.zeros((ndists, 3))
+    for j in range(ndists):
+        tmp = (j+1) * sd - new_rdist
+        lo, la, _ = g.fwd(pl[0], pl[1], az12,
+                          tmp * hdist / tdist * 1e3)
+        coo[j, 0] = fix_idl(lo, idl)
+        coo[j, 1] = la
+        coo[j, 2] = pl[2] + tmp*vdist/hdist
+    return coo
+
+
 def get_mesh_back(pfs, rfi, sd, idl, last):
     """
     Compute resampled profiles in the backward direction from the reference
@@ -1249,22 +1261,15 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
 
             # Calculate the number of cells
             ndists = int(np.floor((tdist+new_rdist)/sd))
-
+            coo = get_coo(
+                g, pl[k], az12, ndists, hdist, vdist, tdist, new_rdist, sd, idl)
             # Adding new points along edge with index k
-            for j, _ in enumerate(range(ndists)):
+            for j in range(ndists):
 
                 # add new profile
                 if len(npr)-1 < laidx[k]+1:
                     add_empty_profile(npr)
-
-                # fix distance
-                tmp = (j+1)*sd - new_rdist
-                lo, la, _ = g.fwd(pl[k, 0], pl[k, 1], az12,
-                                  tmp * hdist / tdist * 1e3)
-                lo = fix_idl(lo, idl)
-
-                de = pl[k, 2] + tmp*vdist/hdist
-                npr[laidx[k]+1][k] = [lo, la, de]
+                npr[laidx[k]+1][k] = coo[j]
 
                 if (k > 0 and np.all(np.isfinite(npr[laidx[k]+1][k])) and
                         np.all(np.isfinite(npr[laidx[k]][k]))):
