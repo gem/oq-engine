@@ -44,7 +44,7 @@ def fix_idl(lon, idl):
     return lon + 360 if idl and lon < 0 else lon
 
 
-def _fix_right_hand(mesh):
+def _fix_right_hand(lons, lats, depths):
     """
     This method fixes the mesh used to represent the grid surface so
     that it complies with the right hand rule.
@@ -53,31 +53,31 @@ def _fix_right_hand(mesh):
     irow = 0
     icol = 0
     while not found:
-        if np.all(np.isfinite(mesh.lons[irow:irow+2, icol:icol+2])):
+        if np.all(np.isfinite(lons[irow:irow+2, icol:icol+2])):
             found = True
         else:
             icol += 1
-            if (icol+1) >= mesh.lons.shape[1]:
+            if icol + 1 >= lons.shape[1]:
                 irow += 1
                 icol = 1
-                if irow + 1 >= mesh.lons.shape[0]:
+                if irow + 1 >= lons.shape[0]:
                     break
     if found:
-        azi_strike = azimuth(mesh.lons[irow, icol],
-                             mesh.lats[irow, icol],
-                             mesh.lons[irow, icol+1],
-                             mesh.lats[irow, icol+1])
-        azi_dip = azimuth(mesh.lons[irow, icol],
-                          mesh.lats[irow, icol],
-                          mesh.lons[irow+1, icol],
-                          mesh.lats[irow+1, icol])
+        azi_strike = azimuth(lons[irow, icol],
+                             lats[irow, icol],
+                             lons[irow, icol+1],
+                             lats[irow, icol+1])
+        azi_dip = azimuth(lons[irow, icol],
+                          lats[irow, icol],
+                          lons[irow+1, icol],
+                          lats[irow+1, icol])
 
         if abs((azi_strike - 90) % 360 - azi_dip) < 40:
-            tlo = np.fliplr(mesh.lons)
-            tla = np.fliplr(mesh.lats)
-            tde = np.fliplr(mesh.depths)
-            return RectangularMesh(tlo, tla, tde)
-        return mesh
+            tlo = np.fliplr(lons)
+            tla = np.fliplr(lats)
+            tde = np.fliplr(depths)
+            return tlo, tla, tde
+        return
     else:
         msg = 'Could not find a valid quadrilateral for strike calculation'
         raise ValueError(msg)
@@ -132,7 +132,9 @@ class KiteSurface(BaseSurface):
             "Mesh must have at least 2 nodes along strike and dip.")
 
         # Make sure the mesh respects the right hand rule
-        self.mesh = _fix_right_hand(self.mesh)
+        args = _fix_right_hand(self.mesh.lons, self.mesh.lats, self.mesh.depths)
+        if args is not None:
+            self.mesh = RectangularMesh(*args)
         self.strike = self.dip = None
         self.width = None
 
