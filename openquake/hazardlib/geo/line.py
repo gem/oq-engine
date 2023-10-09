@@ -34,27 +34,25 @@ def _update(rtra, rtra_prj, proj, pnt):
 
 
 def _resample(coo, sect_len, orig_extremes):
+    # returns array of resampled trace coordinates
+
     N = len(coo)
     if N < 2:
         raise ValueError('The line contains less than two points')
 
-    # Project the coordinates
-    west, east, north, south = utils.get_spherical_bounding_box(
-        coo[:, 0], coo[:, 1])
-    proj = utils.OrthographicProjection(west, east, north, south)
-
     # Project the coordinates of the trace
+    sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+    proj = utils.OrthographicProjection(*sbb)
     txy = coo.copy()
     txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
-
-    # Initialise the list where we store the coordinates of the resampled
-    # trace
-    rtra_prj = [txy[0]]
-    rtra = [coo[0]]
 
     # Compute the total length of the original trace
     tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
     inc_len = 0.
+
+    # Initialize the lists with the coordinates of the resampled trace
+    rtra_prj = [txy[0]]
+    rtra = [coo[0]]
 
     # Resampling
     idx_vtx = -1
@@ -62,9 +60,8 @@ def _resample(coo, sect_len, orig_extremes):
 
         # Computing distances from the reference point
         dis = utils.get_dist(txy, rtra_prj[-1])
-
-        # Fixing distances for points before the index
         if idx_vtx > 0:
+            # Fixing distances for points before the index
             dis[0:idx_vtx] = 100000
 
         # Index of the point on the trace with a distance just below the

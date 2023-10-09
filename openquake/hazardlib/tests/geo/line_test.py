@@ -84,7 +84,7 @@ class LineResampleTestCase(unittest.TestCase):
         # (with spacing of 50 km) consistent with the number of points
         # as predicted by n = round(20 / 50) + 1, therefore a ValueError
         # is raised.
-        raise unittest.SkipTest('To investigate')
+        raise unittest.SkipTest('TODO: investigate why not ValueError')
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.0, 0.089932202939476777)
         p3 = geo.Point(0.0, 0.1798644058789465)
