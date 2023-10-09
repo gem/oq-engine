@@ -595,7 +595,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     prfl = []
     last = False if ref_idx < len(rprof) - 1 else True
     if ref_idx > 0:
-        prfl = get_mesh_back(rprof, ref_idx, edge_sd, idl, last)
+        prfl = get_mesh(rprof, ref_idx, edge_sd, idl, last)
     prf = prfl + prfr
 
     # Create the whole mesh
@@ -1030,7 +1030,7 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
         assert rdist[k] < sd
     
 
-def get_mesh(pfs, rfi, sd, idl):
+def get_mesh(pfs, rfi, sd, idl, last=None):
     """
     From a set of profiles creates the mesh in the forward direction from the
     reference profile.
@@ -1047,6 +1047,7 @@ def get_mesh(pfs, rfi, sd, idl):
         An updated list of the profiles i.e. a list of
         :class:`openquake.hazardlib.geo.line.Line` instances
     """
+    forw = last is None
     g = Geod(ellps='WGS84')
     n = len(pfs[0])
 
@@ -1058,43 +1059,14 @@ def get_mesh(pfs, rfi, sd, idl):
     # the mesh. We start with the initial profile i.e. the one identified by
     # the reference index rfi
     npr = [pfs[rfi].copy()]
-    for i in range(rfi, len(pfs) - 1):
-        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, idl, True)
-    return npr
-
-
-def get_mesh_back(pfs, rfi, sd, idl, last):
-    """
-    Compute resampled profiles in the backward direction from the reference
-    profile and creates the portion of the mesh 'before' the reference profile.
-
-    :param list pfs:
-        Original profiles. Each profile is a :class:`numpy.ndarray` instance
-        with 3 columns and as many rows as the number of points included
-    :param int rfi:
-        Index of the reference profile
-    :param sd:
-        Sampling distance [in km] along the strike
-    :param boolean idl:
-        A flag used to specify cases where the model crosses the IDL
-    :returns:
-        A list of new profiles
-    """
-    # Projection
-    g = Geod(ellps='WGS84')
-    n = len(pfs[0])
-
-    # Initialize residual distance and last index lists
-    rdist = np.zeros(n)
-    angle = np.zeros(n)
-    laidx = [0 for _ in range(n)]
-
-    # Create list containing the new profiles. We start by adding the
-    # reference profile
-    npr = [pfs[rfi].copy()]
+    if forw:
+        for i in range(rfi, len(pfs) - 1):
+            _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, idl,
+                    forw)
+        return npr
     for i in range(rfi, 0, -1):
-        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i-1], sd, idl, False)
-
+        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i-1], sd, idl,
+                forw)
     return [npr[i] for i in range(len(npr) - 1, -1 if last else 0, -1)]
 
 
