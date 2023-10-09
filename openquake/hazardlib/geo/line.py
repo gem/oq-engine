@@ -105,7 +105,7 @@ def _resample(coo, sect_len, orig_extremes):
         # Updating index
         idx_vtx = idx + 1
 
-    return np.array(rtra)
+    return np.array(utils.clean_points(rtra))
 
 
 class Line(object):
@@ -123,6 +123,10 @@ class Line(object):
 
     @classmethod
     def from_coo(cls, coo):
+        """
+        Build a Line object for an array of coordinates, assuming they have
+        e been cleaned already, i.e. there are no adjacent duplicate points
+        """
         self = cls.__new__(cls)
         self.coo = coo
         self.coo.flags.writeable = False  # avoid dirty coding
@@ -130,9 +134,6 @@ class Line(object):
 
     def __init__(self, points):
         self.points = utils.clean_points(points)  # can remove points!
-        if len(self.points) < 2:
-            raise ValueError(
-                "At least two distinct points are needed for a line!")
         self.coo = np.array([[p.longitude, p.latitude, p.depth]
                              for p in self.points])
         self.coo.flags.writeable = False  # avoid dirty coding
@@ -356,7 +357,7 @@ class Line(object):
         :returns:
             A new line with that many points as requested.
         """
-        assert len(self.points) > 1, "can not resample the line of one point"
+        assert len(self.coo) > 1, "can not resample the line of one point"
         section_length = self.get_length() / (num_points - 1)
         resampled_points = [self.points[0]]
         segment = 0

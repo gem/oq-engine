@@ -125,7 +125,6 @@ class _GeographicObjects(object):
     It is possible to extract the closest object to a given location by
     calling the method .get_closest(lon, lat).
     """
-
     def __init__(self, objects):
         self.objects = objects
         if hasattr(objects, 'lons'):
@@ -323,16 +322,24 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
 
 def clean_points(points):
     """
-    Given a list of :class:`~openquake.hazardlib.geo.point.Point` objects,
-    return a new list with adjacent duplicate points removed.
+    Given a list of points, return a new list with adjacent duplicate points
+    removed.
+
+    :param points: a list of Point instances or a list of 3D arrays
     """
+    msg = 'At least two distinct points are needed for a line!'
     if not points:
-        return points
+        raise ValueError(msg)
 
     result = [points[0]]
-    for point in points:
-        if point != result[-1]:
+    isarray = isinstance(points[0], numpy.ndarray)
+    for point in points[1:]:
+        ok = isarray and (point != result[-1]).any() or point != result[-1]
+        if ok:  # different from the previous point
             result.append(point)
+
+    if len(result) < 2:
+        raise ValueError(msg)
     return result
 
 
