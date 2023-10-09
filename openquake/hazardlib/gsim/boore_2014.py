@@ -237,6 +237,21 @@ def _get_style_of_faulting_term(C, ctx):
     res[(ctx.rake > 30.) & (ctx.rake < 150.)] = C["e3"]
     return res
 
+def get_epistemic_sigma(ctx):
+    """This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are counted in each magnitude and distance bins.
+    However, the epistemic sigma is based on NZ SMDB v1.0"""
+
+    n = 2
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
+
+    return sigma_epi
+
 
 class BooreEtAl2014(GMPE):
     """
@@ -272,10 +287,11 @@ class BooreEtAl2014(GMPE):
 
     kind = "base"
 
-    def __init__(self, region='nobasin', sof=True, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(sigma_mu_epsilon = sigma_mu_epsilon, **kwargs)
         self.region = region
         self.sof = sof
+        self.sigma_mu_epsilon = sigma_mu_epsilon
         if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
@@ -295,6 +311,8 @@ class BooreEtAl2014(GMPE):
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
                                   C, pga_rock, ctx, imt.period, ctx.rjb))
+            if self.sigma_mu_epsilon:
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

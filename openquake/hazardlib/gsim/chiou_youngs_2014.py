@@ -428,7 +428,20 @@ def get_mean_stddevs(name, C, ctx):
 
     return mean, sig, tau, phi
 
+def get_epistemic_sigma(ctx):
+    """This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are counted in each magnitude and distance bins.
+    However, the epistemic sigma is based on NZ SMDB v1.0"""
 
+    n = 2
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
+
+    return sigma_epi
 class ChiouYoungs2014(GMPE):
     """
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
@@ -470,6 +483,10 @@ class ChiouYoungs2014(GMPE):
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
+    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, **kwargs)
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -482,6 +499,7 @@ class ChiouYoungs2014(GMPE):
         for m, imt in enumerate(imts):
             if repr(imt) == "PGA":
                 mean[m] = pga_mean
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 imt_mean, imt_sig, imt_tau, imt_phi = \
@@ -492,6 +510,8 @@ class ChiouYoungs2014(GMPE):
                 mean[m] = np.where(imt_mean < pga_mean, pga_mean, imt_mean) \
                     if repr(imt).startswith("SA") and imt.period <= 0.3 \
                     else imt_mean
+
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 

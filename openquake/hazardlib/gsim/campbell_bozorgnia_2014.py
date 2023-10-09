@@ -364,6 +364,20 @@ def _update_ctx(gsim, ctx):
                 np.log(0.9 * (zbor[mask] - ctx.ztor[mask]))))
         ctx.hypo_depth = ctx.ztor + dz
 
+def get_epistemic_sigma(ctx):
+    """This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are counted in each magnitude and distance bins.
+    However, the epistemic sigma is based on NZ SMDB v1.0"""
+
+    n = 2
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
+
+    return sigma_epi
 
 class CampbellBozorgnia2014(GMPE):
     """
@@ -403,11 +417,12 @@ class CampbellBozorgnia2014(GMPE):
 
     SJ = 0  # 1 for Japan
 
-    def __init__(self, **kwargs):
+    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
         self.kwargs = kwargs
         self.estimate_ztor = int(kwargs.get('estimate_ztor', 0))
         self.estimate_width = int(kwargs.get('estimate_width', 0))
         self.estimate_hypo_depth = int(kwargs.get('estimate_hypo_depth', 0))
+        self.sigma_mu_epsilon = sigma_mu_epsilon
 
         if self.estimate_width:
             # To estimate a width, the GMPE needs Zbot
@@ -431,6 +446,7 @@ class CampbellBozorgnia2014(GMPE):
             C = self.COEFFS[imt]
             # Get mean and standard deviations for IMT
             mean[m] = get_mean_values(self.SJ, C, ctx, pga1100)
+            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             if imt.string[:2] == "SA" and imt.period < 0.25:
                 # According to Campbell & Bozorgnia (2013) [NGA West 2 Report]
                 # If Sa (T) < PGA for T < 0.25 then set mean Sa(T) to mean PGA
@@ -438,6 +454,7 @@ class CampbellBozorgnia2014(GMPE):
                 pga = get_mean_values(self.SJ, C_PGA, ctx, pga1100)
                 idx = mean[m] <= pga
                 mean[m, idx] = pga[idx]
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
 
             # Get stddevs for PGA on basement rock
             tau_lnpga_b = _get_taulny(C_PGA, ctx.mag)

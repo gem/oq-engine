@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2014-2022 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -421,9 +421,76 @@ def get_basin_response_term(C, region, vs30, z_value):
     if not np.any(mask):
         # No basin amplification to be applied
         return 0.0
-    brt[mask] = c11 + c12 * (np.log(z_value[mask]) -
+    if region == "NZL": # Personal communication with Nico. We need to use the NZ specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
+        brt[mask] = c11 + c12 * (_get_ln_z_ref(CZ, vs30[mask]) -
+                                     _get_ln_z_ref(CZ, vs30[mask]))
+    else:
+        brt[mask] = c11 + c12 * (np.log(z_value[mask]) -
                              _get_ln_z_ref(CZ, vs30[mask]))
     return brt
+
+def get_partial_derivative_site_pga(C, vs30, pga1100):
+    """
+    Defines the partial derivative of the site term with respect to the PGA on reference rock. Note that this is taken
+    from AG20. The only difference is Vsref which is 1000 m/s in AG20. This function is added to get the nonlinear
+    correction in aleatory sigma given below.
+    """
+    dfsite_dlnpga = np.zeros(vs30.shape)
+    idx = vs30 <= C["k1"]
+    vnorm = vs30[idx] / C["k1"]
+    dfsite_dlnpga[idx] = C["k2"] * pga1100 * (
+        (-1.0 / (pga1100 + CONSTS["c"])) +
+        (1.0 / (pga1100 + CONSTS["c"] * (vnorm ** CONSTS["n"])))
+        )
+    return dfsite_dlnpga
+
+def get_nonlinear_stddevs(C, C_PGA, imt, vs30, pga1100):
+    """
+    Get the heteroskedastic within-event and between-event standard deviation. This routine gives the aleatory sigma
+    values corrected for nonlinearity in the soil response.
+    """
+    period = imt.period
+
+    # Correlation coefficients from AG20
+    periods_AG20 = [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0]
+    rho_Ws = [1.0, 0.99, 0.99, 0.97, 0.95, 0.92, 0.9, 0.87, 0.84, 0.82, 0.74, 0.66, 0.59, 0.5, 0.41, 0.33, 0.3, 0.27, 0.25, 0.22, 0.19, 0.17, 0.14, 0.1]
+    rho_Bs = [1.0, 0.99, 0.99, 0.985, 0.98, 0.97, 0.96, 0.94, 0.93, 0.91, 0.86, 0.8, 0.78, 0.73, 0.69, 0.62, 0.56, 0.52, 0.495, 0.43, 0.4, 0.37, 0.32, 0.28]
+
+    rho_W_itp = interp1d(np.log(periods_AG20), rho_Ws)
+    rho_B_itp = interp1d(np.log(periods_AG20), rho_Bs)
+    if period < 0.01:
+        rhoW = 1.0
+        rhoB = 1.0
+    else:
+        rhoW = rho_W_itp(np.log(period))
+        rhoB = rho_B_itp(np.log(period))
+
+    # Get linear tau and phi
+    tau_lin = C["tau"]*np.ones(vs30.shape)
+    tau_lin_pga = C_PGA["tau"]*np.ones(vs30.shape)
+    phi_lin = C["phi"]*np.ones(vs30.shape)
+    phi_lin_pga = C_PGA["phi"]*np.ones(vs30.shape)
+    # Find the sites where nonlinear site terms apply
+    idx = vs30 <= C["k1"]
+    # Process the nonlinear site terms
+    phi_amp = 0.3
+    partial_f_pga = get_partial_derivative_site_pga(C, vs30[idx], pga1100[idx])
+    phi_b = np.sqrt(phi_lin[idx] ** 2.0 - phi_amp ** 2.0)
+    phi_b_pga = np.sqrt(phi_lin_pga[idx] ** 2.0 - phi_amp ** 2.0)
+
+    # Get nonlinear tau and phi terms
+    tau = tau_lin.copy()
+    phi = phi_lin.copy()
+    tau_nl_sq = tau_lin[idx]**2 + (partial_f_pga ** 2.0) * tau_lin_pga[idx]**2 +\
+                (2.0 * partial_f_pga * tau_lin_pga[idx]*tau_lin[idx]*rhoB)
+
+    phi_nl_sq = (phi_lin[idx] ** 2.0) + (partial_f_pga ** 2.0) * (phi_b_pga ** 2.0) +\
+        (2.0 * partial_f_pga * phi_b_pga * phi_b * rhoW)
+    tau[idx] = np.sqrt(tau_nl_sq)
+    phi[idx] = np.sqrt(phi_nl_sq)
+    sigma = np.sqrt(tau**2 + phi**2)
+
+    return sigma, tau, phi
 
 
 def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
@@ -443,7 +510,7 @@ def get_mean_values(C, region, trt, m_b, ctx, a1100=None):
         vs30 = ctx.vs30.copy()
         if region in ("JPN", "CAS"):
             z_values = ctx.z2pt5 * 1000.0
-        elif region in ("NZL", "TWN"):
+        elif region in ("TWN"):
             z_values = ctx.z1pt0.copy()
         else:
             z_values = np.zeros(vs30.shape)
@@ -530,41 +597,30 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     :returns:
         sigma_mu for the scenarios (numpy.ndarray)
     """
+
+    # No correction factor needed
     if not model:
-        return np.zeros_like(mag)
-
-    # Get the correct sigma_mu model
-    is_SA = imt.string not in "PGA PGV"
-    sigma_mu_model = model["SA"] if is_SA else model[imt.string]
-
-    model_m = model["M"]
-    model_r = model["R"]
-
-    # Extend the sigma_mu_model as needed
-    # Prevents having to deal with values
-    # outside the model range manually
-    if np.any(mag > model["M"][-1]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model, sigma_mu_model[-1, :][np.newaxis, :]), axis=0)
-        model_m = np.concatenate((model_m, [mag.max()]), axis=0)
-    if np.any(mag < model["M"][0]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model[0, :][np.newaxis, :], sigma_mu_model), axis=0)
-        model_m = np.concatenate(([mag.min()], model_m), axis=0)
-    if np.any(rrup > model["R"][-1]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model, sigma_mu_model[:, -1][:, np.newaxis]), axis=1)
-        model_r = np.concatenate((model_r, [rrup.max()]), axis=0)
-    if np.any(rrup < model["R"][0]):
-        sigma_mu_model = np.concatenate(
-            (sigma_mu_model[:, 0][:, np.newaxis], sigma_mu_model), axis=1)
-        model_r = np.concatenate(([rrup.min()], model_r), axis=0)
-
+        return 0.0
     if imt.string in "PGA PGV":
-        # Linear interpolation
-        interp = RegularGridInterpolator(
-            (model_m, model_r), sigma_mu_model, bounds_error=True,)
-        sigma_mu = interp(np.stack((mag, rrup), axis=1))
+        # PGA and PGV are 2D arrays of dimension [nmags, ndists]
+        sigma_mu = model[imt.string]
+        if mag <= model["M"][0]:
+            sigma_mu_m = sigma_mu[0, :]
+        elif mag >= model["M"][-1]:
+            sigma_mu_m = sigma_mu[-1, :]
+        else:
+            intpl1 = interp1d(model["M"], sigma_mu, axis=0)
+            sigma_mu_m = intpl1(mag)
+        # Linear interpolation with distance
+        intpl2 = interp1d(model["R"], sigma_mu_m, bounds_error=False,
+                          fill_value=(sigma_mu_m[0], sigma_mu_m[-1]))
+        return intpl2(rrup)
+    # In the case of SA the array is of dimension [nmags, ndists, nperiods]
+    # Get values for given magnitude
+    if mag <= model["M"][0]:
+        sigma_mu_m = model["SA"][0, :, :]
+    elif mag >= model["M"][-1]:
+        sigma_mu_m = model["SA"][-1, :, :]
     else:
         model_t = model["periods"]
 
@@ -586,6 +642,47 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
 
     return sigma_mu
 
+def get_backarc_term(trt, imt, ctx):
+
+    """ The backarc correction factors to be applied with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab events.
+    It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016) Earthquake Spectra.
+    The correction is applied only for backarc sites as function of distance."""
+
+    periods =  [0.0, 0.02, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0]
+    theta7s = [1.0988, 1.0988, 1.2536, 1.4175, 1.3997, 1.3582, 1.1648, 0.994, 0.8821, 0.7046, 0.5799, 0.5021, 0.3687, 0.1746,
+       -0.082 , -0.2821, -0.4108, -0.4466, -0.4344, -0.4368, -0.4586, -0.4433, -0.4828]
+    theta8s = [-1.42, -1.42, -1.65, -1.8 , -1.8 , -1.69, -1.49, -1.3 , -1.18, -0.98, -0.82, -0.7 , -0.54, -0.34, -0.05,  0.12,  0.25,  0.3,
+        0.3,  0.3,  0.3,  0.3,  0.3]
+    period  = imt.period
+
+    w_epi_factor = 1.008
+
+    theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
+    theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
+    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0 for periods < 0.
+    if period < 0:
+        theta7 = 0.0
+        theta8 = 0.0
+    elif (period >= 0 and period < 0.02):
+        theta7 = 1.0988
+        theta8 = -1.42
+    else:
+        theta7 = theta7_itp(np.log(period))
+        theta8 = theta8_itp(np.log(period))
+
+    dists = ctx.rrup
+
+    if trt == const.TRT.SUBDUCTION_INTRASLAB:
+        min_dist = 85.0
+        backarc = np.bool_(ctx.backarc)
+        f_faba = np.zeros_like(dists)
+        fixed_dists = dists[backarc]
+        fixed_dists[fixed_dists < min_dist] = min_dist
+        f_faba[backarc] = theta7 + theta8*np.log(fixed_dists/40.0)
+        return f_faba*w_epi_factor
+    else:
+        f_faba = np.zeros_like(dists)
+        return f_faba
 
 class KuehnEtAl2020SInter(GMPE):
     """
@@ -666,22 +763,24 @@ class KuehnEtAl2020SInter(GMPE):
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, which_sigma = "Original", **kwargs):
+        super().__init__(which_sigma = which_sigma, **kwargs)
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
             (region, self.__class__.__name__)
         self.region = region
+        self.which_sigma = which_sigma
 
         # For some regions a basin depth term is defined
         if self.region in ("CAS", "JPN"):
             # If region is CAS or JPN then the GMPE needs Z2.5
             self.REQUIRES_SITES_PARAMETERS = \
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
-        elif self.region in ("NZL", "TWN"):
+        elif self.region in ("TWN"):
             # If region is NZL or TWN then the GMPE needs Z1.0
-            self.REQUIRES_SITES_PARAMETERS |= {"z1pt0"}
+            self.REQUIRES_SITES_PARAMETERS = \
+                 self.REQUIRES_SITES_PARAMETERS.union({"z1pt0", })
         else:
             pass
 
@@ -714,7 +813,7 @@ class KuehnEtAl2020SInter(GMPE):
 
         # Get PGA on rock
         pga1100 = np.exp(get_mean_values(
-            C_PGA, self.region, trt, m_b, ctx, None))
+            C_PGA, self.region, trt, m_b, ctx, None) + get_backarc_term(trt, PGA(), ctx))
         # For PGA and SA ( T <= 0.1 ) we need to define PGA on soil to
         # ensure that SA ( T ) does not fall below PGA on soil
         pga_soil = None
@@ -722,7 +821,7 @@ class KuehnEtAl2020SInter(GMPE):
             if ("PGA" in imt.string) or (("SA" in imt.string) and
                                          (imt.period <= 0.1)):
                 pga_soil = get_mean_values(C_PGA, self.region, trt, m_b,
-                                           ctx, pga1100)
+                                           ctx, pga1100) + get_backarc_term(trt, PGA(), ctx)
                 break
 
         for m, imt in enumerate(imts):
@@ -736,22 +835,25 @@ class KuehnEtAl2020SInter(GMPE):
             elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
                 mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100)
+                                          ctx, pga1100) + get_backarc_term(trt, imt, ctx)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
                 mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100)
+                                          ctx, pga1100) + get_backarc_term(trt, imt, ctx)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
-                sigma_mu_adjust = get_sigma_mu_adjustment(
-                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
+                #[mag] = np.unique(np.round(ctx.mag, 2))
+                sigma_mu_adjust = get_sigma_mu_adjustment(self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
-            tau[m] = C["tau"]
-            phi[m] = C["phi"]
-            sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
+            if self.which_sigma == "Modified":
+                sig[m], tau[m], phi[m] = get_nonlinear_stddevs(C, C_PGA, imt, ctx.vs30, pga1100)
+            else:
+                tau[m] = C["tau"]
+                phi[m] = C["phi"]
+                sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
     # Coefficients in external file - supplied directly by the author
     COEFFS = CoeffsTable(sa_damping=5, table=open(KUEHN_COEFFS).read())
@@ -775,6 +877,8 @@ class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
 
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
 
 # For the aliases use the verbose form of the region name

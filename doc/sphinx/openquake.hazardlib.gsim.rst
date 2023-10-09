@@ -172,6 +172,14 @@ atkinson_2015
     :undoc-members:
     :show-inheritance:
 
+atkinson_2022
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.atkinson_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 atkinson_boore_1995
 ---------------------------------------------------
 
@@ -968,6 +976,14 @@ parker_2020
     :undoc-members:
     :show-inheritance:
 
+parker_2021
+---------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.parker_2021
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pezeshk_2011
 --------------------------------------------
 
@@ -1092,6 +1108,14 @@ somerville_2009
 -----------------------------------------------
 
 .. automodule:: openquake.hazardlib.gsim.somerville_2009
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+stafford_2022
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.stafford_2022
     :members:
     :undoc-members:
     :show-inheritance:

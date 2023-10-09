@@ -440,6 +440,20 @@ def _interp_function(y_ip1, y_i, t_ip1, t_i, imt_per):
     """
     return y_i + (y_ip1 - y_i) / (t_ip1 - t_i) * (imt_per - t_i)
 
+def get_epistemic_sigma(ctx):
+    """This function gives the epistemic sigma computed following USGS-2014 approach. Also, note that the events are counted in each magnitude and distance bins.
+    However, the epistemic sigma is based on NZ SMDB v1.0"""
+
+    n = 2
+    dist_func_5_6 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/11), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/38), 0.4*np.sqrt(n/94)))
+
+    dist_func_6_7 = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/7), 0.4*np.sqrt(n/13)))
+
+    dist_func_7_above = np.where(ctx.rrup <=10, 0.4*np.sqrt(n/2), np.where((ctx.rrup > 10) & (ctx.rrup <30), 0.4*np.sqrt(n/2), 0.4*np.sqrt(n/4)))
+
+    sigma_epi = np.where((ctx.mag>=5) & (ctx.mag<6), dist_func_5_6, np.where((ctx.mag >=6) & (ctx.mag < 7), dist_func_6_7, dist_func_7_above))
+
+    return sigma_epi
 
 class Bradley2013(GMPE):
     """
@@ -491,6 +505,10 @@ class Bradley2013(GMPE):
 
     additional_sigma = 0.
 
+    def __init__(self, sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(sigma_mu_epsilon=sigma_mu_epsilon, **kwargs)
+        self.sigma_mu_epsilon = sigma_mu_epsilon
+
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
@@ -510,6 +528,8 @@ class Bradley2013(GMPE):
             # amplification is constant
             v1 = _get_v1(imt)
             mean[m] = _get_mean(ctx, C, ln_y_ref, exp1, exp2, v1)
+
+            mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             set_stddevs(self.additional_sigma, ctx, C, ln_y_ref, exp1, exp2,
                         sig[m], tau[m], phi[m])
 
