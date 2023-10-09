@@ -27,8 +27,7 @@ from openquake.hazardlib.geo import Point
 TOLERANCE = 0.1
 
 
-def update(rtra, rtra_prj, proj, delta):
-    pnt = rtra_prj[-1] + delta
+def update(rtra, rtra_prj, proj, pnt):
     xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]), reverse=True)
     rtra.append(np.array([xg[0], yg[0], pnt[2]]))
     rtra_prj.append(pnt)
@@ -270,26 +269,17 @@ class Line(object):
             if idx < len(dis) - 1:
                 pnt = find_t(
                     txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
-
                 if pnt is None:
                     raise ValueError('Did not find the intersection')
-
-                # Update the list of coordinates
-                xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
-                              reverse=True)
-                rtra.append(np.array([xg[0], yg[0], pnt[2]]))
-                rtra_prj.append(pnt)
-
-                # Updating incremental length
+                update(rtra, rtra_prj, proj, pnt)
                 inc_len += sect_len
 
                 # Adding more points still on the same segment
                 delta = txy[idx + 1] - rtra_prj[-1]
                 chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
-                ratio = delta / chk_dst
-
+                rat = delta / chk_dst
                 while chk_dst > sect_len * 0.9999:
-                    update(rtra, rtra_prj, proj, sect_len * ratio)
+                    update(rtra, rtra_prj, proj, rtra_prj[-1] + sect_len * rat)
                     inc_len += sect_len
                     # This is the distance between the last resampled point
                     # and the second vertex of the segment
@@ -300,7 +290,8 @@ class Line(object):
                     # Adding more points still on the same segment
                     delta = txy[-1] - txy[-2]
                     chk_dst = utils.get_dist(txy[-1], txy[-2])
-                    update(rtra, rtra_prj, proj, sect_len * delta / chk_dst)
+                    update(rtra, rtra_prj, proj, rtra_prj[-1] +
+                           sect_len * delta / chk_dst)
                     inc_len += sect_len
                 elif orig_extremes:
                     # Adding last point
