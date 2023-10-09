@@ -980,7 +980,7 @@ def get_mesh(pfs, rfi, sd, idl):
     # Creating a new list used to collect the new profiles which will describe
     # the mesh. We start with the initial profile i.e. the one identified by
     # the reference index rfi
-    npr = list([copy.copy(pfs[rfi])])
+    npr = [pfs[rfi].copy()]
 
     # Run for all the profiles 'after' the reference one
     for i in range(rfi, len(pfs)-1):
@@ -1003,17 +1003,17 @@ def get_mesh(pfs, rfi, sd, idl):
         # the mesh)
         mxx = 0
         for ll in laidx:
-            if not np.isnan(ll):
+            if ll is not None:
                 mxx = max(mxx, ll)
 
         # Loop over the points in the right profile
         for x in range(0, len(pr[:, 2])):
 
             # If true this edge connects the right and left profiles
-            if x in cmmi and np.isnan(laidx[x]):
+            if x in cmmi and laidx[x] is None:
                 iii = []
                 for li, lv in enumerate(laidx):
-                    if not np.isnan(lv):
+                    if lv is not None:
                         iii.append(li)
                 iii = np.array(iii)
                 minidx = np.argmin(abs(iii-x))
@@ -1213,7 +1213,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
         cmmi = np.nonzero(cmm)[0].astype(int)
         mxx = 0
         for ll in laidx:
-            if not np.isnan(ll):
+            if ll is not None:
                 mxx = max(mxx, ll)
 
         # For each edge in the right profile we compute
@@ -1221,10 +1221,10 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
 
             # If this index is in cmmi and last index is nan the mesh at this
             # depth starts from this profile
-            if x in cmmi and np.isnan(laidx[x]):
+            if x in cmmi and laidx[x] is None:
                 iii = []
                 for li, lv in enumerate(laidx):
-                    if not np.isnan(lv):
+                    if lv is not None:
                         iii.append(li)
                 iii = np.array(iii)
                 minidx = np.argmin(abs(iii-x))
@@ -1232,9 +1232,9 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
                 rdist[x] = rdist[minidx]
                 angle[x] = angle[minidx]
             elif x not in cmmi:
-                laidx[x] = np.nan
+                laidx[x] = None
                 rdist[x] = 0
-                angle[x] = np.nan
+                angle[x] = None
 
         # Loop over the points in common between the two profiles
         for k in list(np.nonzero(cmm)[0]):
