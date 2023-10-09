@@ -1017,9 +1017,9 @@ def get_mesh(pfs, rfi, sd, idl):
                 rdist[x] = rdist[minidx]
                 angle[x] = angle[minidx]
             elif x not in cmmi:
-                laidx[x] = np.nan
+                laidx[x] = None
                 rdist[x] = 0.
-                angle[x] = np.nan
+                angle[x] = None
 
         # Loop over the indexes of the edges in common for the two profiles
         # starting from the top and going down
