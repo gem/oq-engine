@@ -727,7 +727,7 @@ def get_profiles_from_simple_fault_data(
     """
 
     # Avoids singularity
-    if np.abs(dip-90.) < 1e-5:
+    if np.abs(dip - 90.) < 1e-5:
         dip = 89.9
 
     # Get simple fault surface
@@ -737,8 +737,8 @@ def get_profiles_from_simple_fault_data(
 
     # Creating profiles
     profiles = []
-    for i in range(srfc.mesh.shape[1]):
-        n = len(srfc.mesh.lons)
+    n, m = srfc.mesh.shape
+    for i in range(m):
         coo = np.zeros((n, 3))
         coo[:, 0] = srfc.mesh.lons[:, i]
         coo[:, 1] = srfc.mesh.lats[:, i]
@@ -1181,9 +1181,8 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
     :param boolean idl:
         A flag used to specify cases where the model crosses the IDL
     :returns:
-
+        A list of new profiles
     """
-
     # Projection
     g = Geod(ellps='WGS84')
     n = len(pfs[0])
