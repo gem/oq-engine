@@ -130,10 +130,13 @@ class Line(object):
         return self
 
     def __init__(self, points):
-        self.points = utils.clean_points(points)  # can remove points!
-        self.coo = np.array([[p.longitude, p.latitude, p.depth]
-                             for p in self.points])
+        points = utils.clean_points(points)  # can remove points!
+        self.coo = np.array([[p.x, p.y, p.z] for p in points])
         self.coo.flags.writeable = False  # avoid dirty coding
+
+    @property
+    def points(self):
+        return [self[i] for i in range(len(self.coo))]
 
     def __eq__(self, other):
         """
@@ -340,8 +343,7 @@ class Line(object):
         pidx = set([0, coo.shape[0] - 1])
         idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
         pidx = sorted(list(pidx.union(set(idx + 1))))
-        self.points = [Point(coo[c, 0], coo[c, 1]) for c in pidx]
-        self.coo = coo[pidx, :]
+        self.coo = coo[pidx]
 
     def resample_to_num_points(self, num_points):
         """
