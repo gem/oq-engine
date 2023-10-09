@@ -1302,13 +1302,12 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
 def add_empty_profile(npr, idx=-1):
     """
     :param npr:
-        An integer defining the number of points composing the profile
+        A list of profiles
     :returns:
         A list with the new empty profiles
     """
-
-    #
-    tmp = [[np.nan, np.nan, np.nan] for _ in range(len(npr[0]))]
+    n, m = len(npr), len(npr[0])
+    tmp = [[np.nan, np.nan, np.nan] for _ in range(m)]
     if idx == -1:
         npr = npr + [tmp]
     elif idx == 0:
@@ -1317,8 +1316,8 @@ def add_empty_profile(npr, idx=-1):
         ValueError('Undefined option')
 
     # Check that profiles have the same lenght
-    for i in range(0, len(npr)-1):
-        assert len(npr[i]) == len(npr[i+1])
+    for i in range(n - 1):
+        assert len(npr[i]) == len(npr[i + 1])
 
     return npr
 
