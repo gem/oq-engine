@@ -27,6 +27,13 @@ from openquake.hazardlib.geo import Point
 TOLERANCE = 0.1
 
 
+def update(rtra, rtra_prj, proj, delta):
+    pnt = rtra_prj[-1] + delta
+    xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]), reverse=True)
+    rtra.append(np.array([xg[0], yg[0], pnt[2]]))
+    rtra_prj.append(pnt)
+
+
 class Line(object):
     """
     This class represents a geographical line, which is basically
@@ -302,12 +309,7 @@ class Line(object):
                     # Adding more points still on the same segment
                     delta = txy[-1] - txy[-2]
                     chk_dst = utils.get_dist(txy[-1], txy[-2])
-                    ratio = delta / chk_dst
-                    pnt = rtra_prj[-1] + ratio * sect_len
-                    xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
-                                  reverse=True)
-                    rtra.append(np.array([xg[0], yg[0], pnt[2]]))
-                    rtra_prj.append(pnt)
+                    update(rtra, rtra_prj, proj, sect_len * delta / chk_dst)
                     inc_len += sect_len
                 elif orig_extremes:
                     # Adding last point
