@@ -1077,7 +1077,7 @@ def get_mesh(pfs, rfi, sd, idl):
                 # Add new profile to 'npr' i.e. the list containing the new
                 # set of profiles
                 if len(npr)-1 < laidx[k]+1:
-                    npr = add_empty_profile(npr)
+                    add_empty_profile(npr)
 
                 # Compute the coordinates of intermediate points along the
                 # current edge. 'tmp' is the distance between the node on the
@@ -1255,7 +1255,7 @@ def get_mesh_back(pfs, rfi, sd, idl, last):
 
                 # add new profile
                 if len(npr)-1 < laidx[k]+1:
-                    npr = add_empty_profile(npr)
+                    add_empty_profile(npr)
 
                 # fix distance
                 tmp = (j+1)*sd - new_rdist
@@ -1309,17 +1309,15 @@ def add_empty_profile(npr, idx=-1):
     n, m = len(npr), len(npr[0])
     tmp = [[np.nan, np.nan, np.nan] for _ in range(m)]
     if idx == -1:
-        npr = npr + [tmp]
+        npr.append(tmp)
     elif idx == 0:
-        npr = [tmp] + npr
+        npr.insert(0, tmp)
     else:
         ValueError('Undefined option')
 
     # Check that profiles have the same lenght
     for i in range(n - 1):
         assert len(npr[i]) == len(npr[i + 1])
-
-    return npr
 
 
 def fix_mesh(msh):
