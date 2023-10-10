@@ -271,8 +271,6 @@ class ConditionedGmfComputer(GmfComputer):
                         if gmv.sum() == 0:
                             continue
                         data["sid"].append(sids[i])
-                        if eid >= 10:
-                            import pdb; pdb.set_trace()
                         data["eid"].append(eid)
                         data["rlz"].append(rlz)  # used in compute_gmfs_curves
                         for m in range(M):
