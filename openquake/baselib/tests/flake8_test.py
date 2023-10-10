@@ -21,6 +21,8 @@ Test of flake8 violations
 """
 import io
 import os
+import ast
+import importlib
 import unittest
 from contextlib import redirect_stdout
 import numba
@@ -32,6 +34,40 @@ REPO = os.path.dirname(
 
 LF = ord('\n')
 CR = ord('\r')
+
+
+def _long_funcs(module, maxlen):
+    out = []
+    tree = ast.parse(open(module.__file__).read(), module.__file__)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            numlines = node.end_lineno - node.lineno + 1
+            if numlines > maxlen:
+                out.append((module.__name__ + '.' + node.name, numlines))
+    return out
+
+
+def get_long_funcs(mod_or_pkg, maxlen):
+    mod_or_pkg = importlib.import_module(mod_or_pkg)
+    out = set()
+    if hasattr(mod_or_pkg, '__path__'):  # is a package
+        [pkg_path] = mod_or_pkg.__path__
+        n = len(pkg_path)
+        for cwd, dirs, files in os.walk(pkg_path):
+            if all(os.path.basename(f) != '__init__.py' for f in files):
+                # the current working directory is not a subpackage
+                continue
+            for f in files:
+                if f.endswith('.py'):
+                    # convert PKGPATH/subpackage/module.py -> subpackage.module
+                    # works at any level of nesting
+                    name = (mod_or_pkg.__name__ + cwd[n:].replace(os.sep, '.') +
+                            '.' + os.path.basename(f[:-3]))
+                    mod = importlib.import_module(name)
+                    out.update(_long_funcs(mod, maxlen))
+    else:  # is a module
+        out.update(_long_funcs(mod_or_pkg, maxlen))
+    return sorted(out, key=lambda x: x[1], reverse=True)
 
 
 @numba.njit
@@ -118,3 +154,8 @@ def test_csv(OVERWRITE=False):
                     raise ValueError('Found \\n line ending in %s' % fname)
                 elif error == 2:
                     raise ValueError('Found \\r line ending in %s' % fname)
+
+
+def test_forbid_long_funcs():
+    long_funcs = get_long_funcs('openquake.hazardlib', 100)
+    assert not long_funcs, long_funcs

@@ -27,6 +27,7 @@ jobs:
         python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
     - name: Calculators and documentation tests
       run: |
+        set -e
         source ~/openquake/bin/activate
         pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start
@@ -52,6 +53,7 @@ jobs:
         python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
     - name: Hazardlib tests
       run: |
+        set -e
         source ~/openquake/bin/activate
         pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver start

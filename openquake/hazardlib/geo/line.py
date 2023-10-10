@@ -20,12 +20,89 @@
 """
 import copy
 import numpy as np
-
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
 
 TOLERANCE = 0.1
+
+
+def _update(rtra, rtra_prj, proj, pnt):
+    xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]), reverse=True)
+    rtra.append(np.array([xg[0], yg[0], pnt[2]]))
+    rtra_prj.append(pnt)
+
+
+def _resample(coo, sect_len, orig_extremes):
+    # returns array of resampled trace coordinates
+    N = len(coo)
+
+    # Project the coordinates of the trace
+    sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
+    proj = utils.OrthographicProjection(*sbb)
+    txy = coo.copy()
+    txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
+
+    # Compute the total length of the original trace
+    tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
+    inc_len = 0.
+
+    # Initialize the lists with the coordinates of the resampled trace
+    rtra_prj = [txy[0]]
+    rtra = [coo[0]]
+
+    # Resampling
+    idx_vtx = -1
+    while True:
+
+        # Computing distances from the reference point
+        dis = utils.get_dist(txy, rtra_prj[-1])
+        if idx_vtx > 0:
+            # Fixing distances for points before the index
+            dis[0:idx_vtx] = 100000
+
+        # Index of the point on the trace with a distance just below the
+        # sampling distance
+        idx = np.where(dis <= sect_len, dis, -np.inf).argmax()
+
+        # If the pick a point that is not the last one on the trace we
+        # compute the new sample by interpolation
+        if idx < len(dis) - 1:
+            pnt = find_t(
+                txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
+            if pnt is None:
+                raise ValueError('Did not find the intersection')
+            _update(rtra, rtra_prj, proj, pnt)
+            inc_len += sect_len
+
+            # Adding more points still on the same segment
+            delta = txy[idx + 1] - rtra_prj[-1]
+            chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+            rat = delta / chk_dst
+            while chk_dst > sect_len * 0.9999:
+                _update(rtra, rtra_prj, proj, rtra_prj[-1] + sect_len * rat)
+                inc_len += sect_len
+                # This is the distance between the last resampled point
+                # and the second vertex of the segment
+                chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+        else:
+            # Adding one point
+            if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
+                # Adding more points still on the same segment
+                delta = txy[-1] - txy[-2]
+                chk_dst = utils.get_dist(txy[-1], txy[-2])
+                _update(rtra, rtra_prj, proj, rtra_prj[-1] +
+                       sect_len * delta / chk_dst)
+                inc_len += sect_len
+            elif orig_extremes:
+                # Adding last point
+                rtra.append(coo[-1])
+            break
+
+        # Updating index
+        idx_vtx = idx + 1
+
+    return np.array(utils.clean_points(rtra))
 
 
 class Line(object):
@@ -41,13 +118,25 @@ class Line(object):
         list of :class:`~openquake.hazardlib.geo.point.Point` instances
     """
 
-    def __init__(self, points):
-        self.points = utils.clean_points(points)  # can remove points!
-        if len(self.points) < 2:
-            raise ValueError(
-                "At least two distinct points are needed for a line!")
-        self.coo = np.array([[p.longitude, p.latitude] for p in self.points])
+    @classmethod
+    def from_coo(cls, coo):
+        """
+        Build a Line object for an array of coordinates, assuming they have
+        e been cleaned already, i.e. there are no adjacent duplicate points
+        """
+        self = cls.__new__(cls)
+        self.coo = coo
         self.coo.flags.writeable = False  # avoid dirty coding
+        return self
+
+    def __init__(self, points):
+        points = utils.clean_points(points)  # can remove points!
+        self.coo = np.array([[p.x, p.y, p.z] for p in points])
+        self.coo.flags.writeable = False  # avoid dirty coding
+
+    @property
+    def points(self):
+        return [self[i] for i in range(len(self.coo))]
 
     def __eq__(self, other):
         """
@@ -57,7 +146,7 @@ class Line(object):
         >>> Line(points) == Line(list(reversed(points)))
         False
         """
-        return self.points == other.points
+        return np.allclose(self.coo, other.coo, atol=1E-6)
 
     def __ne__(self, other):
         """
@@ -70,16 +159,15 @@ class Line(object):
         return not self.__eq__(other)
 
     def __len__(self):
-        return len(self.points)
+        return len(self.coo)
 
-    def __getitem__(self, key):
-        return self.points.__getitem__(key)
+    def __getitem__(self, i):
+        return Point(*self.coo[i])
 
     def flip(self):
         """
         Inverts the order of the points composing the line
         """
-        self.points.reverse()
         self.coo = np.flip(self.coo, axis=0)
 
     @classmethod
@@ -101,7 +189,7 @@ class Line(object):
         :returns bool:
             True if this line is on the surface, false otherwise.
         """
-        return all(point.on_surface() for point in self.points)
+        return all(point.on_surface() for point in self)
 
     def horizontal(self):
         """
@@ -111,14 +199,14 @@ class Line(object):
         :returns bool:
             True if this line is horizontal, false otherwise.
         """
-        return all(p.depth == self[0].depth for p in self)
+        return all(p.depth == self.coo[0, 2] for p in self)
 
     def get_azimuths(self):
         """
         Return the azimuths of all the segments omposing the polyline
         """
-        if len(self.points) == 2:
-            return self.points[0].azimuth(self.points[1])
+        if len(self.coo) == 2:
+            return self[0].azimuth(self[1])
         lons = self.coo[:, 0]
         lats = self.coo[:, 1]
         return geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
@@ -172,10 +260,6 @@ class Line(object):
         :rtype:
             An instance of :class:`Line`
         """
-
-        if len(self.points) < 2:
-            return Line(self.points)
-
         resampled_points = []
         # 1. Resample the first section. 2. Loop over the remaining points
         # in the line and resample the remaining sections.
@@ -183,14 +267,12 @@ class Line(object):
         # (because it's already contained in the previous set of
         # resampled points).
         resampled_points.extend(
-            self.points[0].equally_spaced_points(self.points[1],
-                                                 section_length)
-        )
+            self[0].equally_spaced_points(self[1], section_length))
+
         # Skip the first point, it's already resampled
-        for i in range(2, len(self.points)):
+        for i in range(2, len(self)):
             points = resampled_points[-1].equally_spaced_points(
-                self.points[i], section_length
-            )
+                self[i], section_length)
             resampled_points.extend(points[1:])
 
         return Line(resampled_points)
@@ -214,137 +296,7 @@ class Line(object):
         :returns:
             A new line resampled into sections based on the given length.
         """
-        if len(self.points) < 2:
-            raise ValueError('The line contains less than two points')
-
-        # Project the coordinates
-        sbb = utils.get_spherical_bounding_box
-        west, east, north, south = sbb(self.coo[:, 0], self.coo[:, 1])
-        proj = utils.OrthographicProjection(west, east, north, south)
-
-        tmp = self.points
-        coo = np.array([[p.longitude, p.latitude, p.depth] for p in tmp])
-
-        # Project the coordinates of the trace
-        txy = copy.copy(coo)
-        txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
-
-        # Initialise the list where we store the coordinates of the resampled
-        # trace
-        rtra_prj = [[txy[0, 0], txy[0, 1], txy[0, 2]]]
-        rtra = [self.points[0]]
-
-        # Compute the total length of the original trace
-        tot_len = np.sum(((txy[:-1, 0] - txy[1:, 0])**2 +
-                          (txy[:-1, 1] - txy[1:, 1])**2 +
-                          (txy[:-1, 2] - txy[1:, 2])**2)**0.5)
-        inc_len = 0.0
-
-        # Resampling
-        idx_vtx = -1
-        while 1:
-
-            # Computing distances from the reference point
-            dis = ((txy[:, 0] - rtra_prj[-1][0])**2 +
-                   (txy[:, 1] - rtra_prj[-1][1])**2 +
-                   (txy[:, 2] - rtra_prj[-1][2])**2)**0.5
-
-            # Fixing distances for points before the index
-            if idx_vtx > 0:
-                dis[0:idx_vtx] = 100000
-
-            # Index of the point on the trace with a distance just below the
-            # sampling distance
-            tmp = dis - sect_len
-            idx = np.where(tmp <= 0, dis, -np.inf).argmax()
-
-            # If the pick a point that is not the last one on the trace we
-            # compute the new sample by interpolation
-            if idx < len(dis) - 1:
-
-                tmp = [rtra_prj[-1][0], rtra_prj[-1][1], rtra_prj[-1][2]]
-                pnt = find_t(txy[idx + 1, :], txy[idx, :], tmp, sect_len)
-
-                if pnt is None:
-                    raise ValueError('Did not find the intersection')
-
-                # Update the list of coordinates
-                xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]),
-                              reverse=True)
-                rtra.append(Point(xg, yg, pnt[2]))
-                rtra_prj.append(list(pnt))
-
-                # Updating incremental length
-                inc_len += sect_len
-
-                # Adding more points still on the same segment
-                Dx = (txy[idx + 1, 0] - rtra_prj[-1][0])
-                Dy = (txy[idx + 1, 1] - rtra_prj[-1][1])
-                Dz = (txy[idx + 1, 2] - rtra_prj[-1][2])
-                chk_dst = (Dx**2 + Dy**2 + Dz**2)**0.5
-                Dx_ratio = Dx / chk_dst
-                Dy_ratio = Dy / chk_dst
-                Dz_ratio = Dz / chk_dst
-
-                while chk_dst > sect_len * 0.9999:
-
-                    x_pnt = rtra_prj[-1][0] + Dx_ratio * sect_len
-                    y_pnt = rtra_prj[-1][1] + Dy_ratio * sect_len
-                    z_pnt = rtra_prj[-1][2] + Dz_ratio * sect_len
-
-                    # New point
-                    xg, yg = proj(np.array([x_pnt]), np.array([y_pnt]),
-                                  reverse=True)
-                    rtra.append(Point(xg[0], yg[0], z_pnt))
-                    rtra_prj.append([x_pnt, y_pnt, z_pnt])
-
-                    # Updating incremental length
-                    inc_len += sect_len
-
-                    # This is the distance between the last resampled point
-                    # and the second vertex of the segment
-                    chk_dst = ((txy[idx + 1, 0] - rtra_prj[-1][0])**2 +
-                               (txy[idx + 1, 1] - rtra_prj[-1][1])**2 +
-                               (txy[idx + 1, 2] - rtra_prj[-1][2])**2)**0.5
-
-            else:
-
-                # Adding one point
-                if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
-
-                    # Adding more points still on the same segment
-                    dx = (txy[-1, 0] - txy[-2, 0])
-                    dy = (txy[-1, 1] - txy[-2, 1])
-                    dz = (txy[-1, 2] - txy[-2, 2])
-                    chk_dst = (dx**2 + dy**2 + dz**2)**0.5
-                    dx_ratio = dx / chk_dst
-                    dy_ratio = dy / chk_dst
-                    dz_ratio = dz / chk_dst
-
-                    x_pnt = rtra_prj[-1][0] + dx_ratio * sect_len
-                    y_pnt = rtra_prj[-1][1] + dy_ratio * sect_len
-                    z_pnt = rtra_prj[-1][2] + dz_ratio * sect_len
-
-                    # New point
-                    xg, yg = proj(np.array([x_pnt]), np.array([y_pnt]),
-                                  reverse=True)
-                    rtra.append(Point(xg[0], yg[0], z_pnt))
-                    rtra_prj.append([x_pnt, y_pnt, z_pnt])
-
-                    # Updating incremental length
-                    inc_len += sect_len
-
-                elif orig_extremes:
-
-                    # Adding last point
-                    rtra.append(Point(coo[-1, 0], coo[-1, 1], coo[-1, 2]))
-
-                break
-
-            # Updating index
-            idx_vtx = idx + 1
-
-        return Line(rtra)
+        return Line.from_coo(_resample(self.coo, sect_len, orig_extremes))
 
     def get_lengths(self) -> np.ndarray:
         """
@@ -355,9 +307,9 @@ class Line(object):
             Segments length in km.
         """
         lengths = []
-        for i, point in enumerate(self.points):
+        for i, point in enumerate(self):
             if i != 0:
-                lengths.append(point.distance(self.points[i - 1]))
+                lengths.append(point.distance(self[i - 1]))
         return np.array(lengths)
 
     def get_length(self) -> float:
@@ -378,16 +330,14 @@ class Line(object):
         :param delta:
             An angle in decimal degrees
         """
-        coo = np.array([[p.longitude, p.latitude, p.depth] for p in
-                        self.points])
+        coo = self.coo
         # Compute the azimuth of all the segments
         azim = geodetic.azimuth(coo[:-1, 0], coo[:-1, 1],
                                 coo[1:, 0], coo[1:, 1])
         pidx = set([0, coo.shape[0] - 1])
         idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
         pidx = sorted(list(pidx.union(set(idx + 1))))
-        self.points = [Point(coo[c, 0], coo[c, 1]) for c in pidx]
-        self.coo = coo[pidx, :]
+        self.coo = coo[pidx]
 
     def resample_to_num_points(self, num_points):
         """
@@ -398,21 +348,21 @@ class Line(object):
         :returns:
             A new line with that many points as requested.
         """
-        assert len(self.points) > 1, "can not resample the line of one point"
+        assert len(self) > 1, "can not resample the line of one point"
         section_length = self.get_length() / (num_points - 1)
-        resampled_points = [self.points[0]]
+        resampled_points = [self[0]]
         segment = 0
         acc_length = 0
         last_segment_length = 0
+        points = self.points
         for i in range(num_points - 1):
             tot_length = (i + 1) * section_length
-            while tot_length > acc_length and segment < len(self.points) - 1:
-                last_segment_length = self.points[segment].distance(
-                    self.points[segment + 1]
-                )
+            while tot_length > acc_length and segment < len(points) - 1:
+                last_segment_length = points[segment].distance(
+                    points[segment + 1])
                 acc_length += last_segment_length
                 segment += 1
-            p1, p2 = self.points[segment - 1:segment + 1]
+            p1, p2 = points[segment - 1:segment + 1]
             offset = tot_length - (acc_length - last_segment_length)
             if offset < 1e-5:
                 # forward geodetic transformations for very small distances

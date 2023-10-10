@@ -333,6 +333,8 @@ class ContextMaker(object):
     tom = None
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
+        self.trt = trt
+        self.gsims = gsims
         if isinstance(oq, dict):
             param = oq
             oq = Oq(**param)
@@ -352,6 +354,15 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
+    
+        self.oq = oq
+        self.monitor = monitor
+        self._init1(param)
+        self._init2(param, extraparams)
+        self.set_imts_conv()
+        self.init_monitoring(self.monitor)
+
+    def _init1(self, param):
         if 'poes' in param:
             self.poes = param['poes']
         if 'imtls' in param:
@@ -363,7 +374,6 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
-
         self.cache_distances = param.get('cache_distances', False)
         if self.cache_distances:
             # use a cache (surface ID, dist_type) for MultiFaultSources
@@ -375,24 +385,14 @@ class ContextMaker(object):
         self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
-        self.trt = trt
-        self.gsims = gsims
-        self.oq = oq
-        for gsim in gsims:
-            if hasattr(gsim, 'set_tables'):
-                if len(self.mags) == 0 and not is_modifiable(gsim):
-                    raise ValueError(
-                        'You must supply a list of magnitudes as 2-digit '
-                        'strings, like mags=["6.00", "6.10", "6.20"]')
-                gsim.set_tables(self.mags, self.imtls)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
-        self.maximum_distance = _interp(param, 'maximum_distance', trt)
+        self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = float(
                 config.performance.pointsource_distance)
         else:
             self.pointsource_distance = getdefault(
-                param['pointsource_distance'], trt)
+                param['pointsource_distance'], self.trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.ses_seed = param.get('ses_seed', 42)
@@ -403,10 +403,19 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
+
+    def _init2(self, param, extraparams):
+        for gsim in self.gsims:
+            if hasattr(gsim, 'set_tables'):
+                if len(self.mags) == 0 and not is_modifiable(gsim):
+                    raise ValueError(
+                        'You must supply a list of magnitudes as 2-digit '
+                        'strings, like mags=["6.00", "6.10", "6.20"]')
+                gsim.set_tables(self.mags, self.imtls)
         self.effect = param.get('effect')
         for req in self.REQUIRES:
             reqset = set()
-            for gsim in gsims:
+            for gsim in self.gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
                 if getattr(self.oq, 'af', None) and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
@@ -452,8 +461,6 @@ class ContextMaker(object):
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.shift_hypo = param.get('shift_hypo')
-        self.set_imts_conv()
-        self.init_monitoring(monitor)
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers

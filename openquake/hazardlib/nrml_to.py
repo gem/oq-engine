@@ -133,7 +133,53 @@ def to_tuple(row):
     ns = [a for a in row.__class__.__annotations__ if a not in 'geom coords']
     return tuple(getattr(row, n) for n in ns)
 
+def convert_to_csv(name, srcs, srcmodel_attrib, srcgroups_attribs, outdir):
+    for kind, rows in srcs.items():
+        dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
+        logging.info('Saving %d sources on %s', len(rows), dest)
+        header = [a for a in rows[0].__class__.__annotations__
+                  if a not in 'geom coords']
+        write_csv(dest, map(to_tuple, rows), header=header)
+        logging.info('%s was created' % dest)
+    if srcmodel_attrib:
+        dest = os.path.join(outdir, 'source_model.csv')
+        header = [k for k in srcmodel_attrib.keys()
+                  if k != 'kind']
+        logging.info('Saving source model information')
+        srcmodel_rows = [(srcmodel_attrib[k] for k in header)]
+        write_csv(dest, srcmodel_rows, header=header)
+        logging.info('%s was created' % dest)
+    if srcgroups_attribs:
+        dest = os.path.join(outdir, 'source_groups.csv')
+        header = [k for k in srcgroups_attribs[0].keys()
+                  if k != 'kind']
+        logging.info('Saving source groups information')
+        srcgroups_attribs_no_kind = [
+            {k: v for (k, v) in srcgroups_attribs[i].items()
+             if k != 'kind'}
+            for i in range(len(srcgroups_attribs))]
+        srcgroups_rows = [
+            tuple(srcgroups_attribs_no_kind[i].values())
+            for i in range(len(srcgroups_attribs_no_kind))]
+        write_csv(dest, srcgroups_rows, header=header)
+        logging.info('%s was created' % dest)
 
+
+def convert_to_gpkg(name, srcs, srcmodel_attrib, srcgroups_attribs, outdir):
+    dest = os.path.join(outdir, name + '.gpkg')
+    gpkg = GeoPackager(dest)
+    for kind, rows in srcs.items():
+        logging.info('Saving %d sources on layer %s', len(rows), kind)
+        gpkg.save_layer(kind, rows)
+    if srcmodel_attrib:
+        logging.info('Saving source model information')
+        gpkg.save_table('source_model', [srcmodel_attrib])
+    if srcgroups_attribs:
+        logging.info('Saving source groups information')
+        gpkg.save_table('source_groups', srcgroups_attribs)
+    logging.info('%s was created' % dest)
+
+    
 def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
     """
     Convert source models into CSV files (or geopackages, if fiona is
@@ -197,46 +243,7 @@ def convert_to(fmt, fnames, chatty=False, *, outdir='.', geometry=''):
                         row = converter.convert_node(srcnode)
                         appendrow(row, srcs, chatty, sections, s2i)
         if fmt == 'csv':
-            for kind, rows in srcs.items():
-                dest = os.path.join(outdir, '%s_%s.csv' % (name, kind))
-                logging.info('Saving %d sources on %s', len(rows), dest)
-                header = [a for a in rows[0].__class__.__annotations__
-                          if a not in 'geom coords']
-                write_csv(dest, map(to_tuple, rows), header=header)
-                logging.info('%s was created' % dest)
-            if srcmodel_attrib:
-                dest = os.path.join(outdir, 'source_model.csv')
-                header = [k for k in srcmodel_attrib.keys()
-                          if k != 'kind']
-                logging.info('Saving source model information')
-                srcmodel_rows = [(srcmodel_attrib[k] for k in header)]
-                write_csv(dest, srcmodel_rows, header=header)
-                logging.info('%s was created' % dest)
-            if srcgroups_attribs:
-                dest = os.path.join(outdir, 'source_groups.csv')
-                header = [k for k in srcgroups_attribs[0].keys()
-                          if k != 'kind']
-                logging.info('Saving source groups information')
-                srcgroups_attribs_no_kind = [
-                    {k: v for (k, v) in srcgroups_attribs[i].items()
-                     if k != 'kind'}
-                    for i in range(len(srcgroups_attribs))]
-                srcgroups_rows = [
-                    tuple(srcgroups_attribs_no_kind[i].values())
-                    for i in range(len(srcgroups_attribs_no_kind))]
-                write_csv(dest, srcgroups_rows, header=header)
-                logging.info('%s was created' % dest)
+            convert_to_csv(name, srcs, srcmodel_attrib, srcgroups_attribs, outdir)
         else:  # gpkg
-            dest = os.path.join(outdir, name + '.gpkg')
-            gpkg = GeoPackager(dest)
-            for kind, rows in srcs.items():
-                logging.info('Saving %d sources on layer %s', len(rows), kind)
-                gpkg.save_layer(kind, rows)
-            if srcmodel_attrib:
-                logging.info('Saving source model information')
-                gpkg.save_table('source_model', [srcmodel_attrib])
-            if srcgroups_attribs:
-                logging.info('Saving source groups information')
-                gpkg.save_table('source_groups', srcgroups_attribs)
-            logging.info('%s was created' % dest)
+            convert_to_gpkg(name, srcs, srcmodel_attrib, srcgroups_attribs, outdir)
     logging.info('Finished in %d seconds', time.time() - t0)

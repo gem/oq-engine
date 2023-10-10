@@ -58,6 +58,67 @@ class CartesianTestingMultiSurface(MultiSurface):
         pass
 
 
+def franken_fault1(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4):
+    frankel_planes = [
+        PlanarSurface.from_corner_points(
+            PNT1, PNT2,
+            PNT2.point_at(as_length, lsd, dipdir1),
+            PNT1.point_at(as_length, lsd, dipdir1)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT2, PNT3,
+            PNT3.point_at(as_length, lsd, dipdir2),
+            PNT2.point_at(as_length, lsd, dipdir2)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT3, PNT4,
+            PNT4.point_at(as_length, lsd, dipdir3),
+            PNT3.point_at(as_length, lsd, dipdir3)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT4, PNT5,
+            PNT5.point_at(as_length, lsd, dipdir4),
+            PNT4.point_at(as_length, lsd, dipdir4)
+            )
+        ]
+    return MultiSurface(frankel_planes)
+
+
+def franken_fault2(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4):
+    # Test the case of a discordant Frankel plane
+    # Swapping the strike of the second segment to change the dip direction
+    # Also increasing the dip from 60 degrees to 75 degrees
+    as_length_alt = lsd / numpy.tan(numpy.radians(75.0))
+
+    # As a set of planes describing a concordant "Frankel Fault"
+    # In the Frankel fault each segment is projected to the local dip direction
+    dipdir2b = (dipdir2 + 180.) % 360.0
+
+    frankel_discordant = [
+        PlanarSurface.from_corner_points(
+            PNT1, PNT2,
+            PNT2.point_at(as_length, lsd, dipdir1),
+            PNT1.point_at(as_length, lsd, dipdir1)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT3, PNT2,
+            PNT2.point_at(as_length_alt, lsd, dipdir2b),
+            PNT3.point_at(as_length_alt, lsd, dipdir2b)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT3, PNT4,
+            PNT4.point_at(as_length, lsd, dipdir3),
+            PNT3.point_at(as_length, lsd, dipdir3)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT4, PNT5,
+            PNT5.point_at(as_length, lsd, dipdir4),
+            PNT4.point_at(as_length, lsd, dipdir4)
+            )
+        ]
+    return MultiSurface(frankel_discordant)
+
+
 def _setup_peer_test_bending_fault_config():
     r"""
     The GC2 tests will be based on variations of the PEER bending fault
@@ -121,63 +182,10 @@ def _setup_peer_test_bending_fault_config():
         PlanarSurface.from_corner_points(PNT4, PNT5, PNT5b, PNT4b)
     ]
     stirling_fault1 = MultiSurface(stirling_planes)
-
-    # As a set of planes describing a concordant "Frankel Fault"
-    # In the Frankel fault each segment is projected to the local dip direction
-    dipdir2b = (dipdir2 + 180.) % 360.0
-
-    frankel_planes = [
-        PlanarSurface.from_corner_points(
-            PNT1, PNT2,
-            PNT2.point_at(as_length, lsd, dipdir1),
-            PNT1.point_at(as_length, lsd, dipdir1)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT2, PNT3,
-            PNT3.point_at(as_length, lsd, dipdir2),
-            PNT2.point_at(as_length, lsd, dipdir2)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT3, PNT4,
-            PNT4.point_at(as_length, lsd, dipdir3),
-            PNT3.point_at(as_length, lsd, dipdir3)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT4, PNT5,
-            PNT5.point_at(as_length, lsd, dipdir4),
-            PNT4.point_at(as_length, lsd, dipdir4)
-            )
-        ]
-    frankel_fault1 = MultiSurface(frankel_planes)
-
-    # Test the case of a discordant Frankel plane
-    # Swapping the strike of the second segment to change the dip direction
-    # Also increasing the dip from 60 degrees to 75 degrees
-    as_length_alt = lsd / numpy.tan(numpy.radians(75.0))
-    frankel_discordant = [
-        PlanarSurface.from_corner_points(
-            PNT1, PNT2,
-            PNT2.point_at(as_length, lsd, dipdir1),
-            PNT1.point_at(as_length, lsd, dipdir1)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT3, PNT2,
-            PNT2.point_at(as_length_alt, lsd, dipdir2b),
-            PNT3.point_at(as_length_alt, lsd, dipdir2b)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT3, PNT4,
-            PNT4.point_at(as_length, lsd, dipdir3),
-            PNT3.point_at(as_length, lsd, dipdir3)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT4, PNT5,
-            PNT5.point_at(as_length, lsd, dipdir4),
-            PNT4.point_at(as_length, lsd, dipdir4)
-            )
-        ]
-    frankel_fault2 = MultiSurface(frankel_discordant)
-    return simple_fault1, stirling_fault1, frankel_fault1, frankel_fault2
+    return (simple_fault1,
+            stirling_fault1,
+            franken_fault1(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4),
+            franken_fault2(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4))
 
 
 SFLT1, STIRFLT1, FRANK1, FRANK2 = _setup_peer_test_bending_fault_config()
