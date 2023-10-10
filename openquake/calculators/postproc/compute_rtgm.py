@@ -358,14 +358,85 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     plt.xlim([np.min(imls[i]), 4])
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
+    plt.clf()
     return Image.open(bio)
 
 
-def _find_afe_target(imls, afe, sa_target):
+def _find_afe_target(imls, afe, sa_target, afe_pad=False):
     # find the target afe (or poe) for a given acceleration
+    if afe_pad:
+        afe = afe + [1E-15] * (len(imls) - len(afe))
     f = interpolate.interp1d(np.log(imls), np.log(afe))
     afe_target = np.exp(f(np.log(sa_target)))
     return afe_target
+
+
+def disaggr_by_src(dstore, imtls):
+    imtls_dict = {}
+    for imt, imls in imtls.items():
+        imls = [iml for iml in imls]
+        imtls_dict[imt] = imls
+    # get info : specific to disagg by src
+    df = dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
+    grouped_m = df.groupby(['src_id', 'site_id', 'imt']).agg(
+        {"value": lambda x: list(x)}).reset_index()
+    # remove the sources that aren't contributing at all to the hazard
+    mask = grouped_m.value.apply(lambda x: sum(x) > 0)
+    gm = grouped_m[mask].reset_index()
+    grouped_2 = gm.groupby(['imt', 'src_id']).agg(
+        {"value": lambda x: np.array(x)}).reset_index()
+    total_poe = []
+    for wp in grouped_2.value.values:
+        wsp = []
+        if 'list' in str(type(wp)):
+            total_poe.append(wp)
+        else:
+            for wp_i in wp:
+                wsp.append(wp_i)
+            total_poe.append([sum(t) for t in np.array(wsp).T])
+    grouped_2['poes'] = total_poe
+    return grouped_2, imtls_dict
+
+
+def _find_sources(dms, imls, RTGM, afe_target, afe_mean, imt):
+    # identify the sources that have a contribution > than fact (here 10%) of
+    # the largest contributor;
+    fact = 0.1
+    out_contr_all = []
+    # poes from dms are now rates
+    for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
+        # get contribution at target level for that source
+        afe_uhgm = _find_afe_target(imls, afes, RTGM, afe_pad=True)
+        # get % contribution of that source
+        contr_source = afe_uhgm/afe_target
+        out_contr_all.append(contr_source * 100)
+    # identify contribution of largest contributor
+    Largest_contr = np.max(out_contr_all)
+    for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
+        # pad to have the same length of imls and afes
+        afe_pad = afes + [0] * (len(imls) - len(afes))
+        # if it's not a big contributor, plot in silver
+        if out_contr_all[ind] < fact*Largest_contr:
+            plt.loglog(imls, afe_pad, 'silver')
+        # if it is, plot in color
+        else:
+            plt.loglog(imls, afe_pad, label=str(src))
+    plt.loglog(imls, afe_mean, 'k', linewidth=2)
+    plt.loglog([np.min(imls), RTGM], [afe_target, afe_target], 'k--',
+               linewidth=2)
+    plt.loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2)
+    plt.loglog([RTGM], [afe_target], 'ko', linewidth=2)
+    plt.grid('both')
+    plt.legend(fontsize=16)
+    plt.xlabel(imt+' (g)', fontsize=16)
+    plt.ylabel('Annual Frequency of Exceedance', fontsize=14)
+    plt.legend(loc="best", bbox_to_anchor=(1.1, 1.05), fontsize='13')
+    plt.ylim([10E-6, 1])
+    plt.xlim([np.min(imls), 4])
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png', bbox_inches='tight')
+    plt.clf()
+    return Image.open(bio)
 
 
 def plot_curves(dstore):
@@ -374,6 +445,7 @@ def plot_curves(dstore):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     imt_list, AFE, afe_target, imls, facts = [], [], [], [], []
+    # separate imts and imls
     for imt, iml in imtls.items():
         imls.append([im for im in iml])
         imt_list.append(imt)
@@ -391,16 +463,37 @@ def plot_curves(dstore):
     # get investigation time
     window = dinfo['investigation_time']
     # get hazard curves, put into rates
-    mean = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
-    for m, hcurve in enumerate(mean):
+    mean_hcurve = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
+    for m, hcurve in enumerate(mean_hcurve):
         AFE.append(to_rates(hcurve, window))
         # get the AFE of the iml that will be disaggregated for each IMT
         afe_target.append(_find_afe_target(imls[m], AFE[m], RTGM[m]))
-    # make plot
+
     img = plot_meanHCs_afe_RTGM(
         imls, AFE, UHGM_RP, 1/2475, RTGM, afe_target, imt_list)
     logging.info('Storing png/meanHCs_afe_RTGM')
     dstore['png/meanHCs_afe_RTGM'] = img
+
+    df, imtls_dict = disaggr_by_src(dstore, imtls)
+    # make plot for each imt
+    for m, imt in enumerate(imt_list):
+        dms = df[(df['imt'] == imt)]
+
+        # FIXME
+        dic = _get_dict(
+            dstore, 'hcurves-stats', dinfo['imtls'], dinfo['stats'])
+        # site is always 0
+        mean_hcurve = list(dic['mean'][0][m])
+        # mean_hcurve = dstore['hcurves-stats'][0, m]  # shape(M, L1)
+
+        # annual frequency of exceedance:
+        imls = imtls_dict[imt]
+        afe_target = _find_afe_target(imls, mean_hcurve, RTGM[m], afe_pad=True)
+        # find and plot the sources, highlighting the ones that contribute more
+        # than 10% of largest contributor
+        img = _find_sources(dms, imls, RTGM[m], afe_target, mean_hcurve, imt)
+        logging.info(f'Storing png/disagg_by_src-{imt}')
+        dstore[f'png/disagg_by_src-{imt}'] = img
 
 
 def main(dstore, csm):

@@ -26,6 +26,12 @@
                   Show meanHCs_afe_RTGM</a>
               </div>
               {% endif %}
+              {% for img in disagg_by_src %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
+                  Show disaggregation by sources ({{img}})</a>
+              </div>
+              {% endfor %}
           </div>
         </div>
       </div>

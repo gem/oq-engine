@@ -961,12 +961,20 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     application_mode = settings.APPLICATION_MODE.upper()
     job = logs.dbcmd('get_job', calc_id)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        hmaps = 'png' in ds and any([k.startswith('hmap') for k in ds['png']])
-        meanHCs_afe_RTGM = 'png/meanHCs_afe_RTGM' in ds
+        if 'png' in ds:
+            # NOTE: only one hmap can be visualized currently
+            hmaps = any([k.startswith('hmap') for k in ds['png']])
+            meanHCs_afe_RTGM = 'png/meanHCs_afe_RTGM' in ds
+            disagg_by_src = [k for k in ds['png']
+                             if k.startswith('disagg_by_src-')]
+        else:
+            hmaps = meanHCs_afe_RTGM = False
+            disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        meanHCs_afe_RTGM=meanHCs_afe_RTGM,
+                       disagg_by_src=disagg_by_src,
                        application_mode=application_mode))
 
 
