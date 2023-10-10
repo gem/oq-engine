@@ -7,7 +7,7 @@ on:
       - "Build Image Nightly for Docker"
       - "hazardlib + engine + server tests"
       - "MacOS Intel install and test"
-      - "MacOS Monterey M1"
+      - "MacOS M1"
       - "RockyLinux OS test of OpenQuake Engine"
       - "RPM build of engine in Fedora Copr"
       - "Ubuntu test of OpenQuake Engine"
