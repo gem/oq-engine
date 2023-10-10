@@ -242,10 +242,8 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     mce = {}  # imt -> MCE
     prob_mce_out = {}
     for i, imt in enumerate(det_imt):
-        det_mce[imt] = det_imt[imt]
-        mce[imt] = min(prob_mce[i], max(det_imt[imt], DLLs[i]))
-#        det_mce[imt] = max(det_imt[imt], DLLs[i])
-#        mce[imt] = min(prob_mce[i], det_mce[imt])
+ #       det_mce[imt] = det_imt[imt]
+ #       mce[imt] = min(prob_mce[i], max(det_imt[imt], DLLs[i]))
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
