@@ -774,7 +774,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
                                          sampling, idl, alg)
         idx = np.isfinite(smsh.mesh.lons[:, :])
-        self.assertEqual(np.sum(np.sum(idx)), 205)
+        self.assertEqual(np.sum(np.sum(idx)), 207)
 
         if PLOTTING:
             title = 'Top of the slab'

@@ -988,7 +988,7 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
 
         # Update rdist
         new_rdist = rdist[k]
-        if rdist[k] > 0 and abs(az12 - angle[k] > 2):
+        if rdist[k] > 0 and abs(az12 - angle[k]) > 2:
             new_rdist = update_rdist(rdist[k], az12, angle[k], sd)
 
         coo = get_coo(forward, g, pl[k], pr[k], az12, hdist, vdist, tdist,

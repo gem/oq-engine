@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed mesh creation in surface/kite_fault.py
   * Disabled SLOW MODE on macOS, since the amount of free memory returned by
     psutil cannot be trusted
   * Speeding up `count_ruptures` for multifault sources, which gives a *huge*
