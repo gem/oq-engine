@@ -244,6 +244,9 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     for i, imt in enumerate(det_imt):
         det_mce[imt] = max(det_imt[imt], DLLs[i])
         mce[imt] = min(prob_mce[i], det_mce[imt])
+        # FIXME
+        # det_mce[imt] = det_imt[imt]
+        # mce[imt] = min(prob_mce[i], max(det_imt[imt], DLLs[i]))
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
@@ -338,17 +341,22 @@ def get_asce41(dstore, mce, facts):
 def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
                           imt_list):
     plt.figure(figsize=(12, 9))
-    plt.rcParams.update({'font.size': 15})
+    plt.rcParams.update({'font.size': 16})
     for i, imt in enumerate(imt_list):
-        plt.loglog(imls[i], AFE[i], label='Mean ' + imt, linewidth=3)
-        plt.loglog([np.min(imls[i]), UHGM_RP[i]], [afe_RP, afe_RP], 'k--',
-                   linewidth=2)
-        plt.loglog([UHGM_RP[i], UHGM_RP[i]], [0, afe_RP], 'k--', linewidth=2)
-        plt.loglog([UHGM_RP[i]], [afe_RP], 'ko', linewidth=2)
+        imtlab = imt if imt == 'PGA' else imt.replace(')', 's)')
+        comp = 'Geom. mean' if imt == 'PGA' else 'Max. comp.'
+        lab = imtlab + ' - ' + comp
+        plt.loglog(imls[i], AFE[i], label=lab, linewidth=3, zorder=1)
+        if i == 2:
+            plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
+                       label='Probabilistic MCE',  linewidth=2, markersize=10)
+        else:
+            plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
+                       linewidth=2, markersize=10)
         plt.loglog([np.min(imls[i]), RTGM[i]], [afe_RTGM[i], afe_RTGM[i]],
-                   'r--', linewidth=2)
-        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'r--', linewidth=2)
-        plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ro', linewidth=2)
+                   'k--', linewidth=2)
+        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'k--', linewidth=2)
+
     plt.grid('both')
     plt.legend(fontsize=16)
     plt.xlabel('Acceleration (g)', fontsize=20)
@@ -444,22 +452,20 @@ def plot_curves(dstore):
     # site is always 0 for a single-site calculation
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
-    imt_list, AFE, afe_target, imls, facts = [], [], [], [], []
     # separate imts and imls
+    imt_list, AFE, afe_target, imls = [], [], [], []
     for imt, iml in imtls.items():
-        imls.append([im for im in iml])
         imt_list.append(imt)
-        # get factors for converting back to geom mean
+        # get periods and factors for converting btw geom mean and
+        # maximum component
         T = from_string(imt).period
-        facts.append(_find_fact_maxC(T, 'ASCE7-16'))
-    # update factor for PGA to 1
-    facts[0] = 1
+        f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
+        imls.append([im*f for im in iml])
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm')
     # get the IML for the 2475 RP
     UHGM_RP = rtgm_df['UHGM_2475yr-GM']
-    # for the rtgm, convert back to the geometric mean
-    RTGM = [r/f for r, f in zip(rtgm_df['ProbMCE'], facts)]
+    rtgm_probmce = rtgm_df['ProbMCE']
     # get investigation time
     window = dinfo['investigation_time']
     # get hazard curves, put into rates
@@ -467,10 +473,12 @@ def plot_curves(dstore):
     for m, hcurve in enumerate(mean_hcurve):
         AFE.append(to_rates(hcurve, window))
         # get the AFE of the iml that will be disaggregated for each IMT
-        afe_target.append(_find_afe_target(imls[m], AFE[m], RTGM[m]))
-
+        # afe_target.append(_find_afe_target(imls[m], AFE[m], RTGM[m]))
+        afe_target.append(_find_afe_target(
+            imls[m], AFE[m], rtgm_probmce[m]))
+    # make plot
     img = plot_meanHCs_afe_RTGM(
-        imls, AFE, UHGM_RP, 1/2475, RTGM, afe_target, imt_list)
+        imls, AFE, UHGM_RP, 1/2475, rtgm_probmce, afe_target, imt_list)
     logging.info('Storing png/meanHCs_afe_RTGM')
     dstore['png/meanHCs_afe_RTGM'] = img
 
@@ -480,11 +488,13 @@ def plot_curves(dstore):
         dms = df[(df['imt'] == imt)]
         # annual frequency of exceedance:
         imls = imtls_dict[imt]
-        afe_target = _find_afe_target(imls, mean_hcurve[m], RTGM[m])
+        # FIXME: check if rtgm_probmce is the right object to pass here
+        afe_target = _find_afe_target(imls, mean_hcurve[m], rtgm_probmce[m])
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
+        # FIXME: check if rtgm_probmce is the right object to pass here
         img = _find_sources(
-            dms, imls, RTGM[m], afe_target, mean_hcurve[m], imt)
+            dms, imls, rtgm_probmce[m], afe_target, mean_hcurve[m], imt)
         logging.info(f'Storing png/disagg_by_src-{imt}')
         dstore[f'png/disagg_by_src-{imt}'] = img
 
