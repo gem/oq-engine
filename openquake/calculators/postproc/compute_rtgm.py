@@ -54,7 +54,7 @@ from openquake.baselib import hdf5
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
-from openquake.calculators.extract import get_info, _get_dict
+from openquake.calculators.extract import get_info
 
 DLL_df = pd.read_csv(io.StringIO('''\
 imt,A,B,BC,C,CD,D,DE,E
