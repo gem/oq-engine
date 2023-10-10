@@ -362,9 +362,9 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     return Image.open(bio)
 
 
-def _find_afe_target(imls, afe, sa_target, afe_pad=False):
+def _find_afe_target(imls, afe, sa_target):
     # find the target afe (or poe) for a given acceleration
-    if afe_pad:
+    if len(imls) != len(afe):
         afe.extend([1E-15] * (len(imls) - len(afe)))
     f = interpolate.interp1d(np.log(imls), np.log(afe))
     afe_target = np.exp(f(np.log(sa_target)))
@@ -406,7 +406,7 @@ def _find_sources(dms, imls, RTGM, afe_target, afe_mean, imt):
     # poes from dms are now rates
     for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
         # get contribution at target level for that source
-        afe_uhgm = _find_afe_target(imls, afes, RTGM, afe_pad=True)
+        afe_uhgm = _find_afe_target(imls, afes, RTGM)
         # get % contribution of that source
         contr_source = afe_uhgm/afe_target
         out_contr_all.append(contr_source * 100)
@@ -480,8 +480,7 @@ def plot_curves(dstore):
         dms = df[(df['imt'] == imt)]
         # annual frequency of exceedance:
         imls = imtls_dict[imt]
-        afe_target = _find_afe_target(
-            imls, mean_hcurve[m], RTGM[m])
+        afe_target = _find_afe_target(imls, mean_hcurve[m], RTGM[m])
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
         img = _find_sources(
