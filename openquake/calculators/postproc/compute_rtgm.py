@@ -411,12 +411,12 @@ def _find_sources(dms, imls, RTGM, afe_target, afe_mean, imt):
         contr_source = afe_uhgm/afe_target
         out_contr_all.append(contr_source * 100)
     # identify contribution of largest contributor
-    Largest_contr = np.max(out_contr_all)
+    largest_contr = np.max(out_contr_all)
     for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
         # pad to have the same length of imls and afes
         afe_pad = afes + [0] * (len(imls) - len(afes))
         # if it's not a big contributor, plot in silver
-        if out_contr_all[ind] < fact*Largest_contr:
+        if out_contr_all[ind] < fact*largest_contr:
             plt.loglog(imls, afe_pad, 'silver')
         # if it is, plot in color
         else:
