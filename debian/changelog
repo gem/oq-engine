@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Implemented `maximum_distance_stations`
   * Extended conditioned GMFs to number_of_ground_motion_fields > 1
   * Disabled SLOW MODE on macOS, since the amount of free memory returned by
     psutil cannot be trusted
