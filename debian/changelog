@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended conditioned GMFs to number_of_ground_motion_fields > 1
   * Disabled SLOW MODE on macOS, since the amount of free memory returned by
     psutil cannot be trusted
   * Speeding up `count_ruptures` for multifault sources, which gives a *huge*
