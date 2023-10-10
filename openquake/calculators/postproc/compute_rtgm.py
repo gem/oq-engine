@@ -365,7 +365,7 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
 def _find_afe_target(imls, afe, sa_target, afe_pad=False):
     # find the target afe (or poe) for a given acceleration
     if afe_pad:
-        afe = afe + [1E-15] * (len(imls) - len(afe))
+        afe.extend([1E-15] * (len(imls) - len(afe)))
     f = interpolate.interp1d(np.log(imls), np.log(afe))
     afe_target = np.exp(f(np.log(sa_target)))
     return afe_target
@@ -478,20 +478,14 @@ def plot_curves(dstore):
     # make plot for each imt
     for m, imt in enumerate(imt_list):
         dms = df[(df['imt'] == imt)]
-
-        # FIXME
-        dic = _get_dict(
-            dstore, 'hcurves-stats', dinfo['imtls'], dinfo['stats'])
-        # site is always 0
-        mean_hcurve = list(dic['mean'][0][m])
-        # mean_hcurve = dstore['hcurves-stats'][0, m]  # shape(M, L1)
-
         # annual frequency of exceedance:
         imls = imtls_dict[imt]
-        afe_target = _find_afe_target(imls, mean_hcurve, RTGM[m], afe_pad=True)
+        afe_target = _find_afe_target(
+            imls, mean_hcurve[m], RTGM[m])
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
-        img = _find_sources(dms, imls, RTGM[m], afe_target, mean_hcurve, imt)
+        img = _find_sources(
+            dms, imls, RTGM[m], afe_target, mean_hcurve[m], imt)
         logging.info(f'Storing png/disagg_by_src-{imt}')
         dstore[f'png/disagg_by_src-{imt}'] = img
 
