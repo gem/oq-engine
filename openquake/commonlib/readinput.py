@@ -982,9 +982,22 @@ def get_station_data(oqparam, sitecol):
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
-    sid = {(lon, lat): sid
+    dic = {(lon, lat): sid
            for lon, lat, sid in sitecol.complete[['lon', 'lat', 'sids']]}
-    sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
+    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
+
+    # sites that are not stations
+    hazsites = sitecol.filter(~numpy.isin(sitecol.sids, sids))
+
+    # filter station sites
+    maxdist = (oqparam.maximum_distance_stations or
+               oqparam.maximum_distance['default'][-1][1])
+    dists = []
+    for st_site in sitecol.filter(numpy.isin(sitecol.sids, sids)):
+        dists.append(hazsites.get_cdist(st_site.location).min())
+    ok = numpy.array(dists) <= maxdist  # discard 2 stations in case_21
+    df = df[ok]
+    sids = sids[ok]
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
