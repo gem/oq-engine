@@ -304,13 +304,6 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
-        # this is meant to be used in conditioned scenario calculations with
-        # a single rupture; we are taking the first copy of the rupture
-        # (remember: _read_scenario_ruptures makes num_gmfs copies to
-        # parallelize, but the conditioning process is computationally
-        # expensive, so we want to avoid repeating it num_gmfs times)
-        # TODO: this is ugly and must be improved upon!
-        allproxies = allproxies[0:1]
         station_data = dstore.read_df('station_data', 'site_id')
         station_sitecol = sitecol.complete.filtered(station_data.index)
         stations = station_data, station_sitecol
@@ -359,7 +352,10 @@ def compute_avg_gmf(gmf_df, weights, min_iml):
     for sid, df in gmf_df.groupby(gmf_df.index):
         eid = df.pop('eid')
         gmvs = numpy.ones((E, M), F32) * min_iml
-        gmvs[eid.to_numpy()] = df.to_numpy()
+        try:
+            gmvs[eid.to_numpy()] = df.to_numpy()
+        except:
+            pass
         dic[sid] = geom_avg_std(gmvs, weights)
     return dic
 
