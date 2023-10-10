@@ -220,8 +220,6 @@ class ConditionedGmfComputer(GmfComputer):
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
         num_events = self.num_events
-        num_gsims = len(rlzs_by_gsim)
-        offsets = numpy.arange(num_events) * num_gsims
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
             if num_events == 0:  # it may happen
                 continue
@@ -232,6 +230,7 @@ class ConditionedGmfComputer(GmfComputer):
                 self.spatial_correl,
                 self.cross_correl_between, self.cross_correl_within,
                 self.cmaker.maximum_distance)
+
             # mean['PGA'] has shape (N, 1) where N is the number of sites
             # excluding the stations
 
@@ -256,7 +255,7 @@ class ConditionedGmfComputer(GmfComputer):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid'][0] + offsets
+                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:
