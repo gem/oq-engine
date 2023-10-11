@@ -353,7 +353,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         for g, gsim in enumerate(ms):
             for key, val in zip(keys, ms[gsim]):
                 name = 'conditioned/gsim_%d/%s' % (g, key)
-                dset = dstore.create_dset(name, val.dtype, shape=val.shape)
+                dset = dstore.create_dset(name, val.dtype, val.shape)
                 dset[:] = val
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
