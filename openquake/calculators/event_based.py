@@ -413,8 +413,6 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
 
     def init(self):
-        if 'station_data' in self.oqparam.inputs:
-            os.environ['OQ_DISTRIBUTE'] = 'no'
         if self.oqparam.cross_correl.__class__.__name__ == 'GodaAtkinson2009':
             logging.warning(
                 'The truncation_level param is ignored with GodaAtkinson2009')
