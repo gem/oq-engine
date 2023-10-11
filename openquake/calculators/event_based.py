@@ -271,7 +271,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     # skip this rupture
                     continue
             with cmon:
-                if hasattr(computer, 'stations'):  # conditioned GMFs
+                if hasattr(computer, 'station_data'):  # conditioned GMFs
                     assert scenario
                     df = computer.compute_all(dstore, sig_eps, max_iml)
                 else:  # regular GMFs
@@ -339,22 +339,13 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
-    logging.info('totw = {:_d}'.format(round(totw)))
-    dstore.swmr_on()	
-    smap = parallel.Starmap(func, h5=dstore.hdf5)	
+    logging.info('totw = {:_d}'.format(round(totw)))	
     if save_tmp:	
         save_tmp(smap.monitor)
-    for trt_smr, proxies in gb.items():
-        trt = full_lt.trts[trt_smr // TWO24]
-        extra = sitecol.array.dtype.names
-        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
-        cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
-        cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
-        for block in block_splitter(proxies, totw, rup_weight):
-            args = block, cmaker, (station_data, station_sites), dstore
-            smap.submit(args)
     if "station_data" in oq.inputs:
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
+        cmaker = ContextMaker(full_lt.trts[0], rlzs_by_gsim, oq)
         computer = get_computer(
             cmaker, proxy, sitecol.sids, sitecol.complete,
             station_data, station_sites)
@@ -364,7 +355,19 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         for g, gsim in enumerate(ms):
             for key, val in zip(keys, ms[gsim]):
                 name = 'conditioned/gsim_%d/%s' % (g, key)
-                dstore[name] = val
+                dset = dstore.create_dset(name, val.dtype, shape=val.shape)
+                dset[:] = val
+    dstore.swmr_on()
+    smap = parallel.Starmap(func, h5=dstore.hdf5)
+    for trt_smr, proxies in gb.items():
+        trt = full_lt.trts[trt_smr // TWO24]
+        extra = sitecol.array.dtype.names
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(trt_smr)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
+        cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
+        for block in block_splitter(proxies, totw, rup_weight):
+            args = block, cmaker, (station_data, station_sites), dstore
+            smap.submit(args)
     return smap
 
 

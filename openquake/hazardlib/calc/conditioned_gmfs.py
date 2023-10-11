@@ -221,7 +221,7 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+    def compute_all(self, dstore, sig_eps=None, max_iml=None):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
@@ -234,12 +234,10 @@ class ConditionedGmfComputer(GmfComputer):
         num_events = self.num_events
         assert num_events
         # NB: ms is a dictionary gsim -> [imt -> array]
-        ms, sids = self.get_ms_and_sids()
+        sids = dstore['conditioned/sids'][:]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            mean_covs = ms[gsim]
-            # mean['PGA'] has shape (N, 1) where N is the number of sites
-            # excluding the stations
-
+            mean_covs = [dstore['conditioned/gsim_%d/%s' % (g, key)][:]
+                         for key in ('mea', 'sig', 'tau', 'phi')]
             array, sig, eps = self.compute(gsim, num_events, mean_covs, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             assert len(sids) == N, (len(sids), N)
