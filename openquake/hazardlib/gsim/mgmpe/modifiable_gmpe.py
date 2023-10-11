@@ -65,16 +65,16 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     exp_mean = np.exp(me)
     fa = BA08_AB06(kind, C, C2, ctx.vs30, imt, exp_mean)
     me[:] = np.log(exp_mean * fa)
-    
-    
+
+
 def cy14_site_term(ctx, imt, me, si, ta, phi):
     """
     This function adds the CY14 site term to GMMs requiring it
     """
     C = ChiouYoungs2014.COEFFS[imt]
-    fa = _get_site_term(C, ctx.vs30, me) # ref mean must be in natural log
+    fa = _get_site_term(C, ctx.vs30, me)  # ref mean must be in natural log
     me[:] += fa
-    
+
 
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """
@@ -304,7 +304,8 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        if 'nrcan15_site_term' in self.params or 'cy14_site_term' in self.params:
+        if ('nrcan15_site_term' in self.params or
+                'cy14_site_term' in self.params):
             ctx_copy = ctx.copy()
             if 'nrcan15_site_term' in self.params:
                 rock_vs30 = 760.
