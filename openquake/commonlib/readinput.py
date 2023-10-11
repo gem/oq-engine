@@ -986,20 +986,6 @@ def get_station_data(oqparam, sitecol):
     dic = {(lo, la): sid for lo, la, sid in complete[['lon', 'lat', 'sids']]}
     sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
 
-    # split the site collection
-    st_sites = complete.filter(numpy.isin(complete.sids, sids))
-    hazsites = complete.filter(~numpy.isin(complete.sids, sids))
-
-    # filter station sites
-    maxdist = (oqparam.maximum_distance_stations or
-               oqparam.maximum_distance['default'][-1][1])
-    dists = []
-    for st_site in st_sites:
-        dists.append(hazsites.get_cdist(st_site.location).min())
-    ok = numpy.array(dists) <= maxdist  # discard 2 stations in case_21
-    df = df[ok]
-    sids = sids[ok]
-
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
     imt_candidates = df.filter(regex="_VALUE$").columns.str.replace(
