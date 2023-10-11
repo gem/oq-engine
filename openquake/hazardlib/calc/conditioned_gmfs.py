@@ -544,7 +544,7 @@ def get_ms_and_sids(
         # standard deviations at the *target* sites ("_Y")
         cmaker_Y = ContextMaker(
             rupture.tectonic_region_type, [gsim], dict(
-                truncation_level=0, imtls={target_imts[0].string: [0]},
+                imtls={target_imts[0].string: [0]},
                 maximum_distance=maximum_distance))
 
         [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
