@@ -584,14 +584,13 @@ def get_ms_and_sids(
 
     return meancovs, sitecol_filtered.sids
 
-"""
-In scenario/case_21 one has
-target_imt = PGA = target_imts = observed_imts
-ctx_Y with 571 elements, like target_sitecol
-station_data has 140 elements like station_sitecol
-18 sites are discarded
-the total sitecol has 571 + 140 + 18 = 729 sites
-"""
+
+# In scenario/case_21 one has
+# target_imt = PGA = target_imts = observed_imts
+# ctx_Y with 571 elements, like target_sitecol
+# station_data has 140 elements like station_sitecol
+# 18 sites are discarded
+# the total sitecol has 571 + 140 + 18 = 729 sites
 def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
                    target_imts, observed_imts, station_data,
                    target_sitecol, station_sitecol, compute_cov, t):
@@ -666,7 +665,6 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     # Compute the conditioned between-event covariance matrix
     # for the target sites clipped to zero, shape (nsites, nsites)
     phi = numpy.linalg.multi_dot([C, cov_HD_HD_yD, C.T]).clip(min=0)
-
     return mu, tau, phi
 
 
@@ -675,25 +673,13 @@ def _compute_spatial_cross_correlation_matrix(
     if imt_1 == imt_2:
         # since we have a single IMT, there are no cross-correlation terms
         spatial_correlation_matrix = spatial_correl._get_correlation_matrix(
-            distance_matrix, imt_1
-        )
-        spatial_cross_correlation_matrix = spatial_correlation_matrix
-    else:
-        spatial_correlation_matrix_1 = spatial_correl._get_correlation_matrix(
-            distance_matrix, imt_1
-        )
-        spatial_correlation_matrix_2 = spatial_correl._get_correlation_matrix(
-            distance_matrix, imt_2
-        )
-        spatial_correlation_matrix = numpy.maximum(
-            spatial_correlation_matrix_1, spatial_correlation_matrix_2
-        )
-        cross_corr_coeff = cross_correl_within.get_correlation(
-            from_imt=imt_1, to_imt=imt_2
-        )
-        spatial_cross_correlation_matrix = (
-            spatial_correlation_matrix * cross_corr_coeff)
-    return spatial_cross_correlation_matrix
+            distance_matrix, imt_1)
+        return spatial_correlation_matrix
+    matrix1 = spatial_correl._get_correlation_matrix(distance_matrix, imt_1)
+    matrix2 = spatial_correl._get_correlation_matrix(distance_matrix, imt_2)
+    spatial_correlation_matrix = numpy.maximum(matrix1, matrix2)
+    cross_corr_coeff = cross_correl_within.get_correlation(imt_1, imt_2)
+    return spatial_correlation_matrix * cross_corr_coeff
 
 
 def clip_evals(x, value=0):  # threshold=0, value=0):
@@ -810,7 +796,6 @@ def corr_nearest(corr, threshold=1e-15, n_fact=100):
     --------
     corr_clipped
     cov_nearest
-
     """
     k_vars = corr.shape[0]
     if k_vars != corr.shape[1]:
@@ -885,7 +870,6 @@ def corr_clipped(corr, threshold=1e-15):
     --------
     corr_nearest
     cov_nearest
-
     """
     x_new, clipped = clip_evals(corr, value=threshold)
     if not clipped:
@@ -952,7 +936,6 @@ def cov_nearest(cov, method="clipped", threshold=1e-15, n_fact=100,
     corr_nearest
     corr_clipped
     """
-
     cov_, std_ = cov2corr(cov, return_std=True)
     if method == "clipped":
         corr_ = corr_clipped(cov_, threshold=threshold)
