@@ -315,7 +315,8 @@ def filter_stations(station_df, complete, hypo, maxdist):
     return station_data, close
 
 
-def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
+# NB: save_tmp is passed in event_based_risk
+def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
@@ -339,7 +340,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
     totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
-    allargs = []
+    dstore.swmr_on()	
+    smap = parallel.Starmap(func, h5=dstore.hdf5)	
+    if save_tmp:	
+        save_tmp(smap.monitor)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
@@ -348,7 +352,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, totw, rup_weight):
             args = block, cmaker, (station_data, station_sites), dstore
-            allargs.append(args)
+            smap.submit(args)
     if "station_data" in oq.inputs:
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         computer = get_computer(
@@ -361,8 +365,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
             for key, val in zip(keys, ms[gsim]):
                 name = 'conditioned/gsim_%d/%s' % (g, key)
                 dstore[name] = val
-    dstore.swmr_on()
-    return parallel.Starmap(func, allargs, h5=dstore.hdf5)
+    return smap
 
 
 def set_mags(oq, dstore):
