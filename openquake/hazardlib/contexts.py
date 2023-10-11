@@ -592,7 +592,7 @@ class ContextMaker(object):
                 if par == 'closest_point':
                     ra['clon'][slc] = val[:, 0]
                     ra['clat'][slc] = val[:, 1]
-                elif par not in ['clon', 'clat']:
+                elif par not in ['clon', 'clat'] or 'closest_point' not in dd:
                     getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
