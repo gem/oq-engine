@@ -515,15 +515,25 @@ def get_ms_and_sids(
     target_imts = [imt for imt in target_imts
                    if imt.period or imt.string == "PGA"]
 
-    # Generate the contexts and calculate the means and 
+    # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
     cmaker_D = ContextMaker(
         rupture.tectonic_region_type, gsims,
         dict(imtls=observed_imtls, maximum_distance=maximum_distance))
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
-    mean_stds = cmaker_D.get_mean_stds([ctx_D])
+    mean_stds_D = cmaker_D.get_mean_stds([ctx_D])
     # shape (4, G, M, N) where 4 means (mean, sig, tau, phi)
+
+    # Generate the contexts and calculate the means and 
+    # standard deviations at the *target* sites ("_Y")
+    cmaker_Y = ContextMaker(
+        rupture.tectonic_region_type, gsims, dict(
+            imtls={target_imts[0].string: [0]},
+            maximum_distance=maximum_distance))
+
+    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
+    mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
 
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
@@ -540,15 +550,6 @@ def get_ms_and_sids(
         # won't work well as the 4 components will be non-homogeneous
         ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
 
-        # Generate the contexts and calculate the means and 
-        # standard deviations at the *target* sites ("_Y")
-        cmaker_Y = ContextMaker(
-            rupture.tectonic_region_type, [gsim], dict(
-                imtls={target_imts[0].string: [0]},
-                maximum_distance=maximum_distance))
-
-        [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
-
         # filter sites
         sitecol_filtered = target_sitecol.filter(
             numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
@@ -557,10 +558,10 @@ def get_ms_and_sids(
         station_data_filtered = station_data[mask].copy()
         for m, o_imt in enumerate(observed_imts):
             im = o_imt.string
-            station_data_filtered[im + "_median"] = mean_stds[0, g, m]
-            station_data_filtered[im + "_sigma"] = mean_stds[1, g, m]
-            station_data_filtered[im + "_tau"] = mean_stds[2, g, m]
-            station_data_filtered[im + "_phi"] = mean_stds[3, g, m]
+            station_data_filtered[im + "_median"] = mean_stds_D[0, g, m]
+            station_data_filtered[im + "_sigma"] = mean_stds_D[1, g, m]
+            station_data_filtered[im + "_tau"] = mean_stds_D[2, g, m]
+            station_data_filtered[im + "_phi"] = mean_stds_D[3, g, m]
         for target_imt in target_imts:
             imt = target_imt.string
             result = create_result(
@@ -569,7 +570,7 @@ def get_ms_and_sids(
                 station_sitecol_filtered,
                 compute_cov, cross_correl_between)
             mu, tau, phi = get_mu_tau_phi(
-                target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
+                target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
                 station_data_filtered, sitecol_filtered,
                 station_sitecol_filtered,
                 compute_cov, result)
@@ -587,7 +588,7 @@ def get_ms_and_sids(
 # station_data has 140 elements like station_sitecol
 # 18 sites are discarded
 # the total sitecol has 571 + 140 + 18 = 729 sites
-def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
+def get_mu_tau_phi(target_imt, gsim, mean_stds,
                    target_imts, observed_imts, station_data,
                    target_sitecol, station_sitecol, compute_cov, t):
 
@@ -612,15 +613,10 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     nominal_bias_mean = numpy.mean(mu_BD_yD)
     nominal_bias_stddev = numpy.sqrt(numpy.mean(numpy.diag(cov_BD_BD_yD)))
 
-    [gsim] = cmaker_Y.gsims
     logging.info("GSIM: %s, IMT: %s, Nominal bias mean: %.3f, "
                  "Nominal bias stddev: %.3f",
                  gsim.gmpe if hasattr(gsim, 'gmpe') else gsim,
                  target_imt, nominal_bias_mean, nominal_bias_stddev)
-
-    mean_stds = cmaker_Y.get_mean_stds([ctx_Y])[:, 0]  # 0=gsim_idx
-    # (4, M, N): mean, StdDev.TOTAL, StdDev.INTER_EVENT,
-    # StdDev.INTRA_EVENT; M IMTs, N sites/distances
 
     # Predicted mean at the target sites, from GSIM
     mu_Y = mean_stds[0, 0][:, None]
