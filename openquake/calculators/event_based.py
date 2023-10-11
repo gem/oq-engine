@@ -28,6 +28,7 @@ from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -294,6 +295,25 @@ def todict(dframe):
     return {k: dframe[k].to_numpy() for k in dframe.columns}
 
 
+def filter_stations(station_df, complete, hypo, maxdist):
+    """
+    :param station_df: DataFrame with the stations
+    :param complete: complete SiteCollection
+    :param hypo: hypocenter of the rupture
+    :param maxdist: maximum distance
+    :returns: filtered (station_df, station_sitecol)
+    """
+    ns = len(station_df)
+    ok = (hypo.distance_to_mesh(complete.mesh) <= maxdist) & numpy.isin(
+        complete.sids, station_df.index)
+    close = complete.filter(ok)
+    station_data = station_df[numpy.isin(station_df.index, close.sids)]
+    if len(station_data) < ns:
+        logging.info('Discarded %d/%d stations more distant than %d km',
+                     ns - len(station_data), ns, maxdist)
+    return station_data, close
+
+
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -304,9 +324,11 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
-        station_data = dstore.read_df('station_data', 'site_id')
-        station_sitecol = sitecol.complete.filtered(station_data.index)
-        stations = station_data, station_sitecol
+        station_df = dstore.read_df('station_data', 'site_id')
+        maxdist = (oq.maximum_distance_stations or
+                   oq.maximum_distance['default'][-1][1])
+        hypo = Point(*allproxies[0]['hypo'])
+        stations = filter_stations(station_df, sitecol.complete, hypo, maxdist)
     else:
         stations = ()
 
