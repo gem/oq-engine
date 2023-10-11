@@ -224,7 +224,7 @@ class ConditionedGmfComputer(GmfComputer):
             if num_events == 0:  # it may happen
                 continue
             # NB: mean_covs is a list of 4 dicts keyed by IMT
-            mean_covs, sids = get_conditioned_mean_and_covariance(
+            mean_covs, sids = get_ms_and_sids(
                 self.rupture, gsim, self.station_sitecol, self.station_data,
                 self.observed_imt_strs, self.sitecol, self.imts,
                 self.spatial_correl,
@@ -338,7 +338,7 @@ class ConditionedGmfComputer(GmfComputer):
 @dataclass
 class TempResult:
     """
-    Temporary data structure used inside get_conditioned_mean_and_covariance
+    Temporary data structure used inside get_ms_and_sids
     """
     bracketed_imts: list
     conditioning_imts: list
@@ -503,7 +503,7 @@ def compute_spatial_cross_covariance_matrix(
 
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
-def get_conditioned_mean_and_covariance(
+def get_ms_and_sids(
         rupture, gsim, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
