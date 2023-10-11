@@ -397,7 +397,7 @@ def _create_result(target_imt, observed_imts, station_data_filtered):
     return t
 
 
-def create_result(target_imt, cmaker_Y, ctx_Y,
+def create_result(target_imt, ctx_Y,
                   target_imts, observed_imts,
                   station_data, sitecol, station_sitecol,
                   compute_cov, cross_correl_between):
@@ -405,9 +405,6 @@ def create_result(target_imt, cmaker_Y, ctx_Y,
     :returns: a TempResult
     """
     t = _create_result(target_imt, observed_imts, station_data)
-
-    imt = target_imt.string
-    cmaker_Y.imtls = {imt: [0]}
 
     # Observations (recorded values at the stations)
     yD = numpy.log(
@@ -529,6 +526,9 @@ def get_ms_and_sids(
     mean_stds = cmaker_D.get_mean_stds([ctx_D])
     # shape (4, G, M, N) where 4 means (mean, sig, tau, phi)
 
+    compute_cov = partial(compute_spatial_cross_covariance_matrix,
+                          spatial_correl, cross_correl_within)
+
     ms = {}  # dictionary gsim -> list of dicts
     for g, gsim in enumerate(gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
@@ -562,13 +562,10 @@ def get_ms_and_sids(
             station_data_filtered[im + "_sigma"] = mean_stds[1, g, m]
             station_data_filtered[im + "_tau"] = mean_stds[2, g, m]
             station_data_filtered[im + "_phi"] = mean_stds[3, g, m]
-
-        compute_cov = partial(compute_spatial_cross_covariance_matrix,
-                              spatial_correl, cross_correl_within)
         for target_imt in target_imts:
             imt = target_imt.string
             result = create_result(
-                target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
+                target_imt, ctx_Y, target_imts, observed_imts,
                 station_data_filtered, sitecol_filtered,
                 station_sitecol_filtered,
                 compute_cov, cross_correl_between)
