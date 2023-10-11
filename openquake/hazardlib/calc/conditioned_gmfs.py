@@ -209,26 +209,32 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+    def get_ms_and_sids(self):
         """
-        :returns: (dict with fields eid, sid, gmv_X, ...), dt
+        :returns: mean_covs by gsim and site IDs
         """
-        min_iml = self.cmaker.min_iml
-        rlzs_by_gsim = self.cmaker.gsims
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
-        mag = self.ebrupture.rupture.mag
-        data = AccumDict(accum=[])
-        rng = numpy.random.default_rng(self.seed)
-        num_events = self.num_events
-        assert num_events
-        # NB: ms is a dictionary gsim -> [imt -> array]
-        ms, sids = get_ms_and_sids(
+        return get_ms_and_sids(
             self.rupture, self.cmaker.gsims,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
             self.spatial_correl,
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
+
+    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+        """
+        :returns: (dict with fields eid, sid, gmv_X, ...), dt
+        """
+        min_iml = self.cmaker.min_iml
+        rlzs_by_gsim = self.cmaker.gsims
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario=True)
+        mag = self.ebrupture.rupture.mag
+        data = AccumDict(accum=[])
+        rng = numpy.random.default_rng(self.seed)
+        num_events = self.num_events
+        assert num_events
+        # NB: ms is a dictionary gsim -> [imt -> array]
+        ms, sids = self.get_ms_and_sids()
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
             mean_covs = ms[gsim]
             # mean['PGA'] has shape (N, 1) where N is the number of sites
@@ -535,6 +541,13 @@ def get_ms_and_sids(
     [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
     mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
 
+    # filter sites
+    sitecol_filtered = target_sitecol.filter(
+        numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
+    mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
+    station_sitecol_filtered = station_sitecol.filter(mask)
+    station_data_filtered = station_data[mask].copy()
+
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
 
@@ -549,13 +562,6 @@ def get_ms_and_sids(
         # unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
         ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
-
-        # filter sites
-        sitecol_filtered = target_sitecol.filter(
-            numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
-        mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
-        station_sitecol_filtered = station_sitecol.filter(mask)
-        station_data_filtered = station_data[mask].copy()
         for m, o_imt in enumerate(observed_imts):
             im = o_imt.string
             station_data_filtered[im + "_median"] = mean_stds_D[0, g, m]
