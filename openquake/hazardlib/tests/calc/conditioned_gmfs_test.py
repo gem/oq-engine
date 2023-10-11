@@ -55,7 +55,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         aac(numpy.zeros_like(mu), mu)
         numpy.testing.assert_almost_equal(numpy.min(sig), 0)
@@ -81,7 +81,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         aac(numpy.min(mu), -1, rtol=1e-4)
         aac(numpy.max(mu), 1, rtol=1e-4)
@@ -109,7 +109,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         aac(numpy.min(mu), 0.36, rtol=1e-4)
         aac(numpy.max(mu), 1, rtol=1e-4)
@@ -136,7 +136,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         aac(numpy.min(mu), 0.36, rtol=1e-4)
         aac(numpy.max(mu), 1)
@@ -163,7 +163,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         aac(numpy.min(mu), 0.52970, rtol=1e-4)
         aac(numpy.max(mu), 1)
@@ -190,7 +190,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         aac(numpy.zeros_like(mu), mu, atol=1e-4)
         aac(numpy.min(sig), 0, atol=1e-4)
@@ -216,7 +216,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
@@ -270,7 +270,7 @@ class SetUSGSTestCase(unittest.TestCase):
                 observed_imt_strs, target_sitecol, target_imts,
                 spatial_correl, cross_correl_between, cross_correl_within,
                 maximum_distance)
-            mu = mean_covs[0][0].flatten()
+            mu = mean_covs[0][0, :, 0]
             sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
             aac(numpy.min(mu), bias_mean[i], rtol=1e-4)
             aac(numpy.max(mu), conditioned_mean_obs[i], rtol=1e-4)
@@ -299,7 +299,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
@@ -322,7 +322,7 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = mean_covs[0][0].flatten()
+        mu = mean_covs[0][0, :, 0]
         sig = numpy.sqrt(numpy.diag(mean_covs[1][0]))
         plot_test_results(target_sitecol.lons, mu, sig, 0,
                           case_name)
