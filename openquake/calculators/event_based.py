@@ -354,11 +354,9 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
         dstore['conditioned/sids'] = sids
         keys = ['mea', 'sig', 'tau', 'phi']
         for g, gsim in enumerate(ms):
-            imts = ms[gsim][0]
             for key, val in zip(keys, ms[gsim]):
-                for imt in imts:
-                    name = 'conditioned/gsim_%d/%s/%s' % (g, key, imt)
-                    dstore[name] = val[imt]
+                name = 'conditioned/gsim_%d/%s' % (g, key)
+                dstore[name] = val
     dstore.swmr_on()
     return parallel.Starmap(func, allargs, h5=dstore.hdf5)
 

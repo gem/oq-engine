@@ -552,6 +552,7 @@ def get_ms_and_sids(
 
     ms = {}  # dictionary gsim -> list of dicts
     M = len(target_imts)
+    N = len(ctx_Y)
     for g, gsim in enumerate(gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -561,8 +562,10 @@ def get_ms_and_sids(
         # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
         # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
-        ms[gsim] = [{m: 0 for m in range(M)} for _ in range(4)]
-
+        me = numpy.zeros((M, N, 1))
+        si = numpy.zeros((M, N, N))
+        ta = numpy.zeros((M, N, N))
+        ph = numpy.zeros((M, N, N))
         sdata = station_data[mask].copy()    
         for m, o_imt in enumerate(observed_imts):
             im = o_imt.string
@@ -579,10 +582,12 @@ def get_ms_and_sids(
                 target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
                 sdata, target, station_filtered,
                 compute_cov, result)
-            ms[gsim][0][m] = mu
-            ms[gsim][1][m] = tau + phi
-            ms[gsim][2][m] = tau
-            ms[gsim][3][m] = phi
+            me[m] = mu
+            si[m] = tau + phi
+            ta[m] = tau
+            ph[m] = phi
+
+        ms[gsim] = [me, si, ta, ph]
 
     return ms, target.sids
 

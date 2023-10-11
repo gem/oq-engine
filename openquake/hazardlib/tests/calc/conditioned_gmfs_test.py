@@ -239,8 +239,8 @@ class SetUSGSTestCase(unittest.TestCase):
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
             maximum_distance)
-        mu = [mu[0][0] for mu in mean_covs[0].values()]
-        sig = numpy.sqrt([var[0][0] for var in mean_covs[1].values()])
+        mu = mean_covs[0]
+        sig = mean_covs[1]
         periods = [imt.period for imt in target_imts]
         plot_test_results_spectra(periods, mu, sig, case_name)
 
