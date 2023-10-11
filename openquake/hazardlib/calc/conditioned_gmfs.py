@@ -520,8 +520,8 @@ def get_ms_and_sids(
     # standard deviations at the *station* sites ("_D")
     cmaker_D = ContextMaker(
         rupture.tectonic_region_type, gsims,
-        dict(truncation_level=0, imtls=observed_imtls,
-             maximum_distance=maximum_distance))
+        dict(imtls=observed_imtls, maximum_distance=maximum_distance))
+
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
     mean_stds = cmaker_D.get_mean_stds([ctx_D])
     # shape (4, G, M, N) where 4 means (mean, sig, tau, phi)
