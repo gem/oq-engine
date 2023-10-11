@@ -344,8 +344,11 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(full_lt.trts[0], rlzs_by_gsim, oq)
+        maxdist = oq.maximum_distance(cmaker.trt)
+        srcfilter = SourceFilter(sitecol.complete, maxdist)
+        sids = srcfilter.close_sids(proxy, cmaker.trt)
         computer = get_computer(
-            cmaker, proxy, sitecol.sids, sitecol.complete,
+            cmaker, proxy, sids, sitecol.complete,
             station_data, station_sites)
         ms, sids = computer.get_ms_and_sids()
         dstore.create_dset('conditioned/sids', sids)
