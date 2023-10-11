@@ -250,7 +250,7 @@ class ConditionedGmfComputer(GmfComputer):
                     if (array[m] > max_iml[m]).any():
                         for n in range(N):
                             bad = array[m, n] > max_iml[m]  # shape E
-                            mean = mean_covs[0][im]  # shape (N, 1)
+                            mean = mean_covs[0][m]  # shape (N, 1)
                             array[m, n, bad] = exp(mean[n, 0], im)
 
             # manage min_iml
@@ -299,15 +299,15 @@ class ConditionedGmfComputer(GmfComputer):
             and eps for the random part
         """
         M = len(self.imts)
-        num_sids = mean_covs[0][self.imts[0].string].size
+        num_sids = mean_covs[0][0].size
         result = numpy.zeros((M, num_sids, num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
 
         for m, im in enumerate(self.imts):
-            mu_Y_yD = mean_covs[0][im.string]
-            cov_WY_WY_wD = mean_covs[2][im.string]
-            cov_BY_BY_yD = mean_covs[3][im.string]
+            mu_Y_yD = mean_covs[0][m]
+            cov_WY_WY_wD = mean_covs[2][m]
+            cov_BY_BY_yD = mean_covs[3][m]
             try:
                 result[m], sig[m], eps[m] = self._compute(
                     mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, num_events, rng)
@@ -551,6 +551,7 @@ def get_ms_and_sids(
                           spatial_correl, cross_correl_within)
 
     ms = {}  # dictionary gsim -> list of dicts
+    M = len(target_imts)
     for g, gsim in enumerate(gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -560,7 +561,7 @@ def get_ms_and_sids(
         # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
         # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
-        ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
+        ms[gsim] = [{m: 0 for m in range(M)} for _ in range(4)]
 
         sdata = station_data[mask].copy()    
         for m, o_imt in enumerate(observed_imts):
@@ -569,8 +570,7 @@ def get_ms_and_sids(
             sdata[im + "_sigma"] = mean_stds_D[1, g, m]
             sdata[im + "_tau"] = mean_stds_D[2, g, m]
             sdata[im + "_phi"] = mean_stds_D[3, g, m]
-        for target_imt in target_imts:
-            imt = target_imt.string
+        for m, target_imt in enumerate(target_imts):
             result = create_result(
                 target_imt, target_imts, observed_imts,
                 sdata, target, station_filtered,
@@ -579,10 +579,10 @@ def get_ms_and_sids(
                 target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
                 sdata, target, station_filtered,
                 compute_cov, result)
-            ms[gsim][0][imt] = mu
-            ms[gsim][1][imt] = tau + phi
-            ms[gsim][2][imt] = tau
-            ms[gsim][3][imt] = phi
+            ms[gsim][0][m] = mu
+            ms[gsim][1][m] = tau + phi
+            ms[gsim][2][m] = tau
+            ms[gsim][3][m] = phi
 
     return ms, target.sids
 
