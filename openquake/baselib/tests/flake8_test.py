@@ -38,7 +38,8 @@ CR = ord('\r')
 
 def _long_funcs(module, maxlen):
     out = []
-    tree = ast.parse(open(module.__file__).read(), module.__file__)
+    code = open(module.__file__, encoding='utf-8').read()
+    tree = ast.parse(code, module.__file__)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             numlines = node.end_lineno - node.lineno + 1
