@@ -397,8 +397,7 @@ def _create_result(target_imt, observed_imts, station_data_filtered):
     return t
 
 
-def create_result(target_imt, ctx_Y,
-                  target_imts, observed_imts,
+def create_result(target_imt, target_imts, observed_imts,
                   station_data, sitecol, station_sitecol,
                   compute_cov, cross_correl_between):
     """
@@ -565,7 +564,7 @@ def get_ms_and_sids(
         for target_imt in target_imts:
             imt = target_imt.string
             result = create_result(
-                target_imt, ctx_Y, target_imts, observed_imts,
+                target_imt, target_imts, observed_imts,
                 station_data_filtered, sitecol_filtered,
                 station_sitecol_filtered,
                 compute_cov, cross_correl_between)
