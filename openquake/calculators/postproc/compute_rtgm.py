@@ -272,18 +272,21 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
         S1_seismicity = "Very High"
 
     asce7 = {'PGA_2_50': prob_mce_out['PGA'],
-             'PGA_84th': det_mce['PGA'],
+             'PGA_84th': det_imt['PGA'],
+             'PGA_det': det_mce['PGA'],
              'PGA': mce['PGA'],
 
              'SS_RT': prob_mce_out['SA(0.2)'],
              'CRS': crs,
-             'SS_84th': det_mce['SA(0.2)'],
+             'SS_84th': det_imt['SA(0.2)'],
+             'SS_det': det_mce['SA(0.2)'],
              'SS': mce['SA(0.2)'],
              'SS_seismicity': SS_seismicity,
 
              'S1_RT': prob_mce_out['SA(1.0)'],
              'CR1': cr1,
-             'S1_84th': det_mce['SA(1.0)'],
+             'S1_84th': det_imt['SA(1.0)'],
+             'S1_det': det_mce['SA(1.0)'],
              'S1': mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity,
              }
@@ -342,20 +345,22 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
                           imt_list):
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
+    colors = ['g','y','b']
+    patterns = ['-','--',':']
     for i, imt in enumerate(imt_list):
         imtlab = imt if imt == 'PGA' else imt.replace(')', 's)')
         comp = 'Geom. mean' if imt == 'PGA' else 'Max. comp.'
         lab = imtlab + ' - ' + comp
-        plt.loglog(imls[i], AFE[i], label=lab, linewidth=3, zorder=1)
+        plt.loglog(imls[i], AFE[i], colors[i]+patterns[i], label=lab, linewidth=3, zorder=1)
         if i == 2:
             plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
-                       label='Probabilistic MCE',  linewidth=2, markersize=10)
+                       label='Probabilistic MCE',  linewidth=2, markersize=10, zorder=3)
         else:
             plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
-                       linewidth=2, markersize=10)
+                       linewidth=2, markersize=10, zorder=3)
         plt.loglog([np.min(imls[i]), RTGM[i]], [afe_RTGM[i], afe_RTGM[i]],
-                   'k--', linewidth=2)
-        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'k--', linewidth=2)
+                   'darkgray', linewidth=1)
+        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray', linewidth=1)
 
     plt.grid('both')
     plt.legend(fontsize=16)
@@ -453,14 +458,17 @@ def plot_curves(dstore):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     # separate imts and imls
-    imt_list, AFE, afe_target, imls = [], [], [], []
-    for imt, iml in imtls.items():
-        imt_list.append(imt)
+    AFE, afe_target, imls = [], [], []
+    #imt_list, AFE, afe_target, imls = [], [], [], []
+    imt_list = ['PGA', 'SA(0.2)','SA(1.0)']
+    for imt in imt_list:
+    #for imt, iml in imtls.items():
+        #imt_list.append(imt)
         # get periods and factors for converting btw geom mean and
         # maximum component
         T = from_string(imt).period
         f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
-        imls.append([im*f for im in iml])
+        imls.append([im*f for im in imtls[imt]])
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm')
     # get the IML for the 2475 RP
@@ -473,7 +481,6 @@ def plot_curves(dstore):
     for m, hcurve in enumerate(mean_hcurve):
         AFE.append(to_rates(hcurve, window))
         # get the AFE of the iml that will be disaggregated for each IMT
-        # afe_target.append(_find_afe_target(imls[m], AFE[m], RTGM[m]))
         afe_target.append(_find_afe_target(
             imls[m], AFE[m], rtgm_probmce[m]))
     # make plot
@@ -506,7 +513,9 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
+    # FIXME: double-check this (it was checking mean_rates_ss)
     if dstore['mean_rates_ss'][:].max() < 1E-3:
+#    if dstore['mean_rates_by_src'][:].max() < 1E-3:
         logging.warning('Ultra-low hazard: skipping AELO calculation')
         return
     logging.info('Computing Risk Targeted Ground Motion')
