@@ -39,6 +39,7 @@ import io
 import logging
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
 from matplotlib import pyplot as plt
 from scipy import interpolate
 from scipy.interpolate import RegularGridInterpolator
@@ -341,17 +342,21 @@ def get_asce41(dstore, mce, facts):
             'BSE1N_S1': BSE1N_S1}
 
 
+def _get_label(imt):
+    imtlab = imt if imt == 'PGA' else imt.replace(')', 's)')
+    comp = 'Geom. mean' if imt == 'PGA' else 'Max. comp.'
+    return imtlab + ' - ' + comp
+
+
 def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
                           imt_list):
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
-    colors = ['g','y','b']
+    colors = mpl.colormaps['viridis'].reversed()._resample(3)
     patterns = ['-','--',':']
     for i, imt in enumerate(imt_list):
-        imtlab = imt if imt == 'PGA' else imt.replace(')', 's)')
-        comp = 'Geom. mean' if imt == 'PGA' else 'Max. comp.'
-        lab = imtlab + ' - ' + comp
-        plt.loglog(imls[i], AFE[i], colors[i]+patterns[i], label=lab, linewidth=3, zorder=1)
+        lab = _get_label(imt)
+        plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i], label=lab, linewidth=3, zorder=1)
         if i == 2:
             plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
                        label='Probabilistic MCE',  linewidth=2, markersize=10, zorder=3)
@@ -367,7 +372,7 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     plt.xlabel('Acceleration (g)', fontsize=20)
     plt.ylabel('Annual frequency of exceedance', fontsize=20)
     plt.legend(loc="best", fontsize='16')
-    plt.ylim([10E-6, 1])
+    plt.ylim([10E-6, 1.1])
     plt.xlim([np.min(imls[i]), 4])
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
@@ -411,45 +416,100 @@ def disaggr_by_src(dstore, imtls):
     return grouped_2, imtls_dict
 
 
-def _find_sources(dms, imls, RTGM, afe_target, afe_mean, imt):
+def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
+
+    fig, ax = plt.subplots(3, figsize=(8,15))
+
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor;
     fact = 0.1
-    out_contr_all = []
-    # poes from dms are now rates
-    for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
-        # get contribution at target level for that source
-        afe_uhgm = _find_afe_target(imls, afes, RTGM)
-        # get % contribution of that source
-        contr_source = afe_uhgm/afe_target
-        out_contr_all.append(contr_source * 100)
-    # identify contribution of largest contributor
-    largest_contr = np.max(out_contr_all)
-    for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
-        # pad to have the same length of imls and afes
-        afe_pad = afes + [0] * (len(imls) - len(afes))
-        # if it's not a big contributor, plot in silver
-        if out_contr_all[ind] < fact*largest_contr:
-            plt.loglog(imls, afe_pad, 'silver')
-        # if it is, plot in color
-        else:
-            plt.loglog(imls, afe_pad, label=str(src))
-    plt.loglog(imls, afe_mean, 'k', linewidth=2)
-    plt.loglog([np.min(imls), RTGM], [afe_target, afe_target], 'k--',
-               linewidth=2)
-    plt.loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2)
-    plt.loglog([RTGM], [afe_target], 'ko', linewidth=2)
-    plt.grid('both')
-    plt.legend(fontsize=16)
-    plt.xlabel(imt+' (g)', fontsize=16)
-    plt.ylabel('Annual Frequency of Exceedance', fontsize=14)
-    plt.legend(loc="best", bbox_to_anchor=(1.1, 1.05), fontsize='13')
-    plt.ylim([10E-6, 1])
-    plt.xlim([np.min(imls), 4])
+
+    for m, imt in enumerate(imt_list):
+        out_contr_all = []
+        fig1, ax1 = plt.subplots()
+
+        dms = df[(df['imt'] == imt)]
+        # annual frequency of exceedance:
+        T = from_string(imt).period
+        f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
+        imls_o = imtls_dict[imt]
+        imls = [iml*f for iml in imls_o]
+        # FIXME: check if rtgm_probmce is the right object to pass here
+        # have to compute everything for max comp. and for geom. mean
+        RTGM = rtgm_probmce[m]
+        RTGM_o = rtgm_probmce[m]/f
+        afe_target = _find_afe_target(imls, mean_hcurve[m], RTGM)
+        afe_target_o = _find_afe_target(imls_o, mean_hcurve[m], RTGM_o)
+        # poes from dms are now rates
+        for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
+            # get contribution at target level for that source
+            afe_uhgm = _find_afe_target(imls, afes, rtgm_probmce[m])
+            # get % contribution of that source
+            contr_source = afe_uhgm/afe_target
+            out_contr_all.append(contr_source * 100)
+        # identify contribution of largest contributor
+        largest_contr = np.max(out_contr_all)
+        sample = sum(out_contr_all > fact*largest_contr)
+        viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
+        i = 0; j = 0
+        # find and plot the sources, highlighting the ones that contribute more
+        # than 10% of largest contributor
+        for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
+            # pad to have the same length of imls and afes
+            afe_pad = afes + [0] * (len(imls) - len(afes))
+            # if it's not a big contributor, plot in silver
+            if out_contr_all[ind] <= fact*largest_contr:
+                if j==0:
+                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7, label='low contr. source')
+                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7, label='low contr. source')
+                    j+=1
+                else:
+                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7)
+                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7)
+            # if it is, plot in color
+            else:
+                ax[m].loglog(imls, afe_pad, c=viridis(i), label=str(src))
+                ax1.loglog(imls_o, afe_pad, c=viridis(i), label=str(src))
+                i+=1
+        # populate subplot - maximum component
+        ax[m].loglog(imls, mean_hcurve[m], 'k', label=_get_label(imt), linewidth=2)
+        ax[m].loglog([np.min(imls), RTGM], [afe_target, afe_target], 'k--',
+                   linewidth=2)
+        ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2)
+        ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE', linewidth=2)
+        ax[m].grid('both')
+        ax[m].set_xlabel(imt+' (g)', fontsize=16)
+        ax[m].set_ylabel('Annual Freq. Exceedance', fontsize=16)
+        ax[m].legend(loc="best", bbox_to_anchor=(1.1, 1.05), fontsize='16')
+        ax[m].set_ylim([10E-6, 1.1])
+        ax[m].set_xlim([np.min(imls_o), 4])
+
+        # populate single imt plots - geometric mean
+        ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean', linewidth=2)
+        ax1.loglog([np.min(imls_o), RTGM_o], [afe_target_o, afe_target_o], 'k--',
+                   linewidth=2)
+        ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2)
+        ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE', linewidth=2)
+        ax1.grid('both')
+        ax1.set_xlabel(imt+' (g)', fontsize=16)
+        ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
+        ax1.legend(loc="best", bbox_to_anchor=(1.1, 1.05), fontsize='16')
+        ax1.set_ylim([10E-6, 1.1])
+        ax1.set_xlim([np.min(imls_o), 4])
+
+        # save single imt plot
+        bio1 = io.BytesIO()
+        fig1.savefig(bio1, format='png', bbox_inches='tight')
+        # keep these in webui until we finish checks and have a command line exporter, 
+        # then we can change the name to _{imt} and they will not appear in the webui
+        dstore[f'png/disagg_by_src-{imt}'] = Image.open(bio1)
+        #dstore[f'png/disagg_by_src_{imt}'] = Image.open(bio1)
+
+    # save triple plot
     bio = io.BytesIO()
-    plt.savefig(bio, format='png', bbox_inches='tight')
-    plt.clf()
-    return Image.open(bio)
+    fig.savefig(bio, format='png', bbox_inches='tight')
+    logging.info(f'Storing png/disagg_by_src')
+    dstore['png/disagg_by_src-All-IMTs'] = Image.open(bio) 
 
 
 def plot_curves(dstore):
@@ -459,11 +519,8 @@ def plot_curves(dstore):
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_target, imls = [], [], []
-    #imt_list, AFE, afe_target, imls = [], [], [], []
     imt_list = ['PGA', 'SA(0.2)','SA(1.0)']
     for imt in imt_list:
-    #for imt, iml in imtls.items():
-        #imt_list.append(imt)
         # get periods and factors for converting btw geom mean and
         # maximum component
         T = from_string(imt).period
@@ -490,20 +547,7 @@ def plot_curves(dstore):
     dstore['png/hcurves'] = img
 
     df, imtls_dict = disaggr_by_src(dstore, imtls)
-    # make plot for each imt
-    for m, imt in enumerate(imt_list):
-        dms = df[(df['imt'] == imt)]
-        # annual frequency of exceedance:
-        imls = imtls_dict[imt]
-        # FIXME: check if rtgm_probmce is the right object to pass here
-        afe_target = _find_afe_target(imls, mean_hcurve[m], rtgm_probmce[m])
-        # find and plot the sources, highlighting the ones that contribute more
-        # than 10% of largest contributor
-        # FIXME: check if rtgm_probmce is the right object to pass here
-        img = _find_sources(
-            dms, imls, rtgm_probmce[m], afe_target, mean_hcurve[m], imt)
-        logging.info(f'Storing png/disagg_by_src-{imt}')
-        dstore[f'png/disagg_by_src-{imt}'] = img
+    _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore)
 
 
 def main(dstore, csm):
