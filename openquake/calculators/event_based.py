@@ -196,19 +196,17 @@ def get_computer(cmaker, proxy, sids, sitecol, station_sitecol, station_data):
     ebr = proxy.to_ebr(trt)
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
-        if stations.any():
-            # if there are stations close, use them
-            station_sids = sids[stations]
-            target_sids = sids[~stations]
-            return ConditionedGmfComputer(
-                ebr, sitecol.filtered(target_sids),
-                sitecol.filtered(station_sids),
-                station_data.loc[station_sids],
-                oq.observed_imts,
-                cmaker, oq.correl_model, oq.cross_correl,
-                oq.ground_motion_correlation_params,
-                oq.number_of_ground_motion_fields,
-                oq._amplifier, oq._sec_perils)
+        station_sids = sids[stations]
+        target_sids = sids[~stations]
+        return ConditionedGmfComputer(
+            ebr, sitecol.filtered(target_sids),
+            sitecol.filtered(station_sids),
+            station_data.loc[station_sids],
+            oq.observed_imts,
+            cmaker, oq.correl_model, oq.cross_correl,
+            oq.ground_motion_correlation_params,
+            oq.number_of_ground_motion_fields,
+            oq._amplifier, oq._sec_perils)
 
     return GmfComputer(
         ebr, sitecol.filtered(sids), cmaker,

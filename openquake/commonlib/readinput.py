@@ -999,6 +999,8 @@ def get_station_data(oqparam, sitecol):
     ok = numpy.array(dists) <= maxdist  # discard 2 stations in case_21
     df = df[ok]
     sids = sids[ok]
+    if len(sids) == 0:
+        raise RuntimeError('There are no stations close to the hazard sites')
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
