@@ -306,6 +306,12 @@ class DataStore(collections.abc.MutableMapping):
         :param attrs: dictionary of attributes of the dataset
         :returns: a HDF5 dataset
         """
+        if isinstance(dtype, numpy.ndarray):
+            dset = hdf5.create(
+                self.hdf5, key, dtype.dtype, dtype.shape,
+                compression, fillvalue, attrs)
+            dset[:] = dtype
+            return dset
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 
