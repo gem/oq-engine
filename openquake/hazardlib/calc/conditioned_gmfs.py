@@ -557,8 +557,8 @@ def get_ms_and_sids(
                     and "add_between_within_stds" in gsim.kwargs):
                 raise NoInterIntraStdDevs(gsim)
 
-        # NB: the four arrays below have different dimensions, so
-        # unlike the regular gsim get_mean_std, a numpy ndarray
+        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
+        # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
         ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
 

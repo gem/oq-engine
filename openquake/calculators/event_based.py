@@ -311,7 +311,7 @@ def filter_stations(station_df, complete, hypo, maxdist):
     return station_data, close
 
 
-def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
+def starmap_from_rups(func, oq, full_lt, sitecol, dstore):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
     """
@@ -358,7 +358,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             for key, val in zip(keys, ms[gsim]):
                 for imt in imts:
                     name = 'conditioned/gsim_%d/%s/%s' % (g, key, imt)
-                    dstore[name] = val[imt][:, 0]
+                    dstore[name] = val[imt]
     dstore.swmr_on()
     return parallel.Starmap(func, allargs, h5=dstore.hdf5)
 
