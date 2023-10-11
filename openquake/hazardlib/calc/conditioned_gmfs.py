@@ -220,17 +220,17 @@ class ConditionedGmfComputer(GmfComputer):
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
         num_events = self.num_events
+        assert num_events
+        # NB: ms is a dictionary gsim -> [imt -> array]
+        ms, sids = get_ms_and_sids(
+            self.rupture, self.cmaker.gsims,
+            self.station_sitecol, self.station_data,
+            self.observed_imt_strs, self.sitecol, self.imts,
+            self.spatial_correl,
+            self.cross_correl_between, self.cross_correl_within,
+            self.cmaker.maximum_distance)
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            if num_events == 0:  # it may happen
-                continue
-            # NB: mean_covs is a list of 4 dicts keyed by IMT
-            mean_covs, sids = get_ms_and_sids(
-                self.rupture, gsim, self.station_sitecol, self.station_data,
-                self.observed_imt_strs, self.sitecol, self.imts,
-                self.spatial_correl,
-                self.cross_correl_between, self.cross_correl_within,
-                self.cmaker.maximum_distance)
-
+            mean_covs = ms[gsim]
             # mean['PGA'] has shape (N, 1) where N is the number of sites
             # excluding the stations
 
@@ -300,7 +300,6 @@ class ConditionedGmfComputer(GmfComputer):
 
         for m, im in enumerate(self.imts):
             mu_Y_yD = mean_covs[0][im.string]
-            # cov_Y_Y_yD = mean_covs[1][im.string]
             cov_WY_WY_wD = mean_covs[2][im.string]
             cov_BY_BY_yD = mean_covs[3][im.string]
             try:
@@ -504,15 +503,10 @@ def compute_spatial_cross_covariance_matrix(
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
 def get_ms_and_sids(
-        rupture, gsim, station_sitecol, station_data,
+        rupture, gsims, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
-
-    if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
-        if not (type(gsim).__name__ == "ModifiableGMPE"
-                and "add_between_within_stds" in gsim.kwargs):
-            raise NoInterIntraStdDevs(gsim)
 
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
@@ -521,68 +515,74 @@ def get_ms_and_sids(
                       if imt_str not in ["MMI", "PGV"]}
     observed_imts = sorted(from_string(imt_str) for imt_str in observed_imtls)
 
-    # Generate the contexts and calculate the means and 
-    # standard deviations at the *station* sites ("_D")
-    cmaker_D = ContextMaker(
-        rupture.tectonic_region_type, [gsim],
-        dict(truncation_level=0, imtls=observed_imtls,
-             maximum_distance=maximum_distance))
-
-    # Generate the contexts and calculate the means and 
-    # standard deviations at the *target* sites ("_Y")
-    cmaker_Y = ContextMaker(
-        rupture.tectonic_region_type, [gsim], dict(
-            truncation_level=0, imtls={target_imts[0].string: [0]},
-            maximum_distance=maximum_distance))
-
-    [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
-    [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
-
-    gsim_idx = 0  # there is a single gsim
-    mean_stds = cmaker_D.get_mean_stds([ctx_D])[:, gsim_idx]
-    # shape (4, M, N) where 4 means (mean, TOTAL, INTER_EVENT, INTRA_EVENT)
-    # M is the number of IMTs, N the number of sites/distances
-
-    # filter sites
-    sitecol_filtered = target_sitecol.filter(
-        numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
-    mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
-    station_sitecol_filtered = station_sitecol.filter(mask)
-    station_data_filtered = station_data[mask].copy()
-    for i, o_imt in enumerate(observed_imts):
-        im = o_imt.string
-        station_data_filtered[im + "_median"] = mean_stds[0, i]
-        station_data_filtered[im + "_sigma"] = mean_stds[1, i]
-        station_data_filtered[im + "_tau"] = mean_stds[2, i]
-        station_data_filtered[im + "_phi"] = mean_stds[3, i]
-
     # Target IMT is not PGA or SA: Currently not supported
     target_imts = [imt for imt in target_imts
                    if imt.period or imt.string == "PGA"]
 
-    compute_cov = partial(compute_spatial_cross_covariance_matrix,
-                          spatial_correl, cross_correl_within)
+    # Generate the contexts and calculate the means and 
+    # standard deviations at the *station* sites ("_D")
+    cmaker_D = ContextMaker(
+        rupture.tectonic_region_type, gsims,
+        dict(truncation_level=0, imtls=observed_imtls,
+             maximum_distance=maximum_distance))
+    [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
+    mean_stds = cmaker_D.get_mean_stds([ctx_D])
+    # shape (4, G, M, N) where 4 means (mean, sig, tau, phi)
 
-    # NB: the four arrays below have different dimensions, so
-    # unlike the regular gsim get_mean_std, a numpy ndarray
-    # won't work well as the 4 components will be non-homogeneous
-    meancovs = [{imt.string: None for imt in target_imts} for _ in range(4)]
-    for target_imt in target_imts:
-        imt = target_imt.string
-        result = create_result(
-            target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
-            station_data_filtered, sitecol_filtered, station_sitecol_filtered,
-            compute_cov, cross_correl_between)
-        mu, tau, phi = get_mu_tau_phi(
-            target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
-            station_data_filtered, sitecol_filtered, station_sitecol_filtered,
-            compute_cov, result)
-        meancovs[0][imt] = mu
-        meancovs[1][imt] = tau + phi
-        meancovs[2][imt] = tau
-        meancovs[3][imt] = phi
+    ms = {}  # dictionary gsim -> list of dicts
+    for g, gsim in enumerate(gsims):
+        if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
+            if not (type(gsim).__name__ == "ModifiableGMPE"
+                    and "add_between_within_stds" in gsim.kwargs):
+                raise NoInterIntraStdDevs(gsim)
 
-    return meancovs, sitecol_filtered.sids
+        # NB: the four arrays below have different dimensions, so
+        # unlike the regular gsim get_mean_std, a numpy ndarray
+        # won't work well as the 4 components will be non-homogeneous
+        ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
+
+        # Generate the contexts and calculate the means and 
+        # standard deviations at the *target* sites ("_Y")
+        cmaker_Y = ContextMaker(
+            rupture.tectonic_region_type, [gsim], dict(
+                truncation_level=0, imtls={target_imts[0].string: [0]},
+                maximum_distance=maximum_distance))
+
+        [ctx_Y] = cmaker_Y.get_ctx_iter([rupture], target_sitecol)
+
+        # filter sites
+        sitecol_filtered = target_sitecol.filter(
+            numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
+        mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
+        station_sitecol_filtered = station_sitecol.filter(mask)
+        station_data_filtered = station_data[mask].copy()
+        for m, o_imt in enumerate(observed_imts):
+            im = o_imt.string
+            station_data_filtered[im + "_median"] = mean_stds[0, g, m]
+            station_data_filtered[im + "_sigma"] = mean_stds[1, g, m]
+            station_data_filtered[im + "_tau"] = mean_stds[2, g, m]
+            station_data_filtered[im + "_phi"] = mean_stds[3, g, m]
+
+        compute_cov = partial(compute_spatial_cross_covariance_matrix,
+                              spatial_correl, cross_correl_within)
+        for target_imt in target_imts:
+            imt = target_imt.string
+            result = create_result(
+                target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
+                station_data_filtered, sitecol_filtered,
+                station_sitecol_filtered,
+                compute_cov, cross_correl_between)
+            mu, tau, phi = get_mu_tau_phi(
+                target_imt, cmaker_Y, ctx_Y, target_imts, observed_imts,
+                station_data_filtered, sitecol_filtered,
+                station_sitecol_filtered,
+                compute_cov, result)
+            ms[gsim][0][imt] = mu
+            ms[gsim][1][imt] = tau + phi
+            ms[gsim][2][imt] = tau
+            ms[gsim][3][imt] = phi
+
+    return ms, sitecol_filtered.sids
 
 
 # In scenario/case_21 one has
