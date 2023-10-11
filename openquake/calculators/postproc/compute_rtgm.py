@@ -506,8 +506,7 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    # FIXME: double-check this (it was checking mean_rates_ss)
-    if dstore['mean_rates_by_src'][:].max() < 1E-3:
+    if dstore['mean_rates_ss'][:].max() < 1E-3:
         logging.warning('Ultra-low hazard: skipping AELO calculation')
         return
     logging.info('Computing Risk Targeted Ground Motion')
