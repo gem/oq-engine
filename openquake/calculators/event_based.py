@@ -339,9 +339,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
-    logging.info('totw = {:_d}'.format(round(totw)))	
-    if save_tmp:	
-        save_tmp(smap.monitor)
+    logging.info('totw = {:_d}'.format(round(totw)))
     if "station_data" in oq.inputs:
         proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
@@ -359,6 +357,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
                 dset[:] = val
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
+    if save_tmp:	
+        save_tmp(smap.monitor)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
