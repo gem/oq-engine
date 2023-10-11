@@ -188,14 +188,14 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def get_computer(cmaker, proxy, sids, complete, station_sitecol, station_data):
+def get_computer(cmaker, proxy, sids, complete, station_data, station_sitecol):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
     oq = cmaker.oq
     trt = cmaker.trt
     ebr = proxy.to_ebr(trt)
-    if station_sitecol:
+    if station_sitecol[0]:
         stations = numpy.isin(sids, station_sitecol.sids)
         assert stations.sum(), 'There are no stations??'
         station_sids = sids[stations]
@@ -255,10 +255,6 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         rupgeoms = dstore['rupgeoms']
-        if stations:
-            station_data, station_sitecol = stations
-        else:
-            station_data, station_sitecol = None, None
         for proxy in proxies:
             t0 = time.time()
             with fmon:
@@ -270,8 +266,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 try:
                     computer = get_computer(
-                        cmaker, proxy, sids, sitecol.complete,
-                        station_sitecol, station_data)
+                        cmaker, proxy, sids, sitecol.complete, *stations)
                 except FarAwayRupture:
                     # skip this rupture
                     continue
@@ -326,22 +321,21 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
+        proxy = allproxies[0]
         station_df = dstore.read_df('station_data', 'site_id')
         maxdist = (oq.maximum_distance_stations or
                    oq.maximum_distance['default'][-1][1])
-        hypo = Point(*allproxies[0]['hypo'])
-        stations = filter_stations(station_df, sitecol.complete, hypo, maxdist)
+        hypo = Point(*proxy['hypo'])
+        station_data, station_sites = filter_stations(
+            station_df, sitecol.complete, hypo, maxdist)
     else:
-        stations = ()
+        station_data, station_sites = None, None
 
-    dstore.swmr_on()
-    smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if save_tmp:
-        save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
+    allargs = []
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
@@ -349,8 +343,24 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, totw, rup_weight):
-            smap.submit((block, cmaker, stations, dstore))
-    return smap
+            args = block, cmaker, (station_data, station_sites), dstore
+            allargs.append(args)
+    if "station_data" in oq.inputs:
+        proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
+        computer = get_computer(
+            cmaker, proxy, sitecol.sids, sitecol.complete,
+            station_data, station_sites)
+        ms, sids = computer.get_ms_and_sids()
+        dstore['conditioned/sids'] = sids
+        keys = ['mea', 'sig', 'tau', 'phi']
+        for g, gsim in enumerate(ms):
+            imts = ms[gsim][0]
+            for key, val in zip(keys, ms[gsim]):
+                for imt in imts:
+                    name = 'conditioned/gsim_%d/%s/%s' % (g, key, imt)
+                    dstore[name] = val[imt][:, 0]
+    dstore.swmr_on()
+    return parallel.Starmap(func, allargs, h5=dstore.hdf5)
 
 
 def set_mags(oq, dstore):

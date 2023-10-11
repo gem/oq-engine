@@ -278,7 +278,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=1E-5)
 
-    def test_conditioned(self):
+    def test_conditioned_stations(self):
         self.run_calc(conditioned.__file__, 'job.ini',
                       calculation_mode='scenario')
         hc_id = str(self.calc.datastore.calc_id)
