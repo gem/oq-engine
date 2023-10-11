@@ -542,11 +542,10 @@ def get_ms_and_sids(
     mean_stds_Y = cmaker_D.get_mean_stds([ctx_Y])
 
     # filter sites
-    sitecol_filtered = target_sitecol.filter(
+    target = target_sitecol.filter(
         numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
     mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
-    station_sitecol_filtered = station_sitecol.filter(mask)
-    station_data_filtered = station_data[mask].copy()
+    station_filtered = station_sitecol.filter(mask)
 
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
@@ -562,30 +561,30 @@ def get_ms_and_sids(
         # unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
         ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
+
+        sdata = station_data[mask].copy()    
         for m, o_imt in enumerate(observed_imts):
             im = o_imt.string
-            station_data_filtered[im + "_median"] = mean_stds_D[0, g, m]
-            station_data_filtered[im + "_sigma"] = mean_stds_D[1, g, m]
-            station_data_filtered[im + "_tau"] = mean_stds_D[2, g, m]
-            station_data_filtered[im + "_phi"] = mean_stds_D[3, g, m]
+            sdata[im + "_median"] = mean_stds_D[0, g, m]
+            sdata[im + "_sigma"] = mean_stds_D[1, g, m]
+            sdata[im + "_tau"] = mean_stds_D[2, g, m]
+            sdata[im + "_phi"] = mean_stds_D[3, g, m]
         for target_imt in target_imts:
             imt = target_imt.string
             result = create_result(
                 target_imt, target_imts, observed_imts,
-                station_data_filtered, sitecol_filtered,
-                station_sitecol_filtered,
+                sdata, target, station_filtered,
                 compute_cov, cross_correl_between)
             mu, tau, phi = get_mu_tau_phi(
                 target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
-                station_data_filtered, sitecol_filtered,
-                station_sitecol_filtered,
+                sdata, target, station_filtered,
                 compute_cov, result)
             ms[gsim][0][imt] = mu
             ms[gsim][1][imt] = tau + phi
             ms[gsim][2][imt] = tau
             ms[gsim][3][imt] = phi
 
-    return ms, sitecol_filtered.sids
+    return ms, target.sids
 
 
 # In scenario/case_21 one has
