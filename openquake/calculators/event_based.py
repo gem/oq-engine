@@ -188,7 +188,7 @@ def strip_zeros(gmf_df):
     return gmf_df[ok]
 
 
-def get_computer(cmaker, proxy, sids, sitecol, station_sitecol, station_data):
+def get_computer(cmaker, proxy, sids, complete, station_sitecol, station_data):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
@@ -197,22 +197,21 @@ def get_computer(cmaker, proxy, sids, sitecol, station_sitecol, station_data):
     ebr = proxy.to_ebr(trt)
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
-        if stations.any():
-            # if there are stations close, use them
-            station_sids = sids[stations]
-            target_sids = sids[~stations]
-            return ConditionedGmfComputer(
-                ebr, sitecol.filtered(target_sids),
-                sitecol.filtered(station_sids),
-                station_data.loc[station_sids],
-                oq.observed_imts,
-                cmaker, oq.correl_model, oq.cross_correl,
-                oq.ground_motion_correlation_params,
-                oq.number_of_ground_motion_fields,
-                oq._amplifier, oq._sec_perils)
+        assert stations.sum(), 'There are no stations??'
+        station_sids = sids[stations]
+        target_sids = sids[~stations]
+        return ConditionedGmfComputer(
+            ebr, complete.filtered(target_sids),
+            complete.filtered(station_sids),
+            station_data.loc[station_sids],
+            oq.observed_imts,
+            cmaker, oq.correl_model, oq.cross_correl,
+            oq.ground_motion_correlation_params,
+            oq.number_of_ground_motion_fields,
+            oq._amplifier, oq._sec_perils)
 
     return GmfComputer(
-        ebr, sitecol.filtered(sids), cmaker,
+        ebr, complete.filtered(sids), cmaker,
         oq.correl_model, oq.cross_correl,
         oq._amplifier, oq._sec_perils)
 
@@ -251,7 +250,10 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     scenario = 'scenario' in oq.calculation_mode
     with dstore:
         sitecol = dstore['sitecol']
-        srcfilter = SourceFilter(sitecol, oq.maximum_distance(cmaker.trt))
+        if 'complete' in dstore:
+            sitecol.complete = dstore['complete']
+        maxdist = oq.maximum_distance(cmaker.trt)
+        srcfilter = SourceFilter(sitecol.complete, maxdist)
         rupgeoms = dstore['rupgeoms']
         if stations:
             station_data, station_sitecol = stations
@@ -268,7 +270,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 try:
                     computer = get_computer(
-                        cmaker, proxy, sids, sitecol,
+                        cmaker, proxy, sids, sitecol.complete,
                         station_sitecol, station_data)
                 except FarAwayRupture:
                     # skip this rupture

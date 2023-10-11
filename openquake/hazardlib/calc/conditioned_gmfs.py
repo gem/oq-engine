@@ -525,14 +525,13 @@ def get_conditioned_mean_and_covariance(
     # standard deviations at the *station* sites ("_D")
     cmaker_D = ContextMaker(
         rupture.tectonic_region_type, [gsim],
-        dict(truncation_level=0, imtls=observed_imtls,
-             maximum_distance=maximum_distance))
+        dict(imtls=observed_imtls, maximum_distance=maximum_distance))
 
     # Generate the contexts and calculate the means and 
     # standard deviations at the *target* sites ("_Y")
     cmaker_Y = ContextMaker(
         rupture.tectonic_region_type, [gsim], dict(
-            truncation_level=0, imtls={target_imts[0].string: [0]},
+            imtls={target_imts[0].string: [0]},
             maximum_distance=maximum_distance))
 
     [ctx_D] = cmaker_D.get_ctx_iter([rupture], station_sitecol)
