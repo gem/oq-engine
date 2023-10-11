@@ -627,10 +627,11 @@ def get_mu_tau_phi(target_imt, cmaker_Y, ctx_Y,
     # StdDev.INTRA_EVENT; M IMTs, N sites/distances
 
     # Predicted mean at the target sites, from GSIM
-    mu_Y = mean_stds[0, 0].reshape((-1, 1))
+    mu_Y = mean_stds[0, 0][:, None]
+
     # Predicted uncertainty components at the target sites, from GSIM
-    tau_Y = mean_stds[2, 0].reshape((-1, 1))
-    Y = numpy.diag(mean_stds[3, 0].flatten())
+    tau_Y = mean_stds[2, 0][:, None]
+    Y = numpy.diag(mean_stds[3, 0])
 
     # Compute the mean of the conditional between-event residual B|YD=yD
     # for the target sites; the shapes are (nsites, nstations),
