@@ -354,7 +354,7 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
-    
+
         self.oq = oq
         self.monitor = monitor
         self._init1(param)
@@ -726,7 +726,8 @@ class ContextMaker(object):
         # computing distances
         rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
         # get the closest points on the surface
-        closest = project_back(planar, xx, yy)  # (3, U, N)
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
+            closest = project_back(planar, xx, yy)  # (3, U, N)
         dists = {'rrup': rrup}
         for par in self.REQUIRES_DISTANCES - {'rrup'}:
             dists[par] = get_distances_planar(planar, sites, par)
@@ -769,7 +770,7 @@ class ContextMaker(object):
                 ctxt[par] = planar.hypo[:, 1]
             elif par == 'hypo_depth':
                 ctxt[par] = planar.hypo[:, 2]
-        
+
         # setting distance parameters
         for par in dists:
             ctx[par] = dists[par]
@@ -809,8 +810,9 @@ class ContextMaker(object):
         else:
             dd['probs_occur'] = numpy.zeros(0)
 
-        dd['clon'] = numpy.float64(0.)
-        dd['clat'] = numpy.float64(0.)
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
+            dd['clon'] = numpy.float64(0.)
+            dd['clat'] = numpy.float64(0.)
 
         self.build_ctx = RecordBuilder(**dd).zeros
         self.siteparams = [par for par in sitecol.array.dtype.names
