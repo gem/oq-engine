@@ -42,7 +42,7 @@ set -e
 env | grep -q "^GEM_MASTER_BRANCH=" || export GEM_MASTER_BRANCH="master"
 GEM_GIT_REPO="git@github.com:gem"
 GEM_GIT_PACKAGE="oq-engine"
-GEM_DEPENDS="oq-python-deb|oq-python3.8|deb oq-libs|python3-oq-libs|deb oq-libs-extra|python3-oq-libs-extra|sub"
+GEM_DEPENDS="oq-python-deb|oq-python3.8|deb oq-libs|python3-oq-libs|deb"
 GEM_DEB_PACKAGE="python3-${GEM_GIT_PACKAGE}"
 GEM_DEB_SERIE="master"
 if [ -z "$GEM_DEB_REPO" ]; then

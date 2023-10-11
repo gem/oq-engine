@@ -25,12 +25,15 @@ import unittest
 
 import numpy
 
-from openquake.hazardlib.calc.conditioned_gmfs import \
-    get_conditioned_mean_and_covariance
+from openquake.hazardlib.calc.conditioned_gmfs import get_ms_and_sids
 from openquake.hazardlib.tests.calc import \
     _conditioned_gmfs_test_data as test_data
 
 aac = numpy.testing.assert_allclose
+
+def get_mean_covs(rup, gmm, *args):
+    ms, sids = get_ms_and_sids(rup, [gmm], *args)
+    return ms[gmm]
 
 
 class SetUSGSTestCase(unittest.TestCase):
@@ -47,7 +50,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -73,7 +76,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -101,7 +104,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -128,7 +131,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -155,7 +158,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -182,7 +185,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -208,7 +211,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -231,7 +234,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -262,7 +265,7 @@ class SetUSGSTestCase(unittest.TestCase):
         mus = []
         sigs = []
         for i, station_data in enumerate(station_data_list):
-            mean_covs, sids = get_conditioned_mean_and_covariance(
+            mean_covs = get_mean_covs(
                 rupture, gmm, station_sitecol, station_data,
                 observed_imt_strs, target_sitecol, target_imts,
                 spatial_correl, cross_correl_between, cross_correl_within,
@@ -291,7 +294,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,
@@ -314,7 +317,7 @@ class SetUSGSTestCase(unittest.TestCase):
         cross_correl_between = test_data.DummyCrossCorrelationBetween()
         cross_correl_within = test_data.DummyCrossCorrelationWithin()
         maximum_distance = test_data.MAX_DIST
-        mean_covs, sids = get_conditioned_mean_and_covariance(
+        mean_covs = get_mean_covs(
             rupture, gmm, station_sitecol, station_data,
             observed_imt_strs, target_sitecol, target_imts,
             spatial_correl, cross_correl_between, cross_correl_within,

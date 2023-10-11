@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Implemented `maximum_distance_stations` and fixed another site
+    collection filtering bug in conditioned GMFs
+  * Extended conditioned GMFs to number_of_ground_motion_fields > 1
   * Disabled SLOW MODE on macOS, since the amount of free memory returned by
     psutil cannot be trusted
   * Speeding up `count_ruptures` for multifault sources, which gives a *huge*
