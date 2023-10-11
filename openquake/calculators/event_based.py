@@ -299,14 +299,18 @@ def filter_stations(station_df, complete, hypo, maxdist):
     """
     :param station_df: DataFrame with the stations
     :param complete: complete SiteCollection
-    :param hypo: hypocenter array with (lon, lat, dep)
+    :param hypo: hypocenter of the rupture
     :param maxdist: maximum distance
     :returns: filtered (station_df, station_sitecol)
     """
+    ns = len(station_df)
     ok = (hypo.distance_to_mesh(complete.mesh) <= maxdist) & numpy.isin(
         complete.sids, station_df.index)
     close = complete.filter(ok)
     station_data = station_df[numpy.isin(station_df.index, close.sids)]
+    if len(station_data) < ns:
+        logging.info('Discarded %d/%d stations more distant than %d km',
+                     ns - len(station_data), ns, maxdist)
     return station_data, close
 
 
