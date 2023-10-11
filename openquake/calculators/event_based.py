@@ -195,7 +195,7 @@ def get_computer(cmaker, proxy, sids, complete, station_data, station_sitecol):
     oq = cmaker.oq
     trt = cmaker.trt
     ebr = proxy.to_ebr(trt)
-    if station_sitecol[0]:
+    if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
         assert stations.sum(), 'There are no stations??'
         station_sids = sids[stations]
@@ -271,7 +271,11 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     # skip this rupture
                     continue
             with cmon:
-                df = computer.compute_all(scenario, sig_eps, max_iml)
+                if hasattr(computer, 'stations'):  # conditioned GMFs
+                    assert scenario
+                    df = computer.compute_all(dstore, sig_eps, max_iml)
+                else:  # regular GMFs
+                    df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
