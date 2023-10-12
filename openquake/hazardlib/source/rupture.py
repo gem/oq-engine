@@ -756,14 +756,13 @@ class EBRupture(object):
         return self.rupture.tectonic_region_type
 
     # TODO: replace with the function get_eid_rlz
-    def get_eid_rlz(self, rlzs_by_gsim, scenario):
+    def get_eid_rlz(self, rlzs, scenario):
         """
-        :param rlzs_by_gsim: a dictionary gsims -> rlzs array
+        :param rlzs: an array of realization indices
         :param scenario: if true distribute the rlzs evenly else randomly
         :returns: an array with fields (eid, rlz)
         """
         out = numpy.zeros(self.n_occ, [('eid', U32), ('rlz', U32)])
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         out['eid'] = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
         if scenario:
             # the rlzs are distributed evenly

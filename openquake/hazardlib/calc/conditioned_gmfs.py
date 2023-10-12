@@ -229,7 +229,8 @@ class ConditionedGmfComputer(GmfComputer):
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario=True)
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs, scenario=True)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)

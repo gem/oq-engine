@@ -138,7 +138,8 @@ class GmfComputer(object):
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.ctx.sids
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_rlz = self.ebrupture.get_eid_rlz(rlzs, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
