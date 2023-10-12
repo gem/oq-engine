@@ -33,6 +33,12 @@
                   Show disaggregation by sources - {{ img|get_disagg_by_src_imt }}</a>
               </div>
               {% endfor %}
+              {% if governing_mce %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce" class="btn btn-sm">
+                  Show governing MCE</a>
+              </div>
+              {% endif %}
           </div>
         </div>
       </div>

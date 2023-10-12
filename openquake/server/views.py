@@ -964,17 +964,19 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
-            hcurves = 'png/hcurves' in ds
+            hcurves = 'hcurves' in ds['png']
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-')]
+            governing_mce = 'governing_mce' in ds['png']
         else:
-            hmaps = hcurves = False
+            hmaps = hcurves = governing_mce = False
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
+                       governing_mce=governing_mce,
                        application_mode=application_mode))
 
 

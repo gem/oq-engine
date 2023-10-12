@@ -37,6 +37,7 @@ Useful abbreviations:
 """
 import io
 import logging
+import json
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
@@ -521,6 +522,50 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
     dstore['png/disagg_by_src-All-IMTs'] = Image.open(bio)
 
 
+def plot_governing_mce(dstore, imtls):
+    imt_list = []
+    imt_list = []
+    imls = []
+    for imt, iml in imtls.items():
+        imls.append([im for im in iml])
+        imt_list.append(imt)
+    js = dstore['asce7'][()].decode('utf8')
+    dic = json.loads(js)
+    MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
+    MCEr = [dic['PGA'], dic['SS'], dic['S1']]
+    T = [from_string(imt).period for imt in imt_list]
+
+    limit_det = [0.5, 1.5, 0.6]
+    # presenting as maximum component -> do not need conversion facts
+    RTGM = dstore.read_df('rtgm')['ProbMCE']
+    plt.figure(figsize=(8, 6))
+    plt.rcParams.update({'font.size': 15})
+    plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
+    plt.plot(T[0], RTGM[0], 'bX', markersize=12, label='$PGA_{GM}$',
+             linewidth=3)
+    plt.plot(T[1:], RTGM[1:], 'bs', markersize=12,
+             label='$S_{S,RT}$ and $S1_{RT}$', linewidth=3)
+    plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
+             linewidth=3)
+    plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
+             label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
+    plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
+                linewidth=2, facecolors='none', edgecolors='r')
+    plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
+                label='Governing $MCE_R$', linewidth=2,
+                facecolors='none', edgecolors='r')
+    plt.grid('both')
+    plt.ylabel('Spectral Acceleration (g)', fontsize=20)
+    plt.xlabel('Period (s)', fontsize=20)
+    plt.legend(loc="upper right", fontsize='14')
+    plt.ylim([0, np.max([RTGM, MCEr_det, MCEr, limit_det]) + 0.2])
+    plt.xlim([-0.02, 1.2])
+    bio = io.BytesIO()
+    plt.savefig(bio, format='png', bbox_inches='tight')
+    plt.clf()
+    return Image.open(bio)
+
+
 def plot_curves(dstore):
     dinfo = get_info(dstore)
     # site is always 0 for a single-site calculation
@@ -528,6 +573,9 @@ def plot_curves(dstore):
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_target, imls = [], [], []
+    # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
+    # three imts, that are mandatory in this context. For the plot of governing
+    # MCE we read imts from the imtls
     imt_list = ['PGA', 'SA(0.2)', 'SA(1.0)']
     for imt in imt_list:
         # get periods and factors for converting btw geom mean and
@@ -557,6 +605,10 @@ def plot_curves(dstore):
 
     df, imtls_dict = disaggr_by_src(dstore, imtls)
     _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore)
+
+    img = plot_governing_mce(dstore, imtls)
+    logging.info('Storing png/governing_mce')
+    dstore['png/governing_mce'] = img
 
 
 def main(dstore, csm):
