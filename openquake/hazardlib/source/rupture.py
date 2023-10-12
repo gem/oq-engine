@@ -782,7 +782,7 @@ class EBRupture(object):
             self.__class__.__name__, self.id, self.n_occ)
 
 
-def get_eid_rlz(recs, rlzs, scenario):
+def get_events(recs, rlzs, scenario):
     """
     Build the associations event_id -> rlz_id for each rup_id.
 
