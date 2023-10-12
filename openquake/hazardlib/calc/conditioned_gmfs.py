@@ -234,8 +234,6 @@ class ConditionedGmfComputer(GmfComputer):
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
-        num_events = self.num_events
-        assert num_events
         # NB: ms is a dictionary gsim -> [imt -> array]
         sids = dstore['conditioned/sids'][:]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
@@ -245,7 +243,7 @@ class ConditionedGmfComputer(GmfComputer):
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
             with mon2:
                 array, sig, eps = self.compute(
-                    gsim, num_events, mea, tau, phi, rng)
+                    gsim, self.num_events, mea, tau, phi, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             assert len(sids) == N, (len(sids), N)
 
