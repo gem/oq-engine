@@ -355,6 +355,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             cmaker, proxy, rupgeoms, srcfilter,
             station_data, station_sites)
         ms, sids = computer.get_ms_and_sids()
+        del proxy.geom  # to reduce data transfer
         dstore.create_dset('conditioned/sids', sids)
         keys = ['mea', 'sig', 'tau', 'phi']
         for g, gsim in enumerate(ms):
