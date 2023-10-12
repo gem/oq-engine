@@ -253,6 +253,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     times = []  # rup_id, nsites, dt
     fmon = monitor('filtering ruptures', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
+    rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
     scenario = 'scenario' in oq.calculation_mode
     with dstore:
@@ -276,7 +277,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             with cmon:
                 if hasattr(computer, 'station_data'):  # conditioned GMFs
                     assert scenario
-                    df = computer.compute_all(dstore, sig_eps, max_iml)
+                    df = computer.compute_all(dstore, sig_eps, max_iml, rmon)
                 else:  # regular GMFs
                     df = computer.compute_all(scenario, sig_eps, max_iml)
             dt = time.time() - t0
