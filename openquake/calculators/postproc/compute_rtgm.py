@@ -353,19 +353,22 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
     colors = mpl.colormaps['viridis'].reversed()._resample(3)
-    patterns = ['-','--',':']
+    patterns = ['-', '--', ':']
     for i, imt in enumerate(imt_list):
         lab = _get_label(imt)
-        plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i], label=lab, linewidth=3, zorder=1)
+        plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
+                   label=lab, linewidth=3, zorder=1)
         if i == 2:
             plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
-                       label='Probabilistic MCE',  linewidth=2, markersize=10, zorder=3)
+                       label='Probabilistic MCE',  linewidth=2,
+                       markersize=10, zorder=3)
         else:
             plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
                        linewidth=2, markersize=10, zorder=3)
         plt.loglog([np.min(imls[i]), RTGM[i]], [afe_RTGM[i], afe_RTGM[i]],
                    'darkgray', linewidth=1)
-        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray', linewidth=1)
+        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray',
+                   linewidth=1)
 
     plt.grid('both')
     plt.legend(fontsize=16)
@@ -418,7 +421,7 @@ def disaggr_by_src(dstore, imtls):
 
 def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
 
-    fig, ax = plt.subplots(3, figsize=(8,15))
+    fig, ax = plt.subplots(3, figsize=(8, 15))
 
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor;
@@ -434,7 +437,6 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
         imls_o = imtls_dict[imt]
         imls = [iml*f for iml in imls_o]
-        # FIXME: check if rtgm_probmce is the right object to pass here
         # have to compute everything for max comp. and for geom. mean
         RTGM = rtgm_probmce[m]
         RTGM_o = rtgm_probmce[m]/f
@@ -451,7 +453,7 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         largest_contr = np.max(out_contr_all)
         sample = sum(out_contr_all > fact*largest_contr)
         viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
-        i = 0; j = 0
+        i = j = 0
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
         for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
@@ -459,10 +461,12 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
             afe_pad = afes + [0] * (len(imls) - len(afes))
             # if it's not a big contributor, plot in silver
             if out_contr_all[ind] <= fact*largest_contr:
-                if j==0:
-                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7, label='low contr. source')
-                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7, label='low contr. source')
-                    j+=1
+                if j == 0:
+                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7,
+                                 label='low contr. source')
+                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7,
+                               label='low contr. source')
+                    j += 1
                 else:
                     ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7)
                     ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7)
@@ -470,13 +474,15 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
             else:
                 ax[m].loglog(imls, afe_pad, c=viridis(i), label=str(src))
                 ax1.loglog(imls_o, afe_pad, c=viridis(i), label=str(src))
-                i+=1
+                i += 1
         # populate subplot - maximum component
-        ax[m].loglog(imls, mean_hcurve[m], 'k', label=_get_label(imt), linewidth=2)
+        ax[m].loglog(imls, mean_hcurve[m], 'k', label=_get_label(imt),
+                     linewidth=2)
         ax[m].loglog([np.min(imls), RTGM], [afe_target, afe_target], 'k--',
-                   linewidth=2)
+                     linewidth=2)
         ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2)
-        ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE', linewidth=2)
+        ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
+                     linewidth=2)
         ax[m].grid('both')
         ax[m].set_xlabel(imt+' (g)', fontsize=16)
         ax[m].set_ylabel('Annual Freq. Exceedance', fontsize=16)
@@ -485,11 +491,13 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         ax[m].set_xlim([np.min(imls_o), 4])
 
         # populate single imt plots - geometric mean
-        ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean', linewidth=2)
-        ax1.loglog([np.min(imls_o), RTGM_o], [afe_target_o, afe_target_o], 'k--',
+        ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean',
                    linewidth=2)
+        ax1.loglog([np.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
+                   'k--', linewidth=2)
         ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2)
-        ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE', linewidth=2)
+        ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
+                   linewidth=2)
         ax1.grid('both')
         ax1.set_xlabel(imt+' (g)', fontsize=16)
         ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
@@ -500,16 +508,17 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         # save single imt plot
         bio1 = io.BytesIO()
         fig1.savefig(bio1, format='png', bbox_inches='tight')
-        # keep these in webui until we finish checks and have a command line exporter, 
-        # then we can change the name to _{imt} and they will not appear in the webui
+        # keep these in webui until we finish checks and have a command line
+        # exporter, then we can change the name to _{imt} and they will not
+        # appear in the webui
         dstore[f'png/disagg_by_src-{imt}'] = Image.open(bio1)
-        #dstore[f'png/disagg_by_src_{imt}'] = Image.open(bio1)
+        # dstore[f'png/disagg_by_src_{imt}'] = Image.open(bio1)
 
     # save triple plot
     bio = io.BytesIO()
     fig.savefig(bio, format='png', bbox_inches='tight')
-    logging.info(f'Storing png/disagg_by_src')
-    dstore['png/disagg_by_src-All-IMTs'] = Image.open(bio) 
+    logging.info('Storing png/disagg_by_src')
+    dstore['png/disagg_by_src-All-IMTs'] = Image.open(bio)
 
 
 def plot_curves(dstore):
@@ -519,7 +528,7 @@ def plot_curves(dstore):
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_target, imls = [], [], []
-    imt_list = ['PGA', 'SA(0.2)','SA(1.0)']
+    imt_list = ['PGA', 'SA(0.2)', 'SA(1.0)']
     for imt in imt_list:
         # get periods and factors for converting btw geom mean and
         # maximum component
@@ -557,9 +566,7 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    # FIXME: double-check this (it was checking mean_rates_ss)
     if dstore['mean_rates_ss'][:].max() < 1E-3:
-#    if dstore['mean_rates_by_src'][:].max() < 1E-3:
         logging.warning('Ultra-low hazard: skipping AELO calculation')
         return
     logging.info('Computing Risk Targeted Ground Motion')
