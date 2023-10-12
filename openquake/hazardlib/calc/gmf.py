@@ -164,27 +164,24 @@ class GmfComputer(object):
             eids = eid_[rlz_ == rlz]
             for ei, eid in enumerate(eids):
                 gmfa = array[:, :, n + ei]  # shape (N, M)
+                nonzero = gmfa.sum(axis=1) > 0
+                gmfa = gmfa[nonzero]
+                nz = nonzero.sum()
+                # gmv can be zero due to the minimum_intensity, coming
+                # from the job.ini or from the vulnerability functions
+                data['sid'].append(sids[nonzero])
+                data['eid'].append(numpy.full(nz, eid, U32))
+                data['rlz'].append(numpy.full(nz, rlz, U32))
                 if sig_eps is not None:
                     tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                 list(eps[:, n + ei]))
                     sig_eps.append(tup)
-                items = []
                 for sp in self.sec_perils:
                     o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
                     for outkey, outarr in zip(sp.outputs, o):
-                        items.append((outkey, outarr))
-                for i, gmv in enumerate(gmfa):
-                    if gmv.sum() == 0:
-                        continue
-                    data['sid'].append(sids[i])
-                    data['eid'].append(eid)
-                    data['rlz'].append(rlz)  # used in compute_gmfs_curves
-                    for m, gmv_field in enumerate(self.gmv_fields):
-                        data[gmv_field].append(gmv[m])
-                    for outkey, outarr in items:
-                        data[outkey].append(outarr[i])
-                    # gmv can be zero due to the minimum_intensity, coming
-                    # from the job.ini or from the vulnerability functions
+                        data[outkey].append(outarr)
+                for m, gmv_field in enumerate(self.gmv_fields):
+                    data[gmv_field].append(gmfa[:, m])
             n += len(eids)
 
     def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
@@ -212,9 +209,9 @@ class GmfComputer(object):
 
         for key, val in sorted(data.items()):
             if key in 'eid sid rlz':
-                data[key] = U32(data[key])
+                data[key] = numpy.concatenate(data[key], dtype=U32)
             else:
-                data[key] = F32(data[key])
+                data[key] = numpy.concatenate(data[key], dtype=F32)
         return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mean_stds, rng):
