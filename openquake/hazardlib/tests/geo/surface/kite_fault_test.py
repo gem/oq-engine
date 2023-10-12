@@ -32,7 +32,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = False
+PLOTTING = True
 aae = np.testing.assert_almost_equal
 
 
@@ -60,13 +60,14 @@ def plot_mesh_3d(ax, smsh, zfa):
     """
     for i in range(smsh.mesh.lons.shape[0]):
         ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
-                smsh.mesh.depths[i, :]/zfa, '-r', lw=0.5)
+                smsh.mesh.depths[i, :] / zfa, '-r', lw=0.5)
     for i in range(smsh.mesh.lons.shape[1]):
         ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
-                smsh.mesh.depths[:, i]/zfa, '-r', lw=0.5)
+                smsh.mesh.depths[:, i] / zfa, '-r', lw=0.5)
 
 
-def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
+def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
+        ax_equal=False):
     """
     Plots the 3D mesh
 
@@ -75,32 +76,39 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = ''):
     :param smsh:
         The kite surface
     """
-    from mpl_toolkits.mplot3d import Axes3D  # this is needed
+    #  from mpl_toolkits.mplot3d import Axes3D  # this is needed
 
     # Scaling factor on the z-axis
     scl = 0.1
 
     # Create figure
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
+    #  fig = plt.figure(figsize=(10, 8))
+    #  ax = fig.add_subplot(111, projection='3d')
+    ax = plt.figure().add_subplot(projection='3d')
     plt.style.use('seaborn-bright')
+
+    if ax_equal:
+        scl = 0.01
 
     # Plotting nodes
     for ipro in profiles:
         coo = [[p.longitude, p.latitude, p.depth] for p in ipro]
         coo = np.array(coo)
-        ax.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl, '--g', lw=1)
-        ax.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl, 'og', lw=1, markersize=3)
+        ax.plot(coo[:, 0], coo[:, 1], coo[:, 2] * scl, '--g', lw=1)
+        ax.plot(
+            coo[:, 0], coo[:, 1], coo[:, 2] * scl, 'og', lw=1, markersize=3)
 
     # Plotting mesh
     if smsh is not None:
         for i in range(smsh.mesh.lons.shape[0]):
             ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
-                    smsh.mesh.depths[i, :]*scl, '-r', lw=0.5)
+                    smsh.mesh.depths[i, :] * scl, '-r', lw=0.5)
         for i in range(smsh.mesh.lons.shape[1]):
             ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
-                    smsh.mesh.depths[:, i]*scl, '-r', lw=0.5)
+                    smsh.mesh.depths[:, i] * scl, '-r', lw=0.5)
     plt.title(title)
+
+    set_axes_equal(ax)
     ax.invert_zaxis()
     plt.show()
 
@@ -330,6 +338,81 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         dip = self.srfc.get_dip()
 
 
+class KiteSurfaceUCF1Tests(unittest.TestCase):
+
+    def setUp(self):
+        path = os.path.join(BASE_DATA_PATH, 'profiles10')
+        self.prf, _ = _read_profiles(path)
+
+        if PLOTTING:
+            title = 'Profiles'
+            ppp(self.prf, title=title, ax_equal=True)
+
+    def test_mesh_creation(self):
+        # Create the mesh: two parallel profiles - no top alignment
+        hsmpl = 1.0
+        vsmpl = 2.0
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+
+        if PLOTTING:
+            title = 'Test mesh creation'
+            ppp(self.prf, srfc, title, ax_equal=True)
+
+
+class KiteSurfaceUCF2Tests(unittest.TestCase):
+
+    def setUp(self):
+        path = os.path.join(BASE_DATA_PATH, 'profiles11')
+        self.prf, _ = _read_profiles(path)
+
+        if PLOTTING:
+            title = 'Profiles'
+            ppp(self.prf, title=title, ax_equal=True)
+
+    def test_mesh_creation02(self):
+        # Create the mesh: two parallel profiles - no top alignment
+        hsmpl = 0.2
+        vsmpl = 2.0
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
+
+        if PLOTTING:
+            title = 'Test mesh creation'
+            ppp(self.prf, srfc, title, ax_equal=True)
+
+
+def set_axes_equal(ax):
+    """
+    Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc.
+
+    Input
+      ax: a matplotlib axis, e.g., as output from plt.gca().
+    """
+
+    x_limits = ax.get_xlim3d()
+    y_limits = ax.get_ylim3d()
+    z_limits = ax.get_zlim3d()
+
+    x_range = abs(x_limits[1] - x_limits[0])
+    x_middle = np.mean(x_limits)
+    y_range = abs(y_limits[1] - y_limits[0])
+    y_middle = np.mean(y_limits)
+    z_range = abs(z_limits[1] - z_limits[0])
+    z_middle = np.mean(z_limits)
+
+    # The plot bounding box is a sphere in the sense of the infinity
+    # norm, hence I call half the max range the plot radius.
+    plot_radius = 0.5 * max([x_range, y_range, z_range])
+
+    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+
 class KiteSurfaceSimpleTests(unittest.TestCase):
     """
     Simple test for the creation of a KiteSurface
@@ -493,9 +576,9 @@ class KiteSurfaceTestCase(unittest.TestCase):
 
         # Tests the position of the center
         pnt = msh.get_center()
-        tmp = (abs(msh.mesh.lons-pnt.longitude) +
-               abs(msh.mesh.lats-pnt.latitude) +
-               abs(msh.mesh.depths-pnt.depth)*0.01)
+        tmp = (abs(msh.mesh.lons - pnt.longitude) +
+               abs(msh.mesh.lats - pnt.latitude) +
+               abs(msh.mesh.depths - pnt.depth) * 0.01)
         idx = np.unravel_index(np.argmin(tmp, axis=None), tmp.shape)
         msg = "We computed center of the surface is wrong"
         self.assertEqual(idx, (6, 6), msg)
@@ -522,18 +605,18 @@ class KiteSurfaceTestCase(unittest.TestCase):
 
         # Note that this mesh is flipped at the construction level
         self.assertTrue(np.all(np.abs(msh.depths[0, :]) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh.depths[6, :]-15.) < 1e-3))
+        self.assertTrue(np.all(np.abs(msh.depths[6, :] - 15.) < 1e-3))
         self.assertTrue(np.all(np.abs(msh.lons[:, -1]) < 1e-3))
-        self.assertTrue(np.all(np.abs(msh.lons[:, 0]-0.5) < 1e-2))
+        self.assertTrue(np.all(np.abs(msh.lons[:, 0] - 0.5) < 1e-2))
 
         dip = srfc.get_dip()
         msg = "The value of dip computed is wrong: {dip:.3f}"
-        self.assertTrue(abs(dip-90) < 0.5, msg)
+        self.assertTrue(abs(dip - 90) < 0.5, msg)
 
         strike = srfc.get_strike()
         msg = "The value of strike computed is wrong.\n"
         msg += "computed: {strike:.3f} expected:"
-        self.assertTrue(abs(strike-270) < 0.01, msg)
+        self.assertTrue(abs(strike - 270) < 0.01, msg)
 
         if PLOTTING:
             title = 'Trivial case - Vertical fault'
@@ -564,7 +647,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         computed = []
         for i in range(0, smsh.lons.shape[0]):
             tmp = []
-            for j in range(0, smsh.lons.shape[1]-1):
+            for j in range(0, smsh.lons.shape[1] - 1):
                 k = j + 1
                 dst = distance(smsh.lons[i, j], smsh.lats[i, j],
                                smsh.depths[i, j], smsh.lons[i, k],
@@ -572,11 +655,11 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
-        self.assertTrue(np.all(abs(computed-hsmpl)/vsmpl < 0.05))
+        self.assertTrue(np.all(abs(computed - hsmpl) / vsmpl < 0.05))
 
         # Check the vertical mesh spacing
         computed = []
-        for i in range(0, smsh.lons.shape[0]-1):
+        for i in range(0, smsh.lons.shape[0] - 1):
             tmp = []
             k = i + 1
             for j in range(0, smsh.lons.shape[1]):
@@ -586,7 +669,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
-        self.assertTrue(np.all(abs(computed-vsmpl)/vsmpl < 0.05))
+        self.assertTrue(np.all(abs(computed - vsmpl) / vsmpl < 0.05))
 
         if PLOTTING:
             title = 'Two parallel profiles'
@@ -619,7 +702,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         computed = []
         for i in range(0, smsh.lons.shape[0]):
             tmp = []
-            for j in range(0, smsh.lons.shape[1]-1):
+            for j in range(0, smsh.lons.shape[1] - 1):
                 k = j + 1
                 dst = distance(
                     smsh.lons[i, j], smsh.lats[i, j], smsh.depths[i, j],
@@ -627,7 +710,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
-        tmp = abs(computed-self.h_sampl)/self.h_sampl
+        tmp = abs(computed - self.h_sampl) / self.h_sampl
         self.assertTrue(np.all(tmp < 0.02))
 
         if PLOTTING:
@@ -640,7 +723,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         srfc = self.smsh
         smsh = srfc.mesh
         computed = []
-        for i in range(0, smsh.lons.shape[0]-1):
+        for i in range(0, smsh.lons.shape[0] - 1):
             tmp = []
             k = i + 1
             for j in range(0, smsh.lons.shape[1]):
@@ -650,7 +733,7 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
                 tmp.append(dst)
             computed.append(dst)
         computed = np.array(computed)
-        tmp = abs(computed-self.v_sampl)/self.v_sampl
+        tmp = abs(computed - self.v_sampl) / self.v_sampl
         self.assertTrue(np.all(tmp < 0.01))
 
 
@@ -799,10 +882,10 @@ class VerticalProfilesTest(unittest.TestCase):
             ax = fig.add_subplot(111, projection='3d')
             zfa = 50.
             ax.plot(sfc.mesh.lons.flatten(), sfc.mesh.lats.flatten(),
-                    sfc.mesh.depths.flatten()/zfa, '.')
+                    sfc.mesh.depths.flatten() / zfa, '.')
             plot_mesh_3d(ax, sfc, zfa)
             for pr in profiles:
-                coo = np.array([[p.longitude, p.latitude, p.depth/zfa]
+                coo = np.array([[p.longitude, p.latitude, p.depth / zfa]
                                 for p in pr])
                 ax.plot(coo[:, 0], coo[:, 1], coo[:, 2])
             lo, la = sfc._get_external_boundary()
@@ -823,7 +906,7 @@ class VerticalProfilesTest(unittest.TestCase):
         idx = np.min(np.where(np.isfinite(sfc.mesh.lons[:, 0])))
         dst = mgd((sfc.mesh.lons[idx, 0], sfc.mesh.lats[idx, 0]),
                   (eblo[:2], ebla[:2]))
-        self.assertTrue(np.all(dst < 0.1+0.01))
+        self.assertTrue(np.all(dst < 0.1 + 0.01))
 
 
 class TestNarrowSurface(unittest.TestCase):
@@ -892,8 +975,10 @@ class TestProfilesFromSimpleFault(unittest.TestCase):
         coo = npoints_towards(trace[0].longitude, trace[0].latitude, 0.0,
                               azim + 90.0, delta_x, delta_h, 2)
 
-        np.testing.assert_almost_equal(pro[0].coo[-1,0], coo[0][-1], decimal=3)
-        np.testing.assert_almost_equal(pro[0].coo[-1,1], coo[1][-1], decimal=3)
+        np.testing.assert_almost_equal(
+            pro[0].coo[-1, 0], coo[0][-1], decimal=3)
+        np.testing.assert_almost_equal(
+            pro[0].coo[-1, 1], coo[1][-1], decimal=3)
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
@@ -935,6 +1020,3 @@ def _read_profile(filename: str) -> Line:
                                 float(aa[1]),
                                 float(aa[2])))
     return Line(points)
-
-
-
