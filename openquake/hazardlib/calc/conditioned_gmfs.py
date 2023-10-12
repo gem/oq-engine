@@ -116,6 +116,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
@@ -230,7 +231,7 @@ class ConditionedGmfComputer(GmfComputer):
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        eid_, rlz_ = self.ebrupture.get_eid_rlz(rlzs, scenario=True)
+        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario=True)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)

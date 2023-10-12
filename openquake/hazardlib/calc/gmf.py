@@ -26,6 +26,7 @@ import pandas
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
@@ -139,7 +140,7 @@ class GmfComputer(object):
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.ctx.sids
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        eid_, rlz_ = self.ebrupture.get_eid_rlz(rlzs, scenario)
+        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
