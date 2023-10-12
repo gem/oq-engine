@@ -236,9 +236,10 @@ class ConditionedGmfComputer(GmfComputer):
         # NB: ms is a dictionary gsim -> [imt -> array]
         sids = dstore['conditioned/sids'][:]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            mean_covs = [dstore['conditioned/gsim_%d/%s' % (g, key)][:]
-                         for key in ('mea', 'sig', 'tau', 'phi')]
-            array, sig, eps = self.compute(gsim, num_events, mean_covs, rng)
+            mea = dstore['conditioned/gsim_%d/mea' % g][:]
+            tau = dstore['conditioned/gsim_%d/tau' % g][:]
+            phi = dstore['conditioned/gsim_%d/phi' % g][:]
+            array, sig, eps = self.compute(gsim, num_events, mea, tau, phi, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             assert len(sids) == N, (len(sids), N)
 
@@ -248,7 +249,7 @@ class ConditionedGmfComputer(GmfComputer):
                     if (array[m] > max_iml[m]).any():
                         for n in range(N):
                             bad = array[m, n] > max_iml[m]  # shape E
-                            mean = mean_covs[0][m]  # shape (N, 1)
+                            mean = mea[m]  # shape (N, 1)
                             array[m, n, bad] = exp(mean[n, 0], im)
 
             # manage min_iml
@@ -286,26 +287,27 @@ class ConditionedGmfComputer(GmfComputer):
                 n += len(eids)
         return pandas.DataFrame(data)
 
-    def compute(self, gsim, num_events, mean_covs, rng):
+    def compute(self, gsim, num_events, mea, tau, phi, rng):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
-        :param mean_covs: array of shape (4, M, N)
+        :param mea: array of shape (M, N, 1)
+        :param tau: array of shape (M, N, N)
+        :param phi: array of shape (M, N, N)
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for tau
             and eps for the random part
         """
-        M = len(self.imts)
-        num_sids = mean_covs[0][0].size
-        result = numpy.zeros((M, num_sids, num_events), F32)
+        M, N, _ = mea.shape
+        result = numpy.zeros((M, N, num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
 
         for m, im in enumerate(self.imts):
-            mu_Y_yD = mean_covs[0][m]
-            cov_WY_WY_wD = mean_covs[2][m]
-            cov_BY_BY_yD = mean_covs[3][m]
+            mu_Y_yD = mea[m]
+            cov_WY_WY_wD = tau[m]
+            cov_BY_BY_yD = phi[m]
             try:
                 result[m], sig[m], eps[m] = self._compute(
                     mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, num_events, rng)
