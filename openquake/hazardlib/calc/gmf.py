@@ -24,6 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -51,7 +52,7 @@ def exp(vals, imt):
     """
     Exponentiate the values unless the IMT is MMI
     """
-    if str(imt) == 'MMI':
+    if imt == 'MMI':
         return vals
     return numpy.exp(vals)
 
@@ -130,7 +131,7 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+    def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
@@ -148,7 +149,8 @@ class GmfComputer(object):
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
-            array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
+            with mon:
+                array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
 
             # manage max_iml
@@ -157,7 +159,8 @@ class GmfComputer(object):
                     if (array[m] > max_iml[m]).any():
                         for n in range(N):
                             bad = array[m, n] > max_iml[m]  # shape E
-                            array[m, n, bad] = exp(mean_stds[0, g, m, n], im)
+                            array[m, n, bad] = exp(
+                                mean_stds[0, g, m, n], im)
 
             # manage min_iml
             for n in range(N):
@@ -238,13 +241,14 @@ class GmfComputer(object):
         return result, sig, eps
 
     def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
+        im = imt.string
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             mean, _, _, _ = mean_stds
-            gmf = exp(mean, imt)[:, None]
+            gmf = exp(mean, im)[:, None]
             gmf = gmf.repeat(len(inter_eps), axis=1)
             inter_sig = 0
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
@@ -257,7 +261,7 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, sig, _, _ = mean_stds
-            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, imt)
+            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im)
             inter_sig = numpy.nan
         else:
             mean, sig, tau, phi = mean_stds
@@ -274,7 +278,7 @@ class GmfComputer(object):
                     intra_res = intra_res[:, None]
 
             inter_res = tau[:, None] * inter_eps  # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + intra_res + inter_res, imt)  # (N, E)
+            gmf = exp(mean[:, None] + intra_res + inter_res, im)  # (N, E)
             inter_sig = tau.max()  # from shape (N, 1) => scalar
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
