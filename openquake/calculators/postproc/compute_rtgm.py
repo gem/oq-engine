@@ -368,8 +368,8 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
                        linewidth=2, markersize=10, zorder=3)
         plt.loglog([np.min(imls[i]), RTGM[i]], [afe_RTGM[i], afe_RTGM[i]],
                    'darkgray', linestyle='--', linewidth=1)
-        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray', linestyle='--',
-                   linewidth=1)
+        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray',
+                   linestyle='--', linewidth=1)
 
     plt.grid('both')
     plt.legend(fontsize=13)
@@ -378,7 +378,7 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     plt.legend(loc="best", fontsize='16')
     plt.ylim([10E-6, 1.1])
     plt.xlim([0.01, 4])
-    #plt.xlim([np.min(imls[i]), 4])
+    # plt.xlim([np.min(imls[i]), 4])
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
     plt.clf()
@@ -450,15 +450,17 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
                      linewidth=2, zorder=3)
         ax[m].loglog([np.min(imls), RTGM], [afe_target, afe_target], 'k--',
                      linewidth=2, zorder=3)
-        ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2, zorder=3)
+        ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2,
+                     zorder=3)
         ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
-                     linewidth=2, zorder=3) 
+                     linewidth=2, zorder=3)
         # populate individual plots
         ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean',
                    linewidth=2, zorder=3)
         ax1.loglog([np.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
                    'k--', linewidth=2, zorder=3)
-        ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2, zorder=3)
+        ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2,
+                   zorder=3)
         ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
                    linewidth=2, zorder=3)
 
@@ -469,7 +471,6 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
             # get % contribution of that source
             contr_source = afe_uhgm/afe_target
             out_contr_all.append(contr_source * 100)
-        
 
         # identify contribution of largest contributor, make color scale
         largest_contr = np.max(out_contr_all)
@@ -500,24 +501,22 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
                 ax1.loglog(imls_o, afe_pad, c=viridis(i), label=str(src))
                 i += 1
         # populate subplot - maximum component
-        
         ax[m].grid('both')
         ax[m].set_xlabel(imt+' (g)', fontsize=16)
         ax[m].set_ylabel('Annual Freq. Exceedance', fontsize=16)
         ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax[m].set_ylim([10E-6, 1.1])
         ax[m].set_xlim([0.01, 4])
-        #ax[m].set_xlim([np.min(imls_o), 4])
+        # ax[m].set_xlim([np.min(imls_o), 4])
 
         # populate single imt plots - geometric mean
-        
         ax1.grid('both')
         ax1.set_xlabel(imt+' (g)', fontsize=16)
         ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
         ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax1.set_ylim([10E-6, 1.1])
         ax1.set_xlim([0.01, 4])
-        #ax1.set_xlim([np.min(imls_o), 4])
+        # ax1.set_xlim([np.min(imls_o), 4])
 
         # save single imt plot
         bio1 = io.BytesIO()
