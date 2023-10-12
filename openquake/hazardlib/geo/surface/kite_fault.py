@@ -32,6 +32,7 @@ from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
+from openquake.hazardlib.geo.surface.base import _angle_difference
 
 TOL = 0.4
 VERY_SMALL = 1e-20
@@ -586,16 +587,29 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     :returns:
         An instance of  :class:`openquake.hazardlib.geo.Mesh`
     """
+
+    # Compute information needed for the geographic projection
+    west = 1e10
+    south = 1e10
+    east = -1e10
+    north = -1e10
+    for pro in rprof:
+        west = np.minimum(west, np.min(pro[:, 0]))
+        south = np.minimum(south, np.min(pro[:, 1]))
+        east = np.maximum(east, np.max(pro[:, 0]))
+        north = np.maximum(north, np.max(pro[:, 1]))
+    proj = geo_utils.OrthographicProjection(west, east, north, south)
+
     # Create the mesh in the forward direction
     prfr = []
     if ref_idx < len(rprof)-1:
-        prfr = get_new_profiles(rprof, ref_idx, edge_sd, idl)
+        prfr = get_new_profiles(rprof, ref_idx, edge_sd, idl, proj)
 
     # Create the mesh in the backward direction
     prfl = []
     last = False if ref_idx < len(rprof) - 1 else True
     if ref_idx > 0:
-        prfl = get_new_profiles(rprof, ref_idx, edge_sd, idl, last)
+        prfl = get_new_profiles(rprof, ref_idx, edge_sd, idl, proj, last)
     prf = prfl + prfr
 
     # Create the whole mesh
@@ -944,7 +958,7 @@ def get_coords(line, idl):
     return tmp
 
 
-def _update(npr, rdist, angle, laidx, g, pl, pr, proj, sd, idl, forward):
+def _update(npr, rdist, angle, laidx, g, pl, pr, sd, proj, idl, forward):
     # Fixing IDL case
     for ii, vpl in enumerate(pl):
         pl[ii][0] = fix_idl(vpl[0], idl)
@@ -989,11 +1003,16 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, proj, sd, idl, forward):
 
         # Update rdist
         new_rdist = rdist[k]
-        if rdist[k] > 0 and abs(az12 - angle[k]) > 2:
+        diff_angles = _angle_difference(az12, angle[k])
+        if rdist[k] > 0 and diff_angles > 2:
             new_rdist = update_rdist(rdist[k], az12, angle[k], sd)
 
+        # Compute the first point on the new edge
+
+        # Compute new points
         coo = get_coo(forward, g, pl[k], pr[k], az12, hdist, vdist, tdist,
                       new_rdist, sd, idl)
+
         # Adding new points along the edge with index k
         for pnt in coo:
             # Add new profile to 'npr' i.e. the list containing the new
@@ -1030,7 +1049,7 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, proj, sd, idl, forward):
         assert rdist[k] < sd
 
 
-def get_new_profiles(pfs, rfi, sd, idl, last=None):
+def get_new_profiles(pfs, rfi, sd, idl, proj, last=None):
     """
     :param pfs:
         List of :class:`openquake.hazardlib.geo.line.Line` instances
@@ -1040,6 +1059,8 @@ def get_new_profiles(pfs, rfi, sd, idl, last=None):
         Sampling distance [km] for the edges
     :param idl:
         Boolean indicating the need to account for the IDL
+    :param proj:
+        Orthograhic projection
     :param last:
         If None create the mesh in the forward direction, otherwise backward
     :returns:
@@ -1048,14 +1069,6 @@ def get_new_profiles(pfs, rfi, sd, idl, last=None):
     forw = last is None
     g = Geod(ellps='WGS84')
     n = len(pfs[0])
-
-    # Compute information needed for the geographic projection
-    for pro in rprof:
-        west = np.minimum(west, np.min(pro[:, 0]))
-        south = np.minimum(south, np.min(pro[:, 1]))
-        east = np.maximum(east, np.max(pro[:, 0]))
-        north = np.maximum(north, np.max(pro[:, 1]))
-    proj = geo_utils.OrthographicProjection(west, east, north, south)
 
     # Initialize residual distance and last index
     rdist = np.zeros(n)
@@ -1107,6 +1120,8 @@ def update_rdist(rdist, az12, angle, sd):
 
 
 def get_coo(forward, g, pl, pr, az12, hdist, vdist, tdist, new_rdist, sd, idl):
+    """
+    """
     ndists = int(np.floor((tdist + new_rdist) / sd))
     coo = np.zeros((ndists, 3))
     if forward:
