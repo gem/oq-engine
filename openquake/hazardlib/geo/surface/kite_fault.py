@@ -37,6 +37,7 @@ TOL = 0.4
 VERY_SMALL = 1e-20
 ALMOST_RIGHT_ANGLE = 89.9
 
+
 def fix_idl(lon, idl):
     """
     Fix the longitude in proximity of the international date line
@@ -199,16 +200,16 @@ class KiteSurface(BaseSurface):
 
             npt = npoints_towards
             dlt = 0.1
-            tmp = npt(slo, sla, 0.0, strike-90, dlt, 0, 2)
+            tmp = npt(slo, sla, 0.0, strike - 90, dlt, 0, 2)
             lo.append(tmp[0][1])
             la.append(tmp[1][1])
-            tmp = npt(slo, sla, 0.0, strike+90, dlt, 0, 2)
+            tmp = npt(slo, sla, 0.0, strike + 90, dlt, 0, 2)
             lo.append(tmp[0][1])
             la.append(tmp[1][1])
-            tmp = npt(elo, ela, 0.0, strike+90, dlt, 0, 2)
+            tmp = npt(elo, ela, 0.0, strike + 90, dlt, 0, 2)
             lo.append(tmp[0][1])
             la.append(tmp[1][1])
-            tmp = npt(elo, ela, 0.0, strike-90, dlt, 0, 2)
+            tmp = npt(elo, ela, 0.0, strike - 90, dlt, 0, 2)
             lo.append(tmp[0][1])
             la.append(tmp[1][1])
 
@@ -247,7 +248,7 @@ class KiteSurface(BaseSurface):
         for i in range(0, self.mesh.lons.shape[1]):
             bnd.append([iul[i, 0], i])
         # Right
-        for i in range(iul[-1, 0]+1, iul[-1, 1]):
+        for i in range(iul[-1, 0] + 1, iul[-1, 1]):
             bnd.append([i, ilr[i, 1]])
         # Bottom
         for i in range(self.mesh.lons.shape[1]-1, -1, -1):
@@ -766,7 +767,7 @@ def _lo_la_de(line, sampling_dist, g):
         de[-1] = de[-1] + TOL * sampling_dist
     return lo, la, de
 
-    
+
 def _resample_profile(line, sampling_dist):
     """
     :parameter line:
@@ -873,7 +874,7 @@ def _check_distances(coo, sampling_dist):
             msg += ' points along the profile'
             raise ValueError(msg)
 
-    
+
 def profiles_depth_alignment(pro1, pro2):
     """
     Find the indexes needed to align the profiles i.e. define profiles whose
@@ -943,7 +944,7 @@ def get_coords(line, idl):
     return tmp
 
 
-def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
+def _update(npr, rdist, angle, laidx, g, pl, pr, proj, sd, idl, forward):
     # Fixing IDL case
     for ii, vpl in enumerate(pl):
         pl[ii][0] = fix_idl(vpl[0], idl)
@@ -1027,7 +1028,7 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, idl, forward):
         rdist[k] = tdist - sd * len(coo) + new_rdist
         angle[k] = az12
         assert rdist[k] < sd
-    
+
 
 def get_new_profiles(pfs, rfi, sd, idl, last=None):
     """
@@ -1048,6 +1049,14 @@ def get_new_profiles(pfs, rfi, sd, idl, last=None):
     g = Geod(ellps='WGS84')
     n = len(pfs[0])
 
+    # Compute information needed for the geographic projection
+    for pro in rprof:
+        west = np.minimum(west, np.min(pro[:, 0]))
+        south = np.minimum(south, np.min(pro[:, 1]))
+        east = np.maximum(east, np.max(pro[:, 0]))
+        north = np.maximum(north, np.max(pro[:, 1]))
+    proj = geo_utils.OrthographicProjection(west, east, north, south)
+
     # Initialize residual distance and last index
     rdist = np.zeros(n)
     angle = np.zeros(n)
@@ -1058,11 +1067,11 @@ def get_new_profiles(pfs, rfi, sd, idl, last=None):
     npr = [pfs[rfi]]
     if forw:
         for i in range(rfi, len(pfs) - 1):
-            _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, idl,
-                    forw)
+            _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, proj,
+                    idl, forw)
         return npr
     for i in range(rfi, 0, -1):
-        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i-1], sd, idl,
+        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i-1], sd, proj, idl,
                 forw)
     return [npr[i] for i in range(len(npr) - 1, -1 if last else 0, -1)]
 
