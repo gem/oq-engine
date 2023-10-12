@@ -134,7 +134,7 @@ class GmfComputer(object):
             cmaker.truncation_level)
 
     def update(self, data, array, sig, eps, eid_, rlz_, rlzs,
-               mean_stds, g, sig_eps, max_iml):
+               mean_stds, sig_eps, max_iml):
         sids = self.ctx.sids
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
@@ -146,7 +146,10 @@ class GmfComputer(object):
                 if (array[m] > max_iml[m]).any():
                     for n in range(N):
                         bad = array[m, n] > max_iml[m]  # shape E
-                        array[m, n, bad] = exp(mean_stds[0][g, m, n], im)
+                        mean = mean_stds[0][m, n]
+                        if len(mean.shape) == 2:  # conditioned GMFs
+                            mean = mean[:, 0]  # shape (N, 1)
+                        array[m, n, bad] = exp(mean, im)
 
         # manage min_iml
         for n in range(N):
@@ -204,7 +207,7 @@ class GmfComputer(object):
                 array, sig, eps = self.compute(
                     gs, num_events, mean_stds[:, g], rng)
             self.update(data, array, sig, eps, eid_, rlz_, rlzs,
-                        mean_stds, g, sig_eps, max_iml)
+                        mean_stds[:, g], sig_eps, max_iml)
 
         for key, val in sorted(data.items()):
             if key in 'eid sid rlz':
