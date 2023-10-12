@@ -759,7 +759,7 @@ class EBRupture(object):
         """
         :param rlzs: an array of realization indices
         :param scenario: if true distribute the rlzs evenly else randomly
-        :returns: an array with fields (eid, rlz)
+        :returns: two arrays (eid, rlz)
         """
         eid = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
         if scenario:
