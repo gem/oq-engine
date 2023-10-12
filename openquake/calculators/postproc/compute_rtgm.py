@@ -525,14 +525,13 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         # keep these in webui until we finish checks and have a command line
         # exporter, then we can change the name to _{imt} and they will not
         # appear in the webui
-        dstore[f'png/disagg_by_src-{imt}'] = Image.open(bio1)
-        # dstore[f'png/disagg_by_src_{imt}'] = Image.open(bio1)
+        dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
 
     # save triple plot
     bio = io.BytesIO()
     fig.savefig(bio, format='png', bbox_inches='tight')
-    logging.info('Storing png/disagg_by_src')
-    dstore['png/disagg_by_src-All-IMTs'] = Image.open(bio)
+    logging.info('Storing png/disagg_by_src.png')
+    dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
 
 
 def plot_governing_mce(dstore, imtls):
@@ -613,15 +612,15 @@ def plot_curves(dstore):
     # make plot
     img = plot_meanHCs_afe_RTGM(
         imls, AFE, UHGM_RP, 1/2475, rtgm_probmce, afe_target, imt_list)
-    logging.info('Storing png/hcurves')
-    dstore['png/hcurves'] = img
+    logging.info('Storing png/hcurves.png')
+    dstore['png/hcurves.png'] = img
 
     df, imtls_dict = disaggr_by_src(dstore, imtls)
     _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore)
 
     img = plot_governing_mce(dstore, imtls)
-    logging.info('Storing png/governing_mce')
-    dstore['png/governing_mce'] = img
+    logging.info('Storing png/governing_mce.png')
+    dstore['png/governing_mce.png'] = img
 
 
 def main(dstore, csm):
