@@ -340,5 +340,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     rupture.seed = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
-    res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)
+    res, _sig, _eps = gc.compute(gsim, realizations, mean_stds,
+                                 numpy.random.default_rng(seed))
     return {imt: res[m] for m, imt in enumerate(gc.imts)}
