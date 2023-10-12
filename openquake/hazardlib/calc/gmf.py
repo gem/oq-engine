@@ -58,6 +58,22 @@ def exp(vals, imt):
     return numpy.exp(vals)
 
 
+def set_max_min(array, mean, max_iml, min_iml, imts):
+    M, N, E = array.shape
+
+    # manage max_iml
+    for m, im in enumerate(imts):
+        if (array[m] > max_iml[m]).any():
+            for n in range(N):
+                bad = array[m, n] > max_iml[m]  # shape E
+                array[m, n, bad] = exp(mean[m, n], im)
+
+    # manage min_iml
+    for n in range(N):
+        for e in range(E):
+            if (array[:, n, e] < min_iml).all():
+                array[:, n, e] = 0
+
 
 class GmfComputer(object):
     """
@@ -139,26 +155,12 @@ class GmfComputer(object):
         sids = self.ctx.sids
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
-        M, N, E = array.shape  # sig and eps have shapes (M, E) instead
-
-        # manage max_iml
-        if max_iml is not None:
-            for m, im in enumerate(self.cmaker.imtls):
-                if (array[m] > max_iml[m]).any():
-                    for n in range(N):
-                        bad = array[m, n] > max_iml[m]  # shape E
-                        mean = mean_stds[0][m, n]
-                        if len(mean.shape) == 2:  # conditioned GMFs
-                            mean = mean[:, 0]  # shape (N, 1)
-                        array[m, n, bad] = exp(mean, im)
-
-        # manage min_iml
-        for n in range(N):
-            for e in range(E):
-                if (array[:, n, e] < min_iml).all():
-                    array[:, n, e] = 0
-
+        mean = mean_stds[0]
+        if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
+            mean = mean[:, :, 0]
+        set_max_min(array, mean, max_iml, min_iml, self.cmaker.imts)
         array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
+        N = len(array)
         n = 0
         for rlz in rlzs:
             eids = eid_[rlz_ == rlz]
@@ -192,6 +194,9 @@ class GmfComputer(object):
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
         rng = numpy.random.default_rng(self.seed)
+        if max_iml is None:
+            M = len(self.cmaker.imts)
+            max_iml = numpy.full(M, numpy.inf, float)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
             num_events = numpy.isin(rlz_, rlzs).sum()
             if num_events == 0:  # it may happen
