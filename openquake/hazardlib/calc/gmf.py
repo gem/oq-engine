@@ -144,6 +144,7 @@ class GmfComputer(object):
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
+        rng = numpy.random.default_rng(self.seed)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
             num_events = numpy.isin(rlz_, rlzs).sum()
             if num_events == 0:  # it may happen
@@ -152,7 +153,8 @@ class GmfComputer(object):
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
             with mon:
-                array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
+                array, sig, eps = self.compute(
+                    gs, num_events, mean_stds[:, g], rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
 
             # manage max_iml
@@ -205,11 +207,12 @@ class GmfComputer(object):
                 data[key] = F32(data[key])
         return pandas.DataFrame(data)
 
-    def compute(self, gsim, num_events, mean_stds):
+    def compute(self, gsim, num_events, mean_stds, rng):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
         :param mean_stds: array of shape (4, M, N)
+        :param rng: random number generator for the rupture
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for tau
@@ -220,13 +223,13 @@ class GmfComputer(object):
             (len(self.imts), len(self.ctx.sids), num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
-        rng = numpy.random.default_rng(self.seed)
         num_sids = len(self.ctx.sids)
         ccdist = self.cross_correl.distribution
         # build arrays of random numbers of shape (M, N, E) and (M, E)
         intra_eps = [
             ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
-        inter_eps = self.cross_correl.get_inter_eps(self.imts, num_events, rng)
+        inter_eps = self.cross_correl.get_inter_eps(
+            self.imts, num_events, rng)
         for m, imt in enumerate(self.imts):
             try:
                 result[m], sig[m], eps[m] = self._compute(
@@ -337,5 +340,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     rupture.seed = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
-    res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)
+    res, _sig, _eps = gc.compute(gsim, realizations, mean_stds,
+                                 numpy.random.default_rng(seed))
     return {imt: res[m] for m, imt in enumerate(gc.imts)}
