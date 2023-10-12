@@ -28,11 +28,11 @@ from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
+from openquake.hazardlib.calc.filters import (
+    nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
@@ -296,23 +296,23 @@ def todict(dframe):
     return {k: dframe[k].to_numpy() for k in dframe.columns}
 
 
-def filter_stations(station_df, complete, hypo, maxdist):
+def filter_stations(station_df, complete, rup, maxdist):
     """
     :param station_df: DataFrame with the stations
     :param complete: complete SiteCollection
-    :param hypo: hypocenter of the rupture
+    :param rup: rupture
     :param maxdist: maximum distance
     :returns: filtered (station_df, station_sitecol)
     """
     ns = len(station_df)
-    ok = (hypo.distance_to_mesh(complete.mesh) <= maxdist) & numpy.isin(
+    ok = (get_distances(rup, complete, 'rrup') <= maxdist) & numpy.isin(
         complete.sids, station_df.index)
-    close = complete.filter(ok)
-    station_data = station_df[numpy.isin(station_df.index, close.sids)]
+    station_sites = complete.filter(ok)
+    station_data = station_df[numpy.isin(station_df.index, station_sites.sids)]
     if len(station_data) < ns:
         logging.info('Discarded %d/%d stations more distant than %d km',
                      ns - len(station_data), ns, maxdist)
-    return station_data, close
+    return station_data, station_sites
 
 
 # NB: save_tmp is passed in event_based_risk
@@ -326,13 +326,15 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
+        trt = full_lt.trts[0]
         proxy = allproxies[0]
+        proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
+        rup = proxy.to_ebr(trt).rupture
         station_df = dstore.read_df('station_data', 'site_id')
         maxdist = (oq.maximum_distance_stations or
                    oq.maximum_distance['default'][-1][1])
-        hypo = Point(*proxy['hypo'])
         station_data, station_sites = filter_stations(
-            station_df, sitecol.complete, hypo, maxdist)
+            station_df, sitecol.complete, rup, maxdist)
     else:
         station_data, station_sites = None, None
 
@@ -341,9 +343,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
     if "station_data" in oq.inputs:
-        proxy.geom = dstore['rupgeoms'][proxy['geom_id']]
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
-        cmaker = ContextMaker(full_lt.trts[0], rlzs_by_gsim, oq)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         sids = srcfilter.close_sids(proxy, cmaker.trt)
