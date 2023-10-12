@@ -52,7 +52,7 @@ def exp(vals, imt):
     """
     Exponentiate the values unless the IMT is MMI
     """
-    if str(imt) == 'MMI':
+    if imt == 'MMI':
         return vals
     return numpy.exp(vals)
 
