@@ -60,7 +60,7 @@
       <tbody>
         <% _.each(outputs, function(output) { %>
         {% if application_mode == 'AELO' %}
-        <% if (['hmaps', 'realizations', 'fullreport'].indexOf(output.get('type')) >= 0) { %>
+        <% if (['hmaps', 'realizations', 'fullreport', 'rtgm'].indexOf(output.get('type')) >= 0) { %>
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {% endif %}
