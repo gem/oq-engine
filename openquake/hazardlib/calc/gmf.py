@@ -162,23 +162,20 @@ class GmfComputer(object):
         n = 0
         for rlz in rlzs:
             eids = eid_[rlz_ == rlz]
-            for ei, eid in enumerate(eids):
-                gmfa = array[:, :, n + ei]  # shape (N, M)
-                nonzero = gmfa.sum(axis=1) > 0
-                ctx = self.ctx[nonzero]
-                gmfa = gmfa[nonzero, :]
-                nz = nonzero.sum()
-                # gmv can be zero due to the minimum_intensity, coming
-                # from the job.ini or from the vulnerability functions
-                data['sid'].append(sids[nonzero])
-                data['eid'].append(numpy.full(nz, eid, U32))
-                data['rlz'].append(numpy.full(nz, rlz, U32))
-                if sig_eps is not None:
+            if sig_eps is not None:
+                for ei, eid in enumerate(eids):
                     tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                 list(eps[:, n + ei]))
                     sig_eps.append(tup)
+            for ei, eid in enumerate(eids):
+                gmfa = array[:, :, n + ei]  # shape (N, M)
+                # gmv can be zero due to the minimum_intensity, coming
+                # from the job.ini or from the vulnerability functions
+                data['sid'].append(sids)
+                data['eid'].append(numpy.full(N, eid, U32))
+                data['rlz'].append(numpy.full(N, rlz, U32))
                 for sp in self.sec_perils:
-                    o = sp.compute(mag, zip(self.imts, gmfa.T), ctx)
+                    o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
                     for outkey, outarr in zip(sp.outputs, o):
                         data[outkey].append(outarr)
                 for m, gmv_field in enumerate(self.gmv_fields):
