@@ -141,7 +141,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
         aac(dmg.array[0].sum(axis=0),
-            [0.68279, 0.632278, 0.309294, 0.155964, 0.219674], atol=1E-5)
+            [0.68951, 0.623331, 0.305033, 0.155678, 0.22645], atol=1E-5)
 
     def test_case_6(self):
         # this is a case with 5 assets on the same point
@@ -187,10 +187,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df('risk_by_event', 'event_id',
                                          {'agg_id': K})
         dmg = df.loc[1937]  # damage caused by the event 1937
-        self.assertEqual(dmg.dmg_1.sum(), 135)
-        self.assertEqual(dmg.dmg_2.sum(), 10)
-        self.assertEqual(dmg.dmg_3.sum(), 0)
-        self.assertEqual(dmg.dmg_4.sum(), 0)
+        self.assertEqual(dmg.dmg_1.sum(), 133)
+        self.assertEqual(dmg.dmg_2.sum(), 84)
+        self.assertEqual(dmg.dmg_3.sum(), 21)
+        self.assertEqual(dmg.dmg_4.sum(), 22)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-4)

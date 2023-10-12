@@ -114,7 +114,9 @@ import numpy
 import pandas
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
@@ -221,96 +223,55 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+    def compute_all(self, dstore, sig_eps=None, max_iml=None,
+                    mon1=Monitor(), mon2=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
-        min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario=True)
-        mag = self.ebrupture.rupture.mag
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario=True)
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
-        num_events = self.num_events
-        assert num_events
         # NB: ms is a dictionary gsim -> [imt -> array]
-        ms, sids = self.get_ms_and_sids()
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            mean_covs = ms[gsim]
-            # mean['PGA'] has shape (N, 1) where N is the number of sites
-            # excluding the stations
+            with mon1:
+                mea = dstore['conditioned/gsim_%d/mea' % g][:]
+                tau = dstore['conditioned/gsim_%d/tau' % g][:]
+                phi = dstore['conditioned/gsim_%d/phi' % g][:]
+            with mon2:
+                array, sig, eps = self.compute(
+                    gsim, self.num_events, mea, tau, phi, rng)
+            self.update(data, array, sig, eps, eid_, rlz_, rlzs,
+                        [mea, tau+phi, tau, phi], sig_eps, max_iml)
 
-            array, sig, eps = self.compute(gsim, num_events, mean_covs, rng)
-            M, N, E = array.shape  # sig and eps have shapes (M, E) instead
-            assert len(sids) == N, (len(sids), N)
-
-            # manage max_iml
-            if max_iml is not None:
-                for m, im in enumerate(self.cmaker.imtls):
-                    if (array[m] > max_iml[m]).any():
-                        for n in range(N):
-                            bad = array[m, n] > max_iml[m]  # shape E
-                            mean = mean_covs[0][im]  # shape (N, 1)
-                            array[m, n, bad] = exp(mean[n, 0], im)
-
-            # manage min_iml
-            for n in range(N):
-                for e in range(E):
-                    if (array[:, n, e] < min_iml).all():
-                        array[:, n, e] = 0
-            array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            n = 0
-            for rlz in rlzs:
-                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
-                for ei, eid in enumerate(eids):
-                    gmfa = array[:, :, n + ei]  # shape (N, M)
-                    if sig_eps is not None:
-                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
-                                    list(eps[:, n + ei]))
-                        sig_eps.append(tup)
-                    items = []
-                    for sp in self.sec_perils:
-                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
-                        for outkey, outarr in zip(sp.outputs, o):
-                            items.append((outkey, outarr))
-                    for i, gmv in enumerate(gmfa):
-                        if gmv.sum() == 0:
-                            continue
-                        data["sid"].append(sids[i])
-                        data["eid"].append(eid)
-                        data["rlz"].append(rlz)  # used in compute_gmfs_curves
-                        for m in range(M):
-                            data[f"gmv_{m}"].append(gmv[m])
-                        for outkey, outarr in items:
-                            data[outkey].append(outarr[i])
-                        # gmv can be zero due to the minimum_intensity, coming
-                        # from the job.ini or from the vulnerability functions
-                n += len(eids)
         return pandas.DataFrame(data)
 
-    def compute(self, gsim, num_events, mean_covs, rng):
+    def compute(self, gsim, num_events, mea, tau, phi, rng):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
-        :param mean_covs: array of shape (4, M, N)
+        :param mea: array of shape (M, N, 1)
+        :param tau: array of shape (M, N, N)
+        :param phi: array of shape (M, N, N)
         :returns:
             a 32 bit array of shape (num_imts, num_sites, num_events) and
             two arrays with shape (num_imts, num_events): sig for tau
             and eps for the random part
         """
-        M = len(self.imts)
-        num_sids = mean_covs[0][self.imts[0].string].size
-        result = numpy.zeros((M, num_sids, num_events), F32)
+        M, N, _ = mea.shape
+        result = numpy.zeros((M, N, num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
 
-        for m, im in enumerate(self.imts):
-            mu_Y_yD = mean_covs[0][im.string]
-            cov_WY_WY_wD = mean_covs[2][im.string]
-            cov_BY_BY_yD = mean_covs[3][im.string]
+        for m, im in enumerate(self.cmaker.imtls):
+            mu_Y_yD = mea[m]
+            cov_WY_WY_wD = tau[m]
+            cov_BY_BY_yD = phi[m]
             try:
                 result[m], sig[m], eps[m] = self._compute(
-                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, num_events, rng)
+                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD,
+                    im, num_events, rng)
             except Exception as exc:
                 raise RuntimeError(
                     "(%s, %s, source_id=%r) %s: %s"
@@ -551,17 +512,21 @@ def get_ms_and_sids(
                           spatial_correl, cross_correl_within)
 
     ms = {}  # dictionary gsim -> list of dicts
+    M = len(target_imts)
+    N = len(ctx_Y)
     for g, gsim in enumerate(gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
                     and "add_between_within_stds" in gsim.kwargs):
                 raise NoInterIntraStdDevs(gsim)
 
-        # NB: the four arrays below have different dimensions, so
-        # unlike the regular gsim get_mean_std, a numpy ndarray
+        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
+        # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
-        ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
-
+        me = numpy.zeros((M, N, 1))
+        si = numpy.zeros((M, N, N))
+        ta = numpy.zeros((M, N, N))
+        ph = numpy.zeros((M, N, N))
         sdata = station_data[mask].copy()    
         for m, o_imt in enumerate(observed_imts):
             im = o_imt.string
@@ -569,8 +534,7 @@ def get_ms_and_sids(
             sdata[im + "_sigma"] = mean_stds_D[1, g, m]
             sdata[im + "_tau"] = mean_stds_D[2, g, m]
             sdata[im + "_phi"] = mean_stds_D[3, g, m]
-        for target_imt in target_imts:
-            imt = target_imt.string
+        for m, target_imt in enumerate(target_imts):
             result = create_result(
                 target_imt, target_imts, observed_imts,
                 sdata, target, station_filtered,
@@ -579,10 +543,12 @@ def get_ms_and_sids(
                 target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
                 sdata, target, station_filtered,
                 compute_cov, result)
-            ms[gsim][0][imt] = mu
-            ms[gsim][1][imt] = tau + phi
-            ms[gsim][2][imt] = tau
-            ms[gsim][3][imt] = phi
+            me[m] = mu
+            si[m] = tau + phi
+            ta[m] = tau
+            ph[m] = phi
+
+        ms[gsim] = [me, si, ta, ph]
 
     return ms, target.sids
 
@@ -680,10 +646,10 @@ def _compute_spatial_cross_correlation_matrix(
     return spatial_correlation_matrix * cross_corr_coeff
 
 
-def clip_evals(x, value=0):  # threshold=0, value=0):
-    evals, evecs = numpy.linalg.eigh(x)
+def clip_evals(x, value=0):
+    evals, evecs = numpy.linalg.eigh(x)  # totally dominates the performance
     clipped = numpy.any(evals < value)
-    x_new = numpy.dot(evecs * numpy.maximum(evals, value), evecs.T)
+    x_new = evecs * numpy.maximum(evals, value) @ evecs.T
     return x_new, clipped
 
 

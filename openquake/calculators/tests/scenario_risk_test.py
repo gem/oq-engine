@@ -172,7 +172,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2421.5598]], atol=.02)  # from avg_losses-stats
+        aac(obj.array, [[2368.613]], atol=.02)  # from avg_losses-stats
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -278,7 +278,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=1E-5)
 
-    def test_conditioned(self):
+    def test_conditioned_stations(self):
         self.run_calc(conditioned.__file__, 'job.ini',
                       calculation_mode='scenario')
         hc_id = str(self.calc.datastore.calc_id)
