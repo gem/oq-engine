@@ -964,10 +964,10 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
-            hcurves = 'hcurves' in ds['png']
+            hcurves = 'hcurves.png' in ds['png']
             disagg_by_src = [k for k in ds['png']
                              if k.startswith('disagg_by_src-')]
-            governing_mce = 'governing_mce' in ds['png']
+            governing_mce = 'governing_mce.png' in ds['png']
         else:
             hmaps = hcurves = governing_mce = False
             disagg_by_src = []
