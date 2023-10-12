@@ -686,7 +686,7 @@ def _compute_spatial_cross_correlation_matrix(
 def clip_evals(x, value=0):  # threshold=0, value=0):
     evals, evecs = numpy.linalg.eigh(x)
     clipped = numpy.any(evals < value)
-    x_new = numpy.dot(evecs * numpy.maximum(evals, value), evecs.T)
+    x_new = evecs * numpy.maximum(evals, value) @ evecs.T
     return x_new, clipped
 
 
