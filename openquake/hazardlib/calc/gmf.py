@@ -58,6 +58,7 @@ def exp(vals, imt):
     return numpy.exp(vals)
 
 
+
 class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
@@ -132,16 +133,63 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
 
+    def update(self, data, array, sig, eps, eid_, rlz_, rlzs,
+               mean_stds, g, sig_eps, max_iml):
+        sids = self.ctx.sids
+        min_iml = self.cmaker.min_iml
+        mag = self.ebrupture.rupture.mag
+        M, N, E = array.shape  # sig and eps have shapes (M, E) instead
+
+        # manage max_iml
+        if max_iml is not None:
+            for m, im in enumerate(self.cmaker.imtls):
+                if (array[m] > max_iml[m]).any():
+                    for n in range(N):
+                        bad = array[m, n] > max_iml[m]  # shape E
+                        array[m, n, bad] = exp(mean_stds[0][g, m, n], im)
+
+        # manage min_iml
+        for n in range(N):
+            for e in range(E):
+                if (array[:, n, e] < min_iml).all():
+                    array[:, n, e] = 0
+
+        array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
+        n = 0
+        for rlz in rlzs:
+            eids = eid_[rlz_ == rlz]
+            for ei, eid in enumerate(eids):
+                gmfa = array[:, :, n + ei]  # shape (N, M)
+                if sig_eps is not None:
+                    tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
+                                list(eps[:, n + ei]))
+                    sig_eps.append(tup)
+                items = []
+                for sp in self.sec_perils:
+                    o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
+                    for outkey, outarr in zip(sp.outputs, o):
+                        items.append((outkey, outarr))
+                for i, gmv in enumerate(gmfa):
+                    if gmv.sum() == 0:
+                        continue
+                    data['sid'].append(sids[i])
+                    data['eid'].append(eid)
+                    data['rlz'].append(rlz)  # used in compute_gmfs_curves
+                    for m in range(M):
+                        data[f'gmv_{m}'].append(gmv[m])
+                    for outkey, outarr in items:
+                        data[outkey].append(outarr[i])
+                    # gmv can be zero due to the minimum_intensity, coming
+                    # from the job.ini or from the vulnerability functions
+            n += len(eids)
+
     def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
-        min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        sids = self.ctx.sids
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario)
-        mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
         rng = numpy.random.default_rng(self.seed)
@@ -155,51 +203,9 @@ class GmfComputer(object):
             with mon:
                 array, sig, eps = self.compute(
                     gs, num_events, mean_stds[:, g], rng)
-            M, N, E = array.shape  # sig and eps have shapes (M, E) instead
+            self.update(data, array, sig, eps, eid_, rlz_, rlzs,
+                        mean_stds, g, sig_eps, max_iml)
 
-            # manage max_iml
-            if max_iml is not None:
-                for m, im in enumerate(self.cmaker.imtls):
-                    if (array[m] > max_iml[m]).any():
-                        for n in range(N):
-                            bad = array[m, n] > max_iml[m]  # shape E
-                            array[m, n, bad] = exp(
-                                mean_stds[0, g, m, n], im)
-
-            # manage min_iml
-            for n in range(N):
-                for e in range(E):
-                    if (array[:, n, e] < min_iml).all():
-                        array[:, n, e] = 0
-    
-            array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            n = 0
-            for rlz in rlzs:
-                eids = eid_[rlz_ == rlz]
-                for ei, eid in enumerate(eids):
-                    gmfa = array[:, :, n + ei]  # shape (N, M)
-                    if sig_eps is not None:
-                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
-                                    list(eps[:, n + ei]))
-                        sig_eps.append(tup)
-                    items = []
-                    for sp in self.sec_perils:
-                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
-                        for outkey, outarr in zip(sp.outputs, o):
-                            items.append((outkey, outarr))
-                    for i, gmv in enumerate(gmfa):
-                        if gmv.sum() == 0:
-                            continue
-                        data['sid'].append(sids[i])
-                        data['eid'].append(eid)
-                        data['rlz'].append(rlz)  # used in compute_gmfs_curves
-                        for m in range(M):
-                            data[f'gmv_{m}'].append(gmv[m])
-                        for outkey, outarr in items:
-                            data[outkey].append(outarr[i])
-                        # gmv can be zero due to the minimum_intensity, coming
-                        # from the job.ini or from the vulnerability functions
-                n += len(eids)
         for key, val in sorted(data.items()):
             if key in 'eid sid rlz':
                 data[key] = U32(data[key])
