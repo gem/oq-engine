@@ -266,7 +266,7 @@ class ConditionedGmfComputer(GmfComputer):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eid_[rlz_] == rlz
+                eids = eid_[rlz_ == rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:
