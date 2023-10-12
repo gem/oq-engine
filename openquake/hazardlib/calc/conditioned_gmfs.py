@@ -222,7 +222,8 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
 
-    def compute_all(self, dstore, sig_eps=None, max_iml=None, mon=Monitor()):
+    def compute_all(self, dstore, sig_eps=None, max_iml=None,
+                    mon1=Monitor(), mon2=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
@@ -237,11 +238,13 @@ class ConditionedGmfComputer(GmfComputer):
         # NB: ms is a dictionary gsim -> [imt -> array]
         sids = dstore['conditioned/sids'][:]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            with mon:
+            with mon1:
                 mea = dstore['conditioned/gsim_%d/mea' % g][:]
                 tau = dstore['conditioned/gsim_%d/tau' % g][:]
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
-            array, sig, eps = self.compute(gsim, num_events, mea, tau, phi, rng)
+            with mon2:
+                array, sig, eps = self.compute(
+                    gsim, num_events, mea, tau, phi, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             assert len(sids) == N, (len(sids), N)
 

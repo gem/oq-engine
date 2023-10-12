@@ -24,6 +24,7 @@ import numpy
 import pandas
 
 from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
@@ -130,7 +131,7 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+    def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
@@ -148,7 +149,8 @@ class GmfComputer(object):
             # NB: the trick for performance is to keep the call to
             # .compute outside of the loop over the realizations;
             # it is better to have few calls producing big arrays
-            array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
+            with mon:
+                array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
 
             # manage max_iml

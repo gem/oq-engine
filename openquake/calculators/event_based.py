@@ -274,12 +274,11 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                 except FarAwayRupture:
                     # skip this rupture
                     continue
-            with cmon:
-                if hasattr(computer, 'station_data'):  # conditioned GMFs
-                    assert scenario
-                    df = computer.compute_all(dstore, sig_eps, max_iml, rmon)
-                else:  # regular GMFs
-                    df = computer.compute_all(scenario, sig_eps, max_iml)
+            if hasattr(computer, 'station_data'):  # conditioned GMFs
+                assert scenario
+                df = computer.compute_all(dstore, sig_eps, max_iml, cmon, rmon)
+            else:  # regular GMFs
+                df = computer.compute_all(scenario, sig_eps, max_iml, cmon)
             dt = time.time() - t0
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
