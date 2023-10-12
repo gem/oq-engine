@@ -367,17 +367,18 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
             plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
                        linewidth=2, markersize=10, zorder=3)
         plt.loglog([np.min(imls[i]), RTGM[i]], [afe_RTGM[i], afe_RTGM[i]],
-                   'darkgray', linewidth=1)
-        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray',
+                   'darkgray', linestyle='--', linewidth=1)
+        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray', linestyle='--',
                    linewidth=1)
 
     plt.grid('both')
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=13)
     plt.xlabel('Acceleration (g)', fontsize=20)
     plt.ylabel('Annual frequency of exceedance', fontsize=20)
     plt.legend(loc="best", fontsize='16')
     plt.ylim([10E-6, 1.1])
-    plt.xlim([np.min(imls[i]), 4])
+    plt.xlim([0.01, 4])
+    #plt.xlim([np.min(imls[i]), 4])
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
     plt.clf()
@@ -443,6 +444,24 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         RTGM_o = rtgm_probmce[m]/f
         afe_target = _find_afe_target(imls, mean_hcurve[m], RTGM)
         afe_target_o = _find_afe_target(imls_o, mean_hcurve[m], RTGM_o)
+
+        # populate 3-panel plot
+        ax[m].loglog(imls, mean_hcurve[m], 'k', label=_get_label(imt),
+                     linewidth=2, zorder=3)
+        ax[m].loglog([np.min(imls), RTGM], [afe_target, afe_target], 'k--',
+                     linewidth=2, zorder=3)
+        ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2, zorder=3)
+        ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
+                     linewidth=2, zorder=3) 
+        # populate individual plots
+        ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean',
+                   linewidth=2, zorder=3)
+        ax1.loglog([np.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
+                   'k--', linewidth=2, zorder=3)
+        ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2, zorder=3)
+        ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
+                   linewidth=2, zorder=3)
+
         # poes from dms are now rates
         for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
             # get contribution at target level for that source
@@ -450,13 +469,17 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
             # get % contribution of that source
             contr_source = afe_uhgm/afe_target
             out_contr_all.append(contr_source * 100)
-        # identify contribution of largest contributor
+        
+
+        # identify contribution of largest contributor, make color scale
         largest_contr = np.max(out_contr_all)
         sample = sum(out_contr_all > fact*largest_contr)
         viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
-        i = j = 0
+
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
+
+        i = j = 0
         for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
             # pad to have the same length of imls and afes
             afe_pad = afes + [0] * (len(imls) - len(afes))
@@ -464,9 +487,9 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
             if out_contr_all[ind] <= fact*largest_contr:
                 if j == 0:
                     ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7,
-                                 label='low contr. source')
+                                 label='other sources')
                     ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7,
-                               label='low contr. source')
+                               label='other source')
                     j += 1
                 else:
                     ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7)
@@ -477,34 +500,24 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
                 ax1.loglog(imls_o, afe_pad, c=viridis(i), label=str(src))
                 i += 1
         # populate subplot - maximum component
-        ax[m].loglog(imls, mean_hcurve[m], 'k', label=_get_label(imt),
-                     linewidth=2)
-        ax[m].loglog([np.min(imls), RTGM], [afe_target, afe_target], 'k--',
-                     linewidth=2)
-        ax[m].loglog([RTGM, RTGM], [0, afe_target], 'k--', linewidth=2)
-        ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
-                     linewidth=2)
+        
         ax[m].grid('both')
         ax[m].set_xlabel(imt+' (g)', fontsize=16)
         ax[m].set_ylabel('Annual Freq. Exceedance', fontsize=16)
-        ax[m].legend(loc="best", bbox_to_anchor=(1.1, 1.05), fontsize='16')
+        ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax[m].set_ylim([10E-6, 1.1])
-        ax[m].set_xlim([np.min(imls_o), 4])
+        ax[m].set_xlim([0.01, 4])
+        #ax[m].set_xlim([np.min(imls_o), 4])
 
         # populate single imt plots - geometric mean
-        ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean',
-                   linewidth=2)
-        ax1.loglog([np.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
-                   'k--', linewidth=2)
-        ax1.loglog([RTGM_o, RTGM_o], [0, afe_target_o], 'k--', linewidth=2)
-        ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
-                   linewidth=2)
+        
         ax1.grid('both')
         ax1.set_xlabel(imt+' (g)', fontsize=16)
         ax1.set_ylabel('Annual Freq. Exceedance', fontsize=16)
-        ax1.legend(loc="best", bbox_to_anchor=(1.1, 1.05), fontsize='16')
+        ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax1.set_ylim([10E-6, 1.1])
-        ax1.set_xlim([np.min(imls_o), 4])
+        ax1.set_xlim([0.01, 4])
+        #ax1.set_xlim([np.min(imls_o), 4])
 
         # save single imt plot
         bio1 = io.BytesIO()
@@ -544,7 +557,7 @@ def plot_governing_mce(dstore, imtls):
     plt.plot(T[0], RTGM[0], 'bX', markersize=12, label='$PGA_{GM}$',
              linewidth=3)
     plt.plot(T[1:], RTGM[1:], 'bs', markersize=12,
-             label='$S_{S,RT}$ and $S1_{RT}$', linewidth=3)
+             label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
     plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
              linewidth=3)
     plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
@@ -557,7 +570,7 @@ def plot_governing_mce(dstore, imtls):
     plt.grid('both')
     plt.ylabel('Spectral Acceleration (g)', fontsize=20)
     plt.xlabel('Period (s)', fontsize=20)
-    plt.legend(loc="upper right", fontsize='14')
+    plt.legend(loc="upper right", fontsize='13')
     plt.ylim([0, np.max([RTGM, MCEr_det, MCEr, limit_det]) + 0.2])
     plt.xlim([-0.02, 1.2])
     bio = io.BytesIO()
