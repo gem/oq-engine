@@ -132,6 +132,7 @@ class GmfComputer(object):
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
+        self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
 
     def update(self, data, array, sig, eps, eid_, rlz_, rlzs,
                mean_stds, sig_eps, max_iml):
@@ -178,8 +179,8 @@ class GmfComputer(object):
                     data['sid'].append(sids[i])
                     data['eid'].append(eid)
                     data['rlz'].append(rlz)  # used in compute_gmfs_curves
-                    for m in range(M):
-                        data[f'gmv_{m}'].append(gmv[m])
+                    for m, gmv_field in enumerate(self.gmv_fields):
+                        data[gmv_field].append(gmv[m])
                     for outkey, outarr in items:
                         data[outkey].append(outarr[i])
                     # gmv can be zero due to the minimum_intensity, coming
