@@ -26,6 +26,7 @@ import pandas
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
@@ -138,12 +139,13 @@ class GmfComputer(object):
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
         sids = self.ctx.sids
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
-            num_events = numpy.isin(eid_rlz['rlz'], rlzs).sum()
+            num_events = numpy.isin(rlz_, rlzs).sum()
             if num_events == 0:  # it may happen
                 continue
             # NB: the trick for performance is to keep the call to
@@ -171,7 +173,7 @@ class GmfComputer(object):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
+                eids = eid_[rlz_ == rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:

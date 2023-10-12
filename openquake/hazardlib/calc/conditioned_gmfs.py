@@ -116,6 +116,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
@@ -229,12 +230,11 @@ class ConditionedGmfComputer(GmfComputer):
         """
         min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario=True)
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario=True)
         mag = self.ebrupture.rupture.mag
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
-        num_events = self.num_events
-        assert num_events
         # NB: ms is a dictionary gsim -> [imt -> array]
         sids = dstore['conditioned/sids'][:]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
@@ -244,7 +244,7 @@ class ConditionedGmfComputer(GmfComputer):
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
             with mon2:
                 array, sig, eps = self.compute(
-                    gsim, num_events, mea, tau, phi, rng)
+                    gsim, self.num_events, mea, tau, phi, rng)
             M, N, E = array.shape  # sig and eps have shapes (M, E) instead
             assert len(sids) == N, (len(sids), N)
 
@@ -265,7 +265,7 @@ class ConditionedGmfComputer(GmfComputer):
             array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
             n = 0
             for rlz in rlzs:
-                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
+                eids = eid_[rlz_ == rlz]
                 for ei, eid in enumerate(eids):
                     gmfa = array[:, :, n + ei]  # shape (N, M)
                     if sig_eps is not None:
