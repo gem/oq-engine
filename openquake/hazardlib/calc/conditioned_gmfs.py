@@ -683,8 +683,8 @@ def _compute_spatial_cross_correlation_matrix(
     return spatial_correlation_matrix * cross_corr_coeff
 
 
-def clip_evals(x, value=0):  # threshold=0, value=0):
-    evals, evecs = numpy.linalg.eigh(x)
+def clip_evals(x, value=0):
+    evals, evecs = numpy.linalg.eigh(x)  # totally dominates the performance
     clipped = numpy.any(evals < value)
     x_new = evecs * numpy.maximum(evals, value) @ evecs.T
     return x_new, clipped
