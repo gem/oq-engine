@@ -165,6 +165,7 @@ class GmfComputer(object):
             for ei, eid in enumerate(eids):
                 gmfa = array[:, :, n + ei]  # shape (N, M)
                 nonzero = gmfa.sum(axis=1) > 0
+                ctx = self.ctx[nonzero]
                 gmfa = gmfa[nonzero, :]
                 nz = nonzero.sum()
                 # gmv can be zero due to the minimum_intensity, coming
@@ -177,8 +178,7 @@ class GmfComputer(object):
                                 list(eps[:, n + ei]))
                     sig_eps.append(tup)
                 for sp in self.sec_perils:
-                    o = sp.compute(mag, zip(self.imts, gmfa.T),
-                                   self.ctx[nonzero])
+                    o = sp.compute(mag, zip(self.imts, gmfa.T), ctx)
                     for outkey, outarr in zip(sp.outputs, o):
                         data[outkey].append(outarr)
                 for m, gmv_field in enumerate(self.gmv_fields):
