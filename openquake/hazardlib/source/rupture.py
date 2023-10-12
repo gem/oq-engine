@@ -755,23 +755,21 @@ class EBRupture(object):
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
-    # TODO: replace with the function get_eid_rlz
     def get_eid_rlz(self, rlzs, scenario):
         """
         :param rlzs: an array of realization indices
         :param scenario: if true distribute the rlzs evenly else randomly
         :returns: an array with fields (eid, rlz)
         """
-        out = numpy.zeros(self.n_occ, [('eid', U32), ('rlz', U32)])
-        out['eid'] = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
+        eid = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
         if scenario:
             # the rlzs are distributed evenly
             div = self.n_occ // len(rlzs)
-            out['rlz'] = rlzs[numpy.arange(self.n_occ) // div]
+            rlz = rlzs[numpy.arange(self.n_occ) // div]
         else:
             # event_based: the rlzs are distributed randomly
-            out['rlz'] = general.random_choice(rlzs, self.n_occ, 0, self.seed)
-        return out
+            rlz = general.random_choice(rlzs, self.n_occ, 0, self.seed)
+        return eid, rlz
 
     def get_eids(self):
         """
