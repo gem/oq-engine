@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: using a single random number generator inside the GmfComputer
+    and not one for each gsim, causing an artificial correlation between gsims
   * Implemented `maximum_distance_stations` and fixed another site
     collection filtering bug in conditioned GMFs
   * Extended conditioned GMFs to number_of_ground_motion_fields > 1
