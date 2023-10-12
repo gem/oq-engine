@@ -159,7 +159,8 @@ class GmfComputer(object):
                     if (array[m] > max_iml[m]).any():
                         for n in range(N):
                             bad = array[m, n] > max_iml[m]  # shape E
-                            array[m, n, bad] = exp(mean_stds[0, g, m, n], im)
+                            array[m, n, bad] = exp(
+                                mean_stds[0, g, m, n], im)
 
             # manage min_iml
             for n in range(N):
@@ -240,13 +241,14 @@ class GmfComputer(object):
         return result, sig, eps
 
     def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
+        im = imt.string
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             mean, _, _, _ = mean_stds
-            gmf = exp(mean, imt)[:, None]
+            gmf = exp(mean, im)[:, None]
             gmf = gmf.repeat(len(inter_eps), axis=1)
             inter_sig = 0
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
@@ -259,7 +261,7 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, sig, _, _ = mean_stds
-            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, imt)
+            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im)
             inter_sig = numpy.nan
         else:
             mean, sig, tau, phi = mean_stds
@@ -276,7 +278,7 @@ class GmfComputer(object):
                     intra_res = intra_res[:, None]
 
             inter_res = tau[:, None] * inter_eps  # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + intra_res + inter_res, imt)  # (N, E)
+            gmf = exp(mean[:, None] + intra_res + inter_res, im)  # (N, E)
             inter_sig = tau.max()  # from shape (N, 1) => scalar
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 

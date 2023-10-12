@@ -309,13 +309,14 @@ class ConditionedGmfComputer(GmfComputer):
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
 
-        for m, im in enumerate(self.imts):
+        for m, im in enumerate(self.cmaker.imtls):
             mu_Y_yD = mea[m]
             cov_WY_WY_wD = tau[m]
             cov_BY_BY_yD = phi[m]
             try:
                 result[m], sig[m], eps[m] = self._compute(
-                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, num_events, rng)
+                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD,
+                    im, num_events, rng)
             except Exception as exc:
                 raise RuntimeError(
                     "(%s, %s, source_id=%r) %s: %s"
