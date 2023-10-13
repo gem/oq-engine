@@ -165,24 +165,25 @@ class GmfComputer(object):
         for rlz in rlzs:
             eids = eid_[rlz_ == rlz]
             E = len(eids)
+            data['eid'].append(numpy.repeat(eids, N))
+            data['sid'].append(numpy.tile(sids, E))
+            data['rlz'].append(numpy.full(N * E, rlz, U32))
+            for m, gmv_field in enumerate(self.gmv_fields):
+                data[gmv_field].append(array[:, m, n:n + E].T.flatten())
+
             if sig_eps is not None:
                 for ei, eid in enumerate(eids):
                     tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                 list(eps[:, n + ei]))
                     sig_eps.append(tup)
-            for e, eid in enumerate(eids):
-                gmfa = array[:, :, n + e].T  # shape (M, N)
-                # gmv can be zero due to the minimum_intensity, coming
-                # from the job.ini or from the vulnerability functions
-                data['eid'].append(numpy.full(N, eid, U32))
-                for sp in self.sec_perils:
-                    o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
-                    for outkey, outarr in zip(sp.outputs, o):
-                        data[outkey].append(outarr)
-            data['sid'].append(numpy.tile(sids, E))
-            data['rlz'].append(numpy.full(N * E, rlz, U32))
-            for m, gmv_field in enumerate(self.gmv_fields):
-                data[gmv_field].append(array[:, m, n:n + E].T.flatten())
+
+            if self.sec_perils:
+                for e, eid in enumerate(eids):
+                    gmfa = array[:, :, n + e].T  # shape (M, N)
+                    for sp in self.sec_perils:
+                        o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
+                        for outkey, outarr in zip(sp.outputs, o):
+                            data[outkey].append(outarr)
             n += len(eids)
 
     def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
