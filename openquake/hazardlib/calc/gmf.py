@@ -172,9 +172,31 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
         self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
+        self.init_eid_rlz_sig_eps()
 
-    def update(self, data, array, sig, eps, eid_, rlz_, rlzs,
-               mean_stds, sig_eps, max_iml):
+    def init_eid_rlz_sig_eps(self):
+        rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
+        self.eid, self.rlz = get_eid_rlz(
+            vars(self.ebrupture), rlzs, self.cmaker.scenario)
+        self.E = E = len(self.eid)
+        self.M = M = len(self.gmv_fields)
+        self.sig = numpy.zeros((E, M), F32)  # same for all events
+        self.eps = numpy.zeros((E, M), F32)  # not the same
+
+    def build_sig_eps(self, se_dt):
+        """
+        :returns: a structured array of size E with fields
+                  (eid, rlz_id, sig_inter_IMT, eps_inter_IMT)
+        """
+        sig_eps = numpy.zeros(self.E, se_dt)
+        sig_eps['eid'] = self.eid
+        sig_eps['rlz_id'] = self.rlz
+        for m, imt in enumerate(self.cmaker.imtls):
+            sig_eps[f'sig_inter_{imt}'] = self.sig[:, m]
+            sig_eps[f'eps_inter_{imt}'] = self.eps[:, m]
+        return sig_eps
+
+    def update(self, data, array, rlzs, mean_stds, max_iml):
         sids = self.ctx.sids
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
@@ -192,17 +214,11 @@ class GmfComputer(object):
         N = len(array)
         n = 0
         for rlz in rlzs:
-            eids = eid_[rlz_ == rlz]
+            eids = self.eid[self.rlz == rlz]
             E = len(eids)
             data['eid'].append(numpy.repeat(eids, N))
             data['sid'].append(numpy.tile(sids, E))
             data['rlz'].append(numpy.full(N * E, rlz, U32))
-            if sig_eps is not None:
-                for e, eid in enumerate(eids):
-                    tup = tuple([eid, rlz] + list(sig[:, n + e]) +
-                                list(eps[:, n + e]))
-                    sig_eps.append(tup)
-
             if self.sec_perils:
                 for e, eid in enumerate(eids):
                     gmfa = array[:, :, n + e].T  # shape (M, N)
@@ -212,15 +228,12 @@ class GmfComputer(object):
                             data[outkey].append(outarr)
             n += E
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None,
+    def compute_all(self, max_iml=None,
                     mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
         with mmon:
-            rlzs_by_gsim = self.cmaker.gsims
-            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-            eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario)
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
             rng = numpy.random.default_rng(self.seed)
             if max_iml is None:
@@ -228,16 +241,20 @@ class GmfComputer(object):
                 max_iml = numpy.full(M, numpy.inf, float)
 
         data = AccumDict(accum=[])
-        for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
-            num_events = numpy.isin(rlz_, rlzs).sum()
+        ne = 0
+        for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
+            num_events = numpy.isin(self.rlz, rlzs).sum()
             if num_events == 0:  # it may happen
                 continue
             with cmon:
                 arrayNME, sigME, epsME = self.compute(
                     gs, num_events, mean_stds[:, g], rng)
+                self.sig[ne:ne+num_events] = sigME.T
+                self.eps[ne:ne+num_events] = epsME.T
             with umon:
-                self.update(data, arrayNME, sigME, epsME, eid_, rlz_, rlzs,
-                            mean_stds[:, g], sig_eps, max_iml)
+                self.update(data, arrayNME, rlzs,
+                            mean_stds[:, g], max_iml)
+            ne += num_events
         with umon:
             return strip_zeros(data)
 
@@ -247,9 +264,8 @@ class GmfComputer(object):
         :param num_events: the number of seismic events
         :param mean_stds: array of shape (4, M, N)
         :param rng: random number generator for the rupture
-        :returns:
-            a 32 bit array of shape (N, M, E) and
-            two arrays sig and eps with shape (M, E)
+        :returns: a 32 bit array of shape (N, M, E) and
+                  two arrays sig and eps with shape (M, E)
         """
         M = len(self.imts)
         result = numpy.zeros(

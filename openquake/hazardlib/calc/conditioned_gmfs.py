@@ -225,19 +225,17 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
 
-    def compute_all(self, dstore, sig_eps=None, max_iml=None,
+    def compute_all(self, dstore, max_iml=None,
                     rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
-        rlzs_by_gsim = self.cmaker.gsims
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario=True)
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
         # NB: ms is a dictionary gsim -> [imt -> array]
-        for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            num_events = numpy.isin(rlz_, rlzs).sum()
+        ne = 0
+        for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
+            num_events = numpy.isin(self.rlz, rlzs).sum()
             with rmon:
                 mea = dstore['conditioned/gsim_%d/mea' % g][:]
                 tau = dstore['conditioned/gsim_%d/tau' % g][:]
@@ -245,14 +243,17 @@ class ConditionedGmfComputer(GmfComputer):
             with cmon:
                 array, sig, eps = self.compute(
                     gsim, num_events, mea, tau, phi, rng)
+                self.sig[ne:ne+num_events] = sig.T
+                self.eps[ne:ne+num_events] = eps.T
             with umon:
-                self.update(data, array, sig, eps, eid_, rlz_, rlzs,
-                            [mea, tau+phi, tau, phi], sig_eps, max_iml)
+                self.update(data, array, rlzs, [mea, tau+phi, tau, phi],
+                            max_iml)
+            ne += num_events
 
         with umon:
             return strip_zeros(data)
 
-    def compute(self, gsim, num_events, mea, tau, phi, rng):
+    def compute(self, gsim, num_events, mea, tau, phi, rng, offset=0):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events

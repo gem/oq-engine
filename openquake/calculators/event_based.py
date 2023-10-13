@@ -249,7 +249,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     umon = monitor('updating gmfs', measuremem=False)
     rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
-    scenario = 'scenario' in oq.calculation_mode
+    cmaker.scenario = 'scenario' in oq.calculation_mode
     with dstore:
         if dstore.parent:
             sitecol = dstore['sitecol']
@@ -274,12 +274,11 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     # skip this rupture
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
-                assert scenario
-                df = computer.compute_all(
-                    dstore, sig_eps, max_iml, rmon, cmon, umon)
+                assert cmaker.scenario
+                df = computer.compute_all(dstore, max_iml, rmon, cmon, umon)
             else:  # regular GMFs
-                df = computer.compute_all(
-                    scenario, sig_eps, max_iml, mmon, cmon, umon)
+                df = computer.compute_all(max_iml, mmon, cmon, umon)
+            sig_eps.append(computer.build_sig_eps(se_dt))
             dt = time.time() - t0
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
@@ -291,13 +290,10 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     times.sort(order='rup_id')
     if not oq.ground_motion_fields:
         gmfdata = {}
-    return dict(gmfdata=todict(gmfdata), times=times,
-                sig_eps=numpy.array(sig_eps, se_dt))
-
-def todict(dframe):
-    if len(dframe) == 0:
-        return {}
-    return {k: dframe[k].to_numpy() for k in dframe.columns}
+    if len(gmfdata) == 0:
+        return dict(gmfdata={}, times=times, sig_eps=())
+    return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
+                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -350,6 +346,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if "station_data" in oq.inputs:
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+        cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         computer = get_computer(
