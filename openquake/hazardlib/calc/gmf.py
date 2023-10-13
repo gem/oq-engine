@@ -35,6 +35,21 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
+def strip_zeros(data):
+    for key, val in sorted(data.items()):
+        if key in 'eid sid rlz':
+            data[key] = numpy.concatenate(data[key], dtype=U32)
+        else:
+            data[key] = numpy.concatenate(data[key], dtype=F32)
+    gmf_df = pandas.DataFrame(data)
+    # remove the rows with all zero values
+    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
+    df = gmf_df[cols]
+    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
+    ok = df.to_numpy().sum(axis=1) > 0
+    return gmf_df[ok]
+
+
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
         self.corr = corr
@@ -171,6 +186,9 @@ class GmfComputer(object):
             if imt == 'MMI':
                 mmi_index = m
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
+        for m, gmv_field in enumerate(self.gmv_fields):
+            data[gmv_field].append(array[:, m].T.reshape(-1))
+
         N = len(array)
         n = 0
         for rlz in rlzs:
@@ -179,9 +197,6 @@ class GmfComputer(object):
             data['eid'].append(numpy.repeat(eids, N))
             data['sid'].append(numpy.tile(sids, E))
             data['rlz'].append(numpy.full(N * E, rlz, U32))
-            for m, gmv_field in enumerate(self.gmv_fields):
-                data[gmv_field].append(array[:, m, n:n + E].T.reshape(-1))
-
             if sig_eps is not None:
                 for e, eid in enumerate(eids):
                     tup = tuple([eid, rlz] + list(sig[:, n + e]) +
@@ -224,12 +239,7 @@ class GmfComputer(object):
                 self.update(data, arrayNME, sigME, epsME, eid_, rlz_, rlzs,
                             mean_stds[:, g], sig_eps, max_iml)
         with umon:
-            for key, val in sorted(data.items()):
-                if key in 'eid sid rlz':
-                    data[key] = numpy.concatenate(data[key], dtype=U32)
-                else:
-                    data[key] = numpy.concatenate(data[key], dtype=F32)
-        return pandas.DataFrame(data)
+            return strip_zeros(data)
 
     def compute(self, gsim, num_events, mean_stds, rng):
         """

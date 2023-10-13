@@ -111,14 +111,13 @@ from functools import partial
 from dataclasses import dataclass
 
 import numpy
-import pandas
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
 from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.gmf import GmfComputer, exp
+from openquake.hazardlib.calc.gmf import GmfComputer, exp, strip_zeros
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -238,24 +237,20 @@ class ConditionedGmfComputer(GmfComputer):
         rng = numpy.random.default_rng(self.seed)
         # NB: ms is a dictionary gsim -> [imt -> array]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
+            num_events = numpy.isin(rlz_, rlzs).sum()
             with rmon:
                 mea = dstore['conditioned/gsim_%d/mea' % g][:]
                 tau = dstore['conditioned/gsim_%d/tau' % g][:]
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
             with cmon:
                 array, sig, eps = self.compute(
-                    gsim, self.num_events, mea, tau, phi, rng)
+                    gsim, num_events, mea, tau, phi, rng)
             with umon:
                 self.update(data, array, sig, eps, eid_, rlz_, rlzs,
                             [mea, tau+phi, tau, phi], sig_eps, max_iml)
 
         with umon:
-            for key, val in sorted(data.items()):
-                if key in 'eid sid rlz':
-                    data[key] = numpy.concatenate(data[key], dtype=U32)
-                else:
-                    data[key] = numpy.concatenate(data[key], dtype=F32)
-        return pandas.DataFrame(data)
+            return strip_zeros(data)
 
     def compute(self, gsim, num_events, mea, tau, phi, rng):
         """
