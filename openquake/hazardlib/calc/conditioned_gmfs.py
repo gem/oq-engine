@@ -264,8 +264,7 @@ class ConditionedGmfComputer(GmfComputer):
         :param phi: array of shape (M, N, N)
         :returns:
             a 32 bit array of shape (N, M, E) and
-            two arrays with shape (num_imts, num_events): sig for tau
-            and eps for the random part
+            two 32 bit arrays sig and eps with shape (M, E)
         """
         M, N, _ = mea.shape
         result = numpy.zeros((M, N, num_events), F32)

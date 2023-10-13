@@ -77,6 +77,7 @@ def set_max_min(array, mean, max_iml, min_iml, imts):
     # manage min_iml
     for n in range(N):
         for e in range(E):
+            # set to zero only if all IMTs are below the thresholds
             if (array[n, :, e] < min_iml).all():
                 array[n, :, e] = 0
 
@@ -199,28 +200,30 @@ class GmfComputer(object):
         rlzs_by_gsim = self.cmaker.gsims
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
         eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario)
-        data = AccumDict(accum=[])
-        mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
+        with cmon:
+            mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
         rng = numpy.random.default_rng(self.seed)
         if max_iml is None:
             M = len(self.cmaker.imts)
             max_iml = numpy.full(M, numpy.inf, float)
+
+        data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
             num_events = numpy.isin(rlz_, rlzs).sum()
             if num_events == 0:  # it may happen
                 continue
             with cmon:
-                array, sig, eps = self.compute(
+                arrayNME, sigME, epsME = self.compute(
                     gs, num_events, mean_stds[:, g], rng)
             with umon:
-                self.update(data, array, sig, eps, eid_, rlz_, rlzs,
+                self.update(data, arrayNME, sigME, epsME, eid_, rlz_, rlzs,
                             mean_stds[:, g], sig_eps, max_iml)
-
-        for key, val in sorted(data.items()):
-            if key in 'eid sid rlz':
-                data[key] = numpy.concatenate(data[key], dtype=U32)
-            else:
-                data[key] = numpy.concatenate(data[key], dtype=F32)
+        with umon:
+            for key, val in sorted(data.items()):
+                if key in 'eid sid rlz':
+                    data[key] = numpy.concatenate(data[key], dtype=U32)
+                else:
+                    data[key] = numpy.concatenate(data[key], dtype=F32)
         return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mean_stds, rng):
@@ -231,8 +234,7 @@ class GmfComputer(object):
         :param rng: random number generator for the rupture
         :returns:
             a 32 bit array of shape (N, M, E) and
-            two arrays with shape (num_imts, num_events): sig for tau
-            and eps for the random part
+            two arrays sig and eps with shape (M, E)
         """
         M = len(self.imts)
         result = numpy.zeros(
