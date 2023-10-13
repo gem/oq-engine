@@ -25,7 +25,7 @@ import numba
 import pandas
 
 from openquake.baselib.general import AccumDict
-from openquake.baselib.performance import Monitor
+from openquake.baselib.performance import Monitor, compile
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
@@ -50,14 +50,15 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
+#@compile("float64[:](float64[:], boolean)")
 @numba.njit
-def exp(vals, imt):
+def exp(vals, notMMI):
     """
     Exponentiate the values unless the IMT is MMI
     """
-    if imt == 'MMI':
-        return vals
-    return numpy.exp(vals)
+    if notMMI:
+        return numpy.exp(vals)
+    return vals
 
 
 @numba.njit
@@ -68,7 +69,7 @@ def set_max_min(array, mean, max_iml, min_iml, imts):
     for m, im in enumerate(imts):
         iml = max_iml[m]
         for n in range(N):
-            maxval = exp(mean[m, n], im)
+            maxval = exp(mean[m, n], im!='MMI')
             for e in range(E):
                 val = array[n, m, e]
                 if val > iml:
@@ -271,7 +272,7 @@ class GmfComputer(object):
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
             mean, _, _, _ = mean_stds
-            gmf = exp(mean, im)[:, None]
+            gmf = exp(mean, im!='MMI')[:, None]
             gmf = gmf.repeat(len(inter_eps), axis=1)
             inter_sig = 0
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
@@ -284,7 +285,7 @@ class GmfComputer(object):
                     self.correlation_model, gsim)
 
             mean, sig, _, _ = mean_stds
-            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im)
+            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im!='MMI')
             inter_sig = numpy.nan
         else:
             mean, sig, tau, phi = mean_stds
@@ -301,7 +302,7 @@ class GmfComputer(object):
                     intra_res = intra_res[:, None]
 
             inter_res = tau[:, None] * inter_eps  # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + intra_res + inter_res, im)  # (N, E)
+            gmf = exp(mean[:, None] + intra_res + inter_res, im!='MMI')
             inter_sig = tau.max()  # from shape (N, 1) => scalar
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
 
