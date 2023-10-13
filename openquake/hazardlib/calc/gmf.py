@@ -161,6 +161,7 @@ class GmfComputer(object):
             self.seed = rupture.seed
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
+            self.ebrupture = {'e0': 0, 'n_occ': 1, 'seed': rupture.seed}
             self.source_id = '?'
             self.seed = rupture.seed
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
@@ -175,9 +176,15 @@ class GmfComputer(object):
         self.init_eid_rlz_sig_eps()
 
     def init_eid_rlz_sig_eps(self):
+        """
+        Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
+        """
         rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
-        self.eid, self.rlz = get_eid_rlz(
-            vars(self.ebrupture), rlzs, self.cmaker.scenario)
+        if isinstance(self.ebrupture, dict):  # with keys e0, n_occ, seed
+            dic = self.ebrupture
+        else:
+            dic = vars(self.ebrupture)
+        self.eid, self.rlz = get_eid_rlz(dic, rlzs, self.cmaker.scenario)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
@@ -383,9 +390,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
+    cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: [0]},
                           dict(truncation_level=truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
+    cmaker.scenario = True
     rupture.seed = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
