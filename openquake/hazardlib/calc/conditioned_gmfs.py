@@ -559,7 +559,7 @@ def get_mean_covs(
             ta[g, m] = tau
             ph[g, m] = phi
 
-    return [me, si, tau, ph]
+    return [me, si, ta, ph]
 
 
 # In scenario/case_21 one has
