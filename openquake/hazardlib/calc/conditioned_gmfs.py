@@ -216,7 +216,7 @@ class ConditionedGmfComputer(GmfComputer):
 
     def get_mean_covs(self):
         """
-        :returns: a dictionary gsim -> [mean, sig, tau, phi]
+        :returns: a list of arrays [mea, sig, tau, phi]
         """
         return get_mean_covs(
             self.rupture, self.cmaker.gsims,
@@ -514,8 +514,8 @@ def get_mean_covs(
 
     # filter sites
     target = target_sitecol.filter(
-        numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
-    mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
+        numpy.isin(target_sitecol.sids, ctx_Y.sids))
+    mask = numpy.isin(station_sitecol.sids, ctx_D.sids)
     station_filtered = station_sitecol.filter(mask)
 
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
@@ -558,7 +558,7 @@ def get_mean_covs(
             ta[g, m] = tau
             ph[g, m] = phi
 
-    return [me, si, tau, ph]
+    return [me, si, ta, ph]
 
 
 # In scenario/case_21 one has
