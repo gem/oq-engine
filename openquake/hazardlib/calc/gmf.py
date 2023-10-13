@@ -185,6 +185,7 @@ class GmfComputer(object):
         else:
             dic = vars(self.ebrupture)
         self.eid, self.rlz = get_eid_rlz(dic, rlzs, self.cmaker.scenario)
+        self.N = len(self.ctx)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
@@ -247,44 +248,36 @@ class GmfComputer(object):
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
             rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
-        ne = 0
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
-            num_events = numpy.isin(self.rlz, rlzs).sum()
-            if num_events == 0:  # it may happen
-                continue
             with cmon:
-                array = self.compute(
-                    gs, num_events, mean_stds[:, g], rng,
-                    slice(ne, ne + num_events))  # shape (N, M, E)
+                array = self.compute(gs, rlzs, mean_stds[:, g], rng)  # NME
             with umon:
                 self.update(data, array, rlzs, mean_stds[:, g], max_iml)
-            ne += num_events
         with umon:
             return strip_zeros(data)
 
-    def compute(self, gsim, num_events, mean_stds, rng, slc=slice(None)):
+    def compute(self, gsim, rlzs, mean_stds, rng):
         """
         :param gsim: GSIM used to compute mean_stds
-        :param num_events: the number of seismic events
+        :param rlzs: realizations associated to the gsim
         :param mean_stds: array of shape (4, M, N)
         :param rng: random number generator for the rupture
         :returns: a 32 bit array of shape (N, M, E)
         """
         # sets self.eps
         M = len(self.imts)
+        mask = numpy.isin(self.rlz, rlzs)
+        E = mask.sum()
         result = numpy.zeros(
-            (len(self.imts), len(self.ctx.sids), num_events), F32)
-        num_sids = len(self.ctx.sids)
+            (len(self.imts), len(self.ctx.sids), E), F32)
         ccdist = self.cross_correl.distribution
         # build arrays of random numbers of shape (M, N, E) and (M, E)
-        intra_eps = [
-            ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
-        self.eps[slc] = self.cross_correl.get_inter_eps(
-            self.imts, num_events, rng).T
+        intra_eps = [ccdist.rvs((self.N, E), rng) for _ in range(M)]
+        self.eps[mask] = self.cross_correl.get_inter_eps(self.imts, E, rng).T
         for m, imt in enumerate(self.imts):
             try:
                 result[m] = self._compute(
-                    mean_stds[:, m], m, imt, gsim, intra_eps[m], slc)
+                    mean_stds[:, m], m, imt, gsim, intra_eps[m], mask)
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
@@ -296,7 +289,7 @@ class GmfComputer(object):
                 self.ctx.ampcode, result, self.imts, self.seed)
         return result.transpose(1, 0, 2)
 
-    def _compute(self, mean_stds, m, imt, gsim, intra_eps, slc):
+    def _compute(self, mean_stds, m, imt, gsim, intra_eps, mask):
         # sets self.sig
         im = imt.string
         if self.cmaker.truncation_level <= 1E-9:
@@ -318,7 +311,7 @@ class GmfComputer(object):
 
             mean, sig, _, _ = mean_stds
             gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im!='MMI')
-            self.sig[slc, m] = numpy.nan
+            self.sig[mask, m] = numpy.nan
         else:
             mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
@@ -333,10 +326,10 @@ class GmfComputer(object):
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            inter_res = tau[:, None] * self.eps[slc, m]
+            inter_res = tau[:, None] * self.eps[mask, m]
             # shape (N, 1) * E => (N, E)
             gmf = exp(mean[:, None] + intra_res + inter_res, im!='MMI')
-            self.sig[slc, m] = tau.max()  # from shape (N, 1) => scalar
+            self.sig[mask, m] = tau.max()  # from shape (N, 1) => scalar
         return gmf  # shapes (N, E)
 
 
@@ -393,6 +386,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     rupture.seed = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
-    res = gc.compute(gsim, realizations, mean_stds,
+    res = gc.compute(gsim, numpy.arange(realizations), mean_stds,
                      numpy.random.default_rng(seed))
     return {imt: res[:, m] for m, imt in enumerate(gc.imts)}
