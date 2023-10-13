@@ -50,8 +50,9 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
-#@compile("float64[:](float64[:], boolean)")
-@numba.njit
+@compile(["float64[:,:](float64[:,:], boolean)",
+          "float64[:](float64[:], boolean)",
+          "float64(float64, boolean)"])
 def exp(vals, notMMI):
     """
     Exponentiate the values unless the IMT is MMI
@@ -62,6 +63,7 @@ def exp(vals, notMMI):
 
 
 @numba.njit
+#@compile("(float32[:,:,:],float64[:,:],float64[:],float64[:],unicode_type[:])")
 def set_max_min(array, mean, max_iml, min_iml, imts):
     N, M, E = array.shape
 
@@ -166,7 +168,8 @@ class GmfComputer(object):
         mean = mean_stds[0]
         if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
             mean = mean[:, :, 0]
-        set_max_min(array, mean, max_iml, min_iml, self.cmaker.imts)
+        imts= numpy.array(self.cmaker.imtls)
+        set_max_min(array, mean, max_iml, min_iml, imts)
         N = len(array)
         n = 0
         for rlz in rlzs:
