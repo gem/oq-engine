@@ -216,7 +216,7 @@ class ConditionedGmfComputer(GmfComputer):
 
     def get_mean_covs(self):
         """
-        :returns: a dictionary gsim -> [mean, sig, tau, phi]
+        :returns: a list of arrays [mea, sig, tau, phi]
         """
         return get_mean_covs(
             self.rupture, self.cmaker.gsims,
