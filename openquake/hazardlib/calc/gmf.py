@@ -171,6 +171,9 @@ class GmfComputer(object):
             if imt == 'MMI':
                 mmi_index = m
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
+        for m, gmv_field in enumerate(self.gmv_fields):
+            data[gmv_field].append(array[:, m].T.reshape(-1))
+
         N = len(array)
         n = 0
         for rlz in rlzs:
@@ -179,9 +182,6 @@ class GmfComputer(object):
             data['eid'].append(numpy.repeat(eids, N))
             data['sid'].append(numpy.tile(sids, E))
             data['rlz'].append(numpy.full(N * E, rlz, U32))
-            for m, gmv_field in enumerate(self.gmv_fields):
-                data[gmv_field].append(array[:, m, n:n + E].T.reshape(-1))
-
             if sig_eps is not None:
                 for e, eid in enumerate(eids):
                     tup = tuple([eid, rlz] + list(sig[:, n + e]) +
