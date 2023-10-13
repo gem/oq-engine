@@ -306,7 +306,7 @@ class GmfComputer(object):
                                  'no correlation model')
             mean, _, _, _ = mean_stds
             gmf = exp(mean, im!='MMI')[:, None]
-            gmf = gmf.repeat(slc.stop - slc.start, axis=1)
+            gmf = gmf.repeat(len(intra_eps[0]), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -393,6 +393,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     rupture.seed = seed
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
-    res, _sig, _eps = gc.compute(gsim, realizations, mean_stds,
-                                 numpy.random.default_rng(seed))
+    res = gc.compute(gsim, realizations, mean_stds,
+                     numpy.random.default_rng(seed))
     return {imt: res[:, m] for m, imt in enumerate(gc.imts)}
