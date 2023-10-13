@@ -28,11 +28,11 @@ from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
-from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
-from openquake.hazardlib.calc.filters import nofilter, getdefault, SourceFilter
+from openquake.hazardlib.calc.filters import (
+    nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
 from openquake.hazardlib.calc.conditioned_gmfs import ConditionedGmfComputer
 from openquake.hazardlib import InvalidFile
@@ -182,19 +182,27 @@ def count_ruptures(src):
 
 def strip_zeros(gmf_df):
     # remove the rows with all zero values
-    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
+    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
+    df = gmf_df[cols]
     assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
     ok = df.to_numpy().sum(axis=1) > 0
     return gmf_df[ok]
 
 
-def get_computer(cmaker, proxy, sids, complete, station_sitecol, station_data):
+def get_computer(cmaker, proxy, rupgeoms, srcfilter,
+                 station_data, station_sitecol):
     """
     :returns: GmfComputer or ConditionedGmfComputer
     """
+    sids = srcfilter.close_sids(proxy, cmaker.trt)
+    if len(sids) == 0:  # filtered away
+        raise FarAwayRupture
+
+    complete = srcfilter.sitecol.complete
+    proxy.geom = rupgeoms[proxy['geom_id']]
+    ebr = proxy.to_ebr(cmaker.trt)
     oq = cmaker.oq
-    trt = cmaker.trt
-    ebr = proxy.to_ebr(trt)
+
     if station_sitecol:
         stations = numpy.isin(sids, station_sitecol.sids)
         assert stations.sum(), 'There are no stations??'
@@ -245,38 +253,42 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     sig_eps = []
     times = []  # rup_id, nsites, dt
     fmon = monitor('filtering ruptures', measuremem=False)
+    mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
+    umon = monitor('updating gmfs', measuremem=False)
+    rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
     scenario = 'scenario' in oq.calculation_mode
     with dstore:
-        sitecol = dstore['sitecol']
-        if 'complete' in dstore:
-            sitecol.complete = dstore['complete']
+        if dstore.parent:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore.parent:
+                sitecol.complete = dstore.parent['complete']
+        else:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore:
+                sitecol.complete = dstore['complete']
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         rupgeoms = dstore['rupgeoms']
-        if stations:
-            station_data, station_sitecol = stations
-        else:
-            station_data, station_sitecol = None, None
         for proxy in proxies:
             t0 = time.time()
             with fmon:
                 if proxy['mag'] < cmaker.min_mag:
                     continue
-                sids = srcfilter.close_sids(proxy, cmaker.trt)
-                if len(sids) == 0:  # filtered away
-                    continue
-                proxy.geom = rupgeoms[proxy['geom_id']]
                 try:
                     computer = get_computer(
-                        cmaker, proxy, sids, sitecol.complete,
-                        station_sitecol, station_data)
+                        cmaker, proxy, rupgeoms, srcfilter, *stations)
                 except FarAwayRupture:
                     # skip this rupture
                     continue
-            with cmon:
-                df = computer.compute_all(scenario, sig_eps, max_iml)
+            if hasattr(computer, 'station_data'):  # conditioned GMFs
+                assert scenario
+                df = computer.compute_all(
+                    dstore, sig_eps, max_iml, rmon, cmon, umon)
+            else:  # regular GMFs
+                df = computer.compute_all(
+                    scenario, sig_eps, max_iml, mmon, cmon, umon)
             dt = time.time() - t0
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
@@ -297,25 +309,26 @@ def todict(dframe):
     return {k: dframe[k].to_numpy() for k in dframe.columns}
 
 
-def filter_stations(station_df, complete, hypo, maxdist):
+def filter_stations(station_df, complete, rup, maxdist):
     """
     :param station_df: DataFrame with the stations
     :param complete: complete SiteCollection
-    :param hypo: hypocenter of the rupture
+    :param rup: rupture
     :param maxdist: maximum distance
     :returns: filtered (station_df, station_sitecol)
     """
     ns = len(station_df)
-    ok = (hypo.distance_to_mesh(complete.mesh) <= maxdist) & numpy.isin(
+    ok = (get_distances(rup, complete, 'rrup') <= maxdist) & numpy.isin(
         complete.sids, station_df.index)
-    close = complete.filter(ok)
-    station_data = station_df[numpy.isin(station_df.index, close.sids)]
+    station_sites = complete.filter(ok)
+    station_data = station_df[numpy.isin(station_df.index, station_sites.sids)]
     if len(station_data) < ns:
         logging.info('Discarded %d/%d stations more distant than %d km',
                      ns - len(station_data), ns, maxdist)
-    return station_data, close
+    return station_data, station_sites
 
 
+# NB: save_tmp is passed in event_based_risk
 def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     """
     Submit the ruptures and apply `func` (event_based or ebrisk)
@@ -326,22 +339,41 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     logging.info('Affected sites = %.1f per rupture', rups['nsites'].mean())
     allproxies = [RuptureProxy(rec) for rec in rups]
     if "station_data" in oq.inputs:
+        rupgeoms = dstore['rupgeoms'][:]
+        trt = full_lt.trts[0]
+        proxy = allproxies[0]
+        proxy.geom = rupgeoms[proxy['geom_id']]
+        rup = proxy.to_ebr(trt).rupture
         station_df = dstore.read_df('station_data', 'site_id')
         maxdist = (oq.maximum_distance_stations or
                    oq.maximum_distance['default'][-1][1])
-        hypo = Point(*allproxies[0]['hypo'])
-        stations = filter_stations(station_df, sitecol.complete, hypo, maxdist)
+        station_data, station_sites = filter_stations(
+            station_df, sitecol.complete, rup, maxdist)
     else:
-        stations = ()
+        station_data, station_sites = None, None
 
-    dstore.swmr_on()
-    smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if save_tmp:
-        save_tmp(smap.monitor)
     gb = groupby(allproxies, operator.itemgetter('trt_smr'))
     totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
+    if "station_data" in oq.inputs:
+        rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
+        cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+        maxdist = oq.maximum_distance(cmaker.trt)
+        srcfilter = SourceFilter(sitecol.complete, maxdist)
+        computer = get_computer(
+            cmaker, proxy, rupgeoms, srcfilter,
+            station_data, station_sites)
+        mean_covs = computer.get_mean_covs()
+        for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
+            for g in range(len(cmaker.gsims)):
+                name = 'conditioned/gsim_%d/%s' % (g, key)
+                dstore.create_dset(name, val[g])
+        del proxy.geom  # to reduce data transfer
+    dstore.swmr_on()
+    smap = parallel.Starmap(func, h5=dstore.hdf5)
+    if save_tmp:	
+        save_tmp(smap.monitor)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
         extra = sitecol.array.dtype.names
@@ -349,7 +381,8 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq, extraparams=extra)
         cmaker.min_mag = getdefault(oq.minimum_magnitude, trt)
         for block in block_splitter(proxies, totw, rup_weight):
-            smap.submit((block, cmaker, stations, dstore))
+            args = block, cmaker, (station_data, station_sites), dstore
+            smap.submit(args)
     return smap
 
 
@@ -393,8 +426,6 @@ class EventBasedCalculator(base.HazardCalculator):
     accept_precalc = ['event_based', 'ebrisk', 'event_based_risk']
 
     def init(self):
-        if 'station_data' in self.oqparam.inputs:
-            os.environ['OQ_DISTRIBUTE'] = 'no'
         if self.oqparam.cross_correl.__class__.__name__ == 'GodaAtkinson2009':
             logging.warning(
                 'The truncation_level param is ignored with GodaAtkinson2009')

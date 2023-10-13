@@ -114,14 +114,19 @@ import numpy
 import pandas
 from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
+from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.gsim.base import ContextMaker
 
+U32 = numpy.uint32
 F32 = numpy.float32
+
+
 class NoInterIntraStdDevs(Exception):
     def __init__(self, gsim):
         self.gsim = gsim
@@ -209,11 +214,11 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def get_ms_and_sids(self):
+    def get_mean_covs(self):
         """
-        :returns: mean_covs by gsim and site IDs
+        :returns: a list of arrays [mea, sig, tau, phi]
         """
-        return get_ms_and_sids(
+        return get_mean_covs(
             self.rupture, self.cmaker.gsims,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
@@ -221,96 +226,61 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+    def compute_all(self, dstore, sig_eps=None, max_iml=None,
+                    rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
-        min_iml = self.cmaker.min_iml
         rlzs_by_gsim = self.cmaker.gsims
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario=True)
-        mag = self.ebrupture.rupture.mag
+        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario=True)
         data = AccumDict(accum=[])
         rng = numpy.random.default_rng(self.seed)
-        num_events = self.num_events
-        assert num_events
         # NB: ms is a dictionary gsim -> [imt -> array]
-        ms, sids = self.get_ms_and_sids()
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            mean_covs = ms[gsim]
-            # mean['PGA'] has shape (N, 1) where N is the number of sites
-            # excluding the stations
+            with rmon:
+                mea = dstore['conditioned/gsim_%d/mea' % g][:]
+                tau = dstore['conditioned/gsim_%d/tau' % g][:]
+                phi = dstore['conditioned/gsim_%d/phi' % g][:]
+            with cmon:
+                array, sig, eps = self.compute(
+                    gsim, self.num_events, mea, tau, phi, rng)
+            with umon:
+                self.update(data, array, sig, eps, eid_, rlz_, rlzs,
+                            [mea, tau+phi, tau, phi], sig_eps, max_iml)
 
-            array, sig, eps = self.compute(gsim, num_events, mean_covs, rng)
-            M, N, E = array.shape  # sig and eps have shapes (M, E) instead
-            assert len(sids) == N, (len(sids), N)
-
-            # manage max_iml
-            if max_iml is not None:
-                for m, im in enumerate(self.cmaker.imtls):
-                    if (array[m] > max_iml[m]).any():
-                        for n in range(N):
-                            bad = array[m, n] > max_iml[m]  # shape E
-                            mean = mean_covs[0][im]  # shape (N, 1)
-                            array[m, n, bad] = exp(mean[n, 0], im)
-
-            # manage min_iml
-            for n in range(N):
-                for e in range(E):
-                    if (array[:, n, e] < min_iml).all():
-                        array[:, n, e] = 0
-            array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            n = 0
-            for rlz in rlzs:
-                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
-                for ei, eid in enumerate(eids):
-                    gmfa = array[:, :, n + ei]  # shape (N, M)
-                    if sig_eps is not None:
-                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
-                                    list(eps[:, n + ei]))
-                        sig_eps.append(tup)
-                    items = []
-                    for sp in self.sec_perils:
-                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
-                        for outkey, outarr in zip(sp.outputs, o):
-                            items.append((outkey, outarr))
-                    for i, gmv in enumerate(gmfa):
-                        if gmv.sum() == 0:
-                            continue
-                        data["sid"].append(sids[i])
-                        data["eid"].append(eid)
-                        data["rlz"].append(rlz)  # used in compute_gmfs_curves
-                        for m in range(M):
-                            data[f"gmv_{m}"].append(gmv[m])
-                        for outkey, outarr in items:
-                            data[outkey].append(outarr[i])
-                        # gmv can be zero due to the minimum_intensity, coming
-                        # from the job.ini or from the vulnerability functions
-                n += len(eids)
+        with umon:
+            for key, val in sorted(data.items()):
+                if key in 'eid sid rlz':
+                    data[key] = numpy.concatenate(data[key], dtype=U32)
+                else:
+                    data[key] = numpy.concatenate(data[key], dtype=F32)
         return pandas.DataFrame(data)
 
-    def compute(self, gsim, num_events, mean_covs, rng):
+    def compute(self, gsim, num_events, mea, tau, phi, rng):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
-        :param mean_covs: array of shape (4, M, N)
+        :param mea: array of shape (M, N, 1)
+        :param tau: array of shape (M, N, N)
+        :param phi: array of shape (M, N, N)
         :returns:
-            a 32 bit array of shape (num_imts, num_sites, num_events) and
-            two arrays with shape (num_imts, num_events): sig for tau
-            and eps for the random part
+            a 32 bit array of shape (N, M, E) and
+            two 32 bit arrays sig and eps with shape (M, E)
         """
-        M = len(self.imts)
-        num_sids = mean_covs[0][self.imts[0].string].size
-        result = numpy.zeros((M, num_sids, num_events), F32)
+        M, N, _ = mea.shape
+        result = numpy.zeros((M, N, num_events), F32)
         sig = numpy.zeros((M, num_events), F32)  # same for all events
         eps = numpy.zeros((M, num_events), F32)  # not the same
 
-        for m, im in enumerate(self.imts):
-            mu_Y_yD = mean_covs[0][im.string]
-            cov_WY_WY_wD = mean_covs[2][im.string]
-            cov_BY_BY_yD = mean_covs[3][im.string]
+        for m, im in enumerate(self.cmaker.imtls):
+            mu_Y_yD = mea[m]
+            cov_WY_WY_wD = tau[m]
+            cov_BY_BY_yD = phi[m]
             try:
                 result[m], sig[m], eps[m] = self._compute(
-                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD, im, num_events, rng)
+                    mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD,
+                    im, num_events, rng)
             except Exception as exc:
                 raise RuntimeError(
                     "(%s, %s, source_id=%r) %s: %s"
@@ -320,21 +290,20 @@ class ConditionedGmfComputer(GmfComputer):
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
-        return result, sig, eps
+        return result.transpose(1, 0, 2), sig, eps
 
     def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
         if self.cmaker.truncation_level <= 1E-9:
-            gmf = exp(mu_Y, imt)  # exponentiate unless imt == 'MMI'
+            gmf = exp(mu_Y, imt != "MMI")
             gmf = gmf.repeat(num_events, axis=1)
             inter_sig = 0
             inter_eps = numpy.zeros(num_events)
         else:
             cov_Y_Y = cov_WY_WY + cov_BY_BY
-            gmf = exp(
-                rng.multivariate_normal(
-                    mu_Y.flatten(), cov_Y_Y, size=num_events,
-                    check_valid="warn", tol=1e-5, method="eigh"),
-                imt).T
+            arr = rng.multivariate_normal(
+                mu_Y.flatten(), cov_Y_Y, size=num_events,
+                check_valid="warn", tol=1e-5, method="eigh")
+            gmf = exp(arr, imt != "MMI").T
             inter_sig = 0
             inter_eps = 0
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
@@ -343,7 +312,7 @@ class ConditionedGmfComputer(GmfComputer):
 @dataclass
 class TempResult:
     """
-    Temporary data structure used inside get_ms_and_sids
+    Temporary data structure used inside get_mean_covs
     """
     bracketed_imts: list
     conditioning_imts: list
@@ -504,11 +473,14 @@ def compute_spatial_cross_covariance_matrix(
 
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
-def get_ms_and_sids(
+def get_mean_covs(
         rupture, gsims, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
+    """
+    :returns: a list of arrays [mea, sig, tau, phi]
+    """
 
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
@@ -543,25 +515,29 @@ def get_ms_and_sids(
 
     # filter sites
     target = target_sitecol.filter(
-        numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
-    mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
+        numpy.isin(target_sitecol.sids, ctx_Y.sids))
+    mask = numpy.isin(station_sitecol.sids, ctx_D.sids)
     station_filtered = station_sitecol.filter(mask)
 
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
 
-    ms = {}  # dictionary gsim -> list of dicts
+    G = len(gsims)
+    M = len(target_imts)
+    N = len(ctx_Y)
+    me = numpy.zeros((G, M, N, 1))
+    si = numpy.zeros((G, M, N, N))
+    ta = numpy.zeros((G, M, N, N))
+    ph = numpy.zeros((G, M, N, N))
     for g, gsim in enumerate(gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
                     and "add_between_within_stds" in gsim.kwargs):
                 raise NoInterIntraStdDevs(gsim)
 
-        # NB: the four arrays below have different dimensions, so
-        # unlike the regular gsim get_mean_std, a numpy ndarray
+        # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
+        # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
-        ms[gsim] = [{imt.string: 0 for imt in target_imts} for _ in range(4)]
-
         sdata = station_data[mask].copy()    
         for m, o_imt in enumerate(observed_imts):
             im = o_imt.string
@@ -569,8 +545,7 @@ def get_ms_and_sids(
             sdata[im + "_sigma"] = mean_stds_D[1, g, m]
             sdata[im + "_tau"] = mean_stds_D[2, g, m]
             sdata[im + "_phi"] = mean_stds_D[3, g, m]
-        for target_imt in target_imts:
-            imt = target_imt.string
+        for m, target_imt in enumerate(target_imts):
             result = create_result(
                 target_imt, target_imts, observed_imts,
                 sdata, target, station_filtered,
@@ -579,12 +554,12 @@ def get_ms_and_sids(
                 target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
                 sdata, target, station_filtered,
                 compute_cov, result)
-            ms[gsim][0][imt] = mu
-            ms[gsim][1][imt] = tau + phi
-            ms[gsim][2][imt] = tau
-            ms[gsim][3][imt] = phi
+            me[g, m] = mu
+            si[g, m] = tau + phi
+            ta[g, m] = tau
+            ph[g, m] = phi
 
-    return ms, target.sids
+    return [me, si, ta, ph]
 
 
 # In scenario/case_21 one has
@@ -680,10 +655,10 @@ def _compute_spatial_cross_correlation_matrix(
     return spatial_correlation_matrix * cross_corr_coeff
 
 
-def clip_evals(x, value=0):  # threshold=0, value=0):
-    evals, evecs = numpy.linalg.eigh(x)
+def clip_evals(x, value=0):
+    evals, evecs = numpy.linalg.eigh(x)  # totally dominates the performance
     clipped = numpy.any(evals < value)
-    x_new = numpy.dot(evecs * numpy.maximum(evals, value), evecs.T)
+    x_new = evecs * numpy.maximum(evals, value) @ evecs.T
     return x_new, clipped
 
 
