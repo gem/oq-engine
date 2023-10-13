@@ -254,12 +254,11 @@ class GmfComputer(object):
             if num_events == 0:  # it may happen
                 continue
             with cmon:
-                arrayNME = self.compute(
+                array = self.compute(
                     gs, num_events, mean_stds[:, g], rng,
-                    slice(ne, ne + num_events))
+                    slice(ne, ne + num_events))  # shape (N, M, E)
             with umon:
-                self.update(data, arrayNME, rlzs,
-                            mean_stds[:, g], max_iml)
+                self.update(data, array, rlzs, mean_stds[:, g], max_iml)
             ne += num_events
         with umon:
             return strip_zeros(data)
@@ -272,6 +271,7 @@ class GmfComputer(object):
         :param rng: random number generator for the rupture
         :returns: a 32 bit array of shape (N, M, E)
         """
+        # sets self.eps
         M = len(self.imts)
         result = numpy.zeros(
             (len(self.imts), len(self.ctx.sids), num_events), F32)
@@ -298,6 +298,7 @@ class GmfComputer(object):
         return result.transpose(1, 0, 2)
 
     def _compute(self, mean_stds, m, imt, gsim, intra_eps, slc):
+        # sets self.sig
         im = imt.string
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds

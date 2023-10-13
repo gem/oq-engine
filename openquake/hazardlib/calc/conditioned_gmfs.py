@@ -241,10 +241,8 @@ class ConditionedGmfComputer(GmfComputer):
                 tau = dstore['conditioned/gsim_%d/tau' % g][:]
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
             with cmon:
-                array, sig, eps = self.compute(
-                    gsim, num_events, mea, tau, phi, rng)
-                self.sig[ne:ne+num_events] = sig.T
-                self.eps[ne:ne+num_events] = eps.T
+                array = self.compute(gsim, num_events, mea, tau, phi, rng,
+                                     slice(ne, ne + num_events))
             with umon:
                 self.update(data, array, rlzs, [mea, tau+phi, tau, phi],
                             max_iml)
@@ -253,30 +251,26 @@ class ConditionedGmfComputer(GmfComputer):
         with umon:
             return strip_zeros(data)
 
-    def compute(self, gsim, num_events, mea, tau, phi, rng, offset=0):
+    def compute(self, gsim, num_events, mea, tau, phi, rng, slc):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
         :param mea: array of shape (M, N, 1)
         :param tau: array of shape (M, N, N)
         :param phi: array of shape (M, N, N)
-        :returns:
-            a 32 bit array of shape (N, M, E) and
-            two 32 bit arrays sig and eps with shape (M, E)
+        :returns: a 32 bit array of shape (N, M, E)
         """
         M, N, _ = mea.shape
         result = numpy.zeros((M, N, num_events), F32)
-        sig = numpy.zeros((M, num_events), F32)  # same for all events
-        eps = numpy.zeros((M, num_events), F32)  # not the same
 
         for m, im in enumerate(self.cmaker.imtls):
             mu_Y_yD = mea[m]
             cov_WY_WY_wD = tau[m]
             cov_BY_BY_yD = phi[m]
             try:
-                result[m], sig[m], eps[m] = self._compute(
+                result[m] = self._compute(
                     mu_Y_yD, cov_WY_WY_wD, cov_BY_BY_yD,
-                    im, num_events, rng)
+                    im, num_events, rng, slc)
             except Exception as exc:
                 raise RuntimeError(
                     "(%s, %s, source_id=%r) %s: %s"
@@ -286,23 +280,19 @@ class ConditionedGmfComputer(GmfComputer):
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
-        return result.transpose(1, 0, 2), sig, eps
+        return result.transpose(1, 0, 2)
 
-    def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
+    def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng, slc):
         if self.cmaker.truncation_level <= 1E-9:
             gmf = exp(mu_Y, imt != "MMI")
             gmf = gmf.repeat(num_events, axis=1)
-            inter_sig = 0
-            inter_eps = numpy.zeros(num_events)
         else:
             cov_Y_Y = cov_WY_WY + cov_BY_BY
             arr = rng.multivariate_normal(
                 mu_Y.flatten(), cov_Y_Y, size=num_events,
                 check_valid="warn", tol=1e-5, method="eigh")
             gmf = exp(arr, imt != "MMI").T
-            inter_sig = 0
-            inter_eps = 0
-        return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
+        return gmf  # shapes (N, E)
 
 
 @dataclass
