@@ -254,10 +254,9 @@ class GmfComputer(object):
             if num_events == 0:  # it may happen
                 continue
             with cmon:
-                arrayNME, sigME, epsME = self.compute(
-                    gs, num_events, mean_stds[:, g], rng)
-                self.sig[ne:ne+num_events] = sigME.T
-                self.eps[ne:ne+num_events] = epsME.T
+                arrayNME = self.compute(
+                    gs, num_events, mean_stds[:, g], rng,
+                    slice(ne, ne + num_events))
             with umon:
                 self.update(data, arrayNME, rlzs,
                             mean_stds[:, g], max_iml)
@@ -265,31 +264,28 @@ class GmfComputer(object):
         with umon:
             return strip_zeros(data)
 
-    def compute(self, gsim, num_events, mean_stds, rng):
+    def compute(self, gsim, num_events, mean_stds, rng, slc=slice(None)):
         """
         :param gsim: GSIM used to compute mean_stds
         :param num_events: the number of seismic events
         :param mean_stds: array of shape (4, M, N)
         :param rng: random number generator for the rupture
-        :returns: a 32 bit array of shape (N, M, E) and
-                  two arrays sig and eps with shape (M, E)
+        :returns: a 32 bit array of shape (N, M, E)
         """
         M = len(self.imts)
         result = numpy.zeros(
             (len(self.imts), len(self.ctx.sids), num_events), F32)
-        sig = numpy.zeros((M, num_events), F32)  # same for all events
-        eps = numpy.zeros((M, num_events), F32)  # not the same
         num_sids = len(self.ctx.sids)
         ccdist = self.cross_correl.distribution
         # build arrays of random numbers of shape (M, N, E) and (M, E)
         intra_eps = [
             ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
-        inter_eps = self.cross_correl.get_inter_eps(
-            self.imts, num_events, rng)
+        self.eps[slc] = self.cross_correl.get_inter_eps(
+            self.imts, num_events, rng).T
         for m, imt in enumerate(self.imts):
             try:
-                result[m], sig[m], eps[m] = self._compute(
-                    mean_stds[:, m], imt, gsim, intra_eps[m], inter_eps[m])
+                result[m] = self._compute(
+                    mean_stds[:, m], m, imt, gsim, intra_eps[m], slc)
             except Exception as exc:
                 raise RuntimeError(
                     '(%s, %s, source_id=%r) %s: %s' %
@@ -299,9 +295,9 @@ class GmfComputer(object):
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
-        return result.transpose(1, 0, 2), sig, eps
+        return result.transpose(1, 0, 2)
 
-    def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
+    def _compute(self, mean_stds, m, imt, gsim, intra_eps, slc):
         im = imt.string
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
@@ -310,8 +306,7 @@ class GmfComputer(object):
                                  'no correlation model')
             mean, _, _, _ = mean_stds
             gmf = exp(mean, im!='MMI')[:, None]
-            gmf = gmf.repeat(len(inter_eps), axis=1)
-            inter_sig = 0
+            gmf = gmf.repeat(slc.stop - slc.start, axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -323,7 +318,7 @@ class GmfComputer(object):
 
             mean, sig, _, _ = mean_stds
             gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im!='MMI')
-            inter_sig = numpy.nan
+            self.sig[slc, m] = numpy.nan
         else:
             mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
@@ -338,10 +333,11 @@ class GmfComputer(object):
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            inter_res = tau[:, None] * inter_eps  # shape (N, 1) * E => (N, E)
+            inter_res = tau[:, None] * self.eps[slc, m]
+            # shape (N, 1) * E => (N, E)
             gmf = exp(mean[:, None] + intra_res + inter_res, im!='MMI')
-            inter_sig = tau.max()  # from shape (N, 1) => scalar
-        return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
+            self.sig[slc, m] = tau.max()  # from shape (N, 1) => scalar
+        return gmf  # shapes (N, E)
 
 
 # this is not used in the engine; it is still useful for usage in IPython
