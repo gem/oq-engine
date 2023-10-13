@@ -259,9 +259,14 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     max_iml = oq.get_max_iml()
     scenario = 'scenario' in oq.calculation_mode
     with dstore:
-        sitecol = dstore['sitecol']
-        if 'complete' in dstore:
-            sitecol.complete = dstore['complete']
+        if dstore.parent:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore.parent:
+                sitecol.complete = dstore.parent['complete']
+        else:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore:
+                sitecol.complete = dstore['complete']
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         rupgeoms = dstore['rupgeoms']
@@ -358,14 +363,13 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         computer = get_computer(
             cmaker, proxy, rupgeoms, srcfilter,
             station_data, station_sites)
-        ms, sids = computer.get_ms_and_sids()
-        del proxy.geom  # to reduce data transfer
-        dstore.create_dset('conditioned/sids', sids)
+        mean_covs = computer.get_mean_covs()
         keys = ['mea', 'sig', 'tau', 'phi']
-        for g, gsim in enumerate(ms):
-            for key, val in zip(keys, ms[gsim]):
+        for g in range(len(cmaker.gsims)):
+            for key, val in zip(keys, mean_covs):
                 name = 'conditioned/gsim_%d/%s' % (g, key)
-                dstore.create_dset(name, val)
+                dstore.create_dset(name, val[g])
+        del proxy.geom  # to reduce data transfer
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:	
