@@ -203,7 +203,7 @@ class GmfComputer(object):
             sig_eps[f'eps_inter_{imt}'] = self.eps[:, m]
         return sig_eps
 
-    def update(self, data, array, rlzs, mean_stds, max_iml):
+    def update(self, data, array, rlzs, mean_stds, max_iml=None):
         sids = self.ctx.sids
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
@@ -214,6 +214,9 @@ class GmfComputer(object):
         for m, imt in enumerate(self.cmaker.imtls):
             if imt == 'MMI':
                 mmi_index = m
+        if max_iml is None:
+            M = len(self.cmaker.imts)
+            max_iml = numpy.full(M, numpy.inf, float)
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
         for m, gmv_field in enumerate(self.gmv_fields):
             data[gmv_field].append(array[:, m].T.reshape(-1))
@@ -243,10 +246,6 @@ class GmfComputer(object):
         with mmon:
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
             rng = numpy.random.default_rng(self.seed)
-            if max_iml is None:
-                M = len(self.cmaker.imts)
-                max_iml = numpy.full(M, numpy.inf, float)
-
         data = AccumDict(accum=[])
         ne = 0
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):

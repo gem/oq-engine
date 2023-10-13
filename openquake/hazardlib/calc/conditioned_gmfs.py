@@ -225,8 +225,8 @@ class ConditionedGmfComputer(GmfComputer):
             self.cross_correl_between, self.cross_correl_within,
             self.cmaker.maximum_distance)
 
-    def compute_all(self, dstore, max_iml=None,
-                    rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
+    def compute_all(
+            self, dstore, rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
@@ -244,8 +244,7 @@ class ConditionedGmfComputer(GmfComputer):
                 array = self.compute(gsim, num_events, mea, tau, phi, rng,
                                      slice(ne, ne + num_events))
             with umon:
-                self.update(data, array, rlzs, [mea, tau+phi, tau, phi],
-                            max_iml)
+                self.update(data, array, rlzs, [mea, tau+phi, tau, phi])
             ne += num_events
 
         with umon:

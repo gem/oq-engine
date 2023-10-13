@@ -275,7 +275,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert cmaker.scenario
-                df = computer.compute_all(dstore, max_iml, rmon, cmon, umon)
+                df = computer.compute_all(dstore, rmon, cmon, umon)
             else:  # regular GMFs
                 df = computer.compute_all(max_iml, mmon, cmon, umon)
             sig_eps.append(computer.build_sig_eps(se_dt))
