@@ -168,7 +168,7 @@ class GmfComputer(object):
         mean = mean_stds[0]
         if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
             mean = mean[:, :, 0]
-        imts= numpy.array(self.cmaker.imtls)
+        imts= numpy.array(list(self.cmaker.imtls))
         set_max_min(array, mean, max_iml, min_iml, imts)
         N = len(array)
         n = 0
@@ -364,4 +364,4 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
     res, _sig, _eps = gc.compute(gsim, realizations, mean_stds,
                                  numpy.random.default_rng(seed))
-    return {imt: res[m] for m, imt in enumerate(gc.imts)}
+    return {imt: res[:, m] for m, imt in enumerate(gc.imts)}

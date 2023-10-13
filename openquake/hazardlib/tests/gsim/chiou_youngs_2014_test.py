@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
 from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     ChiouYoungs2014, ChiouYoungs2014PEER, ChiouYoungs2014NearFaultEffect,
     ChiouYoungs2014Japan, ChiouYoungs2014Italy, ChiouYoungs2014Wenchuan)
@@ -189,5 +190,4 @@ class ChiouYoungs2014NearFaultDistanceTaperTestCase(BaseGSIMTestCase):
             rupture, sites, [PGV()], ChiouYoungs2014NearFaultEffect(),
             truncation_level=0, realizations=1)
         gmf = fields[PGV()]
-        self.assertAlmostEqual(2.27395, gmf[0, 0], delta=1e-4)
-        self.assertAlmostEqual(3.38409, gmf[1], delta=1e-4)
+        numpy.testing.assert_allclose(gmf, [[2.2739506], [3.3840923]])
