@@ -63,10 +63,13 @@ def set_max_min(array, mean, max_iml, min_iml, imts):
 
     # manage max_iml
     for m, im in enumerate(imts):
-        if (array[m] > max_iml[m]).any():
-            for n in range(N):
-                bad = array[m, n] > max_iml[m]  # shape E
-                array[m, n, bad] = exp(mean[m, n], im)
+        iml = max_iml[m]
+        for n in range(N):
+            maxval = exp(mean[m, n], im)
+            for e in range(E):
+                val = array[m, n, e]
+                if val > iml:
+                    array[m, n, e] = maxval
 
     # manage min_iml
     for n in range(N):
