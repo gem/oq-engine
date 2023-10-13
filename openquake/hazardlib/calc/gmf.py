@@ -21,7 +21,6 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
 import numpy
-import numba
 import pandas
 
 from openquake.baselib.general import AccumDict
@@ -62,16 +61,15 @@ def exp(vals, notMMI):
     return vals
 
 
-@numba.njit
-#@compile("(float32[:,:,:],float64[:,:],float64[:],float64[:],unicode_type[:])")
-def set_max_min(array, mean, max_iml, min_iml, imts):
+@compile("(float32[:,:,:],float64[:,:],float64[:],float64[:],int64)")
+def set_max_min(array, mean, max_iml, min_iml, mmi_index):
     N, M, E = array.shape
 
     # manage max_iml
-    for m, im in enumerate(imts):
+    for m in range(M):
         iml = max_iml[m]
         for n in range(N):
-            maxval = exp(mean[m, n], im!='MMI')
+            maxval = exp(mean[m, n], m!=mmi_index)
             for e in range(E):
                 val = array[n, m, e]
                 if val > iml:
@@ -168,8 +166,11 @@ class GmfComputer(object):
         mean = mean_stds[0]
         if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
             mean = mean[:, :, 0]
-        imts= numpy.array(list(self.cmaker.imtls))
-        set_max_min(array, mean, max_iml, min_iml, imts)
+        mmi_index = -1
+        for m, imt in enumerate(self.cmaker.imtls):
+            if imt == 'MMI':
+                mmi_index = m
+        set_max_min(array, mean, max_iml, min_iml, mmi_index)
         N = len(array)
         n = 0
         for rlz in rlzs:
