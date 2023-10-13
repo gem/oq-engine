@@ -182,7 +182,8 @@ def count_ruptures(src):
 
 def strip_zeros(gmf_df):
     # remove the rows with all zero values
-    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
+    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
+    df = gmf_df[cols]
     assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
     ok = df.to_numpy().sum(axis=1) > 0
     return gmf_df[ok]
@@ -252,7 +253,9 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     sig_eps = []
     times = []  # rup_id, nsites, dt
     fmon = monitor('filtering ruptures', measuremem=False)
+    mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
+    umon = monitor('updating gmfs', measuremem=False)
     rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
     scenario = 'scenario' in oq.calculation_mode
@@ -281,9 +284,11 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
                 assert scenario
-                df = computer.compute_all(dstore, sig_eps, max_iml, cmon, rmon)
+                df = computer.compute_all(
+                    dstore, sig_eps, max_iml, rmon, cmon, umon)
             else:  # regular GMFs
-                df = computer.compute_all(scenario, sig_eps, max_iml, cmon)
+                df = computer.compute_all(
+                    scenario, sig_eps, max_iml, mmon, cmon, umon)
             dt = time.time() - t0
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)

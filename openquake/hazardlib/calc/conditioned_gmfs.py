@@ -227,7 +227,7 @@ class ConditionedGmfComputer(GmfComputer):
             self.cmaker.maximum_distance)
 
     def compute_all(self, dstore, sig_eps=None, max_iml=None,
-                    mon1=Monitor(), mon2=Monitor()):
+                    rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
@@ -238,21 +238,23 @@ class ConditionedGmfComputer(GmfComputer):
         rng = numpy.random.default_rng(self.seed)
         # NB: ms is a dictionary gsim -> [imt -> array]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            with mon1:
+            with rmon:
                 mea = dstore['conditioned/gsim_%d/mea' % g][:]
                 tau = dstore['conditioned/gsim_%d/tau' % g][:]
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
-            with mon2:
+            with cmon:
                 array, sig, eps = self.compute(
                     gsim, self.num_events, mea, tau, phi, rng)
-            self.update(data, array, sig, eps, eid_, rlz_, rlzs,
-                        [mea, tau+phi, tau, phi], sig_eps, max_iml)
+            with umon:
+                self.update(data, array, sig, eps, eid_, rlz_, rlzs,
+                            [mea, tau+phi, tau, phi], sig_eps, max_iml)
 
-        for key, val in sorted(data.items()):
-            if key in 'eid sid rlz':
-                data[key] = numpy.concatenate(data[key], dtype=U32)
-            else:
-                data[key] = numpy.concatenate(data[key], dtype=F32)
+        with umon:
+            for key, val in sorted(data.items()):
+                if key in 'eid sid rlz':
+                    data[key] = numpy.concatenate(data[key], dtype=U32)
+                else:
+                    data[key] = numpy.concatenate(data[key], dtype=F32)
         return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mea, tau, phi, rng):
@@ -263,9 +265,8 @@ class ConditionedGmfComputer(GmfComputer):
         :param tau: array of shape (M, N, N)
         :param phi: array of shape (M, N, N)
         :returns:
-            a 32 bit array of shape (num_imts, num_sites, num_events) and
-            two arrays with shape (num_imts, num_events): sig for tau
-            and eps for the random part
+            a 32 bit array of shape (N, M, E) and
+            two 32 bit arrays sig and eps with shape (M, E)
         """
         M, N, _ = mea.shape
         result = numpy.zeros((M, N, num_events), F32)
@@ -289,21 +290,20 @@ class ConditionedGmfComputer(GmfComputer):
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
-        return result, sig, eps
+        return result.transpose(1, 0, 2), sig, eps
 
     def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
         if self.cmaker.truncation_level <= 1E-9:
-            gmf = exp(mu_Y, imt)  # exponentiate unless imt == 'MMI'
+            gmf = exp(mu_Y, imt != "MMI")
             gmf = gmf.repeat(num_events, axis=1)
             inter_sig = 0
             inter_eps = numpy.zeros(num_events)
         else:
             cov_Y_Y = cov_WY_WY + cov_BY_BY
-            gmf = exp(
-                rng.multivariate_normal(
-                    mu_Y.flatten(), cov_Y_Y, size=num_events,
-                    check_valid="warn", tol=1e-5, method="eigh"),
-                imt).T
+            arr = rng.multivariate_normal(
+                mu_Y.flatten(), cov_Y_Y, size=num_events,
+                check_valid="warn", tol=1e-5, method="eigh")
+            gmf = exp(arr, imt != "MMI").T
             inter_sig = 0
             inter_eps = 0
         return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
