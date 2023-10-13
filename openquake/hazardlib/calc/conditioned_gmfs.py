@@ -263,7 +263,7 @@ class ConditionedGmfComputer(GmfComputer):
         :param tau: array of shape (M, N, N)
         :param phi: array of shape (M, N, N)
         :returns:
-            a 32 bit array of shape (num_imts, num_sites, num_events) and
+            a 32 bit array of shape (N, M, E) and
             two arrays with shape (num_imts, num_events): sig for tau
             and eps for the random part
         """
@@ -289,7 +289,7 @@ class ConditionedGmfComputer(GmfComputer):
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
-        return result, sig, eps
+        return result.transpose(1, 0, 2), sig, eps
 
     def _compute(self, mu_Y, cov_WY_WY, cov_BY_BY, imt, num_events, rng):
         if self.cmaker.truncation_level <= 1E-9:

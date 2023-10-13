@@ -21,6 +21,7 @@ Module :mod:`~openquake.hazardlib.calc.gmf` exports
 :func:`ground_motion_fields`.
 """
 import numpy
+import numba
 import pandas
 
 from openquake.baselib.general import AccumDict
@@ -49,6 +50,7 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
+@numba.njit
 def exp(vals, imt):
     """
     Exponentiate the values unless the IMT is MMI
@@ -58,8 +60,9 @@ def exp(vals, imt):
     return numpy.exp(vals)
 
 
+@numba.njit
 def set_max_min(array, mean, max_iml, min_iml, imts):
-    M, N, E = array.shape
+    N, M, E = array.shape
 
     # manage max_iml
     for m, im in enumerate(imts):
@@ -67,15 +70,15 @@ def set_max_min(array, mean, max_iml, min_iml, imts):
         for n in range(N):
             maxval = exp(mean[m, n], im)
             for e in range(E):
-                val = array[m, n, e]
+                val = array[n, m, e]
                 if val > iml:
-                    array[m, n, e] = maxval
+                    array[n, m, e] = maxval
 
     # manage min_iml
     for n in range(N):
         for e in range(E):
-            if (array[:, n, e] < min_iml).all():
-                array[:, n, e] = 0
+            if (array[n, :, e] < min_iml).all():
+                array[n, :, e] = 0
 
 
 class GmfComputer(object):
@@ -162,7 +165,6 @@ class GmfComputer(object):
         if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
             mean = mean[:, :, 0]
         set_max_min(array, mean, max_iml, min_iml, self.cmaker.imts)
-        array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
         N = len(array)
         n = 0
         for rlz in rlzs:
@@ -189,7 +191,8 @@ class GmfComputer(object):
                             data[outkey].append(outarr)
             n += E
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
+    def compute_all(self, scenario, sig_eps=None, max_iml=None,
+                    cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
@@ -206,14 +209,12 @@ class GmfComputer(object):
             num_events = numpy.isin(rlz_, rlzs).sum()
             if num_events == 0:  # it may happen
                 continue
-            # NB: the trick for performance is to keep the call to
-            # .compute outside of the loop over the realizations;
-            # it is better to have few calls producing big arrays
-            with mon:
+            with cmon:
                 array, sig, eps = self.compute(
                     gs, num_events, mean_stds[:, g], rng)
-            self.update(data, array, sig, eps, eid_, rlz_, rlzs,
-                        mean_stds[:, g], sig_eps, max_iml)
+            with umon:
+                self.update(data, array, sig, eps, eid_, rlz_, rlzs,
+                            mean_stds[:, g], sig_eps, max_iml)
 
         for key, val in sorted(data.items()):
             if key in 'eid sid rlz':
@@ -229,7 +230,7 @@ class GmfComputer(object):
         :param mean_stds: array of shape (4, M, N)
         :param rng: random number generator for the rupture
         :returns:
-            a 32 bit array of shape (num_imts, num_sites, num_events) and
+            a 32 bit array of shape (N, M, E) and
             two arrays with shape (num_imts, num_events): sig for tau
             and eps for the random part
         """
@@ -258,7 +259,7 @@ class GmfComputer(object):
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
-        return result, sig, eps
+        return result.transpose(1, 0, 2), sig, eps
 
     def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
         im = imt.string
