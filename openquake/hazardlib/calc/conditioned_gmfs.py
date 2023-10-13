@@ -227,7 +227,7 @@ class ConditionedGmfComputer(GmfComputer):
             self.cmaker.maximum_distance)
 
     def compute_all(self, dstore, sig_eps=None, max_iml=None,
-                    mon1=Monitor(), mon2=Monitor()):
+                    rmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
@@ -238,21 +238,23 @@ class ConditionedGmfComputer(GmfComputer):
         rng = numpy.random.default_rng(self.seed)
         # NB: ms is a dictionary gsim -> [imt -> array]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
-            with mon1:
+            with rmon:
                 mea = dstore['conditioned/gsim_%d/mea' % g][:]
                 tau = dstore['conditioned/gsim_%d/tau' % g][:]
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
-            with mon2:
+            with cmon:
                 array, sig, eps = self.compute(
                     gsim, self.num_events, mea, tau, phi, rng)
-            self.update(data, array, sig, eps, eid_, rlz_, rlzs,
-                        [mea, tau+phi, tau, phi], sig_eps, max_iml)
+            with umon:
+                self.update(data, array, sig, eps, eid_, rlz_, rlzs,
+                            [mea, tau+phi, tau, phi], sig_eps, max_iml)
 
-        for key, val in sorted(data.items()):
-            if key in 'eid sid rlz':
-                data[key] = numpy.concatenate(data[key], dtype=U32)
-            else:
-                data[key] = numpy.concatenate(data[key], dtype=F32)
+        with umon:
+            for key, val in sorted(data.items()):
+                if key in 'eid sid rlz':
+                    data[key] = numpy.concatenate(data[key], dtype=U32)
+                else:
+                    data[key] = numpy.concatenate(data[key], dtype=F32)
         return pandas.DataFrame(data)
 
     def compute(self, gsim, num_events, mea, tau, phi, rng):

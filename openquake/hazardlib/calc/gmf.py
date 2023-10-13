@@ -198,19 +198,19 @@ class GmfComputer(object):
             n += E
 
     def compute_all(self, scenario, sig_eps=None, max_iml=None,
-                    cmon=Monitor(), umon=Monitor()):
+                    mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
-        rlzs_by_gsim = self.cmaker.gsims
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario)
-        with cmon:
+        with mmon:
+            rlzs_by_gsim = self.cmaker.gsims
+            rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
+            eid_, rlz_ = get_eid_rlz(vars(self.ebrupture), rlzs, scenario)
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
-        rng = numpy.random.default_rng(self.seed)
-        if max_iml is None:
-            M = len(self.cmaker.imts)
-            max_iml = numpy.full(M, numpy.inf, float)
+            rng = numpy.random.default_rng(self.seed)
+            if max_iml is None:
+                M = len(self.cmaker.imts)
+                max_iml = numpy.full(M, numpy.inf, float)
 
         data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
