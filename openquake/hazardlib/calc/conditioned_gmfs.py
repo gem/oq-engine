@@ -214,11 +214,11 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def get_ms_and_sids(self):
+    def get_mean_covs(self):
         """
-        :returns: mean_covs by gsim and site IDs
+        :returns: a dictionary gsim -> [mean, sig, tau, phi]
         """
-        return get_ms_and_sids(
+        return get_mean_covs(
             self.rupture, self.cmaker.gsims,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
@@ -312,7 +312,7 @@ class ConditionedGmfComputer(GmfComputer):
 @dataclass
 class TempResult:
     """
-    Temporary data structure used inside get_ms_and_sids
+    Temporary data structure used inside get_mean_covs
     """
     bracketed_imts: list
     conditioning_imts: list
@@ -473,7 +473,7 @@ def compute_spatial_cross_covariance_matrix(
 
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
-def get_ms_and_sids(
+def get_mean_covs(
         rupture, gsims, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
@@ -558,7 +558,7 @@ def get_ms_and_sids(
 
         ms[gsim] = [me, si, ta, ph]
 
-    return ms, target.sids
+    return ms
 
 
 # In scenario/case_21 one has
