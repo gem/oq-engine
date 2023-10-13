@@ -238,13 +238,14 @@ class ConditionedGmfComputer(GmfComputer):
         rng = numpy.random.default_rng(self.seed)
         # NB: ms is a dictionary gsim -> [imt -> array]
         for g, (gsim, rlzs) in enumerate(rlzs_by_gsim.items()):
+            num_events = numpy.isin(rlz_, rlzs).sum()
             with rmon:
                 mea = dstore['conditioned/gsim_%d/mea' % g][:]
                 tau = dstore['conditioned/gsim_%d/tau' % g][:]
                 phi = dstore['conditioned/gsim_%d/phi' % g][:]
             with cmon:
                 array, sig, eps = self.compute(
-                    gsim, self.num_events, mea, tau, phi, rng)
+                    gsim, num_events, mea, tau, phi, rng)
             with umon:
                 self.update(data, array, sig, eps, eid_, rlz_, rlzs,
                             [mea, tau+phi, tau, phi], sig_eps, max_iml)
