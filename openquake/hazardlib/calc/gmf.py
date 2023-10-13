@@ -169,12 +169,12 @@ class GmfComputer(object):
             data['sid'].append(numpy.tile(sids, E))
             data['rlz'].append(numpy.full(N * E, rlz, U32))
             for m, gmv_field in enumerate(self.gmv_fields):
-                data[gmv_field].append(array[:, m, n:n + E].T.flatten())
+                data[gmv_field].append(array[:, m, n:n + E].T.reshape(-1))
 
             if sig_eps is not None:
-                for ei, eid in enumerate(eids):
-                    tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
-                                list(eps[:, n + ei]))
+                for e, eid in enumerate(eids):
+                    tup = tuple([eid, rlz] + list(sig[:, n + e]) +
+                                list(eps[:, n + e]))
                     sig_eps.append(tup)
 
             if self.sec_perils:
@@ -184,7 +184,7 @@ class GmfComputer(object):
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             data[outkey].append(outarr)
-            n += len(eids)
+            n += E
 
     def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
         """
