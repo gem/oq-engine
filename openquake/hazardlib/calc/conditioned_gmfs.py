@@ -214,11 +214,11 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
-    def get_ms_and_sids(self):
+    def get_mean_covs(self):
         """
-        :returns: mean_covs by gsim and site IDs
+        :returns: a list of arrays [mea, sig, tau, phi]
         """
-        return get_ms_and_sids(
+        return get_mean_covs(
             self.rupture, self.cmaker.gsims,
             self.station_sitecol, self.station_data,
             self.observed_imt_strs, self.sitecol, self.imts,
@@ -312,7 +312,7 @@ class ConditionedGmfComputer(GmfComputer):
 @dataclass
 class TempResult:
     """
-    Temporary data structure used inside get_ms_and_sids
+    Temporary data structure used inside get_mean_covs
     """
     bracketed_imts: list
     conditioning_imts: list
@@ -473,11 +473,14 @@ def compute_spatial_cross_covariance_matrix(
 
 
 # tested in openquake/hazardlib/tests/calc/conditioned_gmfs_test.py
-def get_ms_and_sids(
+def get_mean_covs(
         rupture, gsims, station_sitecol, station_data,
         observed_imt_strs, target_sitecol, target_imts,
         spatial_correl, cross_correl_between, cross_correl_within,
         maximum_distance):
+    """
+    :returns: a list of arrays [mea, sig, tau, phi]
+    """
 
     if hasattr(rupture, 'rupture'):
         rupture = rupture.rupture
@@ -519,9 +522,13 @@ def get_ms_and_sids(
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
                           spatial_correl, cross_correl_within)
 
-    ms = {}  # dictionary gsim -> list of dicts
+    G = len(gsims)
     M = len(target_imts)
     N = len(ctx_Y)
+    me = numpy.zeros((G, M, N, 1))
+    si = numpy.zeros((G, M, N, N))
+    ta = numpy.zeros((G, M, N, N))
+    ph = numpy.zeros((G, M, N, N))
     for g, gsim in enumerate(gsims):
         if gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             if not (type(gsim).__name__ == "ModifiableGMPE"
@@ -531,10 +538,6 @@ def get_ms_and_sids(
         # NB: mu has shape (N, 1) and sig, tau, phi shape (N, N)
         # so, unlike the regular gsim get_mean_std, a numpy ndarray
         # won't work well as the 4 components will be non-homogeneous
-        me = numpy.zeros((M, N, 1))
-        si = numpy.zeros((M, N, N))
-        ta = numpy.zeros((M, N, N))
-        ph = numpy.zeros((M, N, N))
         sdata = station_data[mask].copy()    
         for m, o_imt in enumerate(observed_imts):
             im = o_imt.string
@@ -551,14 +554,12 @@ def get_ms_and_sids(
                 target_imt, gsim, mean_stds_Y[:, g], target_imts, observed_imts,
                 sdata, target, station_filtered,
                 compute_cov, result)
-            me[m] = mu
-            si[m] = tau + phi
-            ta[m] = tau
-            ph[m] = phi
+            me[g, m] = mu
+            si[g, m] = tau + phi
+            ta[g, m] = tau
+            ph[g, m] = phi
 
-        ms[gsim] = [me, si, ta, ph]
-
-    return ms, target.sids
+    return [me, si, ta, ph]
 
 
 # In scenario/case_21 one has
