@@ -180,15 +180,6 @@ def count_ruptures(src):
     return {src.source_id: src.count_ruptures()}
 
 
-def strip_zeros(gmf_df):
-    # remove the rows with all zero values
-    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
-    df = gmf_df[cols]
-    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
-    ok = df.to_numpy().sum(axis=1) > 0
-    return gmf_df[ok]
-
-
 def get_computer(cmaker, proxy, rupgeoms, srcfilter,
                  station_data, station_sitecol):
     """
@@ -293,7 +284,7 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
     if sum(len(df) for df in alldata):
-        gmfdata = strip_zeros(pandas.concat(alldata))
+        gmfdata = pandas.concat(alldata)
     else:
         gmfdata = {}
     times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)

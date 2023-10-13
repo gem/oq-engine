@@ -35,6 +35,21 @@ U32 = numpy.uint32
 F32 = numpy.float32
 
 
+def strip_zeros(data):
+    for key, val in sorted(data.items()):
+        if key in 'eid sid rlz':
+            data[key] = numpy.concatenate(data[key], dtype=U32)
+        else:
+            data[key] = numpy.concatenate(data[key], dtype=F32)
+    gmf_df = pandas.DataFrame(data)
+    # remove the rows with all zero values
+    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
+    df = gmf_df[cols]
+    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
+    ok = df.to_numpy().sum(axis=1) > 0
+    return gmf_df[ok]
+
+
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
         self.corr = corr
@@ -224,12 +239,7 @@ class GmfComputer(object):
                 self.update(data, arrayNME, sigME, epsME, eid_, rlz_, rlzs,
                             mean_stds[:, g], sig_eps, max_iml)
         with umon:
-            for key, val in sorted(data.items()):
-                if key in 'eid sid rlz':
-                    data[key] = numpy.concatenate(data[key], dtype=U32)
-                else:
-                    data[key] = numpy.concatenate(data[key], dtype=F32)
-        return pandas.DataFrame(data)
+            return strip_zeros(data)
 
     def compute(self, gsim, num_events, mean_stds, rng):
         """
