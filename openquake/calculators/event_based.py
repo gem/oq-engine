@@ -356,10 +356,10 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
             station_data, station_sites)
         mean_covs = computer.get_mean_covs()
         keys = ['mea', 'sig', 'tau', 'phi']
-        for g, gsim in enumerate(mean_covs):
-            for key, val in zip(keys, mean_covs[gsim]):
+        for g in range(len(cmaker.gsims)):
+            for key, val in zip(keys, mean_covs):
                 name = 'conditioned/gsim_%d/%s' % (g, key)
-                dstore.create_dset(name, val)
+                dstore.create_dset(name, val[g])
         del proxy.geom  # to reduce data transfer
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
