@@ -171,17 +171,16 @@ class GmfComputer(object):
                                 list(eps[:, n + ei]))
                     sig_eps.append(tup)
             for e, eid in enumerate(eids):
-                gmfa = array[:, :, n + e]  # shape (N, M)
+                gmfa = array[:, :, n + e].T  # shape (M, N)
                 # gmv can be zero due to the minimum_intensity, coming
                 # from the job.ini or from the vulnerability functions
-                data['sid'].append(sids)
                 data['eid'].append(numpy.full(N, eid, U32))
-                data['rlz'].append(numpy.full(N, rlz, U32))
                 for sp in self.sec_perils:
-                    o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
+                    o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                     for outkey, outarr in zip(sp.outputs, o):
                         data[outkey].append(outarr)
-            
+            data['sid'].append(numpy.tile(sids, E))
+            data['rlz'].append(numpy.full(N * E, rlz, U32))
             for m, gmv_field in enumerate(self.gmv_fields):
                 data[gmv_field].append(array[:, m, n:n + E].T.flatten())
             n += len(eids)
