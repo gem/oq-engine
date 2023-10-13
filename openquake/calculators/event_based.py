@@ -182,7 +182,8 @@ def count_ruptures(src):
 
 def strip_zeros(gmf_df):
     # remove the rows with all zero values
-    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
+    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
+    df = gmf_df[cols]
     assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
     ok = df.to_numpy().sum(axis=1) > 0
     return gmf_df[ok]

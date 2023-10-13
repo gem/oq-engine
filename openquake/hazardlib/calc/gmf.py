@@ -164,13 +164,14 @@ class GmfComputer(object):
         n = 0
         for rlz in rlzs:
             eids = eid_[rlz_ == rlz]
+            E = len(eids)
             if sig_eps is not None:
                 for ei, eid in enumerate(eids):
                     tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
                                 list(eps[:, n + ei]))
                     sig_eps.append(tup)
-            for ei, eid in enumerate(eids):
-                gmfa = array[:, :, n + ei]  # shape (N, M)
+            for e, eid in enumerate(eids):
+                gmfa = array[:, :, n + e]  # shape (N, M)
                 # gmv can be zero due to the minimum_intensity, coming
                 # from the job.ini or from the vulnerability functions
                 data['sid'].append(sids)
@@ -180,8 +181,9 @@ class GmfComputer(object):
                     o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
                     for outkey, outarr in zip(sp.outputs, o):
                         data[outkey].append(outarr)
-                for m, gmv_field in enumerate(self.gmv_fields):
-                    data[gmv_field].append(gmfa[:, m])
+            
+            for m, gmv_field in enumerate(self.gmv_fields):
+                data[gmv_field].append(array[:, m, n:n + E].T.flatten())
             n += len(eids)
 
     def compute_all(self, scenario, sig_eps=None, max_iml=None, mon=Monitor()):
