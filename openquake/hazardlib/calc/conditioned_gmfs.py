@@ -515,8 +515,8 @@ def get_mean_covs(
 
     # filter sites
     target = target_sitecol.filter(
-        numpy.isin(target_sitecol.sids, numpy.unique(ctx_Y.sids)))
-    mask = numpy.isin(station_sitecol.sids, numpy.unique(ctx_D.sids))
+        numpy.isin(target_sitecol.sids, ctx_Y.sids))
+    mask = numpy.isin(station_sitecol.sids, ctx_D.sids)
     station_filtered = station_sitecol.filter(mask)
 
     compute_cov = partial(compute_spatial_cross_covariance_matrix,
