@@ -257,9 +257,14 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     max_iml = oq.get_max_iml()
     scenario = 'scenario' in oq.calculation_mode
     with dstore:
-        sitecol = dstore['sitecol']
-        if 'complete' in dstore:
-            sitecol.complete = dstore['complete']
+        if dstore.parent:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore.parent:
+                sitecol.complete = dstore.parent['complete']
+        else:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore:
+                sitecol.complete = dstore['complete']
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         rupgeoms = dstore['rupgeoms']
