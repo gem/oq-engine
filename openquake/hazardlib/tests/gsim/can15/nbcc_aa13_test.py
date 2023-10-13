@@ -50,9 +50,10 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
         for trt in gsim_lt.values:
             rbg = {gsim: [g] for g, gsim in enumerate(gsim_lt.values[trt])}
             cmaker = contexts.ContextMaker(trt, rbg, param)
+            cmaker.scenario = True
             ebr.n_occ = len(cmaker.gsims)
             gc = gmf.GmfComputer(ebr, inp.sitecol, cmaker)
-            gmfdata = pandas.DataFrame(gc.compute_all(scenario=True))
+            gmfdata = pandas.DataFrame(gc.compute_all())
             del gmfdata['rlz']  # the info is encoded in the eid
             fname = 'NBCC2015_AA13_%s.csv' % cmaker.trt.replace(' ', '')
             path = os.path.join(CWD, 'data', 'CAN15', fname)
