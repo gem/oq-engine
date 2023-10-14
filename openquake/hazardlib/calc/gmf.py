@@ -195,17 +195,19 @@ class GmfComputer(object):
         """
         Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
         """
-        self.rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
+        rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
         if isinstance(self.ebrupture, dict):  # with keys e0, n_occ, seed
             dic = self.ebrupture
         else:
             dic = vars(self.ebrupture)
-        self.eid, self.rlz = get_eid_rlz(dic, self.rlzs, self.cmaker.scenario)
+        eid, rlz = get_eid_rlz(dic, rlzs, self.cmaker.scenario)
+        self.eid, self.rlz = eid, rlz
         self.N = len(self.ctx)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
         self.eps = numpy.zeros((E, M), F32)  # not the same
+        self.sid_eid_rlz = build_sid_eid_rlz(rlzs, self.ctx.sids, eid, rlz)
 
     def build_sig_eps(self, se_dt):
         """
@@ -257,12 +259,11 @@ class GmfComputer(object):
         with mmon:
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
             rng = numpy.random.default_rng(self.seed)
-        s, e, r = build_sid_eid_rlz(
-            self.rlzs, self.ctx.sids, self.eid, self.rlz)  # shape (3, NE)
+
         data = AccumDict(accum=[])
-        data['eid'].append(s)
-        data['sid'].append(e)
-        data['rlz'].append(r)        
+        data['eid'].append(self.sid_eid_rlz[0])
+        data['sid'].append(self.sid_eid_rlz[1])
+        data['rlz'].append(self.sid_eid_rlz[2])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             with cmon:
                 array = self.compute(gs, rlzs, mean_stds[:, g], rng)  # NME
