@@ -98,6 +98,22 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
                 array[n, :, e] = 0
 
 
+#@compile("uint32[:,:](uint32[:],uint32[:],uint32[:],uint32[:])")
+def build_sid_eid_rlz(rlzs, sids, eid, rlz):
+    N = len(sids)
+    sid_eid_rlz = numpy.zeros((3, N*len(eid)), U32)
+    ne = 0
+    for r in rlzs:
+        eids = eid[rlz == r]
+        E = len(eids)
+        NE = N * E
+        sid_eid_rlz[0, ne:ne+NE] = numpy.repeat(eids, N)
+        sid_eid_rlz[1, ne:ne+NE] = numpy.tile(sids, E)
+        sid_eid_rlz[2, ne:ne+NE] = r
+        ne += NE
+    return sid_eid_rlz
+
+
 class GmfComputer(object):
     """
     Given an earthquake rupture, the ground motion field computer computes
@@ -179,12 +195,12 @@ class GmfComputer(object):
         """
         Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
         """
-        rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
+        self.rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
         if isinstance(self.ebrupture, dict):  # with keys e0, n_occ, seed
             dic = self.ebrupture
         else:
             dic = vars(self.ebrupture)
-        self.eid, self.rlz = get_eid_rlz(dic, rlzs, self.cmaker.scenario)
+        self.eid, self.rlz = get_eid_rlz(dic, self.rlzs, self.cmaker.scenario)
         self.N = len(self.ctx)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
@@ -205,7 +221,6 @@ class GmfComputer(object):
         return sig_eps
 
     def update(self, data, array, rlzs, mean_stds, max_iml=None):
-        sids = self.ctx.sids
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
         mean = mean_stds[0]
@@ -221,23 +236,18 @@ class GmfComputer(object):
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
         for m, gmv_field in enumerate(self.gmv_fields):
             data[gmv_field].append(array[:, m].T.reshape(-1))
-
-        N = len(array)
-        n = 0
-        for rlz in rlzs:
-            eids = self.eid[self.rlz == rlz]
-            E = len(eids)
-            data['eid'].append(numpy.repeat(eids, N))
-            data['sid'].append(numpy.tile(sids, E))
-            data['rlz'].append(numpy.full(N * E, rlz, U32))
-            if self.sec_perils:
+        if self.sec_perils:
+            n = 0
+            for rlz in rlzs:
+                eids = self.eid[self.rlz == rlz]
+                E = len(eids)
                 for e, eid in enumerate(eids):
                     gmfa = array[:, :, n + e].T  # shape (M, N)
                     for sp in self.sec_perils:
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             data[outkey].append(outarr)
-            n += E
+                n += E
 
     def compute_all(self, max_iml=None,
                     mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
@@ -247,7 +257,12 @@ class GmfComputer(object):
         with mmon:
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
             rng = numpy.random.default_rng(self.seed)
+        s, e, r = build_sid_eid_rlz(
+            self.rlzs, self.ctx.sids, self.eid, self.rlz)  # shape (3, NE)
         data = AccumDict(accum=[])
+        data['eid'].append(s)
+        data['sid'].append(e)
+        data['rlz'].append(r)        
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             with cmon:
                 array = self.compute(gs, rlzs, mean_stds[:, g], rng)  # NME
