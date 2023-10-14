@@ -99,16 +99,15 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
 
 
 @compile("uint32[:,:](uint32[:],uint32[:],uint32[:],uint32[:])")
-def build_eid_sid_rlz(rlzs, sids, eid, rlz):
-    eid_sid_rlz = numpy.zeros((3, len(sids)*len(eid)), U32)
+def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
+    eid_sid_rlz = numpy.zeros((3, len(sids) * len(eids)), U32)
     idx = 0
-    for r in rlzs:
-        ok = rlz == r
-        for r, e in zip(rlz[ok], eid[ok]):
-            for s in sids:
-                eid_sid_rlz[0, idx] = e
-                eid_sid_rlz[1, idx] = s
-                eid_sid_rlz[2, idx] = r
+    for rlz in allrlzs:
+        for eid in eids[rlzs == rlz]:
+            for sid in sids:
+                eid_sid_rlz[0, idx] = eid
+                eid_sid_rlz[1, idx] = sid
+                eid_sid_rlz[2, idx] = rlz
                 idx += 1
     return eid_sid_rlz
 
