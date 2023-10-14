@@ -24,6 +24,7 @@ from openquake.hazardlib import read_input, IntegrationDistance, contexts
 from openquake.hazardlib.calc import gmf
 
 OVERWRITE = False
+U32 = numpy.uint32
 CWD = os.path.dirname(os.path.dirname(__file__))  # hazardlib/tests/gsim
 # rupture around Vancouver (-123, 49)
 RUP_XML = os.path.join(CWD, 'data', 'CAN15', 'rup.xml')
@@ -48,7 +49,7 @@ class NBCC2015_AA13TestCase(unittest.TestCase):
         param['mags'] = ['%.2f' % ebr.rupture.mag]
         gsim_lt = inp.full_lt.gsim_lt
         for trt in gsim_lt.values:
-            rbg = {gsim: [g] for g, gsim in enumerate(gsim_lt.values[trt])}
+            rbg = {gsim: U32([g]) for g, gsim in enumerate(gsim_lt.values[trt])}
             cmaker = contexts.ContextMaker(trt, rbg, param)
             cmaker.scenario = True
             ebr.n_occ = len(cmaker.gsims)
