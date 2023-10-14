@@ -34,22 +34,6 @@ from openquake.hazardlib.imt import from_string
 U32 = numpy.uint32
 F32 = numpy.float32
 
-
-def strip_zeros(data):
-    for key, val in sorted(data.items()):
-        if key in 'eid sid rlz':
-            data[key] = numpy.concatenate(data[key], dtype=U32)
-        else:
-            data[key] = numpy.concatenate(data[key], dtype=F32)
-    gmf_df = pandas.DataFrame(data)
-    # remove the rows with all zero values
-    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
-    df = gmf_df[cols]
-    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
-    ok = df.to_numpy().sum(axis=1) > 0
-    return gmf_df[ok]
-
-
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
         self.corr = corr
@@ -250,6 +234,24 @@ class GmfComputer(object):
                             data[outkey].append(outarr)
                 n += E
 
+    def strip_zeros(self, data):
+        """
+        :returns: a DataFrame with the nonzero GMVs
+        """
+        # build dataframe
+        for key, val in sorted(data.items()):
+            data[key] = numpy.concatenate(data[key], dtype=F32)
+        df = pandas.DataFrame(data)
+        assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
+
+        # remove the rows with all zero values
+        ok = df.to_numpy().sum(axis=1) > 0
+        df['eid'] = self.eid_sid_rlz[0]
+        df['sid'] = self.eid_sid_rlz[1]
+        df['rlz'] = self.eid_sid_rlz[2]
+        gmf_df = df[ok]
+        return gmf_df
+
     def compute_all(self, max_iml=None,
                     mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
         """
@@ -257,19 +259,16 @@ class GmfComputer(object):
         """
         with mmon:
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
-            rng = numpy.random.default_rng(self.seed)
 
+        rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
-        data['eid'].append(self.eid_sid_rlz[0])
-        data['sid'].append(self.eid_sid_rlz[1])
-        data['rlz'].append(self.eid_sid_rlz[2])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             with cmon:
                 array = self.compute(gs, rlzs, mean_stds[:, g], rng)  # NME
             with umon:
                 self.update(data, array, rlzs, mean_stds[:, g], max_iml)
         with umon:
-            return strip_zeros(data)
+            return self.strip_zeros(data)
 
     def compute(self, gsim, rlzs, mean_stds, rng):
         """
