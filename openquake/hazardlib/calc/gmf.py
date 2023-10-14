@@ -99,19 +99,19 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
 
 
 #@compile("uint32[:,:](uint32[:],uint32[:],uint32[:],uint32[:])")
-def build_sid_eid_rlz(rlzs, sids, eid, rlz):
+def build_eid_sid_rlz(rlzs, sids, eid, rlz):
     N = len(sids)
-    sid_eid_rlz = numpy.zeros((3, N*len(eid)), U32)
+    eid_sid_rlz = numpy.zeros((3, N*len(eid)), U32)
     ne = 0
     for r in rlzs:
         eids = eid[rlz == r]
         E = len(eids)
         NE = N * E
-        sid_eid_rlz[0, ne:ne+NE] = numpy.repeat(eids, N)
-        sid_eid_rlz[1, ne:ne+NE] = numpy.tile(sids, E)
-        sid_eid_rlz[2, ne:ne+NE] = r
+        eid_sid_rlz[0, ne:ne+NE] = numpy.repeat(eids, N)
+        eid_sid_rlz[1, ne:ne+NE] = numpy.tile(sids, E)
+        eid_sid_rlz[2, ne:ne+NE] = r
         ne += NE
-    return sid_eid_rlz
+    return eid_sid_rlz
 
 
 class GmfComputer(object):
@@ -207,7 +207,7 @@ class GmfComputer(object):
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
         self.eps = numpy.zeros((E, M), F32)  # not the same
-        self.sid_eid_rlz = build_sid_eid_rlz(rlzs, self.ctx.sids, eid, rlz)
+        self.eid_sid_rlz = build_eid_sid_rlz(rlzs, self.ctx.sids, eid, rlz)
 
     def build_sig_eps(self, se_dt):
         """
@@ -261,9 +261,9 @@ class GmfComputer(object):
             rng = numpy.random.default_rng(self.seed)
 
         data = AccumDict(accum=[])
-        data['eid'].append(self.sid_eid_rlz[0])
-        data['sid'].append(self.sid_eid_rlz[1])
-        data['rlz'].append(self.sid_eid_rlz[2])
+        data['eid'].append(self.eid_sid_rlz[0])
+        data['sid'].append(self.eid_sid_rlz[1])
+        data['rlz'].append(self.eid_sid_rlz[2])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             with cmon:
                 array = self.compute(gs, rlzs, mean_stds[:, g], rng)  # NME
