@@ -34,22 +34,6 @@ from openquake.hazardlib.imt import from_string
 U32 = numpy.uint32
 F32 = numpy.float32
 
-
-def strip_zeros(data):
-    for key, val in sorted(data.items()):
-        if key in 'eid sid rlz':
-            data[key] = numpy.concatenate(data[key], dtype=U32)
-        else:
-            data[key] = numpy.concatenate(data[key], dtype=F32)
-    gmf_df = pandas.DataFrame(data)
-    # remove the rows with all zero values
-    cols = [col for col in gmf_df.columns if col not in {'eid', 'sid', 'rlz'}]
-    df = gmf_df[cols]
-    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
-    ok = df.to_numpy().sum(axis=1) > 0
-    return gmf_df[ok]
-
-
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
         self.corr = corr
@@ -96,6 +80,20 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
             # set to zero only if all IMTs are below the thresholds
             if (array[n, :, e] < min_iml).all():
                 array[n, :, e] = 0
+
+
+@compile("uint32[:,:](uint32[:],uint32[:],uint32[:],uint32[:])")
+def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
+    eid_sid_rlz = numpy.zeros((3, len(sids) * len(eids)), U32)
+    idx = 0
+    for rlz in allrlzs:
+        for eid in eids[rlzs == rlz]:
+            for sid in sids:
+                eid_sid_rlz[0, idx] = eid
+                eid_sid_rlz[1, idx] = sid
+                eid_sid_rlz[2, idx] = rlz
+                idx += 1
+    return eid_sid_rlz
 
 
 class GmfComputer(object):
@@ -184,12 +182,15 @@ class GmfComputer(object):
             dic = self.ebrupture
         else:
             dic = vars(self.ebrupture)
-        self.eid, self.rlz = get_eid_rlz(dic, rlzs, self.cmaker.scenario)
+        eid, rlz = get_eid_rlz(dic, rlzs, self.cmaker.scenario)
+        self.eid, self.rlz = eid, rlz
         self.N = len(self.ctx)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
         self.eps = numpy.zeros((E, M), F32)  # not the same
+        # slow part, building an array of shape (3, NE)
+        self.eid_sid_rlz = build_eid_sid_rlz(rlzs, self.ctx.sids, eid, rlz)
 
     def build_sig_eps(self, se_dt):
         """
@@ -205,7 +206,10 @@ class GmfComputer(object):
         return sig_eps
 
     def update(self, data, array, rlzs, mean_stds, max_iml=None):
-        sids = self.ctx.sids
+        """
+        Updates the data dictionary with the values coming from the array
+        of GMVs. Also indirectly updates the arrays .sig and .eps.
+        """
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
         mean = mean_stds[0]
@@ -222,22 +226,35 @@ class GmfComputer(object):
         for m, gmv_field in enumerate(self.gmv_fields):
             data[gmv_field].append(array[:, m].T.reshape(-1))
 
-        N = len(array)
-        n = 0
-        for rlz in rlzs:
-            eids = self.eid[self.rlz == rlz]
-            E = len(eids)
-            data['eid'].append(numpy.repeat(eids, N))
-            data['sid'].append(numpy.tile(sids, E))
-            data['rlz'].append(numpy.full(N * E, rlz, U32))
-            if self.sec_perils:
+        if self.sec_perils:
+            n = 0
+            for rlz in rlzs:
+                eids = self.eid[self.rlz == rlz]
+                E = len(eids)
                 for e, eid in enumerate(eids):
                     gmfa = array[:, :, n + e].T  # shape (M, N)
                     for sp in self.sec_perils:
                         o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
                         for outkey, outarr in zip(sp.outputs, o):
                             data[outkey].append(outarr)
-            n += E
+                n += E
+
+    def strip_zeros(self, data):
+        """
+        :returns: a DataFrame with the nonzero GMVs
+        """
+        # build dataframe
+        for key, val in sorted(data.items()):
+            data[key] = numpy.concatenate(data[key], dtype=F32)
+        df = pandas.DataFrame(data)
+        assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
+
+        # remove the rows with all zero values
+        ok = df.to_numpy().sum(axis=1) > 0
+        df['eid'] = self.eid_sid_rlz[0]
+        df['sid'] = self.eid_sid_rlz[1]
+        df['rlz'] = self.eid_sid_rlz[2]
+        return df[ok]
 
     def compute_all(self, max_iml=None,
                     mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
@@ -246,7 +263,8 @@ class GmfComputer(object):
         """
         with mmon:
             mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
-            rng = numpy.random.default_rng(self.seed)
+
+        rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
             with cmon:
@@ -254,7 +272,7 @@ class GmfComputer(object):
             with umon:
                 self.update(data, array, rlzs, mean_stds[:, g], max_iml)
         with umon:
-            return strip_zeros(data)
+            return self.strip_zeros(data)
 
     def compute(self, gsim, rlzs, mean_stds, rng):
         """
@@ -379,7 +397,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: [0]},
+    cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: U32([0])},
                           dict(truncation_level=truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
     cmaker.scenario = True
@@ -387,6 +405,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     gc.ebrupture['n_occ'] = realizations
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
-    res = gc.compute(gsim, [0], mean_stds,
+    res = gc.compute(gsim, U32([0]), mean_stds,
                      numpy.random.default_rng(seed))
     return {imt: res[:, m] for m, imt in enumerate(gc.imts)}

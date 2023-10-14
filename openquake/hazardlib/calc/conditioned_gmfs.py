@@ -115,9 +115,8 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib import correlation, cross_correlation
-from openquake.hazardlib.source.rupture import get_eid_rlz
 from openquake.hazardlib.imt import from_string
-from openquake.hazardlib.calc.gmf import GmfComputer, exp, strip_zeros
+from openquake.hazardlib.calc.gmf import GmfComputer, exp
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.gsim.base import ContextMaker
@@ -242,7 +241,7 @@ class ConditionedGmfComputer(GmfComputer):
             with umon:
                 self.update(data, array, rlzs, [mea, tau+phi, tau, phi])
         with umon:
-            return strip_zeros(data)
+            return self.strip_zeros(data)
 
     def compute(self, gsim, rlzs, mea, tau, phi, rng):
         """
