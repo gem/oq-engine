@@ -206,6 +206,10 @@ class GmfComputer(object):
         return sig_eps
 
     def update(self, data, array, rlzs, mean_stds, max_iml=None):
+        """
+        Updates the data dictionary with the values coming from the array
+        of GMVs. Also indirectly updates the arrays .sig and .eps.
+        """
         min_iml = self.cmaker.min_iml
         mag = self.ebrupture.rupture.mag
         mean = mean_stds[0]
@@ -221,6 +225,7 @@ class GmfComputer(object):
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
         for m, gmv_field in enumerate(self.gmv_fields):
             data[gmv_field].append(array[:, m].T.reshape(-1))
+
         if self.sec_perils:
             n = 0
             for rlz in rlzs:
@@ -249,8 +254,7 @@ class GmfComputer(object):
         df['eid'] = self.eid_sid_rlz[0]
         df['sid'] = self.eid_sid_rlz[1]
         df['rlz'] = self.eid_sid_rlz[2]
-        gmf_df = df[ok]
-        return gmf_df
+        return df[ok]
 
     def compute_all(self, max_iml=None,
                     mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
