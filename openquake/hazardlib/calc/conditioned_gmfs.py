@@ -231,6 +231,9 @@ class ConditionedGmfComputer(GmfComputer):
         :returns: (dict with fields eid, sid, gmv_X, ...), dt
         """
         data = AccumDict(accum=[])
+        data['eid'].append(self.sid_eid_rlz[0])
+        data['sid'].append(self.sid_eid_rlz[1])
+        data['rlz'].append(self.sid_eid_rlz[2])
         rng = numpy.random.default_rng(self.seed)
         for g, (gsim, rlzs) in enumerate(self.cmaker.gsims.items()):
             with rmon:
