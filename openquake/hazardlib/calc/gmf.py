@@ -397,7 +397,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for all sites in the collection. First dimension represents
         sites and second one is for realizations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: [0]},
+    cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: U32([0])},
                           dict(truncation_level=truncation_level,
                                imtls={str(imt): [1] for imt in imts}))
     cmaker.scenario = True
@@ -405,6 +405,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     gc = GmfComputer(rupture, sites, cmaker, correlation_model)
     gc.ebrupture['n_occ'] = realizations
     mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
-    res = gc.compute(gsim, [0], mean_stds,
+    res = gc.compute(gsim, U32([0]), mean_stds,
                      numpy.random.default_rng(seed))
     return {imt: res[:, m] for m, imt in enumerate(gc.imts)}
