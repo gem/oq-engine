@@ -205,6 +205,7 @@ class GmfComputer(object):
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
         self.eps = numpy.zeros((E, M), F32)  # not the same
+        # slow part, building an array of shape (3, NE)
         self.eid_sid_rlz = build_eid_sid_rlz(rlzs, self.ctx.sids, eid, rlz)
 
     def build_sig_eps(self, se_dt):
