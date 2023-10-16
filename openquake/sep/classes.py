@@ -336,11 +336,8 @@ class RashidianBaise2020Liquefaction(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        imts = dict(imt_gmf)
-        assert "PGA" in imts
-        assert "PGV" in imts
-        # pga = None
-        # pgv = None
+        pga = None
+        pgv = None
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
                 pgv = gmf
@@ -381,11 +378,8 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        imts = dict(imt_gmf)
-        assert "PGA" in imts
-        assert "PGV" in imts
-        # pga = None
-        # pgv = None
+        pga = None
+        pgv = None
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
                 pgv = gmf
@@ -463,7 +457,7 @@ class AkhlagiEtAl2021LiquefactionB(SecondaryPeril):
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
                 prob_liq, out_class = akhlagi_etal_2021_model_b(
-                    pgv=gmf, vs30_coeff=sites.vs30_coeff, dc=sites.dc, 
+                    pgv=gmf, vs30=sites.vs30, dc=sites.dc, 
                     dr=sites.dr, zwb=sites.zwb)
             out.append(prob_liq)
             out.append(out_class)
