@@ -2083,7 +2083,7 @@ exceedence (poes) as those specified by the later option ``poes``. The
 probabilities specified here correspond to the set investigation time.
 Specifying poes will output hazard maps. For more information about the
 outputs of the calculation, see the section: “Description of hazard
-output” (page ).
+outputs”.
 
 Seismic hazard disaggregation 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2630,9 +2630,9 @@ In particular, the median is computed as the q=0.5 quantile.
 
 Outputs from Classical PSHA 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-By default, the
-classical PSHA calculator computes and stores hazard curves for each
-logic tree sample considered.
+
+By default, the classical PSHA calculator computes and stores hazard
+curves for each logic tree sample considered.
 
 When the PSHA input model doesn’t contain epistemic uncertainties the
 results is a set of hazard curves (one for each investigated site). The
@@ -2641,9 +2641,7 @@ hazard curves obtained for a calculation with a given identifier
 ``<calc_id>`` (see
 Section :ref:`sec-exporting_hazard_results`
 for an explanation about how to obtain the list of calculations
-performed with their corresponding ID):
-
-::
+performed with their corresponding ID)::
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
@@ -2652,52 +2650,32 @@ performed with their corresponding ID):
 
 To export from the database the outputs (in this case hazard curves)
 contained in one of the output identifies, one can do so with the
-following command:
-
-::
+following command::
 
    user@ubuntu:~$ oq engine --export-output <output_id> <output_directory>
 
 Alternatively, if the user wishes to export all of the outputs
 associated with a particular calculation then they can use the
-``--export-outputs`` with the corresponding calculation key:
-
-::
+``--export-outputs`` with the corresponding calculation key::
 
    user@ubuntu:~$ oq engine --export-outputs <calc_id> <output_directory>
 
-The exports will produce one or more nrml files containing the seismic
-hazard curves, as represented below in
-`the listing <lst:output_hazard_curves_xml>` below.
+The exports will produce one or more CSV files containing the seismic
+hazard curves as represented in the listing
+<lst:output_hazard_curves_csv>` below.
 
 .. container:: listing
 
-   .. code:: xml
+   .. code:: csv
       :number-lines:
-      :name: lst:output_hazard_curves_xml
+      :name: lst:output_hazard_curves_csv
 
-      <?xml version="1.0" encoding="utf-8"?>
-      <nrml xmlns:gml="http://www.opengis.net/gml"
-            xmlns="http://openquake.org/xmlns/nrml/0.5">
-        <hazardCurves sourceModelTreePath="b1|b212"
-                      gsimTreePath="b2" IMT="PGA"
-                      investigationTime="50.0">
-          <IMLs>0.005 0.007 0.0098 ... 1.09 1.52 2.13</IMLs>
-          <hazardCurve>
-            <gml:Point>
-              <gml:pos>10.0 45.0</gml:pos>
-            </gml:Point>
-            <poEs>1.0 1.0 1.0 ... 0.000688359310522 0.0 0.0</poEs>
-          </hazardCurve>
-          ...
-          <hazardCurve>
-            <gml:Point>
-              <gml:pos>lon lat</gml:pos>
-            </gml:Point>
-            <poEs>poe1 poe2 ... poeN</poEs>
-          </hazardCurve>
-        </hazardCurves>
-      </nrml>
+      #,,,,,"generated_by='OpenQuake engine 3.18.0-gitabf2de85b8', start_date='2023-10-03T06:09:08', checksum=2107362341, kind='mean', investigation_time=1.0, imt='PGA'"
+      lon,lat,depth,poe-0.1000000,poe-0.4000000,poe-0.6000000
+      0.00000,0.00000,-0.10000,4.553860E-01,5.754042E-02,6.354511E-03
+      0.10000,0.00000,-0.10000,1.522632E-01,0.000000E+00,0.000000E+00
+      0.20000,0.00000,-0.10000,3.037810E-03,0.000000E+00,0.000000E+00
+      0.30000,0.00000,-0.10000,0.000000E+00,0.000000E+00,0.000000E+00
 
 Notwithstanding the intuitiveness of this file, let’s have a brief
 overview of the information included. The overall content of this file
@@ -2705,25 +2683,14 @@ is a list of hazard curves, one for each investigated site, computed
 using a PSHA input model representing one possible realisation obtained
 using the complete logic tree structure.
 
-The attributes of the ``hazardCurves`` element (see text in red) specify
-the path of the logic tree used to create the seismic source model
-(``sourceModelTreePath``) and the ground motion model (``gsimTreePath``)
-plus the intensity measure type and the investigation time used to
-compute the probability of exceedance.
-
-The ``IMLs`` element (in green in the example) contains the values of
-shaking used by the engine to compute the probability of exceedance in
-the investigation time. For each site this file contains a
-``hazardCurve`` element which has the coordinates (longitude and
-latitude in decimal degrees) of the site and the values of the
-probability of exceedance for all the intensity measure levels specified
-in the ``IMLs`` element.
+The first commented line contains some metadata like the version of the
+engine used to generate the file, the start date of the calculation, a
+checksum, the kind of hazard curves generated (in the example they are
+mean curves), the investigation time and the IMT used (in the example PGA).
 
 If the hazard calculation is configured to produce results including
 seismic hazard maps and uniform hazard spectra, then the list of outputs
-would display the following:
-
-::
+would display the following::
 
    user@ubuntu:~$ oq engine --lo <calc_id>
    id | name
@@ -2733,28 +2700,22 @@ would display the following:
    5 | Realizations
    6 | Uniform Hazard Spectra
 
-:ref:`The first listing <lst:output_hazard_map_xml>` below
-shows a sample of the nrml file used to describe a hazard map, and and
+:ref:`The first listing <lst:output_hazard_map_csv>` below
+shows a sample of the CSV file used to describe a hazard map, and and
 :ref:`the second listing <lst:output_uhs>` below shows a sample of the
-nrml used to describe a uniform hazard spectrum.
+CSC used to describe a uniform hazard spectrum.
 
 .. container:: listing
 
    .. code:: xml
       :number-lines:
-      :name: lst:output_hazard_map_xml
+      :name: lst:output_hazard_map_csv
 
-      <?xml version="1.0" encoding="UTF-8"?>
-      <nrml xmlns:gml="http://www.opengis.net/gml"
-            xmlns="http://openquake.org/xmlns/nrml/0.5">
-        <hazardMap sourceModelTreePath="b1" gsimTreePath="b1"
-                   IMT="PGA" investigationTime="50.0" poE="0.1">
-          <node lon="119.596690957" lat="21.5497682591" iml="0.204569990197"/>
-          <node lon="119.596751048" lat="21.6397004197" iml="0.212391638188"/>
-          <node lon="119.596811453" lat="21.7296325803" iml="0.221407505615"/>
-          ...
-        </hazardMap>
-      </nrml>
+      #,,,,"generated_by='OpenQuake engine 3.18.0-gitabf2de85b8', start_date='2023-10-03T06:09:09', checksum=969346546, kind='mean', investigation_time=1.0"
+      lon,lat,PGA-0.002105,SA(0.2)-0.002105,SA(1.0)-0.002105
+      -123.23738,49.27479,3.023730E-03,1.227876E-02,1.304533E-02
+      -123.23282,49.26162,2.969411E-03,1.210481E-02,1.294509E-02
+      -123.20480,49.26786,2.971350E-03,1.211078E-02,1.294870E-02
 
 .. container:: listing
 
@@ -2762,32 +2723,16 @@ nrml used to describe a uniform hazard spectrum.
       :number-lines:
       :name: lst:output_uhs
 
-      <?xml version="1.0" encoding="UTF-8"?>
-      <nrml xmlns:gml="http://www.opengis.net/gml"
-            xmlns="http://openquake.org/xmlns/nrml/0.5">
-          <uniformHazardSpectra sourceModelTreePath="b1_b2_b4"
-                              gsimTreePath="b1_b2"
-                              investigationTime="50.0" poE="0.1">
-              <periods>0.0 0.025 0.1 0.2</periods>
-              <uhs>
-                  <gml:Point>
-                      <gml:pos>0.0 0.0</gml:pos>
-                  </gml:Point>
-                  <IMLs>0.3 0.5 0.2 0.1</IMLs>
-              </uhs>
-              <uhs>
-                  <gml:Point>
-                      <gml:pos>0.0 1.0</gml:pos>
-                  </gml:Point>
-                  <IMLs>0.3 0.5 0.2 0.1</IMLs>
-              </uhs>
-          </uniformHazardSpectra>
-      </nrml>
+      #,,,,"generated_by='OpenQuake engine 3.15.0-git7c5b3f1678', start_date='2022-05-14T10:44:47', checksum=2967670219, kind='rlz-001', investigation_time=1.0"
+      lon,lat,0.002105~PGA,0.002105~SA(0.2),0.002105~SA(1.0)
+      -123.23738,49.27479,2.651139E-03,1.120929E-02,1.218275E-02
+      -123.23282,49.26162,2.603451E-03,1.105909E-02,1.208975E-02
+      -123.20480,49.26786,2.605109E-03,1.106432E-02,1.209299E-02
 
 Outputs from Hazard Disaggregation 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The
-OpenQuake engine output of a disaggregation analysis corresponds to the
+
+The OpenQuake engine output of a disaggregation analysis corresponds to the
 combination of a hazard curve and a multidimensional matrix containing
 the results of the disaggregation. For a typical disaggregation
 calculation the list of outputs are the following:
