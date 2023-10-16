@@ -258,14 +258,11 @@ class GmfComputer(object):
         # remove the rows with all zero values
         return df[ok]
 
-    def compute_all(self, max_iml=None,
-                    mmon=Monitor(), cmon=Monitor(), umon=Monitor()):
+    def compute_all(self, mean_stds, max_iml=None,
+                    cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
-        with mmon:
-            mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
-
         rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):

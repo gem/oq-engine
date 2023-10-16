@@ -277,7 +277,9 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                 assert cmaker.scenario
                 df = computer.compute_all(dstore, rmon, cmon, umon)
             else:  # regular GMFs
-                df = computer.compute_all(max_iml, mmon, cmon, umon)
+                with mmon:
+                    mean_stds = cmaker.get_mean_stds([computer.ctx])
+                df = computer.compute_all(mean_stds, max_iml, cmon, umon)
             sig_eps.append(computer.build_sig_eps(se_dt))
             dt = time.time() - t0
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
