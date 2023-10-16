@@ -175,20 +175,18 @@ class GmfComputer(object):
         """
         Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
         """
-        rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
+        self.rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
         if isinstance(self.ebrupture, dict):  # with keys e0, n_occ, seed
             dic = self.ebrupture
         else:
             dic = vars(self.ebrupture)
-        eid, rlz = get_eid_rlz(dic, rlzs, self.cmaker.scenario)
+        eid, rlz = get_eid_rlz(dic, self.rlzs, self.cmaker.scenario)
         self.eid, self.rlz = eid, rlz
         self.N = len(self.ctx)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
         self.eps = numpy.zeros((E, M), F32)  # not the same
-        # slow part, building an array of shape (3, NE)
-        self.eid_sid_rlz = build_eid_sid_rlz(rlzs, self.ctx.sids, eid, rlz)
 
     def build_sig_eps(self, se_dt):
         """
@@ -221,8 +219,7 @@ class GmfComputer(object):
             M = len(self.cmaker.imts)
             max_iml = numpy.full(M, numpy.inf, float)
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
-        for m, gmv_field in enumerate(self.gmv_fields):
-            data[gmv_field].append(array[:, m].T.reshape(-1))
+        data['gmv'].append(array)
 
         if self.sec_perils:
             n = 0
@@ -241,17 +238,24 @@ class GmfComputer(object):
         """
         :returns: a DataFrame with the nonzero GMVs
         """
-        # build dataframe
+        # building an array of shape (3, NE)
+        eid_sid_rlz = build_eid_sid_rlz(
+            self.rlzs, self.ctx.sids, self.eid, self.rlz)
+
         for key, val in sorted(data.items()):
-            data[key] = numpy.concatenate(data[key], dtype=F32)
+            data[key] = numpy.concatenate(data[key], axis=-1, dtype=F32)
+        gmv = data.pop('gmv')  # shape (N, M, E)
+        ok = gmv.sum(axis=1).T.reshape(-1) > 0
+        for m, gmv_field in enumerate(self.gmv_fields):
+            data[gmv_field] = gmv[:, m].T.reshape(-1)
+
+        # build dataframe
         df = pandas.DataFrame(data)
-        assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
+        df['eid'] = eid_sid_rlz[0]
+        df['sid'] = eid_sid_rlz[1]
+        df['rlz'] = eid_sid_rlz[2]
 
         # remove the rows with all zero values
-        ok = df.to_numpy().sum(axis=1) > 0
-        df['eid'] = self.eid_sid_rlz[0]
-        df['sid'] = self.eid_sid_rlz[1]
-        df['rlz'] = self.eid_sid_rlz[2]
         return df[ok]
 
     def compute_all(self, max_iml=None,
