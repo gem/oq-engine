@@ -94,7 +94,7 @@ ENGINE = "python -m openquake.engine.engine".split()
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Vs30 (default 760 m/s)',
+    'vs30': 'Vs30 (fixed at 760 m/s)',
     'siteid': 'Site name',
 }
 
@@ -958,12 +958,14 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
+    application_mode = settings.APPLICATION_MODE.upper()
     job = logs.dbcmd('get_job', calc_id)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         hmaps = 'png' in ds
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     return render(request, "engine/get_outputs.html",
-                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps))
+                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
+                       application_mode=application_mode))
 
 
 @csrf_exempt

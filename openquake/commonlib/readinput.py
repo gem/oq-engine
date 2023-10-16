@@ -978,13 +978,13 @@ def get_station_data(oqparam, sitecol):
         the hazard site collection
     :returns: station_data, observed_imts
     """
+    complete = sitecol.complete
     # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
-    sid = {(lon, lat): sid
-           for lon, lat, sid in sitecol.complete[['lon', 'lat', 'sids']]}
-    sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
+    dic = {(lo, la): sid for lo, la, sid in complete[['lon', 'lat', 'sids']]}
+    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4

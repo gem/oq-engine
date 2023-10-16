@@ -325,8 +325,7 @@ class CanadaSHM6_InSlab_ZhaoEtAl2006SSlabCascadia55(ZhaoEtAl2006SSlabCascadia):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        See :meth:`superclass method <.base.GMPE.compute>`
         for spec of input and result values.
         CanadaSHM6 edits: modified site amplification term
                           added extrapolation beyond MAX_SA and MIN_SA to 0.05
@@ -553,7 +552,7 @@ class CanadaSHM6_InSlab_GarciaEtAl2005SSlab55(GarciaEtAl2005SSlab):
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <.base.GMPE.compute>`
         for spec of input and result values.
         CanadaSHM6 edits: added extrapolation beyond MAX_SA and MIN_SA to 0.05
                           - 10s

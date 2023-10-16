@@ -377,12 +377,14 @@ class Disaggregator(object):
         self.cmaker = cmaker
         self.epsstar = cmaker.oq.epsilon_star
         self.bin_edges = (bin_edges[0],  # mag
-                          bin_edges[1],  # dist,
+                          bin_edges[1],  # dist
                           bin_edges[2][sid],  # lon
                           bin_edges[3][sid],  # lat
                           bin_edges[4])  # eps
         for i, name in enumerate(['Ma', 'D', 'Lo', 'La', 'E']):
             setattr(self, name, len(self.bin_edges[i]) - 1)
+        self.dist_idx = {}  # magi -> dist_idx
+        self.mea, self.std = {}, {}  # magi -> array[G, M, U]
 
         self.g_by_rlz = {}  # dict rlz -> g
         for g, rlzs in enumerate(cmaker.gsims.values()):
@@ -422,9 +424,12 @@ class Disaggregator(object):
             # make sure we can use idx_start_stop below
             # NB: using ctx.sort(order='src_id') would cause a ValueError
             self.ctx = self.ctx[numpy.argsort(self.ctx.src_id)]
+        self.dist_idx[magi] = numpy.digitize(
+            self.ctx.rrup, self.bin_edges[1]) - 1
         with mon0:
             # shape (G, M, U), where M = len(imts) <= len(imtls)
-            self.mea, self.std = self.cmaker.get_mean_stds([self.ctx])[:2]
+            self.mea[magi], self.std[magi] = self.cmaker.get_mean_stds(
+                [self.ctx])[:2]
         if self.src_mutex:
             mat = idx_start_stop(self.ctx.src_id)  # shape (n, 3)
             src_ids = mat[:, 0]  # subset contributing to the given magi
@@ -442,8 +447,9 @@ class Disaggregator(object):
         imlog2 = numpy.zeros_like(iml2)
         for m, imt in enumerate(imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
+        mea, std = self.mea[self.magi], self.std[self.magi]
         if not self.src_mutex:
-            return _disaggregate(self.ctx, self.mea, self.std, self.cmaker,
+            return _disaggregate(self.ctx, mea, std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,
                                  self.cmaker.oq.infer_occur_rates,
                                  self.mon1, self.mon2, self.mon3)
@@ -452,8 +458,8 @@ class Disaggregator(object):
         mats = []
         for s1, s2 in zip(self.src_mutex['start'], self.src_mutex['stop']):
             ctx = self.ctx[s1:s2]
-            mea = self.mea[:, :, s1:s2]  # shape (G, M, U)
-            std = self.std[:, :, s1:s2]  # shape (G, M, U)
+            mea = self.mea[self.magi][:, :, s1:s2]  # shape (G, M, U)
+            std = self.std[self.magi][:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
                                 self.bin_edges, self.epsstar,
                                 self.cmaker.oq.infer_occur_rates,
@@ -525,76 +531,6 @@ def disaggregation(
         n_epsilons=None, mag_bin_width=None, dist_bin_width=None,
         coord_bin_width=None, source_filter=filters.nofilter,
         epsstar=False, bin_edges={}, **kwargs):
-    """
-    Compute "Disaggregation" matrix representing conditional probability of an
-    intensity measure type ``imt`` exceeding, at least once, an intensity
-    measure level ``iml`` at a geographical location ``site``, given rupture
-    scenarios classified in terms of:
-
-    - rupture magnitude
-    - Joyner-Boore distance from rupture surface to site
-    - longitude and latitude of the surface projection of a rupture's point
-      closest to ``site``
-    - epsilon: number of standard deviations by which an intensity measure
-      level deviates from the median value predicted by a GSIM, given the
-      rupture parameters
-    - rupture tectonic region type
-
-    In other words, the disaggregation matrix allows to compute the probability
-    of each scenario with the specified properties (e.g., magnitude, or the
-    magnitude and distance) to cause one or more exceedences of a given hazard
-    level.
-
-    For more detailed information about the disaggregation, see for instance
-    "Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
-    Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
-    April 1999.
-
-    :param sources:
-        Seismic source model, as for
-        :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>` calculator it
-        should be an iterator of seismic sources.
-    :param site:
-        :class:`~openquake.hazardlib.site.Site` of interest to calculate
-        disaggregation matrix for.
-    :param imt:
-        Instance of :mod:`intensity measure type <openquake.hazardlib.imt>`
-        class.
-    :param iml:
-        Intensity measure level. A float value in units of ``imt``.
-    :param gsim_by_trt:
-        Tectonic region type to GSIM objects mapping.
-    :param truncation_level:
-        Float, number of standard deviations for truncation of the intensity
-        distribution.
-    :param n_epsilons:
-        Integer number of epsilon histogram bins in the result matrix.
-    :param mag_bin_width:
-        Magnitude discretization step, width of one magnitude histogram bin.
-    :param dist_bin_width:
-        Distance histogram discretization step, in km.
-    :param coord_bin_width:
-        Longitude and latitude histograms discretization step,
-        in decimal degrees.
-    :param source_filter:
-        Optional source-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
-    :param epsstar:
-        A boolean. When true disaggregations results including epsilon are
-        in terms of epsilon star rather then epsilon.
-    :param bin_edges:
-        Bin edges provided by the users. These override the ones automatically
-        computed by the OQ Engine.
-    :returns:
-        A tuple of two items. First is itself a tuple of bin edges information
-        for (in specified order) magnitude, distance, longitude, latitude,
-        epsilon and tectonic region types.
-
-        Second item is 6d-array representing the full disaggregation matrix.
-        Dimensions are in the same order as bin edges in the first item
-        of the result tuple. The matrix can be used directly by pmf-extractor
-        functions.
-    """
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
@@ -647,8 +583,106 @@ def disaggregation(
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
 
+disaggregation.__doc__ = """\
+Compute "Disaggregation" matrix representing conditional probability of an
+intensity measure type ``imt`` exceeding, at least once, an intensity
+measure level ``iml`` at a geographical location ``site``, given rupture
+scenarios classified in terms of:
+
+- rupture magnitude
+- Joyner-Boore distance from rupture surface to site
+- longitude and latitude of the surface projection of a rupture's point
+  closest to ``site``
+- epsilon: number of standard deviations by which an intensity measure
+  level deviates from the median value predicted by a GSIM, given the
+  rupture parameters
+- rupture tectonic region type
+
+In other words, the disaggregation matrix allows to compute the probability
+of each scenario with the specified properties (e.g., magnitude, or the
+magnitude and distance) to cause one or more exceedences of a given hazard
+level.
+
+For more detailed information about the disaggregation, see for instance
+"Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
+Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
+April 1999.
+
+:param sources:
+    Seismic source model, as for
+    :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>` calculator it
+    should be an iterator of seismic sources.
+:param site:
+    :class:`~openquake.hazardlib.site.Site` of interest to calculate
+    disaggregation matrix for.
+:param imt:
+    Instance of :mod:`intensity measure type <openquake.hazardlib.imt>`
+    class.
+:param iml:
+    Intensity measure level. A float value in units of ``imt``.
+:param gsim_by_trt:
+    Tectonic region type to GSIM objects mapping.
+:param truncation_level:
+    Float, number of standard deviations for truncation of the intensity
+    distribution.
+:param n_epsilons:
+    Integer number of epsilon histogram bins in the result matrix.
+:param mag_bin_width:
+    Magnitude discretization step, width of one magnitude histogram bin.
+:param dist_bin_width:
+    Distance histogram discretization step, in km.
+:param coord_bin_width:
+    Longitude and latitude histograms discretization step,
+    in decimal degrees.
+:param source_filter:
+    Optional source-site filter function. See
+    :mod:`openquake.hazardlib.calc.filters`.
+:param epsstar:
+    A boolean. When true disaggregations results including epsilon are
+    in terms of epsilon star rather then epsilon.
+:param bin_edges:
+    Bin edges provided by the users. These override the ones automatically
+    computed by the OQ Engine.
+:returns:
+    A tuple of two items. First is itself a tuple of bin edges information
+    for (in specified order) magnitude, distance, longitude, latitude,
+    epsilon and tectonic region types.
+
+    Second item is 6d-array representing the full disaggregation matrix.
+    Dimensions are in the same order as bin edges in the first item
+    of the result tuple. The matrix can be used directly by pmf-extractor
+    functions.
+"""
 
 # ###################### disagg by source ################################ #
+
+def collect_std(disaggs):
+    """
+    :returns: an array of shape (Ma, D, M', G)
+    """
+    assert len(disaggs)
+    gsims = set()
+    for dis in disaggs:
+        gsims.update(dis.cmaker.gsims)
+    gidx = {gsim: g for g, gsim in enumerate(sorted(gsims))}
+    G, M = len(gidx), len(dis.cmaker.imts)
+    out = AccumDict(accum=numpy.zeros((G, M)))  # (magi, dsti) -> stddev
+    cnt = collections.Counter()  # (magi, dsti)
+    for dis in disaggs:
+        for magi in dis.std:
+            for gsim, std in zip(dis.cmaker.gsims, dis.std[magi]):
+                g = gidx[gsim]  # std has shape (M, U)
+                for dsti, val in zip(dis.dist_idx[magi], std.T):
+                    if (magi, dsti) in out:
+                        out[magi, dsti][g] += val  # shape M
+                    else:
+                        out[magi, dsti][g] = val.copy()
+                    cnt[magi, dsti] += 1 / G
+    res = numpy.zeros((dis.Ma, dis.D, M, G))
+    for (magi, dsti), v in out.items():
+        res[magi, dsti] = v.T / cnt[magi, dsti]
+    return res
+
 
 def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
                   oq, imldic, monitor=Monitor()):
@@ -662,7 +696,7 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     :param oq: OqParam instance
     :param imldic: dictionary imt->iml
     :param monitor: a Monitor instance
-    :returns: source_id, rates(Ma, D, E, M), rates(M, L1)
+    :returns: source_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
     assert len(sitecol) == 1, sitecol
     if not hasattr(reduced_lt, 'trt_rlzs'):
@@ -674,9 +708,12 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
                 for rlzs in cm.gsims.values()]
     ws = reduced_lt.rlzs['weight']
+    disaggs = []
     for ctx, cmaker in zip(ctxs, cmakers):
-        dis = Disaggregator([ctx], sitecol, cmaker, edges)
+        dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
         drates4D += dis.disagg_mag_dist_eps(imldic, ws)
+        disaggs.append(dis)
+    std4D = collect_std(disaggs)
     gws = reduced_lt.g_weights(trt_rlzs)
     rates3D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))  # (N, M, L1)
-    return source_id, drates4D, rates3D[0]  # (M, L1) rates for the site
+    return source_id, std4D, drates4D, rates3D[0]  # (M, L1) rates for the site

@@ -375,8 +375,39 @@ def project_back(planar, xx, yy):
     return arr
 
 
-# numbified below
-def get_rjb(planar, points):
+# NB: we define four great circle arcs that contain four sides
+# of projected planar surface:
+#
+#       ↓     II    ↓
+#    I  ↓           ↓  I
+#       ↓     +     ↓
+#  →→→→→TL→→→→1→→→→TR→→→→→     → azimuth direction →
+#       ↓     -     ↓
+#       ↓           ↓
+# III  -3+   IV    -4+  III             ↓
+#       ↓           ↓            downdip direction
+#       ↓     +     ↓                   ↓
+#  →→→→→BL→→→→2→→→→BR→→→→→
+#       ↓     -     ↓
+#    I  ↓           ↓  I
+#       ↓     II    ↓
+#
+# arcs 1 and 2 are directed from left corners to right ones (the
+# direction has an effect on the sign of the distance to an arc,
+# as it shown on the figure), arcs 3 and 4 are directed from top
+# corners to bottom ones.
+#
+# then we measure distance from each of the points in a mesh
+# to each of those arcs and compare signs of distances in order
+# to find a relative positions of projections of points and
+# projection of a surface.
+#
+# then we consider four special cases (labeled with Roman numerals)
+# and either pick one of distances to arcs or a closest distance
+# to corner.
+#
+# indices 0, 2 and 1 represent corners TL, BL and TR respectively.
+def get_rjb(planar, points):  # numbified below
     """
     :param planar: a planar recarray of shape (U, 3)
     :param points: an array of of shape (N, 3)
@@ -385,38 +416,6 @@ def get_rjb(planar, points):
     lons, lats, deps = geo_utils.cartesian_to_spherical(points)
     out = numpy.zeros((len(planar), len(points)))
     for u, pla in enumerate(planar):
-        # we define four great circle arcs that contain four sides
-        # of projected planar surface:
-        #
-        #       ↓     II    ↓
-        #    I  ↓           ↓  I
-        #       ↓     +     ↓
-        #  →→→→→TL→→→→1→→→→TR→→→→→     → azimuth direction →
-        #       ↓     -     ↓
-        #       ↓           ↓
-        # III  -3+   IV    -4+  III             ↓
-        #       ↓           ↓            downdip direction
-        #       ↓     +     ↓                   ↓
-        #  →→→→→BL→→→→2→→→→BR→→→→→
-        #       ↓     -     ↓
-        #    I  ↓           ↓  I
-        #       ↓     II    ↓
-        #
-        # arcs 1 and 2 are directed from left corners to right ones (the
-        # direction has an effect on the sign of the distance to an arc,
-        # as it shown on the figure), arcs 3 and 4 are directed from top
-        # corners to bottom ones.
-        #
-        # then we measure distance from each of the points in a mesh
-        # to each of those arcs and compare signs of distances in order
-        # to find a relative positions of projections of points and
-        # projection of a surface.
-        #
-        # then we consider four special cases (labeled with Roman numerals)
-        # and either pick one of distances to arcs or a closest distance
-        # to corner.
-        #
-        # indices 0, 2 and 1 represent corners TL, BL and TR respectively.
         strike, dip, rake = pla['sdr']
         downdip = (strike + 90) % 360
         corners = pla.corners

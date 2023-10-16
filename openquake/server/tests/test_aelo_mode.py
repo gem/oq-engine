@@ -112,7 +112,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
                 # # FIXME: we should use the overridden EMAIL_FILE_PATH,
                 # #        so email_dir would contain only one file
                 # email_file = os.listdir(email_dir)[0]
-                email_files = glob.glob('/tmp/app-messages/*')
+                app_msgs_dir = os.path.join(tempfile.gettempdir(),
+                                            'app-messages')
+                email_files = glob.glob(os.path.join(app_msgs_dir, '*'))
                 email_file = max(email_files, key=os.path.getctime)
                 with open(os.path.join(email_dir, email_file), 'r') as f:
                     email_content = f.read()

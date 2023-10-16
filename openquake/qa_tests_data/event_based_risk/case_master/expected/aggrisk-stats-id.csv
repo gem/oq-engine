@@ -1,4 +1,4 @@
-#,,,"generated_by='OpenQuake engine 3.18.0-git3f93e21a24', start_date='2023-07-14T04:54:29', checksum=3727381189"
+#,,,"generated_by='OpenQuake engine 3.18.0-gitbd5cd346d9', start_date='2023-10-12T08:28:39', checksum=3776012644"
 loss_type,loss,stat,id
 business_interruption,76.71222404197411,quantile-0.5,a3
 contents,379.80062301070603,quantile-0.5,a3
@@ -21,7 +21,7 @@ business_interruption,241.93803349247685,quantile-0.5,a4
 contents,665.2755081741898,quantile-0.5,a4
 nonstructural,1365.4993308738426,quantile-0.5,a4
 occupants,0.005043588061299589,quantile-0.5,a4
-structural,1131.6274188006366,quantile-0.5,a4
+structural,1018.0258291739005,quantile-0.5,a4
 structural+nonstructural+contents,2967.3255931712965,quantile-0.5,a4
 business_interruption,408.5468004014757,quantile-0.5,a1
 contents,2518.9200303819443,quantile-0.5,a1

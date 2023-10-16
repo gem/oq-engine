@@ -204,11 +204,20 @@ def ensure(pip=None, pyvenv=None):
                    % sys.executable))
 
 
-def get_branch(version):
+def get_requirements_branch(version, inst, repository):
     """
     Convert "version" into a branch name
     """
+    repository_owner, repository_name = repository.split('/')
+    # in forks of oq-engine, always read requirements from master
+    if repository_owner != 'gem' and repository_name == 'oq-engine':
+        return 'master'
+    # in cases such as 'install.py user', for instance while running tests from
+    # another gem repository, we need requirements to be read from the latest
+    # stable version unless differently specified.
     if version is None:
+        if (inst is devel or inst is devel_server):
+            return 'master'
         # retrieve the tag name of the current stable version
         with urlopen('https://pypi.org/pypi/openquake.engine/json') as resp:
             content = resp.read()
@@ -334,7 +343,7 @@ def fix_version(commit, venv):
         f.write(''.join(lines))
 
 
-def install(inst, version):
+def install(inst, version, repository):
     """
     Install the engine in one of the three possible modes
     """
@@ -381,7 +390,7 @@ def install(inst, version):
                                    'pip', 'wheel'])
 
     # install the requirements
-    branch = get_branch(version)
+    branch = get_requirements_branch(version, inst, repository)
     if sys.platform == 'darwin':
         mac = '_' + platform.machine(),  # x86_64 or arm64
     else:
@@ -532,6 +541,10 @@ if __name__ == '__main__':
                         help="version to install (default stable)")
     parser.add_argument("--dbport",
                         help="DbServer port (default 1907 or 1908)")
+    parser.add_argument("--repository",
+                        help=("The owner and repository name. For example,"
+                              " 'gem/oq-engine' or 'forkowner/oq-engine'"),
+                        default='gem/oq-engine')
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
@@ -540,6 +553,6 @@ if __name__ == '__main__':
         if args.remove:
             remove(inst)
         else:
-            install(inst, args.version)
+            install(inst, args.version, args.repository)
     else:
         sys.exit("Please specify the kind of installation")

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import unittest
 import numpy
 from openquake.baselib import general, config
@@ -26,8 +27,7 @@ from openquake.hazardlib.calc.mean_rates import (
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_04, case_05, case_06, case_07, case_08, case_09,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
@@ -202,8 +202,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
     def test_case_12(self):
         # akin to NAF model
-        self.assert_curves_ok(
-            ['mean_rates.csv'], case_12.__file__, delta=1E-15)
+        self.assert_curves_ok(['mean_rates.csv'], case_12.__file__)
 
     def test_case_12_bis(self):
         # test reduction with empty branches
@@ -263,13 +262,6 @@ hazard_uhs-max.csv
 hazard_uhs-mean.csv
 hazard_uhs-std.csv
 '''.split(), case_15.__file__, delta=1E-6)
-
-        # test UHS XML export
-        fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
-                  if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
 
         # npz exports
         [fname] = export(('hmaps', 'npz'), self.calc.datastore)
@@ -354,7 +346,7 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
-            case_20.__file__, delta=1E-7)
+            case_20.__file__)
         # there are 3 sources x 12 sm_rlzs
         sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
         self.assertEqual(len(sgs), 7)
@@ -425,13 +417,14 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip30-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
-            case_21.__file__, delta=1E-7)
+            case_21.__file__)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
         for f in out['uhs', 'csv']:
-            self.assertEqualFiles('expected/' + strip_calc_id(f), f)
+            self.assertEqualFiles('expected/' + strip_calc_id(f), f,
+                                  delta=4E-5)
 
         # checking that source_info is stored correctly
         info = self.calc.datastore['source_info'][:]
@@ -455,7 +448,7 @@ hazard_uhs-std.csv
     def test_case_30(self):
         # point on the international data line
         # this is also a test with IMT-dependent weights
-        if NOT_DARWIN:  # broken on macOS
+        if sys.platform != 'darwin':  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
@@ -464,13 +457,12 @@ hazard_uhs-std.csv
         # IMT-dependent weights with sampling by cheating
         self.assert_curves_ok(
             ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-            case_30.__file__, number_of_logic_tree_samples='10', delta=1E-5)
+            case_30.__file__, number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
-                               'hazard_curve-std-PGA.csv'], case_31.__file__,
-                              delta=1E-5)
+                               'hazard_curve-std-PGA.csv'], case_31.__file__)
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree

@@ -31,7 +31,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import (
-    KiteSurface, _fix_profiles, _create_mesh, get_mesh)
+    KiteSurface, _fix_profiles, _create_mesh, get_new_profiles)
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -42,7 +42,7 @@ OVERWRITE = False
 aae = np.testing.assert_almost_equal
 
 
-def get_meshs(milo, malo, mila, mala, step=0.01):
+def new_profiles(milo, malo, mila, mala, step=0.01):
     clo = []
     cla = []
     for lo in np.arange(milo, malo, step):
@@ -186,7 +186,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # north. This section is west to the section defined by cs_50
         prf, _ = _read_profiles(path, 'cs_51')
         srfc51 = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
-        self.clo, self.cla, mesh = get_meshs(-71.8, -69, 19.25, 20.25, 0.01)
+        self.clo, self.cla, mesh = new_profiles(-71.8, -69, 19.25, 20.25, 0.01)
         # Define multisurface and mesh of sites
         self.srfc50 = srfc50
         self.srfc51 = srfc51
@@ -455,11 +455,11 @@ class NZLTestCase(unittest.TestCase):
         rprof, ref_idx = _fix_profiles(prof, rms, False, idl=False)
 
         # Create mesh (note that we flip it to replicate the right_hand rule
-        # fix). The 'get_mesh' function provides the same results on MacOS and
-        # Linux.
+        # fix). The 'get_new_profiles' function provides the same results on
+        # MacOS and Linux
         msh = _create_mesh(rprof, ref_idx, rms, idl=False)
         tmp = np.fliplr(msh[:, :, 0])
-        mback = get_mesh(rprof, ref_idx, rms, idl=False)
+        mback = get_new_profiles(rprof, ref_idx, rms, idl=False)
 
         # Save results
         fname = 'results_nzl_2_mesh.txt'

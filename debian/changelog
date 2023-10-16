@@ -1,3 +1,66 @@
+  [Michele Simionato]
+  * Optimized (2x) the generation of ground motion fields
+  * Internal: using a single random number generator inside the GmfComputer
+    and not one for each gsim, causing an artificial correlation between gsims
+  * Implemented `maximum_distance_stations` and fixed another site
+    collection filtering bug in conditioned GMFs
+  * Extended conditioned GMFs to number_of_ground_motion_fields > 1
+  * Disabled SLOW MODE on macOS, since the amount of free memory returned by
+    psutil cannot be trusted
+  * Speeding up `count_ruptures` for multifault sources, which gives a *huge*
+    in some calculations (like event_based for Dominican Republic)
+
+  [Marco Pagani]
+  * Fixed a bug in the code that resamples a line, with a small effect
+    on the hazard of models containing simple fault sources
+
+  [Michele Simionato]
+  * Optimized the calculation of quantile hazard maps (7x)
+  * Internal: stored `_rates` instead of `_poes` in classical calculations
+
+  [Lana Todorovic, Anirudh Rao]
+  * Added several regional liquefaction models to the secondary perils module,
+    including:
+    ZhuEtAl2017LiquefactionCoastal and ZhuEtAl2017LiquefactionGeneral,
+    RashidianBaise2020Liquefaction, AllstadtEtAl2022Liquefaction,
+    AkhlagiEtAl2021LiquefactionA and AkhlagiEtAl2021LiquefactionB
+    (experimental),
+    Bozzoni2021LiquefactionEurope, TodorovicSilva2022NonParametric
+  * Added new site parameters required by some of these new models to site.py
+  * Added LiqOccur as a valid IMT, referring to the occurrence or
+    non-occurrence of liquefaction at a site
+  * Added basic documentation for the secondary perils module
+    (originally written by @cossatot and extended by @LanaTodorovic93)
+  * Added rock-slope co-seismic failure computation of Grant et al. (2016)
+
+  [Michele Simionato]
+  * Fixed sanity check on avg_losses and aggrisk breaking for event_based_damage
+    calculations following event_based_risk calculations
+  * Fixed a bug in avg_gmf causing the average to be computed incorrectly
+  * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
+    after 7 years of deprecation
+
+  [Paolo Tormene]
+  * In the WebUI users are not allowed to see other users outputs by default
+    (the old default can be obtained setting ACL_ON = False)
+
+  [Manuela Villani, Michele Simionato, Paolo Tormene]
+  * Produced ASCE-7 and ASCE-41 outputs for the AELO project and hidden
+    a few internal outputs
+
+  [Athanasios Papadopoulos]
+  * Adjusted the Swiss-specific implementations of the GMPEs used
+    in the Swiss national seismic hazard (SUIhaz15) and risk (ERM-CH23) models.
+    The new implementation returns all of total, intra- and inter-event sigmas,
+    rather than just the total one
+  * Extended the ModifiableGMPE class by adding an
+    `apply_swiss_amplification_sa` method that is used in ERM-CH23 to
+    apply site specific adjustments for site effects and intra-event
+    uncertainty
+
+  * Added ch_ampl03, ch_ampl06, ch_phis2s03, ch_phis2s06,
+    ch_phisss03, ch_phis2s06 site parameters to the site.py file
+
   [Paolo Tormene]
   * Upgraded requirements: Shapely to version 2.0.1 and Pandas to version 2.0.3
 

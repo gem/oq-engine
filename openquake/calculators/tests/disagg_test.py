@@ -154,14 +154,13 @@ class DisaggregationTestCase(CalculatorTestCase):
 
         haz = self.calc.datastore['hmap3'][0, 0]  # shape NMP
         self.assertEqual(haz[0], 0)  # shortest return period => 0 hazard
-        self.assertAlmostEqual(haz[1], 0.13311564210230828)
+        aae(haz[1], 0.13311564, decimal=6)
 
         # test normal disaggregation
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/TRT-0.csv', fname)
 
         # test conditional disaggregation
-        raise unittest.SkipTest('Non-reproducible issue on CI :-(')
         [fname] = export(('disagg-rlzs-traditional', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/TRT-traditional-0.csv', fname)

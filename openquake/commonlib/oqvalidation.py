@@ -66,8 +66,8 @@ aggregate_loss_curves_types:
   loss Exceedance Probability (EP) only or to also calculate (if possible) the
   Occurrence Exceedance Probability (OEP) and/or the Aggregate Exceedance
   Probability (AEP).
-  Example: *aggregate_loss_curves_types = ,_oep,_aep*.
-  Default: ,_oep,_aep
+  Example: *aggregate_loss_curves_types = aep, oep*.
+  Default: ep
 
 reaggregate_by:
   Used to perform additional aggregations in risk calculations. Takes in
@@ -488,6 +488,12 @@ maximum_distance:
   or as dictionary TRT -> [(mag, dist), ...]
   Example: *maximum_distance = 200*.
   Default: no default
+
+maximum_distance_stations:
+  Applies only to scenario calculations with conditioned GMFs to discard
+  stations.
+  Example: *maximum_distance_stations = 100*.
+  Default: None
 
 mean:
   Flag to enable/disable the calculation of mean curves.
@@ -912,12 +918,14 @@ class OqParam(valid.ParamSet):
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
     aggregate_loss_curves_types = valid.Param(
-        valid.Choice('',
-                     ',_oep',
-                     ',_aep',
-                     ',_oep,_aep',
-                     ',_aep,_oep'),
-        ',_oep,_aep')
+        # accepting all comma-separated permutations of 1, 2 or 3 elements
+        # of the list ['ep', 'aep' 'oep']
+        valid.Choice(
+            'ep', 'aep', 'oep',
+            'ep, aep', 'ep, oep', 'aep, ep', 'aep, oep', 'oep, ep', 'oep, aep',
+            'ep, aep, oep', 'ep, oep, aep', 'aep, ep, oep', 'aep, oep, ep',
+            'oep, ep, aep', 'oep, aep, ep'),
+        'ep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
@@ -990,9 +998,10 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
+    maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_aggregations = valid.Param(valid.positivefloat, 100_000)
+    max_aggregations = valid.Param(valid.positivefloat, 1E5)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_gmvs_chunk = valid.Param(valid.positiveint, 100_000) # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
@@ -1478,7 +1487,7 @@ class OqParam(valid.ParamSet):
                     mini[imt] = 0
         if 'default' in mini:
             del mini['default']
-        min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        min_iml = F64([mini.get(imt) or 1E-10 for imt in self.imtls])
         return min_iml
 
     def get_max_iml(self):

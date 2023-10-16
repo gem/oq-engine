@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import events_dt, get_eid_rlz
+from openquake.hazardlib.source.rupture import get_events
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -67,12 +67,12 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
         for iml in imls:
             lst.append(('%s-%.3f' % (imt, iml), F32))
     curves = numpy.zeros(nsites, numpy.dtype(lst))
-    for sid, pcurve in pmap.items():
+    for sid, hcurve in pmap.items():
         curve = curves[sid]
         idx = 0
         for imt, imls in imtls.items():
             for iml in imls:
-                curve['%s-%.3f' % (imt, iml)] = pcurve.array[idx, inner_idx]
+                curve['%s-%.3f' % (imt, iml)] = hcurve.array[idx, inner_idx]
                 idx += 1
     return curves
 
@@ -185,8 +185,7 @@ class RuptureImporter(object):
         :returns: a composite array with the associations eid->rlz
         """
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        eid_rlz = get_eid_rlz(proxies, rlzs, self.scenario)
-        return {ordinal: numpy.array(eid_rlz, events_dt)}
+        return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
@@ -259,9 +258,11 @@ class RuptureImporter(object):
 
         rng = numpy.random.default_rng(oq.ses_seed)
         if oq.investigation_time:
-            eff_time = int(oq.investigation_time * oq.ses_per_logic_tree_path *
-                           len(self.datastore['weights']))
-            extra['year'] = rng.choice(eff_time, len(events)) + 1
+            R = len(self.datastore['weights'])
+            etime = int(oq.investigation_time * oq.ses_per_logic_tree_path)
+            for r in range(R):
+                ok, = numpy.where(events['rlz_id'] == r)
+                extra['year'][ok] = rng.choice(etime, len(ok)) + r * etime + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
 

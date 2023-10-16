@@ -24,7 +24,6 @@ from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
-from openquake.commonlib import datastore
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 
 PLOT = False
@@ -40,7 +39,7 @@ class MRD01TestCase(unittest.TestCase):
         from openquake.calculators import base
 
         job_ini = os.path.join(CWD, 'expected', 'mrd', 'job.ini')
-        with logs.init('calc', job_ini) as log:
+        with logs.init('job', job_ini) as log:
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
 

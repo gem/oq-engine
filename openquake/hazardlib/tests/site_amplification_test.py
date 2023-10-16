@@ -228,11 +228,11 @@ class AmplifierTestCase(unittest.TestCase):
         # Create a list with one ProbabilityCurve instance
         poes = numpy.squeeze(df_hc.iloc[0, 3:].to_numpy())
         tmp = numpy.expand_dims(poes, 1)
-        pcurve = ProbabilityCurve(tmp)
+        hcurve = ProbabilityCurve(tmp)
 
         soil_levels = numpy.array(list(numpy.geomspace(0.001, 2, 50)))
         a = Amplifier(imtls, df_af, soil_levels)
-        res = a.amplify(b'MQ15', pcurve)
+        res = a.amplify(b'MQ15', hcurve)
 
         tmp = 'hazard_curve_expected.csv'
         fname_expected = os.path.join(path, 'data', 'convolution', tmp)

@@ -40,6 +40,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.site_amplification import AmplFunction
 from openquake.hazardlib.calc.filters import SourceFilter, getdefault
+from openquake.hazardlib.calc.disagg import to_rates
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.hazardlib.shakemap.gmfs import to_gmfs
@@ -469,7 +470,10 @@ class HazardCalculator(BaseCalculator):
         dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
         required = .5 * (1 if dist == 'no' else parallel.Starmap.num_cores)
-        if dist == 'processpool' and avail < required:
+        if (dist == 'processpool' and avail < required and
+                sys.platform != 'darwin'):
+            # macos tells that there is no memory when there is, so we
+            # must not enter in SLOW MODE there
             msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
                    'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
                    'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
@@ -574,8 +578,9 @@ class HazardCalculator(BaseCalculator):
             haz_sitecol = readinput.get_site_collection(oq, self.datastore)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
-            self.datastore.create_df('_poes',
-                                     readinput.Global.pmap.to_dframe())
+            df = readinput.Global.pmap.to_dframe()
+            df.rate = to_rates(df.rate)
+            self.datastore.create_df('_rates', df)
             self.datastore['assetcol'] = self.assetcol
             self.datastore['full_lt'] = fake = logictree.FullLogicTree.fake()
             self.datastore['trt_rlzs'] = U32([[0]])
@@ -1059,7 +1064,7 @@ class RiskCalculator(HazardCalculator):
         full_lt = dstore['full_lt'].init()
         out = []
         asset_df = self.assetcol.to_dframe('site_id')
-        slices = performance.get_slices(dstore['_poes/sid'][:])
+        slices = performance.get_slices(dstore['_rates/sid'][:])
         for sid, assets in asset_df.groupby(asset_df.index):
             # hcurves, shape (R, N)
             getter = getters.PmapGetter(
@@ -1217,6 +1222,9 @@ def import_gmfs_hdf5(dstore, oqparam):
     :param oqparam: an OqParam instance
     :returns: event_ids
     """
+    # NB: you cannot access an external link if the file it points to is
+    # already open, therefore you cannot run in parallel two calculations
+    # starting from the same GMFs
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
