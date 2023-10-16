@@ -46,7 +46,6 @@ def get_gms_from_ctx(imt, rup, sites, gmm_perg, gmm, azimuth):
     
     ctxs_perg = list(ctxm_perg.get_ctx_iter([rup], sites)) 
     ctxs_perg = ctxs_perg[0]
-    ctxs_perg.occurrence_rate = 0.0
     mean_perg, std_perg, tau_perg, phi_perg = ctxm_perg.get_mean_stds(
         [ctxs_perg])
 
