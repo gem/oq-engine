@@ -153,14 +153,12 @@ class GmfComputer(object):
         self.amplifier = amplifier
         self.sec_perils = sec_perils
         # `rupture` is an EBRupture instance in the engine
-        if hasattr(rupture, 'source_id'):
+        if hasattr(rupture, 'rupture'):
             self.ebrupture = rupture
-            self.source_id = rupture.source_id  # the underlying source
             self.seed = rupture.seed
             rupture = rupture.rupture  # the underlying rupture
         else:  # in the hazardlib tests
             self.ebrupture = {'e0': 0, 'n_occ': 1, 'seed': rupture.seed}
-            self.source_id = '?'
             self.seed = rupture.seed
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
         if not ctxs:
@@ -301,9 +299,8 @@ class GmfComputer(object):
                     mean_stds[:, m], m, imt, gsim, intra_eps[m], idxs)
             except Exception as exc:
                 raise RuntimeError(
-                    '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, self.source_id,
-                     exc.__class__.__name__, exc)
+                    '(%s, %s, %s): %s' %
+                    (gsim, imt, exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
