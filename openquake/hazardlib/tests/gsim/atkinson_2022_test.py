@@ -35,12 +35,20 @@ class Atkinson2022CrustTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.5, epistemic = "Central")
 
     def test_all(self):
-        self.check('ATKINSON2022/ATKINSON22_CRUST_LOWER_MEAN.csv',
+        self.check('ATKINSON2022/ATKINSON22_CRUST_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
                    max_discrep_percentage=0.5, epistemic = "Lower")
 
     def test_all(self):
-        self.check('ATKINSON2022/ATKINSON22_CRUST_UPPER_MEAN.csv',
+        self.check('ATKINSON2022/ATKINSON22_CRUST_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
                        max_discrep_percentage=0.5, epistemic = "Upper")
+
+    def test_all(self):
+        self.check('ATKINSON2022/ATKINSON2022_CRUST_MODIFIED_SIGMA.csv',
+                       max_discrep_percentage = 0.5, which_sigma = "Modified")
+
+    def test_all(self):
+        self.check('ATKINSON2022/ATKINSON2022_CRUST_ORIGINAL_SIGMA.csv',
+                           max_discrep_percentage = 0.5, which_sigma = "Original")
 
 class Atkinson2022SInterTestCase(BaseGSIMTestCase):
     """
@@ -54,12 +62,20 @@ class Atkinson2022SInterTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.5, epistemic = "Central")
 
     def test_all(self):
-        self.check('ATKINSON2022/ATKINSON22_INTER_LOWER_MEAN.csv',
+        self.check('ATKINSON2022/ATKINSON22_INTER_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
                    max_discrep_percentage=0.5, epistemic = "Lower")
 
     def test_all(self):
-        self.check('ATKINSON2022/ATKINSON22_INTER_UPPER_MEAN.csv',
+        self.check('ATKINSON2022/ATKINSON22_INTER_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
                        max_discrep_percentage=0.5, epistemic = "Upper")
+
+    def test_all(self):
+        self.check('ATKINSON2022/ATKINSON2022_INTERFACE_MODIFIED_SIGMA.csv',
+                       max_discrep_percentage = 0.5, which_sigma = "Modified")
+
+    def test_all(self):
+        self.check('ATKINSON2022/ATKINSON2022_INTERFACE_ORIGINAL_SIGMA.csv',
+                           max_discrep_percentage = 0.5, which_sigma = "Original")
 
 class Atkinson2022SSlabTestCase(BaseGSIMTestCase):
     """
@@ -73,9 +89,17 @@ class Atkinson2022SSlabTestCase(BaseGSIMTestCase):
                    max_discrep_percentage=0.5, epistemic = "Central")
 
     def test_all(self):
-        self.check('ATKINSON2022/ATKINSON22_SLAB_LOWER_MEAN.csv',
-                   max_discrep_percentage=0.5, epistemic = "Lower")
+        self.check('ATKINSON2022/ATKINSON22_SLAB_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
+                   max_discrep_percentage = 0.5, epistemic = "Lower")
 
     def test_all(self):
-        self.check('ATKINSON2022/ATKINSON22_SLAB_UPPER_MEAN.csv',
-                       max_discrep_percentage=0.5, epistemic = "Upper")
+        self.check('ATKINSON2022/ATKINSON22_SLAB_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
+                       max_discrep_percentage = 0.5, epistemic = "Upper")
+
+    def test_all(self):
+        self.check('ATKINSON2022/ATKINSON2022_SLAB_MODIFIED_SIGMA.csv',
+                       max_discrep_percentage = 0.5, which_sigma = "Modified")
+
+    def test_all(self):
+        self.check('ATKINSON2022/ATKINSON2022_SLAB_ORIGINAL_SIGMA.csv',
+                           max_discrep_percentage = 0.5, which_sigma = "Original")
