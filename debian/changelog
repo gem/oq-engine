@@ -1,4 +1,14 @@
   [Michele Simionato]
+  * Internal: raised a clear error message when get_composite_source_model is
+   called without passing a datastore in presence of multifault sources
+
+  [Christopher Brooks]
+  * Added non-ergodic implementation of Zhao et al. (2016) GMM (ray-tracing
+    of travel paths through anelastically attenuating volcanic regions and
+    subsequent adjustment of the path term based on this distance to reduce
+    the predicted ground-motion).
+
+  [Michele Simionato]
   * Optimized (2x) the generation of ground motion fields
   * Internal: using a single random number generator inside the GmfComputer
     and not one for each gsim, causing an artificial correlation between gsims
