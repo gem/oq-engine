@@ -83,7 +83,7 @@ the causative earthquake.
 The model is quite simple. An explanatory variable :math:`X` is
 calculated as:
 
-.. math:: X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI − 4.784\, ln\, Vs30\ \(2)
+.. math:: X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, Vs30\ \(2)
 
 and the final probability is the logistic function
 
