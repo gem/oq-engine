@@ -343,6 +343,7 @@ latex_elements = {
     # 'figure_align': 'htbp',
     'utf8extra': r"""
 \DeclareUnicodeCharacter{22EE}{\ensuremath{\vdots}}
+\DeclareUnicodeCharacter{2212}{−}
 """,
 }
 
