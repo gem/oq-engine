@@ -110,7 +110,11 @@ language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', 'old']
+exclude_patterns = ['_build', 'old', 
+    'build/html/_static/vendor/fontawesome/6.1.2/js/all.min.js.LICENSE.txt',
+    'build/html/_static/vendor/fontawesome/6.1.2/LICENSE.txt',
+    'build/html/_static/scripts/bootstrap.js.LICENSE.txt',
+ ]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
