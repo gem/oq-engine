@@ -12,3 +12,4 @@ Tools for preparing the data for these models are also presented. This can be a 
    :caption: Contents:
 
    sep/sep_models
+   sep/sep_tutorials
