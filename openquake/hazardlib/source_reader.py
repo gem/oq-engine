@@ -279,7 +279,9 @@ def fix_geometry_sections(smdict, dstore):
     s2i = {suid: i for i, suid in enumerate(sections)}
     for idx, sec in enumerate(sections.values()):
         sec.suid = idx
-    if dstore and sections:
+    if sections:
+        assert dstore, ('You forgot to pass the dstore to '
+                        'get_composite_source_model')
         with hdf5.File(dstore.tempname, 'w') as h5:
             h5.save_vlen('multi_fault_sections',
                          [kite_to_geom(sec) for sec in sections.values()])
