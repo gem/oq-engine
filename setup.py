@@ -82,7 +82,7 @@ extras_require = {
         'pdbpp',
         'ipython',
         'silx',
-        'sphinx==4.4',
+        'sphinx==6.2',
         'sphinx-theme',
         'pydata-sphinx-theme',
     ]
