@@ -123,50 +123,6 @@ Model's prediction can be transformed into binary class (liquefaction
 occurrence or nonoccurrence) via probability threshold value. The authors
 proposed a threshold of 0.2.
 
-
-Bozzoni et al. (2021)
-~~~~~~~~~~~~~~~~~~~~~
-
-The parametric model developed by Bozzoni et al. (2021), keeps the same 
-input variables (i.e., :math:`PGA_{M,SM}`, :math:`CTI`, :math:`Vs30`)
-and functional form as in Zhu et al. (2015). Regression parameters are
-calibrated based on the liquefaction case histories observed during 
-seismic events in Europe. The implemented model is associated with the
-ADASYN sampling algorithm. The explanatory variable :math:`X`is computed as:
-
-.. math:: X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI − 0.091\, ln\, Vs30\ \(5)
-
-and the probability of liquefaction in calculated using equation (3). 
-
-The adopted probability threshold of 0.57 converts the probability of
-liquefaction into binary outcome. 
-
-Zhu et al. (2017)
-~~~~~~~~~~~~~~~~~
-
-Two parametric models are proposed by Zhu and others (2017), a coastal
-model (Model 1), and a more general model (Model 2). A coastal event is
-defined as one where the liquefaction occurrences are, on average, within 
-20 km of the coast; or, for earthquakes with insignificant or no liquefaction,
-epicentral distances less than 50 km.The implemented geospatial models 
-are for global use. An extended set of input parameters is used to 
-describe soil properties (its density and wetness). The ground shaking
-is characterised by :math:`PGV [cm/s]`. Soil density is described by 
-:math:`Vs30 [m/s]`. Soil wetness in Model 1 is chatacterised by a set of 
-features: mean annual precipitation :math:`precip [mm]`, distance to the 
-coast :math:`d_{c} [km]`, and distance to the river :math:`d_{r} [km]`. 
-Distance to the coast also indicates the geologic age - younger deposits 
-are found near the coast. Soil wetness in Model 2 is characterised by 
-closest distance to the water body :math:`d_{w} [km]` which is determined 
-as :math:`\min(d_{c}, d_{r})`, and the water table depth :math:`wtd [m]`. 
-Mean annual precipitation is from a global layer developed by Hijmans 
-et al. (2005). Distance to the nearest river is calculated based on the 
-HydroSHEDS database (Lehner et al. 2008). Water table depth is retreived from a 
-global dataset by Fan et al (2013).Distance to the nearest coastline data
-was computed from https://oceancolor.gsfc.nasa.gov. 
-
-The explanatory varibale :math:`X`is calculated as:
-
 Model 1: 
 .. math:: X = 12.435 + 0.301\, ln\, PGV - 2.615\, ln\, Vs30 + 0.0005556\, precip
 .. math::     -0.0287\, \sqrt{d_{c}} + 0.0666\,d_{r} - 0.0369\, \sqrt{d_{c}} \cdot d_{r}\ \(6) 
