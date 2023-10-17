@@ -1,5 +1,3 @@
-:orphan:
-
 Secondary Perils Analysis
 =========================
 
@@ -14,5 +12,3 @@ Tools for preparing the data for these models are also presented. This can be a 
    :caption: Contents:
 
    sep/sep_models
-   sep/liquefaction_data_prep
-   sep/sep_tutorials
