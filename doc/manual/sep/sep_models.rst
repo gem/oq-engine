@@ -199,6 +199,7 @@ regression coefficients are given in Table 2.
 +--------------+-----------+-----------+
 | c            | 11.43     | 9.165     |
 +--------------+-----------+-----------+
+
 Table 2: Parameters for relating proba-
 bilities to areal liquefaction percent.
 
@@ -336,6 +337,7 @@ category (LSC).
 +----------------+-----------------------+
 | none           |           0           |
 +----------------+-----------------------+
+
 Table 3: Ground settlements amplitudes for 
 liquefaction susceptibility categories.
 
