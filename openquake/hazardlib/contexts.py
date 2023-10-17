@@ -56,7 +56,8 @@ TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point\
+        clon clat'
     .split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
@@ -353,7 +354,7 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
-    
+
         self.oq = oq
         self.monitor = monitor
         self._init1(param)
@@ -588,7 +589,11 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 else:
                     val = getattr(ctx, par, numpy.nan)
-                getattr(ra, par)[slc] = val
+                if par == 'closest_point':
+                    ra['clon'][slc] = val[:, 0]
+                    ra['clat'][slc] = val[:, 1]
+                elif par not in ['clon', 'clat'] or 'closest_point' not in dd:
+                    getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
@@ -720,8 +725,8 @@ class ContextMaker(object):
     def _get_ctx_planar(self, mag, planar, sites, src_id, start_stop, tom):
         # computing distances
         rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-        if self.fewsites:
-            # get the closest points on the surface
+        # get the closest points on the surface
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
             closest = project_back(planar, xx, yy)  # (3, U, N)
         dists = {'rrup': rrup}
         for par in self.REQUIRES_DISTANCES - {'rrup'}:
@@ -805,7 +810,7 @@ class ContextMaker(object):
         else:
             dd['probs_occur'] = numpy.zeros(0)
 
-        if self.fewsites:
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
 
