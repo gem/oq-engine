@@ -31,7 +31,6 @@ from openquake import engine
 extensions = [
     'sphinx.ext.mathjax',
     'myst_parser',
-    'myst_nb',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
