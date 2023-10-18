@@ -106,7 +106,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Public Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="10%" />
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png)
 ![](https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg =50%x)
 ![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg)
 ![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png)
