@@ -40,7 +40,7 @@ from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_25, case_26, case_27, case_28, case_29, case_30, src_mutex)
+    case_25, case_26, case_27, case_28, case_29, case_30, case_31, src_mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -597,3 +597,9 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_30.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+
+    def test_31(self):
+        # HM2018CorrelationModel with filtered site collection
+        self.run_calc(case_31.__file__, 'job.ini', exports='csv')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)
