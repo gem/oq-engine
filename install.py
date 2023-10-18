@@ -402,7 +402,8 @@ def install(inst, version, repository):
     else:
         mac = '',
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
-        'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
+        'requirements-py%d%d-%s%s.txt' % (
+            PYVER[:2] + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call(
         [pycmd, '-m', 'pip', 'install',
