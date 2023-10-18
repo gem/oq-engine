@@ -127,16 +127,16 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Allianz_logo.png" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Aon_logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Eucentre_logo.png" width="15%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Hannover_Re.png" width="10%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Hannover_Re.png" width="15%" />
 <br />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/MMC_SEO.jpg" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="15%" align="left" />
 <br />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="10%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="10%" align="left" />
 
 
 #### Advisors
