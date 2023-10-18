@@ -174,8 +174,8 @@ class HM2018CorrelationModel(BaseCorrelationModel):
         Apply correlation to randomly sampled residuals
         """
         # TODO: the case of filtered sites is probably managed incorrectly
-        # NB: this is ABSURDELY SLOW and we cannot use the cache as in
-        # JB2009 because we are not using the complete site collection
+        # NB: this is SLOW and we cannot use the cache as in JB2009 because
+        # we are not using the complete site collection
         nsites = len(sites)
         assert len(residuals) == len(stddev_intra) == nsites
         D = numpy.diag(stddev_intra)  # phi as a diagonal matrix
