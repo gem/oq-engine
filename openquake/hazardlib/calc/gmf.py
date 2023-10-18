@@ -309,16 +309,15 @@ class GmfComputer(object):
         return result.transpose(1, 0, 2)
 
     def _compute(self, mean_stds, m, imt, gsim, intra_eps, idxs):
-        # sets self.sig
+        # sets self.sig, returns gmf
         im = imt.string
+        mean, sig, tau, phi = mean_stds
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
-            mean, _, _, _ = mean_stds
-            gmf = exp(mean, im!='MMI')[:, None]
-            gmf = gmf.repeat(len(intra_eps[0]), axis=1)
+            gmf = exp(mean, im!='MMI')[:, None].repeat(len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -327,18 +326,14 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
-
-            mean, sig, _, _ = mean_stds
             gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im!='MMI')
             self.sig[idxs, m] = numpy.nan
         else:
-            mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
             intra_res = phi[:, None] * intra_eps  # shape (N, E)
-
             if self.correlation_model is not None:
                 intra_res = self.correlation_model.apply_correlation(
                     self.sites, imt, intra_res, phi)
