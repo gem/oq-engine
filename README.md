@@ -107,15 +107,16 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 ## Public Partners
 
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="10%" />
-![logo_sponsor_png|10%](https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg =50%x)
 ![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/aus.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/nrcan.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/NTU.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/nset.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/swiss_1.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/tem.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/usaid.jpg)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif)
+![](https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png)
 
 ## Private Partners
 
