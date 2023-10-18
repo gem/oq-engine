@@ -357,8 +357,8 @@ The static factor of safety is calculated as:
 where:
 :math:`c' [Pa]` is the effective cohession with typical values ranging
 from 20 kPa for soils up to 20 MPa for unfaulted rocks.
-:math:`\alpha` is the slope angle.
-:math:`\phi'` is the effective friction angle with typical values
+:math:`\alpha [\degree]` is the slope angle.
+:math:`\phi' [\degree]` is the effective friction angle with typical values 
 ranging from 30 to 40 degrees.
 :math:`\gamma [kg/m^3]` is the dry_density of the soil or rock. It ranges 
 from ~1500 :math:`kg/m^3` for soils to ~ 2500 - 3200 :math:`kg/m^3`.
