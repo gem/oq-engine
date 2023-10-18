@@ -132,20 +132,21 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/MMC_SEO.jpg" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="25%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="20%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="20%" />
 <br />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="23%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="15%" />
 
 
 #### Advisors
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Oneconcern-topiqs2020-thumbnail-image.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="10%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Oneconcern-topiqs2020-thumbnail-image.png" width="15%" align="left" />
+<br />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="15%" />
 
 ## Associate Partners
 
