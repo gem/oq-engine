@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Required at least Python 3.10.6 on mac and windows
+
   [Claudio Schill]
   * Optimized the Kuehn sigma_mu_adjustment calculation by replacing the
     multi-step interpolation with a single 2D/3D space interpolation
