@@ -408,11 +408,13 @@ where:
 for soils up to 20 MPa for unfaulted rocks. 
 :math:`c_{r}` is the cohesion provided by the root systems of vegetated 
 hillslopes. Here, we adopted the default value of 0 root cohesion.
+:math:`\alpha [\degrees]` is the slope angle.
 :math:`\gamma [kg/m^3]` is the dry_density of the soil or rock. It ranges 
 from ~1500 :math:`kg/m^3` for soils to ~ 2500 - 3200 :math:`kg/m^3`.
 :math:`h [m]` is the vertical height of the failure mass and it corresponds
 to 1/4 of the local relief :math:`H` calculated based on the moving
 window analysis. 
+:math:`\phi' [\degrees]` is the effective friction angle with typical values 
 ranging from 30 to 40 degrees.
 :math:`\beta` is the slope's critical angle calculated as:
 .. :math:: \beta = \frac{\alpha + \phi}{0.5} (19)
