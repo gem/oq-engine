@@ -128,7 +128,7 @@ Bozzoni et al. (2021)
 ~~~~~~~~~~~~~~~~~~~~~
 
 The parametric model developed by Bozzoni et al. (2021), keeps the same 
-input variables (i.e., :math:`PGA_{M,SM}`, :math:`CTI`, :math:`Vs30`)
+input variables (i.e., :math:`PGA_{M,SM}`, :math:`CTI`, :math:`Vs30` )
 and functional form as in Zhu et al. (2015). Regression parameters are
 calibrated based on the liquefaction case histories observed during 
 seismic events in Europe. The implemented model is associated with the
@@ -165,7 +165,7 @@ HydroSHEDS database (Lehner et al. 2008). Water table depth is retreived from a
 global dataset by Fan et al (2013).Distance to the nearest coastline data
 was computed from https://oceancolor.gsfc.nasa.gov. 
 
-The explanatory varibale :math:`X`is calculated as:
+The explanatory varibale :math:`X` is calculated as:
 
 Model 1: 
 .. math:: X = 12.435 + 0.301\, ln\, PGV - 2.615\, ln\, Vs30 + 0.0005556\, precip
