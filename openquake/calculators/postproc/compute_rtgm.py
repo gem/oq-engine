@@ -87,6 +87,9 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 
 # hard-coded for year 1
 # TODO: interpolate for vs30 != 760 and for different periods
+# NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
+# three imts, that are mandatory in this context. For the plot of governing
+# MCE we read imts from the imtls
 imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in imts]
@@ -347,16 +350,17 @@ def _get_label(imt):
 
 
 def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
-                          imt_list):
+                          imts):
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
     colors = mpl.colormaps['viridis'].reversed()._resample(3)
     patterns = ['-', '--', ':']
-    for i, imt in enumerate(imt_list):
+    for i, imt in enumerate(imts):
         lab = _get_label(imt)
         plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
                    label=lab, linewidth=3, zorder=1)
-        if i == 2:
+        # plot the label only once but it must be at the end of the legend
+        if imt == imts[-1]:
             plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
                        label='Probabilistic MCE',  linewidth=2,
                        markersize=10, zorder=3)
@@ -398,7 +402,7 @@ def disaggr_by_src(dstore, imtls):
     # get info : specific to disagg by src
     df = dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
     grouped_m = df.groupby(['src_id', 'site_id', 'imt']).agg(
-        {"value": lambda x: list(x)}).reset_index()
+        {"value": list}).reset_index()
     # remove the sources that aren't contributing at all to the hazard
     mask = grouped_m.value.apply(lambda x: sum(x) > 0)
     gm = grouped_m[mask].reset_index()
@@ -407,7 +411,7 @@ def disaggr_by_src(dstore, imtls):
     total_poe = []
     for wp in grouped_2.value.values:
         wsp = []
-        if 'list' in str(type(wp)):
+        if isinstance(wp, list):
             total_poe.append(wp)
         else:
             for wp_i in wp:
@@ -417,7 +421,7 @@ def disaggr_by_src(dstore, imtls):
     return grouped_2, imtls_dict
 
 
-def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
+def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
 
     fig, ax = plt.subplots(3, figsize=(8, 15))
 
@@ -425,7 +429,7 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
     # the largest contributor;
     fact = 0.1
 
-    for m, imt in enumerate(imt_list):
+    for m, imt in enumerate(imts):
         out_contr_all = []
         fig1, ax1 = plt.subplots()
 
@@ -475,7 +479,8 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
 
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
-
+        # use j to only add the "other sources" label once 
+        # use i to cycle through the colors for the major source contributors
         i = j = 0
         for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
             # pad to have the same length of imls and afes
@@ -503,7 +508,6 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax[m].set_ylim([10E-6, 1.1])
         ax[m].set_xlim([0.01, 4])
-        # ax[m].set_xlim([np.min(imls_o), 4])
 
         # populate single imt plots - geometric mean
         ax1.grid('both')
@@ -512,7 +516,6 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
         ax1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax1.set_ylim([10E-6, 1.1])
         ax1.set_xlim([0.01, 4])
-        # ax1.set_xlim([np.min(imls_o), 4])
 
         # save single imt plot
         bio1 = io.BytesIO()
@@ -530,7 +533,6 @@ def _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore):
 
 
 def plot_governing_mce(dstore, imtls):
-    imt_list = []
     imt_list = []
     imls = []
     for imt, iml in imtls.items():
@@ -580,11 +582,7 @@ def plot_curves(dstore):
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_target, imls = [], [], []
-    # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
-    # three imts, that are mandatory in this context. For the plot of governing
-    # MCE we read imts from the imtls
-    imt_list = ['PGA', 'SA(0.2)', 'SA(1.0)']
-    for imt in imt_list:
+    for imt in imts:
         # get periods and factors for converting btw geom mean and
         # maximum component
         T = from_string(imt).period
@@ -606,12 +604,12 @@ def plot_curves(dstore):
             imls[m], AFE[m], rtgm_probmce[m]))
     # make plot
     img = plot_meanHCs_afe_RTGM(
-        imls, AFE, UHGM_RP, 1/2475, rtgm_probmce, afe_target, imt_list)
+        imls, AFE, UHGM_RP, 1/2475, rtgm_probmce, afe_target, imts)
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
     df, imtls_dict = disaggr_by_src(dstore, imtls)
-    _find_sources(df, imtls_dict, imt_list, rtgm_probmce, mean_hcurve, dstore)
+    _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore)
 
     img = plot_governing_mce(dstore, imtls)
     logging.info('Storing png/governing_mce.png')
