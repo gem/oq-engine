@@ -106,33 +106,3 @@ resolution) must be used to calculate :math:`Vs30`, rather than the
 :math:`Vs30` for a given slope measurement, but it also means that in 
 an urban setting, sub-km-scale variations in slope are not accounted for.
 
-The CTI (Moore et al., 1991) is a proxy for soil wetness that relates
-the topographic slope of a point to the upstream drainage area of that
-point, through the relation
-
-.. math:: CTI = \ln (d_a / \tan \delta)\ \(4)
-
-where :math:`d_a` is the upstream drainage area per unit width through
-the flow direction (i.e. relating to the DEM resolution). It was
-developed for hillslopes, and is not meaningful in certain very flat
-areas such as the valley floors of major low-gradient rivers, where the
-upstream drainage areas are very large. Unfortunately, this is exactly
-where liquefaction is most expected away from coastal settings.
-
-Model's prediction can be transformed into binary class (liquefaction
-occurrence or nonoccurrence) via probability threshold value. The authors
-proposed a threshold of 0.2.
-
-Model 1: 
-.. math:: X = 12.435 + 0.301\, ln\, PGV - 2.615\, ln\, Vs30 + 0.0005556\, precip
-.. math::     -0.0287\, \sqrt{d_{c}} + 0.0666\,d_{r} - 0.0369\, \sqrt{d_{c}} \cdot d_{r}\ \(6) 
-
-Model 2:
-.. math:: X = 8.801 + 0.334\, ln\, PGV - 1.918\, ln\, Vs30 + 0.0005408\, precip
-.. math::     -0.2054\, d_{w} -0.0333\, wtd\ \(7)
-
-and the probability of liquefaction is calculated using equation (3). 
-Zero probability is heuristically assigned if :math:`PGV < 3 cm/s ` or 
-:math:`Vs30 > 620 m/s`. 
-
-The proposed probability threshold to convert to class outcome is 0.4. 
