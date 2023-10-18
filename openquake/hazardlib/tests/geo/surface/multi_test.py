@@ -47,11 +47,11 @@ class GetTorTestCase(unittest.TestCase):
         surf._set_tor()
 
         # Expected value inferred from the input file
-        expected = numpy.array([[-117.955505, 33.769615],
-                                [-117.9903, 33.797646]])
+        expected = numpy.array([[-117.955505, 33.769615, 0],
+                                [-117.9903, 33.797646, 0]])
         aae(expected, surf.tors.lines[0].coo)
-        expected = numpy.array([[-117.9903, 33.797646],
-                                [-117.99624, 33.802425]])
+        expected = numpy.array([[-117.9903, 33.797646, 0],
+                                [-117.99624, 33.802425, 0]])
         aae(expected, surf.tors.lines[1].coo)
 
 

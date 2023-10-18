@@ -41,7 +41,7 @@
       <tbody>
         <% _.each(outputs, function(output) { %>
         {% if application_mode == 'AELO' %}
-        <% if (['hmaps', 'realizations'].indexOf(output.get('type')) >= 0) { %>
+        <% if (['hmaps', 'realizations', 'fullreport'].indexOf(output.get('type')) >= 0) { %>
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {% endif %}
@@ -52,6 +52,11 @@
           <td>
             <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>
+              {% if application_mode == 'AELO' %}
+              <% if (['npz'].indexOf(outtype) >= 0) { %>
+              <%   return; // works like continue in underscore.js %>
+              <% }%>
+              {% endif %}
               <tr>
                 <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm">Download <%= outtype %></a></td>
               </tr>

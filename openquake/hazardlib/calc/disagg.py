@@ -531,76 +531,6 @@ def disaggregation(
         n_epsilons=None, mag_bin_width=None, dist_bin_width=None,
         coord_bin_width=None, source_filter=filters.nofilter,
         epsstar=False, bin_edges={}, **kwargs):
-    """
-    Compute "Disaggregation" matrix representing conditional probability of an
-    intensity measure type ``imt`` exceeding, at least once, an intensity
-    measure level ``iml`` at a geographical location ``site``, given rupture
-    scenarios classified in terms of:
-
-    - rupture magnitude
-    - Joyner-Boore distance from rupture surface to site
-    - longitude and latitude of the surface projection of a rupture's point
-      closest to ``site``
-    - epsilon: number of standard deviations by which an intensity measure
-      level deviates from the median value predicted by a GSIM, given the
-      rupture parameters
-    - rupture tectonic region type
-
-    In other words, the disaggregation matrix allows to compute the probability
-    of each scenario with the specified properties (e.g., magnitude, or the
-    magnitude and distance) to cause one or more exceedences of a given hazard
-    level.
-
-    For more detailed information about the disaggregation, see for instance
-    "Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
-    Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
-    April 1999.
-
-    :param sources:
-        Seismic source model, as for
-        :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>` calculator it
-        should be an iterator of seismic sources.
-    :param site:
-        :class:`~openquake.hazardlib.site.Site` of interest to calculate
-        disaggregation matrix for.
-    :param imt:
-        Instance of :mod:`intensity measure type <openquake.hazardlib.imt>`
-        class.
-    :param iml:
-        Intensity measure level. A float value in units of ``imt``.
-    :param gsim_by_trt:
-        Tectonic region type to GSIM objects mapping.
-    :param truncation_level:
-        Float, number of standard deviations for truncation of the intensity
-        distribution.
-    :param n_epsilons:
-        Integer number of epsilon histogram bins in the result matrix.
-    :param mag_bin_width:
-        Magnitude discretization step, width of one magnitude histogram bin.
-    :param dist_bin_width:
-        Distance histogram discretization step, in km.
-    :param coord_bin_width:
-        Longitude and latitude histograms discretization step,
-        in decimal degrees.
-    :param source_filter:
-        Optional source-site filter function. See
-        :mod:`openquake.hazardlib.calc.filters`.
-    :param epsstar:
-        A boolean. When true disaggregations results including epsilon are
-        in terms of epsilon star rather then epsilon.
-    :param bin_edges:
-        Bin edges provided by the users. These override the ones automatically
-        computed by the OQ Engine.
-    :returns:
-        A tuple of two items. First is itself a tuple of bin edges information
-        for (in specified order) magnitude, distance, longitude, latitude,
-        epsilon and tectonic region types.
-
-        Second item is 6d-array representing the full disaggregation matrix.
-        Dimensions are in the same order as bin edges in the first item
-        of the result tuple. The matrix can be used directly by pmf-extractor
-        functions.
-    """
     trts = sorted(set(src.tectonic_region_type for src in sources))
     trt_num = dict((trt, i) for i, trt in enumerate(trts))
     rlzs_by_gsim = {gsim_by_trt[trt]: [0] for trt in trts}
@@ -653,6 +583,76 @@ def disaggregation(
             matrix[magi, ..., trt_num[trt]] = mat4
     return bin_edges, to_probs(matrix)
 
+disaggregation.__doc__ = """\
+Compute "Disaggregation" matrix representing conditional probability of an
+intensity measure type ``imt`` exceeding, at least once, an intensity
+measure level ``iml`` at a geographical location ``site``, given rupture
+scenarios classified in terms of:
+
+- rupture magnitude
+- Joyner-Boore distance from rupture surface to site
+- longitude and latitude of the surface projection of a rupture's point
+  closest to ``site``
+- epsilon: number of standard deviations by which an intensity measure
+  level deviates from the median value predicted by a GSIM, given the
+  rupture parameters
+- rupture tectonic region type
+
+In other words, the disaggregation matrix allows to compute the probability
+of each scenario with the specified properties (e.g., magnitude, or the
+magnitude and distance) to cause one or more exceedences of a given hazard
+level.
+
+For more detailed information about the disaggregation, see for instance
+"Disaggregation of Seismic Hazard", Paolo Bazzurro, C. Allin Cornell,
+Bulletin of the Seismological Society of America, Vol. 89, pp. 501-520,
+April 1999.
+
+:param sources:
+    Seismic source model, as for
+    :mod:`PSHA <openquake.hazardlib.calc.hazard_curve>` calculator it
+    should be an iterator of seismic sources.
+:param site:
+    :class:`~openquake.hazardlib.site.Site` of interest to calculate
+    disaggregation matrix for.
+:param imt:
+    Instance of :mod:`intensity measure type <openquake.hazardlib.imt>`
+    class.
+:param iml:
+    Intensity measure level. A float value in units of ``imt``.
+:param gsim_by_trt:
+    Tectonic region type to GSIM objects mapping.
+:param truncation_level:
+    Float, number of standard deviations for truncation of the intensity
+    distribution.
+:param n_epsilons:
+    Integer number of epsilon histogram bins in the result matrix.
+:param mag_bin_width:
+    Magnitude discretization step, width of one magnitude histogram bin.
+:param dist_bin_width:
+    Distance histogram discretization step, in km.
+:param coord_bin_width:
+    Longitude and latitude histograms discretization step,
+    in decimal degrees.
+:param source_filter:
+    Optional source-site filter function. See
+    :mod:`openquake.hazardlib.calc.filters`.
+:param epsstar:
+    A boolean. When true disaggregations results including epsilon are
+    in terms of epsilon star rather then epsilon.
+:param bin_edges:
+    Bin edges provided by the users. These override the ones automatically
+    computed by the OQ Engine.
+:returns:
+    A tuple of two items. First is itself a tuple of bin edges information
+    for (in specified order) magnitude, distance, longitude, latitude,
+    epsilon and tectonic region types.
+
+    Second item is 6d-array representing the full disaggregation matrix.
+    Dimensions are in the same order as bin edges in the first item
+    of the result tuple. The matrix can be used directly by pmf-extractor
+    functions.
+"""
 
 # ###################### disagg by source ################################ #
 

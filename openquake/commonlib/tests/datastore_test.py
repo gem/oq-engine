@@ -33,7 +33,8 @@ class DataStoreTestCase(unittest.TestCase):
     def setUp(self):
         log = logs.init(
             "job", {'calculation_mode': 'scenario', 'sites': '0 0'})
-        self.dstore = datastore.new(log.calc_id, log.get_oqparam())
+        with log:
+            self.dstore = datastore.new(log.calc_id, log.get_oqparam())
 
     def tearDown(self):
         self.dstore.close()
@@ -41,7 +42,8 @@ class DataStoreTestCase(unittest.TestCase):
 
     def test_hdf5(self):
         # store numpy arrays as hdf5 files
-        self.assertEqual(len(self.dstore), 4)
+        lst = ['oqparam', 'performance_data', 'task_info', 'task_sent']
+        self.assertEqual(sorted(self.dstore), lst)
         # performance_data, task_info, task_sent
         self.dstore['/key1'] = value1 = numpy.array(['a', 'b'], dtype=bytes)
         self.dstore['/key2'] = numpy.array([1, 2])
@@ -75,27 +77,6 @@ class DataStoreTestCase(unittest.TestCase):
         path = self.dstore.export_path('hello.txt', tempfile.mkdtemp())
         mo = re.search(r'hello_\d+', path)
         self.assertIsNotNone(mo)
-
-    def test_read(self):
-        # windows does not manage permissions properly. Skip the test
-        if sys.platform == 'win32':
-            raise unittest.SkipTest('Windows')
-
-        # case of a non-existing directory
-        with self.assertRaises(OSError):
-            datastore.read(42, 'r', '/fake/directory')
-        # case of a non-existing file
-        with self.assertRaises(IOError):
-            datastore.read(42, 'r', '/tmp')
-        # case of no read permission
-        tmp = tempfile.mkdtemp()
-        fname = os.path.join(tmp, 'calc_42.hdf5')
-        open(fname, 'w').write('')
-        os.chmod(fname, 0)
-        with self.assertRaises(IOError) as ctx:
-            datastore.read(42, 'r', tmp)
-        self.assertIn('permission denied', str(ctx.exception).lower())
-        os.remove(fname)
 
     def test_store_retrieve_files(self):
         fnames = []

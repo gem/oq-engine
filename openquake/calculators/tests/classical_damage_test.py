@@ -16,15 +16,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import numpy
 from openquake.qa_tests_data.classical_damage import (
     case_1, case_2, case_1a, case_1b, case_1c, case_2a, case_2b, case_3a,
     case_4a, case_4b, case_4c, case_5a, case_6a, case_6b, case_7a, case_7b,
     case_7c, case_8a, case_master)
 from openquake.calculators.export import export
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
-
-import numpy
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 
 aae = numpy.testing.assert_almost_equal
 

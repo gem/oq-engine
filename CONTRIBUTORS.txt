@@ -9,12 +9,12 @@ Code
 Marco Pagani             (@mmpagani)            July 2010
 Andy Smith               (@termie)              August 2010
 Fabian Euchner           (@feuchner)            August 2010
-Gaya Moemke                                     August 2010
+Aurea Mömke              (@amoemke)             August 2010
 Joshua McKenty           (@joshuamckenty)       August 2010
 Philipp Kästli           (@kaestli)             August 2010
 Christopher MacGown      (@ChristopherMacGown)  November 2010
 Lars Butler              (@larsbutler)          November 2010
-Roland Siegert                                  November 2010
+Roland Siegert           (@rolandsiegert)       November 2010
 Andrea Cerisara          (@acerisara)           December 2010
 Marco Milanesi           (@kpanic)              February 2011
 Muharem Hrnjadovic       (@arbeit)              February 2011
@@ -42,9 +42,9 @@ Silvia Canessa           (@silviacanessa)       December 2015
 Nick Ackerley            (@nackerley)           December 2015
 Trevor Allen             (@treviallen)          July 2016
 Jonathan Griffin         (@griffij)             October 2016
-Özkan Kale                                      October 2016
+Özkan Kale               (@ozkankale)           October 2016
 Valerio Poggi            (@klunk386)            March 2017
-Abhineet Gupta                                  April 2017
+Abhineet Gupta           (@abhineetgupta)       April 2017
 Armando Scarpati         (@hascar)              June 2017
 Kendra Johnson           (@kejohnso)            April 2018
 Pablo Heresi             (@pheresi)             August 2018
@@ -80,7 +80,7 @@ Anne Hulsey              (@annehulsey)          July 2022
 Nicole Paul              (@nicolepaul)          May 2023
 Claudio Schill           (@claudio525)          June 2023
 Astha Poudel             (@asthapoudel)         July 2023
-Lana Todorovich          (@LanaTodorovic93)     August 2023
+Lana Todorovic           (@LanaTodorovic93)     August 2023
 Christopher Brooks       (@CB-quakemodel)       September 2023
 Manuela Villani          (@ManuelaVillani)      September 2023
 

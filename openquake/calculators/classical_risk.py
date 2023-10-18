@@ -50,8 +50,8 @@ def classical_risk(riskinputs, oqparam, monitor):
             haz = ri.hazard_getter.get_hazard()
         for taxo, asset_df in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
-                pcurve = haz.extract(rlz)
-                out = crmodel.get_output(asset_df, pcurve)
+                hcurve = haz.extract(rlz)
+                out = crmodel.get_output(asset_df, hcurve)
                 for li, loss_type in enumerate(crmodel.loss_types):
                     # loss_curves has shape (A, C)
                     for i, asset in enumerate(asset_df.to_records()):
@@ -92,7 +92,7 @@ class ClassicalRiskCalculator(base.RiskCalculator):
         """
         oq = self.oqparam
         super().pre_execute()
-        if '_poes' not in self.datastore:  # when building short report
+        if '_rates' not in self.datastore:  # when building short report
             return
         full_lt = self.datastore['full_lt']
         self.realizations = full_lt.get_realizations()

@@ -1,3 +1,3 @@
-#,,,,"generated_by='OpenQuake engine 3.17.0-git5adb6553aa', start_date='2023-05-05T11:01:37', checksum=154257206, investigation_time=1.0, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -72.19554763962729], lat_bin_edges=[2.80136, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], lon=-74.0, lat=4.6, weights=[1.0], rlz_ids=[0]"
+#,,,,"generated_by='OpenQuake engine 3.18.0-gitabf2de85b8', start_date='2023-10-03T06:09:15', checksum=154257206, investigation_time=1.0, mag_bin_edges=[6.0, 7.0], dist_bin_edges=[0.0, 40.0, 80.0, 120.0, 160.0, 200.0], lon_bin_edges=[-75.80445236037271, -72.19554763962729], lat_bin_edges=[2.80136, 6.398639999999999], eps_bin_edges=[-3.0, -1.0, 1.0, 3.0], tectonic_region_types=['Deep Seismicity'], lon=-74.0, lat=4.6, weights=[1.0], rlz_ids=[0]"
 imt,iml,poe,trt,rlz0
-PGA,1.20339E-02,1.00000E-04,Deep Seismicity,1.00472E-04
+PGA,1.20422E-02,1.00000E-04,Deep Seismicity,1.00457E-04

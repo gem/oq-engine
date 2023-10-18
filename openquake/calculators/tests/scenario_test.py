@@ -163,8 +163,8 @@ class ScenarioTestCase(CalculatorTestCase):
         # choosing invalid GMPE
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_15.__file__, 'job.ini')
-        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id=0)"
-                      " CorrelationButNoInterIntraStdDevs", str(ctx.exception))
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, "
+                      "CorrelationButNoInterIntraStdDevs)", str(ctx.exception))
 
     def test_case_16(self):
         # check exposures with exposureFields
@@ -211,13 +211,13 @@ class ScenarioTestCase(CalculatorTestCase):
         aae(new.sig_inter_PGA.unique(), 0)
         aae(new.eps_inter_PGA.mean(), 0.027470892)
 
-    def test_case_21(self):
+    def test_case_21_stations(self):
         # conditioned gmfs
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
 
-    def test_case_21_different_columns(self):
+    def test_case_21_different_columns_stations(self):
         # conditioned gmfs
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_21.__file__, 'job_different_columns.ini',
@@ -270,14 +270,14 @@ class ScenarioTestCase(CalculatorTestCase):
         with self.assertRaises(nrml.DuplicatedID):
             self.run_calc(case_23.__file__, 'job.ini')
 
-    def test_case_24(self):
+    def test_case_24_stations(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         self.run_calc(case_24.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f,
                               ignore_gsd_fields, delta=1E-5)
 
-    def test_case_24_station_with_zero_im_value(self):
+    def test_case_24_station_with_zero_im_value_stations(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_24.__file__,
@@ -289,7 +289,7 @@ class ScenarioTestCase(CalculatorTestCase):
             'stationlist_seismic_zero_im_value.csv',
             str(ctx.exception))
 
-    def test_case_26(self):
+    def test_case_26_stations(self):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)

@@ -21,7 +21,7 @@ import numpy
 from unittest import mock
 from openquake.baselib import parallel, general, config
 from openquake.baselib.python3compat import decode
-from openquake.hazardlib import InvalidFile, nrml
+from openquake.hazardlib import InvalidFile, nrml, calc
 from openquake.hazardlib.source.rupture import get_ruptures
 from openquake.hazardlib.sourcewriter import write_source_model
 from openquake.calculators.views import view, text_table
@@ -36,7 +36,7 @@ from openquake.qa_tests_data.classical import (
     case_50, case_51, case_53, case_54, case_55, case_57,
     case_60, case_61, case_62, case_63, case_64, case_65,
     case_66, case_69, case_70, case_72, case_74, case_75, case_76, case_77,
-    case_78, case_80, case_81, case_82, case_84)
+    case_78, case_80, case_81, case_82, case_83, case_84)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -135,7 +135,7 @@ class ClassicalTestCase(CalculatorTestCase):
              'hazard_map-mean.csv',
              'hazard_uhs-mean.csv'],
             case_18.__file__,
-            kind='stats', delta=1E-7, hazard_calculation_id=hc_id)
+            kind='stats', hazard_calculation_id=hc_id)
         [fname] = export(('realizations', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/realizations.csv', fname)
         self.calc.datastore.close()
@@ -294,7 +294,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # NGA East
         self.assert_curves_ok([
             'hazard_curve-mean-PGV.csv', 'hazard_map-mean.csv'],
-                              case_40.__file__, delta=1E-6)
+                              case_40.__file__)
 
         # checking fullreport can be exported, see https://
         # groups.google.com/g/openquake-users/c/m5vH4rGMWNc/m/8bcBexXNAQAJ
@@ -620,13 +620,13 @@ class ClassicalTestCase(CalculatorTestCase):
         L1 = L // len(oq.imtls)
         branches = self.calc.datastore['full_lt/gsim_lt'].branches
         gsims = [br.gsim for br in branches]
-        df = self.calc.datastore.read_df('_poes')
+        df = self.calc.datastore.read_df('_rates')
         del df['sid']
         for g, gsim in enumerate(gsims):
             curve = numpy.zeros(L1, oq.imt_dt())
             df_for_g = df[df.gid == g]
             poes = numpy.zeros(L)
-            poes[df_for_g.lid] = df_for_g.poe
+            poes[df_for_g.lid] = calc.disagg.to_probs(df_for_g.rate)
             for im in oq.imtls:
                 curve[im] = poes[oq.imtls(im)]
             gs = gsim.__class__.__name__
@@ -690,9 +690,15 @@ class ClassicalTestCase(CalculatorTestCase):
         [f1] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/mean_rates_by_src.csv', f1)
 
+    def test_case_83(self):
+        # Non-ergodic Zhao
+        self.run_calc(case_83.__file__, 'job.ini')
+        [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/hazard_curve-mean.csv', f1)
+
     def test_case_84(self):
         # three sources are identical except for their source_ids.
-        # one is collapsed using reqv, while the other two are specified 
+        # one is collapsed using reqv, while the other two are specified
         # as 'not collapsed' in the job file field reqv_ignore_sources
         self.run_calc(case_84.__file__, 'job.ini')
         [f] = export(('mean_rates_by_src', 'csv'), self.calc.datastore)

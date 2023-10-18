@@ -666,7 +666,7 @@ class ArrayWrapper(object):
             if isinstance(v, h5py.Dataset):
                 arr = v[()]
                 if isinstance(arr, INT):
-                    arr = numpy.arange(arr)  
+                    arr = numpy.arange(arr)
                 elif len(arr) and isinstance(arr[0], bytes):
                     arr = decode(arr)
                 setattr(self, k, arr)
@@ -782,7 +782,7 @@ class ArrayWrapper(object):
                 if sum(tup):
                     out.append(values + tup)
             else:
-                out.append(values + tup)
+                out.append(values + tuple(0 if x == 0 else x for x in tup))
         return pandas.DataFrame(out, columns=fields)
 
     def to_dict(self):
@@ -872,9 +872,13 @@ def _read_csv(fileobj, compositedt):
     dic = {}
     conv = {}
     for name in compositedt.names:
-        dic[name] = dt = compositedt[name]
+        dt = compositedt[name]
+        # NOTE: pandas.read_csv raises a warning and ignores a field dtype if a
+        # converter for the same field is given
         if dt.kind == 'S':  # limit of the length of byte-fields
             conv[name] = check_length(name, dt.itemsize)
+        else:
+            dic[name] = dt
     df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
                          dtype=dic, keep_default_na=False, na_filter=False)
     arr = numpy.zeros(len(df), compositedt)

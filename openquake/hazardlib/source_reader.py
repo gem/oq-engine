@@ -185,6 +185,7 @@ def get_csm(oq, full_lt, dstore=None):
         allargs.append((fname, converter))
     smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
                               h5=dstore if dstore else None).reduce()
+    smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, dstore)
 
@@ -238,7 +239,9 @@ def find_false_duplicates(smdict):
                 raise RuntimeError('Mutually exclusive sources cannot be '
                                    'duplicated: %s', srcid)
             add_checksums(srcs)
-            gb = general.groupby(srcs, checksum)
+            gb = general.AccumDict(accum=[])
+            for src in srcs:
+                gb[checksum(src)].append(src)
             if len(gb) > 1:
                 for i, same_checksum in enumerate(gb.values()):
                     # sources with the same checksum get the same ID
@@ -276,7 +279,9 @@ def fix_geometry_sections(smdict, dstore):
     s2i = {suid: i for i, suid in enumerate(sections)}
     for idx, sec in enumerate(sections.values()):
         sec.suid = idx
-    if dstore and sections:
+    if sections:
+        assert dstore, ('You forgot to pass the dstore to '
+                        'get_composite_source_model')
         with hdf5.File(dstore.tempname, 'w') as h5:
             h5.save_vlen('multi_fault_sections',
                          [kite_to_geom(sec) for sec in sections.values()])
