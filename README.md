@@ -118,7 +118,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="10%" />
-<br /><br /><br />
+
 ## Private Partners
 
 #### Governors
@@ -134,7 +134,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="10%" />
-<br /><br /><br />
+
 #### Advisors
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="10%" align="left" />
