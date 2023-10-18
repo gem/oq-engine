@@ -93,7 +93,7 @@ The term :math:`PGA_{M,SM}` is the PGA corrected by magnitude scaling
 factor (MSF) that serves as proxy for earthquake duration. The :math:`MSF`
 is calculated as per Idriss et al. (1991):
 
-.. math:: MSF = \{10^2.24}{M^2.56} (4)
+.. math:: MSF = {10^2.24}{M^2.56} (4)
 
 Both the :math:`CTI` and the :math:`Vs30` may be derived from digital 
 elevation data. The :math:`Vs30` may be estimated from the topographic 
