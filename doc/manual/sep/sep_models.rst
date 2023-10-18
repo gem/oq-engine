@@ -83,26 +83,3 @@ the causative earthquake.
 The model is quite simple. An explanatory variable :math:`X` is
 calculated as:
 
-.. math:: X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI − 4.784\, ln\, Vs30\ \(2)
-
-and the final probability is the logistic function
-
-.. math:: P(L) = \frac{1}{1+e^X}\ \(3)
-
-The term :math:`PGA_{M,SM}` is the PGA corrected by magnitude scaling
-factor (MSF) that serves as proxy for earthquake duration. The :math:`MSF`
-is calculated as per Idriss et al. (1991):
-
-.. math:: MSF = \{10^2.24}{M^2.56}\ \(4)
-
-Both the :math:`CTI` and the :math:`Vs30` may be derived from digital 
-elevation data. The :math:`Vs30` may be estimated from the topographic 
-slope through the equations of Wald and Allen (2007), which uses a 
-very low resolution DEM compared to modern offerings. As topographic 
-slope tends to increase with increased DEM resolution, the estimated 
-:math:`Vs30` does too; therefore a low-resolution DEM (i.e., a 1 km 
-resolution) must be used to calculate :math:`Vs30`, rather than the 
-30 m DEM that is the current standard. This results in a more accurate 
-:math:`Vs30` for a given slope measurement, but it also means that in 
-an urban setting, sub-km-scale variations in slope are not accounted for.
-
