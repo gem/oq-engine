@@ -177,7 +177,7 @@ TimeoutStopSec=10
 WantedBy=multi-user.target
 '''
 
-PYVER = sys.version_info[:2]
+PYVER = sys.version_info
 PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'darwin': ('macos',),
             'win32': ('win64',)}
