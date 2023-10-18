@@ -106,9 +106,9 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Public Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="10%" float="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="10%" float="left"  />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="10%" align="left"  />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="20%" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20%" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="20%" />
