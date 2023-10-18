@@ -246,9 +246,6 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     for i, imt in enumerate(det_imt):
         det_mce[imt] = max(det_imt[imt], DLLs[i])
         mce[imt] = min(prob_mce[i], det_mce[imt])
-        # FIXME
-        # det_mce[imt] = det_imt[imt]
-        # mce[imt] = min(prob_mce[i], max(det_imt[imt], DLLs[i]))
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
@@ -378,7 +375,6 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     plt.legend(loc="best", fontsize='16')
     plt.ylim([10E-6, 1.1])
     plt.xlim([0.01, 4])
-    # plt.xlim([np.min(imls[i]), 4])
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
     plt.clf()
@@ -407,7 +403,7 @@ def disaggr_by_src(dstore, imtls):
     mask = grouped_m.value.apply(lambda x: sum(x) > 0)
     gm = grouped_m[mask].reset_index()
     grouped_2 = gm.groupby(['imt', 'src_id']).agg(
-        {"value": lambda x: np.array(x)}).reset_index()
+        {"value": np.array}).reset_index()
     total_poe = []
     for wp in grouped_2.value.values:
         wsp = []
