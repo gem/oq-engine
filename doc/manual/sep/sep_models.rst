@@ -123,12 +123,7 @@ Model's prediction can be transformed into binary class (liquefaction
 occurrence or nonoccurrence) via probability threshold value. The authors
 proposed a threshold of 0.2.
 
-
-Bozzoni et al. (2021)
-~~~~~~~~~~~~~~~~~~~~~
-
-and functional form as in Zhu et al. (2015). Regression parameters are
-calibrated based on the liquefaction case histories observed during 
+Calibrated based on the liquefaction case histories observed during 
 seismic events in Europe. The implemented model is associated with the
 ADASYN sampling algorithm. The explanatory variable :math:`X`is computed as:
 
