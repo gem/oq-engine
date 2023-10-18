@@ -80,6 +80,7 @@ HAZUS_LIQUEFACTION_MAP_AREA_PROPORTION_TABLE = {
 
 FT_PER_M = 3.28084
 CM_PER_M = 100
+M_PER_KM = 1000
 NUM = 10 ** 2.24
 
 
@@ -484,8 +485,12 @@ def akhlagi_etal_2021_model_a(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
+
+    dc_m = dc * M_PER_KM
+    dr_m = dr * M_PER_KM
+
     Xg = (pgv_coeff * np.log(pgv) + tri_coeff * np.sqrt(tri)
-          + dc_coeff * np.log(dc + 1) + dr_coeff * np.log(dr + 1)
+          + dc_coeff * np.log(dc_m + 1) + dr_coeff * np.log(dr_m + 1)
           + zwb_coeff * np.sqrt(zwb) + intercept)
     prob_liq = sigmoid(Xg)
     out_class = np.where(prob_liq > 0.4, 1, 0)
@@ -538,8 +543,13 @@ def akhlagi_etal_2021_model_b(
         out_class: Binary output 0 or 1, i.e., liquefaction nonoccurrence
                    or liquefaction occurrence occurrence.
     """
-    Xg = (pgv_coeff * np.log(pgv)  + vs30_coeff * np.log(vs30)
-          + dc_coeff * np.log(dc + 1) + dr_coeff * np.log(dr + 1)
+
+    vs30_m = vs30 * CM_PER_M
+    dc_m = dc * M_PER_KM
+    dr_m = dr * M_PER_KM
+
+    Xg = (pgv_coeff * np.log(pgv)  + vs30_coeff * np.log(vs30_m)
+          + dc_coeff * np.log(dc_m + 1) + dr_coeff * np.log(dr_m + 1)
           + zwb_coeff * np.sqrt(zwb) + intercept)
     prob_liq = sigmoid(Xg)
     out_class = np.where(prob_liq > 0.4, 1, 0)
