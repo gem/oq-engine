@@ -59,7 +59,7 @@ We changed the stochastic part of the algorithm generating the GMFs
 to avoid unwanted correlations in the case of full enumeration (see
 https://github.com/gem/oq-engine/issues/9073).
 
-# hazardlib
+# Work on hazardlib
 
 Marco Pagani fixed a long standing resampling bug affecting
 the simple fault sources and therefore affecting most hazard models;
