@@ -267,8 +267,14 @@ def before_checks(inst, venv, port, remove, usage):
         inst.DBPORT = int(port)
 
     # check python version
-    if PYVER < (3, 8):
-        sys.exit('Error: you need at least Python 3.8, but you have %s' %
+    if sys.platform == 'linux':
+        # requires Python >= 3.8.0
+        if PYVER < (3, 8, 0):
+            sys.exit('Error: you need at least Python 3.8, but you have %s' %
+                     '.'.join(map(str, sys.version_info)))
+    elif PYVER < (3, 10, 6):
+        # requires Python >= 3.10.6
+        sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
@@ -448,19 +454,13 @@ def install(inst, version, repository):
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
-    if inst is user:
-        if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}'
-                  '\\Scripts\\activate.bat')
-        else:
-            print(f'Please add an alias oq={oqreal} in your .bashrc or equiv')
-    elif inst is devel:
-        if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}'
-                  '\\Scripts\\activate.bat')
-        else:
-            print(f'Please activate the venv with source {inst.VENV}'
-                  '/bin/activate')
+    if sys.platform == 'win32' and inst in (user, devel):
+        print(f'Please activate the virtualenv with {inst.VENV}'
+              f'\\Scripts\\activate.bat (in CMD) or {inst.VENV}'
+              '\\Scripts\\activate.ps1 (in PowerShell)')
+    elif inst in (user, devel):
+        print(f'Please activate the venv with source {inst.VENV}'
+              '/bin/activate')
 
     # create systemd services
     if ((inst is server and os.path.exists('/run/systemd/system')) or
