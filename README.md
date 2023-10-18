@@ -111,6 +111,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="10%" align="left" />
+
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="10%" align="left" />
@@ -121,14 +122,18 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 ## Private Partners
 
 #### Governors
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/eucentre.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/FMGlobal.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/hannoverRe.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/munichRe.jpg)
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Allianz_logo.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Aon_logo.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Eucentre_logo.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Hannover_Re.png" width="10%" align="left" />
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/swissRe.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/verisk.png)
-
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/MMC_SEO.jpg" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="10%" align="left" />
+<img src=""https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="10%" align="left" />
 
 #### Advisors
 ![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/axa.png)
