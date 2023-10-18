@@ -143,7 +143,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Oneconcern-topiqs2020-thumbnail-image.png" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="24%"/>
 <br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="18%" />
