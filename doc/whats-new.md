@@ -129,6 +129,10 @@ bug in the event ID. This has been fixed.
 There was a regression in engine 3.17 breaking the disaggregation by source
 for the Japan model. It has been fixed.
 
+We fixed a bug in calculations with a filtered site collection using
+the HM2018CorrelationModel. The model should still be considered
+experimental.
+
 When configured for multiple users the WebUI allowed people to see
 the results produced by other users knowing the URL. This is not
 possible anymore.
