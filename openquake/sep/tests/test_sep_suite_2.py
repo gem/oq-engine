@@ -242,10 +242,11 @@ class test_liquefaction_cali_small(unittest.TestCase):
             pgv=self.pgv, tri=self.sites["tri"], dc=self.sites["dc"], dr=self.sites["dr"], 
             zwb=self.sites["zwb"])
 
-        zlp = np.array([0.949740005, 0.660621806, 0.982407491, 0.972949802, 0.989203293,
-                        0.992850986, 1.58769E-05, 0.526810919, 0.988698807, 0.908844299])
+        zlp = np.array([0.172896, 0.020747,	0.522570, 0.383086,	0.542473, 0.602332,
+                        0.000000, 0.017903,	0.493158, 0.082296
+])
         
-        clq = np.array([1, 1, 1, 1, 1, 1, 0, 1, 1, 1])
+        clq = np.array([0, 0, 1, 0, 1, 1, 0, 0, 1, 0])
 
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
@@ -255,10 +256,10 @@ class test_liquefaction_cali_small(unittest.TestCase):
             pgv=self.pgv, vs30=self.sites["vs30"], dc=self.sites["dc"], dr=self.sites["dr"], 
             zwb=self.sites["zwb"])
 
-        zlp = np.array([0.973289334, 0.974526031, 0.988384878, 0.988594348, 0.990864928,
-                        0.992975958, 0.991752215, 0.989183352, 0.992783854, 0.990591401])
+        zlp = np.array([0.005021, 0.005191, 0.019797, 0.017927, 0.017115, 0.018952,
+                        0.015265, 0.017993, 0.01879 , 0.011857])
         
-        clq = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+        clq = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         
         np.testing.assert_array_almost_equal(prob_liq, zlp)
         np.testing.assert_array_almost_equal(out_class, clq)
