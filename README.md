@@ -106,17 +106,17 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Public Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="20% />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="20% />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="20%" />
 
 ## Private Partners
 
