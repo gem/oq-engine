@@ -127,7 +127,6 @@ proposed a threshold of 0.2.
 Bozzoni et al. (2021)
 ~~~~~~~~~~~~~~~~~~~~~
 
-input variables (i.e., :math:`PGA_{M,SM}`, :math:`CTI`, :math:`Vs30` )
 and functional form as in Zhu et al. (2015). Regression parameters are
 calibrated based on the liquefaction case histories observed during 
 seismic events in Europe. The implemented model is associated with the
