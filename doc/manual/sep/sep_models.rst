@@ -123,6 +123,15 @@ Model's prediction can be transformed into binary class (liquefaction
 occurrence or nonoccurrence) via probability threshold value. The authors
 proposed a threshold of 0.2.
 
+
+Bozzoni et al. (2021)
+~~~~~~~~~~~~~~~~~~~~~
+
+The parametric model developed by Bozzoni et al. (2021), keeps the same 
+input variables (i.e., :math:`PGA_{M,SM}`, :math:`CTI`, :math:`Vs30`)
+and functional form as in Zhu et al. (2015). Regression parameters are
+calibrated based on the liquefaction case histories observed during 
+
 and the probability of liquefaction in calculated using equation (3). 
 
 The adopted probability threshold of 0.57 converts the probability of
@@ -408,13 +417,13 @@ where:
 for soils up to 20 MPa for unfaulted rocks. 
 :math:`c_{r}` is the cohesion provided by the root systems of vegetated 
 hillslopes. Here, we adopted the default value of 0 root cohesion.
-:math:`\alpha [\degrees]` is the slope angle.
+:math:`\alpha [\degree]` is the slope angle.
 :math:`\gamma [kg/m^3]` is the dry_density of the soil or rock. It ranges 
 from ~1500 :math:`kg/m^3` for soils to ~ 2500 - 3200 :math:`kg/m^3`.
 :math:`h [m]` is the vertical height of the failure mass and it corresponds
 to 1/4 of the local relief :math:`H` calculated based on the moving
 window analysis. 
-:math:`\phi' [\degrees]` is the effective friction angle with typical values 
+:math:`\phi' [\degree]` is the effective friction angle with typical values 
 ranging from 30 to 40 degrees.
 :math:`\beta` is the slope's critical angle calculated as:
 .. :math:: \beta = \frac{\alpha + \phi}{0.5} (19)
