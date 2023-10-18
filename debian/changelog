@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug in calculations with a filtered site collection using the
+    HM2018CorrelationModel
   * Internal: raised a clear error message when get_composite_source_model is
    called without passing a datastore in presence of multifault sources
 
