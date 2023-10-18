@@ -365,7 +365,7 @@ class GroundShakingIntensityModel(metaclass=MetaGSIM):
         else:
             ctx = rup  # rup is already a good object
         assert self.compute.__annotations__.get("ctx") is numpy.recarray
-        cmaker = simple_cmaker([self], [imt.string])
+        cmaker = simple_cmaker([self], [imt.string], mags=['%.2f' % rup.mag])
         if not isinstance(ctx, numpy.ndarray):
             ctx = cmaker.recarray([ctx])
         self.compute(ctx, [imt], mean, sig, tau, phi)
