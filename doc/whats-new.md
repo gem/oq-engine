@@ -84,7 +84,7 @@ engine 3.16. Originally it worked only for `truncation_level=0` and
 the general case. Moreover we have added a new parameter
 `maximum_distance_stations` that can be used to filter out stations
 which are very distant from the rupture (in the sense of the `rrup`
-distance`).  We also optimized the calculator which is now faster than
+distance).  We also optimized the calculator which is now faster than
 before.  Many bugs have been ironed out and a few consistency checks
 has been added. It much more reliable than in the past, however it
 should still be considered in experimental status.
