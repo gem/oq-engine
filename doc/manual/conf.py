@@ -340,10 +340,11 @@ latex_elements = {
 
     # Latex figure (float) alignment
     # 'figure_align': 'htbp',
+    'inputenc':     '\\usepackage[utf8]{inputenc}',
     'utf8extra': r"""
 \DeclareUnicodeCharacter{22EE}{\ensuremath{\vdots}}
-\DeclareUnicodeCharacter{2212}{−}
 """,
+    # \DeclareUnicodeCharacter{2212}{−}
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
