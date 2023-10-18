@@ -110,8 +110,6 @@ The CTI (Moore et al., 1991) is a proxy for soil wetness that relates
 the topographic slope of a point to the upstream drainage area of that
 point, through the relation
 
-.. math:: CTI = \ln (d_a / \tan \delta) (4)
-
 where :math:`d_a` is the upstream drainage area per unit width through
 the flow direction (i.e. relating to the DEM resolution). It was
 developed for hillslopes, and is not meaningful in certain very flat
@@ -123,7 +121,7 @@ Model's prediction can be transformed into binary class (liquefaction
 occurrence or nonoccurrence) via probability threshold value. The authors
 proposed a threshold of 0.2.
 
-Calibrated based on the liquefaction case histories observed during 
+calibrated based on the liquefaction case histories observed during 
 seismic events in Europe. The implemented model is associated with the
 ADASYN sampling algorithm. The explanatory variable :math:`X`is computed as:
 
