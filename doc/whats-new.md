@@ -75,6 +75,9 @@ Laurentiu Danciu and Athanasios Papadopoulos contributed a set of
 adjusted Swiss GMPEs for application in the Earthquake Risk Model of
 Switzerland.
 
+Claudio Schill optimized the Kuehn `sigma_mu_adjustment` calculation by
+replacing the multi-step interpolation with a single 2D/3D space interpolation.
+
 # Scenarios with conditioned GMFs
 
 There was a subtantial amount of work on the scenario calculator for
