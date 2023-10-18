@@ -121,12 +121,6 @@ Model's prediction can be transformed into binary class (liquefaction
 occurrence or nonoccurrence) via probability threshold value. The authors
 proposed a threshold of 0.2.
 
-calibrated based on the liquefaction case histories observed during 
-seismic events in Europe. The implemented model is associated with the
-ADASYN sampling algorithm. The explanatory variable :math:`X`is computed as:
-
-.. math:: X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, Vs30 (5)
-
 and the probability of liquefaction in calculated using equation (3). 
 
 The adopted probability threshold of 0.57 converts the probability of
