@@ -180,14 +180,6 @@ def count_ruptures(src):
     return {src.source_id: src.count_ruptures()}
 
 
-def strip_zeros(gmf_df):
-    # remove the rows with all zero values
-    df = gmf_df[gmf_df.columns[3:]]  # strip eid, sid, rlz
-    assert str(df.gmv_0.dtype) == 'float32', df.gmv_0.dtype
-    ok = df.to_numpy().sum(axis=1) > 0
-    return gmf_df[ok]
-
-
 def get_computer(cmaker, proxy, rupgeoms, srcfilter,
                  station_data, station_sitecol):
     """
@@ -251,15 +243,22 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
     se_dt = sig_eps_dt(oq.imtls)
     sig_eps = []
     times = []  # rup_id, nsites, dt
-    fmon = monitor('filtering ruptures', measuremem=False)
+    fmon = monitor('instantiating GmfComputer', measuremem=False)
+    mmon = monitor('computing mean_stds', measuremem=False)
     cmon = monitor('computing gmfs', measuremem=False)
+    umon = monitor('updating gmfs', measuremem=False)
     rmon = monitor('reading mea,tau,phi', measuremem=False)
     max_iml = oq.get_max_iml()
-    scenario = 'scenario' in oq.calculation_mode
+    cmaker.scenario = 'scenario' in oq.calculation_mode
     with dstore:
-        sitecol = dstore['sitecol']
-        if 'complete' in dstore:
-            sitecol.complete = dstore['complete']
+        if dstore.parent:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore.parent:
+                sitecol.complete = dstore.parent['complete']
+        else:
+            sitecol = dstore['sitecol']
+            if 'complete' in dstore:
+                sitecol.complete = dstore['complete']
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         rupgeoms = dstore['rupgeoms']
@@ -275,28 +274,28 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                     # skip this rupture
                     continue
             if hasattr(computer, 'station_data'):  # conditioned GMFs
-                assert scenario
-                df = computer.compute_all(dstore, sig_eps, max_iml, cmon, rmon)
+                assert cmaker.scenario
+                df = computer.compute_all(dstore, rmon, cmon, umon)
             else:  # regular GMFs
-                df = computer.compute_all(scenario, sig_eps, max_iml, cmon)
+                with mmon:
+                    mean_stds = cmaker.get_mean_stds([computer.ctx])
+                df = computer.compute_all(mean_stds, max_iml, cmon, umon)
+            sig_eps.append(computer.build_sig_eps(se_dt))
             dt = time.time() - t0
             times.append((proxy['id'], computer.ctx.rrup.min(), dt))
             alldata.append(df)
     if sum(len(df) for df in alldata):
-        gmfdata = strip_zeros(pandas.concat(alldata))
+        gmfdata = pandas.concat(alldata)
     else:
         gmfdata = {}
     times = numpy.array([tup + (monitor.task_no,) for tup in times], rup_dt)
     times.sort(order='rup_id')
     if not oq.ground_motion_fields:
         gmfdata = {}
-    return dict(gmfdata=todict(gmfdata), times=times,
-                sig_eps=numpy.array(sig_eps, se_dt))
-
-def todict(dframe):
-    if len(dframe) == 0:
-        return {}
-    return {k: dframe[k].to_numpy() for k in dframe.columns}
+    if len(gmfdata) == 0:
+        return dict(gmfdata={}, times=times, sig_eps=())
+    return dict(gmfdata={k: gmfdata[k].to_numpy() for k in gmfdata.columns},
+                times=times, sig_eps=numpy.concatenate(sig_eps, dtype=se_dt))
 
 
 def filter_stations(station_df, complete, rup, maxdist):
@@ -349,19 +348,18 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     if "station_data" in oq.inputs:
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
+        cmaker.scenario = True
         maxdist = oq.maximum_distance(cmaker.trt)
         srcfilter = SourceFilter(sitecol.complete, maxdist)
         computer = get_computer(
             cmaker, proxy, rupgeoms, srcfilter,
             station_data, station_sites)
-        ms, sids = computer.get_ms_and_sids()
-        del proxy.geom  # to reduce data transfer
-        dstore.create_dset('conditioned/sids', sids)
-        keys = ['mea', 'sig', 'tau', 'phi']
-        for g, gsim in enumerate(ms):
-            for key, val in zip(keys, ms[gsim]):
+        mean_covs = computer.get_mean_covs()
+        for key, val in zip(['mea', 'sig', 'tau', 'phi'], mean_covs):
+            for g in range(len(cmaker.gsims)):
                 name = 'conditioned/gsim_%d/%s' % (g, key)
-                dstore.create_dset(name, val)
+                dstore.create_dset(name, val[g])
+        del proxy.geom  # to reduce data transfer
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
     if save_tmp:	

@@ -123,9 +123,14 @@ def get_distances(rupture, sites, param, dcache=None):
         dist = rupture.surface.get_azimuth(sites)
     elif param == 'azimuth_cp':
         dist = rupture.surface.get_azimuth_of_closest_point(sites)
-    elif param == 'closest_point':
+    elif param == 'closest_point' or param == 'clon' or param == 'clat':
         t = rupture.surface.get_closest_points(sites)
-        dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+        if param == 'closest_point':
+            dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+        if param == 'clon':
+            dist = numpy.reshape([t.lons], (len(t.lons), 1))  # shape (N, 1)
+        if param == 'clat':
+            dist = numpy.reshape([t.lats], (len(t.lons), 1))  # shape (N, 1)  
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)

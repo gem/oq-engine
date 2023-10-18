@@ -72,7 +72,7 @@ Geospatial models
 ^^^^^^^^^^^^^^^^^
 
 Zhu et al. (2015)
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 The model by Zhu et al. (2015) is a logistic regression model requiring
 specification of the :math:`Vs30 [m/s]`, the Compound Topographic Index 

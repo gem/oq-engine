@@ -1,4 +1,21 @@
+  [Claudio Schill]
+  * Optimized the Kuehn sigma_mu_adjustment calculation by replacing the
+    multi-step interpolation with a single 2D/3D space interpolation
+
   [Michele Simionato]
+  * Fixed a bug in calculations with a filtered site collection using the
+    HM2018CorrelationModel
+  * Internal: raised a clear error message when get_composite_source_model is
+   called without passing a datastore in presence of multifault sources
+
+  [Christopher Brooks]
+  * Added non-ergodic implementation of Zhao et al. (2016) GMM (ray-tracing
+    of travel paths through anelastically attenuating volcanic regions and
+    subsequent adjustment of the path term based on this distance to reduce
+    the predicted ground-motion).
+
+  [Michele Simionato]
+  * Optimized (2x) the generation of ground motion fields
   * Internal: using a single random number generator inside the GmfComputer
     and not one for each gsim, causing an artificial correlation between gsims
   * Implemented `maximum_distance_stations` and fixed another site
@@ -37,7 +54,7 @@
     calculations following event_based_risk calculations
   * Fixed a bug in avg_gmf causing the average to be computed incorrectly
   * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
-    after 7 years of deprecation
+    after nearly 5 years of deprecation
 
   [Paolo Tormene]
   * In the WebUI users are not allowed to see other users outputs by default
