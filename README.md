@@ -118,9 +118,10 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="15%" />
 
+
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="15%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" />
 
 
 ## Private Partners
