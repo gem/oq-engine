@@ -336,7 +336,7 @@ latex_elements = {
     'pointsize': '12pt',
 
     # Additional stuff for the LaTeX preamble.
-    # 'preamble': '',
+    'preamble': '\\usepackage{gensymb}',
 
     # Latex figure (float) alignment
     # 'figure_align': 'htbp',
