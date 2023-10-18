@@ -119,6 +119,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="10%" />
 
+
 ## Private Partners
 
 #### Governors
@@ -135,6 +136,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="10%" />
 
+
 #### Advisors
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="10%" align="left" />
@@ -145,17 +147,14 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Associate Partners
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/apdim.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/cssc.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/EERI_GEM.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/iaee.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/iaspei.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/IRDRICSU.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/istructe.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/oecd.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/undrr.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/unesco.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/usgs.jpg)
+<img src="" width="10%" align="left" />
+<img src="" width="10%" align="left" />
+<img src="" width="10%" align="left" />
+<img src="" width="10%" align="left" />
+<img src="" width="10%" align="left" />
+<img src="" width="10%" align="left" />
+<img src="" width="10%" align="left" />
+<img src="" width="10%" align="left" />
 
 
 ## Project Partners
