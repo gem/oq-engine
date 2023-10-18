@@ -1,5 +1,5 @@
 Version 3.18 is the culmination of 3 months of work involving around 200
-pull requests. It is aimed to users wanting the latest features
+pull requests. It is aimed at users wanting the latest features
 and maximum performance. Users valuing stability may want to stay with
 the LTS release instead (currently at version 3.16.7).
 
@@ -14,7 +14,7 @@ A summary is given below.
 After years of effort, we finally managed to get a drastic reduction
 in memory consumption in classical calculations. For instance, in
 cluster situations, instead of requiring 128 GB for the master node,
-now we require 1/3th of that. Moreover, for large calculations, now
+now we require ⅓rd of that. Moreover, for large calculations, now
 the worker nodes require nearly half of the memory that was required
 before. This was achieved by implementing an automatic parallel tiling
 mechanism invisible to the user.
@@ -23,9 +23,9 @@ There was an even more impressive memory reduction in event based
 calculations, which now requires 2-3 times less memory than
 before. This is particularly important on small machines (i.e. desktop
 computers and mini pc) since they tend to have many threads and not
-enough memory. Right now all of the models in GEM's mosaic can be ran
+enough memory. Right now all of the models in GEM's hazard mosaic can be run
 on a machine with 16 virtual cores and 64 GB of RAM and for most models even
-32 GB of RAM are sufficient. Earthquake computing is more accessible
+32 GB of RAM is sufficient. Earthquake computing is more accessible
 than ever.
 
 Related to the memory saving, there was also a substantial reduction
@@ -92,7 +92,7 @@ should still be considered in experimental status.
 # New features: AEP/OEP curves, infrastructure risk, liquefaction
 
 At user request, we extended the event based risk calculator to
-produce Aggregate Exceedance Probability (AEP) or Occurrence
+produce Aggregate Exceedance Probability (AEP) and Occurrence
 Exceedance Probability (OEP) loss curves (see
 https://github.com/gem/oq-engine/issues/8971). The way to enable the
 feature is to add the line `aggregate_loss_curves_types = aep`
@@ -114,8 +114,8 @@ RashidianBaise2020Liquefaction, AllstadtEtAl2022Liquefaction,
 AkhlagiEtAl2021LiquefactionA and AkhlagiEtAl2021LiquefactionB
 Bozzoni2021LiquefactionEurope, TodorovicSilva2022NonParametric.
 
-The models are based on a machine learning approach and therefore
-now the engine supports the onnx runtime.
+The TodorovicSilva2022NonParametric model is based on a machine 
+learning approach and therefore now the engine supports the onnx runtime.
 
 # Bug fixes and better error messages
 
@@ -171,9 +171,10 @@ code from the USGS (the `rtgmpy` library).
 
 # Other
 
-After more than 4 years since their deprecation, we have finally removed
-the XML outputs for hazard curves, hazard maps and uniform hazard spectra.
-They can only be exported in CSV format.
+After more than four years since their 
+[deprecation](https://github.com/gem/oq-engine/pull/4524), 
+we have finally removed the XML outputs for hazard curves, hazard maps 
+and uniform hazard spectra. They can only be exported in CSV format.
 
 We improved the universal installer to use the `--trusted-host`
 feature: this is necessary for corporate users with a firewall
