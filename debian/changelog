@@ -1,3 +1,7 @@
+  [Claudio Schill]
+  * Optimized the Kuehn sigma_mu_adjustment calculation by replacing the
+    multi-step interpolation with a single 2D/3D space interpolation
+
   [Michele Simionato]
   * Fixed a bug in calculations with a filtered site collection using the
     HM2018CorrelationModel
