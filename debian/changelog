@@ -48,7 +48,7 @@
     calculations following event_based_risk calculations
   * Fixed a bug in avg_gmf causing the average to be computed incorrectly
   * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
-    after 7 years of deprecation
+    after nearly 5 years of deprecation
 
   [Paolo Tormene]
   * In the WebUI users are not allowed to see other users outputs by default
