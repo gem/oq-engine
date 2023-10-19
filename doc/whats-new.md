@@ -176,16 +176,26 @@ There was a substantial amount of work on the AELO project. The engine
 is finally able to compute the ASCE-41 and ASCE-7 parameters by using
 code from the USGS (the `rtgmpy` library).
 
-# Other
+# Deprecations and removals
 
 After more than four years since their 
 [deprecation](https://github.com/gem/oq-engine/pull/4524), 
 we have finally removed the XML outputs for hazard curves, hazard maps 
 and uniform hazard spectra. They can only be exported in CSV format.
 
+We removed support for Python 3.8 and Python 3.9 on Windows and macOS
+since they had various issues and were a big maintenance burden. The
+only versions supported are Python 3.10.X, with X>=6.
+
+In linux we still support Python 3.8, Python 3.9 and Python 3.10,
+but Python 3.8 is deprecated and will be removed in the near future.
+In the next release we will start supporting Python 3.11.
+
+# Other
+
 We improved the universal installer to use the `--trusted-host`
-feature: this is necessary for corporate users with a firewall
-forbidding downloads from PyPI.
+feature: this is necessary for corporate users forbidding downloads
+from PyPI.
 
 We also changed the universal installer to read the requirements
 from the stable version and not from master, unless --version
