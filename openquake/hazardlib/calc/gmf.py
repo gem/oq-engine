@@ -171,12 +171,8 @@ class GmfComputer(object):
         Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
         """
         self.rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
-        if isinstance(self.ebrupture, dict):  # with keys e0, n_occ, seed
-            dic = self.ebrupture
-        else:
-            dic = vars(self.ebrupture)
-        eid, rlz = get_eid_rlz(dic, self.rlzs, self.cmaker.scenario)
-        self.eid, self.rlz = eid, rlz
+        self.eid, self.rlz = get_eid_rlz(
+            vars(self.ebrupture), self.rlzs, self.cmaker.scenario)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
