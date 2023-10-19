@@ -202,7 +202,7 @@ class AmplifierTestCase(unittest.TestCase):
                       index='ampcode')
         with self.assertRaises(ValueError) as ctx:
             Amplifier(self.imtls, df, self.soil_levels)
-        self.assertEqual(str(ctx.exception), "Found duplicates for (b'A',)")
+        self.assertEqual(str(ctx.exception), "Found duplicates for b'A'")
 
     def test_resampling(self):
         path = os.path.dirname(os.path.abspath(__file__))
