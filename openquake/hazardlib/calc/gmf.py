@@ -398,7 +398,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         rupture, source_id=0, trt_smr=0, n_occ=realizations, id=0, e0=0)
     ebr.seed = seed
     gc = GmfComputer(ebr, sites, cmaker, correlation_model)
-    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]  # shape (M, N)
+    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]  # shape (4, M, N)
     gc.init_eid_rlz_sig_eps()
     res = gc.compute(gsim, U32([0]), mean_stds,
                      numpy.random.default_rng(seed))
