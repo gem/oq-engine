@@ -210,10 +210,6 @@ def get_requirements_branch(version, inst, from_fork):
     """
     # in actions triggered by forks we want requirements to be taken from
     # master
-
-    # FIXME: remove following line
-    print(f'got_requirements_branch: from_fork={from_fork}')
-
     if from_fork:
         return 'master'
     # in cases such as 'install.py user', for instance while running tests from
@@ -547,8 +543,8 @@ if __name__ == '__main__':
     parser.add_argument("--dbport",
                         help="DbServer port (default 1907 or 1908)")
     parser.add_argument("--from_fork", dest='from_fork', action='store_true',
-                        help=("Set this if installing the engine from"
-                              " an action triggered by a fork"))
+                        help=("This flag should be set when installing the"
+                              " engine from an action triggered by a fork"))
     parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
