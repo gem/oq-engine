@@ -523,8 +523,8 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         if pga is None or pgv is None:
             raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the AllstadtEtAl2022Liquefaction model")
         
-        out_class, out_prob = todorovic_silva_2022_nonparametric_general(pga=gmf,
-                    pgv=gmf, vs30=sites.vs30, dw=sites.dw, wtd=sites.gwd, precip=sites.precip)
+        out_class, out_prob = todorovic_silva_2022_nonparametric_general(pga=pga,
+                    pgv=pgv, vs30=sites.vs30, dw=sites.dw, wtd=sites.gwd, precip=sites.precip)
         out.append(out_class)
         out.append(out_prob)
         return out
