@@ -542,9 +542,10 @@ if __name__ == '__main__':
                         help="version to install (default stable)")
     parser.add_argument("--dbport",
                         help="DbServer port (default 1907 or 1908)")
+    # NOTE: This flag should be set when installing the engine from an action
+    #       triggered by a fork
     parser.add_argument("--from_fork", dest='from_fork', action='store_true',
-                        help=("This flag should be set when installing the"
-                              " engine from an action triggered by a fork"))
+                        help=argparse.SUPPRESS)
     parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
