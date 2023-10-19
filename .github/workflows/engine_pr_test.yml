@@ -129,7 +129,11 @@ jobs:
     - name: Install dependencies
       run: |
         echo "FROM_FORK: $FROM_FORK"
-        python install.py devel --version=$GITHUB_HEAD_REF --from_fork=$FROM_FORK
+        if [[ $FROM_FORK == "true" ]]; then
+          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+        else
+          python install.py devel --version=$GITHUB_HEAD_REF
+        fi
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate
