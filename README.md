@@ -163,17 +163,20 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Project Partners
 
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/edf_governing_board_logo.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Servicio-Geol%C3%B3gico-Colombiano.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Sura-new-logos-website.png" width="18%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Sura-new-logos-website.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/edf_governing_board_logo.png" width="18%" />
 
 
 ## Products Distribution Partners
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/prod_distr/imagecat.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/prod_distr/nasdaq.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/prod_distr/verisk.png)
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" />
+<img src=""https://cloud-storage.globalquakemodel.org/public/partners-logo/nasdaq.png width="18%" align="left" />
+<img src=""https://cloud-storage.globalquakemodel.org/public/partners-logo/imagecat_logo_transparent_600x162.png width="18%" align="left" />
+<img src=""https://cloud-storage.globalquakemodel.org/public/partners-logo/dClimate_logo_semibold_Logo.jpg width="18%" align="left" />
+<img src=""https://cloud-storage.globalquakemodel.org/public/partners-logo/eigenrisk-logo.png width="18%" />
 
 ***
 
