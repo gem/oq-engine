@@ -59,6 +59,8 @@ def _collapse_res(rdic):
 def _matrix(matrices, num_trts, num_mag_bins):
     # convert a dict trti, magi -> matrix into a single matrix
     trti, magi = next(iter(matrices))
+    if trti >= num_trts:
+        raise IndexError('please upgrade to engine >= 3.17')
     mat = numpy.zeros((num_trts, num_mag_bins) + matrices[trti, magi].shape)
     for trti, magi in matrices:
         mat[trti, magi] = matrices[trti, magi]
