@@ -102,7 +102,7 @@ jobs:
           pip install -U pip
           pip install -r ./requirements-py38-linux64.txt
           pip install sphinx==6.2 pydata-sphinx-theme
-          pip install --upgrade myst-parser
+          pip install --upgrade myst-parser nbsphinx
       - name: Install oq engine
         run: |
           pip install -e .[dev]

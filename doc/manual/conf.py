@@ -31,7 +31,12 @@ from openquake import engine
 extensions = [
     'sphinx.ext.mathjax',
     'myst_parser',
+    'nbsphinx',
 ]
+
+nbsphinx_custom_formats = {
+    ".md": ["jupytext.reads", {"fmt": "mystnb"}],
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

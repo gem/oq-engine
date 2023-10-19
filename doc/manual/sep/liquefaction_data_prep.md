@@ -1,6 +1,3 @@
----
-orphan: true
----
 # Site characterization for probabilistic liquefaction analysis
 
 There are many methods to calculate the probabilities and displacements that result from liquefaction.  In OpenQuake, we have several models, the methods developed by the US Federal Emergency Management Agency through their HAZUS project, and geospatial methods recently developed by [Zhu et al. (2015)][z15], [Zhu et al. (17)][z17], [Rashidian et al. (2020)][rb20], [Akhlagi et al. (2021)][akh21], [Bozzoni et al. (2021)][b21],[Allstadt et al. (2022)][all22], [Todorovic and Silva (2022)][ts22].
