@@ -114,7 +114,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="20%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="25%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="22%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" />
 
@@ -148,7 +148,7 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/IASPEI_logo_new_1.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/iaee.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Usgs-logo.jpg" width="18%" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNESCO_logo_symbol.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNESCO_logo_symbol.png" width="14%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="12%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/irdr_icsu_logo_300.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="30%" />
