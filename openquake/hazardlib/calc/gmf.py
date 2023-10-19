@@ -212,6 +212,7 @@ class GmfComputer(object):
         if max_iml is None:
             M = len(self.cmaker.imts)
             max_iml = numpy.full(M, numpy.inf, float)
+
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
         data['gmv'].append(array)
 
@@ -373,7 +374,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         Float, number of standard deviations for truncation of the intensity
         distribution
     :param realizations:
-        Integer number of GMF realizations to compute.
+        Integer number of GMF simulations to compute.
     :param correlation_model:
         Instance of correlation model object. See
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which case
@@ -384,19 +385,21 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     :returns:
         Dictionary mapping intensity measure type objects (same
         as in parameter ``imts``) to 2d numpy arrays of floats,
-        representing different realizations of ground shaking intensity
+        representing different simulations of ground shaking intensity
         for all sites in the collection. First dimension represents
-        sites and second one is for realizations.
+        sites and second one is for simulations.
     """
     cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: U32([0])},
                           dict(truncation_level=truncation_level,
-                               imtls={str(imt): [1] for imt in imts}))
+                               imtls={str(imt): numpy.array([0.])
+                                      for imt in imts}))
     cmaker.scenario = True
     ebr = EBRupture(
         rupture, source_id=0, trt_smr=0, n_occ=realizations, id=0, e0=0)
     ebr.seed = seed
     gc = GmfComputer(ebr, sites, cmaker, correlation_model)
-    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
+    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]  # shape (M, N)
+    gc.init_eid_rlz_sig_eps()
     res = gc.compute(gsim, U32([0]), mean_stds,
                      numpy.random.default_rng(seed))
     return {imt: res[:, m] for m, imt in enumerate(gc.imts)}
