@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2022 GEM Foundation
+# Copyright (C) 2014-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -37,7 +37,7 @@ Module exports :class:`KuehnEtAl2020SInter`,
 import numpy as np
 import os
 import h5py
-from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import RegularGridInterpolator, interp1d
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
 from openquake.hazardlib import const
@@ -426,8 +426,9 @@ def get_basin_response_term(C, region, vs30, z_value):
                                      _get_ln_z_ref(CZ, vs30[mask]))
     else:
         brt[mask] = c11 + c12 * (np.log(z_value[mask]) -
-                             _get_ln_z_ref(CZ, vs30[mask]))
+                                 _get_ln_z_ref(CZ, vs30[mask]))
     return brt
+
 
 def get_partial_derivative_site_pga(C, vs30, pga1100):
     """
@@ -443,6 +444,7 @@ def get_partial_derivative_site_pga(C, vs30, pga1100):
         (1.0 / (pga1100 + CONSTS["c"] * (vnorm ** CONSTS["n"])))
         )
     return dfsite_dlnpga
+
 
 def get_nonlinear_stddevs(C, C_PGA, imt, vs30, pga1100):
     """
@@ -597,30 +599,41 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
     :returns:
         sigma_mu for the scenarios (numpy.ndarray)
     """
-
-    # No correction factor needed
     if not model:
-        return 0.0
+        return np.zeros_like(mag)
+
+    # Get the correct sigma_mu model
+    is_SA = imt.string not in "PGA PGV"
+    sigma_mu_model = model["SA"] if is_SA else model[imt.string]
+
+    model_m = model["M"]
+    model_r = model["R"]
+
+    # Extend the sigma_mu_model as needed
+    # Prevents having to deal with values
+    # outside the model range manually
+    if np.any(mag > model["M"][-1]):
+        sigma_mu_model = np.concatenate(
+            (sigma_mu_model, sigma_mu_model[-1, :][np.newaxis, :]), axis=0)
+        model_m = np.concatenate((model_m, [mag.max()]), axis=0)
+    if np.any(mag < model["M"][0]):
+        sigma_mu_model = np.concatenate(
+            (sigma_mu_model[0, :][np.newaxis, :], sigma_mu_model), axis=0)
+        model_m = np.concatenate(([mag.min()], model_m), axis=0)
+    if np.any(rrup > model["R"][-1]):
+        sigma_mu_model = np.concatenate(
+            (sigma_mu_model, sigma_mu_model[:, -1][:, np.newaxis]), axis=1)
+        model_r = np.concatenate((model_r, [rrup.max()]), axis=0)
+    if np.any(rrup < model["R"][0]):
+        sigma_mu_model = np.concatenate(
+            (sigma_mu_model[:, 0][:, np.newaxis], sigma_mu_model), axis=1)
+        model_r = np.concatenate(([rrup.min()], model_r), axis=0)
+
     if imt.string in "PGA PGV":
-        # PGA and PGV are 2D arrays of dimension [nmags, ndists]
-        sigma_mu = model[imt.string]
-        if mag <= model["M"][0]:
-            sigma_mu_m = sigma_mu[0, :]
-        elif mag >= model["M"][-1]:
-            sigma_mu_m = sigma_mu[-1, :]
-        else:
-            intpl1 = interp1d(model["M"], sigma_mu, axis=0)
-            sigma_mu_m = intpl1(mag)
-        # Linear interpolation with distance
-        intpl2 = interp1d(model["R"], sigma_mu_m, bounds_error=False,
-                          fill_value=(sigma_mu_m[0], sigma_mu_m[-1]))
-        return intpl2(rrup)
-    # In the case of SA the array is of dimension [nmags, ndists, nperiods]
-    # Get values for given magnitude
-    if mag <= model["M"][0]:
-        sigma_mu_m = model["SA"][0, :, :]
-    elif mag >= model["M"][-1]:
-        sigma_mu_m = model["SA"][-1, :, :]
+        # Linear interpolation
+        interp = RegularGridInterpolator(
+            (model_m, model_r), sigma_mu_model, bounds_error=True,)
+        sigma_mu = interp(np.stack((mag, rrup), axis=1))
     else:
         model_t = model["periods"]
 
@@ -641,6 +654,7 @@ def get_sigma_mu_adjustment(model, imt, mag, rrup):
             np.stack((mag, rrup, np.ones_like(mag) * np.log(imt.period)), axis=1))
 
     return sigma_mu
+
 
 def get_backarc_term(trt, imt, ctx):
 
@@ -683,6 +697,7 @@ def get_backarc_term(trt, imt, ctx):
     else:
         f_faba = np.zeros_like(dists)
         return f_faba
+
 
 class KuehnEtAl2020SInter(GMPE):
     """
@@ -763,8 +778,8 @@ class KuehnEtAl2020SInter(GMPE):
     #: Defined for a reference velocity of 1100 m/s
     DEFINED_FOR_REFERENCE_VELOCITY = 1100.0
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, which_sigma = "Original", **kwargs):
-        super().__init__(which_sigma = which_sigma, **kwargs)
+    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, which_sigma = "Origional", **kwargs):
+        super().__init__(which_sigma = "Origional", **kwargs)
         # Check that if a region is input that it is one of the ones
         # supported by the model
         assert region in SUPPORTED_REGIONS, "Region %s not defined for %s" %\
@@ -778,9 +793,9 @@ class KuehnEtAl2020SInter(GMPE):
             self.REQUIRES_SITES_PARAMETERS = \
                  self.REQUIRES_SITES_PARAMETERS.union({"z2pt5", })
         elif self.region in ("TWN"):
-            # If region is NZL or TWN then the GMPE needs Z1.0
+            # If region is TWN then the GMPE needs Z1.0
             self.REQUIRES_SITES_PARAMETERS = \
-                 self.REQUIRES_SITES_PARAMETERS.union({"z1pt0", })
+                self.REQUIRES_SITES_PARAMETERS.union({"z1pt0", })
         else:
             pass
 
@@ -820,8 +835,10 @@ class KuehnEtAl2020SInter(GMPE):
         for imt in imts:
             if ("PGA" in imt.string) or (("SA" in imt.string) and
                                          (imt.period <= 0.1)):
-                pga_soil = get_mean_values(C_PGA, self.region, trt, m_b,
-                                           ctx, pga1100) + get_backarc_term(trt, PGA(), ctx)
+                pga_soil = get_mean_values(
+                    C_PGA, self.region, trt, m_b,
+                    ctx, pga1100) \
+                        + get_backarc_term(trt, PGA(), ctx)
                 break
 
         for m, imt in enumerate(imts):
@@ -834,18 +851,22 @@ class KuehnEtAl2020SInter(GMPE):
                 mean[m] = pga_soil
             elif "SA" in imt.string and imt.period <= 0.1:
                 # If Sa (T) < PGA for T <= 0.1 then set mean Sa(T) to mean PGA
-                mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100) + get_backarc_term(trt, imt, ctx)
+                mean[m] = get_mean_values(
+                    C, self.region, trt, m_break,
+                    ctx, pga1100) \
+                        + get_backarc_term(trt, imt, ctx)
                 idx = mean[m] < pga_soil
                 mean[m][idx] = pga_soil[idx]
             else:
                 # For PGV and Sa (T > 0.1 s)
-                mean[m] = get_mean_values(C, self.region, trt, m_break,
-                                          ctx, pga1100) + get_backarc_term(trt, imt, ctx)
+                mean[m] = get_mean_values(
+                    C, self.region, trt, m_break,
+                    ctx, pga1100) \
+                        + get_backarc_term(trt, imt, ctx)
             # Apply the sigma mu adjustment if necessary
             if self.sigma_mu_epsilon:
-                #[mag] = np.unique(np.round(ctx.mag, 2))
-                sigma_mu_adjust = get_sigma_mu_adjustment(self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
+                sigma_mu_adjust = get_sigma_mu_adjustment(
+                    self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
             if self.which_sigma == "Modified":
@@ -877,8 +898,6 @@ class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
 
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'backarc'}
 
 
 # For the aliases use the verbose form of the region name
