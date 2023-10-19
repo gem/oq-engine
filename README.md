@@ -110,12 +110,10 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="18%" align="left"  />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="14%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="19%" />
-<br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="25%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="20%" />
-<br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="25%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="10%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" />
@@ -128,12 +126,10 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Aon_logo.png" width="14%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Eucentre_logo.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Hannover_Re.png" width="20%" />
-<br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="25%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" />
-<br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/MMC_SEO.jpg" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="12%" />
@@ -144,7 +140,6 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Oneconcern-topiqs2020-thumbnail-image.png" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="24%"/>
-<br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="18%" />
 
@@ -175,7 +170,6 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/imagecat_logo_transparent_600x162.png" width="22%" />
-<br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/dClimate_logo_semibold_Logo.jpg" width="15%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eigenrisk-logo.png" width="18%" />
 
