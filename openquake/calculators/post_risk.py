@@ -401,6 +401,7 @@ def build_reinsurance(dstore, num_events):
                      units=dstore['cost_calculator'].get_units(
                          oq.loss_types))
 
+
 @base.calculators.add('post_risk')
 class PostRiskCalculator(base.RiskCalculator):
     """
@@ -550,8 +551,7 @@ class PostRiskCalculator(base.RiskCalculator):
                         '%s != %s\nsee %s', lt, agg, avg, url)
 
         # save agg_curves-stats
-        if (self.R > 1 and 'aggcurves' in self.datastore and
-                'risk' in oq.calculation_mode):
+        if (self.R > 1 and 'aggcurves' in self.datastore):
             save_curve_stats(self.datastore)
 
 
