@@ -96,70 +96,85 @@ class KuehnEtAl2020SSlabTestCase(BaseGSIMTestCase):
 
 
 class KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
-    FILES = {
-        "USA-AK": {
+    FILES = [
+        {
+            "region": "USA-AK",
             "files": [
-            "kuehn2020/KUEHN2020_{}_ALASKA_MEAN.csv",
-            "kuehn2020/KUEHN2020_{}_ALASKA_TOTAL_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_ALASKA_INTER_EVENT_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_ALASKA_INTRA_EVENT_STDDEV.csv"],
+                "kuehn2020/KUEHN2020_{}_ALASKA_MEAN.csv",
+                "kuehn2020/KUEHN2020_{}_ALASKA_TOTAL_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_ALASKA_INTER_EVENT_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_ALASKA_INTRA_EVENT_STDDEV.csv"],
             "sigma": "Origional",
         },
-        "CAS": {
+        {
+            "region": "CAS",
             "files": [
-            "kuehn2020/KUEHN2020_{}_CASCADIA_MEAN.csv",
-            "kuehn2020/KUEHN2020_{}_CASCADIA_TOTAL_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_CASCADIA_INTER_EVENT_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_CASCADIA_INTRA_EVENT_STDDEV.csv"],
+                "kuehn2020/KUEHN2020_{}_CASCADIA_MEAN.csv",
+                "kuehn2020/KUEHN2020_{}_CASCADIA_TOTAL_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_CASCADIA_INTER_EVENT_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_CASCADIA_INTRA_EVENT_STDDEV.csv"],
             "sigma": "Origional",
         },
-        "CAM": {
+        {
+            "region": "CAM",
             "files": [
-            "kuehn2020/KUEHN2020_{}_CAM_MEAN.csv",
-            "kuehn2020/KUEHN2020_{}_CAM_TOTAL_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_CAM_INTER_EVENT_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_CAM_INTRA_EVENT_STDDEV.csv"],
+                "kuehn2020/KUEHN2020_{}_CAM_MEAN.csv",
+                "kuehn2020/KUEHN2020_{}_CAM_TOTAL_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_CAM_INTER_EVENT_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_CAM_INTRA_EVENT_STDDEV.csv"],
             "sigma": "Origional",
         },
-        "JPN": {
+        {
+            "region": "JPN",
             "files": [
-            "kuehn2020/KUEHN2020_{}_JAPAN_MEAN.csv",
-            "kuehn2020/KUEHN2020_{}_JAPAN_TOTAL_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_JAPAN_INTER_EVENT_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_JAPAN_INTRA_EVENT_STDDEV.csv"],
+                "kuehn2020/KUEHN2020_{}_JAPAN_MEAN.csv",
+                "kuehn2020/KUEHN2020_{}_JAPAN_TOTAL_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_JAPAN_INTER_EVENT_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_JAPAN_INTRA_EVENT_STDDEV.csv"],
             "sigma": "Origional",
         },
-        "NZL": {
+        {
+            "region": "NZL",
             "files": [
-            "kuehn2020/KUEHN20_{}_NZL_GNS_MEAN.csv",
-            "kuehn2020/KUEHN20_{}_NZL_GNS_TOTAL_STDDEV.csv"],
+                "kuehn2020/KUEHN20_{}_NZL_GNS_MEAN.csv",
+                "kuehn2020/KUEHN20_{}_NZL_GNS_TOTAL_STDDEV_ORIGINAL_SIGMA.csv"],
+            "sigma": "Origional",
+        },
+        {
+            "region": "NZL",
+            "files": [
+                "kuehn2020/KUEHN20_{}_NZL_GNS_MEAN.csv",
+                "kuehn2020/KUEHN20_{}_NZL_GNS_TOTAL_STDDEV_MODIFIED_SIGMA.csv"],
             "sigma": "Modified",
         },
-        "SAM": {
+        {
+            "region": "SAM",
            "files": [
-            "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_MEAN.csv",
-            "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_TOTAL_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_INTER_EVENT_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_INTRA_EVENT_STDDEV.csv"],
+                "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_MEAN.csv",
+                "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_TOTAL_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_INTER_EVENT_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_SOUTHAMERICA_INTRA_EVENT_STDDEV.csv"],
             "sigma": "Origional",
         },
-        "TWN": {
+        {
+            "region": "TWN",
             "files": [
-            "kuehn2020/KUEHN2020_{}_TAIWAN_MEAN.csv",
-            "kuehn2020/KUEHN2020_{}_TAIWAN_TOTAL_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_TAIWAN_INTER_EVENT_STDDEV.csv",
-            "kuehn2020/KUEHN2020_{}_TAIWAN_INTRA_EVENT_STDDEV.csv"],
+                "kuehn2020/KUEHN2020_{}_TAIWAN_MEAN.csv",
+                "kuehn2020/KUEHN2020_{}_TAIWAN_TOTAL_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_TAIWAN_INTER_EVENT_STDDEV.csv",
+                "kuehn2020/KUEHN2020_{}_TAIWAN_INTRA_EVENT_STDDEV.csv"],
             "sigma": "Origional",
         },
-    }
+    ]
 
     def test_all(self):
         for gcls, trt in zip([KuehnEtAl2020SInter, KuehnEtAl2020SSlab],
                              ['INTERFACE', 'INSLAB']):
             self.GSIM_CLASS = gcls
-            for region, values in self.FILES.items():
-                files = values["files"]
-                sigma = values["sigma"]
+            for test_case in self.FILES:
+                region = test_case["region"]
+                files = test_case["files"]
+                sigma = test_case["sigma"]
                 mean_file, *std_files = [f.format(trt) for f in files]
                 self.check(mean_file,
                            max_discrep_percentage=0.03, region=region, which_sigma=sigma)
