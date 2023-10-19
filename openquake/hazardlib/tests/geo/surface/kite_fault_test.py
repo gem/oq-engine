@@ -441,7 +441,7 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         alg = False
         srfc = KiteSurface.from_profiles(self.prf, vsmpl, hsmpl, idl, alg)
         area = srfc.get_area()
-        self.assertAlmostEqual(271.3134, area, places=2)
+        self.assertAlmostEqual(271.2357, area, places=2)
 
     def test_ztor(self):
         # Create the mesh: two parallel profiles - no top alignment
@@ -510,11 +510,12 @@ class KinkedKiteSurfaceTestCase(unittest.TestCase):
         self.profiles1.append(Line(tmp))
 
     def test_build_kinked_mesh_01(self):
-        # Trivial case - Fault dipping at about 45 degrees
+
+        ppp(self.profiles1)
 
         # Build the fault surface
-        p_sd = 5.0
-        e_sd = 15.0
+        p_sd = 2.5
+        e_sd = 10.0
         msh = KiteSurface.from_profiles(self.profiles1, p_sd, e_sd)
 
         if PLOTTING:
@@ -689,15 +690,17 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         self.h_sampl = 2
         self.v_sampl = 4
         idl = False
-        alg = False
+        alg = True
+
         self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
                                               self.h_sampl, idl, alg)
 
     def test_h_spacing(self):
-        # Check v-spacing: two misaligned profiles - no top alignment
+
+        # Check h-spacing: two misaligned profiles - no top alignment
         srfc = self.smsh
         smsh = srfc.mesh
-        #
+
         # Check the horizontal mesh spacing
         computed = []
         for i in range(0, smsh.lons.shape[0]):
@@ -779,6 +782,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             ppp(self.profiles, srfc, title)
 
     def test_get_surface_projection(self):
+        """ Test the calculation of the surface projection """
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -789,7 +793,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         # TODO
 
     def test_get_width(self):
-        # Test the calculation of the width
+        """ Test the calculation of the width """
         h_sampl = 2.5
         v_sampl = 2.5
         idl = False
@@ -797,7 +801,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         width = srfc.get_width()
-        np.testing.assert_almost_equal(38.13112131, width)
+        np.testing.assert_almost_equal(38.465767929, width)
 
 
 class IdealizedATest(unittest.TestCase):
@@ -849,9 +853,9 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         path = os.path.join(BASE_DATA_PATH, 'sam_seg6_slab')
         self.profiles, _ = _read_profiles(path)
 
-    def test_mesh_creation(self):
+    def test_mesh_creation_sa(self):
         # Create mesh from profiles for SA
-        sampling = 40
+        sampling = 20
         idl = False
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, sampling,

@@ -33,8 +33,10 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
 from openquake.hazardlib.geo.surface.base import _angle_difference
+from openquake.hazardlib.geo.line import find_t
 
 TOL = 0.4
+SMALL = 1e-5
 VERY_SMALL = 1e-20
 ALMOST_RIGHT_ANGLE = 89.9
 
@@ -252,10 +254,10 @@ class KiteSurface(BaseSurface):
         for i in range(iul[-1, 0] + 1, iul[-1, 1]):
             bnd.append([i, ilr[i, 1]])
         # Bottom
-        for i in range(self.mesh.lons.shape[1]-1, -1, -1):
+        for i in range(self.mesh.lons.shape[1] - 1, -1, -1):
             bnd.append([iul[i, 1], i])
         # Left
-        for i in range(iul[0, 1]-1, iul[0, 0], -1):
+        for i in range(iul[0, 1] - 1, iul[0, 0], -1):
             bnd.append([i, ilr[i, 0]])
         return bnd
 
@@ -305,24 +307,25 @@ class KiteSurface(BaseSurface):
         irow = 0
         icol = 0
         while not found:
-            if np.all(np.isfinite(self.mesh.lons[irow:irow+2, icol:icol+2])):
+            if np.all(np.isfinite(self.mesh.lons[irow:irow + 2,
+                                                 icol:icol + 2])):
                 found = True
             else:
                 icol += 1
-                if (icol+1) >= self.mesh.lons.shape[1]:
+                if (icol + 1) >= self.mesh.lons.shape[1]:
                     irow += 1
                     icol = 1
-                    if (irow+1) >= self.mesh.lons.shape[0]:
+                    if (irow + 1) >= self.mesh.lons.shape[0]:
                         break
         if found:
             azi_strike = azimuth(self.mesh.lons[irow, icol],
                                  self.mesh.lats[irow, icol],
-                                 self.mesh.lons[irow, icol+1],
-                                 self.mesh.lats[irow, icol+1])
+                                 self.mesh.lons[irow, icol + 1],
+                                 self.mesh.lats[irow, icol + 1])
             azi_dip = azimuth(self.mesh.lons[irow, icol],
                               self.mesh.lats[irow, icol],
-                              self.mesh.lons[irow+1, icol],
-                              self.mesh.lats[irow+1, icol])
+                              self.mesh.lons[irow + 1, icol],
+                              self.mesh.lats[irow + 1, icol])
 
             if abs((azi_strike - 90) % 360 - azi_dip) < 40:
                 tlo = np.fliplr(self.mesh.lons)
@@ -349,14 +352,14 @@ class KiteSurface(BaseSurface):
             widths = []
             for col_idx in range(self.mesh.lons.shape[1]):
                 tmpa = np.nonzero(np.isfinite(self.mesh.lons[:, col_idx]))[0]
-                tmpb = (tmpa[1:]-tmpa[:-1] == 1).nonzero()[0]
+                tmpb = (tmpa[1:] - tmpa[:-1] == 1).nonzero()[0]
                 idxs_low = tmpa[tmpb.astype(int)]
                 tmp = distance(self.mesh.lons[idxs_low, col_idx],
                                self.mesh.lats[idxs_low, col_idx],
                                self.mesh.depths[idxs_low, col_idx],
-                               self.mesh.lons[idxs_low+1, col_idx],
-                               self.mesh.lats[idxs_low+1, col_idx],
-                               self.mesh.depths[idxs_low+1, col_idx])
+                               self.mesh.lons[idxs_low + 1, col_idx],
+                               self.mesh.lats[idxs_low + 1, col_idx],
+                               self.mesh.depths[idxs_low + 1, col_idx])
                 if len(tmp) > 0:
                     widths.append(np.sum(tmp))
             self.width = np.mean(np.array(widths))
@@ -384,13 +387,13 @@ class KiteSurface(BaseSurface):
                 jjj = np.where(np.logical_and(kkk, iii))[0]
 
                 zeros = np.zeros_like(self.mesh.depths[jjj, col_idx])
-                hdists = distance(self.mesh.lons[jjj+1, col_idx],
-                                  self.mesh.lats[jjj+1, col_idx],
+                hdists = distance(self.mesh.lons[jjj + 1, col_idx],
+                                  self.mesh.lats[jjj + 1, col_idx],
                                   zeros,
                                   self.mesh.lons[jjj, col_idx],
                                   self.mesh.lats[jjj, col_idx],
                                   zeros)
-                vdists = (self.mesh.depths[jjj+1, col_idx] -
+                vdists = (self.mesh.depths[jjj + 1, col_idx] -
                           self.mesh.depths[jjj, col_idx])
 
                 ok = np.logical_and(np.isfinite(hdists), np.isfinite(vdists))
@@ -399,11 +402,11 @@ class KiteSurface(BaseSurface):
                 if len(vdists) > 0:
                     tmp = np.ones_like(vdists) * 90.
                     idx = hdists > VERY_SMALL
-                    tmp[idx] = np.degrees(np.arctan(vdists[idx]/hdists[idx]))
+                    tmp[idx] = np.degrees(np.arctan(vdists[idx] / hdists[idx]))
                     dips.append(np.mean(tmp))
                     lens.append(np.sum((hdists**2 + vdists**2)**0.5))
             lens = np.array(lens)
-            self.dip = np.sum(np.array(dips) * lens/np.sum(lens))
+            self.dip = np.sum(np.array(dips) * lens / np.sum(lens))
 
         return self.dip
 
@@ -421,7 +424,7 @@ class KiteSurface(BaseSurface):
                           self.mesh.lats[0, idx[:-1]],
                           self.mesh.lons[0, idx[1:]],
                           self.mesh.lats[0, idx[1:]])
-            self.strike = np.mean((azi+0.001) % 360)
+            self.strike = np.mean((azi + 0.001) % 360)
         return self.strike
 
     def get_top_edge_depth(self):
@@ -489,8 +492,8 @@ class KiteSurface(BaseSurface):
             The point on the mesh closer to its center
         """
         mesh = self.mesh
-        irow = int(np.round(mesh.shape[0]/2))
-        icol = int(np.round(mesh.shape[1]/2))
+        irow = int(np.round(mesh.shape[0] / 2))
+        icol = int(np.round(mesh.shape[1] / 2))
         return Point(mesh.lons[irow, icol], mesh.lats[irow, icol],
                      mesh.depths[irow, icol])
 
@@ -594,22 +597,26 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     east = -1e10
     north = -1e10
     for pro in rprof:
-        west = np.minimum(west, np.min(pro[:, 0]))
-        south = np.minimum(south, np.min(pro[:, 1]))
-        east = np.maximum(east, np.max(pro[:, 0]))
-        north = np.maximum(north, np.max(pro[:, 1]))
+        idx = np.nonzero(np.isfinite(pro[:, 0]))
+        west = np.minimum(west, np.min(pro[idx, 0]))
+        south = np.minimum(south, np.min(pro[idx, 1]))
+        east = np.maximum(east, np.max(pro[idx, 0]))
+        north = np.maximum(north, np.max(pro[idx, 1]))
     proj = geo_utils.OrthographicProjection(west, east, north, south)
 
     # Create the mesh in the forward direction
     prfr = []
-    if ref_idx < len(rprof)-1:
-        prfr = get_new_profiles(rprof, ref_idx, edge_sd, idl, proj)
+    if ref_idx < len(rprof) - 1:
+        # prfr = get_new_profiles(rprof, ref_idx, edge_sd, idl, proj)
+        prfr = _get_resampled_profs(prfr, rprof, edge_sd, proj, idl, ref_idx)
 
     # Create the mesh in the backward direction
     prfl = []
     last = False if ref_idx < len(rprof) - 1 else True
     if ref_idx > 0:
-        prfl = get_new_profiles(rprof, ref_idx, edge_sd, idl, proj, last)
+        # prfl = get_new_profiles(rprof, ref_idx, edge_sd, idl, proj, last)
+        prfr = _get_resampled_profs(
+            prfl, rprof, edge_sd, proj, idl, ref_idx, last)
     prf = prfl + prfr
 
     # Create the whole mesh
@@ -621,7 +628,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
         top_depths = np.array([p[0, 0] for p in rprof])
 
         # Check profiles have the same top depth
-        chk2 = np.all(np.abs(top_depths - rprof[0][0, 0]) < 0.1*edge_sd)
+        chk2 = np.all(np.abs(top_depths - rprof[0][0, 0]) < 0.1 * edge_sd)
 
         if chk1 and chk2:
             msh = np.array(rprof)
@@ -657,7 +664,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     # Set the reference profile i.e. the longest one
     ref_idx = 0
     lengths = np.array([prf.get_length() for prf in rprofiles])
-    if np.max(lengths) - np.min(lengths) > profile_sd*0.1:
+    if np.max(lengths) - np.min(lengths) > profile_sd * 0.1:
         ref_idx = np.argmax(lengths)
 
     # Check that in each profile the points are equally spaced
@@ -674,17 +681,17 @@ def _fix_profiles(profiles, profile_sd, align, idl):
         np.testing.assert_allclose(dst, profile_sd, rtol=1.)
 
     # Find the delta needed to align profiles if requested
-    shift = np.zeros(len(rprofiles)-1)
+    shift = np.zeros(len(rprofiles) - 1)
     if align is True:
-        for i in range(0, len(rprofiles)-1):
+        for i in range(0, len(rprofiles) - 1):
             shift[i] = profiles_depth_alignment(rprofiles[i],
-                                                rprofiles[i+1])
+                                                rprofiles[i + 1])
     shift = np.array([0] + list(shift))
 
     # Find the maximum back-shift
     ccsum = [shift[0]]
     for i in range(1, len(shift)):
-        ccsum.append(shift[i] + ccsum[i-1])
+        ccsum.append(shift[i] + ccsum[i - 1])
     add = ccsum - min(ccsum)
 
     # Create resampled profiles. Now the profiles should be all aligned
@@ -739,8 +746,8 @@ def get_profiles_from_simple_fault_data(
 
     # Get simple fault surface
     srfc = SimpleFaultSurface.from_fault_data(
-        fault_trace, upper_seismogenic_depth,lower_seismogenic_depth,
-        dip, rupture_mesh_spacing*1.01)
+        fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+        dip, rupture_mesh_spacing * 1.01)
 
     # Creating profiles
     profiles = []
@@ -767,7 +774,7 @@ def _lo_la_de(line, sampling_dist, g):
         slope = np.arctan((de[-1] - de[-2]) / odist)
         hdist = TOL * sampling_dist * np.cos(slope)
         vdist = TOL * sampling_dist * np.sin(slope)
-        endlon, endlat, _ = g.fwd(lo[-1], la[-1], az12, hdist*1e3)
+        endlon, endlat, _ = g.fwd(lo[-1], la[-1], az12, hdist * 1e3)
         lo[-1] = endlon
         la[-1] = endlat
         de[-1] = de[-1] + vdist
@@ -776,7 +783,7 @@ def _lo_la_de(line, sampling_dist, g):
         # Checking
         odist /= 1e3
         slopec = np.arctan((de[-1] - de[-2]) / odist)
-        assert abs(slope-slopec) < 1e-3
+        assert abs(slope - slopec) < 1e-3
     else:
         de[-1] = de[-1] + TOL * sampling_dist
     return lo, la, de
@@ -816,8 +823,9 @@ def _resample_profile(line, sampling_dist):
     while idx <= len(lo) - 2:
         # Compute the distance between the starting point and the next point
         # on the profile
-        segment_len = distance(slo, sla, sde, lo[idx+1], la[idx+1], de[idx+1])
-        azim = azimuth(slo, sla, lo[idx+1], la[idx+1])
+        segment_len = distance(slo, sla, sde, lo[idx + 1], la[idx + 1],
+                               de[idx + 1])
+        azim = azimuth(slo, sla, lo[idx + 1], la[idx + 1])
 
         # Search for the point along the profile
         if cdist + segment_len > sampling_dist:
@@ -827,9 +835,9 @@ def _resample_profile(line, sampling_dist):
 
             # Compute the slope of the last segment and its horizontal length.
             # We need to manage the case of a vertical segment TODO
-            segment_hlen = distance(slo, sla, 0., lo[idx+1], la[idx+1], 0.)
+            segment_hlen = distance(slo, sla, 0., lo[idx + 1], la[idx + 1], 0.)
             if segment_hlen > 1e-5:
-                segment_slope = np.arctan((de[idx+1] - sde) / segment_hlen)
+                segment_slope = np.arctan((de[idx + 1] - sde) / segment_hlen)
             else:
                 segment_slope = 90.
 
@@ -847,7 +855,8 @@ def _resample_profile(line, sampling_dist):
                         np.array([sla, sla]),
                         np.array([sde, sde + delta_v])]
             else:
-                pnts = npoints_towards(slo, sla, sde, azim, delta_h, delta_v, 2)
+                pnts = npoints_towards(
+                    slo, sla, sde, azim, delta_h, delta_v, 2)
 
             # Update the starting point
             slo = pnts[0][-1]
@@ -873,7 +882,7 @@ def _check_distances(coo, sampling_dist):
     # Check the distances along the profile
     for i in range(coo.shape[0] - 1):
         dst = distance(coo[i, 0], coo[i, 1], coo[i, 2],
-                       coo[i+1, 0], coo[i+1, 1], coo[i+1, 2])
+                       coo[i + 1, 0], coo[i + 1, 1], coo[i + 1, 2])
         if abs(dst - sampling_dist) > 0.1 * sampling_dist:
             msg = 'Distance between points along the profile larger than 10%'
 
@@ -882,7 +891,7 @@ def _check_distances(coo, sampling_dist):
 
             fmt = '\n   Point {:.2f} {:.2f} {:.2f}'
             msg += fmt.format(*[coo[i, j] for j in range(3)])
-            msg += fmt.format(*[coo[i+1, j] for j in range(3)])
+            msg += fmt.format(*[coo[i + 1, j] for j in range(3)])
 
             msg += '\n   Please, change the sampling distance or the'
             msg += ' points along the profile'
@@ -933,12 +942,12 @@ def profiles_depth_alignment(pro1, pro2):
         amin = np.amin(dff)
         res = indexes[np.amax(np.nonzero(dff == amin))] * swap
     else:
-        d1 = np.zeros((len(coo2)-len(coo1) + 1, len(coo1)))
-        d2 = np.zeros((len(coo2)-len(coo1) + 1, len(coo1)))
+        d1 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
+        d2 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
         for i in np.arange(0, len(coo2) - len(coo1) + 1):
-            d2[i, :] = [coo2[d, 2] for d in range(i, i+len(coo1))]
+            d2[i, :] = [coo2[d, 2] for d in range(i, i + len(coo1))]
             d1[i, :] = coo1[:, 2]
-        res = np.argmin(np.sum(abs(d2-d1), axis=1))
+        res = np.argmin(np.sum(abs(d2 - d1), axis=1))
     return res
 
 
@@ -958,7 +967,137 @@ def get_coords(line, idl):
     return tmp
 
 
+def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
+
+    # Initializing the list of profiles
+    npr = [profs[ref_idx]]
+
+    # Set the indexes of the profiles depending on the direction i.e. forward
+    # or backward
+    low, upp, step = _set_indexes(forward, ref_idx, profs)
+
+    # Initialize the residual distance along each edge starting from the first
+    # profile. We set the index of the last '1st' profile sampled to None for 
+    # the edges where the reference profile does not have finite points.
+    res_dist = np.zeros_like(npr[0][:, 0])
+    last_idx = np.zeros_like(npr[0][:, 0])
+    last_idx[np.nonzero(np.isnan(npr[0][:, 0]))] = None
+
+    # Processing profiles: from the reference one towards the end of the
+    # surface. Note that in the forward direction `upp` corresponds to the 
+    # length of `profs` minus one.
+    for i_prof in range(low, upp, step):
+
+        # Find the indexes of the edges with finite coords on both profiles
+        pl = profs[low]
+        pr = profs[low+step]
+        tmp = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
+        idx = np.nonzero(tmp)[0].astype(int)
+
+        # Processing edges
+        for i_edge in idx:
+
+            # Set the starting point
+            start_pnt = _set_starting_point(
+                i_prof, i_edge, profs, low, res_dist, last_idx, step)
+
+            # Get the coordinates of the points along this part of the edge
+            coo = get_coo(start_pnt, pr[i_edge], res_dist[i_edge], sd, idl)
+            breakpoint()
+             
+            # Adding a new profiles
+            for i_row, _ in enumerate(range(len(coo))):
+                add_empty_profile(npr)
+
+        # tmp = get_coo(pro_1st[i_edge], pro_2nd[i_edge], flag, sd, idl)
+        # flag = 0
+
+    return npr
+        
+def _set_starting_point(i_prof, i_edge, profs, low, res_dist, last_idx, step):
+    """
+    Set the point from where to sample the current edge. We have three cases to 
+    deal with:
+    1. The index of the profile `i_prof` is equal to the one of the 
+       reference profile `low`
+    2. We have a residual distance greater than 0 
+        a. The index of the last `1st` profile is -1 the index of the current 
+           '1st' profile
+        b. The index of the last `1st` profile is more than -1 the index of 
+           the current '1st' profile. In this case we have a gap along this 
+           edge.
+    """
+    # Get the profiles
+    pro_1st = profs[i_prof]
+    pro_2nd = profs[i_prof + step]
+
+    # If the index of the 1st profile corresponds to the one of the reference 
+    # profile or the residual distance is negligible we return the point on 
+    # the reference profile
+    if i_prof == low or res_dist[i_edge] < SMALL:
+        
+        return pro_1st[i_edge]
+
+    # If have a residual distance after sampling the part on the edge between 
+    # the previous two profiles 
+    elif res_dist[i_edge] > 0 and last_idx[i_edge] == i_prof-1:
+
+        pnt0 = pro_1st[i_edge]
+        pnt1 = pro_2nd[i_edge]
+        pntrp = profs[i_prof - step][i_edge]
+
+        x, y = proj(pnt0[0], pnt0[1])
+        pnt0p = np.array([x, y, pnt0[2]])
+
+        x, y = proj(pnt1[0], pnt1[1])
+        pnt1p = np.array([x, y, pnt1[2]])
+
+        x, y = proj(pntr[0], pntr[1])
+        pntrp = np.array([x, y, pntr[2]])
+
+        start_pnt_proj = find_t(pnt0p, pnt1p, pntrp, sd) 
+        
+    # If the last part of the current edge is not continuous to the current one
+    elif last_idx[i_edge] < i_prof-step:
+
+        raise('Option not yet supported')
+
+    else:
+        
+        raise('Unknown option')
+
+
+def _set_indexes(forward, ref_idx, profs):
+    step = 1
+    low = ref_idx
+    upp = len(profs) - 1
+    if not forward:
+        step = -1
+        low = 1
+        upp = ref_idx
+    return low, upp, step
+
+
+def _find_first_point(pnt0, pnt1, pntr, proj, sd):
+
+    x, y = proj(pnt0[0], pnt0[1])
+    pnt0p = np.array([x, y, pnt0[2]])
+
+    x, y = proj(pnt1[0], pnt1[1])
+    pnt1p = np.array([x, y, pnt1[2]])
+
+    x, y = proj(pntr[0], pntr[1])
+    pntrp = np.array([x, y, pntr[2]])
+
+    start_pnt_proj = find_t(pnt0p, pnt1p, pntrp, sd)
+    x, y = proj(np.array([start_pnt_proj[0]]),
+                np.array([start_pnt_proj[1]]), reverse=True)
+
+    return np.array([x[0], y[0], start_pnt_proj[2]])
+
+
 def _update(npr, rdist, angle, laidx, g, pl, pr, sd, proj, idl, forward):
+
     # Fixing IDL case
     for ii, vpl in enumerate(pl):
         pl[ii][0] = fix_idl(vpl[0], idl)
@@ -975,6 +1114,7 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, proj, idl, forward):
 
     # Loop over the points in the right profile
     for x in range(0, len(pr[:, 2])):
+
         # If true this edge connects the right and left profiles
         if x in cmmi and laidx[x] is None:
             iii = np.array([li for li, lv in enumerate(laidx)
@@ -992,29 +1132,42 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, proj, idl, forward):
     # starting from the top and going down
     for k in np.nonzero(cmm)[0]:
 
+        # Compute the first point on the new edge
+        if rdist[k] > 0:
+
+            x, y = proj(pl[k][0], pl[k][1])
+            pnt0 = np.array([x, y, pl[k][2]])
+
+            x, y = proj(pr[k][0], pr[k][1])
+            pnt1 = np.array([x, y, pr[k][2]])
+
+            tmp = npr[laidx[k]][k]
+            x, y = proj(tmp[0], tmp[1])
+            ref_pnt = np.array([x, y, tmp[2]])
+            start_pnt_proj = find_t(pnt0, pnt1, ref_pnt, sd)
+            x, y = proj(np.array([start_pnt_proj[0]]),
+                        np.array([start_pnt_proj[1]]), reverse=True)
+            start_pnt_geo = np.array([x[0], y[0], start_pnt_proj[2]])
+            flag_rdist = 1.0
+        else:
+            start_pnt_geo = pl[k]
+            flag_rdist = -1.0
+
         # Compute distance [km] and azimuth between the corresponding
         # points on the two consecutive profiles
-        az12, _, hdist = g.inv(pl[k, 0], pl[k, 1], pr[k, 0], pr[k, 1])
-        hdist /= 1e3
-        # Vertical distance
-        vdist = pr[k, 2] - pl[k, 2]
-        # Total distance
-        tdist = (vdist**2 + hdist**2)**.5
-
-        # Update rdist
-        new_rdist = rdist[k]
-        diff_angles = _angle_difference(az12, angle[k])
-        if rdist[k] > 0 and diff_angles > 2:
-            new_rdist = update_rdist(rdist[k], az12, angle[k], sd)
-
-        # Compute the first point on the new edge
+        # az12, _, hdist = g.inv(start_pnt_geo[0], start_pnt_geo[1],
+        #                        pr[k, 0], pr[k, 1])
 
         # Compute new points
-        coo = get_coo(forward, g, pl[k], pr[k], az12, hdist, vdist, tdist,
-                      new_rdist, sd, idl)
+        coo = get_coo(pl[k], pr[k], flag_rdist, sd, idl)
+
+        if len(coo) == 0:
+            continue
+        assert (len(coo.shape) == 2)
 
         # Adding new points along the edge with index k
         for pnt in coo:
+
             # Add new profile to 'npr' i.e. the list containing the new
             # set of profiles
             if len(npr) - 1 < laidx[k] + 1:
@@ -1022,31 +1175,98 @@ def _update(npr, rdist, angle, laidx, g, pl, pr, sd, proj, idl, forward):
 
             # Updating the new profile
             npr[laidx[k] + 1][k] = pnt
-            if (k > 0 and np.all(np.isfinite(npr[laidx[k]+1][k])) and
+
+            if (k > 0 and np.all(np.isfinite(npr[laidx[k] + 1][k])) and
                     np.all(np.isfinite(npr[laidx[k]][k]))):
 
                 # Computing the distance between consecutive points on
                 # one edge
                 p1 = npr[laidx[k]][k]
-                p2 = npr[laidx[k]+1][k]
+                p2 = npr[laidx[k] + 1][k]
                 d = distance(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
 
                 # Check if the distance between consecutive points on one
                 # edge (with index k) is within a tolerance limit of the
                 # mesh distance defined by the user
-                if abs(d-sd) > TOL*sd:
+                if abs(d - sd) > TOL * sd:
+
                     tmpf = '\ndistance: {:f} difference: {:f} '
                     tmpf += '\ntolerance dist: {:f} sampling dist: {:f}'
-                    tmpf += '\nresidual distance: {:f}'
-                    tmps = tmpf.format(d, d-sd, TOL*sd, sd, new_rdist)
+                    tmps = tmpf.format(d, d - sd, TOL * sd, sd)
+
+                    import matplotlib.pyplot as plt
+                    from openquake.hazardlib.tests.geo.surface.kite_fault_test import set_axes_equal
+                    scl = 0.01
+                    ax = plt.figure().add_subplot(projection='3d')
+                    plt.plot(pl[:, 0], pl[:, 1], pl[:, 2]*scl, '-o', color='red')
+                    plt.plot(pr[:, 0], pr[:, 1], pr[:, 2]*scl, '-x', color='blue')
+                    plt.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl,
+                             '-x', color='purple', ms=2.5)
+                    plt.plot(start_pnt_geo[0], start_pnt_geo[1],
+                             start_pnt_geo[2]*scl, 'o', color='yellow', ms=2.5)
+
+                    ax.text(pl[k][0], pl[k][1], pl[k][1], 'PL')
+                    plt.plot(pl[k][0], pl[k][1], pl[k][1], 'ok')
+                    ax.text(pr[k][0], pr[k][1], pr[k][1], 'PR')
+                    plt.plot(pr[k][0], pr[k][1], pr[k][1], 'ok')
+
+                    for i_pro, pro in enumerate(npr):
+                        tmpp = np.array(pro)
+                        tidx = np.nonzero(np.isfinite(tmpp[:, 0]))[0]
+                        if np.any(tidx):
+                            plt.plot(tmpp[tidx, 0], tmpp[tidx, 1], tmpp[tidx, 2]*scl, '-', color='green')
+                    set_axes_equal(ax)
+                    ax.invert_zaxis()
+                    plt.show()
+
                     raise ValueError(tmps)
+
             laidx[k] += 1
 
         # Check that the residual distance along each edge is lower than
         # the sampling distance
-        rdist[k] = tdist - sd * len(coo) + new_rdist
-        angle[k] = az12
-        assert rdist[k] < sd
+        # rdist[k] = tdist - sd * len(coo) + new_rdist
+        tmp = npr[laidx[k]][k]
+        rdist[k] = distance(
+            tmp[0], tmp[1], tmp[2], pr[k][0], pr[k][1], pr[k][2])
+        angle[k] = azimuth(tmp[0], tmp[1], pr[k][0], pr[k][1])
+
+        try:
+            assert rdist[k] < sd
+        except:
+
+            import matplotlib.pyplot as plt
+            from openquake.hazardlib.tests.geo.surface.kite_fault_test import set_axes_equal
+            scl = 0.01
+            ax = plt.figure().add_subplot(projection='3d')
+            plt.plot(pl[:, 0], pl[:, 1], pl[:, 2]*scl, '-o', color='red')
+            plt.plot(pr[:, 0], pr[:, 1], pr[:, 2]*scl, '-x', color='blue')
+            plt.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl,
+                        '-x', color='purple', ms=2.5)
+
+            plt.plot(start_pnt_geo[0], start_pnt_geo[1],
+                        start_pnt_geo[2]*scl, 'o', color='yellow', ms=2.5)
+
+            plt.plot([pl[k][0], pr[k][0]], [pl[k][1], pr[k][1]],
+                     np.array([pl[k][2], pr[k][2]])*scl, ls='--',
+                     color='cyan', lw=1)
+
+            plt.plot([tmp[0], pr[k][0]], [tmp[1], pr[k][1]],
+                     np.array([tmp[2], pr[k][2]])*scl, color='orange', lw=2)
+
+            ax.text(pl[k][0], pl[k][1], pl[k][2]*scl, 'PL')
+            plt.plot(pl[k][0], pl[k][1], pl[k][2]*scl, 'ok')
+            ax.text(pr[k][0], pr[k][1], pr[k][2]*scl, 'PR')
+            plt.plot(pr[k][0], pr[k][1], pr[k][2]*scl, 'ok')
+
+            for i_pro, pro in enumerate(npr):
+                tmpp = np.array(pro)
+                tidx = np.nonzero(np.isfinite(tmpp[:, 0]))[0]
+                if np.any(tidx):
+                    plt.plot(tmpp[tidx, 0], tmpp[tidx, 1], tmpp[tidx, 2]*scl, '-', color='green')
+            set_axes_equal(ax)
+            ax.invert_zaxis()
+            plt.show()
 
 
 def get_new_profiles(pfs, rfi, sd, idl, proj, last=None):
@@ -1080,11 +1300,11 @@ def get_new_profiles(pfs, rfi, sd, idl, proj, last=None):
     npr = [pfs[rfi]]
     if forw:
         for i in range(rfi, len(pfs) - 1):
-            _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i+1], sd, proj,
+            _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i + 1], sd, proj,
                     idl, forw)
         return npr
     for i in range(rfi, 0, -1):
-        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i-1], sd, proj, idl,
+        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i - 1], sd, proj, idl,
                 forw)
     return [npr[i] for i in range(len(npr) - 1, -1 if last else 0, -1)]
 
@@ -1119,65 +1339,62 @@ def update_rdist(rdist, az12, angle, sd):
     return rdist_new
 
 
-def get_coo(forward, g, pl, pr, az12, hdist, vdist, tdist, new_rdist, sd, idl):
+def get_coo(pl, pr, rdist, sd, idl):
     """
     """
-    ndists = int(np.floor((tdist + new_rdist) / sd))
-    coo = np.zeros((ndists, 3))
-    if forward:
-        # Calculate points between the corresponding nodes on the
-        # two profiles
-        ll = g.npts(pl[0], pl[1], pr[0], pr[1],
-                    np.ceil(tdist)*20)
-        ll = np.array(ll)
-        lll = np.ones_like(ll)
-        lll[:, 0] = pl[0]
-        lll[:, 1] = pl[1]
 
-        _, _, hdsts = g.inv(lll[:, 0], lll[:, 1], ll[:, 0], ll[:, 1])
-        hdsts /= 1e3
-        deps = np.linspace(pl[2], pr[2], ll.shape[0], endpoint=True)
-        tdsts = (hdsts**2 + (pl[2]-deps)**2)**0.5
-        assert len(deps) == ll.shape[0]
+    # Total distance between the two points
+    tdist = distance(pl[0], pl[1], pl[2], pr[0], pr[1], pr[2])
 
-        # Compute distance between nodels at depth 'k' on the two
-        # consecutive profiles
-        dd = distance(pl[0], pl[1], pl[2],
-                      pr[0], pr[1], pr[2])
+    # Number of points delimiting the new intervals i.e. number of intervals
+    # plus one
+    ndists = int(np.floor(tdist / sd)) + 1
+    low = 0 if rdist > 0 else 1
 
-        # Check that the actual distance between these nodes is similar to
-        # the one originally defined
-        if abs(dd - tdist) > 0.1*tdist:
-            print('dd:', dd)
-            tmps = 'Error while building the mesh'
-            tmps += '\nDistances: {:f} {:f}'
-            raise ValueError(tmps.format(dd, tdist))
+    # Vector with the output coordinates
+    coo = np.zeros((ndists - low, 3))
 
-        for j in range(ndists):
-            # Compute the coordinates of intermediate points along the
-            # current edge. 'tmp' is the distance between the node on the
-            # left edge and the j-th node on the edge. 'lo' and 'la' are
-            # the coordinates of this new node
-            # tmp = (j+1)*sd - rdist[k]
-            tmp = (j+1)*sd - new_rdist
-            # Find the index of the closest node in the vector sampled at
-            # high frequency
-            tidx = np.argmin(abs(tdsts - tmp))
-            # Fix longitudes in proximity of the IDL
-            coo[j, 0] = fix_idl(ll[tidx, 0], idl)
-            coo[j, 1] = ll[tidx, 1]
-            # Computing depths
-            coo[j, 2] = deps[tidx]
+    # If the distance is too short
+    if ndists == 1:
+        return []
 
-    else:
-        vhratio = vdist / hdist
-        htratio = hdist / tdist
-        for j in range(ndists):
-            tmp = (j+1) * sd - new_rdist
-            lo, la, _ = g.fwd(pl[0], pl[1], az12, tmp * htratio * 1e3)
-            coo[j, 0] = fix_idl(lo, idl)
-            coo[j, 1] = la
-            coo[j, 2] = pl[2] + tmp * vhratio
+    # Compute thet binned distance
+    bin_dst = (ndists - 1) * sd
+    assert bin_dst < tdist
+
+    # Compute azimuth between the first and last point
+    az12 = azimuth(pl[0], pl[1], pr[0], pr[1])
+
+    # Vertical distance
+    hdist = distance(pl[0], pl[1], 0.0, pr[0], pr[1], 0.0) * bin_dst / tdist
+    vdist = (pr[2] - pl[2]) * bin_dst / tdist
+
+    # Create the points
+    nptt = npoints_towards
+    tlo, tla, tde = nptt(pl[0], pl[1], pl[2], az12, hdist, vdist, ndists)
+    assert len(tlo) > 0
+    if np.any(tde > np.max([pr[2], pl[2]])):
+        breakpoint()
+    if np.any(tde < np.min([pr[2], pl[2]])):
+        breakpoint()
+
+    try:
+        coo[:, 0] = np.array([fix_idl(lo, idl) for lo in tlo[low:]])
+        coo[:, 1] = np.array(tla[low:])
+        coo[:, 2] = np.array(tde[low:])
+    except:
+        breakpoint()
+
+    if len(coo) > 1:
+        if (np.all(np.abs(np.diff(coo[:, 0])) < 1e-5) and
+                np.all(np.abs(np.diff(coo[:, 1])) < 1e-5)):
+            breakpoint()
+
+    coo = np.array(coo)
+    if len(coo.shape) < 2:
+        coo = np.expand_dims(coo, axis=0)
+    assert (len(coo.shape) == 2)
+
     return coo
 
 
@@ -1214,16 +1431,18 @@ def fix_mesh(msh):
         the mesh. The shape of this array num_rows x num_cols x 3
     """
     for i in range(msh.shape[0]):
-        ru = i+1
-        rl = i-1
+        ru = i + 1
+        rl = i - 1
         for j in range(msh.shape[1]):
-            cu = j+1
-            cl = j-1
+            cu = j + 1
+            cl = j - 1
 
             trl = False if cl < 0 else np.isfinite(msh[i, cl, 0])
-            tru = False if cu > msh.shape[1]-1 else np.isfinite(msh[i, cu, 0])
+            tru = (False if cu > msh.shape[1] - 1 else
+                   np.isfinite(msh[i, cu, 0]))
             tcl = False if rl < 0 else np.isfinite(msh[rl, j, 0])
-            tcu = False if ru > msh.shape[0]-1 else np.isfinite(msh[ru, j, 0])
+            tcu = (False if ru > msh.shape[0] - 1 else
+                   np.isfinite(msh[ru, j, 0]))
 
             check_row = trl or tru
             check_col = tcl or tcu
