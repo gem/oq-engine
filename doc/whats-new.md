@@ -191,6 +191,8 @@ In linux we still support Python 3.8, Python 3.9 and Python 3.10,
 but Python 3.8 is deprecated and will be removed in the near future.
 In the next release we will start supporting Python 3.11.
 
+Mac with an Intel processor are not officially supported anymore
+
 # Other
 
 We improved the universal installer to use the `--trusted-host`
