@@ -52,11 +52,7 @@ C:\>python.exe install.py user
 _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS)._
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
-$ python3.9 install.py user
-```
-_*Note 2*: Users can decided the preferred Python version (e.g., `$python3.9 install.py user`)_
-
-_*Note 3*: Users with the M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
+$ python3.10 install.py user
 
 **on Linux:**
 ```
@@ -64,14 +60,18 @@ $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ /usr/bin/python3 install.py user
 ```
 
-This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine on it.
-After that, you can activate the virtual environment with
+This installation method will create a Python virtual environment in
+`$HOME/openquake` and will install the engine on it.  After that, you
+can activate the virtual environment with
 
 **on Windows:**
 ```
 C:\>%USERPROFILE%\openquake\Scripts\activate.bat
 ```
-
+or, when using PowerShell,
+```
+C:\>%USERPROFILE%\openquake\Scripts\activate.ps1
+```
 **on macOS and Linux:**
 ```
 $ source $HOME/openquake/bin/activate
@@ -123,26 +123,25 @@ _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/In
 ```
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine
-$ python3.9 install.py devel
-```
-_*Note 2*: Users can choose the preferred Python version (e.g., `$python3.9 install.py user`)_
-
-_*Note 3*: Users with M1 CPU must use Python 3.9 (e.g., `$python3.9 install.py user`)_
+$ python3.10 install.py devel
 
 **on Linux:**
 ```
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine && /usr/bin/python3 install.py devel
 ```
-
-This installation method will create a Python virtual environment in `$HOME/openquake` and will install the engine
-in development mode in this environment. Then, activate the virtual environment with
+This installation method will create a Python virtual environment in
+`$HOME/openquake` and will install the engine in development mode in
+this environment. Then, activate the virtual environment with
 
 **on Windows:**
 ```
 C:\>%USERPROFILE%\openquake\Scripts\activate.bat
 ```
-
+or, when using PowerShell,
+```
+C:\>%USERPROFILE%\openquake\Scripts\activate.ps1
+```
 **on macOS and Linux:**
 ```
 $ source $HOME/openquake/bin/activate
