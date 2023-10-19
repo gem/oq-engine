@@ -601,7 +601,7 @@ def bozzoni_etal_2021_europe(
 
 
 def todorovic_silva_2022_nonparametric_general(
-    pga: Union[float, np.narray],
+    pga: Union[float, np.array],
     pgv: Union[float, np.ndarray],
     vs30: Union[float, np.ndarray],
     dw: Union[float, np.ndarray],
