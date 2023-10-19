@@ -150,14 +150,15 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Associate Partners
 
-<img src="" width="10%" align="left" />
-<img src="" width="10%" align="left" />
-<img src="" width="10%" align="left" />
-<img src="" width="10%" align="left" />
-<img src="" width="10%" align="left" />
-<img src="" width="10%" align="left" />
-<img src="" width="10%" align="left" />
-<img src="" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/apdim.svg" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/iaee.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/IASPEI_logo_new_1.png" width="18%" align="left" />
+<br />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/irdr_icsu_logo_300.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNESCO_logo_symbol.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Usgs-logo.jpg" width="18%" />
 
 
 ## Project Partners
