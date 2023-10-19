@@ -156,15 +156,17 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Usgs-logo.jpg" width="18%" />
 <br />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNESCO_logo_symbol.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="12%" align="left" />
 <img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/irdr_icsu_logo_300.png" width="18%" align="left" />
-<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="18%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="30%" />
+
 
 ## Project Partners
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/project/aon.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/project/sg.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/project/sura.png)
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/edf_governing_board_logo.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Servicio-Geol%C3%B3gico-Colombiano.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Sura-new-logos-website.png" width="18%" />
 
 
 ## Products Distribution Partners
