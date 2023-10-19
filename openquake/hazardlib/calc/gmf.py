@@ -169,7 +169,6 @@ class GmfComputer(object):
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
         self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
-        self.init_eid_rlz_sig_eps()
 
     def init_eid_rlz_sig_eps(self):
         """
@@ -263,6 +262,7 @@ class GmfComputer(object):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
+        self.init_eid_rlz_sig_eps()
         rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
