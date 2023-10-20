@@ -174,7 +174,8 @@ the headers and an error is raised if the headers are not consistent.
 
 There was a substantial amount of work on the AELO project. The engine
 is finally able to compute the ASCE-41 and ASCE-7 parameters by using
-code from the USGS (the `rtgmpy` library).
+code from the USGS (the `rtgmpy` library). The project is still marked
+as experimental and the associated service is not public.
 
 # Deprecations and removals
 
