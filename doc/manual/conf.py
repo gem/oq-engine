@@ -35,7 +35,7 @@ extensions = [
 ]
 
 nbsphinx_custom_formats = {
-    ".ipynb": ["jupytext.reads", {"fmt": "mystnb"}],
+    ".md": ["jupytext.reads", {"fmt": "mystnb"}],
 }
 
 # Add any paths that contain templates here, relative to this directory.
