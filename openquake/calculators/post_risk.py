@@ -551,7 +551,7 @@ class PostRiskCalculator(base.RiskCalculator):
                         '%s != %s\nsee %s', lt, agg, avg, url)
 
         # save agg_curves-stats
-        if (self.R > 1 and 'aggcurves' in self.datastore):
+        if self.R > 1 and 'aggcurves' in self.datastore:
             save_curve_stats(self.datastore)
 
 
