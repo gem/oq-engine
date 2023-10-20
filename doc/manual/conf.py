@@ -29,9 +29,9 @@ from openquake import engine
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'nbsphinx',
     'sphinx.ext.mathjax',
     'myst_parser',
-    'nbsphinx',
 ]
 
 nbsphinx_custom_formats = {
