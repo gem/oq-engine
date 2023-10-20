@@ -22,7 +22,6 @@ jobs:
         python-version: [3.8, 3.9, "3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -33,9 +32,9 @@ jobs:
       run: |
         if [[ "$GITHUB_HEAD_REF" != "" ]]
         then
-          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+          python install.py devel --version=$GITHUB_HEAD_REF
         else
-          python install.py devel --repository=$GITHUB_REPOSITORY
+          python install.py devel
         fi
     - name: Calculators and documentation tests
       run: |
@@ -63,9 +62,9 @@ jobs:
       run: |
         if [[ "$GITHUB_HEAD_REF" != "" ]]
         then
-          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+          python install.py devel --version=$GITHUB_HEAD_REF
         else
-          python install.py devel --repository=$GITHUB_REPOSITORY
+          python install.py devel
         fi
     - name: Hazardlib tests
       run: |
@@ -94,9 +93,9 @@ jobs:
       run: |
         if [[ "$GITHUB_HEAD_REF" != "" ]]
         then
-          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+          python install.py devel --version=$GITHUB_HEAD_REF
         else
-          python install.py devel --repository=$GITHUB_REPOSITORY
+          python install.py devel
         fi
     - name: Server 'PUBLIC' mode tests
       run: |
@@ -124,9 +123,9 @@ jobs:
       run: |
         if [[ "$GITHUB_HEAD_REF" != "" ]]
         then
-          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+          python install.py devel --version=$GITHUB_HEAD_REF
         else
-          python install.py devel --repository=$GITHUB_REPOSITORY
+          python install.py devel
         fi
     - name: Server 'READ_ONLY' mode tests
       run: |
@@ -154,9 +153,9 @@ jobs:
       run: |
         if [[ "$GITHUB_HEAD_REF" != "" ]]
         then
-          python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+          python install.py devel --version=$GITHUB_HEAD_REF
         else
-          python install.py devel --repository=$GITHUB_REPOSITORY
+          python install.py devel
         fi
     - name: Server 'AELO' mode tests
       run: |
