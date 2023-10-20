@@ -174,8 +174,13 @@ jobs:
               PDF_VER="(master)"
           elif [ "$BUILD" == "dev" ]; then
               DOCS_BASE="${DOCS_BASE}.dev/"
-              TARGET="oq-engine/$GITHUB_REF_NAME/"
-              PDF_VER="($GITHUB_REF_NAME)"
+              if echo "$GITHUB_REF_NAME" | grep -q '[0-9]\+/merge'; then
+                  TARGET="oq-engine/$GITHUB_HD_REF/"
+                  PDF_VER="($GITHUB_HD_REF)"
+              else
+                  TARGET="oq-engine/$GITHUB_REF_NAME/"
+                  PDF_VER="($GITHUB_REF_NAME)"
+              fi
               PDFDOCS="manuals/"
           else
               echo "BUILD [$BUILD] not recognized"
