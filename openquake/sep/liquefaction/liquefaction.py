@@ -637,7 +637,7 @@ def todorovic_silva_2022_nonparametric_general(
                    or liquefaction occurrence occurrence.
         out_prob: probability of belonging to class 1.
     """
-    #pgv = np.where(pgv > 150, 150, pgv)
+    pgv = np.where(pgv > 150, 150, pgv)
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
     model_file = 'data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz'
