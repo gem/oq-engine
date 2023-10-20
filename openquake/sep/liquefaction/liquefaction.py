@@ -638,7 +638,7 @@ def todorovic_silva_2022_nonparametric_general(
         out_prob: probability of belonging to class 1.
     """
     pgv = np.where(pgv > 150, 150, pgv)
-    gwd = np.where(gwd > 30, 30, gwd)
+    wtd = np.where(wtd > 30, 30, wtd)
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
     model_file = 'data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz'
