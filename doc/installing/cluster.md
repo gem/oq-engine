@@ -171,6 +171,19 @@ currently running with respect to the number of cores available (for instance
 on the host 192.168.2.1 only 1 core of 64 is running, while in the other
 two workers 7 cores are running each).
 
+There are a few useful commands to manage the workers, to be run as user
+`openquake`:
+
+- `oq workers start` is used to start the workers
+- `oq workers stop` is used to stop the workers nicely
+- `oq workers kill` is used to send a hard `kill -9` to the workers
+- `oq workers debug` is used to test that the installation is correct
+
+If a calculation is stuck in the "executing" state due to an IT
+problem (like the cluster running out of memory followed by an `oq
+workers kill`) you can fix its status with the command `oq abort XXX`
+where `XXX` is the calculation ID.
+
 ## Running calculations
 
 Jobs can be submitted through the master node using the `oq engine` command line interface, the API or the WebUI if active. See the documentation about [how to run a calculation](../running/unix.md) or about how to use the [WebUI](../running/server.md)

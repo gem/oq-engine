@@ -30,6 +30,7 @@ from openquake import engine
 # ones.
 extensions = [
     'sphinx.ext.mathjax',
+    'myst_parser',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -38,8 +39,11 @@ templates_path = ['_templates']
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+# source_suffix = '.rst'
 #source_suffix = 'oq-manual.rst'
+source_suffix = {'.rst': 'restructuredtext',
+                 '.md': 'markdown',
+                }
 
 # The encoding of source files.
 source_encoding = 'utf-8-sig'
@@ -105,7 +109,11 @@ language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build', 'old']
+exclude_patterns = ['_build', 'old', 
+    'build/html/_static/vendor/fontawesome/6.1.2/js/all.min.js.LICENSE.txt',
+    'build/html/_static/vendor/fontawesome/6.1.2/LICENSE.txt',
+    'build/html/_static/scripts/bootstrap.js.LICENSE.txt',
+ ]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -328,10 +336,11 @@ latex_elements = {
     'pointsize': '12pt',
 
     # Additional stuff for the LaTeX preamble.
-    # 'preamble': '',
+    'preamble': '\\usepackage{gensymb}',
 
     # Latex figure (float) alignment
     # 'figure_align': 'htbp',
+    'inputenc':     '\\usepackage[utf8]{inputenc}',
     'utf8extra': r"""
 \DeclareUnicodeCharacter{22EE}{\ensuremath{\vdots}}
 """,

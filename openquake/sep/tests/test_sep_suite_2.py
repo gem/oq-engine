@@ -242,8 +242,9 @@ class test_liquefaction_cali_small(unittest.TestCase):
             pgv=self.pgv, tri=self.sites["tri"], dc=self.sites["dc"], dr=self.sites["dr"], 
             zwb=self.sites["zwb"])
 
-        zlp = np.array([0.949740005, 0.660621806, 0.982407491, 0.972949802, 0.989203293,
-                        0.992850986, 1.58769E-05, 0.526810919, 0.988698807, 0.908844299])
+        zlp = np.array([0.949740, 0.660622,	0.982408, 0.972950,	0.989203,
+                        0.992851, 0.000016,	0.526811, 0.988699,	0.908844
+])
         
         clq = np.array([1, 1, 1, 1, 1, 1, 0, 1, 1, 1])
 
@@ -255,8 +256,8 @@ class test_liquefaction_cali_small(unittest.TestCase):
             pgv=self.pgv, vs30=self.sites["vs30"], dc=self.sites["dc"], dr=self.sites["dr"], 
             zwb=self.sites["zwb"])
 
-        zlp = np.array([0.973289334, 0.974526031, 0.988384878, 0.988594348, 0.990864928,
-                        0.992975958, 0.991752215, 0.989183352, 0.992783854, 0.990591401])
+        zlp = np.array([0.973289, 0.974526, 0.988385, 0.988594, 0.990865, 0.992976,
+                        0.991752, 0.989183, 0.992784, 0.990591])
         
         clq = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
         
