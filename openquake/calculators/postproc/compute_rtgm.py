@@ -83,6 +83,7 @@ imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in imts]
 assert DLLs == [0.5, 1.5, 0.6]
+min_afe = 1/2475
 
 def norm_imt(imt):
     """
@@ -148,21 +149,16 @@ def calc_rtgm_df(hcurves, sitecol, oq):
         fact = _find_fact_maxC(T, 'ASCE7-16')
         facts.append(fact)
         
-        if afe[0]<1/2475:
-            logging.info('Hazard is too low')
+        if afe[0]<min_afe:
+            logging.warning('Hazard is too low for %s', imt)
             UHGM[m] = 0
             RTGM_max[m] = 0
             MCE[m] = 0
             riskCoeff[m] = 0
-        elif afe[-1]>1/2475:
-            logging.info('IMLs are not sufficient')
-            UHGM[m] = 999
-            RTGM_max[m] = 999
-            MCE[m] = 999
-            riskCoeff[m] = 999  
-        else:
-            logging.info('Compute RTGM from rtgmpy')
+        elif afe[-1]>min_afe:     
+            raise ValueError("the max iml is too low: please change the job.ini")
             
+        else:            
             hazdic = get_hazdic(afe, IMT, imtls[imt]*fact, sitecol)
             rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
             logging.info(rtgm_haz)
@@ -355,7 +351,7 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    if dstore['mean_rates_ss'][:].max() < 0.0004:
+    if dstore['mean_rates_ss'][:].max() < min_afe:
         logging.warning('Ultra-low hazard: skipping AELO calculation')
         return
     logging.info('Computing Risk Targeted Ground Motion')
