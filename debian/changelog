@@ -1,4 +1,13 @@
   [Michele Simionato]
+  * Required at least Python 3.10.6 on mac and windows
+
+  [Claudio Schill]
+  * Optimized the Kuehn sigma_mu_adjustment calculation by replacing the
+    multi-step interpolation with a single 2D/3D space interpolation
+
+  [Michele Simionato]
+  * Fixed a bug in calculations with a filtered site collection using the
+    HM2018CorrelationModel
   * Internal: raised a clear error message when get_composite_source_model is
    called without passing a datastore in presence of multifault sources
 
@@ -48,7 +57,7 @@
     calculations following event_based_risk calculations
   * Fixed a bug in avg_gmf causing the average to be computed incorrectly
   * Removed the XML exporters for hazard curves, maps and uniform hazard spectra
-    after 7 years of deprecation
+    after nearly 5 years of deprecation
 
   [Paolo Tormene]
   * In the WebUI users are not allowed to see other users outputs by default
