@@ -82,7 +82,7 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
                 array[n, :, e] = 0
 
 
-@compile("uint32[:,:](uint32[:],uint32[:],uint32[:],uint32[:])")
+@compile("(uint32[:],uint32[:],uint32[:],uint32[:])")
 def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
     eid_sid_rlz = numpy.zeros((3, len(sids) * len(eids)), U32)
     idx = 0
