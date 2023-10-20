@@ -177,7 +177,7 @@ TimeoutStopSec=10
 WantedBy=multi-user.target
 '''
 
-PYVER = sys.version_info[:2]
+PYVER = sys.version_info
 PLATFORM = {'linux': ('linux64',),  # from sys.platform to requirements.txt
             'darwin': ('macos',),
             'win32': ('win64',)}
@@ -204,13 +204,13 @@ def ensure(pip=None, pyvenv=None):
                    % sys.executable))
 
 
-def get_requirements_branch(version, inst, repository):
+def get_requirements_branch(version, inst, from_fork):
     """
     Convert "version" into a branch name
     """
-    repository_owner, repository_name = repository.split('/')
-    # in forks of oq-engine, always read requirements from master
-    if repository_owner != 'gem' and repository_name == 'oq-engine':
+    # in actions triggered by forks we want requirements to be taken from
+    # master
+    if from_fork:
         return 'master'
     # in cases such as 'install.py user', for instance while running tests from
     # another gem repository, we need requirements to be read from the latest
@@ -267,8 +267,14 @@ def before_checks(inst, venv, port, remove, usage):
         inst.DBPORT = int(port)
 
     # check python version
-    if PYVER < (3, 8):
-        sys.exit('Error: you need at least Python 3.8, but you have %s' %
+    if sys.platform == 'linux':
+        # requires Python >= 3.8.0
+        if PYVER < (3, 8, 0):
+            sys.exit('Error: you need at least Python 3.8, but you have %s' %
+                     '.'.join(map(str, sys.version_info)))
+    elif PYVER < (3, 10, 6):
+        # requires Python >= 3.10.6
+        sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
 
     # check platform
@@ -343,7 +349,7 @@ def fix_version(commit, venv):
         f.write(''.join(lines))
 
 
-def install(inst, version, repository):
+def install(inst, version, from_fork):
     """
     Install the engine in one of the three possible modes
     """
@@ -390,13 +396,14 @@ def install(inst, version, repository):
                                    'pip', 'wheel'])
 
     # install the requirements
-    branch = get_requirements_branch(version, inst, repository)
+    branch = get_requirements_branch(version, inst, from_fork)
     if sys.platform == 'darwin':
         mac = '_' + platform.machine(),  # x86_64 or arm64
     else:
         mac = '',
     req = f'https://raw.githubusercontent.com/gem/oq-engine/{branch}/' \
-        'requirements-py%d%d-%s%s.txt' % (PYVER + PLATFORM[sys.platform] + mac)
+        'requirements-py%d%d-%s%s.txt' % (
+            PYVER[:2] + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call(
         [pycmd, '-m', 'pip', 'install',
@@ -448,19 +455,13 @@ def install(inst, version, repository):
     if (inst is server and not os.path.exists(inst.OQ) or
        inst is devel_server and not os.path.exists(inst.OQ)):
         os.symlink(oqreal, inst.OQ)
-    if inst is user:
-        if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}'
-                  '\\Scripts\\activate.bat')
-        else:
-            print(f'Please add an alias oq={oqreal} in your .bashrc or equiv')
-    elif inst is devel:
-        if sys.platform == 'win32':
-            print(f'Please activate the virtualenv with {inst.VENV}'
-                  '\\Scripts\\activate.bat')
-        else:
-            print(f'Please activate the venv with source {inst.VENV}'
-                  '/bin/activate')
+    if sys.platform == 'win32' and inst in (user, devel):
+        print(f'Please activate the virtualenv with {inst.VENV}'
+              f'\\Scripts\\activate.bat (in CMD) or {inst.VENV}'
+              '\\Scripts\\activate.ps1 (in PowerShell)')
+    elif inst in (user, devel):
+        print(f'Please activate the venv with source {inst.VENV}'
+              '/bin/activate')
 
     # create systemd services
     if ((inst is server and os.path.exists('/run/systemd/system')) or
@@ -541,10 +542,11 @@ if __name__ == '__main__':
                         help="version to install (default stable)")
     parser.add_argument("--dbport",
                         help="DbServer port (default 1907 or 1908)")
-    parser.add_argument("--repository",
-                        help=("The owner and repository name. For example,"
-                              " 'gem/oq-engine' or 'forkowner/oq-engine'"),
-                        default='gem/oq-engine')
+    # NOTE: This flag should be set when installing the engine from an action
+    #       triggered by a fork
+    parser.add_argument("--from_fork", dest='from_fork', action='store_true',
+                        help=argparse.SUPPRESS)
+    parser.set_defaults(from_fork=False)
     args = parser.parse_args()
     if args.inst:
         inst = globals()[args.inst]
@@ -553,6 +555,6 @@ if __name__ == '__main__':
         if args.remove:
             remove(inst)
         else:
-            install(inst, args.version, args.repository)
+            install(inst, args.version, args.from_fork)
     else:
         sys.exit("Please specify the kind of installation")

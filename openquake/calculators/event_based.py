@@ -278,7 +278,11 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                 df = computer.compute_all(dstore, rmon, cmon, umon)
             else:  # regular GMFs
                 with mmon:
-                    mean_stds = cmaker.get_mean_stds([computer.ctx])
+                    mean_stds = cmaker.get_mean_stds(
+                        [computer.ctx], split_by_mag=False)
+                    # avoid numba type error
+                    computer.ctx.flags.writeable = True
+
                 df = computer.compute_all(mean_stds, max_iml, cmon, umon)
             sig_eps.append(computer.build_sig_eps(se_dt))
             dt = time.time() - t0
