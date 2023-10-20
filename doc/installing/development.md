@@ -10,7 +10,12 @@ wanting to do everything manually.
 Knowledge of [Python](https://www.python.org/) (and its [virtual environments](https://docs.python.org/3.9/tutorial/venv.html)), [git](https://git-scm.com/) and [software development](https://xkcd.com/844/) are required.
 
 Some software prerequisites are needed to build the development environment.
-Python 3.8, 3.9 and 3.10 are supported.
+First of your you need a Python version supported by the engine.
+At the moment we recommend Python 3.10, which is the only version
+supported on Windows and macOS.
+
+**NB: Python 3.11 and 3.12 are not supported yet, so please do NOT install
+such versions**
 
 ### Ubuntu
 

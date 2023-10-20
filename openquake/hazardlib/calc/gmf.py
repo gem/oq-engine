@@ -26,7 +26,7 @@ import pandas
 from openquake.baselib.general import AccumDict
 from openquake.baselib.performance import Monitor, compile
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.source.rupture import get_eid_rlz
+from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
@@ -82,7 +82,7 @@ def set_max_min(array, mean, max_iml, min_iml, mmi_index):
                 array[n, :, e] = 0
 
 
-@compile("uint32[:,:](uint32[:],uint32[:],uint32[:],uint32[:])")
+@compile("(uint32[:],uint32[:],uint32[:],uint32[:])")
 def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
     eid_sid_rlz = numpy.zeros((3, len(sids) * len(eids)), U32)
     idx = 0
@@ -98,12 +98,12 @@ def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
 
 class GmfComputer(object):
     """
-    Given an earthquake rupture, the ground motion field computer computes
+    Given an earthquake rupture, the GmfComputer computes
     ground shaking over a set of sites, by randomly sampling a ground
     shaking intensity model.
 
     :param rupture:
-        Rupture to calculate ground motion fields radiated from.
+        EBRupture to calculate ground motion fields radiated from.
 
     :param :class:`openquake.hazardlib.site.SiteCollection` sitecol:
         a complete SiteCollection
@@ -131,10 +131,10 @@ class GmfComputer(object):
         case no secondary perils need to be evaluated.
     """
     # The GmfComputer is called from the OpenQuake Engine. In that case
-    # the rupture is an higher level containing a
+    # the rupture is an EBRupture instance containing a
     # :class:`openquake.hazardlib.source.rupture.Rupture` instance as an
     # attribute. Then the `.compute(gsim, num_events, ms)` method is called and
-    # a matrix of size (I, N, E) is returned, where I is the number of
+    # a matrix of size (M, N, E) is returned, where M is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sitecol, cmaker, correlation_model=None,
@@ -152,37 +152,27 @@ class GmfComputer(object):
         self.correlation_model = correlation_model
         self.amplifier = amplifier
         self.sec_perils = sec_perils
-        # `rupture` is an EBRupture instance in the engine
-        if hasattr(rupture, 'rupture'):
-            self.ebrupture = rupture
-            self.seed = rupture.seed
-            rupture = rupture.rupture  # the underlying rupture
-        else:  # in the hazardlib tests
-            self.ebrupture = {'e0': 0, 'n_occ': 1, 'seed': rupture.seed}
-            self.seed = rupture.seed
+        self.ebrupture = rupture
+        self.seed = rupture.seed
+        rupture = rupture.rupture  # the underlying rupture
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs
+        self.N = len(self.ctx)
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
         self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
-        self.init_eid_rlz_sig_eps()
 
     def init_eid_rlz_sig_eps(self):
         """
         Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
         """
         self.rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
-        if isinstance(self.ebrupture, dict):  # with keys e0, n_occ, seed
-            dic = self.ebrupture
-        else:
-            dic = vars(self.ebrupture)
-        eid, rlz = get_eid_rlz(dic, self.rlzs, self.cmaker.scenario)
-        self.eid, self.rlz = eid, rlz
-        self.N = len(self.ctx)
+        self.eid, self.rlz = get_eid_rlz(
+            vars(self.ebrupture), self.rlzs, self.cmaker.scenario)
         self.E = E = len(self.eid)
         self.M = M = len(self.gmv_fields)
         self.sig = numpy.zeros((E, M), F32)  # same for all events
@@ -218,6 +208,7 @@ class GmfComputer(object):
         if max_iml is None:
             M = len(self.cmaker.imts)
             max_iml = numpy.full(M, numpy.inf, float)
+
         set_max_min(array, mean, max_iml, min_iml, mmi_index)
         data['gmv'].append(array)
 
@@ -263,6 +254,7 @@ class GmfComputer(object):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
+        self.init_eid_rlz_sig_eps()
         rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
         for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
@@ -378,7 +370,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         Float, number of standard deviations for truncation of the intensity
         distribution
     :param realizations:
-        Integer number of GMF realizations to compute.
+        Integer number of GMF simulations to compute.
     :param correlation_model:
         Instance of correlation model object. See
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which case
@@ -389,18 +381,21 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     :returns:
         Dictionary mapping intensity measure type objects (same
         as in parameter ``imts``) to 2d numpy arrays of floats,
-        representing different realizations of ground shaking intensity
+        representing different simulations of ground shaking intensity
         for all sites in the collection. First dimension represents
-        sites and second one is for realizations.
+        sites and second one is for simulations.
     """
     cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: U32([0])},
                           dict(truncation_level=truncation_level,
-                               imtls={str(imt): [1] for imt in imts}))
+                               imtls={str(imt): numpy.array([0.])
+                                      for imt in imts}))
     cmaker.scenario = True
-    rupture.seed = seed
-    gc = GmfComputer(rupture, sites, cmaker, correlation_model)
-    gc.ebrupture['n_occ'] = realizations
-    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
+    ebr = EBRupture(
+        rupture, source_id=0, trt_smr=0, n_occ=realizations, id=0, e0=0)
+    ebr.seed = seed
+    gc = GmfComputer(ebr, sites, cmaker, correlation_model)
+    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]  # shape (4, M, N)
+    gc.init_eid_rlz_sig_eps()
     res = gc.compute(gsim, U32([0]), mean_stds,
                      numpy.random.default_rng(seed))
     return {imt: res[:, m] for m, imt in enumerate(gc.imts)}
