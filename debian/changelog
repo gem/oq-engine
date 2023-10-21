@@ -3,6 +3,8 @@
     the QGIS plugin
 
   [Michele Simionato]
+  * Fixed the function `get_mean_stddevs_cy14` to recover the same results
+    for the Canada SHM6 model as in engine 3.11
   * Required at least Python 3.10.6 on mac and windows
 
   [Claudio Schill]
