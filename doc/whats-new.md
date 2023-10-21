@@ -136,6 +136,9 @@ We fixed a bug in calculations with a filtered site collection using
 the HM2018CorrelationModel. The model should still be considered
 experimental.
 
+We fixed the function `get_mean_stddevs_cy14` to recover the same results
+for the Canada SHM6 model as in engine 3.11.
+
 When configured for multiple users the WebUI allowed people to see
 the results produced by other users knowing the URL. This is not
 possible anymore.
