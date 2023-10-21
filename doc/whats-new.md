@@ -152,7 +152,10 @@ calculation file `calc_XXX.hdf5` when the DbServer was on a different
 machine, or when the DbServer user had no permissions to delete. Now
 the deletion is performed directly by the user running the command.
 
-We fixed consequence calculations for 'homeless', 'fatality' and 'injury'
+We fixed an ordering bug in the tagnames in `extract_agg_curves` breaking
+the QGIS plugin.
+
+We fixed the consequence calculations for 'homeless', 'fatality' and 'injury'
 with and without a specified 'time_event'.
 
 There is now a better error message for logic trees with branchsets

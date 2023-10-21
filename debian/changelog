@@ -1,3 +1,7 @@
+  [Paolo Tormene, Michele Simionato]
+  * Fixed an ordering bug in the tagnames in `extract_agg_curves` breaking
+    the QGIS plugin
+
   [Michele Simionato]
   * Required at least Python 3.10.6 on mac and windows
 
