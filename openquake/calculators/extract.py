@@ -736,8 +736,10 @@ def extract_agg_curves(dstore, what):
     """
     info = get_info(dstore)
     qdic = parse(what, info)
-
-    tagnames = dstore['oqparam'].aggregate_by[0]
+    try:
+        tagnames = dstore['oqparam'].aggregate_by[0]
+    except IndexError:
+        tagnames = []
     k = qdic['k']  # rlz or stat index
     lts = qdic['lt']
     [l] = qdic['loss_type']  # loss type index
