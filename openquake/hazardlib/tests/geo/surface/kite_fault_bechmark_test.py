@@ -39,7 +39,7 @@ class KiteSurfaceBenchmark(unittest.TestCase):
 
         if PLOTTING:
             title = 'Profiles'
-            ppp(self.prf, title=title, ax_equal=True)
+            #ppp(self.prf, title=title, ax_equal=True)
 
     def test_mesh(self):
 
@@ -51,4 +51,4 @@ class KiteSurfaceBenchmark(unittest.TestCase):
 
         if PLOTTING:
             title = 'Test mesh creation'
-            # ppp(self.prf, srfc, title, ax_equal=True)
+            ppp(self.prf, srfc, title, ax_equal=True)
