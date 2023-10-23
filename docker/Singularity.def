@@ -1,0 +1,76 @@
+# Copyright (C) 2023-2023 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+Bootstrap: docker
+From: python:3.10-slim
+Stage: compile-image
+
+%environment
+    oq_branch=engine-3.17
+	export oq_branch
+
+%labels
+    maintainer="GEM Foundation <devops@openquake.org>"
+    vendor="GEM Foundation"
+
+%post
+
+    useradd -m -u 1000 -s /bin/bash openquake
+    apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
+    # Create venv
+    VIRTUAL_ENV=/opt/openquake
+    python3 -m venv $VIRTUAL_ENV
+    PATH="$VIRTUAL_ENV/bin:$PATH"
+    #clone repository and install engine
+    git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
+    pip --disable-pip-version-check install . -r requirements-py310-linux64.txt --no-warn-script-location
+
+Bootstrap: docker
+From: python:3.10-slim
+Stage: build-image
+
+%environment
+    export VIRTUAL_ENV=/opt/openquake
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+
+%files
+    scripts/oq-db_start.sh ${HOME}
+    %files from compile-image
+    /opt/openquake/ /opt/openquake/
+
+%post
+    LANG=en_US.UTF-8
+    LOCKDOWN=False
+    useradd -m -u 1000 -s /bin/bash openquake
+    su -  openquake # USER openquake
+    HOME=/home/openquake
+    mkdir -p ${HOME}
+    cd ${HOME}
+    PATH="/opt/openquake/bin:$PATH"
+    #
+    mkdir oqdata
+
+%environment
+    export LANG=en_US.UTF-8
+    export LOCKDOWN=False
+    export HOME=/home/openquake
+    export PATH="/opt/openquake/bin:$PATH"
+
+%runscript
+    cd ${HOME}
+    exec /bin/bash -c ./oq-db_start.sh "$@"
+
+%startscript
+    cd ${HOME}
+    exec /bin/bash -c ./oq-db_start.sh "$@"
