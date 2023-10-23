@@ -133,7 +133,7 @@ The OpenQuake Engine has several installation methods. To choose the one that be
 
 Binary packages are provided for Windows. For all other systems use the
 [universal installer](installing/universal.md). We also provide
-[Docker](installing/docker.md).
+[Docker containers](installing/docker.md).
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
 
