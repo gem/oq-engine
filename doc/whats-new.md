@@ -14,7 +14,7 @@ A summary is given below.
 After years of effort, we finally managed to get a drastic reduction
 in memory consumption in classical calculations. For instance, in
 cluster situations, instead of requiring 128 GB for the master node,
-now we require ⅓rd of that. Moreover, for large calculations, now
+now we require one third of that. Moreover, for large calculations, now
 the worker nodes require nearly half of the memory that was required
 before. This was achieved by implementing an automatic parallel tiling
 mechanism invisible to the user.
