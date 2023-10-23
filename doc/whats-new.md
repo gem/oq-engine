@@ -146,6 +146,9 @@ possible anymore.
 Removing a calculation through the WebUI failed on Windows due to the
 use of a wrong path separator. This has been fixed.
 
+The command `oq extract ruptures` on Windows was producing wrong newlines
+\r\r\n instead of the correct \r\n. It has been fixed.
+
 The command `oq reaggregate` was failing with a cryptic error message
 when starting from a calculation with a missing or inconsistent
 `aggregate_by`. Now there is a clear error.
