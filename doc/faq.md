@@ -131,33 +131,11 @@ The OpenQuake Engine has several installation methods. To choose the one that be
 
 ### Supported operating systems
 
-Binary packages are provided for the following 64bit operating systems:
-- [Windows 10](installing/windows.md)
-- [macOS 11.6+](installing/universal.md)
-- Linux [Ubuntu 18.04+](installing/ubuntu.md) and [RedHat/CentOS 7/RockyLinux 8 ](installing/rhel.md) via _deb_ and _rpm_
-- Any other generic Linux distribution via the [universal installer](installing/universal.md)
-- [Docker](installing/docker.md) hosts
+Binary packages are provided for Windows. For all other systems use the
+[universal installer](installing/universal.md). We also provide
+[Docker](installing/docker.md).
 
 A 64bit operating system **is required**. Please refer to each OS specific page for details about requirements.
-
-******
-
-### Unsupported operating systems
-
-- Windows 8 may or may not work and we will not provide support for it
-Binary packages *may* work on Ubuntu derivatives and Debian if the dependencies are satisfied; these configurations are known to work:
-- Ubuntu 18.04 (Bionic) packages work on **Debian 10.0** (Buster)
-- Ubuntu 20.04 (Focal) packages work on **Debian 11.0** (Bullseye)
-
-These configurations however are not tested and we cannot guarantee on the quality of the results. Use at your own risk.
-
-******
-
-### 32bit support
-
-The OpenQuake Engine **requires a 64bit operating system**. Starting with version 2.3 of the Engine binary installers and packages aren't provided for 32bit operating systems anymore.
-
-******
 
 ### MPI support
 
@@ -170,62 +148,6 @@ MPI support may be added in the future if sponsored by someone. If you would lik
 ### Python 2.7 compatibility 
 
 Support for Python 2.7 has been dropped. The last version of the Engine compatible with Python 2.7 is **[OpenQuake Engine version 2.9 (Jeffreys)](https://github.com/gem/oq-engine/tree/engine-2.9#openquake-engine)**.
-
-******
-
-### Python scripts that import openquake
-
-On **Ubuntu** and **RHEL** if a third party python script (or a Jupyter notebook) needs to import openquake as a library (as an example: `from openquake.commonlib import readinput`) you must use a virtual environment and install a local copy of the Engine:
-
-```
-$ python3 -m venv </path/to/myvenv>
-$ . /path/to/myvenv/bin/activate
-$ pip3 install openquake.engine
-```
-
-******
-
-### Errors upgrading from an old version on Ubuntu
-
-When upgrading from an OpenQuake version **older than 2.9 to a newer one** you may encounter an error on **Ubuntu**. Using `apt` to perform the upgrade you may get an error like this:
-
-```bash
-Unpacking oq-python3.5 (3.5.3-1ubuntu0~gem03~xenial01) ...
-dpkg: error processing archive /var/cache/apt/archives/oq-python3.5_3.5.3-1ubuntu0~gem03~xenial01_amd64.deb (--unpack):
- trying to overwrite '/opt/openquake/bin/easy_install', which is also in package python-oq-libs 1.3.0~dev1496296871+a6bdffb
-```
-
-This issue can be resolved uninstalling OpenQuake first and then making a fresh installation of the latest version:
-
-```bash
-$ sudo apt remove python-oq-.*
-$ sudo rm -Rf /opt/openquake
-$ sudo apt install python3-oq-engine
-```
-
-******
-
-### OpenQuake Hazardlib errors
-
-```bash
-pkg_resources.DistributionNotFound: The 'openquake.hazardlib==0.XY' distribution was not found and is required by openquake.engine
-```
-Since OpenQuake Engine 2.5, the OpenQuake Hazardlib package has been merged with the OpenQuake Engine one.
-
-If you are using git and you have the `PYTHONPATH` set you should update `oq-engine` and then remove `oq-hazardlib` from your filesystem and from the `PYTHONPATH`, to avoid any possible confusion.
-
-If `oq-hazardlib` has been installed via `pip` you must uninstall both `openquake.engine` and `openquake.hazardlib` first, and then reinstall `openquake.engine`.
-
-```bash
-$ pip uninstall openquake.hazardlib openquake.engine
-$ pip install openquake.engine
-# -OR- development installation
-$ pip install -e /path/to/oq-engine/
-```
-
-If you are using Ubuntu or RedHat packages no extra operations are needed, the package manager will remove the old `python-oq-hazardlib` package and replace it with a fresh copy of `python3-oq-engine`.
-
-On Ubuntu make sure to run `apt dist-upgrade` instead on `apt upgrade` to make a proper upgrade of the OpenQuake packages.
 
 ******
 
@@ -245,12 +167,6 @@ More information is available on [Running the OpenQuake Engine](running/unix.md)
 The default port for the DbServer (configured via the `openquake.cfg`
 configuration file) is `1908` (for a development installation) or `1907`
 (for a package installation).
-
-******
-
-### Swap partitions
-
-Having a swap partition active on resources fully dedicated to the OpenQuake Engine is discouraged. More info [here](installing/cluster.md#swap-partitions).
 
 ******
 
