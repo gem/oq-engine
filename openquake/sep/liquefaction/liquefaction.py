@@ -638,10 +638,10 @@ def todorovic_silva_2022_nonparametric_general(
         out_prob: probability of belonging to class 1.
     """
     pgv = np.where(pgv > 150, 150, pgv)
-    wtd = np.where(wtd > 30, 30, wtd)
+    #wtd = np.where(wtd > 30, 30, wtd)
     strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([strain_proxy, dw, wtd, precip]).T
-    model_file = 'data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz'
+    model_file = 'data/todorovic_silva_2022/random_forest_v1.onnx.gz'
     model_path = os.path.join(os.path.dirname(__file__), model_file)
     with gzip.open(model_path, 'rb') as gzipped_file:
         file = gzipped_file.read()
@@ -650,6 +650,8 @@ def todorovic_silva_2022_nonparametric_general(
         results = session.run(None, {"X": matrix})
         out_class = results[0]
         out_prob = [p[1] for p in results[1]]
+        prob_liq = np.where((pgv < 4.0) | (vs30 > 620), 0, prob_liq)
+        prob_liq = np.where((pgv < 4.0) | (vs30 > 620), 0, prob_liq)
         out_prob = np.where(pga < 0.1, 0, out_prob)
         out_class = np.where(pga < 0.1, 0, out_class)
         return out_class, out_prob
