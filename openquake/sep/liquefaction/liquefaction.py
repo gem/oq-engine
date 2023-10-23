@@ -639,8 +639,8 @@ def todorovic_silva_2022_nonparametric_general(
     """
     pgv = np.where(pgv > 150, 150, pgv)
     #wtd = np.where(wtd > 30, 30, wtd)
-    strain_proxy = pgv / (CM_PER_M * vs30)
-    matrix = np.array([strain_proxy, dw, wtd, precip]).T
+    #strain_proxy = pgv / (CM_PER_M * vs30)
+    matrix = np.array([pgv, vs30, dw, wtd, precip]).T
     model_file = 'data/todorovic_silva_2022/random_forest_v1.onnx.gz'
     model_path = os.path.join(os.path.dirname(__file__), model_file)
     with gzip.open(model_path, 'rb') as gzipped_file:
