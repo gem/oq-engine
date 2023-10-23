@@ -12,51 +12,47 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+#
+# 
+# Singularity recipe does not have ARG like Dockerfile
+# Default value for oq_branch variable is master
+# Remember to change if needed
+
 Bootstrap: docker
 From: python:3.10-slim
 Stage: compile-build
 
 %labels
-    maintainer="GEM Foundation <devops@openquake.org>"
-    vendor="GEM Foundation"
-
-%post
-    LANG=en_US.UTF-8
-    LOCKDOWN=False
-    export VIRTUAL_ENV=/opt/openquake
-    export PATH="$VIRTUAL_ENV/bin:$PATH"
-    HOME=/home/openquake
-    oq_branch=engine-3.17
-    export oq_branch
-    useradd -m -u 1000 -s /bin/bash openquake
-    apt-get update &&  apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
-    # Create venv
-    VIRTUAL_ENV=/opt/openquake
-    python3 -m venv $VIRTUAL_ENV
-    PATH="$VIRTUAL_ENV/bin:$PATH"
-    # clone repository and install engine
-    git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
-    pip --disable-pip-version-check install . -r requirements-py310-linux64.txt --no-warn-script-location
-    #
-    su -  openquake # USER openquake
-    cd ${HOME}
-    #
-    mkdir oqdata
-
-%environment
-    export LANG=en_US.UTF-8
-    export LOCKDOWN=False
-    export HOME=/home/openquake
-    export VIRTUAL_ENV=/opt/openquake
-    export PATH="$VIRTUAL_ENV/bin:$PATH"
+    Author GEM Foundation <devops@openquake.org>
 
 %files
-    scripts/oq-db_start.sh /home/openquake/
+   scripts/oq-db_start.sh /opt/openquake/bin/
+
+%post
+    ## for apt to be noninteractive
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    export LANG=en_US.UTF-8
+    oq_branch=master
+    export oq_branch
+    apt-get -y update
+    apt-get -y upgrade
+    apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
+    apt-get clean
+    ## Create venv
+    export VIRTUAL_ENV=/opt/openquake
+    python3 -m venv $VIRTUAL_ENV
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+    ## Clone repository and install engine
+    git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
+    pip3 --disable-pip-version-check install . -r requirements-py310-linux64.txt --no-warn-script-location
+
+%environment
+
+## General environment variable
+    export LANG=en_US.UTF-8
+    export VIRTUAL_ENV=/opt/openquake
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
 
 %runscript
-    cd ${HOME}
-    exec /bin/bash -c ./oq-db_start.sh "$@"
-
-%startscript
-    cd ${HOME}
-    exec /bin/bash -c ./oq-db_start.sh "$@"
+    exec /bin/bash -c /opt/openquake/bin/oq-db_start.sh "$@"
