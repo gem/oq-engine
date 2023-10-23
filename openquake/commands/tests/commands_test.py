@@ -34,6 +34,7 @@ from openquake.baselib.python3compat import encode
 from openquake.baselib.general import gettemp, chdir
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.tests.flake8_test import check_newlines
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
@@ -46,7 +47,8 @@ from openquake.qa_tests_data.logictree import case_09, case_13, case_56
 from openquake.qa_tests_data.classical import case_01, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_5, case_16, case_21
+from openquake.qa_tests_data.event_based import (
+    case_1 as eb_case_1, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
 from openquake.qa_tests_data.scenario import case_25
@@ -307,6 +309,25 @@ class RunShowExportTestCase(unittest.TestCase):
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
+
+    def test_extract_ruptures(self):
+        job_ini = os.path.join(
+            os.path.dirname(eb_case_1.__file__), 'job_ruptures.ini')
+        with Print.patch() as p:
+            calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
+        calc_id = calc.datastore.calc_id
+        tempdir = tempfile.mkdtemp()
+        with Print.patch() as p:
+            sap.runline("openquake.commands extract ruptures "
+                        f"{calc_id} --extract-dir={tempdir}")
+        fnames = os.listdir(tempdir)
+        fname = os.path.join(tempdir, fnames[0])
+        error = check_newlines(open(fname, 'rb').read())
+        if error:
+            raise ValueError(
+                f'Invalid newlines in the exported ruptures file {fname}')
+        else:
+            shutil.rmtree(tempdir)
 
 
 class CompareTestCase(unittest.TestCase):
