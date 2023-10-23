@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Fixed the command `oq extract ruptures` producing wrong newlines on
+    Windows
+
   [Paolo Tormene, Michele Simionato]
   * Fixed an ordering bug in the tagnames in `extract_agg_curves` breaking
     the QGIS plugin

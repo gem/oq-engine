@@ -44,7 +44,7 @@ def main(what,
         w = what.replace('/', '-').replace('?', '-')
         if hasattr(aw, 'array') and isinstance(aw.array, str):  # CSV string
             fname = os.path.join(extract_dir, '%s_%d.csv' % (w, calc_id))
-            with open(fname, 'w', encoding='utf-8') as f:
+            with open(fname, 'w', encoding='utf-8', newline='') as f:
                 f.write(aw.array)
         else:  # save as npz
             fname = os.path.join(extract_dir, '%s_%d.npz' % (w, calc_id))
