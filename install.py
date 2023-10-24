@@ -17,13 +17,13 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 """
 Universal installation script for the OpenQuake engine.
-Three installation methods are supported:
+Four installation methods are supported:
 
 1. "server" installation, i.e. system-wide installation on /opt/openquake
-1. "devel_server" installation, i.e. developement system-wide installation on
+2. "devel_server" installation, i.e. developement system-wide installation on
     /opt/openquake
-2. "user" installation on $HOME/openquake
-3. "devel" installation on $HOME/openquake from the engine repository
+3. "user" installation on $HOME/openquake
+4. "devel" installation on $HOME/openquake from the engine repository
 
 To disinstall use the --remove flag, which remove the services and the
 directories /opt/openquake/venv or $HOME/openquake.
