@@ -62,6 +62,7 @@ _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/In
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ python3.10 install.py user
+```
 
 **on Linux:**
 ```
