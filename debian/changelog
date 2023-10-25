@@ -1,3 +1,5 @@
+python3-oq-engine (3.18.0-1~xenial01) xenial; urgency=low
+
   [Michele Simionato]
   * Fixed the command `oq extract ruptures` producing wrong newlines on
     Windows
@@ -169,6 +171,8 @@
     calculations
   * Huge reduction of the memory usage in the event_based calculator; also,
     reduced the slow tasks
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 25 Oct 2023 12:34:09 +0000
 
 python3-oq-engine (3.17.0-2~xenial01) xenial; urgency=low
 
