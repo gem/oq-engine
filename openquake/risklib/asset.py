@@ -599,7 +599,7 @@ def _get_exposure(fname, stop=None):
                            f' column names to each oq field. As a workaround,'
                            f' you can duplicate \'{node["input"]}\', assign a'
                            f' new name, and map to the other oq field.')
-                raise ValueError(err_msg)
+                raise InvalidFile(err_msg)
             fieldmap[node['input']] = node['oq']
     except AttributeError:
         pass  # no fieldmap
