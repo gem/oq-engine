@@ -181,6 +181,7 @@ if not os.path.exists(json_url_path):
                     json_url_path)
 
 html_theme_options = {
+    "navigation_with_keys": True,
     "navbar_start": ["version-switcher"],
     "switcher": {
         "json_url": json_url_path,
