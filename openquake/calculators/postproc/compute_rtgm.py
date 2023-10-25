@@ -575,7 +575,7 @@ def plot_governing_mce(dstore, imtls):
     return Image.open(bio)
 
 
-def plot_curves(dstore):
+def plot_curves(dstore, hc_only=False):
     dinfo = get_info(dstore)
     # site is always 0 for a single-site calculation
     # get imls and imts, make arrays
@@ -608,12 +608,13 @@ def plot_curves(dstore):
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
-    df, imtls_dict = disaggr_by_src(dstore, imtls)
-    _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore)
+    if hc_only==False:
+        df, imtls_dict = disaggr_by_src(dstore, imtls)
+        _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore)
 
-    img = plot_governing_mce(dstore, imtls)
-    logging.info('Storing png/governing_mce.png')
-    dstore['png/governing_mce.png'] = img
+        img = plot_governing_mce(dstore, imtls)
+        logging.info('Storing png/governing_mce.png')
+        dstore['png/governing_mce.png'] = img
 
 
 def main(dstore, csm):
@@ -639,6 +640,7 @@ def main(dstore, csm):
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
+        plot_curves(dstore, hc_only=True)
         return
     facts[0] = 1  # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
