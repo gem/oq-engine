@@ -39,7 +39,7 @@ can be installed in several different ways. The following page provides
 a handy guide for users to choose the most appropriate installation
 method depending on their intended use cases:
 
-https://github.com/gem/oq-engine/blob/master/doc/installing/README.md.
+https://github.com/gem/oq-engine/blob/engine-3.18/doc/installing/README.md.
 
 This user manual is for the command line interface for the OpenQuake engine.
 
@@ -47,7 +47,7 @@ Supplementary resources
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Guidance instructions for using the OpenQuake engine WebUI are available at
-https://github.com/gem/oq-engine/blob/master/doc/running/server.md.
+https://github.com/gem/oq-engine/blob/engine-3.18/doc/running/server.md.
 
 A user manual for the QGIS plugin for the OpenQuake engine is available at
 https://docs.openquake.org/oq-irmt-qgis/latest/. In particular,

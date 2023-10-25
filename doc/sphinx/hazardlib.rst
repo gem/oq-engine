@@ -33,7 +33,7 @@ support on IRC channel #openquake on freenode.
 Installation
 ------------
 
-See https://github.com/gem/oq-engine/blob/master/README.md#installation
+See https://github.com/gem/oq-engine/blob/engine-3.18/README.md#installation
 
 License
 -------

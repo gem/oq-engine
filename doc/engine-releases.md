@@ -36,7 +36,7 @@ be careful about that.
 
 The recommended way to install a non-LTS release is via the
 universal installer (see
-https://github.com/gem/oq-engine/blob/master/doc/installing/universal.md)
+https://github.com/gem/oq-engine/blob/engine-3.18/doc/installing/universal.md)
 and we do not provide Linux packages nor Windows installer.
 
 While we try very hard to ensure that the QGIS plugin and the web
