@@ -378,13 +378,80 @@ class DummyCorrelationModel(BaseAvgSACorrelationModel):
         return 1.
 
 
+ESHM20_COEFFICIENTS = {
+     "total": (0.18566593, 0.11134301, -0.04588736),
+     "between-event": (0.16269577, 0.05630065, -0.0567915),
+     "between-site": (0.16135806, 0.10495677, -0.07538098),
+     "within-event": (0.26521779, 0.20006642, -0.03859216)
+}
+
+
+def baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2):
+    """
+    Basic function of the Baker & Jayaram (2007) cross-correlation model
+    allowing for flexibility in the coefficients of the model
+
+    :param float d1:
+        Coefficient d1 (0.366 in original model)
+    
+    :param float d2:
+        Coefficient d2 (0.105 in original model)
+    
+    :param float d3:
+        Coefficient d3 (0.0099 in original model)
+        
+    :param float t1:
+        First period of interest.
+
+    :param float t2:
+        Second period of interest.
+
+    :return float rho:
+        The predicted correlation coefficient.
+    """
+    t_min = min(t1, t2)
+    t_max = max(t1, t2)
+
+    c1 = 1.0
+    c1 -= np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * d1)
+
+    if t_max < 0.2:
+        c2 = d2 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
+        c2 = 1.0 - c2 * (t_max - t_min) / (t_max - d3)
+    else:
+        c2 = 0
+
+    if t_max < 0.109:
+        c3 = c2
+    else:
+        c3 = c1
+
+    c4 = c1
+    c4 += 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
+
+    if t_max <= 0.109:
+        rho = c2
+    elif t_min > 0.109:
+        rho = c1
+    elif t_max < 0.2:
+        rho = min(c2, c4)
+    else:
+        rho = c4
+
+    return rho
+
+
 class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
+    """Variation of the Baker & Jayaram (2007) cross-correlation model with
+    coefficients calibrated on European data, and with separate functions
+    for correlation in between-event, between-site and within-event residuals
     """
-    """
+
     @staticmethod
     def get_correlation(t1, t2):
         """
-        Computes the correlation coefficient for the specified periods.
+        Computes the correlation coefficient for the specified periods for the
+        total standard deviation
 
         :param float t1:
             First period of interest.
@@ -400,35 +467,29 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         New
         0.20698079,  0.0888577,  -0.03330
         """
+        d1, d2, d3 = ESHM20_COEFFICIENTS["total"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
 
-        t_min = min(t1, t2)
-        t_max = max(t1, t2)
+    @staticmethod
+    def get_between_event_correlation(t1, t2):
+        """As per the get_correlation function but for the between-event
+        residuals only
+        """
+        d1, d2, d3 = ESHM20_COEFFICIENTS["between-event"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
+    
+    @staticmethod
+    def get_between_site_correlation(t1, t2):
+        """As per the get_correlation function but for the between-site
+        residuals only
+        """
+        d1, d2, d3 = ESHM20_COEFFICIENTS["between-site"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
 
-        c1 = 1.0
-        c1 -= np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * 0.20698)
-
-        if t_max < 0.2:
-            c2 = 0.0888577 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
-            c2 = 1.0 - c2 * (t_max - t_min) / (t_max - -0.03330)
-        else:
-            c2 = 0
-
-        if t_max < 0.109:
-            c3 = c2
-        else:
-            c3 = c1
-
-        c4 = c1
-        c4 += 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
-
-        if t_max <= 0.109:
-            rho = c2
-        elif t_min > 0.109:
-            rho = c1
-        elif t_max < 0.2:
-            rho = min(c2, c4)
-        else:
-            rho = c4
-
-        return rho
-
+    @staticmethod
+    def get_within_event_correlation(t1, t2):
+        """As per the get_correlation function but for the between-event
+        residuals only
+        """
+        d1, d2, d3 = ESHM20_COEFFICIENTS["within-event"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
