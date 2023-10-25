@@ -591,6 +591,15 @@ def _get_exposure(fname, stop=None):
     fieldmap = {}  # input_field -> oq_field
     try:
         for node in exposure.exposureFields:
+            if node['input'] in fieldmap:
+                clashing_oq_fields = [fieldmap[node['input']], node['oq']]
+                err_msg = (f'The {fname} maps the following oq fields'
+                           f' {clashing_oq_fields} to the same column'
+                           f' \'{node["input"]}\'. Please only provide unique'
+                           f' column names to each oq field. As a workaround,'
+                           f' you can duplicate \'{node["input"]}\', assign a'
+                           f' new name, and map to the other oq field.')
+                raise ValueError(err_msg)
             fieldmap[node['input']] = node['oq']
     except AttributeError:
         pass  # no fieldmap
