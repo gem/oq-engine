@@ -196,14 +196,14 @@ class DisaggregationTestCase(CalculatorTestCase):
         # extract API
         aw = extract(self.calc.datastore, 'disagg?kind=Mag&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
-        self.assertEqual(len(aw.mag), 8)
-        self.assertEqual(aw.shape, (8, 1, 1))
+        self.assertEqual(len(aw.mag), 4)
+        self.assertEqual(aw.shape, (4, 1, 1))
 
         aw = extract(self.calc.datastore, 'disagg?kind=Mag_Dist_Eps&site_id=0&'
                      'imt=SA(0.1)&poe_id=0&spec=rlzs')
-        self.assertEqual(len(aw.dist), 60)
-        self.assertEqual(len(aw.eps), 12)
-        self.assertEqual(aw.shape, (8, 60, 12, 1, 1))
+        self.assertEqual(len(aw.dist), 10)
+        self.assertEqual(len(aw.eps), 6)
+        self.assertEqual(aw.shape, (4, 10, 6, 1, 1))
 
     def test_case_10(self):
         # test single magnitude
