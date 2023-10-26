@@ -265,7 +265,6 @@ class DisaggregationCalculator(base.HazardCalculator):
             gb = dstore.read_df('src_mutex').groupby('grp_id')
             src_mutex_by_grp = {
                 grp_id: {'src_id': get_ints(list(df.src_id)),
-                         'nrups': df.num_ruptures.to_numpy(),
                          'weight': df.mutex_weight.to_numpy()}
                 for grp_id, df in gb}
         else:

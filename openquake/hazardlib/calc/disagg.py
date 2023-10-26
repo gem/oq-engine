@@ -467,7 +467,8 @@ class Disaggregator(object):
                                 self.cmaker.oq.infer_occur_rates,
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
-        return numpy.average(mats, weights=self.weights, axis=0)
+        res = numpy.average(mats, weights=self.weights, axis=0)
+        return res
 
     def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
                        mon0, mon1, mon2, mon3):
