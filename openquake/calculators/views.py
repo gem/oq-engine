@@ -1531,6 +1531,7 @@ def _irate(df, imt, src, iml, imls):
     return numpy.exp(interp)
 
 
+# used only in AELO calculations
 @view.add('check_disagg_by_src')
 def check_disagg_by_src(token, dstore):
     oq = dstore['oqparam']
