@@ -37,7 +37,7 @@ Check more advanced [hardware suggestions here](../hardware-suggestions.md).
 
 **On Windows**
 
-  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.6-1.exe .
+  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.7-1.exe .
   Then follow the wizard on screen.
   > **Warning**:
   > Administrator level access may be required.
