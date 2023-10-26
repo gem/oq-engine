@@ -1,3 +1,6 @@
+  [Michele Simionato]
+  * Internal: forced the colon convention on mutex sources
+
 python3-oq-engine (3.18.0-1~xenial01) xenial; urgency=low
 
   [Michele Simionato]
