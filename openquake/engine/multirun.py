@@ -39,8 +39,6 @@ def main(dirname, job_ini='job.ini', concurrent=0, **kw):
     inis.sort()
     print('running ' + ' '.join(inis))
     inis = [get_params(ini, kw) for ini in inis]
-    from openquake.server import dbserver  # avoid CodeDependencyError
-    dbserver.ensure_on()
     t0 = time.time()
     if concurrent:  # in parallel
         ctxs = run_jobs(create_jobs(inis), concurrent)
