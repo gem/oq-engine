@@ -35,6 +35,7 @@ IMTLS = '''\
  "SA(1.0)": logscale(0.005, 3.60, 25)}
 '''
 
+
 def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     """
     :param inputs: a dictionary with lon, lat, vs30, siteid
@@ -53,6 +54,7 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['intensity_measure_types_and_levels'] = IMTLS
+    params['truncation_level']='3.'
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
@@ -68,10 +70,10 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
         params['poes'] = '0.000404 0.001025 0.002105 0.004453 0.013767'
     elif float(params['investigation_time']) == 50:
         params['poes'] = '0.02 0.05 0.10 0.20 0.50'
-    else: 
+    else:
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
-        
+
     # params['cachedir'] = datastore.get_datadir()
     return params
 
