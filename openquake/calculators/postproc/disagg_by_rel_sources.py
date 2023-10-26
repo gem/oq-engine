@@ -23,7 +23,7 @@ from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.logictree import FullLogicTree
-from openquake.hazardlib.calc import disagg
+from openquake.hazardlib.calc import disagg, views
 from openquake.calculators import extract
 
 
@@ -174,6 +174,8 @@ def main(dstore, csm, imts, imls):
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mean_disagg_by_src, sigma_by_src = disagg_sources(
         csm, rel_ids, imts, imls, oq, sitecol, dstore)
+    df = views.view('check_disagg_by_src',  dstore)
+    logging.info(df)
     src_mutex = dstore['mutex_by_grp']['src_mutex']  
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])
