@@ -26,7 +26,7 @@ import numpy
 from openquake.baselib import parallel
 from openquake.baselib.general import (
     AccumDict, pprod, agg_probs, shortlist)
-from openquake.baselib.python3compat import encode, decode
+from openquake.baselib.python3compat import encode
 from openquake.hazardlib import stats, probability_map, valid
 from openquake.hazardlib.calc import disagg, mean_rates
 from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
@@ -44,16 +44,6 @@ U8 = numpy.uint8
 U16 = numpy.uint16
 U32 = numpy.uint32
 F32 = numpy.float32
-
-
-def get_ints(src_ids):
-    """
-    :returns: array of integers from source IDs following the colon convention
-    """
-    out = []
-    for src_id in decode(src_ids):
-        out.append(int(src_id.split(':')[1]))
-    return U32(out)
 
 
 def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
@@ -264,7 +254,7 @@ class DisaggregationCalculator(base.HazardCalculator):
         if 'src_mutex' in dstore:
             gb = dstore.read_df('src_mutex').groupby('grp_id')
             src_mutex_by_grp = {
-                grp_id: {'src_id': get_ints(list(df.src_id)),
+                grp_id: {'src_id': disagg.get_ints(df.src_id),
                          'weight': df.mutex_weight.to_numpy()}
                 for grp_id, df in gb}
         else:

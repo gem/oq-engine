@@ -33,6 +33,7 @@ import scipy.stats
 
 from openquake.baselib.general import AccumDict, groupby, humansize
 from openquake.baselib.performance import idx_start_stop, Monitor
+from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
@@ -507,7 +508,7 @@ class Disaggregator(object):
     def disagg_mag_dist_eps(self, imldic, rlz_weights, src_mutex={}):
         """
         :param imldic: a dictionary imt->iml
-        :param src_mutex: a dictionary src_id -> weight, default empty
+        :param src_mutex: a dictionary with keys src_id, weight or empty
         :param rlz_weights: an array with the realization weights
         :returns: a 4D matrix of rates of shape (Ma, D, E, M)
         """
@@ -688,6 +689,16 @@ def collect_std(disaggs):
     return res
 
 
+def get_ints(src_ids):
+    """
+    :returns: array of integers from source IDs following the colon convention
+    """
+    out = []
+    for src_id in decode(list(src_ids)):
+        out.append(int(src_id.split(':')[1]))
+    return numpy.uint32(out)
+
+
 def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
                   oq, imldic, monitor=Monitor()):
     """
@@ -713,9 +724,16 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
                 for rlzs in cm.gsims.values()]
     ws = reduced_lt.rlzs['weight']
     disaggs = []
+    if any(grp.src_interdep == 'mutex' for grp in groups):
+        assert len(groups) == 1, 'There can be only one mutex group'
+        src_mutex = {
+            'src_id': get_ints(src.source_id for src in groups[0]),
+            'weight': [src.mutex_weight for src in groups[0]]}
+    else:
+        src_mutex = {}
     for ctx, cmaker in zip(ctxs, cmakers):
         dis = Disaggregator([ctx], sitecol, cmaker, edges, imldic)
-        drates4D += dis.disagg_mag_dist_eps(imldic, ws)
+        drates4D += dis.disagg_mag_dist_eps(imldic, ws, src_mutex)
         disaggs.append(dis)
     std4D = collect_std(disaggs)
     gws = reduced_lt.g_weights(trt_rlzs)

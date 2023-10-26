@@ -203,5 +203,28 @@ xmlns:gml="http://www.opengis.net/gml"
                 </hypoDepthDist>
             </pointSource>
         </sourceGroup>
+        <sourceGroup
+        name="Nankai"
+        rup_interdep="indep"
+        src_interdep="mutex"
+        srcs_weights="0.0125 0.0125 0.0125 0.0125 0.1625 0.1625 0.0125 0.0125 0.025 0.025 0.05 0.05 0.325 0.025 0.1"
+        tectonicRegion="Subduction Interface"
+        >
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:01" name="Nankai Trough - CASE 1"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:02" name="Nankai Trough - CASE 2"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:03" name="Nankai Trough - CASE 3"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:04" name="Nankai Trough - CASE 4"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:05" name="Nankai Trough - CASE 5"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:06" name="Nankai Trough - CASE 6"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:07" name="Nankai Trough - CASE 7"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:08" name="Nankai Trough - CASE 8"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:09" name="Nankai Trough - CASE 9"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:10" name="Nankai Trough - CASE 10"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:11" name="Nankai Trough - CASE 11"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:12" name="Nankai Trough - CASE 12"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:13" name="Nankai Trough - CASE 13"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:14" name="Nankai Trough - CASE 14"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:15" name="Nankai Trough - CASE 15"/>
+        </sourceGroup>
     </sourceModel>
 </nrml>
