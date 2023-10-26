@@ -124,6 +124,4 @@ def main(lon: valid.longitude,
 
 
 if __name__ == '__main__':
-    from openquake.server import dbserver  # avoid CodeDependencyError
-    dbserver.ensure_on()
     sap.run(main)
