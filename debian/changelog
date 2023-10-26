@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Internal: forced the colon convention on mutex sources
   * Fixed a bug in the disaggregation with mutex sources incorrectly
     averaging over the rates and not the poes
 

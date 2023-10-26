@@ -15,7 +15,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Subduction Interface"
         >
             <nonParametricSeismicSource
-            id="sag_01"
+            id="sag:01"
             name="Sagami Trough - CASE 1"
             tectonicRegion="Subduction Interface"
             >
@@ -37,7 +37,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_02"
+            id="sag:02"
             name="Sagami Trough - CASE 2"
             tectonicRegion="Subduction Interface"
             >
@@ -59,7 +59,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_03"
+            id="sag:03"
             name="Sagami Trough - CASE 3"
             tectonicRegion="Subduction Interface"
             >
@@ -81,7 +81,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_04"
+            id="sag:04"
             name="Sagami Trough - CASE 4"
             tectonicRegion="Subduction Interface"
             >
@@ -103,7 +103,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_05"
+            id="sag:05"
             name="Sagami Trough - CASE 5"
             tectonicRegion="Subduction Interface"
             >
@@ -125,7 +125,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_06"
+            id="sag:06"
             name="Sagami Trough - CASE 6"
             tectonicRegion="Subduction Interface"
             >
@@ -147,7 +147,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_07"
+            id="sag:07"
             name="Sagami Trough - CASE 7"
             tectonicRegion="Subduction Interface"
             >
@@ -169,7 +169,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_08"
+            id="sag:08"
             name="Sagami Trough - CASE 8"
             tectonicRegion="Subduction Interface"
             >
@@ -191,7 +191,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_09"
+            id="sag:09"
             name="Sagami Trough - CASE 9"
             tectonicRegion="Subduction Interface"
             >
@@ -213,7 +213,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="sag_10"
+            id="sag:10"
             name="Sagami Trough - CASE 10"
             tectonicRegion="Subduction Interface"
             >

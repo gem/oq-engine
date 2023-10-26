@@ -1343,9 +1343,12 @@ class PmapMaker(object):
 
     def _make_src_mutex(self, pmap):
         # used in Japan (case_27) and in New Madrid (case_80)
-        # used in the Japan model, test case_27
-        pmap_by_src = {}
         cm = self.cmaker
+        t0 = time.time()
+        weight = 0.
+        nsites = 0
+        esites = 0
+        nctxs = 0
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
@@ -1353,34 +1356,28 @@ class PmapMaker(object):
             pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
-            nctxs = len(ctxs)
-            nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites:
-                cm.update(pm, ctxs, tom, self.rup_mutex)
+            n = sum(len(ctx) for ctx in ctxs)
+            if n == 0:
+                continue
+            nctxs += len(ctxs)
+            nsites += n
+            esites += src.esites
+            cm.update(pm, ctxs, tom, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
-                p = pm.new(arr * src.mutex_weight)
+                pmap.array += arr * src.mutex_weight
             else:
-                p = pm
-            if ':' in src.source_id:
-                srcid = basename(src)
-                if srcid in pmap_by_src:
-                    pmap_by_src[srcid].array += p.array
-                else:
-                    pmap_by_src[srcid] = p
-            else:
-                pmap_by_src[src.source_id] = p
-            dt = time.time() - t0
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(nsites)
-            self.source_data['esites'].append(src.esites)
-            self.source_data['nrupts'].append(nctxs)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(dt)
-            self.source_data['taskno'].append(cm.task_no)
-
-        return pmap_by_src
+                pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+            weight += src.weight
+        dt = time.time() - t0
+        self.source_data['src_id'].append(basename(src))
+        self.source_data['grp_id'].append(src.grp_id)
+        self.source_data['nsites'].append(nsites)
+        self.source_data['esites'].append(esites)
+        self.source_data['nrupts'].append(nctxs)
+        self.source_data['weight'].append(weight)
+        self.source_data['ctimes'].append(dt)
+        self.source_data['taskno'].append(cm.task_no)
 
     def make(self, pmap):
         dic = {}
@@ -1389,12 +1386,7 @@ class PmapMaker(object):
         grp_id = self.sources[0].grp_id
         if self.src_mutex or not self.rup_indep:
             pmap.fill(0)
-            pmap_by_src = self._make_src_mutex(pmap)
-            for source_id, pm in pmap_by_src.items():
-                if self.src_mutex:
-                    pmap.array += pm.array
-                else:
-                    pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+            self._make_src_mutex(pmap)
             if self.src_mutex:
                 pmap.array = self.grp_probability * pmap.array
         else:
@@ -1404,9 +1396,7 @@ class PmapMaker(object):
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['grp_id'] = grp_id
-        if self.disagg_by_src and self.src_mutex:
-            dic['pmap_by_src'] = pmap_by_src
-        elif self.disagg_by_src:
+        if self.disagg_by_src:
             # all the sources in the group have the same source_id because
             # of the groupby(group, basename) in classical.py
             srcids = set(map(basename, self.sources))
@@ -1756,18 +1746,6 @@ def read_cmaker(dstore, trt_smr):
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
     return ContextMaker(trt, rlzs_by_gsim, oq)
-
-
-def read_src_mutex(dstore):
-    """
-    :param dstore: a DataStore-like object
-    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
-    """
-    info = dstore.read_df('source_info')
-    mutex_df = info[info.mutex_weight > 0][['grp_id', 'mutex_weight']]
-    return {grp_id: {'src_id': df.index.to_numpy(),
-                     'weight': df.mutex_weight.to_numpy()}
-            for grp_id, df in mutex_df.groupby('grp_id')}
 
 
 def get_src_mutex(srcs):

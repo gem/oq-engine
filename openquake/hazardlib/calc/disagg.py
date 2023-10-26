@@ -415,6 +415,8 @@ class Disaggregator(object):
         self.mon3 = mon3
         if not hasattr(self, 'ctx_by_magi'):
             # the first time build the magnitude bins
+            if self.src_mutex:  # reset src_id
+                self.fullctx.src_id = self.src_mutex['src_id']
             self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
         try:
             self.ctx = self.ctx_by_magi[magi]
