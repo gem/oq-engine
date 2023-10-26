@@ -1343,8 +1343,6 @@ class PmapMaker(object):
 
     def _make_src_mutex(self, pmap):
         # used in Japan (case_27) and in New Madrid (case_80)
-        # used in the Japan model, test case_27
-        pmap_by_src = {}
         cm = self.cmaker
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
@@ -1359,17 +1357,9 @@ class PmapMaker(object):
                 cm.update(pm, ctxs, tom, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
-                p = pm.new(arr * src.mutex_weight)
+                pmap.array += arr * src.mutex_weight
             else:
-                p = pm
-            if ':' in src.source_id:
-                srcid = basename(src)
-                if srcid in pmap_by_src:
-                    pmap_by_src[srcid].array += p.array
-                else:
-                    pmap_by_src[srcid] = p
-            else:
-                pmap_by_src[src.source_id] = p
+                pmap.array = 1. - (1-pmap.array) * (1-pm.array)
             dt = time.time() - t0
             self.source_data['src_id'].append(src.source_id)
             self.source_data['grp_id'].append(src.grp_id)
@@ -1380,8 +1370,6 @@ class PmapMaker(object):
             self.source_data['ctimes'].append(dt)
             self.source_data['taskno'].append(cm.task_no)
 
-        return pmap_by_src
-
     def make(self, pmap):
         dic = {}
         self.rupdata = []
@@ -1389,12 +1377,7 @@ class PmapMaker(object):
         grp_id = self.sources[0].grp_id
         if self.src_mutex or not self.rup_indep:
             pmap.fill(0)
-            pmap_by_src = self._make_src_mutex(pmap)
-            for source_id, pm in pmap_by_src.items():
-                if self.src_mutex:
-                    pmap.array += pm.array
-                else:
-                    pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+            self._make_src_mutex(pmap)
             if self.src_mutex:
                 pmap.array = self.grp_probability * pmap.array
         else:
@@ -1404,9 +1387,7 @@ class PmapMaker(object):
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['grp_id'] = grp_id
-        if self.disagg_by_src and self.src_mutex:
-            dic['pmap_by_src'] = pmap_by_src
-        elif self.disagg_by_src:
+        if self.disagg_by_src:
             # all the sources in the group have the same source_id because
             # of the groupby(group, basename) in classical.py
             srcids = set(map(basename, self.sources))
