@@ -1342,6 +1342,7 @@ class PmapMaker(object):
         return pmap
 
     def _make_src_mutex(self, pmap):
+        # used in Japan (case_27) and in New Madrid (case_80)
         # used in the Japan model, test case_27
         pmap_by_src = {}
         cm = self.cmaker

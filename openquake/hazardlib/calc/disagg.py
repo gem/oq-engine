@@ -249,7 +249,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
 
     with mon3:
         bindata = BinData(ctx.rrup, ctx.clon, ctx.clat, pnes)
-        return to_rates(_build_disagg_matrix(bindata, bin_edges[1:]))
+        return _build_disagg_matrix(bindata, bin_edges[1:])
 
 
 def _disagg_eps(survival, bins, eps_bands, cum_bands):
@@ -451,10 +451,11 @@ class Disaggregator(object):
             imlog2[m] = to_distribution_values(iml2[m], imt)
         mea, std = self.mea[self.magi], self.std[self.magi]
         if not self.src_mutex:
-            return _disaggregate(self.ctx, mea, std, self.cmaker,
+            poes = _disaggregate(self.ctx, mea, std, self.cmaker,
                                  g, imlog2, self.bin_edges, self.epsstar,
                                  self.cmaker.oq.infer_occur_rates,
                                  self.mon1, self.mon2, self.mon3)
+            return to_rates(poes)
 
         # else average on the src_mutex weights
         mats = []
@@ -467,8 +468,8 @@ class Disaggregator(object):
                                 self.cmaker.oq.infer_occur_rates,
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
-        res = numpy.average(mats, weights=self.weights, axis=0)
-        return res
+        poes = numpy.average(mats, weights=self.weights, axis=0)
+        return to_rates(poes)
 
     def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
                        mon0, mon1, mon2, mon3):

@@ -1,5 +1,7 @@
   [Michele Simionato]
   * Internal: forced the colon convention on mutex sources
+  * Fixed a bug in the disaggregation with mutex sources incorrectly
+    averaging over the rates and not the poes
 
 python3-oq-engine (3.18.0-1~xenial01) xenial; urgency=low
 
