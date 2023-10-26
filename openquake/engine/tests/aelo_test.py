@@ -82,3 +82,16 @@ def test_JPN():
         calc.run()
     df = views.view('compare_disagg_rates', calc.datastore)
     aac(df.disagg_rate, df.interp_rate, rtol=.01)
+
+
+def test_KOR():
+    # test with same name sources
+    job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
+    dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
+    with logs.init('job', job_ini) as log:
+        log.params.update(get_params_from(dic, MOSAIC_DIR))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    df = views.view('compare_disagg_rates', calc.datastore)
+    aac(df.disagg_rate, df.interp_rate, rtol=.01)
+
