@@ -205,7 +205,7 @@ def get_csm(oq, full_lt, dstore=None):
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     csm = _get_csm(full_lt, groups, is_event_based)
     for sg in csm.src_groups:
-        if sg.src_interdep == 'mutex':
+        if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
             dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
                       ('num_ruptures', int), ('mutex_weight', float)]
             out = []
