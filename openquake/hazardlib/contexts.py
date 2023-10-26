@@ -1344,6 +1344,11 @@ class PmapMaker(object):
     def _make_src_mutex(self, pmap):
         # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
+        t0 = time.time()
+        weight = 0.
+        nsites = 0
+        esites = 0
+        nctxs = 0
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
@@ -1351,24 +1356,28 @@ class PmapMaker(object):
             pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
-            nctxs = len(ctxs)
-            nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites:
-                cm.update(pm, ctxs, tom, self.rup_mutex)
+            n = sum(len(ctx) for ctx in ctxs)
+            if n == 0:
+                continue
+            nctxs += len(ctxs)
+            nsites += n
+            esites += src.esites
+            cm.update(pm, ctxs, tom, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
                 pmap.array += arr * src.mutex_weight
             else:
                 pmap.array = 1. - (1-pmap.array) * (1-pm.array)
-            dt = time.time() - t0
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(nsites)
-            self.source_data['esites'].append(src.esites)
-            self.source_data['nrupts'].append(nctxs)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(dt)
-            self.source_data['taskno'].append(cm.task_no)
+            weight += src.weight
+        dt = time.time() - t0
+        self.source_data['src_id'].append(basename(src))
+        self.source_data['grp_id'].append(src.grp_id)
+        self.source_data['nsites'].append(nsites)
+        self.source_data['esites'].append(esites)
+        self.source_data['nrupts'].append(nctxs)
+        self.source_data['weight'].append(weight)
+        self.source_data['ctimes'].append(dt)
+        self.source_data['taskno'].append(cm.task_no)
 
     def make(self, pmap):
         dic = {}
