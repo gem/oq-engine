@@ -209,10 +209,13 @@ def get_csm(oq, full_lt, dstore=None):
             dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
                       ('num_ruptures', int), ('mutex_weight', float)]
             out = []
+            segments = []
             for src in sg:
+                segments.append(int(src.source_id.split(':')[1]))
                 t = (src.source_id, src.count_ruptures(),
                      src.grp_id, src.mutex_weight)
                 out.append(t)
+            assert len(segments) == len(set(segments)), segments
             dstore.create_dset('src_mutex', numpy.array(out, dtlist),
                                fillvalue=None)
     return csm
