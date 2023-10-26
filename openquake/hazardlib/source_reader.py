@@ -203,7 +203,19 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    return _get_csm(full_lt, groups, is_event_based)
+    csm = _get_csm(full_lt, groups, is_event_based)
+    for sg in csm.src_groups:
+        if sg.src_interdep == 'mutex':
+            dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
+                      ('num_ruptures', int), ('mutex_weight', float)]
+            out = []
+            for src in sg:
+                t = (src.source_id, src.count_ruptures(),
+                     src.grp_id, src.mutex_weight)
+                out.append(t)
+            dstore.create_dset('src_mutex', numpy.array(out, dtlist),
+                               fillvalue=None)
+    return csm
 
 
 def add_checksums(srcs):
