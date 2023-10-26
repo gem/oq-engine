@@ -445,6 +445,7 @@ class Disaggregator(object):
     def _disagg6D(self, imldic, g):
         # returns a 6D matrix of shape (D, Lo, La, E, M, P)
         # compute the logarithmic intensities
+        # returns poes for src_mutex and rates otherwise
         imts = list(imldic)
         iml2 = numpy.array(list(imldic.values()))  # shape (M, P)
         imlog2 = numpy.zeros_like(iml2)
@@ -470,7 +471,7 @@ class Disaggregator(object):
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
         poes = numpy.average(mats, weights=self.weights, axis=0)
-        return to_rates(poes)
+        return poes
 
     def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
                        mon0, mon1, mon2, mon3):
@@ -491,18 +492,25 @@ class Disaggregator(object):
                 self.init(magi, src_mutex, mon0, mon1, mon2, mon3)
             except FarAwayRupture:
                 continue
+            if src_mutex:  # mutex weights
+                mw = sum(self.weights)
+            else:
+                mw = 1.
             res = {'trti': self.cmaker.trti, 'magi': self.magi, 'sid': self.sid}
             for rlz in rlzs:
                 try:
                     g = self.g_by_rlz[rlz]
                 except KeyError:  # non-contributing rlz
                     continue
-                res[rlz] = rates6D = self._disagg6D(imtls, g)
-                if rwdic:  # compute mean rates
+                arr6D = self._disagg6D(imtls, g)
+                res[rlz] = to_rates(arr6D) if src_mutex else arr6D
+                if rwdic:  # compute mean rates (mean poes for src_mutex)
                     if 'mean' not in res:
-                        res['mean'] = rates6D * rwdic[rlz]
+                        res['mean'] = arr6D * rwdic[rlz] * mw
                     else:
-                        res['mean'] += rates6D * rwdic[rlz]
+                        res['mean'] += arr6D * rwdic[rlz] * mw
+            if rwdic and src_mutex:
+                res['mean'] = to_rates(res['mean'])
             yield res
 
     def disagg_mag_dist_eps(self, imldic, rlz_weights, src_mutex={}):
@@ -514,17 +522,21 @@ class Disaggregator(object):
         """
         M = len(imldic)
         imtls = {imt: [iml] for imt, iml in imldic.items()}
-        out = numpy.zeros((self.Ma, self.D, self.E, M))
+        out = numpy.zeros((self.Ma, self.D, self.E, M))  # rates
         for magi in range(self.Ma):
             try:
                 self.init(magi, src_mutex)
             except FarAwayRupture:
                 continue
+            if src_mutex:  # mutex weights
+                mw = sum(self.weights)
+            else:
+                mw = 1.
             for rlz, g in self.g_by_rlz.items():
                 mat5 = self._disagg6D(imtls, g)[..., 0]  # p = 0
                 # summing on lon, lat and producing a (D, E, M) array
-                out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz]
-        return out
+                out[magi] += mat5.sum(axis=(1, 2)) * rlz_weights[rlz] * mw
+        return to_rates(out) if src_mutex else out
 
     def __repr__(self):
         return f'<{self.__class__.__name__} {humansize(self.fullctx.nbytes)} >'
