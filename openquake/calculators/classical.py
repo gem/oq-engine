@@ -345,7 +345,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         pnemap = dic['pnemap']  # probabilities of no exceedence
         pmap_by_src = dic.pop('pmap_by_src', {})  # non-empty for disagg_by_src
-        # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
+        # len(pmap_by_src) > 1 only for rup_mutex, see contexts.py
         for source_id, pm in pmap_by_src.items():
             # store the poes for the given source
             acc[source_id] = pm
