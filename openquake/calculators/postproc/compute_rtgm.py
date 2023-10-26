@@ -215,7 +215,7 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
 
-def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
+def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low=False):
     """
     :returns: a dictionary imt -> MCE
     :returns: a dictionary imt -> det MCE
@@ -233,8 +233,12 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     mce = {}  # imt -> MCE
     prob_mce_out = {}
     for i, imt in enumerate(det_imt):
-        det_mce[imt] = max(det_imt[imt], DLLs[i])
-        mce[imt] = min(prob_mce[i], det_mce[imt]) 
+        if low==True:
+            det_mce[imt] = 'n.a.'
+            mce[imt] = prob_mce[i] 
+        else:
+            det_mce[imt] = max(det_imt[imt], DLLs[i])
+            mce[imt] = min(prob_mce[i], det_mce[imt]) 
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
@@ -259,27 +263,28 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore):
     else:
         S1_seismicity = "Very High"
         
-    asce7 = {'PGA_2_50': prob_mce_out['PGA'],
+    asce7 = {'PGA_2_50': prob_mce_out['PGA'], # always
             'PGA_84th': det_mce['PGA'],
-            'PGA': mce['PGA'],
-            
-            'SS_RT': prob_mce_out['SA(0.2)'],
-            'CRS': crs,
-            'SS_84th': det_mce['SA(0.2)'],
-            'SS': mce['SA(0.2)'],
-            'SS_seismicity': SS_seismicity,
+            'PGA': mce['PGA'], # always
 
-            'S1_RT': prob_mce_out['SA(1.0)'],
-            'CR1': cr1,
+            
+            'SS_RT': prob_mce_out['SA(0.2)'], # always
+            'CRS': crs, # always
+            'SS_84th': det_mce['SA(0.2)'],
+            'SS': mce['SA(0.2)'], #always
+            'SS_seismicity': SS_seismicity, # always
+
+            'S1_RT': prob_mce_out['SA(1.0)'], # always
+            'CR1': cr1, # always
             'S1_84th': det_mce['SA(1.0)'],
-            'S1': mce['SA(1.0)'],
-            'S1_seismicity': S1_seismicity,
+            'S1': mce['SA(1.0)'], # always
+            'S1_seismicity': S1_seismicity, # always
             }
 
     return prob_mce_out, mce, det_mce, asce7
 
 
-def get_asce41(dstore, mce, facts):
+def get_asce41(dstore, mce, facts, low=False):
     """
     :returns: a dictionary with the ASCE-41 parameters
     """
@@ -348,12 +353,20 @@ def main(dstore, csm):
     rtgm_df = calc_rtgm_df(rtgm_haz, facts, oq)    
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
-    if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-        logging.warning('Low hazard, do not disaggregate by source')
-        return
     facts[0] = 1 # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
     prob_mce = rtgm_df.ProbMCE.to_numpy()
+
+    if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
+        logging.warning('Low hazard, do not disaggregate by source')
+        dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
+        prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(
+            prob_mce, dummy_det, DLLs, dstore, low=True)
+        dstore['asce7'] = hdf5.dumps(asce7)
+        asce41 = get_asce41(dstore, mce, facts, low=True)
+        dstore['asce41'] = hdf5.dumps(asce41)
+        return
+
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
         dstore, csm, imts, imls_disagg)
     det_imt, mag_dst_eps_sig = get_deterministic(
