@@ -1,3 +1,5 @@
+python3-oq-engine (3.16.7-1~xenial01) xenial; urgency=low
+
   [Antonio Ettorre]
   * Upgraded Django version to version 3.2.21 with a security fix
 
@@ -14,12 +16,14 @@
   * Backported fix to `import_gmfs_csv`, which was breaking sometimes with a
     filtered site collection
 
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 26 Oct 2023 09:54:13 +0000
+
 python3-oq-engine (3.16.6-1~xenial01) xenial; urgency=low
 
   [Paolo Tormene]
   * Fixed bug #8907: unable to run ClassicalDamage demo on Windows
 
- -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org> Thu, 20 Jul 2023 12:51:10 +0000
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Thu, 20 Jul 2023 12:51:10 +0000
 
 python3-oq-engine (3.16.5-1~xenial01) xenial; urgency=low
 

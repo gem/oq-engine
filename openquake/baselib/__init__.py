@@ -132,4 +132,4 @@ else:  # linux
 
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.16.6'
+__version__ = '3.16.7'
