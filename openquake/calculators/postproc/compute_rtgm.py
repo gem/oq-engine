@@ -349,6 +349,7 @@ def main(dstore, csm):
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
+        logging.warning('Low hazard, do not disaggregate by source')
         return
     facts[0] = 1 # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
