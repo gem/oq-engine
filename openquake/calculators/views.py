@@ -1518,3 +1518,37 @@ def view_MPL(token, dstore):
                          stat='mean', agg_id=K, return_period=rp)
         out[ltype] = arr
     return out
+
+
+def _drate(df, imt, src):
+    return df[(df.imt == imt) & (df.source_id == src)].value.sum()
+
+
+def _irate(df, imt, src, iml, imls):
+    subdf = df[(df.imt == imt) & (df.src_id == src)]
+    interp = numpy.interp(numpy.log(iml), numpy.log(imls[subdf.lvl]),
+                       numpy.log(subdf.value))
+    return numpy.exp(interp)
+
+
+# used only in AELO calculations
+@view.add('check_disagg_by_src')
+def check_disagg_by_src(token, dstore):
+    oq = dstore['oqparam']
+    aw = dstore['mean_disagg_by_src']
+    iml_disagg = dict(zip(aw.imt, aw.iml))
+    mean_disagg_df = aw.to_dframe()
+    mean_rates_df = dstore['mean_rates_by_src'].to_dframe()
+    imts_out, srcs_out, drates, irates = [], [], [], []
+    for imt, iml in iml_disagg.items():
+        imls = oq.imtls[imt]
+        srcs = mean_disagg_df[mean_disagg_df.imt == imt].source_id
+        for src in set(srcs):
+            imts_out.append(imt)
+            srcs_out.append(src)    
+            drates.append(_drate(mean_disagg_df, imt, src))
+            irates.append(_irate(mean_rates_df, imt, src, iml, imls))
+    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out, 
+                             'disagg_rate': drates, 
+                             'interp_rate': irates}
+                            ).sort_values(['imt', 'src'])
