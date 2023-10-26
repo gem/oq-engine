@@ -81,8 +81,4 @@ def test_JPN():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     df = views.view('compare_disagg_rates', calc.datastore)
-    assert str(df) == '''\
-       imt                    src  disagg_rate  interp_rate
-0      PGA  IF-NPSS-Nankai_Trough     0.181918     0.020202
-1  SA(0.2)  IF-NPSS-Nankai_Trough     0.227975     0.026202
-2  SA(1.0)  IF-NPSS-Nankai_Trough     0.248096     0.026018'''
+    aac(df.disagg_rate, df.interp_rate, rtol=.01)

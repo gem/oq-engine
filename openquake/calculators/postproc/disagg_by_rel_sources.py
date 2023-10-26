@@ -122,15 +122,18 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
     Ns, M1 = len(rel_ids), len(imldic)
     rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
     std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
-    for srcid, std4D, rates4D, rates2D in smap:
+    rates2D = 0.  # (Ns, M1)
+    for srcid, std4D, rates4D, _rates2D in smap:
         bname = basename(srcid, '!;')
         idx = src2idx[bname]
         rates[idx] += rates4D
         std[idx] += std4D @ weights[bname] # shape (Ma, D, M, G) -> (Ma, D, M)
+        rates2D += _rates2D
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, mag=middle(mags), dist=middle(dists),
-        eps=middle(eps), imt=imts, iml=imls)
+        eps=middle(eps), imt=imts, iml=imls, view=rates.sum(axis=(1, 2, 3)),
+        rates2D=rates2D)
     mean_disagg_by_src = hdf5.ArrayWrapper(rates, dic)
     dic2 = dict(
         shape_descr=['source_id', 'mag', 'dist', 'imt'],
