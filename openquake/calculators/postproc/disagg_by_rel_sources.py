@@ -42,7 +42,7 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
     grp = {}
     for src_id, grp_id in zip(src_info['source_id'], src_info['grp_id']):
-        src = basename(src_id.decode('utf8'))
+        src = basename(src_id.decode('utf8'), ':;')
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
