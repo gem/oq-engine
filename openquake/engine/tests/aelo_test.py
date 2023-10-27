@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-# 
+#
 # Copyright (C) 2023, GEM Foundation
-# 
+#
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
 # by the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -36,10 +36,10 @@ aac = numpy.testing.assert_allclose
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
 EXPECTED = [[0.30846, 0.63827, 0.727454], [0.73277, 1.76939, 1.22298]]
 ASCE7 = ['0.75315', '0.34598', '0.50000', '0.50000', '1.76939', '0.95831',
-          '0.80947', '1.50000', '1.50000', 'Very High', '1.22298', '0.95013',
-          '0.48816', '0.60000', '0.60000', 'Very High']
+         '0.80947', '1.50000', '1.50000', 'Very High', '1.22298', '0.95013',
+         '0.48816', '0.60000', '0.60000', 'Very High']
 ASCE41 = [1.5, 1.43082, 1.43082, 0.83393, 0.83393, 1., 0.6,
-        0.9865, 0.6, 0.4, 0.56995, 0.4 ]
+          0.9865, 0.6, 0.4, 0.56995, 0.4]
 
 
 def test_CCA():
@@ -73,7 +73,7 @@ def test_CCA():
 
 
 def test_JPN():
-    # test with mutex sources    
+    # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     dic = dict(lon=139, lat=36, site='JPN-site', vs30='760')
     with logs.init('job', job_ini) as log:
