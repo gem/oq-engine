@@ -85,7 +85,7 @@ def test_JPN():
 
 
 # not passing yet
-def _test_KOR():
+def test_KOR():
     # test with same name sources
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
     dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')

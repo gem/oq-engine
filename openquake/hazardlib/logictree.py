@@ -815,7 +815,7 @@ class SourceModelLogicTree(object):
         :returns: the number of sources in the source model portion
         """
         with self._get_source_model(fname) as sm:
-            trt_by_src = get_trt_by_src(sm, self.source_id)
+            trt_by_src = get_trt_by_src(sm, self.source_id.split('!')[0])
         if self.basepath:
             path = sm.name[len(self.basepath) + 1:]
         else:
@@ -1168,9 +1168,10 @@ class FullLogicTree(object):
             return srcs
         out = []
         for src in srcs:
-            srcid = re.split('[:;!.]', src.source_id)[0]
+            srcid = re.split('[:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
+            srcid = srcid.rsplit('!')[0]  # needed to compare with self.sd
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
                 trti = 0
             else:
@@ -1193,12 +1194,12 @@ class FullLogicTree(object):
             out.append(src)
         return out
 
-    def reduce_groups(self, src_groups, source_id=''):
+    def reduce_groups(self, src_groups):
         """
         Filter the sources and set the tuple .trt_smr
         """
         groups = []
-        source_id = source_id or self.source_model_lt.source_id
+        source_id = self.source_model_lt.source_id
         for sg in src_groups:
             ok = self.set_trt_smr(sg, source_id)
             if ok:
