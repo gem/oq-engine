@@ -45,6 +45,7 @@
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {% endif %}
+        {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in this case #}
         <tr class={% if application_mode == 'AELO' %}<%= ['asce7', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %>{% else %}""{% endif %}>
           <td><%= output.get('id') || 'New' %></td>
           <td><%= output.get('name') %></td>
