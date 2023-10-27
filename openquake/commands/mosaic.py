@@ -134,7 +134,6 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     Run a PSHA analysis on the given lon and lat or given a CSV file
     formatted as described in the 'from_file' function
     """
-    print(f'Concurrent jobs: {concurrent_jobs}')
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
 

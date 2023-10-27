@@ -338,7 +338,8 @@ class CompareTestCase(unittest.TestCase):
         id = job.calc_id
         with Print.patch() as p:
             sap.runline(f"openquake.commands compare med_gmv PGA {id} {id}")
-        self.assertIn('0_0!0: no differences within the tolerances', str(p))
+        self.assertIn('0_0!aFault_aPriori_D2_1: no differences within '
+                      'the tolerances', str(p))
 
 
 class SampleSmTestCase(unittest.TestCase):

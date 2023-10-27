@@ -66,7 +66,7 @@ def compute_disagg(dstore, ctxt, sitecol, cmaker, bin_edges, src_mutex, rwdic,
     :param monitor:
         monitor of the currently running job
     :returns:
-        one 6D matrix of rates per site and realization
+        a list of dictionaries containing matrices of rates
     """
     mon0 = monitor('disagg mean_std', measuremem=False)
     mon1 = monitor('disagg by eps', measuremem=False)
@@ -287,6 +287,8 @@ class DisaggregationCalculator(base.HazardCalculator):
             cmaker = cmakers[grp_id]
             src_mutex, rup_mutex = mutex_by_grp[grp_id]
             src_mutex = src_mutex_by_grp.get(grp_id, {})
+            # NB: in case_27 src_mutex for grp_id=1 has the form
+            # {'src_id': array([1, 2]), 'weight': array([0.625, 0.375])}
             if rup_mutex:
                 raise NotImplementedError(
                     'Disaggregation with mutex ruptures')
@@ -394,6 +396,7 @@ class DisaggregationCalculator(base.HazardCalculator):
 
         :param results:
             a dict s, z -> 8D-matrix of shape (T, Ma, D, E, Lo, La, M, P)
+            containing individual realizations or statistics (only mean)
         :param name:
             the string "disagg-rlzs" or "disagg-stats"
         """
@@ -417,7 +420,7 @@ class DisaggregationCalculator(base.HazardCalculator):
                 else:
                     out[key][s, ..., z] = valid.pmf_map[key](mat7)
 
-            # display some warnings if needed
+            # store poe4
             for m, imt in enumerate(self.imts):
                 for p, poe in enumerate(self.poes_disagg):
                     mat6 = mat8[..., m, p]  # shape (T, Ma, D, Lo, La, E)

@@ -42,7 +42,7 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
     grp = {}
     for src_id, grp_id in zip(src_info['source_id'], src_info['grp_id']):
-        src = basename(src_id.decode('utf8'), '!;')
+        src = basename(src_id.decode('utf8'), ':;')
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
@@ -115,7 +115,7 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
         Z = relt.get_num_paths()
         assert Z, relt  # sanity check
         logging.info('Considering source %s (%d realizations)', source_id, Z)
-        groups = relt.reduce_groups(csm.src_groups, source_id)
+        groups = relt.reduce_groups(csm.src_groups)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, (edges, shp), oq, imldic))
     mags, dists, lons, lats, eps, trts = edges
@@ -124,10 +124,9 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
     std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
     rates2D = 0.  # (Ns, M1)
     for srcid, std4D, rates4D, _rates2D in smap:
-        bname = basename(srcid, '!;')
-        idx = src2idx[bname]
+        idx = src2idx[srcid]
         rates[idx] += rates4D
-        std[idx] += std4D @ weights[bname] # shape (Ma, D, M, G) -> (Ma, D, M)
+        std[idx] += std4D @ weights[srcid] # shape (Ma, D, M, G) -> (Ma, D, M)
         rates2D += _rates2D
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
