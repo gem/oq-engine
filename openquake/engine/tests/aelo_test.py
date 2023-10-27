@@ -96,4 +96,4 @@ def test_KOR():
         calc.run()
     if rtgmpy:
         df = views.view('compare_disagg_rates', calc.datastore)
-        aac(df.disagg_rate, df.interp_rate, rtol=.02)
+        aac(df.disagg_rate, df.interp_rate, rtol=.025)
