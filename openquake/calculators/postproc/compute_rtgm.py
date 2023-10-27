@@ -249,10 +249,10 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low=False):
     for i, imt in enumerate(det_imt):
         if low:
             det_mce[imt] = 'n.a.'
-            mce[imt] = prob_mce[i] 
+            mce[imt] = prob_mce[i]
         else:
             det_mce[imt] = max(det_imt[imt], DLLs[i])
-            mce[imt] = min(prob_mce[i], det_mce[imt]) 
+            mce[imt] = min(prob_mce[i], det_mce[imt])
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
@@ -462,7 +462,7 @@ def _find_sources(mrs, rel_ids, imtls_dict, imts, rtgm_probmce, mean_hcurve,
 
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
-        # use j to only add the "other sources" label once 
+        # use j to only add the "other sources" label once
         # use i to cycle through the colors for the major source contributors
         i = j = 0
         site = 0  # there is a single site
@@ -621,7 +621,7 @@ def main(dstore, csm):
     rtgm_df = calc_rtgm_df(rtgm_haz, facts, oq)
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
-    facts[0] = 1 # for PGA the Prob MCE is already geometric mean
+    facts[0] = 1  # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
     prob_mce = rtgm_df.ProbMCE.to_numpy()
 
