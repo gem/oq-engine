@@ -1186,15 +1186,6 @@ class FullLogicTree(object):
             srcid = re.split('[:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
-            try:
-                # check if ambiguous source ID
-                srcid, fname = srcid.rsplit('!')
-            except ValueError:
-                # non-ambiguous source ID
-                fname = ''
-                ok = slice(None)
-            else:
-                ok = [fname in string for string in sd[srcid]['fname']]
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
                 trti = 0
             else:
@@ -1203,6 +1194,15 @@ class FullLogicTree(object):
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
             if smr is None:  # called by .reduce_groups 
+                try:
+                    # check if ambiguous source ID
+                    srcid, fname = srcid.rsplit('!')
+                except ValueError:
+                    # non-ambiguous source ID
+                    fname = ''
+                    ok = slice(None)
+                else:
+                    ok = [fname in string for string in sd[srcid]['fname']]
                 brids = set(sd[srcid]['branch'][ok])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
