@@ -398,43 +398,18 @@ def _find_afe_target(imls, afe, sa_target):
     return afe_target
 
 
-# NOTE: run pytest openquake/engine -k KOR to debug this
-def disaggr_by_src(dstore, imtls):
-    # get info : specific to disagg by src
-    df = dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
-    grouped_m = df.groupby(['src_id', 'site_id', 'imt']).agg(
-        {"value": list}).reset_index()
-    # remove the sources that aren't contributing at all to the hazard
-    mask = grouped_m.value.apply(lambda x: sum(x) > 0)
-    gm = grouped_m[mask].reset_index()
-    grouped_2 = gm.groupby(['imt', 'src_id']).agg(
-        {"value": np.array}).reset_index()
-    total_poe = []
-    for wp in grouped_2.value.values:
-        wsp = []
-        if isinstance(wp, list):
-            total_poe.append(wp)
-        else:  # array
-            for wp_i in wp:
-                wsp.append(wp_i)
-            total_poe.append([sum(t) for t in np.array(wsp).T])
-    grouped_2['poes'] = total_poe
-    return grouped_2
+def _find_sources(mrs, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
 
-
-def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
-
+    # mrs has shape (N, M, L1, Ns) with N=1
     fig, ax = plt.subplots(3, figsize=(8, 15))
 
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor;
     fact = 0.1
-
     for m, imt in enumerate(imts):
         out_contr_all = []
         fig1, ax1 = plt.subplots()
 
-        dms = df[(df['imt'] == imt)]
         # annual frequency of exceedance:
         T = from_string(imt).period
         f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
@@ -466,7 +441,8 @@ def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
                    linewidth=2, zorder=3)
 
         # poes from dms are now rates
-        for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
+        for ind, src in enumerate(mrs.src_id):
+            afes = mrs[0, m, :, ind]
             # get contribution at target level for that source
             afe_uhgm = _find_afe_target(imls, afes, rtgm_probmce[m])
             # get % contribution of that source
@@ -483,24 +459,23 @@ def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
         # use j to only add the "other sources" label once 
         # use i to cycle through the colors for the major source contributors
         i = j = 0
-        for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
-            # pad to have the same length of imls and afes
-            afe_pad = afes + [0] * (len(imls) - len(afes))
+        for ind, src in enumerate(mrs.src_id):
+            afe = mrs[0, m, :, ind]            
             # if it's not a big contributor, plot in silver
             if out_contr_all[ind] <= fact*largest_contr:
                 if j == 0:
-                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7,
+                    ax[m].loglog(imls, afe, 'silver', linewidth=0.7,
                                  label='other sources')
-                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7,
+                    ax1.loglog(imls_o, afe, 'silver', linewidth=0.7,
                                label='other source')
                     j += 1
                 else:
-                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7)
-                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7)
+                    ax[m].loglog(imls, afe, 'silver', linewidth=0.7)
+                    ax1.loglog(imls_o, afe, 'silver', linewidth=0.7)
             # if it is, plot in color
             else:
-                ax[m].loglog(imls, afe_pad, c=viridis(i), label=str(src))
-                ax1.loglog(imls_o, afe_pad, c=viridis(i), label=str(src))
+                ax[m].loglog(imls, afe, c=viridis(i), label=str(src))
+                ax1.loglog(imls_o, afe, c=viridis(i), label=str(src))
                 i += 1
         # populate subplot - maximum component
         ax[m].grid('both')
@@ -609,8 +584,8 @@ def plot_curves(dstore, hc_only=False):
     dstore['png/hcurves.png'] = img
 
     if hc_only==False:
-        df = disaggr_by_src(dstore, imtls)
-        _find_sources(df, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
+        mrs = dstore['mean_rates_by_src']
+        _find_sources(mrs, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
 
         img = plot_governing_mce(dstore, imtls)
         logging.info('Storing png/governing_mce.png')
