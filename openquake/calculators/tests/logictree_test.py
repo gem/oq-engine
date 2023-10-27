@@ -116,6 +116,11 @@ class LogicTreeTestCase(CalculatorTestCase):
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curve-mean.csv', fname)
 
+        # check disagg_by_src
+        src_ids = decode(self.calc.datastore['mean_rates_by_src/src_id'][:])
+        self.assertEqual(
+            src_ids, ['SSC-AS-001!0', 'SSC-AS-001!1', 'SSC-AS-001!2'])
+
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
