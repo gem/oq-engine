@@ -230,6 +230,18 @@ def collect_info(smltpath, branchID=''):
     return Info(sorted(smpaths), sorted(h5paths), applytosources)
 
 
+def reduce_fnames(fnames, source_id):
+    """
+    If the source ID is ambiguous (i.e. there is "!") only returns
+    the filenames containing the source, otherwise return all the filenames
+    """
+    try:
+        srcid, fname = source_id.split('!')
+    except ValueError:
+        return fnames
+    return [f for f in fnames if fname in f]
+
+
 def read_source_groups(fname):
     """
     :param fname: a path to a source model XML file
@@ -586,7 +598,7 @@ class SourceModelLogicTree(object):
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
                 if self.source_id:  # only the files containing source_id
-                    value = ' '.join(vals)
+                    value = ' '.join(reduce_fnames(vals, self.source_id))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
                 raise LogicTreeError(
