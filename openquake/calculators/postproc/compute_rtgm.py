@@ -459,8 +459,9 @@ def _find_sources(mrs, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
         # use j to only add the "other sources" label once 
         # use i to cycle through the colors for the major source contributors
         i = j = 0
+        site = 0  # there is a single site
         for ind, src in enumerate(mrs.src_id):
-            afe = mrs[0, m, :, ind]            
+            afe = mrs[site, m, :, ind]
             # if it's not a big contributor, plot in silver
             if out_contr_all[ind] <= fact*largest_contr:
                 if j == 0:
@@ -583,10 +584,9 @@ def plot_curves(dstore, hc_only=False):
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
-    if hc_only==False:
+    if not hc_only:
         mrs = dstore['mean_rates_by_src']
         _find_sources(mrs, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
-
         img = plot_governing_mce(dstore, imtls)
         logging.info('Storing png/governing_mce.png')
         dstore['png/governing_mce.png'] = img
