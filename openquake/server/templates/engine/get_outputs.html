@@ -45,7 +45,7 @@
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {% endif %}
-        <tr class="success">
+        <tr class={% if application_mode == 'AELO' %}<%= ['asce7', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %>{% else %}""{% endif %}>
           <td><%= output.get('id') || 'New' %></td>
           <td><%= output.get('name') %></td>
           <td <% if (output.get('size_mb')) { %>title="Size: <%= Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%= output.get('type') %></td>
