@@ -122,12 +122,16 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
 
     # NB: disagg_by_src is disabled in case of tiling
     assert not (itiles > 1 and cmaker.disagg_by_src)
+    N = len(sitecol)
     for sites in sitecol.split_in_tiles(itiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
-        result['pnemap'] = ~pmap.remove_zeros()
+        if N > cmaker.max_sites_disagg:  # save data transfer
+            result['pnemap'] = ~pmap.remove_zeros()
+        else:  # keep the shape of the underlying array in store_mean_rates
+            result['pnemap'] = ~pmap
         result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
@@ -295,13 +299,11 @@ class Hazard:
         Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
         """
         mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
-        first = []
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
-                idx = self.srcidx[basename(key, '!;:')]
+                idx = self.srcidx[basename(key, ';:')]
                 mean_rates_by_src[..., idx] += self.get_rates(pmap)
-                first.append(self.get_rates(pmap)[0, 0, 0])
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
         return mean_rates_by_src
 
@@ -345,6 +347,7 @@ class ClassicalCalculator(base.HazardCalculator):
 
         pnemap = dic['pnemap']  # probabilities of no exceedence
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
+        print('*****************', source_id, grp_id, pnemap)
         if source_id:
             # store the poes for the given source
             pm = ~pnemap
