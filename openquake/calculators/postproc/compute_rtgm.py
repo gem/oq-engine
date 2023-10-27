@@ -90,9 +90,9 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
 # three imts, that are mandatory in this context. For the plot of governing
 # MCE we read imts from the imtls
-imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
+IMTS = ['PGA', 'SA(0.2)', 'SA(1.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-DLLs = [D[imt] for imt in imts]
+DLLs = [D[imt] for imt in IMTS]
 assert DLLs == [0.5, 1.5, 0.6]
 
 
@@ -145,13 +145,13 @@ def calc_rtgm_df(rtgm_haz, facts, oq):
     :param facts: conversion factors from maximum component to geometric mean
     :param oq: OqParam instance
     """
-    M = len(imts)
+    M = len(IMTS)
     assert len(oq.imtls) == M
     riskCoeff, RTGM, UHGM, RTGM_max, MCE = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M))
     results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
     IMTs = []
-    for m, imt in enumerate(imts):
+    for m, imt in enumerate(IMTS):
         IMT = norm_imt(imt)
         IMTs.append(IMT)
         rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
@@ -185,7 +185,7 @@ def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
     """
     new_imtls = {}
     facts = []
-    for m, imt in enumerate(imts):
+    for m, imt in enumerate(IMTS):
         T = from_string(imt).period
         fact = _find_fact_maxC(T, 'ASCE7-16')
         facts.append(fact)
@@ -201,7 +201,7 @@ def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
                       {'iml': new_imtls[imt],
                        # NB: minrate > 0 is needed to avoid NaNs in the RTGM
                        'afe': to_rates(hcurves[0, m], invtime, minrate=1E-12)}
-                      for m, imt in enumerate(imtls) if imt in imts}}
+                      for m, imt in enumerate(imtls) if imt in IMTS}}
     return hazdic, np.array(facts)
 
 
@@ -247,7 +247,7 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low=False):
     mce = {}  # imt -> MCE
     prob_mce_out = {}
     for i, imt in enumerate(det_imt):
-        if low==True:
+        if low:
             det_mce[imt] = 'n.a.'
             mce[imt] = prob_mce[i] 
         else:
@@ -359,21 +359,21 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
     plt.rcParams.update({'font.size': 16})
     colors = mpl.colormaps['viridis'].reversed()._resample(3)
     patterns = ['-', '--', ':']
-    for i, imt in enumerate(imts):
+    for m, imt in enumerate(imts):
         lab = _get_label(imt)
-        plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
+        plt.loglog(imls[m], AFE[m], color=colors(m), linestyle=patterns[m],
                    label=lab, linewidth=3, zorder=1)
         # plot the label only once but it must be at the end of the legend
         if imt == imts[-1]:
-            plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
+            plt.loglog([RTGM[m]], [afe_RTGM[m]], 'ko',
                        label='Probabilistic MCE',  linewidth=2,
                        markersize=10, zorder=3)
         else:
-            plt.loglog([RTGM[i]], [afe_RTGM[i]], 'ko',
+            plt.loglog([RTGM[m]], [afe_RTGM[m]], 'ko',
                        linewidth=2, markersize=10, zorder=3)
-        plt.loglog([np.min(imls[i]), RTGM[i]], [afe_RTGM[i], afe_RTGM[i]],
+        plt.loglog([np.min(imls[m]), RTGM[m]], [afe_RTGM[m], afe_RTGM[m]],
                    'darkgray', linestyle='--', linewidth=1)
-        plt.loglog([RTGM[i], RTGM[i]], [0, afe_RTGM[i]], 'darkgray',
+        plt.loglog([RTGM[m], RTGM[m]], [0, afe_RTGM[m]], 'darkgray',
                    linestyle='--', linewidth=1)
 
     plt.grid('both')
@@ -398,11 +398,8 @@ def _find_afe_target(imls, afe, sa_target):
     return afe_target
 
 
+# NOTE: run pytest openquake/engine -k KOR to debug this
 def disaggr_by_src(dstore, imtls):
-    imtls_dict = {}
-    for imt, imls in imtls.items():
-        imls = [iml for iml in imls]
-        imtls_dict[imt] = imls
     # get info : specific to disagg by src
     df = dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
     grouped_m = df.groupby(['src_id', 'site_id', 'imt']).agg(
@@ -417,12 +414,12 @@ def disaggr_by_src(dstore, imtls):
         wsp = []
         if isinstance(wp, list):
             total_poe.append(wp)
-        else:
+        else:  # array
             for wp_i in wp:
                 wsp.append(wp_i)
             total_poe.append([sum(t) for t in np.array(wsp).T])
     grouped_2['poes'] = total_poe
-    return grouped_2, imtls_dict
+    return grouped_2
 
 
 def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
@@ -586,7 +583,7 @@ def plot_curves(dstore, hc_only=False):
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_target, imls = [], [], []
-    for imt in imts:
+    for imt in IMTS:
         # get periods and factors for converting btw geom mean and
         # maximum component
         T = from_string(imt).period
@@ -598,23 +595,22 @@ def plot_curves(dstore, hc_only=False):
     UHGM_RP = rtgm_df['UHGM_2475yr-GM']
     rtgm_probmce = rtgm_df['ProbMCE']
     # get investigation time
-    window = dinfo['investigation_time']
+    itime = dinfo['investigation_time']
     # get hazard curves, put into rates
     mean_hcurve = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
     for m, hcurve in enumerate(mean_hcurve):
-        AFE.append(to_rates(hcurve, window))
+        AFE.append(to_rates(hcurve, itime))
         # get the AFE of the iml that will be disaggregated for each IMT
-        afe_target.append(_find_afe_target(
-            imls[m], AFE[m], rtgm_probmce[m]))
+        afe_target.append(_find_afe_target(imls[m], AFE[m], rtgm_probmce[m]))
     # make plot
     img = plot_meanHCs_afe_RTGM(
-        imls, AFE, UHGM_RP, 1/2475, rtgm_probmce, afe_target, imts)
+        imls, AFE, UHGM_RP, 1/2475, rtgm_probmce, afe_target, IMTS)
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
     if hc_only==False:
-        df, imtls_dict = disaggr_by_src(dstore, imtls)
-        _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore)
+        df = disaggr_by_src(dstore, imtls)
+        _find_sources(df, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
 
         img = plot_governing_mce(dstore, imtls)
         logging.info('Storing png/governing_mce.png')
@@ -658,7 +654,7 @@ def main(dstore, csm):
         return
 
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-        dstore, csm, imts, imls_disagg)
+        dstore, csm, IMTS, imls_disagg)
     det_imt, mag_dst_eps_sig = get_deterministic(
         prob_mce, mag_dist_eps, sigma_by_src)
     dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
