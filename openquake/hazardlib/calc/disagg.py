@@ -750,5 +750,4 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     std4D = collect_std(disaggs)
     gws = reduced_lt.g_weights(trt_rlzs)
     rates3D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))  # (N, M, L1)
-    import pdb; pdb.set_trace()
     return source_id, std4D, drates4D, rates3D[0]  # (M, L1) rates for the site
