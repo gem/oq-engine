@@ -1157,6 +1157,8 @@ class FullLogicTree(object):
                      for sm_rlz in self.sm_rlzs
                      if set(sm_rlz.lt_path) & brids)
 
+    # NB: called by the source_reader with smr and by
+    # .reduce_groups with source_id
     def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
         :param srcs: source objects
@@ -1166,7 +1168,7 @@ class FullLogicTree(object):
         """
         if not self.trti: # empty gsim_lt
             return srcs
-        sdata = self.source_model_lt.source_data
+        sd = group_array(self.source_model_lt.source_data, 'source')
         out = []
         for src in srcs:
             srcid = re.split('[:;.]', src.source_id)[0]
@@ -1178,10 +1180,9 @@ class FullLogicTree(object):
             except ValueError:
                 # non-ambiguous source ID
                 fname = ''
-                data = sdata
+                ok = slice(None)
             else:
-                ok = [fname in string for string in sdata['fname']]
-                data = sdata[ok]
+                ok = [fname in string for string in sd[srcid]['fname']]
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
                 trti = 0
             else:
@@ -1189,10 +1190,8 @@ class FullLogicTree(object):
             if smr is None and ';' in src.source_id:
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
-            if smr is None:
-                if not hasattr(self, 'sd'):  # cache source_data by source
-                    self.sd = group_array(data, 'source')
-                brids = set(self.sd[srcid]['branch'])
+            if smr is None:  # called by .reduce_groups 
+                brids = set(sd[srcid]['branch'][ok])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
