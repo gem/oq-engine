@@ -217,3 +217,7 @@ footer.footer form label {
      line-height: 12px;
      margin: 0px;
 }
+
+tr.asce_output {
+    font-weight: bold;
+}
