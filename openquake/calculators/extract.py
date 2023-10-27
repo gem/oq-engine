@@ -736,13 +736,14 @@ def extract_agg_curves(dstore, what):
     """
     info = get_info(dstore)
     qdic = parse(what, info)
-    tagdict = qdic.copy()
-    for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
-        del tagdict[a]
+    try:
+        tagnames = dstore['oqparam'].aggregate_by[0]
+    except IndexError:
+        tagnames = []
     k = qdic['k']  # rlz or stat index
-    lts = tagdict.pop('lt')  # loss type string
+    lts = qdic['lt']
     [l] = qdic['loss_type']  # loss type index
-    tagnames = sorted(tagdict)
+    tagdict = {tag: qdic[tag] for tag in tagnames}
     if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))

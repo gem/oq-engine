@@ -768,6 +768,7 @@ class Starmap(object):
             match = re.search(r'(\d+)', os.path.basename(h5.filename))
             self.calc_id = int(match.group(1))
         else:
+            # TODO: see if we can forbid this case
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)

@@ -123,9 +123,7 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    if not os.environ.get('OQ_DATABASE'):
-        # start the dbserver locally if needed
-        dbserver.ensure_on()
+    if config.dbserver.host != 'local':
         # check that we are talking to the right server
         err = dbserver.check_foreign()
         if err:

@@ -25,7 +25,7 @@ except ImportError:
     rtgmpy = None
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import logs
-from openquake.calculators import base
+from openquake.calculators import base, views
 from openquake.calculators.export import export
 from openquake.engine.aelo import get_params_from
 
@@ -70,3 +70,30 @@ def test_CCA():
         # run mag_dst_eps_sig exporter
         [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
         pandas.read_csv(fname, skiprows=1)
+
+
+def test_JPN():
+    # test with mutex sources    
+    job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
+    dic = dict(lon=139, lat=36, site='JPN-site', vs30='760')
+    with logs.init('job', job_ini) as log:
+        log.params.update(get_params_from(dic, MOSAIC_DIR))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    if rtgmpy:
+        df = views.view('compare_disagg_rates', calc.datastore)
+        aac(df.disagg_rate, df.interp_rate, rtol=.01)
+
+
+# not passing yet
+def test_KOR():
+    # test with same name sources
+    job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
+    dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
+    with logs.init('job', job_ini) as log:
+        log.params.update(get_params_from(dic, MOSAIC_DIR))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    if rtgmpy:
+        df = views.view('compare_disagg_rates', calc.datastore)
+        aac(df.disagg_rate, df.interp_rate, rtol=.02)

@@ -11,7 +11,7 @@
             srcs_weights=".25 .25 .25 .25"
             tectonicRegion="TRTA">
 
-            <nonParametricSeismicSource id="s1" name="I source">
+            <nonParametricSeismicSource id="s:1" name="I source">
                 <simpleFaultRupture probs_occur="0.99 0.01">
                     <magnitude> 7.0 </magnitude>
                     <rake>90.0</rake>
@@ -29,7 +29,7 @@
                 </simpleFaultRupture>
             </nonParametricSeismicSource>
 
-            <nonParametricSeismicSource id="s2" name="II source">
+            <nonParametricSeismicSource id="s:2" name="II source">
                 <simpleFaultRupture probs_occur="0.97 0.03">
                     <magnitude> 6.3 </magnitude>
                     <rake>90.0</rake>
@@ -47,7 +47,7 @@
                 </simpleFaultRupture>
             </nonParametricSeismicSource>
 
-            <nonParametricSeismicSource id="s2a" name="IIa source">
+            <nonParametricSeismicSource id="s:3" name="IIa source">
                 <simpleFaultRupture probs_occur="0.98 0.02">
                     <magnitude> 6.35 </magnitude>
                     <rake>90.0</rake>
@@ -65,7 +65,7 @@
                 </simpleFaultRupture>
             </nonParametricSeismicSource>
 
-            <nonParametricSeismicSource id="s3" name="III source">
+            <nonParametricSeismicSource id="s:4" name="III source">
                 <simpleFaultRupture probs_occur="0.95 0.05">
                     <magnitude> 5.7 </magnitude>
                     <rake>90.0</rake>
