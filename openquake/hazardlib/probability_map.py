@@ -428,6 +428,7 @@ class ProbabilityMap(object):
                     poes3[:, slc, z], imtls[imt], poes)
         return hmap4
 
+    # dangerous since it changes the shape by removing sites
     def remove_zeros(self):
         ok = self.array.sum(axis=(1, 2)) > 0
         if ok.sum() == 0:  # avoid empty array

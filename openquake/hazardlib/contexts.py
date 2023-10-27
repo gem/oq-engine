@@ -1401,7 +1401,7 @@ class PmapMaker(object):
             # of the groupby(group, basename) in classical.py
             srcids = set(map(basename, self.sources))
             assert len(srcids) == 1, srcids
-            dic['pmap_by_src'] = {srcids.pop(): pmap}
+            dic['basename'] = srcids.pop()
         return dic
 
 
