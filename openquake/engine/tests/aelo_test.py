@@ -80,8 +80,9 @@ def test_JPN():
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
-    df = views.view('compare_disagg_rates', calc.datastore)
-    aac(df.disagg_rate, df.interp_rate, rtol=.01)
+    if rtgmpy:
+        df = views.view('compare_disagg_rates', calc.datastore)
+        aac(df.disagg_rate, df.interp_rate, rtol=.01)
 
 
 # not passing yet
@@ -93,5 +94,6 @@ def test_KOR():
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
-    df = views.view('compare_disagg_rates', calc.datastore)
-    aac(df.disagg_rate, df.interp_rate, rtol=.02)
+    if rtgmpy:
+        df = views.view('compare_disagg_rates', calc.datastore)
+        aac(df.disagg_rate, df.interp_rate, rtol=.02)
