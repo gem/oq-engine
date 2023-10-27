@@ -1166,12 +1166,22 @@ class FullLogicTree(object):
         """
         if not self.trti: # empty gsim_lt
             return srcs
+        sdata = self.source_model_lt.source_data
         out = []
         for src in srcs:
             srcid = re.split('[:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
-            srcid = srcid.rsplit('!')[0]  # needed to compare with self.sd
+            try:
+                # check if ambiguous source ID
+                srcid, fname = srcid.rsplit('!')
+            except ValueError:
+                # non-ambiguous source ID
+                fname = ''
+                data = sdata
+            else:
+                ok = [fname in string for string in sdata['fname']]
+                data = sdata[ok]
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
                 trti = 0
             else:
@@ -1181,8 +1191,7 @@ class FullLogicTree(object):
                 smr = _get_smr(src.source_id)
             if smr is None:
                 if not hasattr(self, 'sd'):  # cache source_data by source
-                    self.sd = group_array(
-                        self.source_model_lt.source_data, 'source')
+                    self.sd = group_array(data, 'source')
                 brids = set(self.sd[srcid]['branch'])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
