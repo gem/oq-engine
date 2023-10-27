@@ -392,13 +392,19 @@ def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
 def _find_afe_target(imls, afe, sa_target):
     # find the target afe (or poe) for a given acceleration
     if len(imls) != len(afe):
-        afe.extend([1E-15] * (len(imls) - len(afe)))
+        afe.extend([1E-12] * (len(imls) - len(afe)))
     f = interpolate.interp1d(np.log(imls), np.log(afe))
     afe_target = np.exp(f(np.log(sa_target)))
     return afe_target
 
 
-def _find_sources(mrs, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
+def _find_sources(mrs, rel_ids, imtls_dict, imts, rtgm_probmce, mean_hcurve,
+                  dstore):
+
+    src2idx = {}
+    for idx, src in enumerate(mrs.src_id):
+        if src in rel_ids:
+            src2idx[src] = idx
 
     # mrs has shape (N, M, L1, Ns) with N=1
     fig, ax = plt.subplots(3, figsize=(8, 15))
@@ -441,8 +447,8 @@ def _find_sources(mrs, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
                    linewidth=2, zorder=3)
 
         # poes from dms are now rates
-        for ind, src in enumerate(mrs.src_id):
-            afes = mrs[0, m, :, ind]
+        for src, idx in src2idx.items():
+            afes = mrs[0, m, :, idx] + 1E-12  # added cutoff
             # get contribution at target level for that source
             afe_uhgm = _find_afe_target(imls, afes, rtgm_probmce[m])
             # get % contribution of that source
@@ -460,8 +466,8 @@ def _find_sources(mrs, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
         # use i to cycle through the colors for the major source contributors
         i = j = 0
         site = 0  # there is a single site
-        for ind, src in enumerate(mrs.src_id):
-            afe = mrs[site, m, :, ind]
+        for ind, (src, idx) in enumerate(src2idx.items()):
+            afe = mrs[site, m, :, idx]
             # if it's not a big contributor, plot in silver
             if out_contr_all[ind] <= fact*largest_contr:
                 if j == 0:
@@ -552,7 +558,7 @@ def plot_governing_mce(dstore, imtls):
     return Image.open(bio)
 
 
-def plot_curves(dstore, hc_only=False):
+def plot_curves(dstore, rel_ids, hc_only=False):
     dinfo = get_info(dstore)
     # site is always 0 for a single-site calculation
     # get imls and imts, make arrays
@@ -586,7 +592,8 @@ def plot_curves(dstore, hc_only=False):
 
     if not hc_only:
         mrs = dstore['mean_rates_by_src']
-        _find_sources(mrs, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
+        _find_sources(
+            mrs, rel_ids, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
         img = plot_governing_mce(dstore, imtls)
         logging.info('Storing png/governing_mce.png')
         dstore['png/governing_mce.png'] = img
@@ -647,4 +654,4 @@ def main(dstore, csm):
     if Image is None:  # missing PIL
         logging.warning('Missing module PIL: skipping plotting curves')
     else:
-        plot_curves(dstore)
+        plot_curves(dstore, sigma_by_src.source_id)
