@@ -65,9 +65,9 @@ def gzpik(obj):
 
 def fragmentno(src):
     "Postfix after :.; as an integer"
-    # in disagg/case-12 one has source IDs like 'SL_kerton:665!1'
+    # in disagg/case-12 one has source IDs like 'SL_kerton:665!unseg_z1_m03'
     fragment = re.split('[:.;]', src.source_id, 1)[1]
-    fragment = fragment.split('!')[0]
+    fragment = fragment.split('!')[0]  # strip !unseg_z1_m03
     return int(fragment.replace('.', '').replace(';', ''))
 
 
@@ -227,7 +227,7 @@ def add_checksums(srcs):
     """
     for src in srcs:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr smweight samples'}
+               if k not in 'source_id trt_smr smweight samples fname'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
@@ -241,6 +241,8 @@ def find_false_duplicates(smdict):
     for smodel in smdict.values():
         for sgroup in smodel.src_groups:
             for src in sgroup:
+                src.fname = os.path.basename(smodel.fname).rsplit('.')[0]
+                assert '!' not in src.fname, src.fname
                 acc[src.source_id].append(src)
                 if sgroup.atomic:
                     atomic.add(src.source_id)
@@ -258,10 +260,10 @@ def find_false_duplicates(smdict):
             for src in srcs:
                 gb[checksum(src)].append(src)
             if len(gb) > 1:
-                for i, same_checksum in enumerate(gb.values()):
+                for same_checksum in gb.values():
                     # sources with the same checksum get the same ID
                     for src in same_checksum:
-                        src.source_id += '!%d' % i
+                        src.source_id += '!%s' % src.fname
                 found.append(srcid)
     return found
 

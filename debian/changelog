@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Internal: disambiguated same ID sources by appending the file name after
+    the exclamation mark
   * Fixed another bug in disaggregation for mutex sources
   * Fixed a bug in `disagg_sources` for mutex sources: src_mutex
     was not passed

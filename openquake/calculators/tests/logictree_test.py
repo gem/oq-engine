@@ -118,8 +118,9 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # check disagg_by_src
         src_ids = decode(self.calc.datastore['mean_rates_by_src/src_id'][:])
-        self.assertEqual(
-            src_ids, ['SSC-AS-001!0', 'SSC-AS-001!1', 'SSC-AS-001!2'])
+        self.assertEqual(src_ids, ['SSC-AS-001!KOR_c1_M1_1',
+                                   'SSC-AS-001!KOR_c1_M1_2',
+                                   'SSC-AS-001!KOR_c1_M1_3'])
 
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
@@ -313,7 +314,8 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
-        numpy.testing.assert_equal(ids, ['A!0', 'A!1', 'B'])
+        numpy.testing.assert_equal(
+            ids, ['A!source_model_1', 'A!source_model_2', 'B'])
 
     def test_case_18(self):
         # test classical with 2 gsims and 1 sample
