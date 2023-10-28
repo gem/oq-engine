@@ -38,6 +38,19 @@ may be lifted in the future. Even if the jobs are sequential, the subtasks
 spawned by them will run in parallel and use all of the machines of the
 cluster.
 
+## Running out of quota
+
+Right now the engine store all of its files (intermediate results and
+calc_XXX.hdf5 files) under the $HOME/oqdata directory. It is therefore
+easy to run out of the quota for large calculations. Fortunaly there
+is an environment variable $OQ_DATADIR that can be configured to point
+to some other target, like a directory on a large shared disk. Such
+directory must be accessible in read/write mode from all workers in
+the clusters. Another option is to set a `shared_dir` in the
+`openquake.cfg` file and then the engine will store its data under the
+path `shared_dir/$HOME/oqdata`. This option is preferable since it will
+work transparently for all users but only the sysadmin can set it.
+
 ## Installing SLURM
 
 This section is for the administrators of the SLURM cluster.
