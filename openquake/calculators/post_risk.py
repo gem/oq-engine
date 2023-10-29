@@ -270,7 +270,7 @@ def build_store_agg(dstore, rbe_df, num_events):
     # double loop to avoid running out of memory
     agg_ids = rbe_df.agg_id.unique()
     K = agg_ids.max()
-    L = scientific.LOSSTYPE['structural']
+    L = scientific.LOSSID['structural']
     logging.info("Performing %d aggregations", len(agg_ids))
     for agg_id in agg_ids:
 
