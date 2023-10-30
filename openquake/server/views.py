@@ -973,8 +973,17 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    asce7 = asce41 = None
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        if 'asce7' in ds:
+            asce7_js = ds['asce7'][()].decode('utf8')
+            asce7 = json.loads(asce7_js)
+        if 'asce41' in ds:
+            asce41_js = ds['asce41'][()].decode('utf8')
+            asce41 = json.loads(asce41_js)
     return render(request, "engine/get_outputs_aelo.html",
-                  dict(calc_id=calc_id, size_mb=size_mb))
+                  dict(calc_id=calc_id, size_mb=size_mb,
+                       asce7=asce7, asce41=asce41))
 
 
 @csrf_exempt

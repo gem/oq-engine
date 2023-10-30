@@ -9,6 +9,12 @@
           <div class="span12">
               <h2>Outputs from calculation {{ calc_id }}</h2>
               <div id="my-outputs" class="well"></div>
+              {% if application_mode == 'AELO' %}
+              <div id="to-simplified-outputs">
+                <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs_aelo" class="btn btn-sm">
+                  View simplified outputs page</a>
+              </div>
+              {% endif %}
               <div id="my-datastore">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
