@@ -123,7 +123,11 @@ def main(
     if not os.path.exists(datadir):
         os.makedirs(datadir)
 
-    if config.dbserver.host != 'local':
+    fname = os.path.expanduser(config.dbserver.file)
+    if config.dbserver.host == 'local' and not os.path.exists(fname):
+        upgrade_db = True  # automatically creates the db
+        yes = True
+    else:
         # check that we are talking to the right server
         err = dbserver.check_foreign()
         if err:
@@ -135,7 +139,8 @@ def main(
             pass
         elif yes or confirm('Proceed? (y/n) '):
             logs.dbcmd('upgrade_db')
-        sys.exit(0)
+        if not run:
+            sys.exit(0)
 
     if db_version:
         safeprint(logs.dbcmd('db_version'))
