@@ -1,12 +1,8 @@
 # Running the OpenQuake Engine on multiple nodes (cluster/zmq)
 
-This configuration is supported only by Linux.
-
-## Overall architecture
-
-The nodes must all be able to communicate with the OpenQuake Engine *DbServer*.
-Both services run on a single "master" node.
-Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
+If you have a HPC cluster using the SLURM scheduler you are on the wrong
+page and you should [go here](slurm/md) instead. This page documents how to
+run the engine on a bare cluster of Linux machine without any scheduler.
 
 ## Pre-requisites
 

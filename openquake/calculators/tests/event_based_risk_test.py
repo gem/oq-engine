@@ -524,8 +524,17 @@ agg_id
 
         # check that the exported ruptures can be re-imported
         text = extract(self.calc.datastore, 'ruptures').array
+        nrups = text.count('\n') - 2
+        self.assertEqual(nrups, 4)
         rups = get_ruptures(gettemp(text))
         aac(rups['n_occ'], [1, 1, 1, 1])
+
+        # test extract?threshold
+        text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
+        nrups = text.count('\n') - 2
+        losses = self.calc.datastore['risk_by_rupture/loss'][:]
+        aac(losses, [1356.6093, 324.64624, 203.63742, 129.69966])
+        self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
         # nontrivial taxonomy mapping

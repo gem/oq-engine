@@ -1192,22 +1192,12 @@ def view_risk_by_rup(token, dstore):
     """
     Display the top 30 aggregate losses by rupture ID. Usage:
 
-    $ oq show risk_by_rup:<loss_type>
+    $ oq show risk_by_rup
     """
-    _, ltype = token.split(':')
-    loss_id = LOSSID[ltype]
-    K = dstore['risk_by_event'].attrs.get('K', 0)
-    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id, agg_id=K))
-    del df['loss_id']
-    del df['agg_id']
-    del df['variance']
-    rupids = dstore['events']['rup_id']
-    df['rup_id'] = rupids[df.event_id]
-    del df['event_id']
-    loss_by_rup = df.groupby('rup_id').sum()
-    rdf = dstore.read_df('ruptures', 'id')
+    rbr = dstore.read_df('risk_by_rupture', 'rup_id')
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
-    df = loss_by_rup.join(rdf).join(info)[
+    rdf = dstore.read_df('ruptures', 'id')
+    df = rbr.join(rdf).join(info)[
         ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2', 'rrup']]
     for field in df.columns:
         if field not in ('mag', 'n_occ'):

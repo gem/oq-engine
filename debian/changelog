@@ -1,6 +1,11 @@
   [Michele Simionato]
+  * Added `extract/ruptures?threshold=` functionality
+  * Disabling the DbServer with dbserver.host = local
+  * Fixed `disagg_source` for same ID sources
+  * Disambiguated same ID sources by appending the file name after
+    the exclamation mark and fixed disagg_by_src accordingly
   * Fixed another bug in disaggregation for mutex sources
-  * Fixed a bug in `disagg_sources` for mutex sources: src_mutex
+  * Fixed a bug in `disagg_source` for mutex sources: src_mutex
     was not passed
   * Internal: forced the colon convention on mutex sources
   * Fixed a bug in the disaggregation with mutex sources incorrectly

@@ -94,6 +94,7 @@ imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in imts]
 assert DLLs == [0.5, 1.5, 0.6]
+min_afe = 1/2475
 
 
 def norm_imt(imt):
@@ -137,7 +138,7 @@ def _find_fact_maxC(T, code):
     return fact_maxC
 
 
-def calc_rtgm_df(rtgm_haz, facts, oq):
+def calc_rtgm_df(hcurves, sitecol, oq):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
@@ -146,63 +147,76 @@ def calc_rtgm_df(rtgm_haz, facts, oq):
     :param oq: OqParam instance
     """
     M = len(imts)
-    assert len(oq.imtls) == M
-    riskCoeff, RTGM, UHGM, RTGM_max, MCE = (
+    riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (np.zeros(M),
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M))
-    results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
-    IMTs = []
+    
+    imtls = oq.imtls
+    
+    IMTs, facts = [], []
+    
     for m, imt in enumerate(imts):
+        afe = to_rates(hcurves[0, m], oq.investigation_time, minrate=1E-12)
+        
         IMT = norm_imt(imt)
         IMTs.append(IMT)
-        rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
-        RTGM_max[m] = rtgmCalc['rtgm']  # for maximum component
-        UHGM[m] = rtgmCalc['uhgm'] / facts[m]  # for geometric mean
-        riskCoeff[m] = rtgmCalc['riskCoeff']
-        # note that RTGM_max is the ProbMCEr, while RTGM is used for the
-        # identification of the sources as the hazard curves are in
-        # geometric mean
-        if IMT == 'PGA':
-            RTGM[m] = UHGM[m]
-            MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg
-        else:
-            RTGM[m] = rtgmCalc['rtgm'] / facts[m]  # for geometric mean
-            MCE[m] = RTGM_max[m]
-    dic = {'IMT': IMTs,
-           'UHGM_2475yr-GM': UHGM,
-           'RTGM': RTGM_max,
-           'ProbMCE': MCE,
-           'RiskCoeff': riskCoeff,
-           'DLL': DLLs}
-    return pd.DataFrame(dic)
-
-
-def get_hazdic_facts(hcurves, imtls, invtime, sitecol):
-    """
-    Convert an array of mean hazard curves into a dictionary suitable
-    for the rtgmpy library
-
-    :param hcurves: array of PoEs of shape (N, M, L1)
-    """
-    new_imtls = {}
-    facts = []
-    for m, imt in enumerate(imts):
         T = from_string(imt).period
         fact = _find_fact_maxC(T, 'ASCE7-16')
         facts.append(fact)
-        new_imtls[imt] = imtls[imt]*fact
+        
+        if afe[0] < min_afe:
+            logging.warning('Hazard is too low for %s', imt)
+            UHGM[m] = 0
+            RTGM_max[m] = 0
+            MCE[m] = 0
+            riskCoeff[m] = 0
+        elif afe[-1] > min_afe:     
+            raise ValueError("the max iml is too low: change the job.ini")
+        else:            
+            hazdic = get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
+            rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
+            logging.info(rtgm_haz)
+            results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
+            logging.info(results['RTGM'])
+            rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
+            RTGM_max[m] = rtgmCalc['rtgm']  # for maximum component
+            UHGM[m] = rtgmCalc['uhgm'] / fact  # for geometric mean
+            riskCoeff[m] = rtgmCalc['riskCoeff']
+            # note that RTGM_max is the ProbMCEr, while RTGM is used for the
+            # identification of the sources as the hazard curves are in
+            # geometric mean
+            if IMT == 'PGA':
+                RTGM[m] = UHGM[m]
+                MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg   
+            else:
+                RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
+                MCE[m] = RTGM_max[m]
+    dic =  {'IMT': IMTs,
+            'UHGM_2475yr-GM': UHGM,
+            'RTGM': RTGM_max,
+            'ProbMCE': MCE,
+            'RiskCoeff': riskCoeff,
+            'DLL': DLLs}
+    
+    return pd.DataFrame(dic), np.array(facts)
 
+
+def get_hazdic(afe, imt, imtls, sitecol):
+    """
+    Convert an array of mean hazard curves into a dictionary suitable
+    for the rtgmpy library. Note that here the imls are already converted to max component
+    :param hcurves: array with annual frequency of exceedance
+    """ 
     [site] = sitecol  # there must be a single site
     hazdic = {
         'site': {'name': 'site',
                  'lon': site.location.x,
                  'lat': site.location.y,
                  'Vs30': site.vs30},
-        'hazCurves': {norm_imt(imt):
-                      {'iml': new_imtls[imt],
-                       # NB: minrate > 0 is needed to avoid NaNs in the RTGM
-                       'afe': to_rates(hcurves[0, m], invtime, minrate=1E-12)}
-                      for m, imt in enumerate(imtls) if imt in imts}}
-    return hazdic, np.array(facts)
+        'hazCurves': {imt:
+                      {'iml': imtls,
+                       'afe': afe}}}
+    return hazdic
+
 
 
 def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
@@ -628,19 +642,16 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    if dstore['mean_rates_ss'][:].max() < 1E-3:
+    if dstore['mean_rates_ss'][:].max() < min_afe:
         logging.warning('Ultra-low hazard: skipping AELO calculation')
         return
     logging.info('Computing Risk Targeted Ground Motion')
     oq = dstore['oqparam']
     stats = list(oq.hazard_stats())
     assert stats[0] == 'mean', stats[0]
-    hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
+    hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1    
     sitecol = dstore['sitecol']
-    hazdic, facts = get_hazdic_facts(
-        hcurves, oq.imtls, oq.investigation_time, sitecol)
-    rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
-    rtgm_df = calc_rtgm_df(rtgm_haz, facts, oq)
+    rtgm_df, facts = calc_rtgm_df(hcurves, sitecol, oq)  
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     facts[0] = 1 # for PGA the Prob MCE is already geometric mean
