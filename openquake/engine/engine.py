@@ -49,7 +49,7 @@ from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
 from openquake.commonlib import readinput
 from openquake.calculators import base, export
-from openquake.commonlib import logs
+
 
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
