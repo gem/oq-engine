@@ -149,25 +149,21 @@ def calc_rtgm_df(hcurves, sitecol, oq):
         fact = _find_fact_maxC(T, 'ASCE7-16')
         facts.append(fact)
         
-        if afe[0]<min_afe:
+        if afe[0] < min_afe:
             logging.warning('Hazard is too low for %s', imt)
             UHGM[m] = 0
             RTGM_max[m] = 0
             MCE[m] = 0
             riskCoeff[m] = 0
-        elif afe[-1]>min_afe:     
-            raise ValueError("the max iml is too low: please change the job.ini")
-            
+        elif afe[-1] > min_afe:     
+            raise ValueError("the max iml is too low: change the job.ini")
         else:            
-            hazdic = get_hazdic(afe, IMT, imtls[imt]*fact, sitecol)
+            hazdic = get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
             rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
             logging.info(rtgm_haz)
             results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
-
             logging.info(results['RTGM'])
-            
             rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
-           
             RTGM_max[m] = rtgmCalc['rtgm']  # for maximum component
             UHGM[m] = rtgmCalc['uhgm'] / fact  # for geometric mean
             riskCoeff[m] = rtgmCalc['riskCoeff']
@@ -375,9 +371,11 @@ def main(dstore, csm):
         prob_mce, mag_dist_eps, sigma_by_src)
     dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
     logging.info(f'{det_imt=}')
-    prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(prob_mce, det_imt, DLLs,dstore)
+    prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(
+        prob_mce, det_imt, DLLs,dstore)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
+    dstore['asce7'] = hdf5.dumps(asce7)
     asce41 = get_asce41(dstore, mce, facts)
     dstore['asce41'] = hdf5.dumps(asce41)
     logging.info(asce41)
