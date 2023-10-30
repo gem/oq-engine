@@ -1,4 +1,5 @@
 {% extends "engine/base.html" %}
+{% load servertags %}
   <title>{% block title %}OpenQuake engine: outputs from calculation {{ calc_id }}{% endblock %}</title>
 
   {% block main %}
@@ -15,9 +16,27 @@
                   Download hdf5 datastore</a>
               </div>
               {% if hmaps %}
-              <div id="my-hmaps">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/hmap_0_0" class="btn btn-sm">
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/hmap_0_0" class="btn btn-sm">
                   Show hazard map</a>
+              </div>
+              {% endif %}
+              {% if hcurves %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/hcurves.png" class="btn btn-sm">
+                  Show hazard curves</a>
+              </div>
+              {% endif %}
+              {% for img in disagg_by_src %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
+                  Show disaggregation by sources - {{ img|get_disagg_by_src_imt }}</a>
+              </div>
+              {% endfor %}
+              {% if governing_mce %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
+                  Show governing MCE</a>
               </div>
               {% endif %}
           </div>
@@ -41,7 +60,7 @@
       <tbody>
         <% _.each(outputs, function(output) { %>
         {% if application_mode == 'AELO' %}
-        <% if (['hmaps', 'realizations', 'fullreport'].indexOf(output.get('type')) >= 0) { %>
+        <% if (['hmaps', 'realizations', 'fullreport', 'rtgm'].indexOf(output.get('type')) >= 0) { %>
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {% endif %}
