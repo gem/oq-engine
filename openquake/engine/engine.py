@@ -47,7 +47,7 @@ from openquake.baselib.python3compat import decode
 from openquake.baselib import parallel, general, config, workerpool as w
 from openquake.hazardlib import valid
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput
+from openquake.commonlib import readinput, logs
 from openquake.calculators import base, export
 
 
