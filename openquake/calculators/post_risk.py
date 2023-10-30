@@ -235,6 +235,12 @@ def build_aggcurves(items, builder, aggregate_loss_curves_types):
     return dic
 
 
+def get_loss_id(ext_loss_types):
+    if 'structural' in ext_loss_types:
+        return scientific.LOSSID['structural']
+    return scientific.LOSSID[ext_loss_types[0]]
+
+
 # aggcurves are built in parallel, aggrisk sequentially
 def build_store_agg(dstore, rbe_df, num_events):
     """
@@ -250,6 +256,7 @@ def build_store_agg(dstore, rbe_df, num_events):
             tr /= len(dstore['weights'])
     events = dstore['events'][:]
     rlz_id = events['rlz_id']
+    rup_id = events['rup_id']
     if len(num_events) > 1:
         rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
     else:
@@ -262,8 +269,23 @@ def build_store_agg(dstore, rbe_df, num_events):
         aggnumber = dstore['agg_values']['number']
     # double loop to avoid running out of memory
     agg_ids = rbe_df.agg_id.unique()
+    K = agg_ids.max()
+    L = scientific.LOSSID['structural']
     logging.info("Performing %d aggregations", len(agg_ids))
     for agg_id in agg_ids:
+
+        # build risk_by_rupture
+        if agg_id == K and ('loss' in columns or 'losses' in columns):
+            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == L)].copy()
+            if len(df):
+                df['rup_id'] = rup_id[df.event_id.to_numpy()]
+                if 'losses' in columns:  # for consequences
+                    df['loss'] = df['losses']
+                gb = df[['rup_id', 'loss']].groupby('rup_id')
+                rbr_df = gb.sum().sort_values('loss', ascending=False)
+                dstore.create_df('risk_by_rupture', rbr_df.reset_index())
+
+        # build aggrisk
         gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
         for (rlz_id, loss_id), df in gb:
             ne = num_events[rlz_id]

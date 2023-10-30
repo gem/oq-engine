@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added `extract/ruptures?threshold=` functionality
   * Disabling the DbServer with dbserver.host = local
   * Fixed `disagg_source` for same ID sources
   * Disambiguated same ID sources by appending the file name after
