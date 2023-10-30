@@ -202,9 +202,10 @@ def calc_rtgm_df(hcurves, sitecol, oq):
 
 def get_hazdic(afe, imt, imtls, sitecol):
     """
-    Convert an array of mean hazard curves into a dictionary suitable for the
-    rtgmpy library. Note that here the imls are already converted to max
-    component
+    Convert an array of mean hazard curves into a dictionary suitable
+    for the rtgmpy library. Note that here the imls are already converted
+    to maximum component.
+
     :param hcurves: array with annual frequency of exceedance
     """
     [site] = sitecol  # there must be a single site
@@ -213,9 +214,7 @@ def get_hazdic(afe, imt, imtls, sitecol):
                  'lon': site.location.x,
                  'lat': site.location.y,
                  'Vs30': site.vs30},
-        'hazCurves': {imt:
-                      {'iml': imtls,
-                       'afe': afe}}}
+        'hazCurves': {imt: {'iml': imtls, 'afe': afe}}}
     return hazdic
 
 
@@ -421,10 +420,7 @@ def _find_afe_target(imls, afe, sa_target):
 
 # TODO: this is horrible code to be removed
 def disaggr_by_src(dstore, imtls):
-    imtls_dict = {}
-    for imt, imls in imtls.items():
-        imls = [iml for iml in imls]
-        imtls_dict[imt] = imls
+
     # get info : specific to disagg by src
     df = dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
     grouped_m = df.groupby(['src_id', 'site_id', 'imt']).agg(
@@ -444,10 +440,10 @@ def disaggr_by_src(dstore, imtls):
                 wsp.append(wp_i)
             total_poe.append([sum(t) for t in np.array(wsp).T])
     grouped_2['poes'] = total_poe
-    return grouped_2, imtls_dict
+    return grouped_2
 
 
-def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
+def _find_sources(df, imtls, imts, rtgm_probmce, mean_hcurve, dstore):
 
     fig, ax = plt.subplots(3, figsize=(8, 15))
 
@@ -463,7 +459,7 @@ def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
         # annual frequency of exceedance:
         T = from_string(imt).period
         f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
-        imls_o = imtls_dict[imt]
+        imls_o = imtls[imt]
         imls = [iml*f for iml in imls_o]
         # have to compute everything for max comp. and for geom. mean
         RTGM = rtgm_probmce[m]
@@ -559,16 +555,11 @@ def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
 
 
 def plot_governing_mce(dstore, imtls):
-    imt_list = []
-    imls = []
-    for imt, iml in imtls.items():
-        imls.append([im for im in iml])
-        imt_list.append(imt)
     js = dstore['asce7'][()].decode('utf8')
     dic = json.loads(js)
     MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
     MCEr = [dic['PGA'], dic['SS'], dic['S1']]
-    T = [from_string(imt).period for imt in imt_list]
+    T = [from_string(imt).period for imt in imtls]
 
     limit_det = [0.5, 1.5, 0.6]
     # presenting as maximum component -> do not need conversion facts
@@ -636,9 +627,8 @@ def plot_curves(dstore, hc_only=False):
     # deterministic
 
     if not hc_only:
-        df, imtls_dict = disaggr_by_src(dstore, imtls)
-        _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore)
-
+        df = disaggr_by_src(dstore, imtls)
+        _find_sources(df, imtls, imts, rtgm_probmce, mean_hcurve, dstore)
         img = plot_governing_mce(dstore, imtls)
         logging.info('Storing png/governing_mce.png')
         dstore['png/governing_mce.png'] = img
@@ -694,8 +684,8 @@ def main(dstore, csm):
     dstore['asce7'] = hdf5.dumps(asce7)
     asce41 = get_asce41(dstore, mce, facts)
     dstore['asce41'] = hdf5.dumps(asce41)
-    logging.info(asce41)
-    logging.info(asce7)
+    logging.info('ASCE-41=%s' % asce41)
+    logging.info('ASCE-7=%s' % asce7)
 
     if Image is None:  # missing PIL
         logging.warning('Missing module PIL: skipping plotting curves')

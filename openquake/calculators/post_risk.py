@@ -254,6 +254,7 @@ def build_store_agg(dstore, rbe_df, num_events):
         tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
         if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
             tr /= len(dstore['weights'])
+    rups = len(dstore['ruptures'])
     events = dstore['events'][:]
     rlz_id = events['rlz_id']
     rup_id = events['rup_id']
@@ -275,7 +276,7 @@ def build_store_agg(dstore, rbe_df, num_events):
     for agg_id in agg_ids:
 
         # build risk_by_rupture
-        if agg_id == K and ('loss' in columns or 'losses' in columns):
+        if agg_id == K and ('loss' in columns or 'losses' in columns) and rups:
             df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == L)].copy()
             if len(df):
                 df['rup_id'] = rup_id[df.event_id.to_numpy()]
