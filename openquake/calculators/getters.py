@@ -261,7 +261,7 @@ class PmapGetter(object):
         return pmap
 
 
-def get_rupture_getters(dstore, ct=0, srcfilter=None):
+def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
@@ -269,6 +269,8 @@ def get_rupture_getters(dstore, ct=0, srcfilter=None):
     """
     full_lt = dstore['full_lt'].init()
     rup_array = dstore['ruptures'][:]
+    if rupids is not None:
+        rup_array = rup_array[numpy.isin(rup_array['id'], rupids)]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
     proxies = [RuptureProxy(rec) for rec in rup_array]
@@ -371,6 +373,7 @@ class RuptureGetter(object):
             rupgeoms = dstore['rupgeoms']
             for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
+                    # discard small magnitudes
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 proxies.append(proxy)
