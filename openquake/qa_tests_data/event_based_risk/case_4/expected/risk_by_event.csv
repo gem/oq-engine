@@ -1,9 +1,9 @@
-#,,,,"generated_by='OpenQuake engine 3.18.0-git768730e128', start_date='2023-09-27T12:00:23', checksum=3505762451, investigation_time=10.0, risk_investigation_time=10.0"
+#,,,,"generated_by='OpenQuake engine 3.18.0-gitbd5cd346d9', start_date='2023-10-12T08:28:27', checksum=3505762451, investigation_time=10.0, risk_investigation_time=10.0"
 event_id,loss,loss_type,rup_id,year
 0,7.62458E+04,structural,1073741826,13
 1,2.25137E+05,structural,1073741884,9
 2,2.60023E+05,structural,1073741885,3
-3,2.14646E+05,structural,1073741944,26
+3,5.76274E+04,structural,1073741944,26
 4,1.19530E+05,structural,1073741944,13
 5,9.85284E+04,structural,1073741949,11
 6,7.46180E+04,structural,1073742007,16
@@ -51,7 +51,7 @@ event_id,loss,loss_type,rup_id,year
 67,1.35993E+05,structural,3221226768,37
 71,1.50693E+05,structural,3221227155,26
 72,1.34487E+06,structural,4294967345,17
-73,2.29105E+06,structural,4294967345,33
+73,5.52336E+05,structural,4294967345,33
 74,1.45589E+06,structural,4294967587,23
 75,4.13235E+05,structural,4294967684,7
 76,6.03935E+06,structural,4294967692,22

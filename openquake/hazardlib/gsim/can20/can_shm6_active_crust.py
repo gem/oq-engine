@@ -178,7 +178,6 @@ def get_mean_stddevs_cy14(name, C, ctx):
 
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref)
-    f_nl = 0.0
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)

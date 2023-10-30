@@ -15,7 +15,7 @@ jobs:
         python-version: ["3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -24,7 +24,11 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ $FROM_FORK == "true" ]]; then
+          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+        else
+          python install.py devel --version=$GITHUB_HEAD_REF
+        fi
     - name: Calculators and documentation tests
       run: |
         set -e
@@ -41,7 +45,7 @@ jobs:
         python-version: ["3.10"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -50,7 +54,11 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ $FROM_FORK == "true" ]]; then
+          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+        else
+          python install.py devel --version=$GITHUB_HEAD_REF
+        fi
     - name: Hazardlib tests
       run: |
         set -e
@@ -69,7 +77,7 @@ jobs:
         python-version: ["3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -78,7 +86,11 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ $FROM_FORK == "true" ]]; then
+          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+        else
+          python install.py devel --version=$GITHUB_HEAD_REF
+        fi
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -94,7 +106,7 @@ jobs:
         python-version: ["3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -103,7 +115,11 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ $FROM_FORK == "true" ]]; then
+          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+        else
+          python install.py devel --version=$GITHUB_HEAD_REF
+        fi
     - name: Server 'READ_ONLY' mode tests
       run: |
         source ~/openquake/bin/activate
@@ -119,7 +135,7 @@ jobs:
         python-version: ["3.10"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
-      GITHUB_REPOSITORY: ${{ github.repository }}
+      FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python  ${{ matrix.python-version }}
@@ -128,7 +144,11 @@ jobs:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python install.py devel --version=$GITHUB_HEAD_REF --repository=$GITHUB_REPOSITORY
+        if [[ $FROM_FORK == "true" ]]; then
+          python install.py devel --version=$GITHUB_HEAD_REF --from_fork
+        else
+          python install.py devel --version=$GITHUB_HEAD_REF
+        fi
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate

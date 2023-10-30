@@ -65,9 +65,9 @@ def gzpik(obj):
 
 def fragmentno(src):
     "Postfix after :.; as an integer"
-    # in disagg/case-12 one has source IDs like 'SL_kerton:665!1'
+    # in disagg/case-12 one has source IDs like 'SL_kerton:665!unseg_z1_m03'
     fragment = re.split('[:.;]', src.source_id, 1)[1]
-    fragment = fragment.split('!')[0]
+    fragment = fragment.split('!')[0]  # strip !unseg_z1_m03
     return int(fragment.replace('.', '').replace(';', ''))
 
 
@@ -203,7 +203,22 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    return _get_csm(full_lt, groups, is_event_based)
+    csm = _get_csm(full_lt, groups, is_event_based)
+    for sg in csm.src_groups:
+        if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
+            dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
+                      ('num_ruptures', int), ('mutex_weight', float)]
+            out = []
+            segments = []
+            for src in sg:
+                segments.append(int(src.source_id.split(':')[1]))
+                t = (src.source_id, src.count_ruptures(),
+                     src.grp_id, src.mutex_weight)
+                out.append(t)
+            assert len(segments) == len(set(segments)), segments
+            dstore.create_dset('src_mutex', numpy.array(out, dtlist),
+                               fillvalue=None)
+    return csm
 
 
 def add_checksums(srcs):
@@ -212,7 +227,7 @@ def add_checksums(srcs):
     """
     for src in srcs:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr smweight samples'}
+               if k not in 'source_id trt_smr smweight samples fname'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
@@ -226,6 +241,8 @@ def find_false_duplicates(smdict):
     for smodel in smdict.values():
         for sgroup in smodel.src_groups:
             for src in sgroup:
+                src.fname = os.path.basename(smodel.fname).rsplit('.')[0]
+                assert '!' not in src.fname, src.fname
                 acc[src.source_id].append(src)
                 if sgroup.atomic:
                     atomic.add(src.source_id)
@@ -243,10 +260,10 @@ def find_false_duplicates(smdict):
             for src in srcs:
                 gb[checksum(src)].append(src)
             if len(gb) > 1:
-                for i, same_checksum in enumerate(gb.values()):
+                for same_checksum in gb.values():
                     # sources with the same checksum get the same ID
                     for src in same_checksum:
-                        src.source_id += '!%d' % i
+                        src.source_id += '!%s' % src.fname
                 found.append(srcid)
     return found
 
@@ -279,7 +296,9 @@ def fix_geometry_sections(smdict, dstore):
     s2i = {suid: i for i, suid in enumerate(sections)}
     for idx, sec in enumerate(sections.values()):
         sec.suid = idx
-    if dstore and sections:
+    if sections:
+        assert dstore, ('You forgot to pass the dstore to '
+                        'get_composite_source_model')
         with hdf5.File(dstore.tempname, 'w') as h5:
             h5.save_vlen('multi_fault_sections',
                          [kite_to_geom(sec) for sec in sections.values()])
@@ -480,7 +499,7 @@ class CompositeSourceModel:
         """
         sources = set()
         for src in self.get_sources():
-            sources.add(basename(src, '!;:.'))
+            sources.add(basename(src, ';:.'))
         return sorted(sources)
 
     def get_mags_by_trt(self, maximum_distance):

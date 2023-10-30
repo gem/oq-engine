@@ -1251,10 +1251,13 @@ class SourceConverter(RuptureConverter):
                     'There are %d srcs_weights but %d source(s) in %s'
                     % (len(srcs_weights), len(node), self.fname))
             tot = 0
-            for src, sw in zip(sg, srcs_weights):
-                src.mutex_weight = sw
-                tot += sw
             with context(self.fname, node):
+                for src, sw in zip(sg, srcs_weights):
+                    if ':' not in src.source_id:
+                        raise NameError('You must use the colon convention '
+                                        'with mutex sources')
+                    src.mutex_weight = sw
+                    tot += sw
                 numpy.testing.assert_allclose(
                     tot, 1., err_msg='sum(srcs_weights)', atol=5E-6)
 

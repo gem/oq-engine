@@ -489,6 +489,12 @@ maximum_distance:
   Example: *maximum_distance = 200*.
   Default: no default
 
+maximum_distance_stations:
+  Applies only to scenario calculations with conditioned GMFs to discard
+  stations.
+  Example: *maximum_distance_stations = 100*.
+  Default: None
+
 mean:
   Flag to enable/disable the calculation of mean curves.
   Example: *mean = false*.
@@ -992,9 +998,10 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
+    maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_aggregations = valid.Param(valid.positivefloat, 100_000)
+    max_aggregations = valid.Param(valid.positivefloat, 1E5)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
     max_gmvs_chunk = valid.Param(valid.positiveint, 100_000) # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
@@ -1480,7 +1487,7 @@ class OqParam(valid.ParamSet):
                     mini[imt] = 0
         if 'default' in mini:
             del mini['default']
-        min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        min_iml = F64([mini.get(imt) or 1E-10 for imt in self.imtls])
         return min_iml
 
     def get_max_iml(self):

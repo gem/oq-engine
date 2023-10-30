@@ -736,13 +736,14 @@ def extract_agg_curves(dstore, what):
     """
     info = get_info(dstore)
     qdic = parse(what, info)
-    tagdict = qdic.copy()
-    for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
-        del tagdict[a]
+    try:
+        tagnames = dstore['oqparam'].aggregate_by[0]
+    except IndexError:
+        tagnames = []
     k = qdic['k']  # rlz or stat index
-    lts = tagdict.pop('lt')  # loss type string
+    lts = qdic['lt']
     [l] = qdic['loss_type']  # loss type index
-    tagnames = sorted(tagdict)
+    tagdict = {tag: qdic[tag] for tag in tagnames}
     if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
@@ -1331,6 +1332,28 @@ def extract_rupture_info(dstore, what):
                                   boundaries=geoms))
 
 
+def get_relevant_rup_ids(dstore, threshold):
+    """
+    :param dstore:
+        a DataStore instance with a `risk_by_rupture` dataframe
+    :param threshold:
+        fraction of the total losses
+    :returns:
+        array with the rupture IDs cumulating the highest losses
+        up to the threshold (usually 95% of the total loss)
+    """
+    assert 0 <= threshold <= 1, threshold
+    if 'risk_by_rupture' not in dstore:
+        return
+    rupids = dstore['risk_by_rupture/rup_id'][:]
+    cumsum = dstore['risk_by_rupture/loss'][:].cumsum()
+    thr = threshold * cumsum[-1]
+    for i, csum in enumerate(cumsum, 1):
+        if csum > thr:
+            break
+    return rupids[:i]
+
+
 @extract.add('ruptures')
 def extract_ruptures(dstore, what):
     """
@@ -1352,8 +1375,13 @@ def extract_ruptures(dstore, what):
         info = dstore['source_info'][rup_id // TWO30]
         comment['source_id'] = info['source_id'].decode('utf8')
     else:
+        if 'threshold' in qdict:
+            [threshold] = qdict['threshold']
+            rup_ids = get_relevant_rup_ids(dstore, threshold)
+        else:
+            rup_ids = None
         ebrups = []
-        for rgetter in getters.get_rupture_getters(dstore):
+        for rgetter in getters.get_rupture_getters(dstore, rupids=rup_ids):
             ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
                           for proxy in rgetter.get_proxies(min_mag))
     bio = io.StringIO()

@@ -1,12 +1,8 @@
 # Running the OpenQuake Engine on multiple nodes (cluster/zmq)
 
-This configuration is supported only by Linux.
-
-## Overall architecture
-
-The nodes must all be able to communicate with the OpenQuake Engine *DbServer*.
-Both services run on a single "master" node.
-Running OpenQuake on an *MPI cluster* is currently not supported. See the [FAQ](../faq.md#mpi-support) for more information.
+If you have a HPC cluster using the SLURM scheduler you are on the wrong
+page and you should [go here](slurm/md) instead. This page documents how to
+run the engine on a bare cluster of Linux machine without any scheduler.
 
 ## Pre-requisites
 
@@ -170,6 +166,19 @@ For each worker in the cluster you can see its IP and the cores which are
 currently running with respect to the number of cores available (for instance
 on the host 192.168.2.1 only 1 core of 64 is running, while in the other
 two workers 7 cores are running each).
+
+There are a few useful commands to manage the workers, to be run as user
+`openquake`:
+
+- `oq workers start` is used to start the workers
+- `oq workers stop` is used to stop the workers nicely
+- `oq workers kill` is used to send a hard `kill -9` to the workers
+- `oq workers debug` is used to test that the installation is correct
+
+If a calculation is stuck in the "executing" state due to an IT
+problem (like the cluster running out of memory followed by an `oq
+workers kill`) you can fix its status with the command `oq abort XXX`
+where `XXX` is the calculation ID.
 
 ## Running calculations
 

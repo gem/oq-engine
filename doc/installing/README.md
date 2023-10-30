@@ -37,7 +37,7 @@ Check more advanced [hardware suggestions here](../hardware-suggestions.md).
 
 **On Windows**
 
-  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.6-1.exe .
+  Download OpenQuake Engine for Windows: https://downloads.openquake.org/pkgs/windows/oq-engine/OpenQuake_Engine_3.16.7-1.exe .
   Then follow the wizard on screen.
   > **Warning**:
   > Administrator level access may be required.
@@ -66,17 +66,17 @@ See instructions for the [universal installer](./universal.md) script. This scri
   The OpenQuake Engine is also available on **[PyPI](https://pypi.python.org/pypi/openquake.engine)** and can be installed in any Python 3 environment via `pip`:
 
     ```
-    $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-linux64.txt openquake.engine
+    $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-linux64.txt openquake.engine
     ```
-  This works for Linux and Python 3.8. You can trivially adapt the command to Python 3.9 and 3.10, and to other operating systems. For instance for Windows and Python 3.8, it would be
+  This works for Linux and Python 3.10. You can trivially adapt the command to other operating systems. For instance for Windows it would be
 
     ```
-    $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-win64.txt openquake.engine
+    $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-win64.txt openquake.engine
     ```
-  and for Mac and Python 3.8, it would be
+  and for Mac it would be
   
     ```
-    $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py38-macos.txt openquake.engine
+    $ pip install -r https://raw.githubusercontent.com/gem/oq-engine/master/requirements-py310-macos_arm64.txt openquake.engine
     ```
 
 **Cloud**

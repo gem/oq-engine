@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import events_dt, get_eid_rlz
+from openquake.hazardlib.source.rupture import get_events
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -185,8 +185,7 @@ class RuptureImporter(object):
         :returns: a composite array with the associations eid->rlz
         """
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        eid_rlz = get_eid_rlz(proxies, rlzs, self.scenario)
-        return {ordinal: numpy.array(eid_rlz, events_dt)}
+        return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
@@ -241,7 +240,10 @@ class RuptureImporter(object):
         else:
             self.datastore.swmr_on()  # before the Starmap
             acc = parallel.Starmap(
-                self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
+                self.get_eid_rlz, iterargs,
+                h5=self.datastore,
+                progress=logging.debug
+            ).reduce()
         i = 0
         for ordinal, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:

@@ -1192,22 +1192,12 @@ def view_risk_by_rup(token, dstore):
     """
     Display the top 30 aggregate losses by rupture ID. Usage:
 
-    $ oq show risk_by_rup:<loss_type>
+    $ oq show risk_by_rup
     """
-    _, ltype = token.split(':')
-    loss_id = LOSSID[ltype]
-    K = dstore['risk_by_event'].attrs.get('K', 0)
-    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id, agg_id=K))
-    del df['loss_id']
-    del df['agg_id']
-    del df['variance']
-    rupids = dstore['events']['rup_id']
-    df['rup_id'] = rupids[df.event_id]
-    del df['event_id']
-    loss_by_rup = df.groupby('rup_id').sum()
-    rdf = dstore.read_df('ruptures', 'id')
+    rbr = dstore.read_df('risk_by_rupture', 'rup_id')
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
-    df = loss_by_rup.join(rdf).join(info)[
+    rdf = dstore.read_df('ruptures', 'id')
+    df = rbr.join(rdf).join(info)[
         ['loss', 'mag', 'n_occ',  'hypo_0', 'hypo_1', 'hypo_2', 'rrup']]
     for field in df.columns:
         if field not in ('mag', 'n_occ'):
@@ -1518,3 +1508,37 @@ def view_MPL(token, dstore):
                          stat='mean', agg_id=K, return_period=rp)
         out[ltype] = arr
     return out
+
+
+def _drate(df, imt, src):
+    return df[(df.imt == imt) & (df.source_id == src)].value.sum()
+
+
+def _irate(df, imt, src, iml, imls):
+    subdf = df[(df.imt == imt) & (df.src_id == src)]
+    interp = numpy.interp(numpy.log(iml), numpy.log(imls[subdf.lvl]),
+                       numpy.log(subdf.value))
+    return numpy.exp(interp)
+
+
+# used only in AELO calculations
+@view.add('compare_disagg_rates')
+def compare_disagg_rates(token, dstore):
+    oq = dstore['oqparam']
+    aw = dstore['mean_disagg_by_src']
+    iml_disagg = dict(zip(aw.imt, aw.iml))
+    mean_disagg_df = aw.to_dframe()
+    mean_rates_df = dstore['mean_rates_by_src'].to_dframe()
+    imts_out, srcs_out, drates, irates = [], [], [], []
+    for imt, iml in iml_disagg.items():
+        imls = oq.imtls[imt]
+        srcs = mean_disagg_df[mean_disagg_df.imt == imt].source_id
+        for src in set(srcs):
+            imts_out.append(imt)
+            srcs_out.append(src)    
+            drates.append(_drate(mean_disagg_df, imt, src))
+            irates.append(_irate(mean_rates_df, imt, src, iml, imls))
+    return pandas.DataFrame({'imt': imts_out, 'src': srcs_out, 
+                             'disagg_rate': drates, 
+                             'interp_rate': irates}
+                            ).sort_values(['imt', 'src'])

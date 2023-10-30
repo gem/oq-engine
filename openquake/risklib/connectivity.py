@@ -31,6 +31,7 @@
 import pandas as pd
 import numpy as np
 import networkx as nx
+import logging
 
 
 def get_exposure_df(dstore):
@@ -369,6 +370,7 @@ def analysis(dstore):
     assert calculation_mode in ("event_based_damage", "scenario_damage")
     exposure_df = get_exposure_df(dstore)
 
+    logging.info('Classifying nodes')
     (TAZ_nodes, source_nodes,
      demand_nodes, eff_nodes) = classify_nodes(exposure_df)
 
@@ -381,6 +383,7 @@ def analysis(dstore):
     if TAZ_nodes:
         # if the nodes acts as both supply or demand (for example: traffic
         # analysis zone in transportation network)
+        logging.info('Analyzing TAZ nodes')
         taz_nodes_analysis_results = analyze_taz_nodes(
             dstore, exposure_df, G_original, TAZ_nodes, eff_nodes, damage_df,
             g_type, calculation_mode)
@@ -388,6 +391,7 @@ def analysis(dstore):
     elif demand_nodes:
         # This is the classic and mostly used when supply/source and
         # demand/sink is explicity mentioned to the nodes of interest
+        logging.info('Analyzing demand nodes')
         demand_nodes_analysis_results = analyze_demand_nodes(
             dstore, exposure_df, G_original, eff_nodes, demand_nodes,
             source_nodes, damage_df, g_type, calculation_mode)
@@ -395,6 +399,7 @@ def analysis(dstore):
     else:
         # if nothing is mentioned in case of scarce data or every node is
         # important and no distinction can be made
+        logging.info('Analyzing generic nodes')
         generic_nodes_analysis_results = analyze_generic_nodes(
             dstore, exposure_df, G_original, eff_nodes, damage_df, g_type,
             calculation_mode)
@@ -462,7 +467,7 @@ def ELWCLPCLCCL_demand(exposure_df, G_original, eff_nodes, demand_nodes,
     att = nx.get_edge_attributes(G_original, 'weight')
     eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
 
-    # Now we check for every event after earthquake
+    logging.info('Checking for every event after earthquake')
     for event_id, event_damage_df in damage_df.groupby("event_id"):
         G = cleanup_graph(G_original, event_damage_df, g_type)
 
@@ -610,6 +615,7 @@ def ELWCLPCLloss_TAZ(exposure_df, G_original, TAZ_nodes,
     att = nx.get_edge_attributes(G_original, 'weight')
     eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
 
+    logging.info('Checking for every event after earthquake')
     for event_id, event_damage_df in damage_df.groupby("event_id"):
         G = cleanup_graph(G_original, event_damage_df, g_type)
 
@@ -710,7 +716,7 @@ def EL_node(exposure_df, G_original, eff_nodes, damage_df, g_type):
     att = nx.get_edge_attributes(G_original, 'weight')
     eff_table = calc_efficiency(G_original, N, att, eff_table, 'Eff0')
 
-    # After eathquake
+    logging.info('Checking for every event after earthquake')
     for event_id, event_damage_df in damage_df.groupby("event_id"):
         G = cleanup_graph(G_original, event_damage_df, g_type)
 

@@ -38,7 +38,8 @@ CR = ord('\r')
 
 def _long_funcs(module, maxlen):
     out = []
-    tree = ast.parse(open(module.__file__).read(), module.__file__)
+    code = open(module.__file__, encoding='utf-8').read()
+    tree = ast.parse(code, module.__file__)
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             numlines = node.end_lineno - node.lineno + 1
@@ -73,7 +74,8 @@ def get_long_funcs(mod_or_pkg, maxlen):
 @numba.njit
 def check_newlines(bytes):
     """
-    :returns: 0 if the newlines are \r\n, 1 for \n and 2 for \r
+    :returns: 0 if the newlines are \r\n, 1 for \n, 2 for \r and 3 for two
+    consecutive \r
     """
     n1 = len(bytes) - 1
     for i, byte in enumerate(bytes):
@@ -83,6 +85,8 @@ def check_newlines(bytes):
         elif byte == CR:
             if (i < n1 and bytes[i+1] != LF) or i == n1:
                 return 2  # \r ending
+            if i > 0 and bytes[i-1] == CR:
+                return 3
     return 0
 
 
@@ -154,6 +158,9 @@ def test_csv(OVERWRITE=False):
                     raise ValueError('Found \\n line ending in %s' % fname)
                 elif error == 2:
                     raise ValueError('Found \\r line ending in %s' % fname)
+                elif error == 3:
+                    raise ValueError('Found two consecutive \\r line endings'
+                                     ' in %s' % fname)
 
 
 def test_forbid_long_funcs():

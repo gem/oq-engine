@@ -40,7 +40,7 @@ class BaseCorrelationModel(metaclass=abc.ABCMeta):
             represents sites (the length as ``sites`` parameter) and
             second one represents different realizations (samples).
         :param stddev_intra:
-            Intra-event standard deviation array. Note that different sites do
+            Intra-event standard deviation array (phi). Different sites do
             not necessarily have the same intra-event standard deviation.
         :returns:
             Array of the same structure and semantics as ``residuals``
@@ -171,17 +171,14 @@ class HM2018CorrelationModel(BaseCorrelationModel):
 
     def apply_correlation(self, sites, imt, residuals, stddev_intra):
         """
-        Apply correlation to randomly sampled residuals.
-
-        See Parent function
+        Apply correlation to randomly sampled residuals
         """
-        # stddev_intra is repeated if there is only one value
-        if len(stddev_intra) == 1:
-            stddev_intra = numpy.full(len(sites.complete), stddev_intra)
-        # Reshape 'stddev_intra' if needed
-        stddev_intra = stddev_intra.squeeze()
-        if not stddev_intra.shape:
-            stddev_intra = stddev_intra[None]
+        # TODO: the case of filtered sites is probably managed incorrectly
+        # NB: this is SLOW and we cannot use the cache as in JB2009 because
+        # we are not using the complete site collection
+        nsites = len(sites)
+        assert len(residuals) == len(stddev_intra) == nsites
+        D = numpy.diag(stddev_intra)  # phi as a diagonal matrix
 
         if self.uncertainty_multiplier == 0:   # No uncertainty
 
@@ -190,37 +187,30 @@ class HM2018CorrelationModel(BaseCorrelationModel):
             # normalized, sampled from a standard normal distribution.
             # For this, every row of 'residuals' (every site) is divided by its
             # corresponding standard deviation element.
-            residuals_norm = residuals / stddev_intra[sites.sids, None]
+            residuals_norm = residuals / stddev_intra[:, None]
 
-            # Lower diagonal of the Cholesky decomposition from/to cache
-            try:
-                cormaLow = self.cache[imt]
-            except KeyError:
-                # Note that instead of computing the whole correlation matrix
-                # corresponding to sites.complete, here we compute only the
-                # correlation matrix corresponding to sites.
-                cormaLow = numpy.linalg.cholesky(
-                       numpy.diag(stddev_intra[sites.sids]) @
-                       self._get_correlation_matrix(sites, imt) @
-                       numpy.diag(stddev_intra[sites.sids]))
-                self.cache[imt] = cormaLow
+            # Lower diagonal of the Cholesky decomposition
+            # Note that instead of computing the whole correlation matrix
+            # corresponding to sites.complete, here we compute only the
+            # correlation matrix corresponding to sites
+            cormaLow = numpy.linalg.cholesky(
+                D @ self._get_correlation_matrix(sites, imt) @ D)
 
             # Apply correlation
-            return numpy.dot(cormaLow, residuals_norm)
+            return cormaLow @ residuals_norm
 
         else:   # Variability (uncertainty) is included
-            nsim = len(residuals[1])
-            nsites = len(residuals)
+            nsim = residuals.shape[1]
 
             # Re-sample all the residuals
             residuals_correlated = residuals * 0
             for isim in range(0, nsim):
+                # FIXME: the seed is not set!
                 corma = self._get_correlation_matrix(sites, imt)
-                cov = (numpy.diag(stddev_intra[sites.sids]) @ corma @
-                       numpy.diag(stddev_intra[sites.sids]))
+                # NB: corma is different at each loop since contains randomicity
                 residuals_correlated[0:, isim] = (
                     numpy.random.multivariate_normal(
-                        numpy.zeros(nsites), cov, 1))
+                        numpy.zeros(nsites), D @ corma @ D, 1))
 
             return residuals_correlated
 
