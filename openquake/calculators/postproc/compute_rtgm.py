@@ -95,6 +95,7 @@ D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in imts]
 assert DLLs == [0.5, 1.5, 0.6]
 min_afe = 1/2475
+ASCE_DECIMALS = 5
 
 
 def norm_imt(imt):
@@ -147,36 +148,35 @@ def calc_rtgm_df(hcurves, sitecol, oq):
     :param oq: OqParam instance
     """
     M = len(imts)
-    riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (np.zeros(M),
-        np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M))
-    
+    riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
+        np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
+        np.zeros(M), np.zeros(M))
+
     imtls = oq.imtls
-    
+
     IMTs, facts = [], []
-    
+
     for m, imt in enumerate(imts):
         afe = to_rates(hcurves[0, m], oq.investigation_time, minrate=1E-12)
-        
+
         IMT = norm_imt(imt)
         IMTs.append(IMT)
         T = from_string(imt).period
         fact = _find_fact_maxC(T, 'ASCE7-16')
         facts.append(fact)
-        
+
         if afe[0] < min_afe:
             logging.warning('Hazard is too low for %s', imt)
             UHGM[m] = 0
             RTGM_max[m] = 0
             MCE[m] = 0
             riskCoeff[m] = 0
-        elif afe[-1] > min_afe:     
+        elif afe[-1] > min_afe:
             raise ValueError("the max iml is too low: change the job.ini")
-        else:            
+        else:
             hazdic = get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
             rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
-            logging.info(rtgm_haz)
             results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
-            logging.info(results['RTGM'])
             rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
             RTGM_max[m] = rtgmCalc['rtgm']  # for maximum component
             UHGM[m] = rtgmCalc['uhgm'] / fact  # for geometric mean
@@ -186,26 +186,27 @@ def calc_rtgm_df(hcurves, sitecol, oq):
             # geometric mean
             if IMT == 'PGA':
                 RTGM[m] = UHGM[m]
-                MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg   
+                MCE[m] = RTGM[m]  # UHGM in terms of GM: MCEg
             else:
                 RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
                 MCE[m] = RTGM_max[m]
-    dic =  {'IMT': IMTs,
-            'UHGM_2475yr-GM': UHGM,
-            'RTGM': RTGM_max,
-            'ProbMCE': MCE,
-            'RiskCoeff': riskCoeff,
-            'DLL': DLLs}
-    
+    dic = {'IMT': IMTs,
+           'UHGM_2475yr-GM': UHGM,
+           'RTGM': RTGM_max,
+           'ProbMCE': MCE,
+           'RiskCoeff': riskCoeff,
+           'DLL': DLLs}
+
     return pd.DataFrame(dic), np.array(facts)
 
 
 def get_hazdic(afe, imt, imtls, sitecol):
     """
-    Convert an array of mean hazard curves into a dictionary suitable
-    for the rtgmpy library. Note that here the imls are already converted to max component
+    Convert an array of mean hazard curves into a dictionary suitable for the
+    rtgmpy library. Note that here the imls are already converted to max
+    component
     :param hcurves: array with annual frequency of exceedance
-    """ 
+    """
     [site] = sitecol  # there must be a single site
     hazdic = {
         'site': {'name': 'site',
@@ -216,7 +217,6 @@ def get_hazdic(afe, imt, imtls, sitecol):
                       {'iml': imtls,
                        'afe': afe}}}
     return hazdic
-
 
 
 def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
@@ -261,12 +261,13 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low=False):
     mce = {}  # imt -> MCE
     prob_mce_out = {}
     for i, imt in enumerate(det_imt):
-        if low==True:
-            det_mce[imt] = 'n.a.'
-            mce[imt] = prob_mce[i] 
+        if low:
+            det_mce[imt] = None
+            det_imt[imt] = None
+            mce[imt] = prob_mce[i]
         else:
             det_mce[imt] = max(det_imt[imt], DLLs[i])
-            mce[imt] = min(prob_mce[i], det_mce[imt]) 
+            mce[imt] = min(prob_mce[i], det_mce[imt])
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
@@ -291,30 +292,36 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low=False):
     else:
         S1_seismicity = "Very High"
 
-    asce7 = {'PGA_2_50': prob_mce_out['PGA'],
-             'PGA_84th': det_imt['PGA'],
-             'PGA_det': det_mce['PGA'],
-             'PGA': mce['PGA'],
+    asce7 = {'PGA_2_50': round(prob_mce_out['PGA'], ASCE_DECIMALS),
+             'PGA_84th': (round(det_imt['PGA'], ASCE_DECIMALS)
+                          if det_imt['PGA'] else 'n.a.'),
+             'PGA_det': (round(det_mce['PGA'], ASCE_DECIMALS)
+                         if det_mce['PGA'] else 'n.a.'),
+             'PGA': round(mce['PGA'], ASCE_DECIMALS),
 
-             'SS_RT': prob_mce_out['SA(0.2)'],
-             'CRS': crs,
-             'SS_84th': det_imt['SA(0.2)'],
-             'SS_det': det_mce['SA(0.2)'],
-             'SS': mce['SA(0.2)'],
+             'SS_RT': round(prob_mce_out['SA(0.2)'], ASCE_DECIMALS),
+             'CRS': round(crs, ASCE_DECIMALS),
+             'SS_84th': (round(det_imt['SA(0.2)'], ASCE_DECIMALS)
+                         if det_imt['SA(0.2)'] else 'n.a.'),
+             'SS_det': (round(det_mce['SA(0.2)'], ASCE_DECIMALS)
+                        if det_mce['SA(0.2)'] else 'n.a.'),
+             'SS': round(mce['SA(0.2)'], ASCE_DECIMALS),
              'SS_seismicity': SS_seismicity,
 
-             'S1_RT': prob_mce_out['SA(1.0)'],
-             'CR1': cr1,
-             'S1_84th': det_imt['SA(1.0)'],
-             'S1_det': det_mce['SA(1.0)'],
-             'S1': mce['SA(1.0)'],
+             'S1_RT': round(prob_mce_out['SA(1.0)'], ASCE_DECIMALS),
+             'CR1': round(cr1, ASCE_DECIMALS),
+             'S1_84th': (round(det_imt['SA(1.0)'], ASCE_DECIMALS)
+                         if det_imt['SA(1.0)'] else 'n.a.'),
+             'S1_det': (round(det_mce['SA(1.0)'], ASCE_DECIMALS)
+                        if det_mce['SA(1.0)'] else 'n.a.'),
+             'S1': round(mce['SA(1.0)'], ASCE_DECIMALS),
              'S1_seismicity': S1_seismicity,
              }
 
     return prob_mce_out, mce, det_mce, asce7
 
 
-def get_asce41(dstore, mce, facts, low=False):
+def get_asce41(dstore, mce, facts):
     """
     :returns: a dictionary with the ASCE-41 parameters
     """
@@ -346,19 +353,20 @@ def get_asce41(dstore, mce, facts, low=False):
     S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
 
-    return {'BSE2N_Ss': BSE2N_Ss,
-            'Ss_5_50': Ss_5_50,
-            'BSE2E_Ss': BSE2E_Ss,
-            'BSE1E_Ss': BSE1E_Ss,
-            'Ss_20_50': Ss_20_50,
-            'BSE1N_Ss': BSE1N_Ss,
+    return {'BSE2N_Ss': round(BSE2N_Ss, ASCE_DECIMALS),
+            'Ss_5_50': round(Ss_5_50, ASCE_DECIMALS),
+            'BSE2E_Ss': round(BSE2E_Ss, ASCE_DECIMALS),
+            'BSE1E_Ss': round(BSE1E_Ss, ASCE_DECIMALS),
+            'Ss_20_50': round(Ss_20_50, ASCE_DECIMALS),
+            'BSE1N_Ss': round(BSE1N_Ss, ASCE_DECIMALS),
 
-            'BSE2N_S1': BSE2N_S1,
-            'S1_5_50': S1_5_50,
-            'BSE2E_S1': BSE2E_S1,
-            'BSE1E_S1': BSE1E_S1,
-            'S1_20_50': S1_20_50,
-            'BSE1N_S1': BSE1N_S1}
+            'BSE2N_S1': round(BSE2N_S1, ASCE_DECIMALS),
+            'S1_5_50': round(S1_5_50, ASCE_DECIMALS),
+            'BSE2E_S1': round(BSE2E_S1, ASCE_DECIMALS),
+            'BSE1E_S1': round(BSE1E_S1, ASCE_DECIMALS),
+            'S1_20_50': round(S1_20_50, ASCE_DECIMALS),
+            'BSE1N_S1': round(BSE1N_S1, ASCE_DECIMALS)
+            }
 
 
 def _get_label(imt):
@@ -367,8 +375,7 @@ def _get_label(imt):
     return imtlab + ' - ' + comp
 
 
-def plot_meanHCs_afe_RTGM(imls, AFE, UHGM_RP, afe_RP, RTGM, afe_RTGM,
-                          imts):
+def plot_meanHCs_afe_RTGM(imls, AFE, RTGM, afe_RTGM, imts):
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
     colors = mpl.colormaps['viridis'].reversed()._resample(3)
@@ -498,7 +505,7 @@ def _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore):
 
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
-        # use j to only add the "other sources" label once 
+        # use j to only add the "other sources" label once
         # use i to cycle through the colors for the major source contributors
         i = j = 0
         for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
@@ -610,7 +617,6 @@ def plot_curves(dstore, hc_only=False):
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm')
     # get the IML for the 2475 RP
-    UHGM_RP = rtgm_df['UHGM_2475yr-GM']
     rtgm_probmce = rtgm_df['ProbMCE']
     # get investigation time
     window = dinfo['investigation_time']
@@ -622,12 +628,14 @@ def plot_curves(dstore, hc_only=False):
         afe_target.append(_find_afe_target(
             imls[m], AFE[m], rtgm_probmce[m]))
     # make plot
-    img = plot_meanHCs_afe_RTGM(
-        imls, AFE, UHGM_RP, 1/2475, rtgm_probmce, afe_target, imts)
+    img = plot_meanHCs_afe_RTGM(imls, AFE, rtgm_probmce, afe_target, imts)
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
-    if hc_only==False:
+    # FIXME: if low hazard, plot MCE anyway with limited items (without
+    # deterministic
+
+    if not hc_only:
         df, imtls_dict = disaggr_by_src(dstore, imtls)
         _find_sources(df, imtls_dict, imts, rtgm_probmce, mean_hcurve, dstore)
 
@@ -650,12 +658,12 @@ def main(dstore, csm):
     oq = dstore['oqparam']
     stats = list(oq.hazard_stats())
     assert stats[0] == 'mean', stats[0]
-    hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1    
+    hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
     sitecol = dstore['sitecol']
-    rtgm_df, facts = calc_rtgm_df(hcurves, sitecol, oq)  
+    rtgm_df, facts = calc_rtgm_df(hcurves, sitecol, oq)
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
-    facts[0] = 1 # for PGA the Prob MCE is already geometric mean
+    facts[0] = 1  # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
     prob_mce = rtgm_df.ProbMCE.to_numpy()
 
@@ -665,8 +673,12 @@ def main(dstore, csm):
         prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(
             prob_mce, dummy_det, DLLs, dstore, low=True)
         dstore['asce7'] = hdf5.dumps(asce7)
-        asce41 = get_asce41(dstore, mce, facts, low=True)
+        asce41 = get_asce41(dstore, mce, facts)
         dstore['asce41'] = hdf5.dumps(asce41)
+        if Image is None:  # missing PIL
+            logging.warning('Missing module PIL: skipping plotting curves')
+        else:
+            plot_curves(dstore, hc_only=True)
         return
 
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(

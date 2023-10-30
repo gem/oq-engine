@@ -32,7 +32,7 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
-        <% if (['hmaps', 'realizations', 'fullreport', 'rtgm'].indexOf(output.get('type')) >= 0) { %>
+        <% if (['hmaps', 'realizations', 'fullreport', 'rtgm', 'mean_rates_by_src', 'mag_dst_eps_sig', 'mean_disagg_by_src'].indexOf(output.get('type')) >= 0) { %>
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
