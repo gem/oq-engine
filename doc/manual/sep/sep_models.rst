@@ -83,17 +83,17 @@ the causative earthquake.
 The model is quite simple. An explanatory variable :math:`X` is
 calculated as:
 
-.. math:: X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI − 4.784\, ln\, Vs30\ \(2)
+.. math:: X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, Vs30 (2)
 
 and the final probability is the logistic function
 
-.. math:: P(L) = \frac{1}{1+e^X}\ \(3)
+.. math:: P(L) = \frac{1}{1+e^X} (3)
 
 The term :math:`PGA_{M,SM}` is the PGA corrected by magnitude scaling
 factor (MSF) that serves as proxy for earthquake duration. The :math:`MSF`
 is calculated as per Idriss et al. (1991):
 
-.. math:: MSF = \{10^2.24}{M^2.56}\ \(4)
+.. math:: MSF = {10^2.24}{M^2.56} (4)
 
 Both the :math:`CTI` and the :math:`Vs30` may be derived from digital 
 elevation data. The :math:`Vs30` may be estimated from the topographic 
@@ -110,7 +110,7 @@ The CTI (Moore et al., 1991) is a proxy for soil wetness that relates
 the topographic slope of a point to the upstream drainage area of that
 point, through the relation
 
-.. math:: CTI = \ln (d_a / \tan \delta)\ \(4)
+.. math:: CTI = \ln (d_a / \tan \delta) (4)
 
 where :math:`d_a` is the upstream drainage area per unit width through
 the flow direction (i.e. relating to the DEM resolution). It was
@@ -132,9 +132,9 @@ input variables (i.e., :math:`PGA_{M,SM}`, :math:`CTI`, :math:`Vs30`)
 and functional form as in Zhu et al. (2015). Regression parameters are
 calibrated based on the liquefaction case histories observed during 
 seismic events in Europe. The implemented model is associated with the
-ADASYN sampling algorithm. The explanatory variable :math:`X`is computed as:
+ADASYN sampling algorithm. The explanatory variable :math:`X` is computed as:
 
-.. math:: X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI − 0.091\, ln\, Vs30\ \(5)
+.. math:: X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, Vs30 (5)
 
 and the probability of liquefaction in calculated using equation (3). 
 
@@ -165,15 +165,15 @@ HydroSHEDS database (Lehner et al. 2008). Water table depth is retreived from a
 global dataset by Fan et al (2013).Distance to the nearest coastline data
 was computed from https://oceancolor.gsfc.nasa.gov. 
 
-The explanatory varibale :math:`X`is calculated as:
+The explanatory varibale :math:`X` is calculated as:
 
 Model 1: 
 .. math:: X = 12.435 + 0.301\, ln\, PGV - 2.615\, ln\, Vs30 + 0.0005556\, precip
-.. math::     -0.0287\, \sqrt{d_{c}} + 0.0666\,d_{r} - 0.0369\, \sqrt{d_{c}} \cdot d_{r}\ \(6) 
+.. math::     -0.0287\, \sqrt{d_{c}} + 0.0666\,d_{r} - 0.0369\, \sqrt{d_{c}} \cdot d_{r} (6)
 
 Model 2:
 .. math:: X = 8.801 + 0.334\, ln\, PGV - 1.918\, ln\, Vs30 + 0.0005408\, precip
-.. math::     -0.2054\, d_{w} -0.0333\, wtd\ \(7)
+.. math::     -0.2054\, d_{w} -0.0333\, wtd (7)
 
 and the probability of liquefaction is calculated using equation (3). 
 Zero probability is heuristically assigned if :math:`PGV < 3 cm/s ` or 
@@ -188,7 +188,7 @@ pixel. Logistic regression with the same form was fit for the two models,
 with only difference in squaring the denominator to improve the fit. The 
 regression coefficients are given in Table 2.
 
-.. math:: L(P) = \frac{a}{1+b\,e^(-c\,P)}^2\ \(8)
+.. math:: L(P) = \frac{a}{1+b\,e^(-c\,P)}^2 (8)
 
 +--------------+-----------+-----------+
 | Parameters   | Model 1   | Model 2   |
@@ -199,6 +199,7 @@ regression coefficients are given in Table 2.
 +--------------+-----------+-----------+
 | c            | 11.43     | 9.165     |
 +--------------+-----------+-----------+
+
 Table 2: Parameters for relating proba-
 bilities to areal liquefaction percent.
 
@@ -216,7 +217,7 @@ Additional novelty introduced in this model is the magnitude scaling factor
 :math:`MSF` to multiply the :math:`PGV` to mitigate the potential over-prediction
 in earthquake with low magnitude.
 
-.. :math:: MSF = \frac{1}{1+e^(-2\,[M-6])}\ \(9)
+.. :math:: MSF = \frac{1}{1+e^(-2\,[M-6])} (9)
 
 The explanatory variable :math:`X` is evaluated using the equation (7) that corr-
 esponds to the general model of Zhu et al. (2017). The spatial extent is evaluated
@@ -240,11 +241,11 @@ explanatory variables of two candidate models are:
 
 Model 1: 
 .. math:: X = 4.925 + 0.694\, ln\, PGV - 0.459\, \sqrt{TRI} - 0.403\, ln\, d_{c}+1
-.. math::     -0.309\, \ln\, d_{r}+1 - 0.164\, \sqrt{Z_{wb}}\ \(10) 
+.. math::     -0.309\, \ln\, d_{r}+1 - 0.164\, \sqrt{Z_{wb}} (10)
 
 Model 2:
 .. math:: X = 9.504 + 0.706\, ln\, PGV - 0.994\, ln\, Vs30 - 0.389\, ln\, d_{c}+1
-.. math::     -0.291\, \ln\, d_{r}+1 - 0.205\, \sqrt{Z_{wb}}\ \(11)
+.. math::     -0.291\, \ln\, d_{r}+1 - 0.205\, \sqrt{Z_{wb}} (11)
 
 and the probability of liquefaction is calculated using equation (3). 
 Zero probability is heuristically assigned if :math:`PGV < 3 cm` or 
@@ -293,7 +294,7 @@ Lateral spreading (Hazus)
 The expected permanent displacement due to lateral spreading given the
 susceptibility category can be determined as:
 
-.. :math:: E[PGD_{SC}] = K_{\Delta}\times E[PGD|(PGA/PL_{SC})=a]\ \(12)
+.. :math:: E[PGD_{SC}] = K_{\Delta}\times E[PGD|(PGA/PL_{SC})=a] (12)
 
 Where: 
 :math:`E[PGD|(PGA/PL_{SC})=a]` is the expected ground displacement given
@@ -307,7 +308,7 @@ and is calculated as:
 :math:`PGA(t)` is theminimum shaking level to induce liquefaction (see Table 1)
 :math:`K_{\Delta}` is the displacement correction factor given thhat modify 
 the displacement term for magnitudes other than :math:`M7.5`:
-.. :math:: K_{\Delta} = 0.0086\, M^3 - 0.0914\, M^2 + 0.4698\, M - 0.9835\ \(13)
+.. :math:: K_{\Delta} = 0.0086\, M^3 - 0.0914\, M^2 + 0.4698\, M - 0.9835 (13)
 
 
 Vertical settlements (Hazus)
@@ -336,6 +337,7 @@ category (LSC).
 +----------------+-----------------------+
 | none           |           0           |
 +----------------+-----------------------+
+
 Table 3: Ground settlements amplitudes for 
 liquefaction susceptibility categories.
 
@@ -356,20 +358,20 @@ the critical acceleration :math:`a_{c}`, the block starts to move. The
 crtical acceleration accounts for the shear strength and geometrical 
 characteristics of the sliding surface, and is calculated as:
 
-.. :math:: a_{c} = (FS-1)\,g\,sin(\alpha)\ \(14)
+.. :math:: a_{c} = (FS-1)\,g\,sin(\alpha) (14)
 
 The lower bound of :math:`a_{c}` is set to 0.05 to avoid unrealistically
 large displacements.
 The static factor of safety is calculated as:
 
 .. :math:: FS = \frac{c'}{\gamma\, t\, sin(\alpha)} + frac{tan(\phi')}{tan(\alpha)} -
-.. :math::       frac{m\, \gamma_{w}\, tan(\phi')}{\gamma\, tan(\alpha)}\ \(15) 
+.. :math::       frac{m\, \gamma_{w}\, tan(\phi')}{\gamma\, tan(\alpha)} (15)
 
 where:
 :math:`c' [Pa]` is the effective cohession with typical values ranging
 from 20 kPa for soils up to 20 MPa for unfaulted rocks.
-:math:`\alpha [\degrees]` is the slope angle.
-:math:`\phi' [\degrees]` is the effective friction angle with typical values 
+:math:`\alpha [\degree]` is the slope angle.
+:math:`\phi' [\degree]` is the effective friction angle with typical values 
 ranging from 30 to 40 degrees.
 :math:`\gamma [kg/m^3]` is the dry_density of the soil or rock. It ranges 
 from ~1500 :math:`kg/m^3` for soils to ~ 2500 - 3200 :math:`kg/m^3`.
@@ -393,7 +395,7 @@ The displacement is in units of meters.
 
 .. :math:: logD_{N} = -2.710 + 
 .. :math::             log[(1-\frac{a_{c}}{a_{max}})^2.335\, (\frac{a_{c}}{a_{max}})^-1.478] + 
-.. :math::             0.424\, M \± 0.454\ \(16) 
+.. :math::             0.424\, M \± 0.454 (16)
 
 The computed displacements do not necessarily correspond directly to  
 measurable slope movements in the field, but the modeled displacements 
@@ -403,7 +405,7 @@ and fit the data with Weilbull curve. The following equation can be used
 to estimate the probability of slope failure as a function of Newmark 
 displacement.
 
-.. :math:: P(f) = 0.335\, [1-e^(-0.048\, D_{n}^1.565)]\ \(17)
+.. :math:: P(f) = 0.335\, [1-e^(-0.048\, D_{n}^1.565)] (17)
 
 
 The rock-slope failures are the other common effect observed in earthquakes.
@@ -412,34 +414,34 @@ associated with rock-slope failures and discontinuities common in rock masses.
 The static factor of safety is computed as:
 
 .. :math:: FS = \frac{2\, (c+c_{r})\, sin(\alpha)}{\gamma\, h\, sin(\beta)} +
-.. :math::      \frac{tan(\phi)}{tan(\beta)}\ \(18)
+.. :math::      \frac{tan(\phi)}{tan(\beta)} (18)
 
 where:
 :math:`c [Pa]` is the cohession with typical values ranging from 20 kPa 
 for soils up to 20 MPa for unfaulted rocks. 
 :math:`c_{r}` is the cohesion provided by the root systems of vegetated 
 hillslopes. Here, we adopted the default value of 0 root cohesion.
-:math:`\alpha [\degrees]` is the slope angle.
+:math:`\alpha [\degree]` is the slope angle.
 :math:`\gamma [kg/m^3]` is the dry_density of the soil or rock. It ranges 
 from ~1500 :math:`kg/m^3` for soils to ~ 2500 - 3200 :math:`kg/m^3`.
 :math:`h [m]` is the vertical height of the failure mass and it corresponds
 to 1/4 of the local relief :math:`H` calculated based on the moving
 window analysis. 
-:math:`\phi' [\degrees]` is the effective friction angle with typical values 
+:math:`\phi' [\degree]` is the effective friction angle with typical values 
 ranging from 30 to 40 degrees.
 :math:`\beta` is the slope's critical angle calculated as:
-.. :math:: \beta = \frac{\alpha + \phi}{0.5}\ \(19)
+.. :math:: \beta = \frac{\alpha + \phi}{0.5} (19)
 
 The critical acceleration is computed similarly to equation (14). For rock-
 slope failures, the :math:`\alpha` term is replaced with :math:`\beta`.
 
-.. :math:: a_{c} = (FS-1)\,g\,sin(\beta)\ \(20)
+.. :math:: a_{c} = (FS-1)\,g\,sin(\beta) (20)
 
 Finaly, the coseismic displacements are estimated using Jibson’s (2007) sliding 
 block displacement regression equation:
 
 .. :math:: logD_{N} = 0.215 + 
-.. :math::             log[(1-\frac{a_{c}}{a_{max}})^2.341\, (\frac{a_{c}}{a_{max}})^-1.438]\ \(21) 
+.. :math::             log[(1-\frac{a_{c}}{a_{max}})^2.341\, (\frac{a_{c}}{a_{max}})^-1.438] (21)
 
 
 

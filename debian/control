@@ -10,7 +10,7 @@ Homepage: http://github.com/gem/oq-engine
 Package: python3-oq-engine
 Architecture: amd64
 X-Python-Version: >= 3.6
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, ${dist:Depends}, python3-oq-libs (>=3.8.2~)
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}, ${dist:Depends}, python3-oq-libs (>=3.8.4~)
 Conflicts: python-noq, python-oq, python-nhlib
 Replaces: python-oq-risklib, python-oq-hazardlib, python-oq-engine (<< ${binary:Version})
 # See https://www.debian.org/doc/debian-policy/ch-relationships.html#s-breaks

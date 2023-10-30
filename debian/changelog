@@ -1,4 +1,27 @@
   [Michele Simionato]
+  * Fixed `disagg_source` for same ID sources
+  * Disambiguated same ID sources by appending the file name after
+    the exclamation mark and fixed disagg_by_src accordingly
+  * Fixed another bug in disaggregation for mutex sources
+  * Fixed a bug in `disagg_source` for mutex sources: src_mutex
+    was not passed
+  * Internal: forced the colon convention on mutex sources
+  * Fixed a bug in the disaggregation with mutex sources incorrectly
+    averaging over the rates and not the poes
+
+python3-oq-engine (3.18.0-1~xenial01) xenial; urgency=low
+
+  [Michele Simionato]
+  * Fixed the command `oq extract ruptures` producing wrong newlines on
+    Windows
+
+  [Paolo Tormene, Michele Simionato]
+  * Fixed an ordering bug in the tagnames in `extract_agg_curves` breaking
+    the QGIS plugin
+
+  [Michele Simionato]
+  * Fixed the function `get_mean_stddevs_cy14` to recover the same results
+    for the Canada SHM6 model as in engine 3.11
   * Required at least Python 3.10.6 on mac and windows
 
   [Claudio Schill]
@@ -159,6 +182,8 @@
     calculations
   * Huge reduction of the memory usage in the event_based calculator; also,
     reduced the slow tasks
+
+ -- Matteo Nastasi (GEM Foundation) <nastasi@openquake.org>  Wed, 25 Oct 2023 12:34:09 +0000
 
 python3-oq-engine (3.17.0-2~xenial01) xenial; urgency=low
 

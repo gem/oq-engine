@@ -278,7 +278,11 @@ def event_based(proxies, cmaker, stations, dstore, monitor):
                 df = computer.compute_all(dstore, rmon, cmon, umon)
             else:  # regular GMFs
                 with mmon:
-                    mean_stds = cmaker.get_mean_stds([computer.ctx])
+                    mean_stds = cmaker.get_mean_stds(
+                        [computer.ctx], split_by_mag=False)
+                    # avoid numba type error
+                    computer.ctx.flags.writeable = True
+
                 df = computer.compute_all(mean_stds, max_iml, cmon, umon)
             sig_eps.append(computer.build_sig_eps(se_dt))
             dt = time.time() - t0
@@ -442,6 +446,7 @@ class EventBasedCalculator(base.HazardCalculator):
             nrups = parallel.Starmap( # weighting the heavy sources
                 count_ruptures, [(src,) for src in sources
                                  if src.code in b'AMSC'],
+                h5=self.datastore.hdf5,
                 progress=logging.debug).reduce()
             # NB: multifault sources must be considered light to avoid a large
             # data transfer, even if .count_ruptures can be slow

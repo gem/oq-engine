@@ -1,7 +1,14 @@
+# Binary installer for Windows
+
+Windows users can use a traditional .exe installer which can be downloaded from
+https://downloads.openquake.org/pkgs/windows/oq-engine/ and includes Python 3.10
+and all dependencies. However users needing to develop with the engine are better
+off with the universal installation script, even on Windows.
+
 # Universal installation script
 
 Since version 3.11 of the OpenQuake-engine, there is a universal installation script that works on any platform, provided you have a suitable Python installed.
-The script allows the user to select between different kinds of installations:
+The script allows the user to select between different kinds of installation:
 
 1. [`user` installation](#user-installation) (Windows, macOS, and Linux)
 2. [`devel` installation](#devel-installation) (Windows, macOS, and Linux)
@@ -23,7 +30,9 @@ Alternatively, use Python from one of the OS X package managers (Homebrew, MacPo
 > <br />
 >_**Note 5.** Conda is not supported; some users have been able to run the OpenQuake-engine with Conda, but GEM is not using and not testing conda; you are on your own._
 > <br />
->_**Note 6.** On Windows installations we recommend using Python 3.10._
+>_**Note 6.** On Windows installations we require Python 3.10, while the Microsoft App
+Store suggests Python 3.11 which is not supported yet, so you have to be careful and
+search for Python 3.10 on the App Store or on the Python official download page._
 
 After installing, you can get the location of the engine virtual enviroment with the command
 ```
@@ -53,6 +62,7 @@ _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/In
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ python3.10 install.py user
+```
 
 **on Linux:**
 ```
@@ -70,13 +80,14 @@ C:\>%USERPROFILE%\openquake\Scripts\activate.bat
 ```
 or, when using PowerShell,
 ```
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 C:\>%USERPROFILE%\openquake\Scripts\activate.ps1
 ```
+
 **on macOS and Linux:**
 ```
 $ source $HOME/openquake/bin/activate
 ```
-
 You can also invoke the `oq` command without activating the virtual environment by directly calling
 
 **on Windows:**
@@ -90,8 +101,6 @@ $HOME/openquake/bin/oq
 ```
 
 Calculation data will be stored in `$HOME/oqdata`.
-
-
 
 ## `devel` installation
 
@@ -109,6 +118,10 @@ If you don’t have `git` installed already, you can install it from https://git
 C:\> git clone https://github.com/gem/oq-engine.git
 C:\> cd oq-engine 
 C:\> python.exe install.py devel
+```
+If using PowerShell you may have to give the command
+```
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 **on macOS:**

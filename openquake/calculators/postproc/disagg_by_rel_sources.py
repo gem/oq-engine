@@ -24,7 +24,7 @@ from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import basename
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
-from openquake.calculators import extract
+from openquake.calculators import extract, views
 
 
 def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
@@ -42,7 +42,7 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
     grp = {}
     for src_id, grp_id in zip(src_info['source_id'], src_info['grp_id']):
-        src = basename(src_id.decode('utf8'), '!;')
+        src = basename(src_id.decode('utf8'), ':;')
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
@@ -115,22 +115,24 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
         Z = relt.get_num_paths()
         assert Z, relt  # sanity check
         logging.info('Considering source %s (%d realizations)', source_id, Z)
-        groups = relt.reduce_groups(csm.src_groups, source_id)
+        groups = relt.reduce_groups(csm.src_groups)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, (edges, shp), oq, imldic))
     mags, dists, lons, lats, eps, trts = edges
     Ns, M1 = len(rel_ids), len(imldic)
     rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
     std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
-    for srcid, std4D, rates4D, rates2D in smap:
-        bname = basename(srcid, '!;')
-        idx = src2idx[bname]
+    rates2D = 0.  # (Ns, M1)
+    for srcid, std4D, rates4D, _rates2D in smap:
+        idx = src2idx[srcid]
         rates[idx] += rates4D
-        std[idx] += std4D @ weights[bname] # shape (Ma, D, M, G) -> (Ma, D, M)
+        std[idx] += std4D @ weights[srcid] # shape (Ma, D, M, G) -> (Ma, D, M)
+        rates2D += _rates2D
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
         source_id=rel_ids, mag=middle(mags), dist=middle(dists),
-        eps=middle(eps), imt=imts, iml=imls)
+        eps=middle(eps), imt=imts, iml=imls, view=rates.sum(axis=(1, 2, 3)),
+        rates2D=rates2D)
     mean_disagg_by_src = hdf5.ArrayWrapper(rates, dic)
     dic2 = dict(
         shape_descr=['source_id', 'mag', 'dist', 'imt'],
@@ -174,6 +176,8 @@ def main(dstore, csm, imts, imls):
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mean_disagg_by_src, sigma_by_src = disagg_sources(
         csm, rel_ids, imts, imls, oq, sitecol, dstore)
+    df = views.view('compare_disagg_rates',  dstore)
+    logging.info(df)
     src_mutex = dstore['mutex_by_grp']['src_mutex']  
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])

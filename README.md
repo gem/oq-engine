@@ -38,7 +38,7 @@ The code name for version 3.16 is **Angela**, in memory of the Italian science j
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.17**.
+Latest stable version is the **OpenQuake Engine 3.18**.
 
 <!-- GEM END -->
 
@@ -106,66 +106,71 @@ The OpenQuake Engine is developed by the **[Global Earthquake Model Foundation (
 
 ## Public Partners
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/nerc.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/dpc.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/gns_science.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/aus.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/nrcan.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/NTU.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/nset.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/swiss_1.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/tem.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/public/usaid.jpg)
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nerc-logo.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/DPC_logo.jpg" width="18%" align="left"  />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Gns-science-logo.jpg" width="14%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Ga@2x.png" width="19%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Nanyang-Technological-University-NTU.jpg" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/NSET_logo.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Canada_Wordmark_2c.jpg" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/USAID-Identity.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-logo.jpg" width="22%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Logomark_color_2t_2_rgb.png" width="10%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/TEM_logo.gif" width="10%" />
+
 
 ## Private Partners
 
 #### Governors
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/eucentre.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/FMGlobal.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/hannoverRe.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/munichRe.jpg)
-
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/swissRe.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/governors/verisk.png)
-
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Allianz_logo.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Aon_logo.png" width="14%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Eucentre_logo.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Hannover_Re.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Moodys_RMS.png" width="25%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Munich_Re.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/MMC_SEO.jpg" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Wtwlogo.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Swiss-re-logo.png" width="12%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Fm-global.png" width="15%" />
 
 #### Advisors
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/axa.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/descartes.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/oneconcern.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/guycarpenter.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/partnerRe.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/safehub.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/private/advisors/wtw.png)
-
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Axa_logo.png" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Oneconcern-topiqs2020-thumbnail-image.png" width="17%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/CelsiusPro_logo.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Descartes-underwriting-logo.png" width="24%"/>
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/PartnerRe_logo.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Safehub_logo.png" width="18%" />
 
 ## Associate Partners
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/apdim.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/cssc.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/EERI_GEM.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/iaee.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/iaspei.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/IRDRICSU.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/istructe.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/oecd.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/undrr.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/unesco.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/associate/usgs.jpg)
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/apdim.svg" width="30%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/IASPEI_logo_new_1.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/iaee.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Usgs-logo.jpg" width="18%" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNESCO_logo_symbol.png" width="14%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eeri_logo_vector100x100.png" width="12%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/irdr_icsu_logo_300.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/UNDRR_logo.png" width="30%" />
+
 
 
 ## Project Partners
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/project/aon.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/project/sg.jpg)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/project/sura.png)
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Servicio-Geol%C3%B3gico-Colombiano.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Sura-new-logos-website.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/edf_governing_board_logo.png" width="18%" />
 
 
 ## Products Distribution Partners
 
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/prod_distr/imagecat.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/prod_distr/nasdaq.png)
-![](https://github.com/gem/oq-infrastructure/raw/master/logos/prod_distr/verisk.png)
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/nasdaq.png" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Impact-Forecasting.png" width="18%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/Verisk_New_Logo.png" width="20%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/imagecat_logo_transparent_600x162.png" width="22%" />  
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/dClimate_logo_semibold_Logo.jpg" width="15%" align="left" />
+<img src="https://cloud-storage.globalquakemodel.org/public/partners-logo/eigenrisk-logo.png" width="40%" />
 
 ***
 

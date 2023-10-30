@@ -240,7 +240,10 @@ class RuptureImporter(object):
         else:
             self.datastore.swmr_on()  # before the Starmap
             acc = parallel.Starmap(
-                self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
+                self.get_eid_rlz, iterargs,
+                h5=self.datastore,
+                progress=logging.debug
+            ).reduce()
         i = 0
         for ordinal, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:

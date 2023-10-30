@@ -58,7 +58,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Subduction Interface - North East Correction"
         >
             <nonParametricSeismicSource
-            id="case_02"
+            id="case:01"
             name="Tokachi-Nemuro Trough - CASE 2"
             tectonicRegion="Subduction Interface - North East Correction"
             >

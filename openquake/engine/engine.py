@@ -468,9 +468,7 @@ def check_obsolete_version(calculation_mode='WebUI'):
 
 
 if __name__ == '__main__':
-    from openquake.server import dbserver
     # run a LogContext object stored in a pickle file, called by job.yaml
     with open(sys.argv[1], 'rb') as f:
         jobctx = pickle.load(f)
-    dbserver.ensure_on()
     run_jobs([jobctx])
