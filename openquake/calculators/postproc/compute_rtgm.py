@@ -412,6 +412,7 @@ def _find_afe_target(imls, afe, sa_target):
     return afe_target
 
 
+# TODO: this is horrible code to be removed
 def disaggr_by_src(dstore, imtls):
     imtls_dict = {}
     for imt, imls in imtls.items():
