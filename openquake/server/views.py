@@ -648,7 +648,7 @@ def aelo_run(request):
     job_id = jobctx.calc_id
 
     outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs', args=[job_id]))
+        reverse('outputs_aelo', args=[job_id]))
 
     outputs_uri_api = request.build_absolute_uri(
         reverse('results', args=[job_id]))
@@ -966,6 +966,15 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        application_mode=application_mode))
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    return render(request, "engine/get_outputs_aelo.html",
+                  dict(calc_id=calc_id, size_mb=size_mb))
 
 
 @csrf_exempt
