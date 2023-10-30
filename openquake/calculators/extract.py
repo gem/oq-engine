@@ -1347,7 +1347,11 @@ def get_relevant_rup_ids(dstore, threshold):
         return
     rupids = dstore['risk_by_rupture/rup_id'][:]
     cumsum = dstore['risk_by_rupture/loss'][:].cumsum()
-    return rupids[cumsum <= threshold * cumsum[-1]]
+    thr = threshold * cumsum[-1]
+    for i, csum in enumerate(cumsum, 1):
+        if csum > thr:
+            break
+    return rupids[:i]
 
 
 @extract.add('ruptures')

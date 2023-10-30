@@ -534,7 +534,7 @@ agg_id
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['risk_by_rupture/loss'][:]
         aac(losses, [1356.6093, 324.64624, 203.63742, 129.69966])
-        self.assertEqual(nrups, 1)  # one rupture <= 80% of the losses
+        self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
         # nontrivial taxonomy mapping
