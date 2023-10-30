@@ -10,9 +10,8 @@ New items must be added at the top of the file.
 
 ## debian/changelog items format
 
-***
+```
 __⎵⎵[__*\<author name and surname\>*__]\<newline (␤)\>__
-
 __⎵⎵\*⎵__*\<feature-bugfix description not exceeding 80 characters\>*__<␤>__
 
 __⎵⎵⎵⎵__*\<optional description continuation\>*__\<␤\>__
@@ -23,7 +22,7 @@ _... other features-bugfix descriptions of the same author ..._
 
 __\<␤\>__
 
-***
+```
 
 ## Example
 
