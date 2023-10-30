@@ -65,11 +65,6 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
-        {% if application_mode == 'AELO' %}
-        <% if (['hmaps', 'realizations', 'fullreport', 'rtgm'].indexOf(output.get('type')) >= 0) { %>
-        <%   return; // works like continue in underscore.js %>
-        <% }%>
-        {% endif %}
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
         <tr class="">
           <td><%= output.get('id') || 'New' %></td>
