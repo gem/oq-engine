@@ -100,7 +100,7 @@ jobs:
       - name: Upgrade pip and install requirements
         run: |
           pip install -U pip
-          pip install -r ./docs23/requirements.txt
+          pip install -r ./doc23/requirements.txt
 #      - name: Install oq engine
 #        run: |
 #          pip install -e .[dev]
@@ -302,8 +302,8 @@ jobs:
           echo "Make OpenQuake Manual (HTML and PDF)"
 
           # PAY ATTENTION: engine folder is 'doc', not 'docs'
-          # cd docs23/manual && make html && make latexpdf
-          cd docs23 && make html 2>&1 | tee full.log
+          # cd doc23/manual && make html && make latexpdf
+          cd doc23 && make html 2>&1 | tee full.log
           grep WARNING < full.log > warnings.log
           echo
           echo "=== WARNINGS ==="
