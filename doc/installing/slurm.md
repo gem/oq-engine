@@ -66,13 +66,19 @@ the clusters. Another option is to set a `shared_dir` in the
 path `shared_dir/$HOME/oqdata`. This option is preferable since it will
 work transparently for all users but only the sysadmin can set it.
 
-## Installing SLURM
+## Installing on HPC
 
-This section is for the administrators of the SLURM cluster.
+This section is for the administrators of the HPC cluster.
 Installing the engine requires access to PyPI since the universal
-installer will download packages from there. Here are the installations
-instructions for engine 3.18, assuming you have python installed as
-modulefiles:
+installer will download packages from there. 
+
+Here are the installations instructions to create modules for
+engine 3.18 assuming you have python3.10 installed as modules.
+
+We recommend choosing a base path for openquake and then installing 
+the different versions using the release number, in our example /apps/openquake/3.18.
+This will create different modules for different releases
+
 ```
 # module load python/3.10
 # mkdir /apps/openquake
@@ -81,7 +87,7 @@ modulefiles:
 # pip install -U pip
 # pip install openquake.engine==3.18
 ```
-Then you have to create a module file. In our cluster it is located in
+Then you have to define the module file. In our cluster it is located in
 `/apps/Modules/modulefiles/openquake/3.18`, please use the appropriate
 location for your cluster. The content of the file should be the following:
 ```
@@ -110,7 +116,7 @@ After installing the engine, the sysadmin has to edit the file
 [distribution]
 oq_distribute = slurm
 serialize_jobs = 2
-python = /opt/openquake/bin/python
+python = /apps/openquake/3.18/bin/python
 
 [directory]
 # optionally set it to something like /mnt/large_shared_disk
@@ -147,6 +153,10 @@ The `slurm.sh` script has the following template:
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
+module purge
+module load python/3.10
+module load openquake/3.18
+
 srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 ```
 At runtime the `mon.` variables will be replaced with their values:
