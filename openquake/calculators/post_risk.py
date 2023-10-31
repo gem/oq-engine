@@ -319,9 +319,12 @@ def build_store_agg(dstore, rbe_df, num_events):
                 df['rup_id'] = rup_id[df.event_id.to_numpy()]
                 if 'losses' in columns:  # for consequences
                     df['loss'] = df['losses']
+                lbe_df = df[['event_id', 'loss']].sort_values(
+                    'loss',  ascending=False)
                 gb = df[['rup_id', 'loss']].groupby('rup_id')
                 rbr_df = gb.sum().sort_values('loss', ascending=False)
-                dstore.create_df('risk_by_rupture', rbr_df.reset_index())
+                dstore.create_df('loss_by_rupture', rbr_df.reset_index())
+                dstore.create_df('loss_by_event', lbe_df)
 
         # build aggrisk
         gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
