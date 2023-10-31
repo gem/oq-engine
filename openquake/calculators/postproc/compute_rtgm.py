@@ -90,11 +90,11 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
 # three imts, that are mandatory in this context. For the plot of governing
 # MCE we read imts from the imtls
-imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
+IMTS = ['PGA', 'SA(0.2)', 'SA(1.0)']
 D = DLL_df.BC.loc  # site class BC for vs30=760m/s
-DLLs = [D[imt] for imt in imts]
+DLLs = [D[imt] for imt in IMTS]
 assert DLLs == [0.5, 1.5, 0.6]
-min_afe = 1/2475
+MIN_AFE = 1/2475
 ASCE_DECIMALS = 5
 
 
@@ -147,31 +147,31 @@ def calc_rtgm_df(hcurves, sitecol, oq):
     :param facts: conversion factors from maximum component to geometric mean
     :param oq: OqParam instance
     """
-    M = len(imts)
+    M = len(IMTS)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
         np.zeros(M), np.zeros(M))
 
     imtls = oq.imtls
 
-    IMTs, facts = [], []
+    imts, facts = [], []
 
-    for m, imt in enumerate(imts):
+    for m, imt in enumerate(IMTS):
         afe = to_rates(hcurves[0, m], oq.investigation_time, minrate=1E-12)
 
         IMT = norm_imt(imt)
-        IMTs.append(IMT)
+        imts.append(IMT)
         T = from_string(imt).period
         fact = _find_fact_maxC(T, 'ASCE7-16')
         facts.append(fact)
 
-        if afe[0] < min_afe:
+        if afe[0] < MIN_AFE:
             logging.warning('Hazard is too low for %s', imt)
             UHGM[m] = 0
             RTGM_max[m] = 0
             MCE[m] = 0
             riskCoeff[m] = 0
-        elif afe[-1] > min_afe:
+        elif afe[-1] > MIN_AFE:
             raise ValueError("the max iml is too low: change the job.ini")
         else:
             hazdic = get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
@@ -190,7 +190,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
             else:
                 RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
                 MCE[m] = RTGM_max[m]
-    dic = {'IMT': IMTs,
+    dic = {'IMT': imts,
            'UHGM_2475yr-GM': UHGM,
            'RTGM': RTGM_max,
            'ProbMCE': MCE,
@@ -599,7 +599,7 @@ def plot_curves(dstore, hc_only=False):
     imtls = dinfo['imtls']
     # separate imts and imls
     AFE, afe_target, imls = [], [], []
-    for imt in imts:
+    for imt in IMTS:
         # get periods and factors for converting btw geom mean and
         # maximum component
         T = from_string(imt).period
@@ -619,7 +619,7 @@ def plot_curves(dstore, hc_only=False):
         afe_target.append(_find_afe_target(
             imls[m], AFE[m], rtgm_probmce[m]))
     # make plot
-    img = plot_meanHCs_afe_RTGM(imls, AFE, rtgm_probmce, afe_target, imts)
+    img = plot_meanHCs_afe_RTGM(imls, AFE, rtgm_probmce, afe_target, IMTS)
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
@@ -628,7 +628,7 @@ def plot_curves(dstore, hc_only=False):
 
     if not hc_only:
         df = disaggr_by_src(dstore, imtls)
-        _find_sources(df, imtls, imts, rtgm_probmce, mean_hcurve, dstore)
+        _find_sources(df, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
         img = plot_governing_mce(dstore, imtls)
         logging.info('Storing png/governing_mce.png')
         dstore['png/governing_mce.png'] = img
@@ -641,7 +641,7 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
-    if dstore['mean_rates_ss'][:].max() < min_afe:
+    if dstore['mean_rates_ss'][:].max() < MIN_AFE:
         logging.warning('Ultra-low hazard: skipping AELO calculation')
         return
     logging.info('Computing Risk Targeted Ground Motion')
@@ -672,7 +672,7 @@ def main(dstore, csm):
         return
 
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-        dstore, csm, imts, imls_disagg)
+        dstore, csm, IMTS, imls_disagg)
     det_imt, mag_dst_eps_sig = get_deterministic(
         prob_mce, mag_dist_eps, sigma_by_src)
     dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
