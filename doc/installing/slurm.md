@@ -153,10 +153,6 @@ The `slurm.sh` script has the following template:
 #SBATCH --mem-per-cpu=1G
 #SBATCH --output={mon.calc_dir}/%a.out
 #SBATCH --error={mon.calc_dir}/%a.err
-module purge
-module load python/3.10
-module load openquake/3.18
-
 srun {python} -m openquake.baselib.slurm {mon.calc_dir} $SLURM_ARRAY_TASK_ID
 ```
 At runtime the `mon.` variables will be replaced with their values:
