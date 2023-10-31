@@ -85,6 +85,7 @@ This will create different modules for different releases
 # python3.10 -m venv /apps/openquake/3.18
 # source /apps/openquake/3.18/bin/activate
 # pip install -U pip
+# pip install -r https://raw.githubusercontent.com/gem/oq-engine/engine-3.18/requirements-py310-linux64.txt
 # pip install openquake.engine==3.18
 ```
 Then you have to define the module file. In our cluster it is located in
