@@ -82,7 +82,7 @@ modulefiles:
 # pip install openquake.engine==3.18
 ```
 Then you have to create a module file. In our cluster it is located in
-`/apps/Modules/modulefiles/openquake/3.18`, please add in the appropriate
+`/apps/Modules/modulefiles/openquake/3.18`, please use the appropriate
 location for your cluster. The content of the file should be the following:
 ```
 #%Module1.0
