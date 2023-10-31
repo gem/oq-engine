@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Added `extract/relevant_gmfs?threshold=` functionality
   * Added `extract/ruptures?threshold=` functionality
   * Disabling the DbServer with dbserver.host = local
   * Fixed `disagg_source` for same ID sources
