@@ -1194,7 +1194,7 @@ def view_risk_by_rup(token, dstore):
 
     $ oq show risk_by_rup
     """
-    rbr = dstore.read_df('risk_by_rupture', 'rup_id')
+    rbr = dstore.read_df('loss_by_rupture', 'rup_id')
     info = dstore.read_df('gmf_data/rup_info', 'rup_id')
     rdf = dstore.read_df('ruptures', 'id')
     df = rbr.join(rdf).join(info)[
@@ -1202,7 +1202,7 @@ def view_risk_by_rup(token, dstore):
     for field in df.columns:
         if field not in ('mag', 'n_occ'):
             df[field] = numpy.round(F64(df[field]), 1)
-    return df.sort_values('loss', ascending=False)[:30]
+    return df[:30]
 
 
 @view.add('delta_loss')

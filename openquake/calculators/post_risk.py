@@ -241,70 +241,9 @@ def get_loss_id(ext_loss_types):
     return scientific.LOSSID[ext_loss_types[0]]
 
 
-# aggcurves are built in parallel, aggrisk sequentially
-def build_store_agg(dstore, rbe_df, num_events):
-    """
-    Build the aggrisk and aggcurves tables from the risk_by_event table
-    """
-    oq = dstore['oqparam']
-    size = dstore.getsize('risk_by_event')
-    logging.info('Building aggrisk from %s of risk_by_event',
-                 general.humansize(size))
-    if oq.investigation_time:  # event based
-        tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
-        if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
-            tr /= len(dstore['weights'])
-    rups = len(dstore['ruptures'])
-    events = dstore['events'][:]
-    rlz_id = events['rlz_id']
-    rup_id = events['rup_id']
-    if len(num_events) > 1:
-        rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
-    else:
-        rbe_df['rlz_id'] = 0
-    aggrisk = general.AccumDict(accum=[])
-    columns = [col for col in rbe_df.columns if col not in {
-        'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
-    dmgs = [col for col in columns if col.startswith('dmg_')]
-    if dmgs:
-        aggnumber = dstore['agg_values']['number']
-    # double loop to avoid running out of memory
-    agg_ids = rbe_df.agg_id.unique()
-    K = agg_ids.max()
-    L = scientific.LOSSID['structural']
-    logging.info("Performing %d aggregations", len(agg_ids))
-    for agg_id in agg_ids:
-
-        # build risk_by_rupture
-        if agg_id == K and ('loss' in columns or 'losses' in columns) and rups:
-            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == L)].copy()
-            if len(df):
-                df['rup_id'] = rup_id[df.event_id.to_numpy()]
-                if 'losses' in columns:  # for consequences
-                    df['loss'] = df['losses']
-                gb = df[['rup_id', 'loss']].groupby('rup_id')
-                rbr_df = gb.sum().sort_values('loss', ascending=False)
-                dstore.create_df('risk_by_rupture', rbr_df.reset_index())
-
-        # build aggrisk
-        gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
-        for (rlz_id, loss_id), df in gb:
-            ne = num_events[rlz_id]
-            aggrisk['agg_id'].append(agg_id)
-            aggrisk['rlz_id'].append(rlz_id)
-            aggrisk['loss_id'].append(loss_id)
-            if dmgs:
-                # infer the number of buildings in nodamage state
-                ndamaged = sum(df[col].sum() for col in dmgs)
-                aggrisk['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
-            for col in columns:
-                agg = df[col].sum()
-                aggrisk[col].append(
-                    agg * tr if oq.investigation_time else agg/ne)
-    fix_dtypes(aggrisk)
-    aggrisk = pandas.DataFrame(aggrisk)
-    dstore.create_df(
-        'aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
+# launch Starmap building the aggcurves and store them
+def store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore):
+    aggtypes = oq.aggregate_loss_curves_types
     loss_cols = [col for col in columns if not col.startswith('dmg_')]
     # can be ['fatalities', 'losses'] in a scenario_damage test
     if oq.investigation_time and loss_cols:  # build aggcurves
@@ -326,16 +265,86 @@ def build_store_agg(dstore, rbe_df, num_events):
                     data['year'] = year[df.event_id.to_numpy()]
                 items.append([(agg_id, rlz_id, loss_id), data])
         dic = parallel.Starmap.apply(
-            build_aggcurves, (items, builder, oq.aggregate_loss_curves_types),
+            build_aggcurves, (items, builder, aggtypes),
             concurrent_tasks=oq.concurrent_tasks,
             h5=dstore.hdf5).reduce()
         fix_dtypes(dic)
         suffix = {'ep': '', 'aep': '_aep', 'oep': '_oep'}
-        ep_fields = ['loss' + suffix[a]
-                     for a in oq.aggregate_loss_curves_types.split(', ')]
+        ep_fields = ['loss' + suffix[a] for a in aggtypes.split(', ')]
         dstore.create_df('aggcurves', pandas.DataFrame(dic),
                          limit_states=' '.join(oq.limit_states),
                          units=units, ep_fields=ep_fields)
+
+    
+# aggcurves are built in parallel, aggrisk sequentially
+def build_store_agg(dstore, rbe_df, num_events):
+    """
+    Build the aggrisk and aggcurves tables from the risk_by_event table
+    """
+    oq = dstore['oqparam']
+    size = dstore.getsize('risk_by_event')
+    logging.info('Building aggrisk from %s of risk_by_event',
+                 general.humansize(size))
+    if oq.investigation_time:  # event based
+        tr = oq.time_ratio  # (risk_invtime / haz_invtime) * num_ses
+        if oq.collect_rlzs:  # reduce the time ratio by the number of rlzs
+            tr /= len(dstore['weights'])
+    rups = len(dstore['ruptures'])
+    events = dstore['events'][:]
+    rlz_id = events['rlz_id']
+    rup_id = events['rup_id']
+    if len(num_events) > 1:
+        rbe_df['rlz_id'] = rlz_id[rbe_df.event_id.to_numpy()]
+    else:
+        rbe_df['rlz_id'] = 0
+    acc = general.AccumDict(accum=[])
+    columns = [col for col in rbe_df.columns if col not in {
+        'event_id', 'agg_id', 'rlz_id', 'loss_id', 'variance'}]
+    dmgs = [col for col in columns if col.startswith('dmg_')]
+    if dmgs:
+        aggnumber = dstore['agg_values']['number']
+
+    agg_ids = rbe_df.agg_id.unique()
+    K = agg_ids.max()
+    L = scientific.LOSSID['structural']
+    logging.info("Performing %d aggregations", len(agg_ids))
+
+    # double loop to avoid running out of memory
+    for agg_id in agg_ids:
+
+        # build loss_by_event and loss_by_rupture
+        if agg_id == K and ('loss' in columns or 'losses' in columns) and rups:
+            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == L)].copy()
+            if len(df):
+                df['rup_id'] = rup_id[df.event_id.to_numpy()]
+                if 'losses' in columns:  # for consequences
+                    df['loss'] = df['losses']
+                lbe_df = df[['event_id', 'loss']].sort_values(
+                    'loss',  ascending=False)
+                gb = df[['rup_id', 'loss']].groupby('rup_id')
+                rbr_df = gb.sum().sort_values('loss', ascending=False)
+                dstore.create_df('loss_by_rupture', rbr_df.reset_index())
+                dstore.create_df('loss_by_event', lbe_df)
+
+        # build aggrisk
+        gb = rbe_df[rbe_df.agg_id == agg_id].groupby(['rlz_id', 'loss_id'])
+        for (rlz_id, loss_id), df in gb:
+            ne = num_events[rlz_id]
+            acc['agg_id'].append(agg_id)
+            acc['rlz_id'].append(rlz_id)
+            acc['loss_id'].append(loss_id)
+            if dmgs:
+                # infer the number of buildings in nodamage state
+                ndamaged = sum(df[col].sum() for col in dmgs)
+                acc['dmg_0'].append(aggnumber[agg_id] - ndamaged / ne)
+            for col in columns:
+                agg = df[col].sum()
+                acc[col].append(
+                    agg * tr if oq.investigation_time else agg/ne)
+    fix_dtypes(acc)
+    aggrisk = pandas.DataFrame(acc)
+    dstore.create_df('aggrisk', aggrisk, limit_states=' '.join(oq.limit_states))
+    store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore)
     return aggrisk
 
 
