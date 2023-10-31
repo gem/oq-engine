@@ -48,21 +48,21 @@
 name: Docs23
 on:
   workflow_dispatch:
-    inputs:
-      oq-release:
-        description: 'OQ Release'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-          - dev
-          - main
+#    inputs:
+#      oq-release:
+#        description: 'OQ Release'
+#        required: true
+#        default: 'dev'
+#        type: choice
+#        options:
+#          - dev
+#          - main
 #          - release
 #          - LTS
 #  push:
 #    branches: [main, 'engine-*', moster, 'ongine-*']
 
-  pull_request:
+#  pull_request:
 
 jobs:
   docs:
