@@ -10,6 +10,12 @@
           <div class="span12">
               <h2>Outputs from calculation {{ calc_id }}</h2>
               <div id="my-outputs" class="well"></div>
+              {% if application_mode == 'AELO' %}
+              <div id="to-simplified-outputs">
+                <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs_aelo" class="btn btn-sm">
+                  View simplified outputs page</a>
+              </div>
+              {% endif %}
               <div id="my-datastore">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
@@ -59,24 +65,14 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
-        {% if application_mode == 'AELO' %}
-        <% if (['hmaps', 'realizations', 'fullreport', 'rtgm'].indexOf(output.get('type')) >= 0) { %>
-        <%   return; // works like continue in underscore.js %>
-        <% }%>
-        {% endif %}
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
-        <tr class={% if application_mode == 'AELO' %}<%= ['asce7', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %>{% else %}""{% endif %}>
+        <tr class="">
           <td><%= output.get('id') || 'New' %></td>
           <td><%= output.get('name') %></td>
           <td <% if (output.get('size_mb')) { %>title="Size: <%= Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%= output.get('type') %></td>
           <td>
             <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>
-              {% if application_mode == 'AELO' %}
-              <% if (['npz'].indexOf(outtype) >= 0) { %>
-              <%   return; // works like continue in underscore.js %>
-              <% }%>
-              {% endif %}
               <tr>
                 <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm">Download <%= outtype %></a></td>
               </tr>
