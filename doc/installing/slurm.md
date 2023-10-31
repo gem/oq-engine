@@ -84,6 +84,7 @@ Then you have to create a module file located in
 `/apps/Modules/modulefiles/openquake/3.18` and with
 the following content:
 ```
+#%Module1.0
 ##
 proc ModulesHelp { } {
 
