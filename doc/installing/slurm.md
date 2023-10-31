@@ -72,14 +72,14 @@ This section is for the administrators of the SLURM cluster.
 Installing the engine requires access to PyPI since the universal
 installer will download packages from there. Here are the installations
 instructions for engine 3.18, assuming you have python installed:
-
+```
 # module load python/3.10
 # mkdir /apps/openquake
 # python3.10 -m venv /apps/openquake/3.18
 # source /apps/openquake/3.18/bin/activate
 # pip install -U pip
 # pip install openquake.engine==3.18
-
+```
 Then you have to create a module file located in
 `/apps/Modules/modulefiles/openquake/3.18` and with
 the following content:
