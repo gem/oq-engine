@@ -23,7 +23,7 @@ import numpy as np
 from scipy import stats
 from pyproj import Geod
 from shapely.geometry import Polygon
-from scipy.interpolate import splev, splrep 
+from scipy.interpolate import splev, splrep
 
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import Point, Line
@@ -624,7 +624,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
 
     # Final profiles
     prf = prfl + prfr
-    
+
     print(f'# profiles: {len(prf)}')
 
     # Create the whole mesh
@@ -976,7 +976,7 @@ def get_coords(line, idl):
 
 
 def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
-    
+
     # Initializing the list of profiles
     npr = [profs[ref_idx]]
 
@@ -985,41 +985,42 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     low, upp, step = _set_indexes(forward, ref_idx, len(profs))
 
     # Initialize the residual distance along each edge starting from the first
-    # profile. We set the index of the last '1st' profile sampled to None for 
+    # profile. We set the index of the last '1st' profile sampled to None for
     # the edges where the reference profile does not have finite points.
     res_dist = np.ones_like(npr[0][:, 0]) * -1
     last_idx = np.zeros_like(npr[0][:, 0], dtype=int)
     tmp_idxs = np.nonzero(np.isnan(npr[0][:, 0]))[0]
+
     if len(tmp_idxs) > 0:
         last_idx[tmp_idxs] = None
 
     # Processing profiles: from the reference one towards the end of the
-    # surface. Note that in the forward direction `upp` corresponds to the 
+    # surface. Note that in the forward direction `upp` corresponds to the
     # length of `profs` minus one.
     for i_prof in range(low, upp, step):
 
-        print(f'i_prof: {i_prof}')
+        print(f'i_prof: {i_prof} / {upp}')
 
         # Find the indexes of the edges with finite coords on both profiles
         pl = profs[i_prof]
         pr = profs[i_prof+step]
         tmp = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
         idx = np.nonzero(tmp)[0].astype(int)
-        
+
         previous_num_profiles = len(npr)
 
         # Processing edges
         for i_edge in idx:
-            
+
             print(f'   i_edge: {i_edge} last idx:{last_idx[i_edge]} previous {previous_num_profiles}')
 
             # Set the starting point
             start_pnt, sidx = _set_starting_point(
-                i_prof, i_edge, profs, low, res_dist, last_idx, step, proj, 
+                i_prof, i_edge, profs, low, res_dist, last_idx, step, proj,
                 sd, previous_num_profiles, npr)
 
             # `sidx` is none when there is not enough space between the two
-            # current profiles to accommodate a cell. Note that this is 
+            # current profiles to accommodate a cell. Note that this is
             # approximate. A more precise check is the one below. TODO we
             # should rely only on the latter.
             if sidx is None:
@@ -1031,7 +1032,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
             if len(coos) < 1:
                 continue
-             
+
             # Index profile from where to start adding coords
             frm = last_idx[i_edge] + 1
             if last_idx[i_edge] < 0:
@@ -1045,8 +1046,8 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
                     add_empty_profile(npr)
                     print('\n>>>>>>>>>> NEW PROFILE\n')
 
-                # Check 
-                if (np.all(np.isfinite(coos[i_val])) and 
+                # Check
+                if (np.all(np.isfinite(coos[i_val])) and
                         np.sum(np.isfinite(npr[i_col])) > 1):
 
                     chk = _check_insertion(coos[i_val], npr, i_col, proj, sd)
@@ -1056,7 +1057,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
                         print('A')
                     elif chk is False:
                         # Could not find a profile
-                        add_empty_profile(npr) 
+                        add_empty_profile(npr)
                         idx = len(npr) - 1
                         print('B')
                     elif chk is True:
@@ -1073,40 +1074,46 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
                     raise ValueError('unknown case B')
 
                 # Updating new profile
-                print(f'        Adding {idx},{i_edge} of {len(npr)}') 
+                print(f'        Adding {idx},{i_edge} | {len(npr)} profs')
                 npr[idx][i_edge] = list(coos[i_val])
 
             last_idx[i_edge] = frm + len(coos) - 1
             res_dist[i_edge] = tmp_rdist
 
-        # Set to -1 the last index of the discontinous edges 
+        # Set to -1 the last index of the discontinous edges
         tmp = np.logical_or(np.isnan(pr[:, 2]), np.isnan(pl[:, 2]))
         idx = np.nonzero(tmp)[0].astype(int)
         last_idx[idx] = -1
-        
+
     return npr
 
 
 def _check_insertion(pnt, prfs, i_col, proj, sd):
-
-    # Check if the we are adding the point in the right profile. To do this we
-    # find the line throught the profile and calculate the distance 
+    # Check if we are adding the point in the right profile. To do this we
+    # find the line throught each profile and calculate the distance from the
+    # point to the line
     #
     # :returns:
     #   True if the index of the profile is correct
-    
+
+    # Compute the distance between the selected profile and the point. If the
+    # distance is negative it means it cannot be computed i.e. the profile
+    # contains less than two points.
     dis = _get_distance(prfs[i_col], pnt, proj)
     if dis < 0:
-        return False
-    
+        return True
+
+    # If the distance is larger than a threshold we look for another profile
     threshold = sd / 4
     if dis > threshold:
         for i in range(len(prfs)):
-            chk = _check_insertion(prfs[i], pnt, proj)
-            if chk < thershold:
+            # chk = _check_insertion(pnt, prfs, i, proj, sd)
+            tmp_dis = _get_distance(prfs[i], pnt, proj)
+            if tmp_dis < threshold:
+                # Returning the index of the selected profile
                 return i
-        return False  
 
+        return False
     return True
 
 
@@ -1114,7 +1121,7 @@ def _get_distance(prof, pnt, proj):
     prf = np.array(prof)
     tmp = prf[np.isfinite(prf[:, 0]), :]
     if len(tmp) < 2:
-        # We must assume that's true 
+        # We must assume that's true
         return -1
     xp, yp = proj(tmp[:, 0], tmp[:, 1])
     xi, yi = proj(pnt[0], pnt[1])
@@ -1122,20 +1129,20 @@ def _get_distance(prof, pnt, proj):
     num = np.abs(-1 * slope * xi + yi - intercept)
     return num / slope
 
-        
+
 def _set_starting_point(
-    i_prof, i_edge, profs, low, res_dist, last_idx, step, proj, sd, 
+    i_prof, i_edge, profs, low, res_dist, last_idx, step, proj, sd,
     previous_num_pr, nprofs):
     """
-    Set the point from where to sample the current edge. We have three cases to 
+    Set the point from where to sample the current edge. We have three cases to
     deal with:
-    1. The index of the profile `i_prof` is equal to the one of the 
+    1. The index of the profile `i_prof` is equal to the one of the
        reference profile `low`
-    2. We have a residual distance greater than 0 
-        a. The index of the last `1st` profile is -1 the index of the current 
+    2. We have a residual distance greater than 0
+        a. The index of the last `1st` profile is -1 the index of the current
            '1st' profile
-        b. The index of the last `1st` profile is more than -1 the index of 
-           the current '1st' profile. In this case we have a gap along this 
+        b. The index of the last `1st` profile is more than -1 the index of
+           the current '1st' profile. In this case we have a gap along this
            edge.
 
     :param i_prof:
@@ -1147,16 +1154,16 @@ def _set_starting_point(
     pnt0 = pro_1st[i_edge]
     pnt1 = pro_2nd[i_edge]
 
-    # If the index of the 1st profile corresponds to the one of the reference 
-    # profile or the residual distance is negligible, we return the point on 
+    # If the index of the 1st profile corresponds to the one of the reference
+    # profile or the residual distance is negligible, we return the point on
     # the reference profile
     if i_prof == low or (res_dist[i_edge] < SMALL and last_idx[i_edge] > -1):
         return pro_1st[i_edge], -1
 
-    # If there is a residual distance after sampling the part on the edge 
-    # between the previous two profiles 
+    # If there is a residual distance after sampling the part on the edge
+    # between the previous two profiles
     elif res_dist[i_edge] > 0 and last_idx[i_edge] > 0:
-        
+
         # Point on the last resampled edge
         pntr = nprofs[last_idx[i_edge]][i_edge]
 
@@ -1174,16 +1181,16 @@ def _set_starting_point(
         x, y = proj(pntr[0], pntr[1])
         pntrp = np.array([x, y, pntr[2]])
 
-        out = find_t(pnt0p, pnt1p, pntrp, sd) 
+        out = find_t(pnt0p, pnt1p, pntrp, sd)
         olo, ola = proj(np.array([out[0]]), np.array([out[1]]), reverse=True)
 
         return [olo[0], ola[0], out[2]], -1
-        
+
     # If the last part of the current edge is not continuous to the new edge
     elif last_idx[i_edge] < 0:
 
         found = False
-        frm = previous_num_pr - 1 
+        frm = previous_num_pr - 1
         while not found and found is not None:
             olo, ola, dep, found = _get_intersection(
                 frm, nprofs, pnt0, pnt1, sd, proj)
@@ -1193,7 +1200,7 @@ def _set_starting_point(
         return [olo[0], ola[0], dep], frm
 
     else:
-        raise('Unknown option')
+        raise ('Unknown option')
 
 
 def _get_intersection(idx, nprofs, pnt0, pnt1, sd, proj):
@@ -1206,7 +1213,7 @@ def _get_intersection(idx, nprofs, pnt0, pnt1, sd, proj):
 
     tmp = tmp[np.isfinite(tmp[:, 0]), :]
     xp, yp = proj(tmp[:, 0], tmp[:, 1])
-    slope, intercept, _, _, _ = stats.linregress(xp, yp) 
+    slope, intercept, _, _, _ = stats.linregress(xp, yp)
 
     # Line through the new edge
     xp0, yp0 = proj(pnt0[0], pnt0[1])
@@ -1215,9 +1222,9 @@ def _get_intersection(idx, nprofs, pnt0, pnt1, sd, proj):
     intercept_e = yp0 - slope_e * xp0
 
     # Intersection i.e. the starting point
-    xi = (intercept_e - intercept) / (slope - slope_e) 
+    xi = (intercept_e - intercept) / (slope - slope_e)
     yi = xi * slope + intercept
-    
+
     # Compute the depth
     dis = ((xp[:] - xp[0])**2 + (yp[:] - yp[0])**2)**0.5
     pnt_dis = ((xi - xp[0])**2 + (yi - yp[0])**2)**0.5
@@ -1237,10 +1244,10 @@ def _get_intersection(idx, nprofs, pnt0, pnt1, sd, proj):
     print(f'a_diff {a_diff} d_pnt0 {d_pnt0} d_pnt1 {d_pnt1} d_pnts {d_pnts}')
     if a_diff < 90 and d_pnt0 < sd:
         found = True
-    elif a_diff < 90 and d_pnt0 > sd and d_pnt1 > sd: 
+    elif a_diff < 90 and d_pnt0 > sd and d_pnt1 > sd:
         # Went too far
         found = None
-    elif a_diff > 90: 
+    elif a_diff > 90:
         # Between the two profiles
         found = None
     elif a_diff < 90 and d_pnt1 > sd:
@@ -1280,13 +1287,13 @@ def _get_intersection(idx, nprofs, pnt0, pnt1, sd, proj):
         plt.show()
         breakpoint()
     """
-    
+
     return olo, ola, dep, found
-    
-    
+
+
 def _set_indexes(forward, ref_idx, len_profs):
     step = 1
-    low = ref_idx 
+    low = ref_idx
     upp = len_profs - 1
     if not forward:
         step = -1
@@ -1612,9 +1619,9 @@ def get_coo(pl, pr, rdist, sd, idl):
         coo = np.expand_dims(coo, axis=0)
     assert (len(coo.shape) == 2)
 
-    # Residual distance 
-    rdist = distance(coo[-1, 0], coo[-1, 1], coo[-1, 2], 
-                     pr[0], pr[1], pr[2]) 
+    # Residual distance
+    rdist = distance(coo[-1, 0], coo[-1, 1], coo[-1, 2],
+                     pr[0], pr[1], pr[2])
 
     return coo, rdist
 
