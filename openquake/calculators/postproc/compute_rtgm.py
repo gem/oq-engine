@@ -425,7 +425,7 @@ def _find_afe_target(imls, afe, sa_target):
 
 
 # TODO: this is horrible code to be removed
-def disaggr_by_src(dstore, imtls):
+def disaggr_by_src(dstore):
 
     # get info : specific to disagg by src
     df = dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
@@ -633,7 +633,7 @@ def plot_curves(dstore, hc_only=False):
     # deterministic
 
     if not hc_only:
-        df = disaggr_by_src(dstore, imtls)
+        df = disaggr_by_src(dstore)
         _find_sources(df, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
         img = plot_governing_mce(dstore, imtls)
         logging.info('Storing png/governing_mce.png')
