@@ -1,6 +1,6 @@
 # Running the OpenQuake Engine on a SLURM cluster
 
-Most supercomputers support a scheduler called SLURM (
+Most HPC clusters support a scheduler called SLURM (
 Simple Linux Utility for Resource Management). The OpenQuake engine
 is able to interface with SLURM to make use of all the resources
 of the cluster.
@@ -31,12 +31,27 @@ the command
 ```
 $ oq engine --show-log -1
 ```
-where `-1` denotes the last submitted job. Using `sbatch` is recommended
-to users that needs to send multiple calculations. At the moment
-the calculations will be serialized by the engine queue, but this restriction
-may be lifted in the future. Even if the jobs are sequential, the subtasks
+where `-1` denotes the last submitted job. Using `sbatch` is
+recommended to users that needs to send multiple calculations. The
+calculations might be serialized by the engine queue, depending on the
+configuration, but even if the jobs are sequential, the subtasks
 spawned by them will run in parallel and make use of all of the
 cluster.
+
+NB: by default the engine will use a couple of nodes of the cluster.
+You may use more or less resources by setting the parameter
+`concurrent_tasks`. For instance, if you want to use around 600
+cores you can give the command
+```
+$ srun oq engine --run job.ini -p concurrent_tasks=600
+```
+
+All the usual `oq commands` are available, but you need to prepend
+`srun` to them; for instance
+```
+$ srun oq show performance
+```
+will give informations about the performance of the last submitted job.
 
 ## Running out of quota
 
@@ -56,21 +71,50 @@ work transparently for all users but only the sysadmin can set it.
 This section is for the administrators of the SLURM cluster.
 Installing the engine requires access to PyPI since the universal
 installer will download packages from there. Here are the installations
-instructions:
+instructions for engine 3.18, assuming you have python installed:
 
-TODO: for Antonio
+# module load python/3.10
+# mkdir /apps/openquake
+# python3.10 -m venv /apps/openquake/3.18
+# source /apps/openquake/3.18/bin/activate
+# pip install -U pip
+# pip install openquake.engine==3.18
 
+Then you have to create a module file located in
+`/apps/Modules/modulefiles/openquake/3.18` and with
+the following content:
+```
+##
+proc ModulesHelp { } {
+
+  puts stderr "\tOpenQuake - loads the OpenQuake environment"
+  puts stderr "\n\tThis will add OpenQuake to your PATH environment variable."
+}
+
+module-whatis   "loads the OpenQuake 3.18 environment"
+
+set     version         3.18
+set     root    /apps/openquake/3.18 
+
+prepend-path    LD_LIBRARY_PATH $root/lib64
+prepend-path    MANPATH         $root/share/man
+prepend-path    PATH            $root/bin
+prepend-path    PKG_CONFIG_PATH $root/lib64/pkgconfig
+prepend-path    XDG_DATA_DIRS   $root/share
+```
 After installing the engine, the sysadmin has to edit the file
-`/opt/openquake/venv/openquake.cfg` and set three parameters:
+`/opt/openquake/venv/openquake.cfg` and set a few parameters:
 ```
 [distribution]
 oq_distribute = slurm
+serialize_jobs = 2
 python = /opt/openquake/bin/python
 
 [dbserver]
 host = local
 ```
-Each user will have its own database located in
+With `serialize_jobs = 2` at most two jobs per user can run concurrently. You may want to
+increase or reduce this number. Each user will have its own database located in
 `$HOME/oqdata/db.sqlite3`. The database will be created automatically
 the first time the user runs a calculation (NB: in engine-3.18 it must be
 created manually with the command `oq engine --upgrade-db`).
