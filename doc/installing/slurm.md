@@ -122,7 +122,7 @@ With `serialize_jobs = 2` at most two jobs per user can run concurrently. You ma
 increase or reduce this number. Each user will have its own database located in
 `$HOME/oqdata/db.sqlite3`. The database will be created automatically
 the first time the user runs a calculation (NB: in engine-3.18 it must be
-created manually with the command `oq engine --upgrade-db`).
+created manually with the command `oq engine --upgrade-db --yes`).
 
 ## How it works internally
 
