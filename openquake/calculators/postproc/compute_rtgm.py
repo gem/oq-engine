@@ -143,8 +143,8 @@ def calc_rtgm_df(hcurves, sitecol, oq):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
-    :param rtgm_haz: a dictionary containing the annual frequency losses
-    :param facts: conversion factors from maximum component to geometric mean
+    FIXME:param rtgm_haz: a dictionary containing the annual frequency losses
+    FIXME:param facts: conversion factors from maximum component to geometric mean
     :param oq: OqParam instance
     """
     M = len(IMTS)
@@ -202,6 +202,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
 
 def get_hazdic(afe, imt, imtls, sitecol):
     """
+    FIXME
     Convert an array of mean hazard curves into a dictionary suitable
     for the rtgmpy library. Note that here the imls are already converted
     to maximum component.
@@ -220,6 +221,7 @@ def get_hazdic(afe, imt, imtls, sitecol):
 
 def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     """
+    FIXME
     :returns: a dictionary imt -> deterministic MCE
     """
     srcs, imts, dets = [], [], []
@@ -244,6 +246,7 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
 
 def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low=False):
     """
+    FIXME
     :returns: a dictionary imt -> MCE
     :returns: a dictionary imt -> det MCE
     :returns: a dictionary all ASCE7 parameters
@@ -291,31 +294,32 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low=False):
     else:
         S1_seismicity = "Very High"
 
-    asce7 = {'PGA_2_50': round(prob_mce_out['PGA'], ASCE_DECIMALS),
-             'PGA_84th': (round(det_imt['PGA'], ASCE_DECIMALS)
-                          if det_imt['PGA'] else 'n.a.'),
-             'PGA_det': (round(det_mce['PGA'], ASCE_DECIMALS)
-                         if det_mce['PGA'] else 'n.a.'),
-             'PGA': round(mce['PGA'], ASCE_DECIMALS),
+    asce7 = {'PGA_2_50': prob_mce_out['PGA'],
+             'PGA_84th': det_imt['PGA'],
+             'PGA_det': det_mce['PGA'],
+             'PGA': mce['PGA'],
 
-             'SS_RT': round(prob_mce_out['SA(0.2)'], ASCE_DECIMALS),
-             'CRS': round(crs, ASCE_DECIMALS),
-             'SS_84th': (round(det_imt['SA(0.2)'], ASCE_DECIMALS)
-                         if det_imt['SA(0.2)'] else 'n.a.'),
-             'SS_det': (round(det_mce['SA(0.2)'], ASCE_DECIMALS)
-                        if det_mce['SA(0.2)'] else 'n.a.'),
-             'SS': round(mce['SA(0.2)'], ASCE_DECIMALS),
+             'SS_RT': prob_mce_out['SA(0.2)'],
+             'CRS': crs,
+             'SS_84th': det_imt['SA(0.2)'],
+             'SS_det': det_mce['SA(0.2)'],
+             'SS': mce['SA(0.2)'],
              'SS_seismicity': SS_seismicity,
 
-             'S1_RT': round(prob_mce_out['SA(1.0)'], ASCE_DECIMALS),
-             'CR1': round(cr1, ASCE_DECIMALS),
-             'S1_84th': (round(det_imt['SA(1.0)'], ASCE_DECIMALS)
-                         if det_imt['SA(1.0)'] else 'n.a.'),
-             'S1_det': (round(det_mce['SA(1.0)'], ASCE_DECIMALS)
-                        if det_mce['SA(1.0)'] else 'n.a.'),
-             'S1': round(mce['SA(1.0)'], ASCE_DECIMALS),
+             'S1_RT': prob_mce_out['SA(1.0)'],
+             'CR1': cr1,
+             'S1_84th': det_imt['SA(1.0)'],
+             'S1_det': det_mce['SA(1.0)'],
+             'S1': mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity,
              }
+    for key in asce7:
+        if key in ('PGA_2_50', 'PGA_84th', 'PGA_det', 'PGA', 'SS_RT', 'CRS',
+                   'SS_84th', 'SS_det', 'SS', 'S1_RT', 'CR1', 'S1_84th',
+                   'S1_det', 'S1'):
+            asce7[key] = (
+                round(asce7[key], ASCE_DECIMALS)
+                if asce7[key] is not None else 'n.a.')
 
     return prob_mce_out, mce, det_mce, asce7
 
@@ -351,21 +355,23 @@ def get_asce41(dstore, mce, facts):
     BSE1N_S1 = 2/3 * BSE2N_S1
     S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
+    asce41 = {'BSE2N_Ss': BSE2N_Ss,
+              'Ss_5_50': Ss_5_50,
+              'BSE2E_Ss': BSE2E_Ss,
+              'BSE1E_Ss': BSE1E_Ss,
+              'Ss_20_50': Ss_20_50,
+              'BSE1N_Ss': BSE1N_Ss,
 
-    return {'BSE2N_Ss': round(BSE2N_Ss, ASCE_DECIMALS),
-            'Ss_5_50': round(Ss_5_50, ASCE_DECIMALS),
-            'BSE2E_Ss': round(BSE2E_Ss, ASCE_DECIMALS),
-            'BSE1E_Ss': round(BSE1E_Ss, ASCE_DECIMALS),
-            'Ss_20_50': round(Ss_20_50, ASCE_DECIMALS),
-            'BSE1N_Ss': round(BSE1N_Ss, ASCE_DECIMALS),
-
-            'BSE2N_S1': round(BSE2N_S1, ASCE_DECIMALS),
-            'S1_5_50': round(S1_5_50, ASCE_DECIMALS),
-            'BSE2E_S1': round(BSE2E_S1, ASCE_DECIMALS),
-            'BSE1E_S1': round(BSE1E_S1, ASCE_DECIMALS),
-            'S1_20_50': round(S1_20_50, ASCE_DECIMALS),
-            'BSE1N_S1': round(BSE1N_S1, ASCE_DECIMALS)
-            }
+              'BSE2N_S1': BSE2N_S1,
+              'S1_5_50': S1_5_50,
+              'BSE2E_S1': BSE2E_S1,
+              'BSE1E_S1': BSE1E_S1,
+              'S1_20_50': S1_20_50,
+              'BSE1N_S1': BSE1N_S1,
+              }
+    for key in asce41:
+        asce41[key] = round(asce41[key], ASCE_DECIMALS)
+    return asce41
 
 
 def _get_label(imt):
