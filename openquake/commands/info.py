@@ -34,7 +34,7 @@ from openquake.hazardlib.mfd.base import BaseMFD
 from openquake.hazardlib.source.base import BaseSeismicSource
 from openquake.hazardlib.valid import pmf_map
 from openquake.commonlib.oqvalidation import OqParam
-from openquake.commonlib import readinput, logictree
+from openquake.commonlib import readinput, logictree, logs
 from openquake.risklib import scientific
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -111,6 +111,13 @@ def main(what, report=False):
     if what == 'calculators':
         for calc in sorted(base.calculators):
             print(calc)
+    elif what == 'executing':
+        fields = 'id,user_name,calculation_mode,description'
+        rows = logs.dbcmd(f"SELECT {fields} FROM job WHERE status IN "
+                          "('executing', 'submitted') AND is_running=1")
+        print('\t'.join(fields.split(',')))
+        for row in rows:
+            print('\t'.join(map(str, row)))
     elif what == 'gsims':
         for gs in gsim.get_available_gsims():
             print(gs)
