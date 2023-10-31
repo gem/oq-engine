@@ -629,8 +629,8 @@ def plot_curves(dstore, hc_only=False):
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
-    # FIXME: if low hazard, plot MCE anyway with limited items (without
-    # deterministic
+    # TODO: if low hazard, plot MCE anyway with limited items (without
+    #       deterministic)
 
     if not hc_only:
         df = disaggr_by_src(dstore)
