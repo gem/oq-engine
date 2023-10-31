@@ -648,7 +648,7 @@ def aelo_run(request):
     job_id = jobctx.calc_id
 
     outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs', args=[job_id]))
+        reverse('outputs_aelo', args=[job_id]))
 
     outputs_uri_api = request.build_absolute_uri(
         reverse('results', args=[job_id]))
@@ -978,6 +978,36 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
                        application_mode=application_mode))
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    asce7 = asce41 = None
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        if 'asce7' in ds:
+            asce7_js = ds['asce7'][()].decode('utf8')
+            asce7 = json.loads(asce7_js)
+        if 'asce41' in ds:
+            asce41_js = ds['asce41'][()].decode('utf8')
+            asce41 = json.loads(asce41_js)
+        asce7_with_units = {}
+        for key, value in asce7.items():
+            if not isinstance(value, float):
+                asce7_with_units[key] = value
+            elif key in ('CRS', 'CR1'):
+                # NOTE: (-) stands for adimensional
+                asce7_with_units[key + ' (-)'] = value
+            else:
+                asce7_with_units[key + ' (g)'] = value
+        asce41_with_units = {}
+        for key, value in asce41.items():
+            asce41_with_units[key + ' (g)'] = value
+    return render(request, "engine/get_outputs_aelo.html",
+                  dict(calc_id=calc_id, size_mb=size_mb,
+                       asce7=asce7_with_units, asce41=asce41_with_units))
 
 
 @csrf_exempt
