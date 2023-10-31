@@ -4,9 +4,6 @@ What's new in engine-1.2
 The difference in OpenQuake 1.2 is mostly in the performance of the hazard calculators.
 They are *much* faster, sometimes several order of magnitudes faster. 
 
-The changes which are not compatible with the past [are listed here](Incompatible-changes-with-previous-version.md).
-Moreover a few new features have been added.
-
 1. it is possible to avoid saving the individual hazard curves. This is useful for people working
    with large logic trees and interested only in the mean curves and/or on the quantile curves.
    Such users should set the configuration parameter `individual_curves=false` in the `job.ini`
@@ -52,10 +49,3 @@ Moreover a few new features have been added.
 10. A lot of the logic of the engine has been moved into a different repository, [oq-risklib]
    (https://github.com/gem/oq-risklib): that means that now it is much easier for hazard and risk
    scientists to use the libraries underlying the engine programmatically.
- 
-On top of that, there is perhaps the most important improvement of them all:
-
-- *it is possible to perform post-1.2 upgrades without destroying the database*.
-
-That means that the users can keep updated their system with the OpenQuake nightly builds without 
-having too worry too much. We added a page [describing how to upgrade from OpenQuake 1.2 up to higher versions](How-to-upgrade-an-OpenQuake-1.2-database.md).
