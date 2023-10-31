@@ -115,7 +115,7 @@ def main(what, report=False):
         fields = 'id,user_name,calculation_mode,description'
         rows = logs.dbcmd(f"SELECT {fields} FROM job WHERE status IN "
                           "('executing', 'submitted') AND is_running=1")
-        print('\t'.join(fields.split(',')))
+        print(fields.replace(',', '\t'))
         for row in rows:
             print('\t'.join(map(str, row)))
     elif what == 'gsims':
