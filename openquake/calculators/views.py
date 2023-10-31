@@ -33,16 +33,18 @@ from openquake.baselib.general import (
     humansize, countby, AccumDict, CallableDict,
     get_array, group_array, fast_agg)
 from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
-from openquake.baselib.performance import performance_view
+from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source
 from openquake.hazardlib.contexts import KNOWN_DISTANCES
 from openquake.hazardlib.gsim.base import ContextMaker, Collapser
 from openquake.commonlib import util
+from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (
-    losses_by_period, return_periods, LOSSID)
+    losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
+from openquake.calculators import event_based_risk as ebr
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
@@ -1148,6 +1150,74 @@ def view_gsim_for_event(token, dstore):
     return gsim
 
 
+@view.add('calc_risk')
+def view_calc_risk(token, dstore):
+    """
+    Compute the risk_by_event table starting from GMFs
+    """
+    _, event_id = token.split(':')
+    oq = dstore['oqparam']
+    assetcol = dstore['assetcol']
+    ideduc = assetcol['ideductible']
+    sec_losses = []
+    try:
+        policy_df = dstore.read_df('policy')
+    except KeyError:
+        pass
+    else:
+        sec_losses.append(
+            functools.partial(ebr.insurance_losses, policy_df=policy_df))
+    if oq.total_losses:
+        sec_losses.append(
+            functools.partial(
+                ebr.total_losses, kind=oq.total_losses, ideduc=ideduc))
+    elif ideduc.any():
+        # subtract the insurance deductible for a single loss_type
+        [lt] = oq.loss_types
+        sec_losses.append(
+            functools.partial(ebr.total_losses, kind=lt, ideduc=ideduc))
+            
+    oq._sec_losses = sec_losses
+    crmodel = riskmodels.CompositeRiskModel.read(dstore, oq)
+    gmf_df = dstore.read_df('gmf_data')
+    gmf_df = gmf_df[gmf_df.eid==int(event_id)]
+    ws = dstore['weights']
+    rlz_id = dstore['events']['rlz_id']
+    aggids, _ = assetcol.build_aggids(
+        oq.aggregate_by, oq.max_aggregations)
+    agg_keys = dstore['agg_keys'][:]
+    try:
+        K = len(agg_keys)
+    except KeyError:
+        K = 0
+    ARK = (len(assetcol), len(ws), K)
+    if oq.ignore_master_seed or oq.ignore_covs:
+        rng = None
+    else:
+        rng = ebr.MultiEventRNG(oq.master_seed, gmf_df.eid.unique(),
+                                int(oq.asset_correlation))
+
+    mon = Monitor()
+    outs = []#ebr.gen_outputs(gmf_df, crmodel, rng, mon)
+    sids = gmf_df.sid.to_numpy()
+    assets = assetcol.to_dframe()
+    for taxo in assets.taxonomy.unique():
+        adf = assets[assets.taxonomy == taxo]
+        df = gmf_df[numpy.isin(sids, adf.site_id.unique())]
+        if len(df) == 0:  # common enough
+            continue
+        out = crmodel.get_output(adf, df, oq._sec_losses, rng)
+        outs.append(out)
+    avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(), mon)
+    del alt['event_id']
+    del alt['variance']
+    alt['type'] = LOSSTYPE[alt.loss_id]
+    del alt['loss_id']
+    alt['agg_keys'] = decode(agg_keys[alt.agg_id - 1])
+    del alt['agg_id']
+    return alt
+    
+
 @view.add('event_loss_table')
 def view_event_loss_table(token, dstore):
     """
@@ -1168,16 +1238,25 @@ def view_event_loss_table(token, dstore):
 
 @view.add('risk_by_event')
 def view_risk_by_event(token, dstore):
-    """
-    Display the top 30 losses of the aggregate loss table as a TSV.
-    If aggregate_by was missing in the calculation, returns nothing.
-
+    """There are two possibilities:
+  
     $ oq show risk_by_event:<loss_type>
+    $ oq show risk_by_event:<event_id>
+    
+    In both cases displays the top 30 losses of the aggregate loss
+    table as a TSV, for all events or only the given event.
     """
     _, ltype = token.split(':')
-    loss_id = LOSSID[ltype]
-    df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
-    del df['loss_id']
+    try:
+        loss_id = LOSSID[ltype]
+        df = dstore.read_df('risk_by_event', sel=dict(loss_id=loss_id))
+        del df['loss_id']
+    except KeyError:
+        event_id = int(ltype)
+        df = dstore.read_df('risk_by_event', sel=dict(event_id=event_id))
+        df['ltype'] = LOSSTYPE[df.loss_id.to_numpy()]
+        del df['loss_id']
+        del df['event_id']
     del df['variance']
     df = df[df.agg_id == df.agg_id.max()].sort_values('loss', ascending=False)
     del df['agg_id']
