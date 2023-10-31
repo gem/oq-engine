@@ -111,6 +111,10 @@ oq_distribute = slurm
 serialize_jobs = 2
 python = /opt/openquake/bin/python
 
+[directory]
+# optionally set it to something like /mnt/large_shared_disk
+shared_dir =
+
 [dbserver]
 host = local
 ```
