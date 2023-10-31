@@ -230,8 +230,9 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     for src, imt, mag, dist, eps in mag_dist_eps:
         m = imtidx[imt]
         sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
-        sigma = RegularGridInterpolator((
-            sigma_by_src.mag, sigma_by_src.dist), sig)((mag, dist))
+        rgi = RegularGridInterpolator(
+            (sigma_by_src.mag, sigma_by_src.dist), sig)
+        sigma = rgi((np.round(mag, 3), np.round(dist, 3)))
         srcs.append(src)
         imts.append(imt)
         dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
