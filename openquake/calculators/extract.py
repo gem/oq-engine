@@ -925,6 +925,15 @@ def extract_gmf_npz(dstore, what):
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
 
 
+# extract the relevant GMFs as an npz file with fields eid, sid, gmv_
+@extract.add('relevant_gmfs')
+def extract_relevant_gmfs(dstore, what):
+    qdict = parse(what)
+    [thr] = qdict.get('threshold', [.95])
+    eids = get_relevant_event_ids(dstore, float(thr))
+    return dstore.read_df('gmf_data', 'eid').loc[eids].reset_index()
+
+
 @extract.add('avg_gmf')
 def extract_avg_gmf(dstore, what):
     qdict = parse(what)
@@ -1343,15 +1352,37 @@ def get_relevant_rup_ids(dstore, threshold):
         up to the threshold (usually 95% of the total loss)
     """
     assert 0 <= threshold <= 1, threshold
-    if 'risk_by_rupture' not in dstore:
+    if 'loss_by_rupture' not in dstore:
         return
-    rupids = dstore['risk_by_rupture/rup_id'][:]
-    cumsum = dstore['risk_by_rupture/loss'][:].cumsum()
+    rupids = dstore['loss_by_rupture/rup_id'][:]
+    cumsum = dstore['loss_by_rupture/loss'][:].cumsum()
     thr = threshold * cumsum[-1]
     for i, csum in enumerate(cumsum, 1):
         if csum > thr:
             break
     return rupids[:i]
+
+
+def get_relevant_event_ids(dstore, threshold):
+    """
+    :param dstore:
+        a DataStore instance with a `risk_by_rupture` dataframe
+    :param threshold:
+        fraction of the total losses
+    :returns:
+        array with the event IDs cumulating the highest losses
+        up to the threshold (usually 95% of the total loss)
+    """
+    assert 0 <= threshold <= 1, threshold
+    if 'loss_by_event' not in dstore:
+        return
+    eids = dstore['loss_by_event/event_id'][:]
+    cumsum = dstore['loss_by_event/loss'][:].cumsum()
+    thr = threshold * cumsum[-1]
+    for i, csum in enumerate(cumsum, 1):
+        if csum > thr:
+            break
+    return eids[:i]
 
 
 @extract.add('ruptures')
