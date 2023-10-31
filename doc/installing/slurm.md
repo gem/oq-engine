@@ -71,7 +71,8 @@ work transparently for all users but only the sysadmin can set it.
 This section is for the administrators of the SLURM cluster.
 Installing the engine requires access to PyPI since the universal
 installer will download packages from there. Here are the installations
-instructions for engine 3.18, assuming you have python installed:
+instructions for engine 3.18, assuming you have python installed as
+modulefiles:
 ```
 # module load python/3.10
 # mkdir /apps/openquake
