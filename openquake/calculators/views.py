@@ -1159,39 +1159,17 @@ def view_calc_risk(token, dstore):
     _, event_id = token.split(':')
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
-    ideduc = assetcol['ideductible']
-    sec_losses = []
-    try:
-        policy_df = dstore.read_df('policy')
-    except KeyError:
-        pass
-    else:
-        sec_losses.append(
-            functools.partial(ebr.insurance_losses, policy_df=policy_df))
-    if oq.total_losses:
-        sec_losses.append(
-            functools.partial(
-                ebr.total_losses, kind=oq.total_losses, ideduc=ideduc))
-    elif ideduc.any():
-        # subtract the insurance deductible for a single loss_type
-        [lt] = oq.loss_types
-        sec_losses.append(
-            functools.partial(ebr.total_losses, kind=lt, ideduc=ideduc))
-            
-    oq._sec_losses = sec_losses
+    ebr.set_oqparam(oq, assetcol, dstore)
     crmodel = riskmodels.CompositeRiskModel.read(dstore, oq)
     gmf_df = dstore.read_df('gmf_data')
-    gmf_df = gmf_df[gmf_df.eid==int(event_id)]
+    gmf_df = gmf_df[gmf_df.eid == int(event_id)]
     ws = dstore['weights']
     rlz_id = dstore['events']['rlz_id']
     aggids, _ = assetcol.build_aggids(
         oq.aggregate_by, oq.max_aggregations)
-    agg_keys = dstore['agg_keys'][:]
-    try:
-        K = len(agg_keys)
-    except KeyError:
-        K = 0
-    ARK = (len(assetcol), len(ws), K)
+    agg_keys = numpy.concatenate(
+        [dstore['agg_keys'][:], numpy.array([b'total'])])
+    ARK = (oq.A, len(ws), oq.K)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
     else:
@@ -1209,12 +1187,12 @@ def view_calc_risk(token, dstore):
             continue
         out = crmodel.get_output(adf, df, oq._sec_losses, rng)
         outs.append(out)
-    avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, ideduc.any(), mon)
+    avg, alt = ebr.aggreg(outs, crmodel, ARK, aggids, rlz_id, oq.ideduc, mon)
     del alt['event_id']
     del alt['variance']
     alt['type'] = LOSSTYPE[alt.loss_id]
     del alt['loss_id']
-    alt['agg_keys'] = decode(agg_keys[alt.agg_id - 1])
+    alt['agg_keys'] = decode(agg_keys[alt.agg_id])
     del alt['agg_id']
     return alt
     
