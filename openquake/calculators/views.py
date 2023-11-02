@@ -44,7 +44,6 @@ from openquake.risklib.scientific import (
     losses_by_period, return_periods, LOSSID, LOSSTYPE)
 from openquake.baselib.writers import build_header, scientificformat
 from openquake.calculators.classical import get_pmaps_gb
-from openquake.calculators import event_based_risk as ebr
 from openquake.calculators.getters import get_ebrupture
 from openquake.calculators.extract import extract
 
@@ -1155,6 +1154,8 @@ def view_calc_risk(token, dstore):
     """
     Compute the risk_by_event table starting from GMFs
     """
+    # avoid a mysterious circular import only on macos
+    from openquake.calculators import event_based_risk as ebr
     _, event_id = token.split(':')
     oq = dstore['oqparam']
     assetcol = dstore['assetcol']
