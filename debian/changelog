@@ -1,4 +1,8 @@
   [Michele Simionato]
+  * Added command `oq info executing`
+  * Added `extract/relevant_gmfs?threshold=` functionality
+  * Added `extract/ruptures?threshold=` functionality
+  * Disabling the DbServer with dbserver.host = local
   * Fixed `disagg_source` for same ID sources
   * Disambiguated same ID sources by appending the file name after
     the exclamation mark and fixed disagg_by_src accordingly
