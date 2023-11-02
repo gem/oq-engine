@@ -625,7 +625,7 @@ def plot_curves(dstore, low_haz):
     # get hazard curves, put into rates
     mean_hcurve = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
     for m, hcurve in enumerate(mean_hcurve):
-        AFE.append(to_rates(hcurve, window))
+        AFE.append(to_rates(hcurve, window, minrate=1E-12))
         # get the AFE of the iml that will be disaggregated for each IMT
         afe_target.append(_find_afe_target(
             imls[m], AFE[m], rtgm_probmce[m]))
