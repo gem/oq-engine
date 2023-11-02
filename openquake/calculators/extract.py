@@ -41,7 +41,6 @@ from openquake.hazardlib.gsim.base import (
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
 from openquake.hazardlib.source import rupture
-from openquake.hazardlib.probability_map import get_lvl
 from openquake.risklib.scientific import LOSSTYPE, LOSSID
 from openquake.risklib.asset import tagset
 from openquake.commonlib import calc, util, oqvalidation, datastore
@@ -737,13 +736,14 @@ def extract_agg_curves(dstore, what):
     """
     info = get_info(dstore)
     qdic = parse(what, info)
-    tagdict = qdic.copy()
-    for a in ('k', 'rlzs', 'kind', 'loss_type', 'absolute'):
-        del tagdict[a]
+    try:
+        tagnames = dstore['oqparam'].aggregate_by[0]
+    except IndexError:
+        tagnames = []
     k = qdic['k']  # rlz or stat index
-    lts = tagdict.pop('lt')  # loss type string
+    lts = qdic['lt']
     [l] = qdic['loss_type']  # loss type index
-    tagnames = sorted(tagdict)
+    tagdict = {tag: qdic[tag] for tag in tagnames}
     if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
                          (info['tagnames'], tagnames))
@@ -753,6 +753,7 @@ def extract_agg_curves(dstore, what):
         agg_id = lst.index(','.join(tagvalues))
     else:
         agg_id = 0  # total aggregation
+    ep_fields = dstore.get_attr('aggcurves', 'ep_fields')
     if qdic['rlzs']:
         [li] = qdic['loss_type']  # loss type index
         units = dstore.get_attr('aggcurves', 'units').split()
@@ -760,17 +761,19 @@ def extract_agg_curves(dstore, what):
         rps = list(df.return_period.unique())
         P = len(rps)
         R = len(qdic['kind'])
-        arr = numpy.zeros((P, R))
+        EP = len(ep_fields)
+        arr = numpy.zeros((R, P, EP))
         for rlz in df.rlz_id.unique():
-            # NB: df may contains zeros but there are no missing periods
-            # by construction (see build_aggcurves)
-            arr[:, rlz] = df[df.rlz_id == rlz].loss
+            for ep_field_idx, ep_field in enumerate(ep_fields):
+                # NB: df may contains zeros but there are no missing periods
+                # by construction (see build_aggcurves)
+                arr[rlz, :, ep_field_idx] = df[df.rlz_id == rlz][ep_field]
     else:
         name = 'agg_curves-stats/' + lts[0]
         shape_descr = hdf5.get_shape_descr(dstore.get_attr(name, 'json'))
         rps = list(shape_descr['return_period'])
         units = dstore.get_attr(name, 'units').split()
-        arr = dstore[name][agg_id, k].T  # shape P, R
+        arr = dstore[name][agg_id, k]  # shape (P, S, EP)
     if qdic['absolute'] == [1]:
         pass
     elif qdic['absolute'] == [0]:
@@ -778,10 +781,11 @@ def extract_agg_curves(dstore, what):
         arr /= evalue
     else:
         raise ValueError('"absolute" must be 0 or 1 in %s' % what)
-    attrs = dict(shape_descr=['return_period', 'kind'] + tagnames)
-    attrs['return_period'] = rps
+    attrs = dict(shape_descr=['kind', 'return_period', 'ep_field'] + tagnames)
     attrs['kind'] = qdic['kind']
+    attrs['return_period'] = rps
     attrs['units'] = units  # used by the QGIS plugin
+    attrs['ep_field'] = ep_fields
     for tagname, tagvalue in zip(tagnames, tagvalues):
         attrs[tagname] = [tagvalue]
     if tagnames:
@@ -919,6 +923,23 @@ def extract_gmf_npz(dstore, what):
     else:
         gmfa = _gmf(df, n, oq.imtls)
         yield 'rlz-%03d' % rlzi, util.compose_arrays(sites, gmfa)
+
+
+# extract the relevant GMFs as an npz file with fields eid, sid, gmv_
+@extract.add('relevant_gmfs')
+def extract_relevant_gmfs(dstore, what):
+    qdict = parse(what)
+    [thr] = qdict.get('threshold', [.95])
+    eids = get_relevant_event_ids(dstore, float(thr))
+    dfs = []
+    N = len(dstore['gmf_data/eid'])
+    nslices = numpy.ceil(N / 10_000_000)
+    for slc in general.split_in_slices(N, nslices):
+        df = dstore.read_df('gmf_data', 'eid', slc=slc)
+        ok_eids = eids[numpy.isin(eids, df.index.unique())]
+        if len(ok_eids):
+            dfs.append(df.loc[ok_eids].reset_index())
+    return pandas.concat(dfs)
 
 
 @extract.add('avg_gmf')
@@ -1108,13 +1129,12 @@ def extract_disagg(dstore, what):
         return dset[:]  # regular bin edges
 
     bins = {k: bin_edges(v, sid) for k, v in dstore['disagg-bins'].items()}
-    matrix = dstore['disagg-%s/%s' % (spec, label)][sid]
+    fullmatrix = dstore['disagg-%s/%s' % (spec, label)][sid]
     # matrix has shape (..., M, P, Z)
-    matrix = matrix[..., imti, poei, :]
+    matrix = fullmatrix[..., imti, poei, :]
     if traditional:
-        poe_agg = dstore['poe4'][sid, imti, poei]  # shape (N, M, P, Z)
-        if matrix.any():  # nonzero
-            matrix = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
+        poe_agg = dstore['poe4'][sid, imti, poei]  # shape (M, P, Z)
+        matrix[:] = numpy.log(1. - matrix) / numpy.log(1. - poe_agg)
 
     disag_tup = tuple(label.split('_'))
     axis = [bins[k] for k in disag_tup]
@@ -1178,26 +1198,25 @@ def norm(qdict, params):
 def extract_mean_rates_by_src(dstore, what):
     """
     Extract the mean_rates_by_src information.
-    Example: http://127.0.0.1:8800/v1/calc/30/extract/mean_rates_by_src?site_id=0&imt=PGA&poe=.001
+    Example: http://127.0.0.1:8800/v1/calc/30/extract/mean_rates_by_src?site_id=0&imt=PGA&iml=.001
     """
     qdict = parse(what)
     dset = dstore['mean_rates_by_src/array']
     oq = dstore['oqparam']
     src_id = dstore['mean_rates_by_src/src_id'][:]
     [imt] = qdict['imt']
-    [poe] = qdict['poe']
+    [iml] = qdict['iml']
     [site_id] = qdict.get('site_id', ['0'])
     site_id = int(site_id)
-    mean = dstore.sel(
-        'hcurves-stats', imt=imt, stat='mean', site_id=site_id)[0, 0, 0]
-    lvl_id = get_lvl(mean, oq.imtls[imt], float(poe))
     imt_id = list(oq.imtls).index(imt)
-    rates = dset[site_id, imt_id, lvl_id]  # shape Ns
-    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('poe', '<f8')])
+    rates = dset[site_id, imt_id]
+    L1, Ns = rates.shape
+    arr = numpy.zeros(len(src_id), [('src_id', hdf5.vstr), ('rate', '<f8')])
     arr['src_id'] = src_id
-    arr['poe'] = rates
-    arr.sort(order='poe')
-    return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, poe=poe))
+    arr['rate'] = [numpy.interp(iml, oq.imtls[imt], rates[:, i])
+                   for i in range(Ns)]
+    arr.sort(order='rate')
+    return ArrayWrapper(arr[::-1], dict(site_id=site_id, imt=imt, iml=iml))
 
 
 # TODO: extract from disagg-stats, avoid computing means on the fly
@@ -1330,6 +1349,50 @@ def extract_rupture_info(dstore, what):
                                   boundaries=geoms))
 
 
+def get_relevant_rup_ids(dstore, threshold):
+    """
+    :param dstore:
+        a DataStore instance with a `risk_by_rupture` dataframe
+    :param threshold:
+        fraction of the total losses
+    :returns:
+        array with the rupture IDs cumulating the highest losses
+        up to the threshold (usually 95% of the total loss)
+    """
+    assert 0 <= threshold <= 1, threshold
+    if 'loss_by_rupture' not in dstore:
+        return
+    rupids = dstore['loss_by_rupture/rup_id'][:]
+    cumsum = dstore['loss_by_rupture/loss'][:].cumsum()
+    thr = threshold * cumsum[-1]
+    for i, csum in enumerate(cumsum, 1):
+        if csum > thr:
+            break
+    return rupids[:i]
+
+
+def get_relevant_event_ids(dstore, threshold):
+    """
+    :param dstore:
+        a DataStore instance with a `risk_by_rupture` dataframe
+    :param threshold:
+        fraction of the total losses
+    :returns:
+        array with the event IDs cumulating the highest losses
+        up to the threshold (usually 95% of the total loss)
+    """
+    assert 0 <= threshold <= 1, threshold
+    if 'loss_by_event' not in dstore:
+        return
+    eids = dstore['loss_by_event/event_id'][:]
+    cumsum = dstore['loss_by_event/loss'][:].cumsum()
+    thr = threshold * cumsum[-1]
+    for i, csum in enumerate(cumsum, 1):
+        if csum > thr:
+            break
+    return eids[:i]
+
+
 @extract.add('ruptures')
 def extract_ruptures(dstore, what):
     """
@@ -1351,8 +1414,13 @@ def extract_ruptures(dstore, what):
         info = dstore['source_info'][rup_id // TWO30]
         comment['source_id'] = info['source_id'].decode('utf8')
     else:
+        if 'threshold' in qdict:
+            [threshold] = qdict['threshold']
+            rup_ids = get_relevant_rup_ids(dstore, threshold)
+        else:
+            rup_ids = None
         ebrups = []
-        for rgetter in getters.get_rupture_getters(dstore):
+        for rgetter in getters.get_rupture_getters(dstore, rupids=rup_ids):
             ebrups.extend(rupture.get_ebr(proxy.rec, proxy.geom, rgetter.trt)
                           for proxy in rgetter.get_proxies(min_mag))
     bio = io.StringIO()

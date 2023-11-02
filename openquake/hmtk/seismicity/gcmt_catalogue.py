@@ -456,7 +456,7 @@ class GCMTCatalogue(Catalogue):
                        'minute', 'second', 'timeError', 'longitude',
                        'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
                        'depth', 'depthError', 'magnitude', 'sigmaMagnitude']
-        with open(filename, 'wt') as fid:
+        with open(filename, 'wt', newline='') as fid:
             writer = csv.DictWriter(fid, fieldnames=header_list)
             headers = dict((header, header) for header in header_list)
             writer.writerow(headers)

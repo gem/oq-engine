@@ -29,8 +29,14 @@ from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
 
+IMTLS = '''\
+{"PGA": logscale(0.005, 3.00, 25),
+ "SA(0.2)": logscale(0.005, 9.00, 25),
+ "SA(1.0)": logscale(0.005, 3.60, 25)}
+'''
 
-def get_params_from(inputs):
+
+def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     """
     :param inputs: a dictionary with lon, lat, vs30, siteid
 
@@ -39,21 +45,35 @@ def get_params_from(inputs):
     """
     getter = mosaic.MosaicGetter()
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
-    ini = os.path.join(
-        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
         params['description'] += ' (%(lon)s, %(lat)s)' % inputs
-    params['ps_grid_spacing'] = '0.'
+    params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
+    params['intensity_measure_types_and_levels'] = IMTLS
+    params['truncation_level']='3.'
     params['disagg_by_src'] = 'true'
+    params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = '%(lon)s %(lat)s' % inputs
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
-    params['postproc_func'] = 'disagg_by_rel_sources.main'
+    params['distance_bin_width'] = '20'
+    params['num_epsilon_bins'] = '10'
+    params['mag_bin_width'] = '0.1'
+    params['epsilon_star'] = 'true'
+    params['postproc_func'] = 'compute_rtgm.main'
+    if float(params['investigation_time']) == 1:
+        params['poes'] = '0.000404 0.001025 0.002105 0.004453 0.013767'
+    elif float(params['investigation_time']) == 50:
+        params['poes'] = '0.02 0.05 0.10 0.20 0.50'
+    else:
+        raise ValueError('Invalid investigation time %(investigation_time)s'
+                         % params)
+
     # params['cachedir'] = datastore.get_datadir()
     return params
 
@@ -106,6 +126,4 @@ def main(lon: valid.longitude,
 
 
 if __name__ == '__main__':
-    from openquake.server import dbserver  # avoid CodeDependencyError
-    dbserver.ensure_on()
     sap.run(main)

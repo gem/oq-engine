@@ -1,0 +1,4 @@
+* text=auto
+*.xml text eol=lf
+*.csv text eol=crlf
+*.onnx binary

@@ -7,7 +7,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "0 13 * * *"
 
 jobs:
 
@@ -147,7 +147,5 @@ jobs:
         export PYTEST_ADDOPTS="--color=yes"
         # set owner to openquake to run test and create cache for pytest
         chown -R openquake /__w/oq-engine/
-        runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/ && /opt/openquake/venv/bin/pytest -vsx --color=yes hazardlib/tests/gsim/kotha_2020_test.py'
-        runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/ && /opt/openquake/venv/bin/pytest -vsx --color=yes sep'
-        runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/ && /opt/openquake/venv/bin/pytest -vsx --color=yes sep/tests/test_utils.py'
+        runuser -l openquake -c 'cd /__w/oq-engine/oq-engine/openquake/ && /opt/openquake/venv/bin/pytest -vsx --color=yes hazardlib/tests/gsim/kotha_2020_test.py sep sep/tests/test_utils.py'
         runuser -l openquake -c '/opt/openquake/venv/bin/oq engine --run https://downloads.openquake.org/jobs/risk_test.zip '

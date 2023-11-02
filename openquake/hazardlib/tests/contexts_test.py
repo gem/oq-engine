@@ -21,7 +21,7 @@ import unittest
 import numpy
 
 from openquake.baselib.general import DictArray
-from openquake.hazardlib import read_input, calc
+from openquake.hazardlib import read_input, calc, site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
@@ -30,7 +30,7 @@ from openquake.hazardlib.contexts import (
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
 from openquake.hazardlib.source.rupture import \
-    NonParametricProbabilisticRupture as NPPR
+    get_planar, NonParametricProbabilisticRupture as NPPR
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
@@ -232,11 +232,11 @@ class CollapseTestCase(unittest.TestCase):
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        pcurve0 = cmaker.get_pmap(ctxs).array[0]
+        hcurve0 = cmaker.get_pmap(ctxs).array[0]
         cmaker.collapser.cfactor = numpy.zeros(3)
         cmaker.collapser.collapse_level = 1
-        pcurve1 = cmaker.get_pmap(ctxs).array[0]
-        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-9)
+        hcurve1 = cmaker.get_pmap(ctxs).array[0]
+        self.assertLess(numpy.abs(hcurve0 - hcurve1).sum(), 1E-9)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [94, 11616, 2])
 
     def test_collapse_azimuth(self):
@@ -542,3 +542,27 @@ class PlanarDistancesTestCase(unittest.TestCase):
         for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
             dist = get_distances_planar(planar, sites, par)[0]
             aac(dist, ctx[par], err_msg=par)
+
+    def test_from_planar(self):
+        s = site.Site(Point(0, 0), vs30=760,
+                      vs30measured=False, z1pt0=20, z2pt5=30)
+        msr = WC1994()
+        mag = 5.0
+        aratio = 1.
+        strike = 0.
+        dip = 90.
+        rake = 45
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        rup = get_planar(s, msr, mag, aratio, strike, dip, rake, trt)
+        gsims = [AbrahamsonEtAl2014()]
+        cm = ContextMaker(trt, gsims, dict(imtls={'PGA': []}))
+        ctx = cm.from_planar(rup, hdist=100, step=5)
+        mea, sig, tau, phi = cm.get_mean_stds([ctx])
+        # in this example sig, tau, phi are constant on all sites
+        aac(sig, .79162428)
+        aac(tau, .47)
+        aac(phi, .637)
+
+        # test att_curves which are functions N-distances -> (G, M, N) arrays
+        mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
+        aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)

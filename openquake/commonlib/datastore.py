@@ -26,9 +26,10 @@ import h5py
 
 from openquake.baselib import hdf5, performance, general
 from openquake.commonlib.logs import (
-    get_datadir, get_calc_ids, get_last_calc_id, CALC_REGEX, dbcmd, init)
+    get_datadir, get_last_calc_id, CALC_REGEX, dbcmd, init)
 
 
+# FIXME: you should never use this
 def hdf5new(datadir=None):
     """
     Return a new `hdf5.File by` instance with name determined by the last
@@ -50,12 +51,19 @@ def extract_calc_id_datadir(filename):
     """
     Extract the calculation ID from the given filename or integer:
 
-    >>> extract_calc_id_datadir('/mnt/ssd/oqdata/calc_25.hdf5')
-    (25, '/mnt/ssd/oqdata')
-    >>> extract_calc_id_datadir('/mnt/ssd/oqdata/wrong_name.hdf5')
-    Traceback (most recent call last):
-       ...
-    ValueError: Cannot extract calc_id from /mnt/ssd/oqdata/wrong_name.hdf5
+    >>> id, datadir = extract_calc_id_datadir('/mnt/ssd/oqdata/calc_25.hdf5')
+    >>> id
+    25
+    >>> path_items = os.path.normpath(datadir).split(os.sep)[1:]
+    >>> print(path_items)
+    ['mnt', 'ssd', 'oqdata']
+
+    >>> wrong_name = '/mnt/ssd/oqdata/wrong_name.hdf5'
+    >>> try:
+    ...     extract_calc_id_datadir(wrong_name)
+    ... except ValueError as exc:
+    ...     assert 'Cannot extract calc_id from' in str(exc)
+    ...     assert 'wrong_name.hdf5' in str(exc)
     """
     filename = os.path.abspath(filename)
     datadir = os.path.dirname(filename)
@@ -69,22 +77,11 @@ def extract_calc_id_datadir(filename):
 def _read(calc_id: int, datadir, mode, haz_id=None):
     # low level function to read a datastore file
     ddir = datadir or get_datadir()
-    if not os.path.exists(ddir):
-        raise OSError(ddir)
     ppath = None
-    if calc_id < 0:  # look at the old calculations of the current user
-        calc_ids = get_calc_ids(ddir)
-        try:
-            jid = calc_ids[calc_id]
-        except IndexError:
-            raise IndexError(
-                'There are %d old calculations, cannot '
-                'retrieve the %s' % (len(calc_ids), calc_id))
-    else:
-        jid = calc_id
     # look in the db
-    job = dbcmd('get_job', jid)
+    job = dbcmd('get_job', calc_id)
     if job:
+        jid = job.id
         path = job.ds_calc_dir + '.hdf5'
         hc_id = job.hazard_calculation_id
         if not hc_id and haz_id:
@@ -97,7 +94,7 @@ def _read(calc_id: int, datadir, mode, haz_id=None):
             else:
                 ppath = os.path.join(ddir, 'calc_%d.hdf5' % hc_id)
     else:  # when using oq run there is no job in the db
-        path = os.path.join(ddir, 'calc_%s.hdf5' % jid)
+        path = os.path.join(ddir, 'calc_%s.hdf5' % calc_id)
     return DataStore(path, ppath, mode)
 
 
@@ -120,11 +117,8 @@ def read(calc_id, mode='r', datadir=None, parentdir=None, read_parent=True):
         hc_id = dstore['oqparam'].hazard_calculation_id
     except KeyError:  # no oqparam
         hc_id = None
-    if read_parent and hc_id and parentdir:
-        dstore.ppath = os.path.join(parentdir, 'calc_%d.hdf5' % hc_id)
-        dstore.parent = DataStore(dstore.ppath, mode='r')
-    elif read_parent and hc_id:
-        dstore.parent = _read(hc_id, datadir, 'r')
+    if read_parent and hc_id:
+        dstore.parent = _read(hc_id, datadir, mode='r')
         dstore.ppath = dstore.parent.filename
     return dstore.open(mode)
 
@@ -151,7 +145,7 @@ def build_dstore_log(description='custom calculation', parent=()):
     :returns: DataStore instance associated to the .calc_id
     """
     dic = dict(description=description, calculation_mode='custom')
-    log = init('calc', dic)
+    log = init('job', dic)
     dstore = new(log.calc_id, log.get_oqparam(validate=False))
     dstore.parent = parent
     return dstore, log
@@ -312,6 +306,12 @@ class DataStore(collections.abc.MutableMapping):
         :param attrs: dictionary of attributes of the dataset
         :returns: a HDF5 dataset
         """
+        if isinstance(dtype, numpy.ndarray):
+            dset = hdf5.create(
+                self.hdf5, key, dtype.dtype, dtype.shape,
+                compression, fillvalue, attrs)
+            dset[:] = dtype
+            return dset
         return hdf5.create(
             self.hdf5, key, dtype, shape, compression, fillvalue, attrs)
 

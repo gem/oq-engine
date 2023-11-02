@@ -22,11 +22,14 @@ from openquake.baselib.writers import write_csv
 
 
 DISPLAY_NAME = {
+    'asce7': 'ASCE-7 Parameters',
+    'asce41': 'ASCE-41 Parameters',
+    'mag_dst_eps_sig': "(src, mag, dst, eps, sig, imt) Table",
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
-    'mean_rates_by_src': 'Mean Hazard Rates by Source',
+    'mean_rates_by_src': 'Mean Hazard Rates By Source',
     'mean_disagg_by_src': 'Mean Disaggregation Rates By Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
@@ -57,6 +60,7 @@ DISPLAY_NAME = {
     'disagg-rlzs': 'Disaggregation Outputs Per Realization',
     'disagg-stats': 'Statistical Disaggregation Outputs',
     'realizations': 'Realizations',
+    'rtgm': 'Risk Targeted Ground Motion',
     'src_loss_table': 'Source Loss Table',
     'fullreport': 'Full Report',
     'input': 'Input Files',

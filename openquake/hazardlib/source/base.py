@@ -254,7 +254,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
             for mag, rate in self.get_annual_occurrence_rates():
                 mags.add(mag)
         elif hasattr(self, 'mags'):  # MultiFaultSource
-            mags.update(mag for mag in self.mags if mag >= self.min_mag)
+            mags.update(self.mags)
         else:  # nonparametric
             for rup, pmf in self.data:
                 mags.add(rup.mag)

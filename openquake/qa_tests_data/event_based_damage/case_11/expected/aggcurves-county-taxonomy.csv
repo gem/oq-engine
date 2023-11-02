@@ -1,5 +1,5 @@
-#,,,,,"generated_by='OpenQuake engine 3.17.0-git237fc3d19f', start_date='2023-05-25T11:44:59', checksum=572001388, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
-county,taxonomy,return_period,loss_type,losses_value,losses_ratio
+#,,,,,"generated_by='OpenQuake engine 3.18.0-gitfdc364228a', start_date='2023-09-26T09:33:12', checksum=210043009, risk_investigation_time=1.0, num_events=4, effective_time=200.0, limit_states='ds1 ds2 ds3 ds4'"
+county,taxonomy,return_period,loss_type,loss_value,loss_ratio
 Contra Costa,tax1,50,structural,9.41111E+02,6.27408E-03
 Contra Costa,tax1,100,structural,9.41111E+02,6.27408E-03
 Contra Costa,tax1,200,structural,9.41111E+02,6.27408E-03

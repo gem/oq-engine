@@ -24,7 +24,7 @@ from openquake.baselib.general import gettemp
 from openquake.qa_tests_data.scenario_damage import (
     case_1, case_1c, case_2, case_3, case_4, case_4b, case_5, case_5a,
     case_6, case_7, case_8, case_9, case_10, case_11, case_12, case_13,
-    case_14, case_15, case_16)
+    case_14, case_15, case_16, case_17)
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.extract import extract
 from openquake.calculators.export import export
@@ -141,7 +141,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         dmg = extract(self.calc.datastore, 'agg_damages/structural?taxonomy=*')
         self.assertEqual(dmg.array.shape, (1, 2, 5))  # (T, R, D)
         aac(dmg.array[0].sum(axis=0),
-            [0.68279, 0.632278, 0.309294, 0.155964, 0.219674], atol=1E-5)
+            [0.68951, 0.623331, 0.305033, 0.155678, 0.22645], atol=1E-5)
 
     def test_case_6(self):
         # this is a case with 5 assets on the same point
@@ -187,10 +187,10 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         df = self.calc.datastore.read_df('risk_by_event', 'event_id',
                                          {'agg_id': K})
         dmg = df.loc[1937]  # damage caused by the event 1937
-        self.assertEqual(dmg.dmg_1.sum(), 135)
-        self.assertEqual(dmg.dmg_2.sum(), 10)
-        self.assertEqual(dmg.dmg_3.sum(), 0)
-        self.assertEqual(dmg.dmg_4.sum(), 0)
+        self.assertEqual(dmg.dmg_1.sum(), 133)
+        self.assertEqual(dmg.dmg_2.sum(), 84)
+        self.assertEqual(dmg.dmg_3.sum(), 21)
+        self.assertEqual(dmg.dmg_4.sum(), 22)
 
         [fname] = export(('aggrisk', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/aggrisk.csv', fname, delta=1E-4)
@@ -260,6 +260,24 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_16.__file__, 'job.ini')
         self.assertIn("Missing 'UNM/C_LR/GOV2' in", str(ctx.exception))
+
+    def test_case_17_no_time_event(self):
+        out = self.run_calc(
+            case_17.__file__,  'job_no_time_event.ini', exports='csv')
+        [fname] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk-_no_time_event.csv', fname)
+        [fname] = out[('damages-rlzs', 'csv')]
+        self.assertEqualFiles(
+            'expected/avg_damages-rlz-000_no_time_event.csv', fname)
+
+    def test_case_17_time_event_day(self):
+        out = self.run_calc(
+            case_17.__file__,  'job_time_event_day.ini', exports='csv')
+        [fname] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk-_time_event_day.csv', fname)
+        [fname] = out[('damages-rlzs', 'csv')]
+        self.assertEqualFiles(
+            'expected/avg_damages-rlz-000_time_event_day.csv', fname)
 
 
 def losses(aid, alt):

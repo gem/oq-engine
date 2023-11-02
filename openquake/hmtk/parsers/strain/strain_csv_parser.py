@@ -180,7 +180,7 @@ class WriteStrainCsv(object):
         # Slice seismicity rates into separate dictionary vectors
         strain, output_variables = self.slice_rates_to_data(strain)
 
-        outfile = open(self.filename, 'wt')
+        outfile = open(self.filename, 'wt', newline='')
         print('Writing strain data to file %s' % self.filename)
         writer = csv.DictWriter(outfile,
                                 fieldnames=output_variables)

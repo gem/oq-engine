@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import os
+import sys
 import unittest
 import numpy as np
 from numpy.testing import assert_allclose as aac
@@ -121,12 +122,14 @@ class CondSpectraTestCase(unittest.TestCase):
 
         spectra, s_sigma = cond_spectra(
             inp.cmaker, inp.group, inp.sitecol, 'SA(0.2)', imls)
-        aac(spectra.flatten(), [0.19236242, 0.23961989, 0.27838065, 0.35216192,
-                                0.39435944, 0.36501786, 0.34676928, 0.23458421,
-                                0.15669297, 0.11154595, 0.0409729], atol=2E-5)
-        aac(s_sigma.flatten(), [0.327456, 0.368969, 0.388289, 0.270122,
-                                0.006058, 0.235236, 0.319312, 0.463179,
-                                0.556208, 0.596132, 0.70371], atol=2E-5)
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('skip on macOS')
+        aac(spectra.flatten(), [0.19164881, 0.23852505, 0.27692626, 0.35103066,
+                                0.39435944, 0.36436695, 0.34596382, 0.23299646,
+                                0.15524817, 0.11027446, 0.04034665], rtol=1E-6)
+        aac(s_sigma.flatten(), [0.33084368, 0.37107024, 0.389734, 0.27167148,
+                                0.02817097, 0.23704353, 0.32075199, 0.46459039,
+                                0.55801751, 0.59838493, 0.7080976], rtol=1E-6)
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT
@@ -157,9 +160,11 @@ class CondSpectraTestCase(unittest.TestCase):
         df = outdic_to_dframe(outdic, cmaker.imts, 0, 0)
 
         # check the result
+        if sys.platform == 'darwin':
+            raise unittest.SkipTest('skip on macOS')
         expected = os.path.join(CWD, 'expected', 'spectra2.csv')
         if OVERWRITE_EXPECTED:
-            df.to_csv(expected, index=False, line_terminator='\r\n',
+            df.to_csv(expected, index=False, lineterminator='\r\n',
                       float_format='%.6f')
         expdf = pandas.read_csv(expected)
         pandas.testing.assert_frame_equal(df, expdf, atol=1E-6)

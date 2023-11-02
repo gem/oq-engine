@@ -108,16 +108,16 @@ def create_job(db, datadir, calculation_mode='to be set',
     :returns:
         the job ID
     """
-    calc_id = get_calc_id(db, datadir) + 1
     # NB: is_running=1 is needed to make views_test.py happy on Jenkins
-    job = dict(id=calc_id, is_running=1, description=description,
+    job = dict(is_running=1, description=description,
                user_name=user_name or getpass.getuser(),
                calculation_mode=calculation_mode,
-               hazard_calculation_id=hc_id,
-               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)),
-               host=host)
-    return db('INSERT INTO job (?S) VALUES (?X)',
-              job.keys(), job.values()).lastrowid
+               ds_calc_dir=datadir, hazard_calculation_id=hc_id, host=host)
+    job_id = db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values()
+                ).lastrowid
+    db('UPDATE job SET ds_calc_dir=?x WHERE id=?x',
+       os.path.join(datadir, 'calc_%s' % job_id), job_id)
+    return job_id
 
 
 def import_job(db, calc_id, calc_mode, description, user_name, status,
@@ -132,7 +132,7 @@ def import_job(db, calc_id, calc_mode, description, user_name, status,
                hazard_calculation_id=hc_id,
                is_running=0,
                status=status,
-               ds_calc_dir=os.path.join('%s/calc_%s' % (datadir, calc_id)))
+               ds_calc_dir=os.path.join(datadir, 'calc_%s' % calc_id))
     db('INSERT INTO job (?S) VALUES (?X)', job.keys(), job.values())
 
 
@@ -180,27 +180,6 @@ def get_job(db, job_id, username=None):
         return
     else:
         return joblist[-1]
-
-
-def get_calc_id(db, datadir, job_id=None):
-    """
-    Return the latest calc_id by looking both at the datastore
-    and the database.
-
-    :param db: a :class:`openquake.commonlib.dbapi.Db` instance
-    :param datadir: the directory containing the datastores
-    :param job_id: a job ID; if None, returns the latest job ID
-    """
-    from openquake.commonlib import datastore  # avoid circular import
-    calcs = datastore.get_calc_ids(datadir)
-    calc_id = 0 if not calcs else calcs[-1]
-    if job_id is None:
-        try:
-            job_id = db('SELECT seq FROM sqlite_sequence WHERE name="job"',
-                        scalar=True)
-        except NotFound:
-            job_id = 0
-    return max(calc_id, job_id)
 
 
 def get_weight(db, job_id):
@@ -318,13 +297,14 @@ def finish(db, job_id, status):
        job_id)
 
 
-def del_calc(db, job_id, user, force=False):
+def del_calc(db, job_id, user, delete_file=True, force=False):
     """
     Delete a calculation and all associated outputs, if possible.
 
     :param db: a :class:`openquake.commonlib.dbapi.Db` instance
     :param job_id: job ID, can be an integer or a string
     :param user: username
+    :param delete_file: also delete the HDF5 file
     :param force: delete even if there are dependent calculations
     :returns: a dict with key "success" and value indicating
         the job id of the calculation or of its ancestor, or key "error"
@@ -338,7 +318,7 @@ def del_calc(db, job_id, user, force=False):
     if not force and job_id in job_ids:  # jobarray
         err = []
         for jid in job_ids:
-            res = del_calc(db, jid, user, force=True)
+            res = del_calc(db, jid, user, delete_file, force=True)
             if "error" in res:
                 err.append(res["error"])
         if err:
@@ -363,13 +343,14 @@ def del_calc(db, job_id, user, force=False):
                 '%s and you are %s' % (job_id, owner, user)}
 
     fname = path + ".hdf5"
-    # A calculation could fail before it produces a hdf5
-    if os.path.isfile(fname):
+    # A calculation could fail before it produces a hdf5, or somebody
+    # may have canceled the file, so it could not exist
+    if delete_file and os.path.isfile(fname):
         try:
             os.remove(fname)
         except OSError as exc:  # permission error
             return {"error": 'Could not remove %s: %s' % (fname, exc)}
-    return {"success": str(job_id)}
+    return {"success": str(job_id), "hdf5path": fname}
 
 
 def log(db, job_id, timestamp, level, process, message):

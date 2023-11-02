@@ -135,6 +135,9 @@ def ensure_on():
     """
     Start the DbServer if it is off
     """
+    if config.dbserver.host == 'local':
+        print('Using local database')
+        return
     if get_status() == 'not-running':
         if config.multi_user and getpass.getuser() != 'openquake':
             sys.exit('Please start the DbServer: '

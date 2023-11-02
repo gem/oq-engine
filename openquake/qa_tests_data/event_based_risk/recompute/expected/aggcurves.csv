@@ -1,4 +1,4 @@
-#,,,,,,"generated_by='OpenQuake engine 3.17.0-git0243415598', start_date='2023-05-25T10:00:13', checksum=124001358, risk_investigation_time=1.0, num_events=25, effective_time=1000.0, limit_states=''"
+#,,,,,,"generated_by='OpenQuake engine 3.18.0-gitfdc364228a', start_date='2023-09-26T09:33:01', checksum=511255688, risk_investigation_time=1.0, num_events=25, effective_time=1000.0, limit_states=''"
 NAME_1,NAME_2,taxonomy,return_period,loss_type,loss_value,loss_ratio
 Central,Bagmati,Adobe,50,structural,0.00000E+00,0.00000E+00
 Central,Bagmati,Adobe,100,structural,1.54354E+05,2.93984E-02

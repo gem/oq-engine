@@ -187,8 +187,7 @@ class SimpleFaultSurface(BaseSurface):
         assert 1 not in mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width."
             " Possible cause: Mesh spacing could be too large with respect to"
-            " the fault length and width."
-        )
+            " the fault length and width.")
         self = cls(mesh)
         self.surface_nodes = [simple_fault_node(
             fault_trace, dip,

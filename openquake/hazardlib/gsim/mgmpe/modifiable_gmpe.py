@@ -25,6 +25,8 @@ from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.gsim.mgmpe.nrcan15_site_term import (
     NRCan15SiteTerm, BA08_AB06)
+from openquake.hazardlib.gsim.mgmpe.cy14_site_term import _get_site_term
+from openquake.hazardlib.gsim.chiou_youngs_2014 import ChiouYoungs2014
 
 from openquake.hazardlib.gsim.nga_east import (
     TAU_EXECUTION, get_phi_ss, TAU_SETUP, PHI_SETUP, get_tau_at_quantile,
@@ -56,7 +58,7 @@ def sigma_model_alatik2015(ctx, imt, me, si, ta, ph,
 
 def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     """
-    This function adds a site term to GMMs missing it
+    This function adds the NRCan15 site term to GMMs requiring it
     """
     C = NRCan15SiteTerm.COEFFS_BA08[imt]
     C2 = NRCan15SiteTerm.COEFFS_AB06r[imt]
@@ -65,10 +67,19 @@ def nrcan15_site_term(ctx, imt, me, si, ta, ph, kind):
     me[:] = np.log(exp_mean * fa)
 
 
+def cy14_site_term(ctx, imt, me, si, ta, phi):
+    """
+    This function adds the CY14 site term to GMMs requiring it
+    """
+    C = ChiouYoungs2014.COEFFS[imt]
+    fa = _get_site_term(C, ctx.vs30, me)  # ref mean must be in natural log
+    me[:] += fa
+
+
 def add_between_within_stds(ctx, imt, me, si, ta, ph, with_betw_ratio):
     """
     This adds the between and within standard deviations to a model which has
-    only the total standatd deviation. This function requires a ratio between
+    only the total standard deviation. This function requires a ratio between
     the within-event standard deviation and the between-event one.
 
     :param with_betw_ratio:
@@ -83,6 +94,27 @@ def apply_swiss_amplification(ctx, imt, me, si, ta, ph):
     Adds amplfactor to mean
     """
     me[:] += ctx.amplfactor
+
+
+def apply_swiss_amplification_sa(ctx, imt, me, si, ta, ph):
+    """
+    Adjust Swiss GMPEs to add amplification and correct intra-event residuals
+    """
+
+    if imt.period == 0.3:
+        phis2s = ctx.ch_phis2s03
+        phiss = ctx.ch_phiss03
+        me[:] += ctx.ch_ampl03
+    elif imt.period == 0.6:
+        phis2s = ctx.ch_phis2s06
+        phiss = ctx.ch_phiss06
+        me[:] += ctx.ch_ampl06
+
+    phi_star = np.sqrt(phis2s**2 + phiss**2)
+    total_stddev_star = np.sqrt(ta**2 + phi_star**2)
+
+    ph[:] = phi_star
+    si[:] = total_stddev_star
 
 
 def set_between_epsilon(ctx, imt, me, si, ta, ph, epsilon_tau):
@@ -170,9 +202,7 @@ def _dict_to_coeffs_table(input_dict, name):
     Transform a dictionary of parameters organised by IMT into a
     coefficient table
     """
-    coeff_dict = {}
-    for key in input_dict:
-        coeff_dict[from_string(key)] = {name: input_dict[key]}
+    coeff_dict = {from_string(k): {name: input_dict[k]} for k in input_dict}
     return {name: CoeffsTable.fromdict(coeff_dict)}
 
 
@@ -197,7 +227,7 @@ class ModifiableGMPE(GMPE):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
- 
+
         # Create the original GMPE
         [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
         self.params = kwargs  # non-gmpe parameters
@@ -274,9 +304,14 @@ class ModifiableGMPE(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        if 'nrcan15_site_term' in self.params:
+        if ('nrcan15_site_term' in self.params or
+                'cy14_site_term' in self.params):
             ctx_copy = ctx.copy()
-            ctx_copy.vs30 = np.full_like(ctx.vs30, 760.)  # rock
+            if 'nrcan15_site_term' in self.params:
+                rock_vs30 = 760.
+            elif 'cy14_site_term' in self.params:
+                rock_vs30 = 1130.
+            ctx_copy.vs30 = np.full_like(ctx.vs30, rock_vs30)  # rock
         else:
             ctx_copy = ctx
         g = globals()

@@ -1,22 +1,23 @@
 # Suggested versions for development
 # GEM Mirror
 #
+https://wheelhouse.openquake.org/v3/linux/py39/onnxruntime-1.16.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/numba-0.56.2-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/llvmlite-0.39.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/h5py-3.7.0-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/setproctitle-1.2.2-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/numpy-1.23.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/scipy-1.8.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py39/pandas-1.3.5-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/pyzmq-23.2.1-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/psutil-5.8.0-cp39-cp39-manylinux2010_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py39/Shapely-1.8.0-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/kiwisolver-1.3.1-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/matplotlib-3.3.4-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/Pillow-8.1.2-cp39-cp39-manylinux1_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/GDAL-3.4.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/Fiona-1.8.21-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py39/pyproj-3.4.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py39/pandas-2.0.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py39/shapely-2.0.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
@@ -47,4 +48,12 @@ https://wheelhouse.openquake.org/v3/py/packaging-21.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/fonttools-4.38.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-5.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/zipp-3.10.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/Django-3.2.20-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/Django-3.2.21-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/sympy-1.12-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/humanfriendly-10.0-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/mpmath-1.3.0-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/protobuf-4.24.3-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/pyreadline3-3.4.1-py3-none-any.whl

@@ -218,6 +218,11 @@ class Monitor(object):
         self.task_no = -1  # overridden in parallel
 
     @property
+    def calc_dir(self):
+        """Calculation directory $HOME/oqdata/calc_XXX"""
+        return self.filename.rsplit('.', 1)[0]
+
+    @property
     def mem(self):
         """Mean memory allocation"""
         return self._mem / (self.counts or 1)
@@ -442,7 +447,7 @@ else:
         return lambda func: func
 
 
-# used when reading _poes/sid
+# used when reading _rates/sid
 @compile(["int64[:, :](uint8[:])",
           "int64[:, :](uint16[:])",
           "int64[:, :](uint32[:])",

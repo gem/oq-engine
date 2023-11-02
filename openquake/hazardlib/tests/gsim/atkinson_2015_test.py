@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.atkinson_2015 import Atkinson2015
+from openquake.hazardlib.gsim.atkinson_2015 import (Atkinson2015,
+                                                    Atkinson2015AltDistSat)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 
@@ -31,3 +32,19 @@ class Atkinson2015TestCase(BaseGSIMTestCase):
                    'ATKINSON2015/ATKINSON2015_STD_INTER.csv',
                    'ATKINSON2015/ATKINSON2015_STD_TOTAL.csv',
                    max_discrep_percentage=0.1)
+        
+class Atkinson2015AltDistSatTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = Atkinson2015AltDistSat
+    
+    # Tables modified from those directly provided by Gail Atkinson on
+    # https://www.inducedseismicity.ca/wp-content/uploads/2015/01/A15GMPErev2.xlsx
+    # to use the published model (i.e. using the coefficients in Table 2 of
+    # Atkinson, 2015) but with the alternative effective depth function
+    # provided on page 986
+
+    def test_alt(self):
+        self.check('ATKINSON2015/A15_ALT_MEAN.csv',
+                   'ATKINSON2015/A15_ALT_STD_INTRA.csv',
+                   'ATKINSON2015/A15_ALT_STD_INTER.csv',
+                   'ATKINSON2015/A15_ALT_STD_TOTAL.csv',
+                   max_discrep_percentage=3.0)

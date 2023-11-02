@@ -268,6 +268,18 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+def LiqOccur():
+    """
+    Liquefaction occurrence class
+    """
+    return IMT('LiqOccur')
+
+def LSE():
+    """
+    Liquefaction spatial extent as percentage of a pixel area.
+    """
+    return IMT('LSE')
+
 
 def PGDMax(vert_settlement, lat_spread):
     """
@@ -280,8 +292,8 @@ def LSD():
     """
     Liquefaction-induced lateral spread displacements measured in units of ``m``.
     """
-    return IMT('LSD')    
-    
+    return IMT('LSD')   
+
 
 def PGDGeomMean(vert_settlement, lat_spread):
     """

@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.geodetic import geodetic_distance
 from openquake.hazardlib.near_fault import (
     get_plane_equation, projection_pp, directp, average_s_rad, isochone_ratio)
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface import BaseSurface, PlanarSurface
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -299,6 +299,11 @@ class BaseRupture(metaclass=abc.ABCMeta):
         self.surface = surface
         self.rupture_slip_direction = rupture_slip_direction
         self.ruid = None
+
+    @property
+    def hypo_depth(self):
+        """Returns the hypocentral depth"""
+        return self.hypocenter.z
 
     @property
     def code(self):
@@ -633,7 +638,7 @@ class PointRupture(ParametricProbabilisticRupture):
         self.occurrence_rate = occurrence_rate
         self.temporal_occurrence_model = temporal_occurrence_model
         self.surface = PointSurface(hypocenter, strike, dip)
-        self.zbot = zbot
+        self.zbot = zbot  # bottom edge depth, used in Campbell-Bozorgnia
 
 
 def get_geom(surface, is_from_fault_source, is_multi_surface,
@@ -750,25 +755,6 @@ class EBRupture(object):
     def tectonic_region_type(self):
         return self.rupture.tectonic_region_type
 
-    # TODO: replace with the function get_eid_rlz
-    def get_eid_rlz(self, rlzs_by_gsim, scenario):
-        """
-        :param rlzs_by_gsim: a dictionary gsims -> rlzs array
-        :param scenario: if true distribute the rlzs evenly else randomly
-        :returns: an array with fields (eid, rlz)
-        """
-        out = numpy.zeros(self.n_occ, [('eid', U32), ('rlz', U32)])
-        rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        out['eid'] = numpy.arange(self.e0, self.e0 + self.n_occ, dtype=U32)
-        if scenario:
-            # the rlzs are distributed evenly
-            div = self.n_occ // len(rlzs)
-            out['rlz'] = rlzs[numpy.arange(self.n_occ) // div]
-        else:
-            # event_based: the rlzs are distributed randomly
-            out['rlz'] = general.random_choice(rlzs, self.n_occ, 0, self.seed)
-        return out
-
     def get_eids(self):
         """
         :returns: an array of event IDs
@@ -780,7 +766,25 @@ class EBRupture(object):
             self.__class__.__name__, self.id, self.n_occ)
 
 
-def get_eid_rlz(recs, rlzs, scenario):
+def get_eid_rlz(rec, rlzs, scenario):
+    """
+    :param rlzs: an array of realization indices
+    :param scenario: if true distribute the rlzs evenly else randomly
+    :returns: two arrays (eid, rlz)
+    """
+    e0 = rec['e0']
+    n = rec['n_occ']
+    eid = numpy.arange(e0, e0 + n, dtype=U32)
+    if scenario:
+        # the rlzs are distributed evenly
+        rlz = rlzs[numpy.arange(rec['n_occ']) // (n // len(rlzs))]
+    else:
+        # event_based: the rlzs are distributed randomly
+        rlz = general.random_choice(rlzs, n, 0, rec['seed'])
+    return eid, rlz
+
+
+def get_events(recs, rlzs, scenario):
     """
     Build the associations event_id -> rlz_id for each rup_id.
 
@@ -793,15 +797,10 @@ def get_eid_rlz(recs, rlzs, scenario):
         n = rec['n_occ']
         stop = start + n
         slc = out[start:stop]
-        slc['id'] = numpy.arange(rec['e0'], rec['e0'] + n, dtype=U32)
+        eid, rlz = get_eid_rlz(rec, rlzs, scenario)
+        slc['id'] = eid
+        slc['rlz_id'] = rlz
         slc['rup_id'] = rec['id']
-        if scenario:
-            # the rlzs are distributed evenly
-            div = n // len(rlzs)
-            slc['rlz_id'] = rlzs[numpy.arange(n) // div]
-        else:
-            # event_based: the rlzs are distributed randomly
-            slc['rlz_id'] = general.random_choice(rlzs, n, 0, rec['seed'])
         start = stop
     return out
 
@@ -882,3 +881,16 @@ def get_ruptures(fname_csv):
     dic = dict(geom=numpy.array(geoms, object), trts=aw.trts)
     # NB: PMFs for nonparametric ruptures are missing
     return hdf5.ArrayWrapper(numpy.array(rups, rupture_dt), dic)
+
+
+def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
+    """
+    :returns: a BaseRupture with a PlanarSurface built around the site
+    """
+    hc = site.location
+    surf = PlanarSurface.from_hypocenter(hc, msr, mag, aratio, strike, dip,
+                                         rake, ztor)
+    rup = BaseRupture(mag, rake, trt, hc, surf)
+    rup.rup_id = 0
+    vars(rup).update(vars(site))
+    return rup

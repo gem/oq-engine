@@ -62,6 +62,8 @@ on:
   push:
     branches: [master, 'engine-*', moster, 'ongine-*']
 
+  pull_request:
+
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -99,7 +101,8 @@ jobs:
         run: |
           pip install -U pip
           pip install -r ./requirements-py38-linux64.txt
-          pip install pydata-sphinx-theme
+          pip install sphinx==6.2 pydata-sphinx-theme
+          pip install --upgrade myst-parser pygments-csv-lexer
       - name: Install oq engine
         run: |
           pip install -e .[dev]
@@ -171,8 +174,13 @@ jobs:
               PDF_VER="(master)"
           elif [ "$BUILD" == "dev" ]; then
               DOCS_BASE="${DOCS_BASE}.dev/"
-              TARGET="oq-engine/$GITHUB_REF_NAME/"
-              PDF_VER="($GITHUB_REF_NAME)"
+              if echo "$GITHUB_REF_NAME" | grep -q '[0-9]\+/merge'; then
+                  TARGET="oq-engine/$GITHUB_HD_REF/"
+                  PDF_VER="($GITHUB_HD_REF)"
+              else
+                  TARGET="oq-engine/$GITHUB_REF_NAME/"
+                  PDF_VER="($GITHUB_REF_NAME)"
+              fi
               PDFDOCS="manuals/"
           else
               echo "BUILD [$BUILD] not recognized"

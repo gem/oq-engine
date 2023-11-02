@@ -142,7 +142,7 @@ class LanzanoEtAl2019_RJB_OMO(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = self.REQUIRES_DISTANCES
+        dist_type = 'rjb' if "RJB" in self.__class__.__name__ else 'rrup'
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             imean = (_compute_magnitude(ctx, C) +

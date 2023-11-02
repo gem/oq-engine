@@ -198,7 +198,7 @@ class LanzanoEtAl2016_RJB(GMPE):
         """
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
-            [dist_type] = self.REQUIRES_DISTANCES
+            dist_type = 'rjb' if "RJB" in self.__class__.__name__ else 'rhypo'
 
             imean = (_compute_magnitude(ctx, C) +
                      _compute_distance(dist_type, ctx, C) +

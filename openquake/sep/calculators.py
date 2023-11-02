@@ -19,8 +19,6 @@ from .landslide.newmark import (
     newmark_displ_from_pga_M,
     prob_failure_given_displacement,
 )
-from .landslide.rotational import rotational_critical_accel
-
 
 def calc_newmark_soil_slide_single_event(
     pga: Union[float, np.ndarray],

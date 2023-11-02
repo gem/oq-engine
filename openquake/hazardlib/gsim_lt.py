@@ -137,14 +137,14 @@ class ImtWeight(object):
         return '<%s %s>' % (self.__class__.__name__, self.dic)
 
 
-def keyno(branch_id, bsno, brno, fname='', chars=BASE183):
+def keyno(branch_id, bsno, brno):
     """
     :param branch_id: a branch ID string
     :param bsno: number of the branchset (starting from 0)
     :param brno: number of the branch in the branchset (starting from 0)
     :returns: a short unique alias for the branch_id
     """
-    return chars[brno] + str(bsno)
+    return BASE183[brno] + str(bsno)
 
 
 class GsimLogicTree(object):
@@ -253,9 +253,12 @@ class GsimLogicTree(object):
                 for gsim in gsims:
                     for k, v in gsim.kwargs.items():
                         if k.endswith(('_file', '_table')):
-                            fname = os.path.join(dirname, v)
-                            with open(fname, 'rb') as f:
-                                dic[os.path.basename(v)] = f.read()
+                            if v is None: # if volc_arc_file is None
+                                pass
+                            else:
+                                fname = os.path.join(dirname, v)
+                                with open(fname, 'rb') as f:
+                                    dic[os.path.basename(v)] = f.read()
         return numpy.array(branches, dt), dic
 
     def __fromh5__(self, array, dic):
@@ -272,8 +275,11 @@ class GsimLogicTree(object):
                 gsim = valid.gsim(branch['uncertainty'], dirname)
                 for k, v in gsim.kwargs.items():
                     if k.endswith(('_file', '_table')):
-                        arr = numpy.asarray(dic[os.path.basename(v)][()])
-                        gsim.kwargs[k] = io.BytesIO(bytes(arr))
+                        if v is None: # if volc_arc_file is None
+                           pass
+                        else:
+                            arr = numpy.asarray(dic[os.path.basename(v)][()])
+                            gsim.kwargs[k] = io.BytesIO(bytes(arr))
                 self.values[branch['trt']].append(gsim)
                 weight = object.__new__(ImtWeight)
                 # branch dtype ('trt', 'branch', 'uncertainty', 'weight', ...)
@@ -332,7 +338,7 @@ class GsimLogicTree(object):
                 gsim._toml = _toml
                 new.values[trt] = [gsim]
                 br_id = 'gA' + str(trti)
-                new.shortener[br_id] = keyno(br_id, trti, 0, self.filename)
+                new.shortener[br_id] = keyno(br_id, trti, 0)
                 branch = BranchTuple(trt, br_id, gsim, sum(weights), True)
                 new.branches.append(branch)
             else:
@@ -415,8 +421,7 @@ class GsimLogicTree(object):
                     branch_id, gsim, weight, effective)
                 if effective:
                     branches.append(bt)
-                    self.shortener[branch_id] = keyno(
-                        branch_id, bsno, brno, self.filename)
+                    self.shortener[branch_id] = keyno(branch_id, bsno, brno)
                 if os.environ.get('OQ_REDUCE'):  # take the first branch only
                     bt.weight.dic['weight'] = 1.
                     break

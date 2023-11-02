@@ -7,8 +7,6 @@ on:
         description: Git Ref
         default: master
         required: true
-  schedule:
-    - cron: "00 22 * * *"
   push:
     branches: [ ae-win_numba ]
 
@@ -74,7 +72,7 @@ jobs:
             Write-Host "python install.py devel "
             python install.py devel
           }
-      - name: Run demos to test installation
+      - name: Test sep, kotha_2020 and all calculators and run a demo to test installation
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           #
