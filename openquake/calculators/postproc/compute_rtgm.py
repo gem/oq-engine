@@ -578,15 +578,15 @@ def plot_governing_mce(dstore, imtls, low_haz):
              linewidth=3)
     plt.plot(T[1:], RTGM[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    if not low_haz:
+    if low_haz:
+        plt.ylim([0, np.max([RTGM, MCEr, limit_det]) + 0.2])
+    else:
         MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
         plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
                  linewidth=3)
         plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
                  label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
         plt.ylim([0, np.max([RTGM,  MCEr, MCEr_det, limit_det]) + 0.2])
-    else:
-        plt.ylim([0, np.max([RTGM, MCEr, limit_det]) + 0.2])
     plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
     plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
@@ -634,12 +634,12 @@ def plot_curves(dstore, low_haz):
     logging.info('Storing png/hcurves.png')
     dstore['png/hcurves.png'] = img
 
-    if not low_haz:
+    if low_haz:
+        img = plot_governing_mce(dstore, imtls, low_haz=True)
+    else:
         df = disaggr_by_src(dstore)
         _find_sources(df, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
         img = plot_governing_mce(dstore, imtls, low_haz=False)
-    else:
-        img = plot_governing_mce(dstore, imtls, low_haz=True)
     logging.info('Storing png/governing_mce.png')
     dstore['png/governing_mce.png'] = img
 
