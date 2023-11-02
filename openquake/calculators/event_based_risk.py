@@ -269,7 +269,7 @@ def set_oqparam(oq, assetcol, dstore):
         sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
 
     oq._sec_losses = sec_losses
-    oq.ideduc = ideduc
+    oq.ideduc = int(ideduc)
     oq.M = len(oq.all_imts())
     oq.K = K
     oq.A = assetcol['ordinal'].max() + 1

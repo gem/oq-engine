@@ -42,7 +42,7 @@ vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
 FLOAT = (float, numpy.float32, numpy.float64)
-INT = (bool, int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
+INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
 
 if sys.platform == 'win32':

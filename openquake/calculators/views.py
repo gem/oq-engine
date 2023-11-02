@@ -1167,7 +1167,8 @@ def view_calc_risk(token, dstore):
     rlz_id = dstore['events']['rlz_id']
     aggids, _ = assetcol.build_aggids(
         oq.aggregate_by, oq.max_aggregations)
-    agg_keys = dstore['agg_keys'][:]
+    agg_keys = numpy.concatenate(
+        [dstore['agg_keys'][:], numpy.array([b'total'])])
     ARK = (oq.A, len(ws), oq.K)
     if oq.ignore_master_seed or oq.ignore_covs:
         rng = None
@@ -1191,7 +1192,7 @@ def view_calc_risk(token, dstore):
     del alt['variance']
     alt['type'] = LOSSTYPE[alt.loss_id]
     del alt['loss_id']
-    alt['agg_keys'] = decode(agg_keys[alt.agg_id - 1])
+    alt['agg_keys'] = decode(agg_keys[alt.agg_id])
     del alt['agg_id']
     return alt
     
