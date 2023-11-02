@@ -32,6 +32,9 @@ class Command(BaseCommand):
             for i in range(8)))
         # by default a user is not superuser and not staff
         User = get_user_model()
+        if User.objects.filter(username=username).exists():
+            logger.error(f'The username "{username}" is already taken!')
+            exit(1)
         logger.info(f'Creating normal user: {username}')
         user = User.objects.create_user(
             username, password=password, email=email)
