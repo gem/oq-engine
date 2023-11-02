@@ -561,10 +561,9 @@ def _find_sources(df, imtls, imts, rtgm_probmce, mean_hcurve, dstore):
     dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
 
 
-def plot_governing_mce(dstore, imtls):
+def plot_governing_mce(dstore, imtls, low):
     js = dstore['asce7'][()].decode('utf8')
     dic = json.loads(js)
-    MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
     MCEr = [dic['PGA'], dic['SS'], dic['S1']]
     T = [from_string(imt).period for imt in imtls]
 
@@ -578,10 +577,15 @@ def plot_governing_mce(dstore, imtls):
              linewidth=3)
     plt.plot(T[1:], RTGM[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
+    if not low:
+        MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
+        plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
              linewidth=3)
-    plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
+        plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
              label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
+        plt.ylim([0, np.max([RTGM,  MCEr, MCEr_det, limit_det]) + 0.2])
+    else:
+        plt.ylim([0, np.max([RTGM, MCEr, limit_det]) + 0.2])
     plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
     plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
@@ -591,7 +595,6 @@ def plot_governing_mce(dstore, imtls):
     plt.ylabel('Spectral Acceleration (g)', fontsize=20)
     plt.xlabel('Period (s)', fontsize=20)
     plt.legend(loc="upper right", fontsize='13')
-    plt.ylim([0, np.max([RTGM, MCEr_det, MCEr, limit_det]) + 0.2])
     plt.xlim([-0.02, 1.2])
     bio = io.BytesIO()
     plt.savefig(bio, format='png', bbox_inches='tight')
@@ -599,7 +602,7 @@ def plot_governing_mce(dstore, imtls):
     return Image.open(bio)
 
 
-def plot_curves(dstore, hc_only=False):
+def plot_curves(dstore, low):
     dinfo = get_info(dstore)
     # site is always 0 for a single-site calculation
     # get imls and imts, make arrays
@@ -633,12 +636,14 @@ def plot_curves(dstore, hc_only=False):
     # TODO: if low hazard, plot MCE anyway with limited items (without
     #       deterministic)
 
-    if not hc_only:
+    if not low:
         df = disaggr_by_src(dstore)
         _find_sources(df, imtls, IMTS, rtgm_probmce, mean_hcurve, dstore)
-        img = plot_governing_mce(dstore, imtls)
-        logging.info('Storing png/governing_mce.png')
-        dstore['png/governing_mce.png'] = img
+        img = plot_governing_mce(dstore, imtls, low = False)
+    else:
+        img = plot_governing_mce(dstore, imtls, low = True)
+    logging.info('Storing png/governing_mce.png')
+    dstore['png/governing_mce.png'] = img
 
 
 def main(dstore, csm):
@@ -675,7 +680,7 @@ def main(dstore, csm):
         if Image is None:  # missing PIL
             logging.warning('Missing module PIL: skipping plotting curves')
         else:
-            plot_curves(dstore, hc_only=True)
+            plot_curves(dstore, low = True)
         return
 
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
@@ -697,4 +702,4 @@ def main(dstore, csm):
     if Image is None:  # missing PIL
         logging.warning('Missing module PIL: skipping plotting curves')
     else:
-        plot_curves(dstore)
+        plot_curves(dstore, low = False)
