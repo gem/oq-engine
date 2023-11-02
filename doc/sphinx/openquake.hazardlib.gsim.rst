@@ -936,6 +936,14 @@ nga_east
     :undoc-members:
     :show-inheritance:
 
+novakovic_2018
+------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.novakovic_2018
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nrcan15_site_term
 ------------------------------------------
 
