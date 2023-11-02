@@ -241,6 +241,40 @@ def gen_outputs(df, crmodel, rng, monitor):
             yield out
 
 
+def set_oqparam(oq, assetcol, dstore):
+    """
+    Set the attributes .M, .K, .A, .ideduc, ._sec_losses
+    """
+    try:
+        K = len(dstore['agg_keys'])
+    except KeyError:
+        K = 0
+    sec_losses = []  # one insured loss for each loss type with a policy
+    try:
+        policy_df = dstore.read_df('policy')
+    except KeyError:
+        pass
+    else:
+        if 'reinsurance' not in oq.inputs:
+            sec_losses.append(
+                partial(insurance_losses, policy_df=policy_df))
+
+    ideduc = assetcol['ideductible'].any()
+    if oq.total_losses:
+        sec_losses.append(
+            partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
+    elif ideduc:
+        # subtract the insurance deductible for a single loss_type
+        [lt] = oq.loss_types
+        sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
+
+    oq._sec_losses = sec_losses
+    oq.ideduc = ideduc
+    oq.M = len(oq.all_imts())
+    oq.K = K
+    oq.A = assetcol['ordinal'].max() + 1
+
+
 def ebrisk(proxies, cmaker, stations, dstore, monitor):
     """
     :param proxies: list of RuptureProxies with the same trt_smr
@@ -321,29 +355,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 len(self.datastore['ruptures']),
                 len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
-        try:
-            K = len(self.datastore['agg_keys'])
-        except KeyError:
-            K = 0
         self.datastore.swmr_on()
-        sec_losses = []  # one insured loss for each loss type with a policy
-        if hasattr(self, 'policy_df') and 'reinsurance' not in oq.inputs:
-            sec_losses.append(
-                partial(insurance_losses, policy_df=self.policy_df))
-        ideduc = self.assetcol['ideductible'].any()
-        if oq.total_losses:
-            sec_losses.append(
-                partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
-        elif ideduc:
-            # subtract the insurance deductible for a single loss_type
-            [lt] = oq.loss_types
-            sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
-            
-        oq._sec_losses = sec_losses
-        oq.M = len(oq.all_imts())
-        oq.N = self.N
-        oq.K = K
-        oq.A = self.assetcol['ordinal'].max() + 1
+        set_oqparam(oq, self.assetcol, self.datastore)
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
