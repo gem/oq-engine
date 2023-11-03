@@ -79,7 +79,7 @@ class ConditionalGMPETestCase(unittest.TestCase):
                 const.StdDev.TOTAL,
             }
 
-            REQUIRES_SITES_PARAMETERS = set()
+            REQUIRES_SITES_PARAMETERS = {}
             REQUIRES_RUPTURE_PARAMETERS = {
                 "mag",
             }
