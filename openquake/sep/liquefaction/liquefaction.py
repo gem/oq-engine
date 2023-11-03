@@ -282,6 +282,7 @@ def zhu_etal_2017_general(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+
     Xg = (pgv_coeff * np.log(pgv_scaling_factor * pgv) 
           + vs30_coeff * np.log(vs30) + precip_coeff * precip 
           + dw_coeff * dw + wtd_coeff * wtd + intercept)
@@ -424,6 +425,7 @@ def allstadt_etal_2022(
                    or liquefaction occurrence occurrence.
     """
     pgv = np.where(pgv > 150, 150, pgv)
+    pgv = np.where(pgv < 1, 1, pgv)
     precip = np.where(precip > 2500, 2500, precip)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
     prob_liq, _, _ = rashidian_baise_2020(
