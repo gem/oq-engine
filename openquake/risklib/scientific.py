@@ -1196,6 +1196,18 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         new['loss'] = insured_losses(losses, deds, lims)
         losses_by_lt[lt + '_ins'] = new
 
+    # sanity check on total losses
+    for lt in policy_df.loss_type.unique():
+        if '+' in lt:
+            totloss = numpy.sum(losses_by_lt[x].loss.to_numpy()
+                                for x in lt.split('+'))
+            insloss = losses_by_lt[lt + '_ins'].loss.to_numpy()
+            bad = insloss > totloss
+            if bad.any():
+                raise ValueError(
+                    'Insured losses are larger than total losses: %s > %s' %
+                    (insloss[insloss > totloss], totloss[insloss > totloss]))
+
 
 def total_losses(asset_df, losses_by_lt, kind, ideduc=False):
     """
@@ -1550,7 +1562,7 @@ def _agg(loss_dfs, weights=None):
         for loss_df, w in zip(loss_dfs, weights):
             loss_df['variance'] *= w
             loss_df['loss'] *= w
-    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
+    return pandas.concat(loss_dfs).groupby(['aid', 'eid']).sum().reset_index()
 
 
 class RiskComputer(dict):

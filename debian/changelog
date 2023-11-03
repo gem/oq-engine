@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug causing the insured losses to be larger than the
+    ground losses in some cases
   * Added command `oq info executing`
   * Added `extract/relevant_gmfs?threshold=` functionality
   * Added `extract/ruptures?threshold=` functionality
