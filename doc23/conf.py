@@ -4,6 +4,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 import sys
 import os
+import shutil
+from openquake import engine
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -12,6 +14,32 @@ project = "OpenQuake Engine"
 copyright = "2023, GEM Foundation"
 author = "GEM Foundation"
 release = "v1.0.0"
+
+try:
+    import subprocess
+    import re
+    vcs_branch = subprocess.run(['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
+    vcs_branch = vcs_branch.stdout.decode('utf-8').rstrip()
+    it_is_master = False
+    if vcs_branch == 'master' or vcs_branch == 'vers-adv-man2':
+        it_is_master = True
+
+    # vcs_branch = 'engine-3.15'
+    if re.compile('engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
+        branch = ''
+    else:
+        branch = " (%s)" % vcs_branch
+except Exception:
+    vcs_branch = None
+    branch = ''
+
+# The version info for the project you're documenting, acts as replacement for
+# |version| and |release|, also used in various other places throughout the
+# built documents.
+#
+# The short X.Y.Z version.
+version = engine.__version__.split('-')[0]
+
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -32,12 +60,26 @@ sys.path.insert(0, os.path.abspath('..'))
 html_theme = "pydata_sphinx_theme"
 html_static_path = ["_static"]
 html_favicon = "_static/OQ-Logo circle_shade.png"
+
+
+json_url_path = ".ddown_doc23.json"
+if not os.path.exists(json_url_path):
+    shutil.copyfile("../samples/dot_ddown_doc23.json.sample",
+                    json_url_path)
+
+it_is_master = False
+
 html_theme_options = {
     "navigation_with_keys": True,
     "show_nav_level": 2,
     "content_footer_items": ["last-updated"],
     "header_links_before_dropdown": 6,
-    "navbar_start": ["navbar-logo"],
+    "navbar_start": ["navbar-logo", "version-switcher"],
+    "switcher": {
+        "json_url": json_url_path,
+#        "version_match": "development" if it_is_master is True else '.'.join(version.split('.')[0:2])
+         "version_match": "development"
+    },
     "navbar_center": ["navbar-nav"],
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
     "navbar_persistent": ["search-button"],
