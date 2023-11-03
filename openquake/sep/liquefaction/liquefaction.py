@@ -218,6 +218,7 @@ def zhu_etal_2017_coastal(
                    or liquefaction occurrence occurrence.
         LSE: Liquefaction spatial extent (in %).
     """
+    pgv = np.where(pgv < 3, 3, pgv)
     Xg = (pgv_coeff * np.log(pgv) + vs30_coeff * np.log(vs30) 
           + precip_coeff * precip + dc_coeff * np.sqrt(dc) 
           + dr_coeff * dr + dcdr_coeff * np.sqrt(dc) * dr + intercept)
@@ -226,7 +227,7 @@ def zhu_etal_2017_coastal(
     # Zhu et al. 2017 heuristically assign zero to the predicted probability 
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s.
-    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
+    prob_liq = np.where((pgv <= 3.0) | (vs30 > 620), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
     LSE = _liquefaction_spatial_extent(42.08, 62.59, 11.43, prob_liq)
     return prob_liq, out_class, LSE
@@ -291,7 +292,7 @@ def zhu_etal_2017_general(
     # Zhu et al. 2017 heuristically assign zero to the predicted probability
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s.
-    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
+    prob_liq = np.where((pgv <= 3.0) | (vs30 > 620), 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
     LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
     return prob_liq, out_class, LSE
@@ -361,7 +362,7 @@ def rashidian_baise_2020(
     # for both models when PGV < 3 cm/s. Similarly, they assign zero to the
     # probability when VS30 > 620 m/s. Additionally, Rashidian and Baise (2020)
     # assign zero to the probability when PGA < 0.1 g.
-    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
+    prob_liq = np.where((pgv <= 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
     LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
@@ -425,7 +426,6 @@ def allstadt_etal_2022(
                    or liquefaction occurrence occurrence.
     """
     pgv = np.where(pgv > 150, 150, pgv)
-    pgv = np.where(pgv < 1, 1, pgv)
     precip = np.where(precip > 2500, 2500, precip)
     pgv_scaling_factor = 1.0 / (1.0 + np.exp(-2.0 * (mag - 6.0)))
     prob_liq, _, _ = rashidian_baise_2020(
@@ -434,7 +434,7 @@ def allstadt_etal_2022(
       pgv_coeff=pgv_coeff, vs30_coeff=vs30_coeff, 
       dw_coeff=dw_coeff, wtd_coeff=wtd_coeff,
       precip_coeff=precip_coeff)
-    prob_liq = np.where((pgv < 3.0) | (vs30 > 620), 0, prob_liq)
+    prob_liq = np.where((pgv <= 3.0) | (vs30 > 620), 0, prob_liq)
     prob_liq = np.where(pga < 0.1, 0, prob_liq)
     out_class = np.where(prob_liq > 0.4, 1, 0)
     LSE = _liquefaction_spatial_extent(49.15, 42.40, 9.165, prob_liq)
