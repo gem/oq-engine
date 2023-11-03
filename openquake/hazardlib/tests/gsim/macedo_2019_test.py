@@ -112,7 +112,7 @@ class MacedoEtAl2019ConditionedTestCase(unittest.TestCase):
 
 class MacedoEtAl2019SInterTestCase(BaseGSIMTestCase):
     """Test case for the Macedo et al. (2019) GMM conditioned on GMVs generated
-    by the AbrahamsonEtAl2015SInter GSIM
+    by the AbrahamsonEtAl2019SInter GSIM
     """
     GSIM_CLASS = MacedoEtAl2019SInter
     MEAN_FILE = "macedo_2019/macedo_2019_sinter_mean.csv"
@@ -129,7 +129,7 @@ class MacedoEtAl2019SInterTestCase(BaseGSIMTestCase):
 
 class MacedoEtAl2019SSlabTestCase(MacedoEtAl2019SInterTestCase):
     """Test case for the Macedo et al. (2019) GMM conditioned on GMVs generated
-    by the AbrahamsonEtAl2015SInter GSIM
+    by the AbrahamsonEtAl2019SInter GSIM
     """
     GSIM_CLASS = MacedoEtAl2019SSlab
     MEAN_FILE = "macedo_2019/macedo_2019_sslab_mean.csv"
