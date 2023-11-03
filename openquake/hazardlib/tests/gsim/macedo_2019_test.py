@@ -25,8 +25,10 @@ import numpy as np
 import pandas as pd
 from openquake.hazardlib.imt import IA
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.macedo_2019 import MacedoEtAl2019SInter,\
-    MacedoEtAl2019SSlab
+from openquake.hazardlib.gsim.macedo_2019 import (
+    MacedoEtAl2019SInter,
+    MacedoEtAl2019SSlab,
+)
 
 
 DATA_PATH = os.path.join(os.path.dirname(__file__), "data/macedo_2019")
@@ -36,24 +38,25 @@ class MacedoEtAl2019ConditionedTestCase(unittest.TestCase):
     """Test cases for the Macedo et al (2019) GMM when conditioned on fixed
     ground motion values
     """
+
     def setUp(self):
         self.sinter_table_file = os.path.join(
-            DATA_PATH,
-            "macedo_2019_sinter_conditioning_gmvs.csv"
-            )
+            DATA_PATH, "macedo_2019_sinter_conditioning_gmvs.csv"
+        )
 
         self.sslab_table_file = os.path.join(
-            DATA_PATH,
-            "macedo_2019_sslab_conditioning_gmvs.csv"
-            )
-        self.ctx_dtypes = np.dtype([
-            ("mag", float),
-            ("vs30", float),
-            ("PGA_MEAN", float),
-            ("PGA_TOTAL_STDDEV", float),
-            ("SA(1.0)_MEAN", float),
-            ("SA(1.0)_TOTAL_STDDEV", float)
-        ])
+            DATA_PATH, "macedo_2019_sslab_conditioning_gmvs.csv"
+        )
+        self.ctx_dtypes = np.dtype(
+            [
+                ("mag", float),
+                ("vs30", float),
+                ("PGA_MEAN", float),
+                ("PGA_TOTAL_STDDEV", float),
+                ("SA(1.0)_MEAN", float),
+                ("SA(1.0)_TOTAL_STDDEV", float),
+            ]
+        )
 
     def _compare_gsim_by_region(self, data: pd.DataFrame, gsim_class):
         """Sorts the values from the data file in context and target, and then
@@ -69,8 +72,7 @@ class MacedoEtAl2019ConditionedTestCase(unittest.TestCase):
                 key = f"{imt}_{res_type}"
                 ctx[key] = data[key].to_numpy()
         # Get the results for each region
-        for region in ["Global", "Japan", "Taiwan",
-                       "South America", "New Zealand"]:
+        for region in ["Global", "Japan", "Taiwan", "South America", "New Zealand"]:
             gsim = gsim_class(region=region)
             mean = np.zeros([1, n])
             sigma = np.zeros([1, n])
@@ -78,33 +80,27 @@ class MacedoEtAl2019ConditionedTestCase(unittest.TestCase):
             phi = np.zeros([1, n])
             gsim.compute(ctx, [IA()], mean, sigma, tau, phi)
             np.testing.assert_array_almost_equal(
-                np.exp(mean).flatten(),
-                data[f"{region}_MEAN"].to_numpy()
-                )
+                np.exp(mean).flatten(), data[f"{region}_MEAN"].to_numpy()
+            )
             np.testing.assert_array_almost_equal(
-                sigma.flatten(),
-                data[f"{region}_SIG"].to_numpy()
-                )
+                sigma.flatten(), data[f"{region}_SIG"].to_numpy()
+            )
             np.testing.assert_array_almost_equal(
-                tau.flatten(),
-                data[f"{region}_TAU"].to_numpy()
-                )
+                tau.flatten(), data[f"{region}_TAU"].to_numpy()
+            )
             np.testing.assert_array_almost_equal(
-                phi.flatten(),
-                data[f"{region}_PHI"].to_numpy()
-                )
+                phi.flatten(), data[f"{region}_PHI"].to_numpy()
+            )
         return
 
     def test_macedo_2019_sinter_conditioned(self):
-        """Tests execution of MacedoEtAl2019SInter conditioned on ground motion
-        """
+        """Tests execution of MacedoEtAl2019SInter conditioned on ground motion"""
         data = pd.read_csv(self.sinter_table_file, sep=",")
         gsim_sinter = MacedoEtAl2019SInter
         self._compare_gsim_by_region(data, gsim_sinter)
 
     def test_macedo_2019_sslab_conditioned(self):
-        """Tests execution of MacedoEtAl2019SSlab conditioned on ground motion
-        """
+        """Tests execution of MacedoEtAl2019SSlab conditioned on ground motion"""
         data = pd.read_csv(self.sslab_table_file, sep=",")
         gsim_sslab = MacedoEtAl2019SSlab
         self._compare_gsim_by_region(data, gsim_sslab)
@@ -114,6 +110,7 @@ class MacedoEtAl2019SInterTestCase(BaseGSIMTestCase):
     """Test case for the Macedo et al. (2019) GMM conditioned on GMVs generated
     by the AbrahamsonEtAl2019SInter GSIM
     """
+
     GSIM_CLASS = MacedoEtAl2019SInter
     MEAN_FILE = "macedo_2019/macedo_2019_sinter_mean.csv"
     TOTAL_FILE = "macedo_2019/macedo_2019_sinter_total_stddev.csv"
@@ -122,15 +119,21 @@ class MacedoEtAl2019SInterTestCase(BaseGSIMTestCase):
     GMM_GMPE = {"AbrahamsonEtAl2015SInter": {}}
 
     def test_all(self):
-        self.check(self.MEAN_FILE, self.TOTAL_FILE, self.INTER_FILE,
-                   self.INTRA_FILE, max_discrep_percentage=0.01,
-                   gmpe=self.GMM_GMPE)
+        self.check(
+            self.MEAN_FILE,
+            self.TOTAL_FILE,
+            self.INTER_FILE,
+            self.INTRA_FILE,
+            max_discrep_percentage=0.01,
+            gmpe=self.GMM_GMPE,
+        )
 
 
 class MacedoEtAl2019SSlabTestCase(MacedoEtAl2019SInterTestCase):
     """Test case for the Macedo et al. (2019) GMM conditioned on GMVs generated
     by the AbrahamsonEtAl2019SInter GSIM
     """
+
     GSIM_CLASS = MacedoEtAl2019SSlab
     MEAN_FILE = "macedo_2019/macedo_2019_sslab_mean.csv"
     TOTAL_FILE = "macedo_2019/macedo_2019_sslab_total_stddev.csv"

@@ -27,57 +27,75 @@ from openquake.hazardlib.gsim.base import GMPE
 from openquake.hazardlib.gsim.conditional_gmpe import ConditionalGMPE
 
 
-imt_dtypes_basic = np.dtype([
-    ("PGA_MEAN", float),
-    ("PGA_TOTAL_STDDEV", float),
-    ("SA(1.0)_MEAN", float),
-    ("SA(1.0)_TOTAL_STDDEV", float)
-])
+imt_dtypes_basic = np.dtype(
+    [
+        ("PGA_MEAN", float),
+        ("PGA_TOTAL_STDDEV", float),
+        ("SA(1.0)_MEAN", float),
+        ("SA(1.0)_TOTAL_STDDEV", float),
+    ]
+)
 
 
-imt_dtypes_inter_only = np.dtype([
-    ("PGA_MEAN", float),
-    ("PGA_TOTAL_STDDEV", float),
-    ("PGA_INTER_EVENT_STDDEV", float),
-    ("SA(1.0)_MEAN", float),
-    ("SA(1.0)_TOTAL_STDDEV", float),
-    ("SA(1.0)_INTER_EVENT_STDDEV", float),
-])
+imt_dtypes_inter_only = np.dtype(
+    [
+        ("PGA_MEAN", float),
+        ("PGA_TOTAL_STDDEV", float),
+        ("PGA_INTER_EVENT_STDDEV", float),
+        ("SA(1.0)_MEAN", float),
+        ("SA(1.0)_TOTAL_STDDEV", float),
+        ("SA(1.0)_INTER_EVENT_STDDEV", float),
+    ]
+)
 
 
-imt_dtypes_full = np.dtype([
-    ("PGA_MEAN", float),
-    ("PGA_TOTAL_STDDEV", float),
-    ("PGA_INTER_EVENT_STDDEV", float),
-    ("PGA_INTRA_EVENT_STDDEV", float),
-    ("SA(1.0)_MEAN", float),
-    ("SA(1.0)_TOTAL_STDDEV", float),
-    ("SA(1.0)_INTER_EVENT_STDDEV", float),
-    ("SA(1.0)_INTRA_EVENT_STDDEV", float),
-])
+imt_dtypes_full = np.dtype(
+    [
+        ("PGA_MEAN", float),
+        ("PGA_TOTAL_STDDEV", float),
+        ("PGA_INTER_EVENT_STDDEV", float),
+        ("PGA_INTRA_EVENT_STDDEV", float),
+        ("SA(1.0)_MEAN", float),
+        ("SA(1.0)_TOTAL_STDDEV", float),
+        ("SA(1.0)_INTER_EVENT_STDDEV", float),
+        ("SA(1.0)_INTRA_EVENT_STDDEV", float),
+    ]
+)
 
 
 class ConditionalGMPETestCase(unittest.TestCase):
     """Tests the main ConditionalGMPE for both cases when ground motion values
     are supplied and ground motion models are called
     """
+
     def setUp(self):
         class DummyGMPE(GMPE):
-            """
-            """
-            DEFINED_FOR_TECTONIC_REGION_TYPE = ''
-            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
+            """ """
+
+            DEFINED_FOR_TECTONIC_REGION_TYPE = ""
+            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
             DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
                 const.StdDev.TOTAL,
             }
 
-            REQUIRES_SITES_PARAMETERS = set()
-            REQUIRES_RUPTURE_PARAMETERS = {"mag", }
-            REQUIRES_DISTANCES = {"rrup", }
+            REQUIRES_SITES_PARAMETERS = {}
+            REQUIRES_RUPTURE_PARAMETERS = {
+                "mag",
+            }
+            REQUIRES_DISTANCES = {
+                "rrup",
+            }
 
-            def compute(self, ctx: np.recarray, imts: List, mean: np.ndarray,
-                        sig: np.ndarray, tau: np.ndarray, phi: np.ndarray):
+            def compute(
+                self,
+                ctx: np.recarray,
+                imts: List,
+                mean: np.ndarray,
+                sig: np.ndarray,
+                tau: np.ndarray,
+                phi: np.ndarray,
+            ):
                 for m, imt in enumerate(imts):
                     if str(imt) == "PGA":
                         mean[m] += np.log(1.0)
@@ -86,6 +104,7 @@ class ConditionalGMPETestCase(unittest.TestCase):
                         mean[m] += np.log(0.1)
                         sig[m] += 0.6
                 return
+
         self.dummy_gmpe = DummyGMPE
 
     def test_instantiation_unknown_gmpe(self):
@@ -103,19 +122,18 @@ class ConditionalGMPETestCase(unittest.TestCase):
         ctx["SA(1.0)_TOTAL_STDDEV"] = np.array([0.08, 0.1, 0.12])
         cgmm = ConditionalGMPE()
         cgmm.REQUIRES_IMTS = {"PGA", "SA(1.0)"}
-        mean_gms, sigma_gms, tau_gms, phi_gms =\
-            cgmm.get_conditioning_ground_motions(ctx)
+        mean_gms, sigma_gms, tau_gms, phi_gms = cgmm.get_conditioning_ground_motions(
+            ctx
+        )
         for imt_string in ["PGA", "SA(1.0)"]:
-            np.testing.assert_array_almost_equal(mean_gms[imt_string],
-                                                 ctx[f"{imt_string}_MEAN"])
             np.testing.assert_array_almost_equal(
-                sigma_gms[imt_string],
-                ctx[f"{imt_string}_TOTAL_STDDEV"]
-                )
-            np.testing.assert_array_almost_equal(tau_gms[imt_string],
-                                                 np.zeros(3))
-            np.testing.assert_array_almost_equal(phi_gms[imt_string],
-                                                 np.zeros(3))
+                mean_gms[imt_string], ctx[f"{imt_string}_MEAN"]
+            )
+            np.testing.assert_array_almost_equal(
+                sigma_gms[imt_string], ctx[f"{imt_string}_TOTAL_STDDEV"]
+            )
+            np.testing.assert_array_almost_equal(tau_gms[imt_string], np.zeros(3))
+            np.testing.assert_array_almost_equal(phi_gms[imt_string], np.zeros(3))
 
     def test_usage_no_gmpe_inter_only(self):
         # Should return the GMVs in the ctx for mean, sigma and tau,
@@ -129,22 +147,21 @@ class ConditionalGMPETestCase(unittest.TestCase):
         ctx["SA(1.0)_INTER_EVENT_STDDEV"] = np.array([0.04, 0.05, 0.06])
         cgmm = ConditionalGMPE()
         cgmm.REQUIRES_IMTS = {"PGA", "SA(1.0)"}
-        mean_gms, sigma_gms, tau_gms, phi_gms =\
-            cgmm.get_conditioning_ground_motions(ctx)
+        mean_gms, sigma_gms, tau_gms, phi_gms = cgmm.get_conditioning_ground_motions(
+            ctx
+        )
         print(tau_gms["PGA"], tau_gms["SA(1.0)"])
         for imt_string in ["PGA", "SA(1.0)"]:
-            np.testing.assert_array_almost_equal(mean_gms[imt_string],
-                                                 ctx[f"{imt_string}_MEAN"])
             np.testing.assert_array_almost_equal(
-                sigma_gms[imt_string],
-                ctx[f"{imt_string}_TOTAL_STDDEV"]
-                )
+                mean_gms[imt_string], ctx[f"{imt_string}_MEAN"]
+            )
             np.testing.assert_array_almost_equal(
-                tau_gms[imt_string],
-                ctx[f"{imt_string}_INTER_EVENT_STDDEV"]
-                )
-            np.testing.assert_array_almost_equal(phi_gms[imt_string],
-                                                 np.zeros(3))
+                sigma_gms[imt_string], ctx[f"{imt_string}_TOTAL_STDDEV"]
+            )
+            np.testing.assert_array_almost_equal(
+                tau_gms[imt_string], ctx[f"{imt_string}_INTER_EVENT_STDDEV"]
+            )
+            np.testing.assert_array_almost_equal(phi_gms[imt_string], np.zeros(3))
 
     def test_usage_no_gmpe_full(self):
         # Should return the GMVs in the ctx for mean, sigma, tau and phi
@@ -159,31 +176,29 @@ class ConditionalGMPETestCase(unittest.TestCase):
         ctx["SA(1.0)_INTRA_EVENT_STDDEV"] = np.array([0.02, 0.03, 0.04])
         cgmm = ConditionalGMPE()
         cgmm.REQUIRES_IMTS = {"PGA", "SA(1.0)"}
-        mean_gms, sigma_gms, tau_gms, phi_gms =\
-            cgmm.get_conditioning_ground_motions(ctx)
+        mean_gms, sigma_gms, tau_gms, phi_gms = cgmm.get_conditioning_ground_motions(
+            ctx
+        )
         for imt_string in ["PGA", "SA(1.0)"]:
-            np.testing.assert_array_almost_equal(mean_gms[imt_string],
-                                                 ctx[f"{imt_string}_MEAN"])
             np.testing.assert_array_almost_equal(
-                sigma_gms[imt_string],
-                ctx[f"{imt_string}_TOTAL_STDDEV"]
-                )
+                mean_gms[imt_string], ctx[f"{imt_string}_MEAN"]
+            )
             np.testing.assert_array_almost_equal(
-                tau_gms[imt_string],
-                ctx[f"{imt_string}_INTER_EVENT_STDDEV"]
-                )
+                sigma_gms[imt_string], ctx[f"{imt_string}_TOTAL_STDDEV"]
+            )
             np.testing.assert_array_almost_equal(
-                phi_gms[imt_string],
-                ctx[f"{imt_string}_INTRA_EVENT_STDDEV"]
-                )
+                tau_gms[imt_string], ctx[f"{imt_string}_INTER_EVENT_STDDEV"]
+            )
+            np.testing.assert_array_almost_equal(
+                phi_gms[imt_string], ctx[f"{imt_string}_INTRA_EVENT_STDDEV"]
+            )
 
     def test_usage_gmpe_empty_ctx(self):
         # Should raise an error saying it needs a GMPE if not GMVs are defined
         # Provide data but no GMVs and no GMPE
-        ctx_empty = np.recarray(3, dtype=np.dtype([("mag", float),
-                                                   ("rrup", float)]))
-        ctx_empty["mag"] = np.array([5., 6., 7.])
-        ctx_empty["rrup"] = np.array([10., 20., 50.0])
+        ctx_empty = np.recarray(3, dtype=np.dtype([("mag", float), ("rrup", float)]))
+        ctx_empty["mag"] = np.array([5.0, 6.0, 7.0])
+        ctx_empty["rrup"] = np.array([10.0, 20.0, 50.0])
         with self.assertRaises(ValueError) as ve:
             cgmm = ConditionalGMPE()
             cgmm.REQUIRES_IMTS = {"PGA", "SA(1.0)"}
@@ -191,30 +206,26 @@ class ConditionalGMPETestCase(unittest.TestCase):
         self.assertEqual(
             str(ve.exception),
             "Conditioning ground motions must be specified in ctx "
-            "or a GMPE must be provided"
+            "or a GMPE must be provided",
         )
 
     def test_usage_with_gmpe(self):
         # Tests to retrieve values from a GMPE
-        ctx_empty = np.recarray(3, dtype=np.dtype([("mag", float),
-                                                   ("rrup", float)]))
-        ctx_empty["mag"] = np.array([5., 6., 7.])
-        ctx_empty["rrup"] = np.array([10., 20., 50.0])
+        ctx_empty = np.recarray(3, dtype=np.dtype([("mag", float), ("rrup", float)]))
+        ctx_empty["mag"] = np.array([5.0, 6.0, 7.0])
+        ctx_empty["rrup"] = np.array([10.0, 20.0, 50.0])
         cgmm = ConditionalGMPE(gmpe={"DummyGMPE": {}})
         cgmm.REQUIRES_IMTS = {"PGA", "SA(1.0)"}
-        mean_gms, sigma_gms, tau_gms, phi_gms = \
-            cgmm.get_conditioning_ground_motions(ctx_empty)
+        mean_gms, sigma_gms, tau_gms, phi_gms = cgmm.get_conditioning_ground_motions(
+            ctx_empty
+        )
         null_array = np.zeros(3, dtype=float)
         # Mean and sigma take constant values from Dummy GMPE
-        np.testing.assert_array_almost_equal(mean_gms["PGA"],
-                                             null_array + 1.0)
-        np.testing.assert_array_almost_equal(mean_gms["SA(1.0)"],
-                                             null_array + 0.1)
+        np.testing.assert_array_almost_equal(mean_gms["PGA"], null_array + 1.0)
+        np.testing.assert_array_almost_equal(mean_gms["SA(1.0)"], null_array + 0.1)
 
-        np.testing.assert_array_almost_equal(sigma_gms["PGA"],
-                                             null_array + 0.8)
-        np.testing.assert_array_almost_equal(sigma_gms["SA(1.0)"],
-                                             null_array + 0.6)
+        np.testing.assert_array_almost_equal(sigma_gms["PGA"], null_array + 0.8)
+        np.testing.assert_array_almost_equal(sigma_gms["SA(1.0)"], null_array + 0.6)
         for imt_str in ["PGA", "SA(1.0)"]:
             np.testing.assert_array_almost_equal(tau_gms[imt_str], null_array)
             np.testing.assert_array_almost_equal(phi_gms[imt_str], null_array)

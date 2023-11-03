@@ -50,13 +50,14 @@ class ConditionalGMPE(GMPE):
     If no conditioning ground motion values are input in `ctx` and no GMPE is
     specified then an error will be raised.
     """
+
     REQUIRES_SITES_PARAMETERS = set()
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ""
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-    DEFINED_FOR_TECTONIC_REGION_TYPE = ''
+    DEFINED_FOR_TECTONIC_REGION_TYPE = ""
     DEFINED_FOR_REFERENCE_VELOCITY = None
 
     # Specific to the Conditional GMPE class. Should be a set
@@ -68,32 +69,21 @@ class ConditionalGMPE(GMPE):
 
         if "gmpe" in kwargs:
             # Create the original GMPE
-            [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
+            [(gmpe_name, kw)] = kwargs.pop("gmpe").items()
             self.params = kwargs  # non-gmpe parameters
             g = globals()
             for k in self.params:
                 if k not in g:
-                    raise ValueError('Unknown %r in ModifiableGMPE' % k)
+                    raise ValueError("Unknown %r in ModifiableGMPE" % k)
             self.gmpe = registry[gmpe_name](**kw)
-            self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
-            self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES |
-                                                self.gmpe.REQUIRES_DISTANCES)
-            self.REQUIRES_RUPTURE_PARAMETERS = frozenset(
-                self.REQUIRES_RUPTURE_PARAMETERS |
-                self.gmpe.REQUIRES_RUPTURE_PARAMETERS)
-            self.REQUIRES_SITES_PARAMETERS = frozenset(
-                self.REQUIRES_SITES_PARAMETERS |
-                self.gmpe.REQUIRES_SITES_PARAMETERS)
-            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = frozenset(
-                self.DEFINED_FOR_INTENSITY_MEASURE_TYPES |
-                self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
+            self.gmpe_table = hasattr(self.gmpe, "gmpe_table")
+            self.set_parameters()
         else:
             self.gmpe = None
             self.gmpe_table = None
 
     def get_conditioning_ground_motions(
-        self,
-        ctx: np.recarray
+        self, ctx: np.recarray
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Retreives the ground motions upon which the model
         is conditioned. If the MEAN and TOTAL_STDDEV of the ground
@@ -126,22 +116,22 @@ class ConditionalGMPE(GMPE):
                     sigma_gms[imt_string] = ctx[f"{imt_string}_TOTAL_STDDEV"]
                     # Optionally, get the between and within-event stddev
                     if (f"{imt_string}_INTER_EVENT_STDDEV") in ctx.dtype.names:
-                        tau_gms[imt_string] = ctx[
-                            f"{imt_string}_INTER_EVENT_STDDEV"]
+                        tau_gms[imt_string] = ctx[f"{imt_string}_INTER_EVENT_STDDEV"]
                     else:
                         tau_gms[imt_string] = np.zeros(n)
                     if (f"{imt_string}_INTRA_EVENT_STDDEV") in ctx.dtype.names:
-                        phi_gms[imt_string] = ctx[
-                            f"{imt_string}_INTRA_EVENT_STDDEV"]
+                        phi_gms[imt_string] = ctx[f"{imt_string}_INTRA_EVENT_STDDEV"]
                     else:
                         phi_gms[imt_string] = np.zeros(n)
             else:
                 # Not conditioned on observations found in ctx, so
                 # calculate from GMPE
                 if self.gmpe is None:
-                    raise ValueError("Conditioning ground motions must be "
-                                     "specified in ctx or a GMPE must be "
-                                     "provided")
+                    raise ValueError(
+                        "Conditioning ground motions must be "
+                        "specified in ctx or a GMPE must be "
+                        "provided"
+                    )
 
                 mean = np.zeros([nimts, n])
                 sigma = np.zeros_like(mean)
@@ -153,7 +143,7 @@ class ConditionalGMPE(GMPE):
                     mean,
                     sigma,
                     tau,
-                    phi
+                    phi,
                 )
                 for i, imt in enumerate(self.REQUIRES_IMTS):
                     mean_gms[imt] = np.exp(mean[i, :])
