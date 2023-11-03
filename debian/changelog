@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Backported fix on the insured losses, see
+    https://github.com/gem/oq-engine/issues/9178
+
 python3-oq-engine (3.16.7-1~xenial01) xenial; urgency=low
 
   [Antonio Ettorre]
