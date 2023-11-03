@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2014-2023 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -15,17 +15,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+"""
+Module exports: :class:`MacedoEtAl2019SInter`,
+                :class:`MacedoEtAl2019SSlab`
+"""
 
-"""
-Module exports :class:`MacedoEtAl2019SInter`,
-               :class:`MacedoEtAl2019SSlab`
-"""
 from typing import Dict, List, Tuple
 import numpy as np
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import IMT, IA, PGA, SA, from_string
-from openquake.hazardlib.gsim.base import ConditionalGMPE, add_alias
-
+from openquake.hazardlib.imt import IMT, IA
+from openquake.hazardlib.gsim.base import add_alias
+from openquake.hazardlib.gsim.conditional_gmpe import ConditionalGMPE
 
 # The Macedo et al. (2019) GMM is period-independent, so all constants
 # can be set as a standard dictionary
@@ -142,7 +142,7 @@ CONSTANTS = {
 
 
 def get_mean_conditional_arias_intensity(
-    C: Dict, ctx: np.recarray, imt: IMT, mean_gms: Dict
+    C: Dict, ctx: np.recarray, imt: IMT, mean_gms: np.recarray
 ) -> np.ndarray:
     """Returns the Arias Intensity (Equation 2)"""
     assert str(imt) == "IA"
@@ -173,9 +173,9 @@ def get_standard_deviations(
     C: Dict,
     kind: str,
     rho_pga_sa1: float,
-    sigma_gms: Dict,
-    tau_gms: Dict,
-    phi_gms: Dict,
+    sigma_gms: np.recarray,
+    tau_gms: np.recarray,
+    phi_gms: np.recarray,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Returns the total standard deviation and, if specified
     by the input ground motions, the between and within-event
@@ -186,7 +186,7 @@ def get_standard_deviations(
     sigma = get_stddev_component(
         C, sigma_ia_cond, sigma_gms["PGA"], sigma_gms["SA(1.0)"], rho_pga_sa1
     )
-    if tau_gms:
+    if np.any(tau_gms["PGA"] >= 0.0) or np.any(tau_gms["SA(1.0)"] > 0.0):
         # If provided by the conditioning ground motion, get the
         # between-event standard deviation
         tau = get_stddev_component(
@@ -198,7 +198,7 @@ def get_standard_deviations(
         )
     else:
         tau = 0.0
-    if phi_gms:
+    if np.any(phi_gms["PGA"] >= 0.0) or np.any(phi_gms["SA(1.0)"] > 0.0):
         # If provided by the conditioning ground motion, get the
         # within-event standard deviation
         phi = get_stddev_component(
@@ -306,7 +306,8 @@ class MacedoEtAl2019SSlab(MacedoEtAl2019SInter):
     kind = "sslab"
 
 
-# Create alias classes for the Macedo et al. (2019) regionalisations
+# Create alias classes for the Macedo et al. (2019)
+# regionalisations
 for region_name in ["Japan", "Taiwan", "South America", "New Zealand"]:
     sinter_alias = "MacedoEtAl2019SInter{:s}".format(region_name.replace(" ", ""))
     sslab_alias = "MacedoEtAl2019SSlab{:s}".format(region_name.replace(" ", ""))
