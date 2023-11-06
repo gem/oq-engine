@@ -1550,7 +1550,7 @@ def _agg(loss_dfs, weights=None):
         for loss_df, w in zip(loss_dfs, weights):
             loss_df['variance'] *= w
             loss_df['loss'] *= w
-    return pandas.concat(loss_dfs).groupby(['aid', 'eid']).sum().reset_index()
+    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
 
 
 class RiskComputer(dict):

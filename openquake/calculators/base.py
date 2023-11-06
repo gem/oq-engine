@@ -1182,7 +1182,11 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     data.sort(order='eid')
     create_gmf_data(dstore, oqparam.get_primary_imtls(),
                     oqparam.get_sec_imts(), data=data)
-    dstore['weights'] = numpy.ones(1)
+    n = oqparam.number_of_logic_tree_samples
+    if n:
+        dstore['weights'] = numpy.full(n, 1/n)
+    else:
+        dstore['weights'] = numpy.ones(1)
     return eids
 
 
@@ -1236,7 +1240,11 @@ def import_gmfs_hdf5(dstore, oqparam):
     rel = numpy.unique(dstore['gmf_data/eid'])
     logging.info('Storing %d events, %d relevant', E, len(rel))
     dstore['events'] = events
-    dstore['weights'] = numpy.ones(1)
+    n = oqparam.number_of_logic_tree_samples
+    if n:
+        dstore['weights'] = numpy.full(n, 1/n)
+    else:
+        dstore['weights'] = numpy.ones(1)
     return events['id']
 
 
