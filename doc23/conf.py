@@ -24,8 +24,8 @@ release = "v1.0.0"
 try:
     import subprocess
     import re
-    vcs_branch_orig = subprocess.run(['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
-    vcs_branch = vcs_branch_orig.stdout.decode('utf-8').rstrip()
+    vcs_branch = subprocess.run(['git', 'branch', '--show-current'], stdout=subprocess.PIPE)
+    vcs_branch = vcs_branch.stdout.decode('utf-8').rstrip()
     it_is_master = False
     if vcs_branch == 'master' or vcs_branch == 'vers-adv-man2':
         it_is_master = True
@@ -39,8 +39,6 @@ except Exception:
     vcs_branch = None
     branch = ''
 
-    # TODO: just to test purposes
-    branch = " (%s)" % vcs_branch_orig
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
