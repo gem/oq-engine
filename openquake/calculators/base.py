@@ -623,7 +623,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation had stats %s != %s' %
                     (hstats, rstats))
-            sec_imts = set(oq.get_sec_imts())
+            sec_imts = set(oq.sec_imts)
             missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
             if oqp.imtls and missing_imts:
                 raise ValueError(
@@ -1039,7 +1039,7 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         logging.info('Building risk inputs from %d realization(s)', self.R)
-        imtset = set(self.oqparam.imtls) | set(self.oqparam.get_sec_imts())
+        imtset = set(self.oqparam.imtls) | set(self.oqparam.sec_imts)
         if not set(self.oqparam.risk_imtls) & imtset:
             rsk = ', '.join(self.oqparam.risk_imtls)
             haz = ', '.join(imtset)
@@ -1181,7 +1181,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     data = numpy.concatenate(gmvlst)
     data.sort(order='eid')
     create_gmf_data(dstore, oqparam.get_primary_imtls(),
-                    oqparam.get_sec_imts(), data=data)
+                    oqparam.sec_imts, data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
