@@ -469,7 +469,10 @@ def export_relevant_gmfs(ekey, dstore):
     etime = oq.investigation_time * oq.ses_per_logic_tree_path * R
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     with hdf5.File(fname, 'w') as f:
-        f['sitecol'] = dstore['sitecol'].complete
+        if dstore.parent:
+            f['sitecol'] = dstore.parent['sitecol']
+        else:
+            f['sitecol'] = dstore['sitecol']
         df = extract(dstore, 'relevant_gmfs?threshold=.95')
         f.create_df('gmf_data', df, effective_time=etime,
                     num_events=len(df.eid.unique()), imts=' '.join(oq.imtls))

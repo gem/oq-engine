@@ -1230,6 +1230,7 @@ def import_gmfs_hdf5(dstore, oqparam):
     # already open, therefore you cannot run in parallel two calculations
     # starting from the same GMFs
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
+    dstore['complete'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "sitecol")
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
