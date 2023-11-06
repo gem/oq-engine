@@ -1237,9 +1237,11 @@ def import_gmfs_hdf5(dstore, oqparam):
     # store the events
     E = attrs['num_events']
     events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = numpy.arange(E)
     rel = numpy.unique(dstore['gmf_data/eid'])
-    logging.info('Storing %d events, %d relevant', E, len(rel))
+    e = len(rel)
+    assert E >= e, (E, e)
+    events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
+    logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
     n = oqparam.number_of_logic_tree_samples
     if n:
