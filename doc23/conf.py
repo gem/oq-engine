@@ -34,7 +34,10 @@ try:
     if re.compile('engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
         branch = ''
     else:
-        branch = " (%s)" % vcs_branch
+        if bcs_branch == '':
+            branch = " (%s)" % os.getenv('GITHUB_HD_REF', default='undefined'))
+        else:
+            branch = " (%s)" % vcs_branch
 except Exception:
     vcs_branch = None
     branch = ''
