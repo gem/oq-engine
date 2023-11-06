@@ -45,7 +45,17 @@ except Exception:
 #
 # The short X.Y.Z version.
 version = engine.__version__.split('-')[0]
+# The full version, including alpha/beta/rc tags.
 
+if it_is_master:
+    release = "devel. (%s)" % (engine.__version__,)
+else:
+    release = "%s%s" % (engine.__version__, branch)
+
+
+rst_epilog = """
+.. |VERSION| replace:: %s
+""" % release
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
