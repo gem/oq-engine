@@ -18,16 +18,15 @@
 import abc
 import inspect
 from openquake.hazardlib import imt
-from openquake.sep.landslide.common import static_factor_of_safety, rock_slope_static_factor_of_safety
+from openquake.sep.landslide.common import (
+    static_factor_of_safety, rock_slope_static_factor_of_safety)
 from openquake.sep.landslide.newmark import (
     newmark_critical_accel,
     newmark_displ_from_pga_M,
-    prob_failure_given_displacement,
-)
+    prob_failure_given_displacement)
 from openquake.sep.landslide.rockfalls import (
     critical_accel_rock_slope,
-    newmark_displ_from_pga
-)
+    newmark_displ_from_pga)
 from openquake.sep.liquefaction.liquefaction import (
     hazus_liquefaction_probability,
     zhu_etal_2015_general,
@@ -39,16 +38,12 @@ from openquake.sep.liquefaction.liquefaction import (
     akhlagi_etal_2021_model_b,
     bozzoni_etal_2021_europe,
     todorovic_silva_2022_nonparametric_general,
-    HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
-)
+    HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE)
 from openquake.sep.liquefaction.lateral_spreading import (
-    hazus_lateral_spreading_displacement
-)
-
+    hazus_lateral_spreading_displacement)
 from openquake.sep.liquefaction.vertical_settlement import (
-    hazus_vertical_settlement,
-    HAZUS_VERT_SETTLEMENT_TABLE
-)
+    hazus_vertical_settlement)
+
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
     """
@@ -227,7 +222,8 @@ class ZhuEtAl2015LiquefactionGeneral(SecondaryPeril):
     """
     outputs = ["LiqProb","LiqOccur"]
 
-    def __init__(self, intercept=24.1, pgam_coeff=2.067, cti_coeff=0.355, vs30_coeff=-4.784):
+    def __init__(self, intercept=24.1, pgam_coeff=2.067, cti_coeff=0.355,
+                 vs30_coeff=-4.784):
         self.intercept = intercept
         self.pgam_coeff = pgam_coeff
         self.cti_coeff = cti_coeff
@@ -254,8 +250,8 @@ class ZhuEtAl2017LiquefactionCoastal(SecondaryPeril):
     """
     outputs = ["LiqProb","LiqOccur","LSE"]
 
-    def __init__(self, intercept=12.435, pgv_coeff=0.301, vs30_coeff=-2.615, 
-                 dr_coeff=0.0666, dc_coeff=-0.0287, dcdr_coeff = -0.0369, 
+    def __init__(self, intercept=12.435, pgv_coeff=0.301, vs30_coeff=-2.615,
+                 dr_coeff=0.0666, dc_coeff=-0.0287, dcdr_coeff = -0.0369,
                  precip_coeff=0.0005556):
         self.intercept = intercept
         self.pgv_coeff = pgv_coeff
@@ -389,7 +385,9 @@ class AllstadtEtAl2022Liquefaction(SecondaryPeril):
                 continue
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
-            raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the AllstadtEtAl2022Liquefaction model")
+            raise ValueError(
+                "Both PGA and PGV are required to compute liquefaction "
+                "probability using the AllstadtEtAl2022Liquefaction model")
         
         prob_liq, out_class, lse = allstadt_etal_2022(
             pga=pga, pgv=pgv, mag=mag, vs30=sites.vs30, dw=sites.dw, 
@@ -471,7 +469,8 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
     """
     outputs = ["LiqProb","LiqOccur"]
 
-    def __init__(self, intercept=-11.489, pgam_coeff=3.864, cti_coeff=2.328, vs30_coeff=-0.091):
+    def __init__(self, intercept=-11.489, pgam_coeff=3.864, cti_coeff=2.328,
+                 vs30_coeff=-0.091):
         self.intercept = intercept
         self.pgam_coeff = pgam_coeff
         self.cti_coeff = cti_coeff
@@ -510,23 +509,14 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
 
     def compute(self, mag, imt_gmf, sites):
         out = []
-        pga = None
-        pgv = None
         for im, gmf in imt_gmf:
             if im.string == 'PGV':
-                pgv = gmf
-            elif im.string == 'PGA':
-                pga = gmf
-            else:
-                continue
-        # Raise error if either PGA or PGV is missing
-        if pga is None or pgv is None:
-            raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the AllstadtEtAl2022Liquefaction model")
-        
-        out_class, out_prob = todorovic_silva_2022_nonparametric_general(pga=pga,
-                    pgv=pgv, vs30=sites.vs30, dw=sites.dw, wtd=sites.gwd, precip=sites.precip)
-        out.append(out_class)
-        out.append(out_prob)
+                out_class, out_prob = \
+                    todorovic_silva_2022_nonparametric_general(
+                        pgv=gmf, vs30=sites.vs30, dw=sites.dw,
+                        wtd=sites.gwd, precip=sites.precip)
+            out.append(out_class)
+            out.append(out_prob)
         return out
 
 
