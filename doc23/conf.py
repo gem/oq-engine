@@ -35,7 +35,7 @@ try:
         branch = ''
     else:
         if bcs_branch == '':
-            branch = " (%s)" % os.getenv('GITHUB_HD_REF', default='undefined'))
+            branch = " (%s)" % os.getenv('GITHUB_HD_REF', default='undefined')
         else:
             branch = " (%s)" % vcs_branch
 except Exception:
