@@ -490,6 +490,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
             uni = numpy.unique(arr, axis=0)
             if len(uni) < len(arr):
+                import pdb; pdb.set_trace()
                 raise RuntimeError('risk_by_event contains %d duplicates!' %
                                    (len(arr) - len(uni)))
 
