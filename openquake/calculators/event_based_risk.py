@@ -488,11 +488,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             assert size <= upper_limit, (size, upper_limit)
             # sanity check on uniqueness by (agg_id, loss_id, event_id)
             arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
-            uni = numpy.unique(arr, axis=0)
+            uni, cnt = numpy.unique(arr, axis=0, return_counts=True)
             if len(uni) < len(arr):
-                import pdb; pdb.set_trace()
-                raise RuntimeError('risk_by_event contains %d duplicates!' %
-                                   (len(arr) - len(uni)))
+                dupl = uni[cnt > 1]  # (agg_id, loss_id, event_id)
+                raise RuntimeError(
+                    'risk_by_event contains %d duplicates for event %s' %
+                    (len(arr) - len(uni), dupl[0, 2]))
 
         if oq.avg_losses:
             logging.info('Storing avg_losses-rlzs')
