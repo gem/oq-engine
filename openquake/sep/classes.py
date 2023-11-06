@@ -40,10 +40,19 @@ from openquake.sep.liquefaction.liquefaction import (
     todorovic_silva_2022_nonparametric_general,
     HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE)
 from openquake.sep.liquefaction.lateral_spreading import (
-    hazus_lateral_spreading_displacement)
+    hazus_lateral_spreading_displacement
+)
 from openquake.sep.liquefaction.vertical_settlement import (
-    hazus_vertical_settlement)
-
+    hazus_vertical_settlement,
+    HAZUS_VERT_SETTLEMENT_TABLE
+)
+from os import path
+import gzip
+try:
+    import onnxruntime
+except ImportError:
+     onnxruntime = None
+     
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
     """
@@ -505,7 +514,10 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         pass
 
     def prepare(self, sites):
-        pass
+        model_file = 'liquefaction/data/todorovic_silva_2022/random_forest_v1.onnx.gz'
+        model_path = path.join(path.dirname(__file__), model_file)
+        with gzip.open(model_path, 'rb') as f:
+            self.model = f.read()
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -520,11 +532,12 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
                 continue
         # Raise error if either PGA or PGV is missing
         if pga is None or pgv is None:
-            raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the AllstadtEtAl2022Liquefaction model")
+            raise ValueError("Both PGA and PGV are required to compute liquefaction probability using the TodorovicSilva2022NonParametric model")
         
         out_class, out_prob = \
             todorovic_silva_2022_nonparametric_general(pga=pga,
-                    pgv=pgv, vs30=sites.vs30, dw=sites.dw, wtd=sites.gwd, precip=sites.precip)
+                    pgv=pgv, vs30=sites.vs30, dw=sites.dw, wtd=sites.gwd, 
+                    precip=sites.precip, model=self.model)
         out.append(out_class)
         out.append(out_prob)
         return out
