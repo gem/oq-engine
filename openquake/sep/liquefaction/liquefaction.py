@@ -18,8 +18,6 @@
 
 from typing import Union
 import numpy as np
-import gzip
-import os
 try:
     import onnxruntime
 except ImportError:
@@ -610,6 +608,7 @@ def todorovic_silva_2022_nonparametric_general(
     dw: Union[float, np.ndarray],
     wtd: Union[float, np.ndarray],
     precip: Union[float, np.ndarray],
+    model: bytes,
     ) -> Union[float, np.ndarray]:
     """
     Returns the binary class output (i.e, 0 or 1) which indicates liquefaction
@@ -634,6 +633,8 @@ def todorovic_silva_2022_nonparametric_general(
         Global water table depth, measured in m
     :param precip:
         Mean annual precipitation, measured in mm
+    :param model:
+        Contents of the ONNX model file
 
     :returns:
         out_class: output 0 or 1, i.e., liquefaction nonoccurrence
@@ -644,20 +645,15 @@ def todorovic_silva_2022_nonparametric_general(
     precip = np.where(precip > 250, 250, precip)
     #strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([pgv, vs30, dw, wtd, precip]).T
-    model_file = 'data/todorovic_silva_2022/random_forest_v1.onnx.gz'
-    model_path = os.path.join(os.path.dirname(__file__), model_file)
-    with gzip.open(model_path, 'rb') as gzipped_file:
-        file = gzipped_file.read()
-        session = onnxruntime.InferenceSession(
-          file, providers=onnxruntime.get_available_providers())
-        results = session.run(None, {"X": matrix})
-        out_class = results[0]
-        out_prob = [p[1] for p in results[1]]
-        out_prob = np.where((pgv < 4.0) | (vs30 > 620), 0, out_prob)
-        out_class = np.where((pgv < 4.0) | (vs30 > 620), 0, out_class)
-        out_prob = np.where(pga < 0.1, 0, out_prob)
-        out_class = np.where(pga < 0.1, 0, out_class)
-        return out_class, out_prob
+    inference_session = onnxruntime.InferenceSession(model, providers=onnxruntime.get_available_providers())
+    results = inference_session.run(None, {"X": matrix})
+    out_class = results[0]
+    out_prob = [p[1] for p in results[1]]
+    out_prob = np.where((pgv < 4.0) | (vs30 > 620), 0, out_prob)
+    out_class = np.where((pgv < 4.0) | (vs30 > 620), 0, out_class)
+    out_prob = np.where(pga < 0.1, 0, out_prob)
+    out_class = np.where(pga < 0.1, 0, out_class)
+    return out_class, out_prob
 
 
 def _hazus_magnitude_correction_factor(

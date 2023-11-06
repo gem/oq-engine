@@ -26,6 +26,10 @@ from openquake.sep.liquefaction import (
     todorovic_silva_2022_nonparametric_general
 )
 
+from openquake.sep.classes import (
+    TodorovicSilva2022NonParametric
+)
+
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement
 )
@@ -265,13 +269,16 @@ class test_liquefaction_cali_small(unittest.TestCase):
         np.testing.assert_array_almost_equal(out_class, clq)
 
     def test_todorovic_2022(self):
-        out_class, out_prob = todorovic_silva_2022_nonparametric_general(
-            pgv=self.pgv, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
-            precip=self.sites["precip"])
+        model_instance = TodorovicSilva2022NonParametric()
+        model_instance.prepare(self.sites)
 
-        clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 1, 1])
-        zlp = np.array([0.142747, 0.084723, 0.483987, 0.419369, 0.444786, 0.706952,
-                        0.323834, 0.394872, 0.934869, 0.607842])
+        out_class, out_prob = todorovic_silva_2022_nonparametric_general(pga=self.pga,
+            pgv=self.pgv, vs30=self.sites["vs30"], dw=self.sites["dw"], wtd=self.sites["gwd"], 
+            precip=self.sites["precip"], model=model_instance.model)
+
+        clq = np.array([0, 0, 1, 0, 0, 0, 1, 0, 1, 0])
+        zlp = np.array([0.125497, 0.466357, 0.520865, 0.472025, 0.490519, 0.24198,
+                        0.570745, 0., 0.61262 , 0.331562])
 
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(out_prob, zlp)
