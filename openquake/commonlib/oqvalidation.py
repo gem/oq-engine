@@ -29,7 +29,7 @@ import numpy
 import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
-from openquake.baselib.general import DictArray, AccumDict
+from openquake.baselib.general import DictArray, AccumDict, cached_property
 from openquake.hazardlib.imt import from_string, sort_by_imt
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
@@ -1550,7 +1550,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.get_sec_imts())
+        sec_imts = set(self.sec_imts)
         return {imt: imls for imt, imls in self.imtls.items()
                 if imt not in sec_imts}
 
@@ -1646,7 +1646,7 @@ class OqParam(valid.ParamSet):
         lst = [('sid', U32), ('eid', U32)]
         for m, imt in enumerate(self.get_primary_imtls()):
             lst.append((f'gmv_{m}', F32))
-        for out in self.get_sec_imts():
+        for out in self.sec_imts:
             lst.append((out, F32))
         return numpy.dtype(lst)
 
@@ -1657,7 +1657,7 @@ class OqParam(valid.ParamSet):
         lst = []
         for m, imt in enumerate(self.get_primary_imtls()):
             lst.append(f'gmv_{m}')
-        for out in self.get_sec_imts():
+        for out in self.sec_imts:
             lst.append(out)
         return lst
 
@@ -1668,7 +1668,8 @@ class OqParam(valid.ParamSet):
         return SecondaryPeril.instantiate(self.secondary_perils,
                                           self.sec_peril_params)
 
-    def get_sec_imts(self):
+    @cached_property
+    def sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
