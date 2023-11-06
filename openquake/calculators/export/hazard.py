@@ -472,7 +472,7 @@ def export_relevant_gmfs(ekey, dstore):
         f['sitecol'] = dstore['sitecol'].complete
         df = extract(dstore, 'relevant_gmfs?threshold=.95')
         f.create_df('gmf_data', df, effective_time=etime,
-                    num_events=len(df), imts=' '.join(oq.imtls))
+                    num_events=len(df.eid.unique()), imts=' '.join(oq.imtls))
     return [fname]
 
 
