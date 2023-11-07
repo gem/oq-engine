@@ -25,13 +25,13 @@ and its collaborators.
 
 .. grid:: 2
 
-    .. grid-item-card::  :ref:`Getting Started`
+    .. grid-item-card::  :ref:`getting-started`
 	:text-align: center
 
 	:octicon:`rocket;5em;sd-text-info`
 	^^^
 
-    .. grid-item-card::  :ref:`User Guide`
+    .. grid-item-card::  :ref:`user-guide`
 	:text-align: center
 
 	:octicon:`book;5em;sd-text-info`
@@ -39,13 +39,13 @@ and its collaborators.
 
 .. grid:: 2
 
-    .. grid-item-card::  :ref:`API Reference`
+    .. grid-item-card::  :ref:`api-reference`
 	:text-align: center
 
 	:octicon:`codescan;5em;sd-text-info`
 	^^^
 
-    .. grid-item-card::  :ref:`Underlying Science`
+    .. grid-item-card::  :ref:`underlying-science`
 	:text-align: center
 
 	:octicon:`archive;5em;sd-text-info`
@@ -53,13 +53,13 @@ and its collaborators.
 
 .. grid:: 2
 
-    .. grid-item-card::  :ref:`Release Notes`
+    .. grid-item-card::  :ref:`release-notes`
 	:text-align: center
 
 	:octicon:`tag;5em;sd-text-info`
 	^^^
 
-    .. grid-item-card::  :ref:`Contributing`
+    .. grid-item-card::  :ref:`contributing`
 	:text-align: center
 
 	:octicon:`people;5em;sd-text-info`

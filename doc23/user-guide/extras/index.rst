@@ -13,6 +13,6 @@ publications that have been referenced in this documentation.
    faq
    reusing-hazard
    common-mistakes
-   oaas
+   OaaS
    glossary-of-terms
    publications

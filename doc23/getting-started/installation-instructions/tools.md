@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-A working installation of the OpenQuake Engine in a Python venv. Please refer to [Development installation](development).
+A working installation of the OpenQuake Engine in a Python venv. Please refer to {ref}`Development installation <development>`.
 
 
 ## Clone repositories

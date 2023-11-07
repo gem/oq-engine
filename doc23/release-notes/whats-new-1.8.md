@@ -3,8 +3,7 @@ What's new in engine-1.8
 
 We are pleased to announce the release of OpenQuake 1.8.
 This is a major release and contains numerous improvements with respect
-to OpenQuake 1.7. Everybody is invited to upgrade,
-by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
+to OpenQuake 1.7.
 
 New features of the OpenQuake Engine, version 1.8
 ---------------------------------------------------
@@ -238,11 +237,7 @@ and in general for [Red Hat Enterprise Linux clones]
 
 While the engine is not supported on Windows and Mac OS X, we are
 happy to report that the underlying libraries and the
-`oq-lite` command-line tool run just fine. We do not offer
-any automatic tool to perform the installation, but there is
-a [guide for Windows](Installing-OQ-Lite-on-Windows.md) and
-a [guide for Mac OS X](Installing-OQ-Lite-on-MacOS.md) to help you
-to install the necessary dependencies.
+`oq-lite` command-line tool run just fine.
 
 Other
 ------

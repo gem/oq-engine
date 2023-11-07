@@ -3,8 +3,8 @@ Release notes for the OpenQuake Engine, version 2.3
 
 This release introduces several new features and improvements of the
 engine calculators. Moreover, our packaging strategy has been
-revolutionized and now we provide packages for [most operating
-systems](faq.md#supported-operating-systems) - including previously
+revolutionized and now we provide packages for most operating
+systems - including previously
 abandoned systems such as Ubuntu 12.04 - by using the exact same
 versions of the libraries on every supported platform (Linux, Windows, Mac).
 
