@@ -6,7 +6,7 @@ its structure and the processes adopted for its development.
 
 
 Structure of the OpenQuake engine
---------------------------------
+---------------------------------
 
 The OpenQuake engine is the combination of different and sometimes
 self-sufficient libraries. Below we provide a short description for
