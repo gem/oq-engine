@@ -423,7 +423,7 @@ Scenario from ShakeMap
 ----------------------
 
 There was a lot of work on the "Scenario from ShakeMap" feature, introduced
-ine engine 3.1.
+ine engine 3.1 and documented [here](scenarios-from-shakemaps).
 
 1. The USGS site changed the layout of the pages, thus breaking the
 feature.  Now we extract the download URL from the official JSON feed instead
@@ -665,11 +665,12 @@ filesystem and to configure the `shared_dir` parameter in the file
 `openquake.cfg`. Without that, classical calculations will fail during
 the calculation of statistics and event based calculations will fail
 during the computations of GMFs, with some kind of "File not found"
-error.
+error. The documentation is [here](installing/cluster.md).
 
 5. Docker support has been improved and now works properly on a
 multi-node, multi-host deployment. We now also have a mechanism to
 emulate a cluster on a single machine by using docker containers.
+The relevant documentation is [here](installing/docker.md).
 
 6. We removed the tests from the Python package because users were trying
 to run them. The engine tests are not meant to be run from a production
@@ -693,7 +694,8 @@ code.
 
 The was a lot of work on documentation. We have revamped the old docs,
 added a description of CSV exposures in the manual and added two new FAQ
-pages, one for hazard and one for risk.
+pages, one for [hazard](faq-hazard.md) and one
+for [risk](faq-risk.md).
 
 Exposures with insuranceLimit/deductible fields are deprecated and may
 be removed in the future, in the sense that we may change the format
