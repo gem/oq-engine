@@ -1,5 +1,5 @@
 Overview of the OpenQuake engine
-=================================
+================================
 
 This section provides an overview of the OpenQuake engine, 
 its structure and the processes adopted for its development.
