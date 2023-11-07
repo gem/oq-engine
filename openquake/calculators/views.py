@@ -492,12 +492,12 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_paths()
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     weights = dstore['weights'][:]
     rlzs = dstore['events']['rlz_id']
     E = len(rlzs)
+    R = len(weights)
     ws = weights[rlzs]
     avgs = []
     if oq.investigation_time:

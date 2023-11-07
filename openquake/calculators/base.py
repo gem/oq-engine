@@ -623,7 +623,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation had stats %s != %s' %
                     (hstats, rstats))
-            sec_imts = set(oq.get_sec_imts())
+            sec_imts = set(oq.sec_imts)
             missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
             if oqp.imtls and missing_imts:
                 raise ValueError(
@@ -1039,7 +1039,7 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         logging.info('Building risk inputs from %d realization(s)', self.R)
-        imtset = set(self.oqparam.imtls) | set(self.oqparam.get_sec_imts())
+        imtset = set(self.oqparam.imtls) | set(self.oqparam.sec_imts)
         if not set(self.oqparam.risk_imtls) & imtset:
             rsk = ', '.join(self.oqparam.risk_imtls)
             haz = ', '.join(imtset)
@@ -1181,7 +1181,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     data = numpy.concatenate(gmvlst)
     data.sort(order='eid')
     create_gmf_data(dstore, oqparam.get_primary_imtls(),
-                    oqparam.get_sec_imts(), data=data)
+                    oqparam.sec_imts, data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
@@ -1226,17 +1226,24 @@ def import_gmfs_hdf5(dstore, oqparam):
     # already open, therefore you cannot run in parallel two calculations
     # starting from the same GMFs
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
+    dstore['complete'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "sitecol")
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     E = attrs['num_events']
     events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = numpy.arange(E)
     rel = numpy.unique(dstore['gmf_data/eid'])
-    logging.info('Storing %d events, %d relevant', E, len(rel))
+    e = len(rel)
+    assert E >= e, (E, e)
+    events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
+    logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
-    dstore['weights'] = numpy.ones(1)
+    n = oqparam.number_of_logic_tree_samples
+    if n:
+        dstore['weights'] = numpy.full(n, 1/n)
+    else:
+        dstore['weights'] = numpy.ones(1)
     return events['id']
 
 

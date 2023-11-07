@@ -430,7 +430,7 @@ def export_gmf_data_csv(ekey, dstore):
         ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
         ren[f'gmv_{m}'] = 'gmv_' + imt
-    for imt in oq.get_sec_imts():
+    for imt in oq.sec_imts:
         ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
@@ -459,6 +459,23 @@ def export_gmf_data_hdf5(ekey, dstore):
     with hdf5.File(fname, 'w') as f:
         f['sitecol'] = dstore['sitecol'].complete
         dstore.hdf5.copy('gmf_data', f)
+    return [fname]
+
+
+@export.add(('relevant_gmfs', 'hdf5'))
+def export_relevant_gmfs(ekey, dstore):
+    oq = dstore['oqparam']
+    R = len(dstore['weights'])
+    etime = oq.investigation_time * oq.ses_per_logic_tree_path * R
+    fname = dstore.build_fname('gmf', 'data', 'hdf5')
+    with hdf5.File(fname, 'w') as f:
+        if dstore.parent:
+            f['sitecol'] = dstore.parent['sitecol']
+        else:
+            f['sitecol'] = dstore['sitecol']
+        df = extract(dstore, 'relevant_gmfs?threshold=.95')
+        f.create_df('gmf_data', df, effective_time=etime,
+                    num_events=len(df.eid.unique()), imts=' '.join(oq.imtls))
     return [fname]
 
 
