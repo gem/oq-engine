@@ -162,9 +162,9 @@ class CsvCatalogueWriter(BaseCatalogueWriter):
     # the preferred output order is given as a list here
     OUTPUT_LIST = ['eventID', 'Agency', 'year', 'month', 'day', 'hour',
                    'minute', 'second', 'timeError', 'longitude',
-                   'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
-                   'depth', 'depthError', 'magnitude', 'sigmaMagnitude',
-                   'magnitudeType']
+                   'latitude', 'semimajor90', 'semiminor90', 'ErrorStrike',
+                   'depth', 'depth_error', 'magnitude', 'sigmaMagnitude',
+                   'magnitudeType', 'str1', 'dip1', 'rake1', 'str2', 'dip2', 'rake2' ]
 
     def write_file(self, catalogue, flag_vector=None, magnitude_table=None):
         '''
@@ -241,8 +241,8 @@ class CsvGCMTCatalogueWriter(CsvCatalogueWriter):
     OUTPUT_LIST = ['eventID', 'centroidID', 'Agency', 'year', 'month', 'day',
                    'hour', 'minute', 'second', 'timeError', 'longitude',
                    'latitude', 'depth', 'depthError', 'magnitude',
-                   'sigmaMagnitude', 'magnitudeType', 'moment', 'SemiMajor90',
-                   'SemiMinor90', 'ErrorStrike', 'strike1', 'rake1', 'dip1',
+                   'sigmaMagnitude', 'magnitudeType', 'moment', 'semimajor90',
+                   'semiminor90', 'ErrorStrike', 'strike1', 'rake1', 'dip1',
                    'strike2', 'rake2', 'dip2', 'f_clvd', 'e_rel',
                    'eigenvalue_b', 'azimuth_b', 'plunge_b',
                    'eigenvalue_p', 'azimuth_p', 'plunge_p',

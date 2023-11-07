@@ -62,12 +62,16 @@ class Zaliapin(BaseCatalogueDecluster):
         
         probability_of_independence = self.gaussianmixturefit(nnd)
         
-        if 'threshold' in config and isinstance(config['threshold'], (int,float)):
-            threshold = config['threshold']
-            root, ld, ms_flag = cluster_number(catalogue, nni, probability_of_independence, threshold = 0.5, stochastic = False)
-           
-        else:
+        if 'threshold' in config and config['threshold'] == 'stochastic':
             root, ld, ms_flag = cluster_number(catalogue, nni, probability_of_independence,  stochastic = True)
+                       
+        else:
+        	if 'threshold' in config:
+        	    threshold = config['threshold']
+        	else:
+        	    threshold = 0.5
+        	root, ld, ms_flag = cluster_number(catalogue, nni, probability_of_independence, threshold = threshold, stochastic = False)
+
                  
 
         if 'output_nearest_neighbor_distances' in config and config['output_nearest_neighbor_distances']:

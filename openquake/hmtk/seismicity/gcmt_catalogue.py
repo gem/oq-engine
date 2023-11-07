@@ -455,7 +455,8 @@ class GCMTCatalogue(Catalogue):
         header_list = ['eventID', 'Agency', 'year', 'month', 'day', 'hour',
                        'minute', 'second', 'timeError', 'longitude',
                        'latitude', 'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
-                       'depth', 'depthError', 'magnitude', 'sigmaMagnitude']
+                       'depth', 'depthError', 'magnitude', 'sigmaMagnitude', 'magnitudeType',
+                       'str1', 'dip1', 'rake1', 'str2', 'dip2', 'rake2']
         with open(filename, 'wt') as fid:
             writer = csv.DictWriter(fid, fieldnames=header_list)
             headers = dict((header, header) for header in header_list)
@@ -470,8 +471,13 @@ class GCMTCatalogue(Catalogue):
                             'ErrorStrike': None,
                             'magnitude': tensor.magnitude,
                             'sigmaMagnitude': None,
-                            'depth': None,
-                            'depthError': None}
+                            'magnitudeType': 'Mw',
+                            'str1': tensor.nodal_planes.nodal_plane_1['strike'],
+                            'dip1': tensor.nodal_planes.nodal_plane_1['dip'],
+                            'rake1': tensor.nodal_planes.nodal_plane_1['rake'],
+                            'str2': tensor.nodal_planes.nodal_plane_2['strike'],
+                            'dip2': tensor.nodal_planes.nodal_plane_2['dip'],
+                            'rake2': tensor.nodal_planes.nodal_plane_2['rake']}
 
                 if centroid_location:
                     # Time and location come from centroid
@@ -503,6 +509,7 @@ class GCMTCatalogue(Catalogue):
                     cmt_dict['latitude'] = tensor.hypocentre.latitude
                     cmt_dict['depth'] = tensor.hypocentre.depth
                     cmt_dict['depthError'] = None
+                
                 writer.writerow(cmt_dict)
         print('done!')
 

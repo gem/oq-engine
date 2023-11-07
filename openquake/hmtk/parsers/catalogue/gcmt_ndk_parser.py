@@ -260,6 +260,7 @@ class ParseNDKtoGCMT(object):
                     gcmt.hypocentre.latitude
                 self.catalogue.data['depth'][iloc] = \
                     gcmt.hypocentre.depth
+            
             # Moment, magnitude and relative errors
             self.catalogue.data['moment'][iloc] = gcmt.moment
             self.catalogue.data['magnitude'][iloc] = gcmt.magnitude

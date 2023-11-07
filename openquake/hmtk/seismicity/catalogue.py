@@ -65,8 +65,9 @@ class Catalogue(object):
 
     FLOAT_ATTRIBUTE_LIST = [
         'second', 'timeError', 'longitude', 'latitude',
-        'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 'depth',
-        'depthError', 'magnitude', 'sigmaMagnitude']
+        'semimajor90', 'semiminor90', 'ErrorStrike', 'depth',
+        'depth_error', 'magnitude', 'sigmaMagnitude', 'str1', 
+        'dip1', 'rake1', 'str2', 'dip2', 'rake2']
 
     INT_ATTRIBUTE_LIST = ['year', 'month', 'day', 'hour', 'minute',
                           'flag']
@@ -81,9 +82,9 @@ class Catalogue(object):
     SORTED_ATTRIBUTE_LIST = [
         'eventID', 'Agency', 'year', 'month', 'day', 'hour',
         'minute', 'second', 'timeError', 'longitude', 'latitude',
-        'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
-        'depth', 'depthError', 'magnitude', 'sigmaMagnitude',
-        'magnitudeType']
+        'semimajor90', 'semiminor90', 'ErrorStrike',
+        'depth', 'depth_error', 'magnitude', 'sigmaMagnitude',
+        'magnitudeType', 'str1', 'dip1', 'rake1', 'str2', 'dip2', 'rake2']
 
     def __init__(self):
         """
