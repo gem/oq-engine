@@ -46,13 +46,18 @@ class Command(BaseCommand):
         request.META['SERVER_NAME'] = settings.SERVER_NAME
         request.META['SERVER_PORT'] = settings.SERVER_PORT
         if settings.APPLICATION_MODE.upper() == 'AELO':
+            password_reset_subject = (
+                'registration/normal_user_creation_email_subject_aelo.txt')
             email_template_name = (
-                'registration/normal_user_creation_email_aelo.html')
+                'registration/normal_user_creation_email_aelo.txt')
         else:
+            password_reset_subject = (
+                'registration/normal_user_creation_email_subject.txt')
             email_template_name = (
-                'registration/normal_user_creation_email.html')
+                'registration/normal_user_creation_email.txt')
         form.save(
             request=request,
             use_https=settings.USE_HTTPS,
             from_email=settings.EMAIL_HOST_USER,
+            subject_template_name=password_reset_subject,
             email_template_name=email_template_name)

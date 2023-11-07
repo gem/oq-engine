@@ -62,11 +62,15 @@ if settings.LOCKDOWN:
     admin.autodiscover()
     admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
     if settings.APPLICATION_MODE.upper() == 'AELO':
-        html_email_template_name = (
-            'registration/password_reset_email_aelo.html')
+        email_template_name = (
+            'registration/password_reset_email_aelo.txt')
+        subject_template_name = (
+            'registration/password_reset_subject_aelo.txt')
     else:
-        html_email_template_name = (
-            'registration/password_reset_email.html')
+        email_template_name = (
+            'registration/password_reset_email.txt')
+        subject_template_name = (
+            'registration/password_reset_subject.txt')
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$', LoginView.as_view(
@@ -78,7 +82,8 @@ if settings.LOCKDOWN:
         path('reset_password/',
              PasswordResetView.as_view(
                  template_name='registration/reset_password.html',
-                 html_email_template_name=html_email_template_name),
+                 subject_template_name=subject_template_name,
+                 email_template_name=email_template_name),
              name='reset_password'),
         path('reset_password_sent/',
              PasswordResetDoneView.as_view(
