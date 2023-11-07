@@ -2,7 +2,7 @@
 
 Below we provide a concise description of the process to be adopted for the creation of a new GSIM (i.e. GMPE or IPE) in the OpenQuake hazard library.
 
-- Read the [Development guidelines](development-guidelines.md)
+- Read the [Development guidelines](https://github.com/gem/oq-engine/blob/master/doc/development-guidelines.md)
 
 - Fork the oq-engine master
 https://help.github.com/articles/fork-a-repo

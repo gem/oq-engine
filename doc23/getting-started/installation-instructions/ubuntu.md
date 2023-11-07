@@ -18,7 +18,7 @@ sudo add-apt-repository -y ppa:openquake/ppa
 sudo apt update
 ```
 
-If you want to install a **nightly build** please read the guide about installing the **[nightly build packages on Ubuntu](ubuntu-nightly)**.
+If you want to install a **nightly build** please read the guide about installing the **{ref}`nightly build packages on Ubuntu <ubuntu-nightly>`**.
 
 Then to install the OpenQuake Engine and its libraries run
 ```bash
