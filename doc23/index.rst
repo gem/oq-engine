@@ -2,6 +2,7 @@ OpenQuake Engine Documentation |VERSION|
 ========================================
 
 .. image:: _static/OQ-Logo-Standard-CMYK-300DPI-01.jpg
+  :class: no-scaled-link
   :width: 400
   :alt: OpenQuake Engine Logo
   :align: center
