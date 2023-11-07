@@ -34,7 +34,10 @@ try:
     if re.compile('engine-[0-9]+\.[0-9]+.*').match(vcs_branch):
         branch = ''
     else:
-        branch = " (%s)" % vcs_branch
+        if vcs_branch == '':
+            branch = " (%s)" % os.getenv('GITHUB_HD_REF', default='undefined')
+        else:
+            branch = " (%s)" % vcs_branch
 except Exception:
     vcs_branch = None
     branch = ''
@@ -45,7 +48,17 @@ except Exception:
 #
 # The short X.Y.Z version.
 version = engine.__version__.split('-')[0]
+# The full version, including alpha/beta/rc tags.
 
+if it_is_master:
+    release = "devel. (%s)" % (engine.__version__,)
+else:
+    release = "%s%s" % (engine.__version__, branch)
+
+
+rst_epilog = """
+.. |VERSION| replace:: %s
+""" % release
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
