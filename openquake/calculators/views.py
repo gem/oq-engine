@@ -507,7 +507,11 @@ def view_portfolio_loss(token, dstore):
     for ln in oq.loss_types:
         df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
-        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * factor)
+        if (eids >= E).any():  # reduced events
+            weights = ws
+        else:
+            weights = ws[eids]
+        avgs.append(weights @ df.loss.to_numpy() / ws.sum() * factor)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
