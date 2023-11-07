@@ -143,20 +143,16 @@ def calc_rtgm_df(hcurves, sitecol, oq):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
-    FIXME:param rtgm_haz: a dictionary containing the annual frequency losses
-    FIXME:param facts: conversion factors from maximum component to geometric
-    mean
+    :param hcurves: array of hazard curves of shape (1, M, L1)
+    :param sitecol: a SiteCollection instance with 1 site
     :param oq: OqParam instance
     """
     M = len(IMTS)
     riskCoeff, RTGM, UHGM, RTGM_max, MCE, rtgmCalc = (
         np.zeros(M), np.zeros(M), np.zeros(M), np.zeros(M),
         np.zeros(M), np.zeros(M))
-
     imtls = oq.imtls
-
     imts, facts = [], []
-
     for m, imt in enumerate(IMTS):
         afe = to_rates(hcurves[0, m], oq.investigation_time, minrate=1E-12)
 
@@ -175,7 +171,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
         elif afe[-1] > MIN_AFE:
             raise ValueError("the max iml is too low: change the job.ini")
         else:
-            hazdic = get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
+            hazdic = _get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
             rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
             results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
             rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
@@ -201,15 +197,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
     return pd.DataFrame(dic), np.array(facts)
 
 
-def get_hazdic(afe, imt, imtls, sitecol):
-    """
-    FIXME
-    Convert an array of mean hazard curves into a dictionary suitable
-    for the rtgmpy library. Note that here the imls are already converted
-    to maximum component.
-
-    :param hcurves: array with annual frequency of exceedance
-    """
+def _get_hazdic(afe, imt, imtls, sitecol):
     [site] = sitecol  # there must be a single site
     hazdic = {
         'site': {'name': 'site',
