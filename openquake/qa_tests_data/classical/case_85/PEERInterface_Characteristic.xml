@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="PEER Set 3 Case 3 Interface as M 8.0 earthquake"
+    >
+       <sourceGroup
+       name="group 1"
+       tectonicRegion="Subduction Interface"
+       >
+            <characteristicFaultSource
+            id="PEERS3C3_TOR"
+            name="PEER Set 3 Test 3 - Complex Fault Top of Rupture (Characteristic)"
+            tectonicRegion="Subduction Interface"
+            >
+                <surface>
+                    <complexFaultGeometry>
+                        <faultTopEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -65.50625 -0.44967 25.0 -65.50625 0.44967 25.0
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultTopEdge>
+                        <intermediateEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -65.0 -0.44967 57.5 -65.0 0.44967 57.5
+                                </gml:posList>
+                            </gml:LineString>
+                        </intermediateEdge>
+                        <faultBottomEdge>
+                            <gml:LineString>
+                                <gml:posList>
+                                    -64.5866 -0.44967 103.46 -64.5866 0.44967 103.46
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultBottomEdge>
+                    </complexFaultGeometry>
+
+                </surface>
+                <arbitraryMFD>
+                    <magnitudes>8.0</magnitudes>
+                    <occurRates>0.01</occurRates>
+                </arbitraryMFD>
+                <rake>
+                    90.0
+                </rake>
+            </characteristicFaultSource>
+        </sourceGroup>
+    </sourceModel>
+</nrml>
