@@ -75,12 +75,50 @@ and its capabilities:
 .. youtube:: DDDzNDrf4bo
    :align: center
 
+
+Additional information
+----------------------
+
 Contacts
---------
+********
 
 - Support forum: https://groups.google.com/g/openquake-users
 - X/Twitter: https://x.com/gem_devs
-- Email: info@openquake.org
+
+
+License
+*******
+
+This material is distributed under the Creative Common License
+Attribution-NonCommercial- ShareAlike 3.0 Unported (CC BY-NC-SA 3.0 -
+`http://creativecommons.org/licenses/by-nc- <http://creativecommons.org/licenses/by-nc-sa/3.0/>`__
+`sa/3.0/). <http://creativecommons.org/licenses/by-nc-sa/3.0/>`__ You
+can share it with others as long as you provide proper credit, 
+but you cannot change it in any way or use it commercially.
+
+
+Disclaimer
+**********
+
+The material shared here is distributed in the hope that 
+it will be useful, but without any warranty: without even the implied
+warranty of merchantability or fitness for a particular purpose.
+While every precaution has been taken in the preparation of this
+material, in no event shall the authors and the GEM
+Foundation be liable to any party for direct, indirect, special,
+incidental, or consequential damages, including lost profits, arising
+out of the use of information contained in this document or from the
+use of programs and source code that may accompany it, even if the
+authors and GEM Foundation have been advised of the possibility of
+such damage. The Books provided hereunder are on as "as is" basis, and
+the authors and GEM Foundation have no obligations to provide
+maintenance, support, updates, enhancements, or modifications.
+
+Thanks
+******
+
+See the list of `contributors <https://github.com/gem/oq-engine/blob/master/CONTRIBUTORS.txt>`_
+and `sponsors <https://github.com/gem/oq-engine#thanks>`_.
 
 .. toctree::
    :hidden:

@@ -205,6 +205,9 @@ Experts*. Technical report NUREG/CR-6372. Two volumes. Washington
 D.C., United States: U.S. Nuclear Regulatory Commission (cited on
 page 43).
 
+Crowley, H., V. Silva (2013). OpenQuake Engine Book: Risk v1.0.0. 
+GEM Foundation, Pavia, Italy.
+
 *Central and Eastern United States Seismic Source Characterization
 for Nuclear Facilities.* (2012). Technical report. EPRI, Palo Alto,
 CA, U.S. DOE, and U.S. NRC (cited on page 45).
@@ -224,6 +227,10 @@ Pagani, M., D. Monelli, G. Weatherill, and J. Garcia (2014b).
 *Testing procedures adopted in the development of the hazard
 Component of the OpenQuake-engine*. Technical report. GEM Technical
 Report (cited on page 13).
+
+Pagani, M., Monelli, D., Weatherill, G. A. and Garcia, J. (2014c). 
+The OpenQuake engine Book: Hazard. Global Earthquake Model (GEM) 
+Technical Report 2014-08, doi: 10.13117/- GEM.OPENQUAKE.TR2014.08, 67 pages
 
 Park, J., P. Bazzurro, and Baker (2007). “Modeling spatial
 correlation of ground motion Intensity Measures for regional seismic

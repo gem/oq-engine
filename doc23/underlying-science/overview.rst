@@ -1,62 +1,12 @@
-Introduction
-============
+Overview of the OpenQuake engine
+================================
 
-This chapter provides an overview of the OpenQuake engine, 
+This section provides an overview of the OpenQuake engine, 
 its structure and the processes adopted for its development.
 
-A particular emphasis is placed on transparency, reproducibility,
-community-based develop- ment and testing (Pagani et al.,
-2014a), the central tenets of the development
-process adopted since the early stages of the project.
-
-Motivation and Basics of the OpenQuake Engine
----------------------------------------------
-
-This book aims to provide an explanation of the scientific basis and
-the methodologies adopted in the implementation of the OpenQuake
-engine, an open source code for seismic hazard and physical risk
-calculation. The book follows the traditional openness and
-transparency features of the **Global Earthquake Model (GEM)** as clearly
-indicated in the development principles of the OpenQuake engine.
-
-The **GEM** initiative is a global collaborative effort with the aim to
-provide organisations and people with tools and resources for
-transparent assessment of earthquake risk anywhere in the world. The
-OpenQuake engine is a fully integrated, flexible and scalable hazard
-and physical risk calculation engine whose development is at the core
-of **GEM**’s overall objectives.
-
-Overview of the OpenQuake engine
---------------------------------
-
-The OpenQuake engine is an open-source hazard and risk calculation engine
-developed by the `Global Earthquake Model (GEM) <http://globalquakemodel.org/>`__ initiative.
-The OpenQuake engine is part of OpenQuake, a suite of open-source software
-packages developed by `GEM <http://globalquakemodel.org/>`__ (Figure
-1.1), which comprises the OpenQuake engine, the
-OpenQuake platform and a large set of tools of which the most
-interesting from a hazard perspective are the hazard modellers’
-toolkit (see
-`https://github.com/GEMScienceTools/hmtk). <https://github.com/GEMScienceTools/hmtk>`__
-The development of the engine - started in 2010 and currently in
-progress - follows established standards adopted for the development
-of open-source software such as open access of the source code though
-an easily accessible website and transparency of the development
-process [1]_. The engine was designed to operate on
-computational hardware with different properties ranging from a
-simple laptop to a heterogeneous cluster of multi-core machines. The
-operative system currently supported is Ubuntu Linux (additional
-information on the supported version and on the installation
-procedure can be found on the GEM area on github, accessible at the
-following link:
-`https://github.com/gem/oq-engine. <https://github.com/gem/oq-engine>`__
-
-.. figure:: _images/schematic_oq_suite.jpeg
-
-   *A schematic describing the OpenQuake suite.*
 
 Structure of the OpenQuake engine
-*********************************
+---------------------------------
 
 The OpenQuake engine is the combination of different and sometimes
 self-sufficient libraries. Below we provide a short description for
@@ -109,29 +59,6 @@ development.
 Development tools
 *****************
 
-The OpenQuake engine development process is based on a number of open-source
-tools, which guarantee a clear and transparent process. For example,
-each new feature improvement or bug fix before being implemented is
-described in a bug tracking system (in our case,
-`Launchpad <https://launchpad.net/>`__). Bug tracking systems such as Launchpad keep
-a log of bugs and errors identified by users of the software, in addition to 
-requests for new features.
-
-Main services and websites related to the OpenQuake engine
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- OpenQuake engine main website 
-
-  http://www.globalquakemodel.org/openquake/start/engine/
-
-- OpenQuake engine bug tracking system
-
-  https://launchpad.net/openquake
-
-- OpenQuake engine web repository 
-
-  http://github.com/gem
-
 The tools used to maintain and make publicly available the OpenQuake engine
 repository and to manage the continual improvement and enhancement
 process are `git <http://git-scm.com/>`__ and a git-based repository
@@ -146,9 +73,9 @@ implement a new feature in response to a request, the log of the code
 contribution should indicate the specific bug, error or feature that
 the code change is intended to resolve. Thus an exhaustive and
 auditible record is kept of each problem identified and the changes
-to the code taken to resolve it. Table 1.1
-provides a short summary of the main resources related to the
-OpenQuake engine.
+to the code taken to resolve it.
+
+The OpenQuake engine web repository is https://github.com/gem/oq-engine
 
 Programming language
 ********************
@@ -158,6 +85,7 @@ The core of the OpenQuake engine is developed in
 open-source programming language extensively used in the scientific
 community which can run on almost all the operative systems currently
 available.
+
 
 Basics of the Engine
 --------------------
@@ -276,8 +204,9 @@ workflows (see next figure):
   importance for emergency management planning and for raising societal
   awareness of risk.
 
+
 Testing and Quality Assurance
-*****************************
+-----------------------------
 
 Testing is an aspect carefully and diligently considered in the
 development of the OpenQuake engine. There are a several different reasons
