@@ -184,6 +184,9 @@ class MacedoEtAl2019SInter(ConditionalGMPE):
     # Conditional upon PGA and Sa (1.0 s)
     REQUIRES_IMTS = {"PGA", "SA(1.0)"}
 
+    # GMPE not verified against an independent implementation
+    non_verified = True
+
     def __init__(self, region: str = "Global", rho_pga_sa1: float = 0.52,
                  **kwargs):
         """

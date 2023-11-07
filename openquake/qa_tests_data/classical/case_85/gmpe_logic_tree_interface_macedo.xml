@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <logicTree
+    logicTreeID="SINTER_CGMM"
+    >
+        <logicTreeBranchSet
+        applyToTectonicRegionType="Subduction Interface"
+        branchSetID="SinterCGMM"
+        uncertaintyType="gmpeModel"
+        >
+            <logicTreeBranch
+            branchID="MACEDOSInterBCHydro"
+            >
+                <uncertaintyModel>
+                    [MacedoEtAl2019SInter]
+                    gmpe = AbrahamsonEtAl2015SInter
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    1.0
+                </uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+</nrml>
