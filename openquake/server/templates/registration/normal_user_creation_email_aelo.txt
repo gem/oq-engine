@@ -1,0 +1,19 @@
+{% load i18n %}{% autoescape off %}
+{% translate "Welcome to the AELO web service!" %}
+{% blocktranslate %}You are receiving this email because we created an account for you at {{ site_name }}.{% endblocktranslate %}
+{% translate 'Your username is:' %} {{ user.get_username }}
+
+{% blocktranslate %}The American Society of Civil Engineers (ASCE) Earthquake Loads Overseas (AELO)
+project is an ongoing collaboration between the U.S. Geological Survey (USGS) and the Global
+Earthquake Model (GEM) Foundation to compute Risk-targeted Maximum Considered Earthquake
+(MCER) and other design ground motions for locations outside of the United States.{% endblocktranslate %}
+
+{% translate "Please go to the following page and choose a new password:" %}
+{% block reset_link %}
+{{ protocol }}://{{ domain }}{% url 'password_reset_confirm' uidb64=uid token=token %}
+{% endblock %}
+
+{% translate "Thanks for joining us!" %}
+{% blocktranslate %}The AELO project team{% endblocktranslate %}
+
+{% endautoescape %}
