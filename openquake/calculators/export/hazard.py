@@ -465,8 +465,7 @@ def export_gmf_data_hdf5(ekey, dstore):
 @export.add(('relevant_gmfs', 'hdf5'))
 def export_relevant_gmfs(ekey, dstore):
     oq = dstore['oqparam']
-    R = len(dstore['weights'])
-    etime = oq.investigation_time * oq.ses_per_logic_tree_path * R
+    attrs = dstore['gmf_data'].attrs
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     with hdf5.File(fname, 'w') as f:
         if dstore.parent:
@@ -474,8 +473,10 @@ def export_relevant_gmfs(ekey, dstore):
         else:
             f['sitecol'] = dstore['sitecol']
         df = extract(dstore, 'relevant_gmfs?threshold=.95')
-        f.create_df('gmf_data', df, effective_time=etime,
-                    num_events=len(df.eid.unique()), imts=' '.join(oq.imtls))
+        f.create_df('gmf_data', df, effective_time=attrs['effective_time'],
+                    investigation_time=attrs['investigation_time'],
+                    num_events=len(df.eid.unique()),
+                    imts=' '.join(oq.imtls))
     return [fname]
 
 

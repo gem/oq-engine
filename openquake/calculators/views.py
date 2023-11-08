@@ -500,8 +500,11 @@ def view_portfolio_loss(token, dstore):
     R = len(weights)
     ws = weights[rlzs]
     avgs = []
-    if oq.investigation_time:
-        factor = oq.time_ratio * E / R
+    attrs = dstore['gmf_data'].attrs
+    itime = attrs['investigation_time']
+    etime = attrs['effective_time']
+    if itime:
+        factor = (oq.risk_investigation_time or itime) * E / etime
     else:
         factor = 1 / R
     for ln in oq.loss_types:
