@@ -151,3 +151,5 @@ extensions = [
     "sphinxcontrib.images",
     "sphinxcontrib.youtube",
 ]
+
+autosectionlabel_prefix_document = True

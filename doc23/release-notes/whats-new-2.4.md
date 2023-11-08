@@ -14,8 +14,7 @@ changes, please see the changelogs:
 https://github.com/gem/oq-hazardlib/blob/engine-2.4/debian/changelog
 and https://github.com/gem/oq-engine/blob/engine-2.4/debian/changelog.
 
-We have also decided a plan for
-[dropping support to Python 2](dropping-python-2.md). We will abandon that
+We have also decided a plan for dropping support to Python 2. We will abandon that
 platform in the course of the year 2018. Precise dates have not been
 fixed yet - on purpose - but everybody who is using hazardlib and/or the
 engine as a library should think about migrating to Python 3. Please
@@ -470,11 +469,9 @@ installation coexisting on the same machine).
 
 [h5py](http://www.h5py.org/) has been updated to version 2.7.0.
 
-A [template for PAM authentication](../openquake/server/local_settings.py.pam)
+A template for PAM authentication
 is now provided. This allows the WebUI to authenticate users against
-system users on a Linux server. See the
-[documentation](installing/server.md#authentication-using-pam) for
-further information.
+system users on a Linux server.
 
 The RPM `python-oq-engine` package has been splitted into `python-oq-engine`,
 `python-oq-engine-master` and `python-oq-engine-worker`. This reduces
@@ -482,8 +479,7 @@ the amount of dependencies needed by `python-oq-engine` when installed on
 a single node. Specific configurations for _master_ and _workers_ nodes
 are provided by dedicated packages.
 This setup will be ported to Ubuntu packages too in the next release.
-See the [documentation](installing/cluster.md#redhat) for further
-information.
+See the [documentation](cluster) for further information.
 
 Deprecations
 ------------------------------

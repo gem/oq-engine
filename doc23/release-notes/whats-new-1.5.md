@@ -3,8 +3,7 @@ What's new in engine-1.5
 
 OpenQuake 1.5 is a major release and a big improvement with respect
 to OpenQuake 1.4. More than 115 bugs/feature
-requests were fixed/implemented. Everybody is invited to upgrade,
-by following the [usual procedure](Installing-the-OpenQuake-Engine.md).
+requests were fixed/implemented.
 
 New features of the OpenQuake Engine, version 1.5
 --------------------------------------------------
@@ -210,8 +209,7 @@ calculator, and a few new tests have been added also for the event
 based hazard calculator. It was a **huge** effort on the part of
 both our scientific team and IT team. The net result is that
 a lot of subtle and hard-to-find bugs have been discovered and
-fixed. The list of bug-fixes is so long that is has been moved to a separated
-document that you can find [here](event-based-bugs.md).
+fixed.
 
 2. The algorithm to compute average losses and average insured losses
 in the event based risk calculator has been changed: it is now
