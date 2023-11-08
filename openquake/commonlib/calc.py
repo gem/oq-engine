@@ -422,7 +422,9 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         try:
             sbe = data['slice_by_event'][:]
         except KeyError:
-            sbe = build_slice_by_event(data['eid'][:])
+            eids = data['eid'][:]
+            sbe = build_slice_by_event(eids)
+            assert len(sbe) == len(numpy.unique(eids))  # sanity check
         slices = []
         logging.info('Reading event weights')
         for slc in general.gen_slices(0, len(sbe), 100_000):
