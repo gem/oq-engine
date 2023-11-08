@@ -28,12 +28,10 @@ import warnings
 import functools
 import toml
 import numpy
-from typing import Tuple
 
 from openquake.baselib.general import DeprecationWarning
 from openquake.baselib.performance import compile
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.stats import truncnorm_sf
 from openquake.hazardlib.gsim.coeffs_table import CoeffsTable
 from openquake.hazardlib.contexts import (
@@ -502,115 +500,3 @@ class GMPE(GroundShakingIntensityModel):
                 # set by the engine when parsing the gsim logictree
                 # when 0 ignore the contribution: see _build_branches
                 out[:, mL1:mL1 + L1] = 0
-
-
-class ConditionalGMPE(GMPE):
-    """Base Class for a form of GMPE in which the output ground
-    motion level is conditional upon other measures of ground motion.
-
-    This class functions for two cases:
-    
-    1. The case that the conditioning ground motion values (e.g. PGA, Sa(T)
-    etc.) are known a priori and input via the context array. If so, these must
-    be specified in the `ctx` recarray with both the MEAN and TOTAL_STDDEV (the
-    TOTAL_STDDEV can be 0), e.g. PGA_MEAN, PGA_TOTAL_STDDEV, SA(0.2)_MEAN,
-    SA(0.2)_TOTAL_STDDEV etc. The IMT string must be such that it can be
-    transformed into an IMT object via the `from_string` function. Optionally,
-    the between- and within-event standard deviation of the input ground
-    motions can also be specified using the same syntax, i.e.
-    PGA_INTER_EVENT_STDDEV, SA(1.0)_INTRA_EVENT_STDDEV etc.
-
-    2. The case that the conditioning groung motion values are not known a
-    priori and must therefore be calculated using a GMPE, which the user passes
-    as input to the function.
-
-    If no conditioning ground motion values are input in `ctx` and no GMPE is
-    specified then an error will be raised.
-    """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
-    
-    # Specific to the Conditional GMPE class. Should be a set
-    # containing string representations of the required IMTs
-    REQUIRES_IMTS = set()
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        
-        if "gmpe" in kwargs:
-            # Create the original GMPE
-            [(gmpe_name, kw)] = kwargs.pop('gmpe').items()
-            self.params = kwargs  # non-gmpe parameters
-            g = globals()
-            for k in self.params:
-                if k not in g:
-                    raise ValueError('Unknown %r in ModifiableGMPE' % k)
-            self.gmpe = registry[gmpe_name](**kw)
-            self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
-            self.set_parameters()
-        else:
-            self.gmpe = None
-            self.gmpe_table = None
-
-    def get_conditioning_ground_motions(
-        self,
-        ctx: numpy.recarray
-    ) -> Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
-        """Retreives the ground motions upon which the model
-        is conditioned. If the MEAN and TOTAL_STDDEV of the ground
-        motion are found in the ctx then these are taken directly,
-        otherwise the mean and total standard deviation are determined
-        from the specified GMPE
-        """
-        mean_gms = {}
-        sigma_gms = {}
-        tau_gms = {}
-        phi_gms = {}
-        for imt_string in self.REQUIRES_IMTS:
-            # Get the mean ground motions and total standard deviations
-            # for the IMT from the ctx if they are provided
-            available_gms = []
-            for imt_string in self.REQUIRES_IMTS:
-                for param in ["MEAN", "TOTAL_STDDEV"]:
-                    label = "{:s}_{:s}".format(imt_string, param)
-                    available_gms.append(label in ctx.dtype.names)
-            if all(available_gms):
-                # The required info about the ground motions
-                # is in the ctx - therefore this can be taken directly
-                for imt_string in self.REQUIRES_IMTS:
-                    mean_gms[imt_string] = ctx[imt_string + "_MEAN"]
-                    sigma_gms[imt_string] = ctx[imt_string + "_TOTAL_STDDEV"]
-                    # Optionally, get the between and within-event stddev
-                    if (imt_string + "_INTER_EVENT_STDDEV") in ctx.dtype.names:
-                        tau_gms[imt_string] + ctx[imt_string +
-                                                  "_INTER_EVENT_STDDEV"]
-                    if (imt_string + "_INTRA_EVENT_STDDEV") in ctx.dtype.names:
-                        phi_gms[imt_string] + ctx[imt_string +
-                                                  "_INTRA_EVENT_STDDEV"]
-            else:
-                # Not conditioned on observations found in ctx, so
-                # calculate from GMPE
-                if self.gmpe is None:
-                    raise ValueError("Conditioning ground motions must be "
-                                     "specified in ctx or a GMPE must be "
-                                     "provided")
-                nimts = len(self.REQUIRES_IMTS)
-                n = len(ctx)
-                mean = numpy.zeros([nimts, n])
-                sigma = numpy.zeros_like(mean)
-                tau = numpy.zeros_like(mean)
-                phi = numpy.zeros_like(mean)
-                self.gmpe.compute(
-                    ctx,
-                    [from_string(imt) for imt in self.REQUIRES_IMTS],
-                    mean,
-                    sigma,
-                    tau,
-                    phi)
-                for i, imt in enumerate(self.REQUIRES_IMTS):
-                    mean_gms[imt] = np.exp(mean[i, :])
-                    sigma_gms[imt] = sigma[i, :]
-                    if not numpy.allclose(tau[i, :], 0.0):
-                        tau_gms[imt] = tau[i, :]
-                    if not numpy.allclose(phi[i, :], 0.0):
-                        phi_gms[imt] = phi[i, :]
-        return mean_gms, sigma_gms, tau_gms, phi_gms
