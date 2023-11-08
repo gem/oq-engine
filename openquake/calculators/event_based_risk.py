@@ -181,7 +181,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     del dic
     # if max_gmvs_chunk is too small, there is a huge data transfer in
     # avg_losses and the calculation may hang; if too large, run out of memory
-    slices = performance.split_slices(df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    slices = performance.split_slices(
+        df.eid.to_numpy(), oqparam.max_gmvs_chunk)
     for s0, s1 in slices:
         yield event_based_risk(df[s0:s1], oqparam, monitor)
 
@@ -362,10 +363,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
         if (oq.calculation_mode == 'event_based_risk' and
-                A * self.R > 1_000_000 and oq.avg_losses
-                and not oq.collect_rlzs):
-            raise ValueError('For large exposures you must set '
-                             'collect_rlzs=true or avg_losses=false')
+                not oq.collect_rlzs and oq.avg_losses):
+            if A * self.R > 10_000_000:
+                raise ValueError('For large exposures you must set '
+                                 'avg_losses=false or use sampling')
+            elif A * self.R > 100_000:
+                logging.warning('We recommend using sampling for performance')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
