@@ -474,7 +474,7 @@ def export_relevant_gmfs(ekey, dstore):
             f['sitecol'] = dstore.parent['sitecol']
         else:
             f['sitecol'] = dstore['sitecol']
-        df = extract(dstore, 'relevant_gmfs?threshold=.98')
+        df = extract(dstore, 'relevant_gmfs?threshold=.97')
         f.create_df('gmf_data', df, effective_time=attrs['effective_time'],
                     investigation_time=attrs['investigation_time'],
                     num_events=len(df.eid.unique()),
