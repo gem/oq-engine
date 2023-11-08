@@ -48,14 +48,14 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
         for m, imt in enumerate(mean_disagg_by_src.imt):
             rates = mean_disagg_by_src[s, :, :, :, m]
             if (rates == 0).all():
-                continue # no contribution from this imt
+                continue  # no contribution from this imt
             rates_mag = rates.sum((1, 2))
             rates_dst = rates.sum((0, 2))
             rates_eps = rates.sum((0, 1))
             dic['src'].append(src)
             dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
-            if not src_mutex[grp[src]]: # compute the mean
+            if not src_mutex[grp[src]]:  # compute the mean
                 mmag = numpy.average(mag, weights=rates_mag)
                 mdst = numpy.average(dst, weights=rates_dst)
                 meps = numpy.average(eps, weights=rates_eps)
@@ -126,7 +126,7 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
     for srcid, std4D, rates4D, _rates2D in smap:
         idx = src2idx[srcid]
         rates[idx] += rates4D
-        std[idx] += std4D @ weights[srcid] # shape (Ma, D, M, G) -> (Ma, D, M)
+        std[idx] += std4D @ weights[srcid]  # shape (Ma, D, M, G) -> (Ma, D, M)
         rates2D += _rates2D
     dic = dict(
         shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
@@ -172,13 +172,13 @@ def main(dstore, csm, imts, imls):
     for imt, ids in rel_ids_by_imt.items():
         rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
         logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
-    
+
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mean_disagg_by_src, sigma_by_src = disagg_sources(
         csm, rel_ids, imts, imls, oq, sitecol, dstore)
     df = views.view('compare_disagg_rates',  dstore)
     logging.info(df)
-    src_mutex = dstore['mutex_by_grp']['src_mutex']  
+    src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])
     out = []
