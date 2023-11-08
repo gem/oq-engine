@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Raised the limit on the produce num_assets * num_rlzs when using
+    full enumeration by a factor of 10
   * Fixed exporting-reimporting GMFs in hdf5 format
   * Fixed a bug causing the insured losses to be larger than the
     ground losses in some cases
