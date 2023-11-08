@@ -465,6 +465,8 @@ def export_gmf_data_hdf5(ekey, dstore):
 @export.add(('relevant_gmfs', 'hdf5'))
 def export_relevant_gmfs(ekey, dstore):
     oq = dstore['oqparam']
+    if oq.number_of_logic_tree_samples == 0:
+        raise NotImplementedError('Full enumeration')
     attrs = dstore['gmf_data'].attrs
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
     with hdf5.File(fname, 'w') as f:
