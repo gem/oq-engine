@@ -23,7 +23,7 @@ Module exports: :class:`MacedoEtAl2019SInter`,
 from typing import Dict, List, Tuple
 import numpy as np
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import IMT, IA
+from openquake.hazardlib.imt import IMT, IA, PGA, SA
 from openquake.hazardlib.gsim.base import add_alias
 from openquake.hazardlib.gsim.conditional_gmpe import ConditionalGMPE
 
@@ -162,7 +162,7 @@ class MacedoEtAl2019SInter(ConditionalGMPE):
 
     """
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA, }
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA, PGA, SA}
 
     # It is unclear to me if the CGMM is for a specific component? Or is the
     # component associated with the input ctx.imt?
@@ -176,7 +176,7 @@ class MacedoEtAl2019SInter(ConditionalGMPE):
 
     REQUIRES_SITES_PARAMETERS = {"vs30", }
     REQUIRES_RUPTURE_PARAMETERS = {"mag", }
-    REQUIRES_DISTANCES = {}
+    REQUIRES_DISTANCES = set()
 
     # Subduction interface
     kind = "sinter"

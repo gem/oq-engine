@@ -12,14 +12,26 @@ xmlns:gml="http://www.opengis.net/gml"
         uncertaintyType="gmpeModel"
         >
             <logicTreeBranch
-            branchID="MACEDOSInterBCHydro"
+            branchID="MACEDOSInterBCHydroGlobal"
             >
                 <uncertaintyModel>
                     [MacedoEtAl2019SInter]
-                    gmpe = AbrahamsonEtAl2015SInter
+                    gmpe.AbrahamsonEtAl2015SInter = {}
                 </uncertaintyModel>
                 <uncertaintyWeight>
-                    1.0
+                    0.5
+                </uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch
+            branchID="MACEDOSInterBCHydroSouthAmerica"
+            >
+                <uncertaintyModel>
+                    [MacedoEtAl2019SInter]
+                    gmpe.AbrahamsonEtAl2015SInter = {}
+                    region = "South America"
+                </uncertaintyModel>
+                <uncertaintyWeight>
+                    0.5
                 </uncertaintyWeight>
             </logicTreeBranch>
         </logicTreeBranchSet>
