@@ -28,6 +28,11 @@ SERVER_NAME = <localhost>
 SERVER_PORT = <8800>
 USE_HTTPS = <False>
 
+# Set to True if using NGINX or some other reverse proxy
+# Externally visible url and port number is different from Django visible
+# values
+USE_REVERSE_PROXY = <False>
+
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 
 # Local time zone for this installation. Choices can be found here:
