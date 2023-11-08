@@ -1,5 +1,5 @@
-OpenQuake Engine Documentation |VERSION|
-========================================
+OpenQuake Engine Documentation (beta)|VERSION|
+==============================================
 
 .. image:: _static/OQ-Logo-Standard-CMYK-300DPI-01.jpg
   :class: no-scaled-link
