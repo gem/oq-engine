@@ -76,7 +76,17 @@ class ConditionalGMPE(GMPE):
                     raise ValueError('Unknown %r in ModifiableGMPE' % k)
             self.gmpe = registry[gmpe_name](**kw)
             self.gmpe_table = hasattr(self.gmpe, 'gmpe_table')
-            self.set_parameters()
+            self.REQUIRES_DISTANCES = frozenset(self.REQUIRES_DISTANCES |
+                                                self.gmpe.REQUIRES_DISTANCES)
+            self.REQUIRES_RUPTURE_PARAMETERS = frozenset(
+                self.REQUIRES_RUPTURE_PARAMETERS |
+                self.gmpe.REQUIRES_RUPTURE_PARAMETERS)
+            self.REQUIRES_SITES_PARAMETERS = frozenset(
+                self.REQUIRES_SITES_PARAMETERS |
+                self.gmpe.REQUIRES_SITES_PARAMETERS)
+            self.DEFINED_FOR_INTENSITY_MEASURE_TYPES = frozenset(
+                self.DEFINED_FOR_INTENSITY_MEASURE_TYPES |
+                self.gmpe.DEFINED_FOR_INTENSITY_MEASURE_TYPES)
         else:
             self.gmpe = None
             self.gmpe_table = None
