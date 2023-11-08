@@ -1269,6 +1269,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     dstore.create_df('gmf_data', items)  # not gzipping for speed
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
+                     investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
     if data is not None:
         _df = pandas.DataFrame(dict(items))
