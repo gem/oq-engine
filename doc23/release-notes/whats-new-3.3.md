@@ -42,8 +42,8 @@ minimum_magnitude = {
   "Stable Shallow Crust": 5.0}
 ```
 
-5. We extended the [equivalent epicenter distance feature](
-adv-manual/equivalent_distance_approximation.rst) to multiple
+5. We extended the [equivalent epicenter distance feature]
+(equivalent-distance-approximation) to multiple
 tectonic region types. While before a single lookup table was
 supported, now you can specify a different lookup table for each
 tectonic region type in the job.ini file, as in this example
@@ -362,8 +362,7 @@ parameters in the current job.ini or not.
 
 3. We replaced the `nodal_dist_collapsing_distance` and
 `hypo_dist_collapsing_distance` parameters with a `pointsource_distance`
-parameter documented [here](
-adv-manual/common-mistakes.rst#pointsource_distance). The algorithm used
+parameter documented under the common mistakes section. The algorithm used
 to collapse the ruptures been optimized.
 
 4. The combination `uniform_hazard_spectra=true` and `mean_hazard_curves=false`
@@ -424,7 +423,7 @@ Scenario from ShakeMap
 ----------------------
 
 There was a lot of work on the "Scenario from ShakeMap" feature, introduced
-ine engine 3.1 and documented [here](scenario-from-shakemap.md).
+ine engine 3.1 and documented [here](scenarios-from-shakemaps).
 
 1. The USGS site changed the layout of the pages, thus breaking the
 feature.  Now we extract the download URL from the official JSON feed instead
@@ -610,7 +609,7 @@ oq commands
 
 1. There is a new command `oq prepare_site_model` that allows to prepare
 a site_model.csv file starting from an exposure and an USGS vs30 file.
-It is documented [here](oq-commands.md#prepare_site_model).
+It is documented [here](prepare-site-model).
 
 2. There is a new command `oq compare` to compare the hazard curves and maps
 of different calculations. It is meant to be used for sensitivity analysis.
@@ -696,8 +695,7 @@ code.
 The was a lot of work on documentation. We have revamped the old docs,
 added a description of CSV exposures in the manual and added two new FAQ
 pages, one for [hazard](faq-hazard.md) and one
-for [risk](faq-risk.md). Finally, we have started
-a [Manual for Advanced Users]( adv-manual/introduction.rst).
+for [risk](faq-risk.md).
 
 Exposures with insuranceLimit/deductible fields are deprecated and may
 be removed in the future, in the sense that we may change the format

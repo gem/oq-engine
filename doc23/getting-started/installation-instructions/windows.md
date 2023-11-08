@@ -21,12 +21,6 @@ may work for small calculations and hang for large calculations, as it has
 been reported by a few users. For large calculations (i.e. any calculation
 in the hazard or risk mosaic) we recommend to use a Linux server.
 
-## Run the OpenQuake Engine
-
-Continue on [How to run the OpenQuake Engine](windows)
-
-***
-
 ## Getting help
 If you need help or have questions/comments/feedback for us, you can:
   * Subscribe to the OpenQuake users mailing list: https://groups.google.com/g/openquake-users

@@ -30,7 +30,7 @@ This is the list of demos which illustrate how to use the OpenQuake engine for v
 - **ScenarioLiquefaction**
 - SimpleFaultSourceClassicalPSHA
 
-The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/hazard>`_.
+The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/hazard>`__.
 
 ********************
 Classical PSHA Demos
@@ -581,7 +581,7 @@ probabilistic seismic damage and risk analyses:
 - ScenarioDamage
 - ScenarioRisk
 
-The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/risk>`_.
+The documentation for the **bold** analysis cases is a work in progress. However, the demo files are available `here <https://github.com/gem/oq-engine/tree/master/demos/risk>`__.
 
 These seven demos use Nepal as the region of interest. An example Exposure Model has been developed for this region, 
 comprising 9,063 assets distributed amongst 2,221 locations (due to the existence of more than one asset at the same 
@@ -806,7 +806,7 @@ Tutorial: Preparing site data for liquefaction analysis with the OpenQuake engin
 
 This tutorial for preparing site data for liquefaction analysis with the OpenQuake engine secondary perils module is a 
 Jupyter notebook, which containts text as well as exectuable Python code. The notebook can be downloaded along with the 
-sample data from `here <https://github.com/gem/oq-engine/tree/todorovic-liquefaction/doc/manual/sep>`_.
+sample data from `here <https://github.com/gem/oq-engine/tree/todorovic-liquefaction/doc/manual/sep>`__.
 
 First, we need to import the Python modules that we'll use.::
 
@@ -1065,7 +1065,7 @@ recommend `Marthews et al., 2015 <https://www.hydrol-earth-syst-sci.net/19/91/20
 
 .. figure:: _images/liquefaction_tutorial_5.png
 
-We also need mean annual precipitation and the global dataset (raster), is publically available `here <https://worldclim.org/data/worldclim21.html>`_.
+We also need mean annual precipitation and the global dataset (raster), is publically available `here <https://worldclim.org/data/worldclim21.html>`__.
 It was developed by interpolating from over 40,000 weather stations across the world and averaging over 1970-2000.::
 
 	sites['precip'] = sample_raster_at_points("./tutorial_data/precip.tif", sites.lon, sites.lat)
@@ -1082,7 +1082,7 @@ It was developed by interpolating from over 40,000 weather stations across the w
 
 Another variable that is used as a proxy for soil wetness is the distance to the nearest coast. Furthermore, this input 
 can be indicative of the geologic age of the deposits, as we expect younger deposits, which are more susceptible to 
-liquefaction, to be located near the coast. The available raster can be found `here <https://oceancolor.gsfc.nasa.gov/#>`_. 
+liquefaction, to be located near the coast. The available raster can be found `here <https://oceancolor.gsfc.nasa.gov/#>`__. 
 Distance is measured in kilometers, with uncertainty of 1 km. Zero values represent the coast line, > 0 is ocean, < 0 
 is land.::
 
@@ -1098,7 +1098,7 @@ is land.::
 
 .. figure:: _images/liquefaction_tutorial_7.png
 
-The global river network is available `here <https://www.hydrosheds.org/about>`_. 
+The global river network is available `here <https://www.hydrosheds.org/about>`__. 
 We again use the `spatial join <https://www.qgistutorials.com/en/docs/3/performing_spatial_joins.html>`_. In our csv file, distance to the river is given in the column dr and the units are 
 in kilometers.
 

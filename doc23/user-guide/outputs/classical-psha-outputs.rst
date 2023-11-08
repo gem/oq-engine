@@ -4,14 +4,14 @@ Outputs from Classical PSHA
 By default, the classical PSHA calculator computes and stores hazard curves for each logic tree sample considered.
 
 When the PSHA input model doesn’t contain epistemic uncertainties the results is a set of hazard curves (one for each 
-investigated site). The command below illustrates how is possible to retrieve the group of hazard curves obtained for 
-a calculation with a given identifier ``<calc_id>`` (see Section :ref:`Exporting results from a hazard calculation <export-hazard-results>`_
+investigated site). The command below illustrates how it is possible to retrieve the group of hazard curves obtained for 
+a calculation with a given identifier ``<calc_id>`` (see Section :ref:`Exporting results from a hazard calculation <export-hazard-results>`
 for an explanation about how to obtain the list of calculations performed with their corresponding ID)::
 	
 	user@ubuntu:~$ oq engine --lo <calc_id>
 	id | name
-	*3 | Hazard Curves
-	4 | Realizations
+	3* | Hazard Curves
+	4  | Realizations
 
 To export from the database the outputs (in this case hazard curves) contained in one of the output identifies, one can 
 do so with the following command::

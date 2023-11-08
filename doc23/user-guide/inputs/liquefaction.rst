@@ -150,9 +150,9 @@ to get the raster values. This function requires the filename of the raster, and
 sites, and returns a Numpy array with the raster values at each point. This function can be easily incorporated into a 
 Python script or workflow in this manner.
 
-##########################
-Liquefaction probabilities
-##########################
+###########################
+Probability of liquefaction
+###########################
 
 Calculating liquefaction probabilities requires values for Vs30 and the Compound Topographic Index, which is a proxy for 
 soil wetness.
@@ -162,11 +162,11 @@ soil wetness.
 `Zhu et al (2015) <https://journals.sagepub.com/doi/abs/10.1193/121912EQS353M>`_ calibrated their model on Vs30 data derived from DEMs using the methods of 
 `Wald and Allen (2007) <https://pubs.geoscienceworld.org/ssa/bssa/article/97/5/1379/146527>`_.
 
-This method is implemented in the engine `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L260>`_. 
+This method is implemented in the engine `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L260>`__. 
 It requires that the slope is calculated as the gradient (dy/dx) rather than an angular unit, and the study area is 
 categorized as tectonically ``active`` or ``stable``.
 
-A more general wrapper function has also been written `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227>`_. 
+A more general wrapper function has also been written `here <https://github.com/gem/oq-engine/blob/ef33b5e0dfdca7a214dac99d4d7214086023ab39/openquake/sep/utils.py#L227>`__. 
 This function can calculate gradient from the slope in degrees (a more common formulation), and will be able to use 
 different formulas or relations between slope and Vs30 if and when those are implemented (we have no current plans for 
 doing so).
@@ -180,6 +180,6 @@ used the compound topographic index, a proxy for soil wetness that relates the t
 upstream drainage area of that point. This index can be obtained from dataset that has a global range of 0-20 
 `Marthews et al. (2015) <https://hess.copernicus.org/articles/19/91/2015/>`_. 
 In more recent models, additional proxies were introduced such as distance to the nearest 
-coast available `here <https://oceancolor.gsfc.nasa.gov/#>`_, distance to the nearest river network available 
-`here <https://www.hydrosheds.org/about>`_, and precipitation available 
-`here <https://worldclim.org/data/worldclim21.html>`_.
+coast available `here <https://oceancolor.gsfc.nasa.gov/#>`__, distance to the nearest river network available 
+`here <https://www.hydrosheds.org/about>`__, and precipitation available 
+`here <https://worldclim.org/data/worldclim21.html>`__.

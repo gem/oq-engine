@@ -21,7 +21,7 @@ engine information regarding both the definition of the input models (e.g. expos
 consequence, or vulnerability models) as well as the parameters governing the risk calculation.
 
 Information regarding the configuration file for running hazard calculations using the OpenQuake engine can be found in 
-Section :ref:`Configuration file <config-file>`. Some initial mandatory parameters of the configuration file common to all of the risk 
+Section :ref:`Configuration file <configuration-file>`. Some initial mandatory parameters of the configuration file common to all of the risk 
 calculators are presented in the listing. The remaining parameters that are specific to each risk calculator are 
 discussed in subsequent sections.::
 
@@ -281,7 +281,7 @@ Ground Motion Fields csv file with their latitude and longitude coordinates.::
 	[fragility]
 	structural_fragility_file = structural_fragility_model.xml
 
-- ``gmfs_csv``: a parameter used to define the path to the Ground Motion Fields file in the csv format. This file must define Ground Motion Fields for all of the intensity measure types used in the Fragility Model. (`Download an example file here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/input_scenario_gmfs.csv>`_).
+- ``gmfs_csv``: a parameter used to define the path to the Ground Motion Fields file in the csv format. This file must define Ground Motion Fields for all of the intensity measure types used in the Fragility Model. (`Download an example file here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/input_scenario_gmfs.csv>`__).
 - ``sites_csv``: a parameter used to define the path to the sites file in the csv format. This file must define site id, longitude, and latitude for all of the sites for the Ground Motion Fields file provided using the gmfs_csv parameter. (`Download an example file here <https://raw.githubusercontent.com/gem/oq-engine/master/doc/manual/input_scenario_sites.csv>`_).
 
 The above calculation(s) can be run using the command line::
