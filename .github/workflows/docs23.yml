@@ -286,10 +286,14 @@ jobs:
           #     echo "$ddown_adv" > dot_ddown_adv.json
           # fi
           set -x
-          gpg --version
-          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
-          chmod 600 ./.deploy_rsa
-          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+          if [ "$DOCS_SSH" ]; then
+              gpg --version
+              gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
+              chmod 600 ./.deploy_rsa
+              eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+          else
+              echo "DOCS_SSH env variable not found, skip deploy"
+          fi
 
           # if [ -f "dot_ddown_man.json" ]; then
           #     rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine-new\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine-new/.ddown_man.json"
@@ -326,9 +330,13 @@ jobs:
           # fi
 
 
-          echo "Uploading New OpenQuake Documentation (HTML)"
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}manual/\" && rsync" -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete _build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
-          echo "------"
+          if [ "$DOCS_SSH" ]; then
+              echo "Uploading New OpenQuake Documentation (HTML)"
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}manual/\" && rsync" -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete _build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
+              echo "------"
+          else
+              echo "SKIP Uploading New OpenQuake Documentation (HTML)"
+          fi
 
 
           # echo "Make Reference Manual (HTML)"
