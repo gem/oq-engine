@@ -152,9 +152,14 @@ def get_standard_deviations(
 
 
 class MacedoEtAl2019SInter(ConditionalGMPE):
-    """Prototype implementation of a conditional GMPE of
-    Macedo, Abrahamson & Bray (2019) for Arias Intensity, applied to
-    subduction interface earthquakes
+    """Implementation of a conditional GMPE of Macedo, Abrahamson & Bray (2019)
+    for Arias Intensity, applied to subduction interface earthquakes. This
+    requires characterisation of the PGA and SA(1.0), in addition to magnitude
+    and vs30, for defining Arias intensity, and propagates uncertainty
+    accordingly. The model includes specific regionalisations for "Global"
+    application (default), "Japan", "Taiwan", "New Zealand" and
+    "South America", as well as a user customisable coefficient of correlation
+    between PGA and SA(1.0).
 
     Macedo J, Abrahamson N, Bray JD (2019) "Arias Intensity Conditional
     Scaling Ground-Motion Models for Subduction Zones", Bulletin of the
@@ -164,8 +169,9 @@ class MacedoEtAl2019SInter(ConditionalGMPE):
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTERFACE
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {IA, PGA, SA}
 
-    # It is unclear to me if the CGMM is for a specific component? Or is the
-    # component associated with the input ctx.imt?
+    # It is unclear to me if the CGMM is for a specific component of Arias
+    # Intensity; however it's fit using NGA Subduction data, which assumes
+    # PGA and SA are in terms of RotD50
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.RotD50
 
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
@@ -235,8 +241,7 @@ class MacedoEtAl2019SSlab(MacedoEtAl2019SInter):
     kind = "sslab"
 
 
-# Create alias classes for the Macedo et al. (2019)
-# regionalisations
+# Create alias classes for the Macedo et al. (2019) regionalisations
 for region_name in ["Japan", "Taiwan", "South America", "New Zealand"]:
     sinter_alias = "MacedoEtAl2019SInter{:s}".format(
         region_name.replace(" ", ""))
