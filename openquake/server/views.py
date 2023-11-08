@@ -986,25 +986,25 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
     asce7 = asce41 = None
+    asce7_with_units = {}
+    asce41_with_units = {}
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'asce7' in ds:
             asce7_js = ds['asce7'][()].decode('utf8')
             asce7 = json.loads(asce7_js)
+            for key, value in asce7.items():
+                if not isinstance(value, float):
+                    asce7_with_units[key] = value
+                elif key in ('CRS', 'CR1'):
+                    # NOTE: (-) stands for adimensional
+                    asce7_with_units[key + ' (-)'] = value
+                else:
+                    asce7_with_units[key + ' (g)'] = value
         if 'asce41' in ds:
             asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
-        asce7_with_units = {}
-        for key, value in asce7.items():
-            if not isinstance(value, float):
-                asce7_with_units[key] = value
-            elif key in ('CRS', 'CR1'):
-                # NOTE: (-) stands for adimensional
-                asce7_with_units[key + ' (-)'] = value
-            else:
-                asce7_with_units[key + ' (g)'] = value
-        asce41_with_units = {}
-        for key, value in asce41.items():
-            asce41_with_units[key + ' (g)'] = value
+            for key, value in asce41.items():
+                asce41_with_units[key + ' (g)'] = value
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce7=asce7_with_units, asce41=asce41_with_units))
