@@ -935,7 +935,7 @@ def extract_relevant_gmfs(dstore, what):
         sbe = dstore.read_df('gmf_data/slice_by_event', 'eid')
     except KeyError:
         df = dstore.read_df('gmf_data', 'eid')
-        return df.loc[eids]
+        return df.loc[eids].reset_index()
     dfs = []
     for eid in eids:
         ser = sbe.loc[eid]
