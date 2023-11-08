@@ -504,9 +504,9 @@ def view_portfolio_loss(token, dstore):
     itime = attrs['investigation_time']
     etime = attrs['effective_time']
     if itime:
-        factor = (oq.risk_investigation_time or itime) * E / etime
+        freq = (oq.risk_investigation_time or itime) * E / etime
     else:
-        factor = 1 / R
+        freq = 1 / R
     for ln in oq.loss_types:
         df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
@@ -514,7 +514,7 @@ def view_portfolio_loss(token, dstore):
             weights = ws
         else:
             weights = ws[eids]
-        avgs.append(weights @ df.loss.to_numpy() / ws.sum() * factor)
+        avgs.append(weights @ df.loss.to_numpy() / ws.sum() * freq)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 
