@@ -1955,8 +1955,7 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights and number_of_logic_tree_samples
-        must be greater than 1.
+        sampling_method must be early_weights with collect_rlzs=true
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
@@ -1978,8 +1977,10 @@ class OqParam(valid.ParamSet):
         if hstats and hstats != ['mean']:
             msg = '%s: quantiles are not supported with collect_rlzs=true'
             raise InvalidFile(msg % self.inputs['job_ini'])
-        return self.number_of_logic_tree_samples > 1 and (
-            self.sampling_method == 'early_weights')
+        if self.number_of_logic_tree_samples == 0:
+            raise ValueError('collect_rlzs=true is inconsistent with '
+                             'full enumeration')
+        return self.sampling_method == 'early_weights'
 
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)
