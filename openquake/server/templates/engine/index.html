@@ -110,7 +110,7 @@
                 <!-- end confirm_modal -->
                 {% endif %}
                 <% if (calc.get('status') == 'complete') { %>
-                  <a href="{% url "index" %}/<%= calc.get('id') %>/outputs" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
+                  <a href="{% url "index" %}/<%= calc.get('id') %>/{% if application_mode == 'AELO'%}outputs_aelo{% else %}outputs{% endif %}" class="btn btn-sm" style="margin: 2px 0 2px 0">Outputs</a>
                   {% if application_mode != 'AELO' and application_mode != 'READ_ONLY' %}
                   <form class="calc-form" enctype="multipart/form-data"
                     style="margin: 0; display: inline-block"

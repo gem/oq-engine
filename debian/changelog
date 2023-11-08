@@ -1,4 +1,11 @@
   [Michele Simionato]
+  * Raised the limit on the product `num_assets * num_rlzs` when using
+    full enumeration by a factor of 10
+  * Fixed exporting-reimporting GMFs in hdf5 format
+  * Fixed a bug causing the insured losses to be larger than the
+    ground losses in some cases
+  * Added command `oq info executing`
+  * Added `extract/relevant_gmfs?threshold=` functionality
   * Added `extract/ruptures?threshold=` functionality
   * Disabling the DbServer with dbserver.host = local
   * Fixed `disagg_source` for same ID sources

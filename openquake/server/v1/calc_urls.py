@@ -28,7 +28,7 @@ urlpatterns = [
     re_path(r'^(\d+)/datastore$', views.calc_datastore),
     re_path(r'^(\d+)/extract/([-/_\.\w]+)$', views.extract),
     re_path(r'^(\d+)/results$', views.calc_results, name="results"),
-    re_path(r'^(\d+)/hmap_(\d+)_(\d+)$', views.hmap_png),
+    re_path(r'^(\d+)/download_png/([-/_\.\(\)\w]+)$', views.download_png),
     re_path(r'^(\d+)/traceback$', views.calc_traceback, name="traceback"),
     re_path(r'^(\d+)/log/size$', views.calc_log_size),
     re_path(r'^(\d+)/log/(\d*):(\d*)$', views.calc_log, name="log"),
