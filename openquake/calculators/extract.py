@@ -929,7 +929,7 @@ def extract_gmf_npz(dstore, what):
 @extract.add('relevant_gmfs')
 def extract_relevant_gmfs(dstore, what):
     qdict = parse(what)
-    [thr] = qdict.get('threshold', [.95])
+    [thr] = qdict.get('threshold', ['1'])
     eids = get_relevant_event_ids(dstore, float(thr))
     try:
         sbe = dstore.read_df('gmf_data/slice_by_event', 'eid')

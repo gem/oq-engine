@@ -338,14 +338,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                          len(parent['ruptures']), ne)
         else:
             self.parent_events = None
-
-        if oq.investigation_time and oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
         super().pre_execute()
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)

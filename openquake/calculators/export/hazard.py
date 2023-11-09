@@ -469,12 +469,13 @@ def export_relevant_gmfs(ekey, dstore):
         raise NotImplementedError('Full enumeration')
     attrs = dstore['gmf_data'].attrs
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
+    thr = os.environ.get('OQ_THRESHOLD', '1.')
     with hdf5.File(fname, 'w') as f:
         if dstore.parent:
             f['sitecol'] = dstore.parent['sitecol']
         else:
             f['sitecol'] = dstore['sitecol']
-        df = extract(dstore, 'relevant_gmfs?threshold=.98')
+        df = extract(dstore, 'relevant_gmfs?threshold=' + thr)
         f.create_df('gmf_data', df, effective_time=attrs['effective_time'],
                     investigation_time=attrs['investigation_time'],
                     num_events=len(df.eid.unique()),
