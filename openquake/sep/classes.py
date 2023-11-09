@@ -499,7 +499,24 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         return out
 
 
-supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
+def init_session(model, providers=onnxruntime.get_available_providers()):
+    inference_session = onnxruntime.InferenceSession(model, providers=providers)
+    return inference_session
+
+class PickableInferenceSession:
+    def __init__(self, model):
+        self.model = model
+        self.inference_session = init_session(self.model)
+
+    def run(self, *args):
+        return self.inference_session.run(*args)
+    
+    def __getstate__(self):
+        return {'model': self.model}
+
+    def __setstate__(self, values):
+        self.model = values['model']
+        self.inference_session = init_session(self.model)
 
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):
@@ -518,6 +535,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         model_path = path.join(path.dirname(__file__), model_file)
         with gzip.open(model_path, 'rb') as f:
             self.model = f.read()
+        self.inference_session = PickableInferenceSession(self.model)
 
     def compute(self, mag, imt_gmf, sites):
         out = []
@@ -537,7 +555,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         out_class, out_prob = \
             todorovic_silva_2022_nonparametric_general(pga=pga,
                     pgv=pgv, vs30=sites.vs30, dw=sites.dw, wtd=sites.gwd, 
-                    precip=sites.precip, model=self.model)
+                    precip=sites.precip, session=self.inference_session)
         out.append(out_class)
         out.append(out_prob)
         return out

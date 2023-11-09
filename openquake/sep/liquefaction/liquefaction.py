@@ -18,10 +18,7 @@
 
 from typing import Union
 import numpy as np
-try:
-    import onnxruntime
-except ImportError:
-     onnxruntime = None
+from openquake.sep.classes import PickableInferenceSession
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
 # to the minimum PGA level necessary to induce liquefaction
@@ -608,7 +605,7 @@ def todorovic_silva_2022_nonparametric_general(
     dw: Union[float, np.ndarray],
     wtd: Union[float, np.ndarray],
     precip: Union[float, np.ndarray],
-    model: bytes,
+    session: PickableInferenceSession,
     ) -> Union[float, np.ndarray]:
     """
     Returns the binary class output (i.e, 0 or 1) which indicates liquefaction
@@ -633,8 +630,8 @@ def todorovic_silva_2022_nonparametric_general(
         Global water table depth, measured in m
     :param precip:
         Mean annual precipitation, measured in mm
-    :param model:
-        Contents of the ONNX model file
+    :param session:
+        A Picklable ONNX Runtime Inference Session with the trained model loaded
 
     :returns:
         out_class: output 0 or 1, i.e., liquefaction nonoccurrence
@@ -645,8 +642,7 @@ def todorovic_silva_2022_nonparametric_general(
     precip = np.where(precip > 250, 250, precip)
     #strain_proxy = pgv / (CM_PER_M * vs30)
     matrix = np.array([pgv, vs30, dw, wtd, precip]).T
-    inference_session = onnxruntime.InferenceSession(model, providers=onnxruntime.get_available_providers())
-    results = inference_session.run(None, {"X": matrix})
+    results = session.run(None, {"X": matrix})
     out_class = results[0]
     out_prob = [p[1] for p in results[1]]
     out_prob = np.where((pgv < 4.0) | (vs30 > 620), 0, out_prob)
