@@ -18,7 +18,6 @@
 
 from typing import Union
 import numpy as np
-from openquake.sep.classes import PickableInferenceSession
 
 # Table mapping the qualitative susceptibility of soils to liquefaction
 # to the minimum PGA level necessary to induce liquefaction
@@ -605,7 +604,7 @@ def todorovic_silva_2022_nonparametric_general(
     dw: Union[float, np.ndarray],
     wtd: Union[float, np.ndarray],
     precip: Union[float, np.ndarray],
-    session: PickableInferenceSession,
+    session,
     ) -> Union[float, np.ndarray]:
     """
     Returns the binary class output (i.e, 0 or 1) which indicates liquefaction
