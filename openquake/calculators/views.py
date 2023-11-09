@@ -511,7 +511,8 @@ def view_portfolio_loss(token, dstore):
         df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
         if (eids >= E).any():  # reduced events
-            weights = ws
+            assert len(set(ws)) == 1, 'Weights must be all equal'
+            weights = ws[:len(eids)]
         else:
             weights = ws[eids]
         avgs.append(weights @ df.loss.to_numpy() / ws.sum() * freq)
