@@ -1,4 +1,4 @@
-#  manuals -> main latest e LTS
+#  manuals -> master latest e LTS
 #  dev/<branch>/arch
 #
 #  link a pdf e constraint coi test ok
@@ -8,7 +8,7 @@
 # --------------
 #
 # .oq-engine-new
-#     <x.y>|main
+#     <x.y>|master
 #         PDF
 #             <pdf_docs>
 #         reference
@@ -19,22 +19,22 @@
 #     reference
 #         latest -> ../latest/reference
 #         LTS    -> ../LTS/reference
-#         main -> ../main/reference
+#         master -> ../master/reference
 #     manual
 #         latest -> ../latest/manual
 #         LTS    -> ../LTS/manual
-#         main -> ../main/manual
+#         master -> ../master/manual
 #     advanced
 #         latest -> ../latest/advanced
 #         LTS    -> ../LTS/advanced
-#         main -> ../main/advanced
+#         master -> ../master/advanced
 # manuals
-#     OpenQuake Manual <x.y>.pdf -> ../.oq-engine-new/<x.y>/PDF/OpenQuake Manual <x.y>.pdf
+#     OpenQuake Manual <x.y>.pdf -> ../oq-engine-new/<x.y>/PDF/OpenQuake Manual <x.y>.pdf
 #     OpenQuake Manual latest.pdf -> OpenQuake Manual <latest_(x.y)>.pdf
 #     OpenQuake Manual LTS.pdf -> OpenQuake Manual <LTS_(x.y)>.pdf
 #
 # .dev
-#     .oq-engine-new
+#     oq-engine-new
 #         <branch>
 #             PDF
 #                 <pdf_docs>
@@ -42,27 +42,27 @@
 #             manual
 #             advanced
 #     manuals
-#         OpenQuake Manual <branch>.pdf -> ../.oq-engine-new/<branch>/PDF/OpenQuake Manual <branch>.pdf
+#         OpenQuake Manual <branch>.pdf -> ../oq-engine-new/<branch>/PDF/OpenQuake Manual <branch>.pdf
 #
 ---
 name: Docs23
 on:
   workflow_dispatch:
-#    inputs:
-#      oq-release:
-#        description: 'OQ Release'
-#        required: true
-#        default: 'dev'
-#        type: choice
-#        options:
-#          - dev
-#          - main
+    inputs:
+      oq-release:
+        description: 'OQ Release'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - master
 #          - release
 #          - LTS
-#  push:
-#    branches: [main, 'engine-*', moster, 'ongine-*']
+  push:
+    branches: [master, 'engine-*', moster, 'ongine-*']
 
-#  pull_request:
+  pull_request:
 
 jobs:
   docs:
@@ -100,7 +100,8 @@ jobs:
       - name: Upgrade pip and install requirements
         run: |
           pip install -U pip
-          pip install -r ./docs23/requirements.txt
+          pip install -r ./requirements-py38-linux64.txt
+          pip install -r ./doc23/requirements.txt
 #      - name: Install oq engine
 #        run: |
 #          pip install -e .[dev]
@@ -127,8 +128,8 @@ jobs:
           # ENG_VER=$(python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])")
           ENG_VER="TODO"
           if [ -z "$BUILD" ]; then
-              if [[ "$GITHUB_REF_NAME" == "main" || "$GITHUB_REF_NAME" == "moster" ]]; then
-                  BUILD=main
+              if [[ "$GITHUB_REF_NAME" == "master" || "$GITHUB_REF_NAME" == "moster" ]]; then
+                  BUILD=master
               elif [[ "$GITHUB_REF_NAME" =~ ^engine- || "$GITHUB_REF_NAME" =~ ^ongine- ]]; then
                   BRANCH_VER="${GITHUB_REF_NAME#engine-}"
                   if [ "$BRANCH_VER" == "$GITHUB_REF_NAME" ]; then
@@ -160,8 +161,8 @@ jobs:
           TARGET_LINK=""
           PDF_VER_LINK=""
           if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
-              TARGET=".oq-engine-new/$ENG_VER/"
-              # TARGET_LINK="${DOCS_BASE}.oq-engine-new/$BUILD"
+              TARGET="oq-engine-new/$ENG_VER/"
+              # TARGET_LINK="${DOCS_BASE}oq-engine-new/$BUILD"
               PDF_VER="${ENG_VER}"
               if [ "$BUILD" == "release" ]; then
                   if [ "$ENG_VER" == "$LATEST_VER" ]; then
@@ -170,16 +171,16 @@ jobs:
               elif [ "$BUILD" == "LTS" ]; then
                   PDF_VER_LINK="LTS"
               fi
-          elif [ "$BUILD" == "main" ]; then
-              TARGET=".oq-engine-new/main/"
-              PDF_VER="(main)"
+          elif [ "$BUILD" == "master" ]; then
+              TARGET="oq-engine-new/master/"
+              PDF_VER="(master)"
           elif [ "$BUILD" == "dev" ]; then
               DOCS_BASE="${DOCS_BASE}.dev/"
               if echo "$GITHUB_REF_NAME" | grep -q '[0-9]\+/merge'; then
-                  TARGET=".oq-engine-new/$GITHUB_HD_REF/"
+                  TARGET="oq-engine-new/$GITHUB_HD_REF/"
                   PDF_VER="($GITHUB_HD_REF)"
               else
-                  TARGET=".oq-engine-new/$GITHUB_REF_NAME/"
+                  TARGET="oq-engine-new/$GITHUB_REF_NAME/"
                   PDF_VER="($GITHUB_REF_NAME)"
               fi
               PDFDOCS="manuals/"
@@ -210,9 +211,9 @@ jobs:
           echo "UPLOAD:              [$UPLOAD]"
 
           # multi-version doc switcher could be runned just from main because
-          # is the only one known the main version (from sources)
+          # is the only one known the master version (from sources)
           # set -x
-          # if [ "$MULTI_DOCS_FOR_DEVEL" == "true" -o  "$BUILD" == "main" ]; then
+          # if [ "$MULTI_DOCS_FOR_DEVEL" == "true" -o  "$BUILD" == "master" ]; then
           #     ddown_adv="["
           #     ddown_man="["
           #     for v in $ALL_VERS; do
@@ -249,12 +250,12 @@ jobs:
           #         if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
           #             if [ "$main_rename" == "true" ]; then
           #                 ver_name="${pfx}"
-          #                 ver_val="main"
+          #                 ver_val="master"
           #             else
           #                 ver_name="${ver_maj}.${ver_min}${sfx}"
           #                 ver_val="${ver_maj}.${ver_min}"
           #             fi
-          #             ver_url="https://docs.openquake.org/${DOCS_BASE}.oq-engine-new/${ver_val}/manual/"
+          #             ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine-new/${ver_val}/manual/"
           #             if [ "$ddown_man" != "[" ]; then
           #                ddown_man="${ddown_man}, "
           #             fi
@@ -265,12 +266,12 @@ jobs:
           #         if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
           #             if [ "$main_rename" == "true" ]; then
           #                 ver_name="${pfx}"
-          #                 ver_val="main"
+          #                 ver_val="master"
           #             else
           #                 ver_name="${ver_maj}.${ver_min}${sfx}"
           #                 ver_val="${ver_maj}.${ver_min}"
           #             fi
-          #             ver_url="https://docs.openquake.org/${DOCS_BASE}.oq-engine-new/${ver_val}/advanced/"
+          #             ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine-new/${ver_val}/advanced/"
           #             if [ "$ddown_adv" != "[" ]; then
           #                ddown_adv="${ddown_adv}, "
           #             fi
@@ -285,16 +286,20 @@ jobs:
           #     echo "$ddown_adv" > dot_ddown_adv.json
           # fi
           set -x
-          gpg --version
-          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
-          chmod 600 ./.deploy_rsa
-          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+          if [ "$DOCS_SSH" ]; then
+              gpg --version
+              gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
+              chmod 600 ./.deploy_rsa
+              eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+          else
+              echo "DOCS_SSH env variable not found, skip deploy"
+          fi
 
           # if [ -f "dot_ddown_man.json" ]; then
-          #     rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}.oq-engine-new\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}.oq-engine-new/.ddown_man.json"
+          #     rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine-new\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine-new/.ddown_man.json"
           # fi
           # if [ -f "dot_ddown_adv.json" ]; then
-          #     rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}.oq-engine-new\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}.oq-engine-new/.ddown_adv.json"
+          #     rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine-new\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine-new/.ddown_adv.json"
           # fi
 
           # sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
@@ -302,8 +307,8 @@ jobs:
           echo "Make OpenQuake Manual (HTML and PDF)"
 
           # PAY ATTENTION: engine folder is 'doc', not 'docs'
-          # cd docs23/manual && make html && make latexpdf
-          cd docs23 && make html 2>&1 | tee full.log
+          # cd doc23/manual && make html && make latexpdf
+          cd doc23 && make html 2>&1 | tee full.log
           grep WARNING < full.log > warnings.log
           echo
           echo "=== WARNINGS ==="
@@ -325,9 +330,13 @@ jobs:
           # fi
 
 
-          echo "Uploading New OpenQuake Documentation (HTML)"
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete _build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
-          echo "------"
+          if [ "$DOCS_SSH" ]; then
+              echo "Uploading New OpenQuake Documentation (HTML)"
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}manual/\" && rsync" -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete _build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
+              echo "------"
+          else
+              echo "SKIP Uploading New OpenQuake Documentation (HTML)"
+          fi
 
 
           # echo "Make Reference Manual (HTML)"
@@ -358,10 +367,10 @@ jobs:
           # rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}advanced/"
 
           # if [ "$BUILD" == "LTS" ]; then
-          #      ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}.oq-engine-new/\"; ln -snf \"$ENG_VER\" LTS'"
+          #      ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine-new/\"; ln -snf \"$ENG_VER\" LTS'"
           # fi
           # if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
           #     if [ "$LATEST_VER" == "$ENG_VER" ]; then
-          #         ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}.oq-engine-new/\"; ln -snf \"$ENG_VER\" latest'"
+          #         ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine-new/\"; ln -snf \"$ENG_VER\" latest'"
           #     fi
           # fi

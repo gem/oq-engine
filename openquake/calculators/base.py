@@ -1226,17 +1226,24 @@ def import_gmfs_hdf5(dstore, oqparam):
     # already open, therefore you cannot run in parallel two calculations
     # starting from the same GMFs
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
+    dstore['complete'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "sitecol")
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     E = attrs['num_events']
     events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = numpy.arange(E)
     rel = numpy.unique(dstore['gmf_data/eid'])
-    logging.info('Storing %d events, %d relevant', E, len(rel))
+    e = len(rel)
+    assert E >= e, (E, e)
+    events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
+    logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
-    dstore['weights'] = numpy.ones(1)
+    n = oqparam.number_of_logic_tree_samples
+    if n:
+        dstore['weights'] = numpy.full(n, 1/n)
+    else:
+        dstore['weights'] = numpy.ones(1)
     return events['id']
 
 
@@ -1262,6 +1269,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     dstore.create_df('gmf_data', items)  # not gzipping for speed
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
+                     investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
     if data is not None:
         _df = pandas.DataFrame(dict(items))

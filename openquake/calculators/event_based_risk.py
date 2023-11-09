@@ -181,7 +181,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     del dic
     # if max_gmvs_chunk is too small, there is a huge data transfer in
     # avg_losses and the calculation may hang; if too large, run out of memory
-    slices = performance.split_slices(df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    slices = performance.split_slices(
+        df.eid.to_numpy(), oqparam.max_gmvs_chunk)
     for s0, s1 in slices:
         yield event_based_risk(df[s0:s1], oqparam, monitor)
 
@@ -337,14 +338,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                          len(parent['ruptures']), ne)
         else:
             self.parent_events = None
-
-        if oq.investigation_time and oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
         super().pre_execute()
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)
@@ -362,10 +355,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
         if (oq.calculation_mode == 'event_based_risk' and
-                A * self.R > 1_000_000 and oq.avg_losses
-                and not oq.collect_rlzs):
-            raise ValueError('For large exposures you must set '
-                             'collect_rlzs=true or avg_losses=false')
+                not oq.collect_rlzs and oq.avg_losses):
+            if A * self.R > 10_000_000:
+                raise ValueError('For large exposures you must set '
+                                 'avg_losses=false or use sampling')
+            elif A * self.R > 100_000:
+                logging.warning('We recommend using sampling for performance')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
@@ -488,10 +483,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             assert size <= upper_limit, (size, upper_limit)
             # sanity check on uniqueness by (agg_id, loss_id, event_id)
             arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
-            uni = numpy.unique(arr, axis=0)
+            uni, cnt = numpy.unique(arr, axis=0, return_counts=True)
             if len(uni) < len(arr):
-                raise RuntimeError('risk_by_event contains %d duplicates!' %
-                                   (len(arr) - len(uni)))
+                dupl = uni[cnt > 1]  # (agg_id, loss_id, event_id)
+                raise RuntimeError(
+                    'risk_by_event contains %d duplicates for event %s' %
+                    (len(arr) - len(uni), dupl[0, 2]))
 
         if oq.avg_losses:
             logging.info('Storing avg_losses-rlzs')

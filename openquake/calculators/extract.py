@@ -931,14 +931,16 @@ def extract_relevant_gmfs(dstore, what):
     qdict = parse(what)
     [thr] = qdict.get('threshold', [.95])
     eids = get_relevant_event_ids(dstore, float(thr))
+    try:
+        sbe = dstore.read_df('gmf_data/slice_by_event', 'eid')
+    except KeyError:
+        df = dstore.read_df('gmf_data', 'eid')
+        return df.loc[eids].reset_index()
     dfs = []
-    N = len(dstore['gmf_data/eid'])
-    nslices = numpy.ceil(N / 10_000_000)
-    for slc in general.split_in_slices(N, nslices):
-        df = dstore.read_df('gmf_data', 'eid', slc=slc)
-        ok_eids = eids[numpy.isin(eids, df.index.unique())]
-        if len(ok_eids):
-            dfs.append(df.loc[ok_eids].reset_index())
+    for eid in eids:
+        ser = sbe.loc[eid]
+        slc = slice(ser.start, ser.stop)
+        dfs.append(dstore.read_df('gmf_data', slc=slc))
     return pandas.concat(dfs)
 
 

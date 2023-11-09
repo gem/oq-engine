@@ -492,22 +492,30 @@ def view_portfolio_loss(token, dstore):
     extracted from the event loss table.
     """
     oq = dstore['oqparam']
-    R = dstore['full_lt'].get_num_paths()
     K = dstore['risk_by_event'].attrs.get('K', 0)
     alt_df = dstore.read_df('risk_by_event', 'agg_id', dict(agg_id=K))
     weights = dstore['weights'][:]
     rlzs = dstore['events']['rlz_id']
     E = len(rlzs)
+    R = len(weights)
     ws = weights[rlzs]
     avgs = []
-    if oq.investigation_time:
-        factor = oq.time_ratio * E / R
+    attrs = dstore['gmf_data'].attrs
+    itime = attrs['investigation_time']
+    etime = attrs['effective_time']
+    if itime:
+        freq = (oq.risk_investigation_time or itime) * E / etime
     else:
-        factor = 1 / R
+        freq = 1 / R
     for ln in oq.loss_types:
         df = alt_df[alt_df.loss_id == LOSSID[ln]]
         eids = df.pop('event_id').to_numpy()
-        avgs.append(ws[eids] @ df.loss.to_numpy() / ws.sum() * factor)
+        if (eids >= E).any():  # reduced events
+            assert len(set(ws)) == 1, 'Weights must be all equal'
+            weights = ws[:len(eids)]
+        else:
+            weights = ws[eids]
+        avgs.append(weights @ df.loss.to_numpy() / ws.sum() * freq)
     return text_table([['avg'] + avgs], ['loss'] + oq.loss_types)
 
 

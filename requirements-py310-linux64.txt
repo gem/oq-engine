@@ -16,7 +16,7 @@ https://wheelhouse.openquake.org/v3/linux/py310/shapely-2.0.1-cp310-cp310-manyli
 https://wheelhouse.openquake.org/v3/linux/py310/llvmlite-0.39.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/numba-0.56.2-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/psutil-5.9.2-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-https://wheelhouse.openquake.org/v3/linux/py310/Fiona-1.8.22-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py310/fiona-1.9.5-cp310-cp310-manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/pyproj-3.4.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 #
 #python
@@ -49,7 +49,7 @@ https://wheelhouse.openquake.org/v3/py/packaging-21.3-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/fonttools-4.38.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/importlib_metadata-5.0.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/zipp-3.10.0-py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/Django-3.2.21-py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/Django-3.2.23-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/tzdata-2023.3-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/coloredlogs-15.0.1-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/flatbuffers-23.5.26-py2.py3-none-any.whl
