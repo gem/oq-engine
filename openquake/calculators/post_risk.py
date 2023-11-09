@@ -349,13 +349,12 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
     return aggrisk
 
 
-def build_reinsurance(dstore, num_events):
+def build_reinsurance(dstore, oq, num_events):
     """
     Build and store the tables `reinsurance-avg_policy` and
     `reinsurance-avg_portfolio`;
     for event_based, also build the `reinsurance-aggcurves` table.
     """
-    oq = dstore['oqparam']
     size = dstore.getsize('reinsurance-risk_by_event')
     logging.info('Building reinsurance-aggcurves from %s of '
                  'reinsurance-risk_by_event', general.humansize(size))
@@ -467,16 +466,15 @@ class PostRiskCalculator(base.RiskCalculator):
 
     def execute(self):
         oq = self.oqparam
+        R = len(self.datastore['weights'])
         if 'gmfs' in oq.inputs and not oq.investigation_time:
             attrs = self.datastore['gmf_data'].attrs
             inv_time = attrs['investigation_time']
             eff_time = attrs['effective_time']
             oq.investigation_time = inv_time
-            oq.ses_per_logic_tree_path = eff_time / (
-                oq.investigation_time * self.R)
+            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
         if oq.investigation_time:
-            eff_time = (oq.investigation_time *
-                        oq.ses_per_logic_tree_path * self.R)
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
 
         if 'reinsurance' in oq.inputs:
             logging.warning('Reinsurance calculations are still experimental')
@@ -544,7 +542,7 @@ class PostRiskCalculator(base.RiskCalculator):
         self.aggrisk = build_store_agg(
             self.datastore, oq, rbe_df, self.num_events)
         if 'reinsurance-risk_by_event' in self.datastore:
-            build_reinsurance(self.datastore, self.num_events)
+            build_reinsurance(self.datastore, oq, self.num_events)
         return 1
 
     def post_execute(self, ok):
