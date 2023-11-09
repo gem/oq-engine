@@ -1387,7 +1387,10 @@ def get_relevant_event_ids(dstore, threshold):
     if 'loss_by_event' not in dstore:
         return
     eids = dstore['loss_by_event/event_id'][:]
-    cumsum = dstore['loss_by_event/loss'][:].cumsum()
+    try:
+        cumsum = dstore['loss_by_event/loss'][:].cumsum()
+    except KeyError:  # no losses
+        return eids
     thr = threshold * cumsum[-1]
     for i, csum in enumerate(cumsum, 1):
         if csum > thr:
