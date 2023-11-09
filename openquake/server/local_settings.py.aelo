@@ -8,7 +8,6 @@ APPLICATION_MODE = 'aelo'
 # WEBUI config uncomment and set properly if needed
 # WEBUIURL = 'http://localhost:8800/'
 
-# TODO: ask Antonio
 # turn on USE_X_FORWARDED_HOST to expose the webui via a proxy server
 # USE_X_FORWARDED_HOST = True
 # USE_X_FORWARDED_PORT = True
