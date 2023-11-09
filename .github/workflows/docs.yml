@@ -294,11 +294,16 @@ jobs:
               echo "DOCS_SSH env variable not found, skip deploy"
           fi
 
-          if [ -f "dot_ddown_man.json" ]; then
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_man.json"
-          fi
-          if [ -f "dot_ddown_adv.json" ]; then
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_adv.json"
+          if [ "$DOCS_SSH" ]; then
+              echo "publish dropdown version descriptions if exists"
+              if [ -f "dot_ddown_man.json" ]; then
+                  rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_man.json"
+              fi
+              if [ -f "dot_ddown_adv.json" ]; then
+                  rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_adv.json"
+              fi
+          else
+              echo "SKIP: publish dropdown version descriptions"
           fi
 
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
