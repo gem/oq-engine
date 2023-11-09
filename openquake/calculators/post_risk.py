@@ -133,28 +133,31 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
     :returns: a LossCurvesMapsBuilder instance
     """
     weights = dstore['weights'][()]
-    try:
-        haz_time = dstore['gmf_data'].attrs['effective_time']
-    except KeyError:
-        haz_time = None
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
+    haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
         len(weights) if oq.collect_rlzs else 1)
     if oq.collect_rlzs:
-        if haz_time and haz_time != eff_time:
+        try:
+            etime = dstore['gmf_data'].attrs['effective_time']
+        except KeyError:
+            etime = None
+        haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * len(weights)
+        if etime and etime != haz_time:
             raise ValueError('The effective time stored in gmf_data is %d, '
                              'which is inconsistent with %d' %
-                             (haz_time, eff_time))
+                             (etime, haz_time))
         num_events = numpy.array([len(dstore['events'])])
         weights = numpy.ones(1)
-    elif num_events is None:
+    else:
+        haz_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    if num_events is None:
         num_events = numpy.bincount(
             dstore['events']['rlz_id'], minlength=len(weights))
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, num_events.max())
+        haz_time, num_events.max())
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
-        eff_time, oq.risk_investigation_time or oq.investigation_time)
+        haz_time, oq.risk_investigation_time or oq.investigation_time)
 
 
 def get_src_loss_table(dstore, loss_id):
