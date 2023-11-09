@@ -6,10 +6,6 @@ import logging
 import numpy as np
 import pandas as pd
 import pyproj as pj
-try:
-    from osgeo import gdal
-except ImportError:
-    gdal = None
 from numpy.lib.stride_tricks import as_strided
 
 
