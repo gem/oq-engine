@@ -219,7 +219,7 @@ class DamageCalculator(EventBasedRiskCalculator):
         if oq.hazard_calculation_id:
             oq.parentdir = os.path.dirname(self.datastore.ppath)
         if oq.investigation_time:  # event based
-            self.builder = get_loss_builder(self.datastore)  # check
+            self.builder = get_loss_builder(self.datastore, oq)  # check
         self.dmgcsq = zero_dmgcsq(len(self.assetcol), self.R, self.crmodel)
         smap = calc.starmap_from_gmfs(damage_from_gmfs, oq, self.datastore,
                                       self._monitor)
