@@ -303,8 +303,9 @@ def fix_investigation_time(oq, dstore):
         attrs = dstore['gmf_data'].attrs
         inv_time = attrs['investigation_time']
         eff_time = attrs['effective_time']
-        oq.investigation_time = inv_time
-        oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+        if inv_time:  # is zero in scenarios
+            oq.investigation_time = inv_time
+            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
     return R
 
 
