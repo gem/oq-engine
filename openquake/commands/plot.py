@@ -859,23 +859,24 @@ def plot_governing_mce(dstore, update_dstore=False):
 
     limit_det = [0.5, 1.5, 0.6]
     # presenting as maximum component -> do not need conversion facts
-    RTGM = dstore.read_df('rtgm')['ProbMCE']
+    rtgm_probmce = dstore.read_df('rtgm')['ProbMCE']
     plt.figure(figsize=(8, 6))
     plt.rcParams.update({'font.size': 15})
     plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
-    plt.plot(T[0], RTGM[0], 'bX', markersize=12, label='$PGA_{GM}$',
+    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{GM}$',
              linewidth=3)
-    plt.plot(T[1:], RTGM[1:], 'bs', markersize=12,
+    plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
     MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
     if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
-        plt.ylim([0, numpy.max([RTGM, MCEr, limit_det]) + 0.2])
+        plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
     else:
         plt.plot(T[0], MCEr_det[0], 'c^', markersize=10, label='$PGA_{84th}$',
                  linewidth=3)
         plt.plot(T[1:], MCEr_det[1:], 'cd', markersize=10,
                  label='$S_{S,84th}$ and $S_{1,84th}$', linewidth=3)
-        plt.ylim([0, numpy.max([RTGM,  MCEr, MCEr_det, limit_det]) + 0.2])
+        plt.ylim(
+            [0, numpy.max([rtgm_probmce,  MCEr, MCEr_det, limit_det]) + 0.2])
     plt.scatter(T[0], MCEr[0], s=200, label='Governing $MCE_G$',
                 linewidth=2, facecolors='none', edgecolors='r')
     plt.scatter(T[1:], MCEr[1:], s=200, marker='s',
