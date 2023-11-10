@@ -27,7 +27,7 @@ from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.engine import engine
-from openquake.calculators import base, views, event_based_risk as ebr
+from openquake.calculators import base, views
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -466,6 +466,8 @@ class PostRiskCalculator(base.RiskCalculator):
             self.num_events = numpy.array([len(ds['events'])])
 
     def execute(self):
+        # avoid circular import on macos
+        from openquake.calculators import event_based_risk as ebr
         oq = self.oqparam
         R = ebr.fix_investigation_time(oq, self.datastore)
         if oq.investigation_time:
