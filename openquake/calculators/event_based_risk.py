@@ -32,7 +32,7 @@ from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
-    PostRiskCalculator, post_aggregate, fix_dtypes)
+    PostRiskCalculator, post_aggregate, fix_dtypes, fix_investigation_time)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -291,22 +291,6 @@ def ebrisk(proxies, cmaker, stations, dstore, monitor):
         if len(dic['gmfdata']):
             gmf_df = pandas.DataFrame(dic['gmfdata'])
             yield event_based_risk(gmf_df, cmaker.oq, monitor)
-
-
-def fix_investigation_time(oq, dstore):
-    """
-    If starting from GMFs, fix oq.investigation_time.
-    :returns: the number of hazard realizations
-    """
-    R = len(dstore['weights'])
-    if 'gmfs' in oq.inputs and not oq.investigation_time:
-        attrs = dstore['gmf_data'].attrs
-        inv_time = attrs['investigation_time']
-        eff_time = attrs['effective_time']
-        if inv_time:  # is zero in scenarios
-            oq.investigation_time = inv_time
-            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
-    return R
 
 
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')

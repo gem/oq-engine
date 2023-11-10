@@ -36,6 +36,22 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 
+def fix_investigation_time(oq, dstore):
+    """
+    If starting from GMFs, fix oq.investigation_time.
+    :returns: the number of hazard realizations
+    """
+    R = len(dstore['weights'])
+    if 'gmfs' in oq.inputs and not oq.investigation_time:
+        attrs = dstore['gmf_data'].attrs
+        inv_time = attrs['investigation_time']
+        eff_time = attrs['effective_time']
+        if inv_time:  # is zero in scenarios
+            oq.investigation_time = inv_time
+            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+    return R
+
+
 def save_curve_stats(dstore):
     """
     Save agg_curves-stats
@@ -466,10 +482,8 @@ class PostRiskCalculator(base.RiskCalculator):
             self.num_events = numpy.array([len(ds['events'])])
 
     def execute(self):
-        # avoid circular import on macos
-        from openquake.calculators import event_based_risk as ebr
         oq = self.oqparam
-        R = ebr.fix_investigation_time(oq, self.datastore)
+        R = fix_investigation_time(oq, self.datastore)
         if oq.investigation_time:
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
 
