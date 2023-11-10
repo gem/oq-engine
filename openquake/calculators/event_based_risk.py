@@ -293,6 +293,22 @@ def ebrisk(proxies, cmaker, stations, dstore, monitor):
             yield event_based_risk(gmf_df, cmaker.oq, monitor)
 
 
+def fix_investigation_time(oq, dstore):
+    """
+    If starting from GMFs, fix oq.investigation_time.
+    :returns: the number of hazard realizations
+    """
+    R = len(dstore['weights'])
+    if 'gmfs' in oq.inputs and not oq.investigation_time:
+        attrs = dstore['gmf_data'].attrs
+        inv_time = attrs['investigation_time']
+        eff_time = attrs['effective_time']
+        if inv_time:  # is zero in scenarios
+            oq.investigation_time = inv_time
+            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+    return R
+
+
 @base.calculators.add('ebrisk', 'scenario_risk', 'event_based_risk')
 class EventBasedRiskCalculator(event_based.EventBasedCalculator):
     """
@@ -383,6 +399,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
+        fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
                 self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])

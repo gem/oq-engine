@@ -163,6 +163,9 @@ agg_id
         self.assertEqual(loss0, loss4)
 
     def test_case_1_deductible_gt_ins_limit(self):
+        if sys.platform == 'win32':
+            raise SkipTest('Skipped to avoid a fake PermissionError')
+
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_1.__file__, 'job2.ini',
                           insurance_csv="{'structural': 'policy_ins_ko.csv'}")
