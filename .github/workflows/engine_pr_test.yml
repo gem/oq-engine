@@ -64,7 +64,7 @@ jobs:
         set -e
         source ~/openquake/bin/activate
         pip install pyshp pytest flake8 https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-        oq dbserver start
+        oq dbserver upgrade
         cd openquake
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
@@ -94,7 +94,6 @@ jobs:
     - name: Server 'PUBLIC' mode tests
       run: |
         source ~/openquake/bin/activate
-        oq dbserver start
         # -v 2 also logs the test names
         OQ_APPLICATION_MODE=public ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
@@ -123,7 +122,6 @@ jobs:
     - name: Server 'READ_ONLY' mode tests
       run: |
         source ~/openquake/bin/activate
-        oq dbserver start
         # -v 2 also logs the test names
         OQ_APPLICATION_MODE=read_only ./openquake/server/manage.py test -v 2 tests.test_read_only_mode
 
@@ -152,6 +150,5 @@ jobs:
     - name: Server 'AELO' mode tests
       run: |
         source ~/openquake/bin/activate
-        oq dbserver start
         # -v 2 also logs the test names
         OQ_APPLICATION_MODE=aelo OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg ./openquake/server/manage.py test -v 2 tests.test_aelo_mode
