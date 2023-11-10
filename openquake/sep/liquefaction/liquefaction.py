@@ -644,10 +644,9 @@ def todorovic_silva_2022_nonparametric_general(
     results = session.run(None, {"X": matrix})
     out_class = results[0]
     out_prob = [p[1] for p in results[1]]
-    out_prob = np.where((pgv < 4.0) | (vs30 > 620), 0, out_prob)
-    out_class = np.where((pgv < 4.0) | (vs30 > 620), 0, out_class)
-    out_prob = np.where(pga < 0.1, 0, out_prob)
-    out_class = np.where(pga < 0.1, 0, out_class)
+    conditions = (pgv < 4.0) | (vs30 > 620) | (pga < 0.1)
+    out_prob = np.where(conditions, 0, out_prob)
+    out_class = np.where(conditions, 0, out_class)
     return out_class, out_prob
 
 
