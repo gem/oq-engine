@@ -703,6 +703,9 @@ class ReinsuranceTestCase(CalculatorTestCase):
                           'source_model_logic_tree.xml',
                           'structural_vulnerability_model.xml'])
 
+        if sys.platform == 'win32':
+            raise SkipTest('Avoid PermissionError')
+
         # make sure reaggreate works
         self.run_calc(reinsurance_2.__file__, 'job.ini',
                       calculation_mode='post_risk',
