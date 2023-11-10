@@ -929,7 +929,7 @@ def extract_gmf_npz(dstore, what):
 @extract.add('relevant_gmfs')
 def extract_relevant_gmfs(dstore, what):
     qdict = parse(what)
-    [thr] = qdict.get('threshold', [.95])
+    [thr] = qdict.get('threshold', ['1'])
     eids = get_relevant_event_ids(dstore, float(thr))
     try:
         sbe = dstore.read_df('gmf_data/slice_by_event', 'eid')
@@ -1387,7 +1387,10 @@ def get_relevant_event_ids(dstore, threshold):
     if 'loss_by_event' not in dstore:
         return
     eids = dstore['loss_by_event/event_id'][:]
-    cumsum = dstore['loss_by_event/loss'][:].cumsum()
+    try:
+        cumsum = dstore['loss_by_event/loss'][:].cumsum()
+    except KeyError:  # no losses
+        return eids
     thr = threshold * cumsum[-1]
     for i, csum in enumerate(cumsum, 1):
         if csum > thr:

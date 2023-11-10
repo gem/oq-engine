@@ -469,7 +469,7 @@ def export_relevant_gmfs(ekey, dstore):
         raise NotImplementedError('Full enumeration')
     attrs = dstore['gmf_data'].attrs
     fname = dstore.build_fname('gmf', 'data', 'hdf5')
-    thr = os.environ.get('OQ_THRESHOLD', '.97')
+    thr = os.environ.get('OQ_THRESHOLD', '1.')
     with hdf5.File(fname, 'w') as f:
         if dstore.parent:
             f['sitecol'] = dstore.parent['sitecol']

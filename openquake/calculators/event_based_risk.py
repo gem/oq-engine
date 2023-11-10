@@ -32,7 +32,7 @@ from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
-    PostRiskCalculator, post_aggregate, fix_dtypes)
+    PostRiskCalculator, post_aggregate, fix_dtypes, fix_investigation_time)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -338,14 +338,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                          len(parent['ruptures']), ne)
         else:
             self.parent_events = None
-
-        if oq.investigation_time and oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
         super().pre_execute()
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)
@@ -391,6 +383,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
+        fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
                 self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])
