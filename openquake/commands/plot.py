@@ -1080,7 +1080,7 @@ def make_figure_governing_mce(extractors, what):
 
 def make_figure_disagg_by_src(extractors, what):
     """
-    $ oq plot "most_contrib_sources?"
+    $ oq plot "disagg_by_src?"
     """
     [ex] = extractors
     dstore = ex.dstore
