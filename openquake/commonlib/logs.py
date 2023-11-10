@@ -57,7 +57,7 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    if os.environ.get('OQ_DATABASE') == 'local':
+    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)

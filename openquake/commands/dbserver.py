@@ -32,15 +32,25 @@ def main(cmd,
     """
     start/stop/restart the database server, or return its status
     """
-    if os.environ.get('OQ_DATABASE') == 'local':
-        print('Doing nothing since OQ_DATABASE=local')
-        return
-
     if config.multi_user:
         user = getpass.getuser()
         if user != config.dbserver.user:
             sys.exit(f'Only user {config.dbserver.user} can start the dbserver '
                      f'but you are {user}')
+
+    if cmd == 'upgrade':
+        dbapi.db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
+        applied = db.actions.upgrade_db(dbapi.db)
+        if applied:
+            print('Applied upgrades', applied)
+        else:
+            print('Already upgraded')
+        dbapi.db.close()
+        return
+
+    if os.environ.get('OQ_DATABASE') == 'local':
+        print('Doing nothing since OQ_DATABASE=local')
+        return
 
     status = dbserver.get_status()
     if cmd == 'status':
@@ -56,14 +66,6 @@ def main(cmd,
             dbserver.run_server(dbhostport, loglevel, foreground)
         else:
             print('dbserver already running')
-    elif cmd == 'upgrade':
-        dbapi.db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
-        applied = db.actions.upgrade_db(dbapi.db)
-        if applied:
-            print('Applied upgrades', applied)
-        else:
-            print('Already upgraded')
-        dbapi.db.close()
 
 
 main.cmd = dict(help='dbserver command',
