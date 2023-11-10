@@ -1043,6 +1043,7 @@ def plot_disagg_by_src(dstore, update_dstore=False):
                 logging.warning(
                     f'Missing module PIL: skipping storing'
                     f' png/disagg_by_src-{imt}.png')
+        fig1.tight_layout()
 
     if update_dstore:
         if Image is not None:
@@ -1055,6 +1056,7 @@ def plot_disagg_by_src(dstore, update_dstore=False):
             logging.warning(
                 'Missing module PIL: skipping storing'
                 ' png/disagg_by_src-All-IMTs.png')
+    fig.tight_layout()
     return plt
 
 
