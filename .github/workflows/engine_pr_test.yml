@@ -34,7 +34,7 @@ jobs:
         set -e
         source ~/openquake/bin/activate
         pip install pytest https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
-        oq dbserver start
+        oq dbserver upgrade
         pytest --doctest-modules -x --disable-warnings --color=yes --durations=10 openquake/calculators -k 'not risk and not damage' && pytest doc/adv-manual/*.rst
 
   hazardlib:
