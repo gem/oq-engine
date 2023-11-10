@@ -147,7 +147,9 @@ class GodaAtkinson2009(CrossCorrelationBetween):
         angle = np.pi/2. - (theta1 + theta2 * ITmin * (Tmin / Tmax) ** theta3 *
                             np.log10(Tmin / 0.25)) * np.log10(Tmax / Tmin)
         delta = 1 + np.cos(-1.5 * np.log10(Tmax / Tmin))
-        return (1. - np.cos(angle) + delta) / 3.
+        corr = (1. - np.cos(angle) + delta) / 3.
+
+        return max(corr, 1)
 
     def get_inter_eps(self, imts, num_events, rng):
         """
