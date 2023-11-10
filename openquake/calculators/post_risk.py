@@ -27,7 +27,7 @@ from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.engine import engine
-from openquake.calculators import base, views
+from openquake.calculators import base, views, event_based_risk as ebr
 
 U8 = numpy.uint8
 F32 = numpy.float32
@@ -140,7 +140,8 @@ def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
             etime = dstore['gmf_data'].attrs['effective_time']
         except KeyError:
             etime = None
-        haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * len(weights)
+        haz_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
+                    len(weights))
         if etime and etime != haz_time:
             raise ValueError('The effective time stored in gmf_data is %d, '
                              'which is inconsistent with %d' %
@@ -307,7 +308,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
 
     agg_ids = rbe_df.agg_id.unique()
     K = agg_ids.max()
-    L = scientific.LOSSID['structural']
+    T = scientific.LOSSID[oq.total_losses or 'structural']
     logging.info("Performing %d aggregations", len(agg_ids))
 
     # double loop to avoid running out of memory
@@ -315,7 +316,7 @@ def build_store_agg(dstore, oq, rbe_df, num_events):
 
         # build loss_by_event and loss_by_rupture
         if agg_id == K and ('loss' in columns or 'losses' in columns) and rups:
-            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == L)].copy()
+            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == T)].copy()
             if len(df):
                 df['rup_id'] = rup_id[df.event_id.to_numpy()]
                 if 'losses' in columns:  # for consequences
@@ -466,13 +467,7 @@ class PostRiskCalculator(base.RiskCalculator):
 
     def execute(self):
         oq = self.oqparam
-        R = len(self.datastore['weights'])
-        if 'gmfs' in oq.inputs and not oq.investigation_time:
-            attrs = self.datastore['gmf_data'].attrs
-            inv_time = attrs['investigation_time']
-            eff_time = attrs['effective_time']
-            oq.investigation_time = inv_time
-            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+        R = ebr.fix_investigation_time(oq, self.datastore)
         if oq.investigation_time:
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
 
