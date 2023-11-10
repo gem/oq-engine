@@ -43,39 +43,6 @@ VERY_SMALL = 1e-20
 ALMOST_RIGHT_ANGLE = 89.9
 
 
-def fix_idl(lon, idl):
-    """
-    Fix the longitude in proximity of the international date line
-    """
-    return lon + 360 if idl and lon < 0 else lon
-
-
-def profile_node(points):
-    """
-    :param points: a list of Point objects
-    :returns: a Node of kind profile
-    """
-    line = []
-    for point in points:
-        line.append(point.longitude)
-        line.append(point.latitude)
-        line.append(point.depth)
-    pos = Node('gml:posList', {}, line)
-    node = Node('profile', nodes=[Node('gml:LineString', nodes=[pos])])
-    return node
-
-
-def kite_surface_node(profiles):
-    """
-    :param profiles: a list of lists of points
-    :returns: a Node of kind complexFaultGeometry
-    """
-    node = Node('kiteSurface')
-    for profile in profiles:
-        node.append(profile_node(profile))
-    return node
-
-
 class KiteSurface(BaseSurface):
     """
     The Kite Fault Surface allows the construction of faults with variable
@@ -576,6 +543,136 @@ class KiteSurface(BaseSurface):
         return None, None, None, area
 
 
+def geom_to_kite(geom):
+    """
+    :returns: KiteSurface described by the given geometry array
+    """
+    shape_y, shape_z = int(geom[1]), int(geom[2])
+    array = geom[3:].astype(np.float64).reshape(3, shape_y, shape_z)
+    return KiteSurface(RectangularMesh(*array))
+
+
+def get_profiles_from_simple_fault_data(
+        fault_trace, upper_seismogenic_depth,
+        lower_seismogenic_depth, dip, rupture_mesh_spacing):
+    """
+    Using the same information used for the construction of a simple fault
+    surface, creates a set of profiles that can be used to instantiate a
+    kite surface.
+
+    :param fault_trace:
+        A :class:`openquake.hazardlib.geo.line.Line` instance
+    :param upper_seismogenic_depth:
+        The upper seismmogenic depth [km]
+    :param lower_seismogenic_depth:
+        The lower seismmogenic depth [km]
+    :param dip:
+        The dip angle [degrees]
+    :param rupture_mesh_spacing:
+        The size of the mesh used to represent the fault surface. In our case
+        the spacing between profiles [km]
+    """
+
+    # Avoids singularity
+    if np.abs(dip - 90.) < 1e-5:
+        dip = 89.9
+
+    # Get simple fault surface
+    srfc = SimpleFaultSurface.from_fault_data(
+        fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+        dip, rupture_mesh_spacing * 1.01)
+
+    # Creating profiles
+    profiles = []
+    n, m = srfc.mesh.shape
+    for i in range(m):
+        coo = np.zeros((n, 3))
+        coo[:, 0] = srfc.mesh.lons[:, i]
+        coo[:, 1] = srfc.mesh.lats[:, i]
+        coo[:, 2] = srfc.mesh.depths[:, i]
+        profiles.append(Line.from_coo(coo))
+
+    return profiles
+
+
+def fix_idl(lon, idl):
+    """
+    Fix the longitude in proximity of the international date line
+    """
+    return lon + 360 if idl and lon < 0 else lon
+
+
+def get_coords(line, idl):
+    """
+    Create a list with the coordinates of the points describing a line
+
+    :param line:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    :returns:
+        A list with the 3D coordinates of the line.
+    """
+    tmp = []
+    for p in line:
+        p.longitude = fix_idl(p.longitude, idl)
+        tmp.append([p.longitude, p.latitude, p.depth])
+    return tmp
+
+
+def kite_surface_node(profiles):
+    """
+    :param profiles: a list of lists of points
+    :returns: a Node of kind complexFaultGeometry
+    """
+    node = Node('kiteSurface')
+    for profile in profiles:
+        node.append(profile_node(profile))
+    return node
+
+
+def kite_to_geom(surface):
+    """
+    :returns: the geometry array describing the KiteSurface
+    """
+    shape_y, shape_z = surface.mesh.array.shape[1:]
+    coords = np.float32(surface.mesh.array.flat)
+    return np.concatenate([np.float32([1, shape_y, shape_z]), coords])
+
+
+def profile_node(points):
+    """
+    :param points: a list of Point objects
+    :returns: a Node of kind profile
+    """
+    line = []
+    for point in points:
+        line.append(point.longitude)
+        line.append(point.latitude)
+        line.append(point.depth)
+    pos = Node('gml:posList', {}, line)
+    node = Node('profile', nodes=[Node('gml:LineString', nodes=[pos])])
+    return node
+
+
+def _check_distances(coo, sampling_dist):
+    # Check the distances along the profile
+    for i in range(coo.shape[0] - 1):
+        dst = distance(coo[i, 0], coo[i, 1], coo[i, 2],
+                       coo[i + 1, 0], coo[i + 1, 1], coo[i + 1, 2])
+        if abs(dst - sampling_dist) > 0.1 * sampling_dist:
+            msg = 'Distance between points along the profile larger than 10%'
+
+            fmt = '\n   Expected {:.2f} Computed {:.2f}'
+            msg += fmt.format(sampling_dist, dst)
+
+            fmt = '\n   Point {:.2f} {:.2f} {:.2f}'
+            msg += fmt.format(*[coo[i, j] for j in range(3)])
+            msg += fmt.format(*[coo[i + 1, j] for j in range(3)])
+
+            msg += '\n   Please, change the sampling distance or the'
+            msg += ' points along the profile'
+            raise ValueError(msg)
+
+
 def _create_mesh(rprof, ref_idx, edge_sd, idl):
     """
     Create the mesh in the forward and backward direction (from the reference
@@ -727,49 +824,81 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     return rprof, ref_idx
 
 
-def get_profiles_from_simple_fault_data(
-        fault_trace, upper_seismogenic_depth,
-        lower_seismogenic_depth, dip, rupture_mesh_spacing):
-    """
-    Using the same information used for the construction of a simple fault
-    surface, creates a set of profiles that can be used to instantiate a
-    kite surface.
-
-    :param fault_trace:
-        A :class:`openquake.hazardlib.geo.line.Line` instance
-    :param upper_seismogenic_depth:
-        The upper seismmogenic depth [km]
-    :param lower_seismogenic_depth:
-        The lower seismmogenic depth [km]
-    :param dip:
-        The dip angle [degrees]
-    :param rupture_mesh_spacing:
-        The size of the mesh used to represent the fault surface. In our case
-        the spacing between profiles [km]
-    """
-
-    # Avoids singularity
-    if np.abs(dip - 90.) < 1e-5:
-        dip = 89.9
-
-    # Get simple fault surface
-    srfc = SimpleFaultSurface.from_fault_data(
-        fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-        dip, rupture_mesh_spacing * 1.01)
-
-    # Creating profiles
-    profiles = []
-    n, m = srfc.mesh.shape
-    for i in range(m):
-        coo = np.zeros((n, 3))
-        coo[:, 0] = srfc.mesh.lons[:, i]
-        coo[:, 1] = srfc.mesh.lats[:, i]
-        coo[:, 2] = srfc.mesh.depths[:, i]
-        profiles.append(Line.from_coo(coo))
-
-    return profiles
+def _from_prf_to_array(prfs, low, upp, step):
+    # Converts a set of profiles into a numpy array 
+    idxs = list(range(low, upp, step))
+    out = np.zeros((len(idxs), len(prfs[low]), 3))
+    for i, idx in enumerate(idxs):
+        out[i, :, :] = prfs[idx]
+    return out
 
 
+def _find_continuous_segments(mtx, i_seg):
+    i_from = -1
+    i_to = -1
+    out = [] 
+    for i in range(len(mtx)):
+        if np.isfinite(mtx[i, 0]):
+            if i_from < 0:
+                i_from = i
+                i_to = i
+            else:
+                i_to = i
+        else:
+            if i_from >= 0 and i_to >= 0 and np.abs(i_from - i_to) > 0:
+                out.append([i_from, i_to+1, i_seg])
+            i_from = -1
+            i_to = -1
+    if i_from >= 0 and i_to >= 0 and np.abs(i_from - i_to) > 0:
+        out.append([i_from, i_to+1, i_seg])
+    return out
+
+
+def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
+
+    # Initializing the list of profiles
+    npr = []
+
+    # Set the indexes of the original profiles depending on the direction
+    # i.e. forward or backward
+    low, upp, step = _set_indexes(forward, ref_idx, len(profs))
+
+    # Get the array with all the profiles
+    parr = _from_prf_to_array(profs, low, upp, step)
+
+    # Process each edge 
+    csegs = []
+    for i_edge in range(parr.shape[1]):
+        for tmp in _find_continuous_segments(parr[:, i_edge], i_edge):
+            csegs.append(tmp)
+    csegs = np.array(csegs) 
+    idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
+    csegs = csegs[idxs]
+
+    # Coordinates of the resampled edges
+    coos = []
+
+    import matplotlib.pyplot as plt
+    scl = 0.01
+    ax = plt.figure().add_subplot(projection='3d')
+
+    from openquake.hazardlib.geo.line import _resample
+    breakpoint()
+    for i_cseg, cseg in enumerate(csegs):
+        tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
+        _update_coos(tmp, cseg[2], cseg[0], coos)
+        plt.plot(tmp[:, 0], tmp[:, 1], tmp[:, 2]*scl, 'x-')
+
+    for pro in profs:
+        plt.plot(pro[:, 0], pro[:, 1], pro[:, 2]*scl, '-k')
+    ax.invert_zaxis()
+    plt.show()
+
+
+def _update_coos(coords, i_edge, idx_1st_profile, coos):
+    if idx_1st_profile == 0:
+        coos.append([i_edge, 0, coords])
+     
 def _lo_la_de(line, sampling_dist, g):
     lo = line.coo[:, 0].copy()
     la = line.coo[:, 1].copy()
@@ -886,813 +1015,12 @@ def _resample_profile(line, sampling_dist):
     return Line.from_coo(coo)
 
 
-def _check_distances(coo, sampling_dist):
-    # Check the distances along the profile
-    for i in range(coo.shape[0] - 1):
-        dst = distance(coo[i, 0], coo[i, 1], coo[i, 2],
-                       coo[i + 1, 0], coo[i + 1, 1], coo[i + 1, 2])
-        if abs(dst - sampling_dist) > 0.1 * sampling_dist:
-            msg = 'Distance between points along the profile larger than 10%'
-
-            fmt = '\n   Expected {:.2f} Computed {:.2f}'
-            msg += fmt.format(sampling_dist, dst)
-
-            fmt = '\n   Point {:.2f} {:.2f} {:.2f}'
-            msg += fmt.format(*[coo[i, j] for j in range(3)])
-            msg += fmt.format(*[coo[i + 1, j] for j in range(3)])
-
-            msg += '\n   Please, change the sampling distance or the'
-            msg += ' points along the profile'
-            raise ValueError(msg)
-
-
-def profiles_depth_alignment(pro1, pro2):
-    """
-    Find the indexes needed to align the profiles i.e. define profiles whose
-    edges are as much as possible horizontal. Note that this method expects
-    that the two profiles had been already resampled, therefore, vertexes in
-    each profile should be equally spaced.
-
-    :param pro1:
-        An instance of :class:`openquake.hazardlib.geo.line.Line`
-    :param pro2:
-        An instance of :class:`openquake.hazardlib.geo.line.Line`
-    :returns:
-        An integer
-    """
-    # Create two numpy.ndarray with the coordinates of the two profiles
-    coo1 = pro1.coo
-    coo2 = pro2.coo
-
-    # Set the profile with the smaller number of points as the first one
-    swap = 1
-    if coo2.shape[0] < coo1.shape[0]:
-        coo1, coo2 = coo2, coo1
-        swap = -1
-
-    # Process the profiles. Note that in the ideal case the two profiles
-    # require at least 5 points
-    if len(coo1) > 5 and len(coo2) > 5:
-        #
-        # create two arrays of the same lenght
-        coo1 = np.array(coo1)
-        coo2 = np.array(coo2[:coo1.shape[0]])
-        #
-        indexes = np.arange(-2, 3)
-        dff = np.zeros_like(indexes)
-        for i, shf in enumerate(indexes):
-            if shf < 0:
-                dff[i] = np.mean(abs(coo1[:shf, 2] - coo2[-shf:, 2]))
-            elif shf == 0:
-                dff[i] = np.mean(abs(coo1[:, 2] - coo2[:, 2]))
-            else:
-                dff[i] = np.mean(abs(coo1[shf:, 2] - coo2[:-shf, 2]))
-        amin = np.amin(dff)
-        res = indexes[np.amax(np.nonzero(dff == amin))] * swap
-    else:
-        d1 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
-        d2 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
-        for i in np.arange(0, len(coo2) - len(coo1) + 1):
-            d2[i, :] = [coo2[d, 2] for d in range(i, i + len(coo1))]
-            d1[i, :] = coo1[:, 2]
-        res = np.argmin(np.sum(abs(d2 - d1), axis=1))
-    return res
-
-
-def get_coords(line, idl):
-    """
-    Create a list with the coordinates of the points describing a line
-
-    :param line:
-        An instance of :class:`openquake.hazardlib.geo.line.Line`
-    :returns:
-        A list with the 3D coordinates of the line.
-    """
-    tmp = []
-    for p in line:
-        p.longitude = fix_idl(p.longitude, idl)
-        tmp.append([p.longitude, p.latitude, p.depth])
-    return tmp
-
-
-def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
-
-    # Initializing the list of profiles
-    npr = [profs[ref_idx]]
-
-    # Set the indexes of the profiles depending on the direction i.e. forward
-    # or backward
-    low, upp, step = _set_indexes(forward, ref_idx, len(profs))
-
-    # Initialize the residual distance along each edge starting from the first
-    # profile. We set the index of the last '1st' profile sampled to None for
-    # the edges where the reference profile does not have finite points.
-    res_dist = np.ones_like(npr[0][:, 0]) * -1
-    last_idx = np.zeros_like(npr[0][:, 0], dtype=int)
-    tmp_idxs = np.nonzero(np.isnan(npr[0][:, 0]))[0]
-
-    if len(tmp_idxs) > 0:
-        last_idx[tmp_idxs] = None
-
-    # Processing profiles: from the reference one towards the end of the
-    # surface. Note that in the forward direction `upp` corresponds to the
-    # length of `profs` minus one.
-    for i_prof in range(low, upp, step):
-
-        print(f'i_prof: {i_prof} / {upp}')
-
-        # Find the indexes of the edges with finite coords on both profiles
-        pl = profs[i_prof]
-        pr = profs[i_prof+step]
-        tmp = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
-        idx = np.nonzero(tmp)[0].astype(int)
-
-        previous_num_profiles = len(npr)
-
-        # Processing edges
-        for i_edge in idx:
-
-            print(f'   i_edge: {i_edge} last idx:{last_idx[i_edge]} previous {previous_num_profiles}')
-
-            # Set the starting point
-            start_pnt, sidx = _set_starting_point(
-                i_prof, i_edge, profs, low, res_dist, last_idx, step, proj,
-                sd, previous_num_profiles, npr)
-
-            # `sidx` is none when there is not enough space between the two
-            # current profiles to accommodate a cell. Note that this is
-            # approximate. A more precise check is the one below. TODO we
-            # should rely only on the latter.
-            if sidx is None:
-                continue
-
-            # Get the coordinates of the points along this part of the edge
-            coos, tmp_rdist = get_coo(
-                start_pnt, pr[i_edge], res_dist[i_edge], sd, idl)
-
-            if len(coos) < 1:
-                continue
-
-            # Index profile from where to start adding coords
-            frm = last_idx[i_edge] + 1
-            if last_idx[i_edge] < 0:
-                frm = sidx
-            assert frm is not None
-
-            # Adding new points to profiles
-            for i_val, i_col in enumerate(range(frm, frm + len(coos))):
-
-                if len(npr) <= i_col:
-                    add_empty_profile(npr)
-                    print('\n>>>>>>>>>> NEW PROFILE\n')
-
-                # Check
-                if (np.all(np.isfinite(coos[i_val])) and
-                        np.sum(np.isfinite(npr[i_col])) > 1):
-
-                    chk = _check_insertion(coos[i_val], npr, i_col, proj, sd)
-
-                    if not isinstance(chk, bool):
-                        idx = chk
-                        print('A')
-                    elif chk is False:
-                        # Could not find a profile
-                        add_empty_profile(npr)
-                        idx = len(npr) - 1
-                        print('B')
-                    elif chk is True:
-                        # Using the right profile
-                        idx = i_col
-                        print('C')
-                    else:
-                        breakpoint()
-                        raise ValueError('unknown case A')
-                elif np.all(np.isnan(npr[i_col])):
-                    idx = i_col
-                else:
-                    breakpoint()
-                    raise ValueError('unknown case B')
-
-                # Updating new profile
-                print(f'        Adding {idx},{i_edge} | {len(npr)} profs')
-                npr[idx][i_edge] = list(coos[i_val])
-
-            last_idx[i_edge] = frm + len(coos) - 1
-            res_dist[i_edge] = tmp_rdist
-
-        # Set to -1 the last index of the discontinous edges
-        tmp = np.logical_or(np.isnan(pr[:, 2]), np.isnan(pl[:, 2]))
-        idx = np.nonzero(tmp)[0].astype(int)
-        last_idx[idx] = -1
-
-    return npr
-
-
-def _check_insertion(pnt, prfs, i_col, proj, sd):
-    # Check if we are adding the point in the right profile. To do this we
-    # find the line throught each profile and calculate the distance from the
-    # point to the line
-    #
-    # :returns:
-    #   True if the index of the profile is correct
-
-    # Compute the distance between the selected profile and the point. If the
-    # distance is negative it means it cannot be computed i.e. the profile
-    # contains less than two points.
-    dis = _get_distance(prfs[i_col], pnt, proj)
-    if dis < 0:
-        return True
-
-    # If the distance is larger than a threshold we look for another profile
-    threshold = sd / 4
-    if dis > threshold:
-        for i in range(len(prfs)):
-            # chk = _check_insertion(pnt, prfs, i, proj, sd)
-            tmp_dis = _get_distance(prfs[i], pnt, proj)
-            if tmp_dis < threshold:
-                # Returning the index of the selected profile
-                return i
-
-        return False
-    return True
-
-
-def _get_distance(prof, pnt, proj):
-    prf = np.array(prof)
-    tmp = prf[np.isfinite(prf[:, 0]), :]
-    if len(tmp) < 2:
-        # We must assume that's true
-        return -1
-    xp, yp = proj(tmp[:, 0], tmp[:, 1])
-    xi, yi = proj(pnt[0], pnt[1])
-    slope, intercept, _, _, _ = stats.linregress(xp, yp)
-    num = np.abs(-1 * slope * xi + yi - intercept)
-    return num / slope
-
-
-def _set_starting_point(
-    i_prof, i_edge, profs, low, res_dist, last_idx, step, proj, sd,
-    previous_num_pr, nprofs):
-    """
-    Set the point from where to sample the current edge. We have three cases to
-    deal with:
-    1. The index of the profile `i_prof` is equal to the one of the
-       reference profile `low`
-    2. We have a residual distance greater than 0
-        a. The index of the last `1st` profile is -1 the index of the current
-           '1st' profile
-        b. The index of the last `1st` profile is more than -1 the index of
-           the current '1st' profile. In this case we have a gap along this
-           edge.
-
-    :param i_prof:
-        The index of the profile
-    """
-    # Get the profiles
-    pro_1st = profs[i_prof]
-    pro_2nd = profs[i_prof + step]
-    pnt0 = pro_1st[i_edge]
-    pnt1 = pro_2nd[i_edge]
-
-    # If the index of the 1st profile corresponds to the one of the reference
-    # profile or the residual distance is negligible, we return the point on
-    # the reference profile
-    if i_prof == low or (res_dist[i_edge] < SMALL and last_idx[i_edge] > -1):
-        return pro_1st[i_edge], -1
-
-    # If there is a residual distance after sampling the part on the edge
-    # between the previous two profiles
-    elif res_dist[i_edge] > 0 and last_idx[i_edge] > 0:
-
-        # Point on the last resampled edge
-        pntr = nprofs[last_idx[i_edge]][i_edge]
-
-        # Project left point
-        x, y = proj(pnt0[0], pnt0[1])
-        pnt0p = np.array([x, y, pnt0[2]])
-
-        # Project right point
-        x, y = proj(pnt1[0], pnt1[1])
-        pnt1p = np.array([x, y, pnt1[2]])
-
-        # Project the reference point
-        if np.isnan(pntr[0]):
-            breakpoint()
-        x, y = proj(pntr[0], pntr[1])
-        pntrp = np.array([x, y, pntr[2]])
-
-        out = find_t(pnt0p, pnt1p, pntrp, sd)
-        olo, ola = proj(np.array([out[0]]), np.array([out[1]]), reverse=True)
-
-        return [olo[0], ola[0], out[2]], -1
-
-    # If the last part of the current edge is not continuous to the new edge
-    elif last_idx[i_edge] < 0:
-
-        found = False
-        frm = previous_num_pr - 1
-        while not found and found is not None:
-            olo, ola, dep, found = _get_intersection(
-                frm, nprofs, pnt0, pnt1, sd, proj)
-            frm -= 1
-        if found is None:
-            return None, None
-        return [olo[0], ola[0], dep], frm
-
-    else:
-        raise ('Unknown option')
-
-
-def _get_intersection(idx, nprofs, pnt0, pnt1, sd, proj):
-
-    # Line (2D) through the previous resampled profile
-    try:
-        tmp = np.array(nprofs[idx])
-    except:
-        breakpoint()
-
-    tmp = tmp[np.isfinite(tmp[:, 0]), :]
-    xp, yp = proj(tmp[:, 0], tmp[:, 1])
-    slope, intercept, _, _, _ = stats.linregress(xp, yp)
-
-    # Line through the new edge
-    xp0, yp0 = proj(pnt0[0], pnt0[1])
-    xp1, yp1 = proj(pnt1[0], pnt1[1])
-    slope_e = (yp1 - yp0) / (xp1 - xp0)
-    intercept_e = yp0 - slope_e * xp0
-
-    # Intersection i.e. the starting point
-    xi = (intercept_e - intercept) / (slope - slope_e)
-    yi = xi * slope + intercept
-
-    # Compute the depth
-    dis = ((xp[:] - xp[0])**2 + (yp[:] - yp[0])**2)**0.5
-    pnt_dis = ((xi - xp[0])**2 + (yi - yp[0])**2)**0.5
-    spl = splrep(dis, tmp[:, 2])
-    dep = splev(pnt_dis, spl)
-
-    # Output
-    olo, ola = proj(np.array([xi]), np.array([yi]), reverse=True)
-
-    d_pnt0 = distance(olo, ola, dep, pnt0[0], pnt0[1], pnt0[2])
-    d_pnt1 = distance(olo, ola, dep, pnt1[0], pnt1[1], pnt1[2])
-    d_pnts = distance(pnt0[0], pnt0[1], pnt0[2], pnt1[0], pnt1[1], pnt1[2])
-    az_pnt1 = azimuth(olo, ola, pnt0[0], pnt0[1])
-    az_pnt2 = azimuth(olo, ola, pnt1[0], pnt1[1])
-    a_diff = _angle_difference(az_pnt1, az_pnt2)
-
-    print(f'a_diff {a_diff} d_pnt0 {d_pnt0} d_pnt1 {d_pnt1} d_pnts {d_pnts}')
-    if a_diff < 90 and d_pnt0 < sd:
-        found = True
-    elif a_diff < 90 and d_pnt0 > sd and d_pnt1 > sd:
-        # Went too far
-        found = None
-    elif a_diff > 90:
-        # Between the two profiles
-        found = None
-    elif a_diff < 90 and d_pnt1 > sd:
-        found = False
-    elif d_pnt1 < sd:
-        # The distance between the original profiles is too narrow
-        found = None
-    else:
-        breakpoint()
-        raise ValueError('Unknown case')
-
-    """
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 1)
-    for i, p in enumerate(nprofs):
-        if isinstance(p, list):
-            p = np.array(p)
-        idx = np.nonzero(np.isfinite(p[:, 0]))
-        x, y = proj(p[idx, 0], p[idx, 1])
-        plt.plot(x[0], y[0], '--', color='grey')
-    plt.plot(xp, yp, 'or', mfc='none')
-    plt.plot(xi, yi, 'ob')
-    plt.show()
-
-    if not found or found is None:
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(1, 1)
-        for i, p in enumerate(nprofs):
-            if isinstance(p, list):
-                p = np.array(p)
-            idx = np.nonzero(np.isfinite(p[:, 0]))
-            x, y = proj(p[idx, 0], p[idx, 1])
-            plt.plot(x[0], y[0], '--', color='grey')
-        plt.plot(xp, yp, 'or', mfc='none')
-        plt.plot(xi, yi, 'ob')
-        plt.title(f'{found}')
-        plt.show()
-        breakpoint()
-    """
-
-    return olo, ola, dep, found
-
-
 def _set_indexes(forward, ref_idx, len_profs):
     step = 1
     low = ref_idx
-    upp = len_profs - 1
+    upp = len_profs
     if not forward:
         step = -1
         low = ref_idx
-        upp = 0
+        upp = -1
     return low, upp, step
-
-
-def _find_first_point(pnt0, pnt1, pntr, proj, sd):
-
-    x, y = proj(pnt0[0], pnt0[1])
-    pnt0p = np.array([x, y, pnt0[2]])
-
-    x, y = proj(pnt1[0], pnt1[1])
-    pnt1p = np.array([x, y, pnt1[2]])
-
-    x, y = proj(pntr[0], pntr[1])
-    pntrp = np.array([x, y, pntr[2]])
-
-    start_pnt_proj = find_t(pnt0p, pnt1p, pntrp, sd)
-    x, y = proj(np.array([start_pnt_proj[0]]),
-                np.array([start_pnt_proj[1]]), reverse=True)
-
-    return np.array([x[0], y[0], start_pnt_proj[2]])
-
-
-def _update(npr, rdist, angle, laidx, g, pl, pr, sd, proj, idl, forward):
-
-    # Fixing IDL case
-    for ii, vpl in enumerate(pl):
-        pl[ii][0] = fix_idl(vpl[0], idl)
-
-    # Points in common on the two profiles i.e. points with finite
-    # coordinates on both of them
-    cmm = np.logical_and(np.isfinite(pr[:, 2]), np.isfinite(pl[:, 2]))
-    cmmi = np.nonzero(cmm)[0].astype(int)
-
-    # Find the index of the profiles previously analysed and with at least
-    # a node in common with the current profile (i.e. with a continuity in
-    # the mesh)
-    mxx = max(ll for ll in laidx if ll is not None)
-
-    # Loop over the points in the right profile
-    for x in range(0, len(pr[:, 2])):
-
-        # If true this edge connects the right and left profiles
-        if x in cmmi and laidx[x] is None:
-            iii = np.array([li for li, lv in enumerate(laidx)
-                            if lv is not None])
-            minidx = np.argmin(abs(iii - x))
-            laidx[x] = mxx
-            rdist[x] = rdist[minidx]
-            angle[x] = angle[minidx]
-        elif x not in cmmi:
-            laidx[x] = None
-            rdist[x] = 0.
-            angle[x] = None
-
-    # Loop over the indexes of the edges in common for the two profiles
-    # starting from the top and going down
-    for k in np.nonzero(cmm)[0]:
-
-        # Compute the first point on the new edge
-        if rdist[k] > 0:
-
-            x, y = proj(pl[k][0], pl[k][1])
-            pnt0 = np.array([x, y, pl[k][2]])
-
-            x, y = proj(pr[k][0], pr[k][1])
-            pnt1 = np.array([x, y, pr[k][2]])
-
-            tmp = npr[laidx[k]][k]
-            x, y = proj(tmp[0], tmp[1])
-            ref_pnt = np.array([x, y, tmp[2]])
-            start_pnt_proj = find_t(pnt0, pnt1, ref_pnt, sd)
-            x, y = proj(np.array([start_pnt_proj[0]]),
-                        np.array([start_pnt_proj[1]]), reverse=True)
-            start_pnt_geo = np.array([x[0], y[0], start_pnt_proj[2]])
-            flag_rdist = 1.0
-        else:
-            start_pnt_geo = pl[k]
-            flag_rdist = -1.0
-
-        # Compute distance [km] and azimuth between the corresponding
-        # points on the two consecutive profiles
-        # az12, _, hdist = g.inv(start_pnt_geo[0], start_pnt_geo[1],
-        #                        pr[k, 0], pr[k, 1])
-
-        # Compute new points
-        coo = get_coo(pl[k], pr[k], flag_rdist, sd, idl)
-
-        if len(coo) == 0:
-            continue
-        assert (len(coo.shape) == 2)
-
-        # Adding new points along the edge with index k
-        for pnt in coo:
-
-            # Add new profile to 'npr' i.e. the list containing the new
-            # set of profiles
-            if len(npr) - 1 < laidx[k] + 1:
-                add_empty_profile(npr)
-
-            # Updating the new profile
-            npr[laidx[k] + 1][k] = pnt
-
-            if (k > 0 and np.all(np.isfinite(npr[laidx[k] + 1][k])) and
-                    np.all(np.isfinite(npr[laidx[k]][k]))):
-
-                # Computing the distance between consecutive points on
-                # one edge
-                p1 = npr[laidx[k]][k]
-                p2 = npr[laidx[k] + 1][k]
-                d = distance(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2])
-
-                # Check if the distance between consecutive points on one
-                # edge (with index k) is within a tolerance limit of the
-                # mesh distance defined by the user
-                if abs(d - sd) > TOL * sd:
-
-                    tmpf = '\ndistance: {:f} difference: {:f} '
-                    tmpf += '\ntolerance dist: {:f} sampling dist: {:f}'
-                    tmps = tmpf.format(d, d - sd, TOL * sd, sd)
-
-                    import matplotlib.pyplot as plt
-                    from openquake.hazardlib.tests.geo.surface.kite_fault_test import set_axes_equal
-                    scl = 0.01
-                    ax = plt.figure().add_subplot(projection='3d')
-                    plt.plot(pl[:, 0], pl[:, 1], pl[:, 2]*scl, '-o', color='red')
-                    plt.plot(pr[:, 0], pr[:, 1], pr[:, 2]*scl, '-x', color='blue')
-                    plt.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl,
-                             '-x', color='purple', ms=2.5)
-                    plt.plot(start_pnt_geo[0], start_pnt_geo[1],
-                             start_pnt_geo[2]*scl, 'o', color='yellow', ms=2.5)
-
-                    ax.text(pl[k][0], pl[k][1], pl[k][1], 'PL')
-                    plt.plot(pl[k][0], pl[k][1], pl[k][1], 'ok')
-                    ax.text(pr[k][0], pr[k][1], pr[k][1], 'PR')
-                    plt.plot(pr[k][0], pr[k][1], pr[k][1], 'ok')
-
-                    for i_pro, pro in enumerate(npr):
-                        tmpp = np.array(pro)
-                        tidx = np.nonzero(np.isfinite(tmpp[:, 0]))[0]
-                        if np.any(tidx):
-                            plt.plot(tmpp[tidx, 0], tmpp[tidx, 1], tmpp[tidx, 2]*scl, '-', color='green')
-                    set_axes_equal(ax)
-                    ax.invert_zaxis()
-                    plt.show()
-
-                    raise ValueError(tmps)
-
-            laidx[k] += 1
-
-        # Check that the residual distance along each edge is lower than
-        # the sampling distance
-        # rdist[k] = tdist - sd * len(coo) + new_rdist
-        tmp = npr[laidx[k]][k]
-        rdist[k] = distance(
-            tmp[0], tmp[1], tmp[2], pr[k][0], pr[k][1], pr[k][2])
-        angle[k] = azimuth(tmp[0], tmp[1], pr[k][0], pr[k][1])
-
-        try:
-            assert rdist[k] < sd
-        except:
-
-            import matplotlib.pyplot as plt
-            from openquake.hazardlib.tests.geo.surface.kite_fault_test import set_axes_equal
-            scl = 0.01
-            ax = plt.figure().add_subplot(projection='3d')
-            plt.plot(pl[:, 0], pl[:, 1], pl[:, 2]*scl, '-o', color='red')
-            plt.plot(pr[:, 0], pr[:, 1], pr[:, 2]*scl, '-x', color='blue')
-            plt.plot(coo[:, 0], coo[:, 1], coo[:, 2]*scl,
-                        '-x', color='purple', ms=2.5)
-
-            plt.plot(start_pnt_geo[0], start_pnt_geo[1],
-                        start_pnt_geo[2]*scl, 'o', color='yellow', ms=2.5)
-
-            plt.plot([pl[k][0], pr[k][0]], [pl[k][1], pr[k][1]],
-                     np.array([pl[k][2], pr[k][2]])*scl, ls='--',
-                     color='cyan', lw=1)
-
-            plt.plot([tmp[0], pr[k][0]], [tmp[1], pr[k][1]],
-                     np.array([tmp[2], pr[k][2]])*scl, color='orange', lw=2)
-
-            ax.text(pl[k][0], pl[k][1], pl[k][2]*scl, 'PL')
-            plt.plot(pl[k][0], pl[k][1], pl[k][2]*scl, 'ok')
-            ax.text(pr[k][0], pr[k][1], pr[k][2]*scl, 'PR')
-            plt.plot(pr[k][0], pr[k][1], pr[k][2]*scl, 'ok')
-
-            for i_pro, pro in enumerate(npr):
-                tmpp = np.array(pro)
-                tidx = np.nonzero(np.isfinite(tmpp[:, 0]))[0]
-                if np.any(tidx):
-                    plt.plot(tmpp[tidx, 0], tmpp[tidx, 1], tmpp[tidx, 2]*scl, '-', color='green')
-            set_axes_equal(ax)
-            ax.invert_zaxis()
-            plt.show()
-
-
-def get_new_profiles(pfs, rfi, sd, idl, proj, last=None):
-    """
-    :param pfs:
-        List of :class:`openquake.hazardlib.geo.line.Line` instances
-    :param rfi:
-        Index of the reference profile
-    :param sd:
-        Sampling distance [km] for the edges
-    :param idl:
-        Boolean indicating the need to account for the IDL
-    :param proj:
-        Orthograhic projection
-    :param last:
-        If None create the mesh in the forward direction, otherwise backward
-    :returns:
-        A new list of profiles
-    """
-    forw = last is None
-    g = Geod(ellps='WGS84')
-    n = len(pfs[0])
-
-    # Initialize residual distance and last index
-    rdist = np.zeros(n)
-    angle = np.zeros(n)
-    laidx = [0 for _ in range(n)]
-    # Creating a new list used to collect the new profiles which will describe
-    # the mesh. We start with the initial profile i.e. the one identified by
-    # the reference index rfi
-    npr = [pfs[rfi]]
-    if forw:
-        for i in range(rfi, len(pfs) - 1):
-            _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i + 1], sd, proj,
-                    idl, forw)
-        return npr
-    for i in range(rfi, 0, -1):
-        _update(npr, rdist, angle, laidx, g, pfs[i], pfs[i - 1], sd, proj, idl,
-                forw)
-    return [npr[i] for i in range(len(npr) - 1, -1 if last else 0, -1)]
-
-
-def update_rdist(rdist, az12, angle, sd):
-    r"""
-    Here we adjust the residual distance to make sure that the size of the
-    mesh is consistent with the sampling. This is particularly needed when the
-    mesh has a kink
-
-    v1
-    ------------------------------  angle[k]
-             beta  \ az12-angle[k]
-                    \
-                     \
-                      \ v2
-
-    alpha is the angle between angle[k] and the v1 to v2 direction
-    gamma is the angle between az12 (the new azimuth) and v1-v2 i.e.
-    the third angle in the triangle
-    """
-    assert rdist > 0
-    beta = 180.0 - abs(az12 - angle)
-    side_b = sd
-    side_a = (sd - rdist)
-    ratio = side_b / np.sin(np.radians(beta))
-    alpha = np.rad2deg(np.arcsin(side_a / ratio))
-    gamma = 180.0 - (alpha + beta)
-    assert gamma > 0
-    rdist_new = ratio * np.sin(np.radians(gamma))
-    assert (rdist_new) > 0
-    return rdist_new
-
-
-def get_coo(pl, pr, rdist, sd, idl):
-    """
-    """
-
-    # Total distance between the two points
-    tdist = distance(pl[0], pl[1], pl[2], pr[0], pr[1], pr[2])
-
-    # Number of points delimiting the new intervals i.e. number of intervals
-    # plus one
-    ndists = int(np.floor(tdist / sd)) + 1
-    low = 0 if rdist > 0 else 1
-
-    # Vector with the output coordinates
-    coo = np.zeros((ndists - low, 3))
-
-    # If the distance is too short
-    if ndists == 1:
-        return [], None
-
-    # Compute the binned distance
-    bin_dst = (ndists - 1) * sd
-    assert bin_dst < tdist
-
-    # Compute azimuth between the first and last point
-    az12 = azimuth(pl[0], pl[1], pr[0], pr[1])
-
-    # Vertical distance
-    hdist = distance(pl[0], pl[1], 0.0, pr[0], pr[1], 0.0) * bin_dst / tdist
-    vdist = (pr[2] - pl[2]) * bin_dst / tdist
-
-    # Create the points
-    nptt = npoints_towards
-    tlo, tla, tde = nptt(pl[0], pl[1], pl[2], az12, hdist, vdist, ndists)
-    assert len(tlo) > 0
-    if np.any(tde > np.max([pr[2], pl[2]])):
-        breakpoint()
-    if np.any(tde < np.min([pr[2], pl[2]])):
-        breakpoint()
-
-    try:
-        coo[:, 0] = np.array([fix_idl(lo, idl) for lo in tlo[low:]])
-        coo[:, 1] = np.array(tla[low:])
-        coo[:, 2] = np.array(tde[low:])
-    except:
-        breakpoint()
-
-    if len(coo) > 1:
-        if (np.all(np.abs(np.diff(coo[:, 0])) < 1e-5) and
-                np.all(np.abs(np.diff(coo[:, 1])) < 1e-5)):
-            breakpoint()
-
-    coo = np.array(coo)
-    if len(coo.shape) < 2:
-        coo = np.expand_dims(coo, axis=0)
-    assert (len(coo.shape) == 2)
-
-    # Residual distance
-    rdist = distance(coo[-1, 0], coo[-1, 1], coo[-1, 2],
-                     pr[0], pr[1], pr[2])
-
-    return coo, rdist
-
-
-def add_empty_profile(npr, idx=-1):
-    """
-    :param npr:
-        A list of profiles
-    :returns:
-        A list with the new empty profiles
-    """
-    n, m = len(npr), len(npr[0])
-    tmp = [[np.nan, np.nan, np.nan] for _ in range(m)]
-    if idx == -1:
-        npr.append(tmp)
-    elif idx == 0:
-        npr.insert(0, tmp)
-    else:
-        ValueError('Undefined option')
-
-    # Check that profiles have the same lenght
-    for i in range(n - 1):
-        assert len(npr[i]) == len(npr[i + 1])
-
-
-def fix_mesh(msh):
-    """
-    Check that the quadrilaterals composing the final mesh are correctly
-    defined i.e. all the vertexes are finite.
-
-    :param msh:
-        A :class:`numpy.ndarray` instance with the coordinates of the mesh
-    :returns:
-        A revised :class:`numpy.ndarray` instance with the coordinates of
-        the mesh. The shape of this array num_rows x num_cols x 3
-    """
-    for i in range(msh.shape[0]):
-        ru = i + 1
-        rl = i - 1
-        for j in range(msh.shape[1]):
-            cu = j + 1
-            cl = j - 1
-
-            trl = False if cl < 0 else np.isfinite(msh[i, cl, 0])
-            tru = (False if cu > msh.shape[1] - 1 else
-                   np.isfinite(msh[i, cu, 0]))
-            tcl = False if rl < 0 else np.isfinite(msh[rl, j, 0])
-            tcu = (False if ru > msh.shape[0] - 1 else
-                   np.isfinite(msh[ru, j, 0]))
-
-            check_row = trl or tru
-            check_col = tcl or tcu
-
-            if not (check_row and check_col):
-                msh[i, j, :] = np.nan
-    return msh
-
-
-def kite_to_geom(surface):
-    """
-    :returns: the geometry array describing the KiteSurface
-    """
-    shape_y, shape_z = surface.mesh.array.shape[1:]
-    coords = np.float32(surface.mesh.array.flat)
-    return np.concatenate([np.float32([1, shape_y, shape_z]), coords])
-
-
-def geom_to_kite(geom):
-    """
-    :returns: KiteSurface described by the given geometry array
-    """
-    shape_y, shape_z = int(geom[1]), int(geom[2])
-    array = geom[3:].astype(np.float64).reshape(3, shape_y, shape_z)
-    return KiteSurface(RectangularMesh(*array))
