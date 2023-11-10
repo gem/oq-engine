@@ -80,6 +80,7 @@ class server:
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
+    host = localhost
     port = %d
     file = %s
     [directory]
@@ -107,6 +108,7 @@ class devel_server:
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
+    host = localhost
     port = %d
     file = %s
     [directory]
