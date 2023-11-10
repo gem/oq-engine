@@ -832,11 +832,14 @@ def plot_mean_hcurves_afe_rtgm(dstore, update_dstore=False):
     plt.ylim([10E-6, 1.1])
     plt.xlim([0.01, 4])
     if update_dstore:
-        bio = io.BytesIO()
-        plt.savefig(bio, format='png', bbox_inches='tight')
-        # plt.clf()
-        logging.info('Storing png/hcurves.png')
-        dstore['png/hcurves.png'] = Image.open(bio)
+        if Image is not None:
+            bio = io.BytesIO()
+            plt.savefig(bio, format='png', bbox_inches='tight')
+            logging.info('Storing png/hcurves.png')
+            dstore['png/hcurves.png'] = Image.open(bio)
+        else:
+            logging.warning(
+                'Missing module PIL: skipping storing png/hcurves.png')
     return plt
 
 
@@ -884,11 +887,14 @@ def plot_governing_mce(dstore, update_dstore=False):
     plt.legend(loc="upper right", fontsize='13')
     plt.xlim([-0.02, 1.2])
     if update_dstore:
-        bio = io.BytesIO()
-        plt.savefig(bio, format='png', bbox_inches='tight')
-        # plt.clf()
-        logging.info('Storing png/governing_mce.png')
-        dstore['png/governing_mce.png'] = Image.open(bio)
+        if Image is not None:
+            bio = io.BytesIO()
+            plt.savefig(bio, format='png', bbox_inches='tight')
+            logging.info('Storing png/governing_mce.png')
+            dstore['png/governing_mce.png'] = Image.open(bio)
+        else:
+            logging.warning(
+                'Missing module PIL: skipping storing png/governing_mce.png')
     return plt
 
 
@@ -1025,20 +1031,30 @@ def plot_disagg_by_src(dstore, update_dstore=False):
         ax1.set_xlim([0.01, 4])
 
         if update_dstore:
-            # save single imt plot
-            bio1 = io.BytesIO()
-            fig1.savefig(bio1, format='png', bbox_inches='tight')
-            # keep these in webui until we finish checks and have a command
-            # line exporter, then we can change the name to _{imt} and they
-            # will not appear in the webui
-            dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
+            if Image is not None:
+                # save single imt plot
+                bio1 = io.BytesIO()
+                fig1.savefig(bio1, format='png', bbox_inches='tight')
+                # keep these in webui until we finish checks and have a command
+                # line exporter, then we can change the name to _{imt} and they
+                # will not appear in the webui
+                dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
+            else:
+                logging.warning(
+                    f'Missing module PIL: skipping storing'
+                    f' png/disagg_by_src-{imt}.png')
 
     if update_dstore:
-        # save triple plot
-        bio = io.BytesIO()
-        fig.savefig(bio, format='png', bbox_inches='tight')
-        logging.info('Storing png/disagg_by_src.png')
-        dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
+        if Image is not None:
+            # save triple plot
+            bio = io.BytesIO()
+            fig.savefig(bio, format='png', bbox_inches='tight')
+            logging.info('Storing png/disagg_by_src.png')
+            dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
+        else:
+            logging.warning(
+                'Missing module PIL: skipping storing'
+                ' png/disagg_by_src-All-IMTs.png')
     return plt
 
 

@@ -377,7 +377,6 @@ def main(dstore, csm):
         if Image is None:  # missing PIL
             logging.warning('Missing module PIL: skipping plotting curves')
         else:
-            # make_aelo_plots(dstore, low_haz=True)
             plot_mean_hcurves_afe_rtgm(dstore, update_dstore=True)
             plot_governing_mce(dstore, update_dstore=True)
         return
@@ -401,7 +400,6 @@ def main(dstore, csm):
     if Image is None:  # missing PIL
         logging.warning('Missing module PIL: skipping plotting curves')
     else:
-        # make_aelo_plots(dstore, low_haz=False)
         plot_mean_hcurves_afe_rtgm(dstore, update_dstore=True)
         plot_disagg_by_src(dstore, update_dstore=True)
         plot_governing_mce(dstore, update_dstore=True)
