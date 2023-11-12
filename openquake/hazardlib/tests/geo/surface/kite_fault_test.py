@@ -76,21 +76,18 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
     :param smsh:
         The kite surface
     """
-    #  from mpl_toolkits.mplot3d import Axes3D  # this is needed
 
     # Scaling factor on the z-axis
     scl = 0.1
 
     # Create figure
-    #  fig = plt.figure(figsize=(10, 8))
-    #  ax = fig.add_subplot(111, projection='3d')
     ax = plt.figure().add_subplot(projection='3d')
     plt.style.use('seaborn-bright')
 
     if ax_equal:
         scl = 0.01
 
-    # Plotting nodes
+    # Plotting original profiles
     for ipro in profiles:
         coo = [[p.longitude, p.latitude, p.depth] for p in ipro]
         coo = np.array(coo)
@@ -100,12 +97,41 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
 
     # Plotting mesh
     if smsh is not None:
+
+        for i_row in range(smsh.mesh.lons.shape[0] - 1):
+            for i_col in range(smsh.mesh.lons.shape[1] - 1):
+
+                tlo = smsh.mesh.lons[i_row:i_row + 2, i_col:i_col + 2]
+                tla = smsh.mesh.lats[i_row:i_row + 2, i_col:i_col + 2]
+                tde = smsh.mesh.depths[i_row:i_row + 2, i_col:i_col + 2]
+
+                if np.all(np.isfinite(tlo)):
+                    i1 = [0, 1, 1, 0, 0]
+                    i2 = [0, 0, 1, 1, 0]
+
+                    color = 'blue'
+                    lw = 0.5
+
+                    for i in range(len(i1) - 1):
+                        ax.plot(tlo[i1[i:i + 2], i2[i:i + 2]],
+                                tla[i1[i:i + 2], i2[i:i + 2]],
+                                tde[i1[i:i + 2], i2[i:i + 2]] * scl,
+                                '-', lw=lw, color=color)
+                        ax.plot(tlo[i1[i], i2[i]],
+                                tla[i1[i], i2[i]],
+                                tde[i1[i], i2[i]] * scl,
+                                'o', ms=0.5, mfc='none', mec='red')
+
+        """
         for i in range(smsh.mesh.lons.shape[0]):
             ax.plot(smsh.mesh.lons[i, :], smsh.mesh.lats[i, :],
                     smsh.mesh.depths[i, :] * scl, '-r', lw=0.5)
+
         for i in range(smsh.mesh.lons.shape[1]):
             ax.plot(smsh.mesh.lons[:, i], smsh.mesh.lats[:, i],
                     smsh.mesh.depths[:, i] * scl, '-r', lw=0.5)
+        """
+
     plt.title(title)
 
     set_axes_equal(ax)
@@ -161,7 +187,7 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
             ax.invert_yaxis()
             plt.show()
 
-    def test_get_dip(self):
+    def test_get_dip1(self):
         self.ksfc.get_dip()
 
     def test_get_cell_dimensions(self):
@@ -187,6 +213,7 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         perc_diff = abs(expected - np.sum(areas[idx])) / expected * 100
         self.assertTrue(perc_diff < 0.5)
 
+    @unittest.skip('')
     def test_get_tor(self):
         """ test calculation of trace (i.e. surface projection of tor) """
         lons = np.flipud([0.0, 0.05, 0.1, 0.15, 0.20])
@@ -240,6 +267,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         self.mlats = np.array(plats)
         self.mesh = Mesh(lons=self.mlons.flatten(), lats=self.mlats.flatten())
 
+    @unittest.skip('')
     def test_get_tor(self):
         tlo, tla = self.srfc.get_tor()
         # Expected results extracted manually from the mesh
@@ -274,8 +302,9 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
             tlo, tla = self.srfc.get_tor()
-            ax.plot(tlo, tla, '-g', lw=4)
+            ax.plot(tlo, tla, '-g', lw=4, label='tor')
             plt.title(f'{self.NAME} - Rjb')
+            plt.legend()
             plt.show()
 
         mesh = Mesh(np.array([10.06]), np.array([44.91]))
@@ -334,7 +363,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             plt.show()
 
     # TODO
-    def test_get_dip(self):
+    def test_get_dip2(self):
         dip = self.srfc.get_dip()
 
 

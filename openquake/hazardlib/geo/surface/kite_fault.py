@@ -20,22 +20,24 @@ Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 :class:`KiteSurface`.
 """
 import numpy as np
+import numpy.typing as npt
 from scipy import stats
 from pyproj import Geod
 from shapely.geometry import Polygon
 from scipy.interpolate import splev, splrep
 
 from openquake.baselib.node import Node
-from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo import geodetic
+from openquake.hazardlib.geo import Point, Line
+from openquake.hazardlib.geo.line import find_t
+from openquake.hazardlib.geo.line import _resample
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
+from openquake.hazardlib.geo.surface import SimpleFaultSurface
 from openquake.hazardlib.geo.surface.base import _angle_difference
-from openquake.hazardlib.geo.line import find_t
 
 TOL = 0.4
 SMALL = 1e-5
@@ -705,12 +707,14 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
 
     # Create the mesh in the forward direction
     prfr = []
-    if ref_idx < len(rprof) - 1:
+    cond = ref_idx > 0 and ref_idx < len(rprof) - 1
+    if cond:
         prfr = _get_resampled_profs(prfr, rprof, edge_sd, proj, idl, ref_idx)
 
     # Create the mesh in the backward direction
     prfl = []
-    last = False if ref_idx < len(rprof) - 1 else True
+    cond = ref_idx > 0 and ref_idx <= len(rprof) - 1
+    last = False if cond else True
     if ref_idx > 0:
         prfl = _get_resampled_profs(
             prfl, rprof, edge_sd, proj, idl, ref_idx, last)
@@ -720,9 +724,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
         prfl = prfl[1:]
 
     # Final profiles
-    prf = prfl + prfr
-
-    print(f'# profiles: {len(prf)}')
+    prf = prfr + prfl
 
     # Create the whole mesh
     if len(prf) > 1:
@@ -824,7 +826,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     return rprof, ref_idx
 
 
-def _from_prf_to_array(prfs, low, upp, step):
+def _from_prf_to_array(prfs: list, low: int, upp:int, step:int):
     # Converts a set of profiles into a numpy array 
     idxs = list(range(low, upp, step))
     out = np.zeros((len(idxs), len(prfs[low]), 3))
@@ -833,7 +835,14 @@ def _from_prf_to_array(prfs, low, upp, step):
     return out
 
 
-def _find_continuous_segments(mtx, i_seg):
+def _find_continuous_segments(mtx, i_seg: int):
+    # Returns a list of lists where each element contains the index of the 
+    # start and end profiles and the index of the edge
+    #
+    # :param mtx:
+    #
+    # :param i_seg:
+    # 
     i_from = -1
     i_to = -1
     out = [] 
@@ -856,9 +865,6 @@ def _find_continuous_segments(mtx, i_seg):
 
 def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
-    # Initializing the list of profiles
-    npr = []
-
     # Set the indexes of the original profiles depending on the direction
     # i.e. forward or backward
     low, upp, step = _set_indexes(forward, ref_idx, len(profs))
@@ -868,37 +874,155 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
     # Process each edge 
     csegs = []
+
     for i_edge in range(parr.shape[1]):
         for tmp in _find_continuous_segments(parr[:, i_edge], i_edge):
+            # Here `tmp` contains many triples with the indexes of the first 
+            # and last profile and the index of the edge
             csegs.append(tmp)
     csegs = np.array(csegs) 
-    idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
+    try:
+        idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
+    except:
+        breakpoint()
     csegs = csegs[idxs]
 
     # Coordinates of the resampled edges
     coos = []
 
-    import matplotlib.pyplot as plt
-    scl = 0.01
-    ax = plt.figure().add_subplot(projection='3d')
+    new_prof_lines = []
+    unique = np.unique(csegs[:, 0])
+    for i_from in unique:
+        for cseg in csegs[csegs[:, 0] == i_from, :]:
 
-    from openquake.hazardlib.geo.line import _resample
-    breakpoint()
-    for i_cseg, cseg in enumerate(csegs):
-        tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
-        _update_coos(tmp, cseg[2], cseg[0], coos)
-        plt.plot(tmp[:, 0], tmp[:, 1], tmp[:, 2]*scl, 'x-')
+            if i_from == unique[0]:
+                tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
+                tmp = tmp[:-1, :]
+                i_prof = 0
+            else:
+                edge = parr[cseg[0]:cseg[1], cseg[2]]
+                tmp, i_prof = _get_intersections(edge, new_prof_lines, proj)
 
-    for pro in profs:
-        plt.plot(pro[:, 0], pro[:, 1], pro[:, 2]*scl, '-k')
-    ax.invert_zaxis()
-    plt.show()
+            coos.append([i_prof, cseg[2], tmp])
+
+        # Update the set of lines describing the new profiles
+        _compute_lines(coos, i_from, proj, new_prof_lines)
+
+    # Build edges
+    new_edges = _build_edges(coos)
+
+    # Build profiles
+    npr = _build_profiles(new_edges)
+        
+    return npr
+    
+
+def _build_profiles(edges: list) -> list:
+    # Find the longest edge
+    num_cols = max([len(edges[k]) for k in edges.keys()])
+    num_rows = len(edges)
+    profs = []
+    for key in edges:
+        edge = edges[key]
+        for i_r, c in enumerate(edge):
+            if len(profs) == i_r:
+                profs.append([c])
+            else:
+                profs[i_r].append(c)
+    
+    max_len = max([len(p) for p in profs])
+    
+    # Set the same length for all the profiles
+    for i_prof, prof in enumerate(profs):
+        if len(prof) < max_len:
+            for i in range(len(prof), max_len):
+                profs[i_prof].append([np.nan, np.nan, np.nan])
+    return profs
 
 
-def _update_coos(coords, i_edge, idx_1st_profile, coos):
-    if idx_1st_profile == 0:
-        coos.append([i_edge, 0, coords])
-     
+def _build_edges(coos):
+    # `coos` is a list with a triple 
+    edges = {}
+    for coo in coos:
+        if coo[1] not in edges:
+            if coo[0] > 0:
+                tmp = _fill(0, coo[0], coo[2])
+            else:
+                tmp = np.squeeze(coo[2]).tolist()
+            edges[coo[1]] = tmp
+        else:
+            if coo[0] > 0:
+                tmp = _fill(len(edges[coo[1]]), coo[0], coo[2])
+            else:
+                tmp = coo[2].tolist()
+            edges[coo[1]].extend(tmp)
+    return edges
+
+
+def _fill(i_from, i_to, coo):
+    delta = int(i_to - i_from)
+    add = np.empty((delta, 3)) 
+    add[:] = np.nan
+    out = np.vstack((add, coo))
+    return out.tolist()
+    
+
+def _get_intersections(edges, lines, proj):
+    pnts = []
+    idxs = []
+    for i_vtx in range(len(edges)-1):
+
+        xp, yp = proj(edges[i_vtx:i_vtx+2, 0], edges[i_vtx:i_vtx+2, 1])
+        slope, intercept, _, _, _ = stats.linregress(xp, yp)   
+
+        for i_line, line in enumerate(lines):
+
+            # Intersection between edge and profile
+            xi = (intercept - line[1]) / (line[0] - slope)
+            yi = xi * slope + intercept
+
+            # Check if intercept is along the segment
+            if (xi > np.min([xp]) and xi < np.max([xp]) and
+                yi > np.min([yp]) and yi < np.max([yp])):
+                xg, yg = proj(np.array([xi]), np.array([yi]), reverse=True)
+                zi = _get_point_depth([xp[0], yp[0], edges[i_vtx, 2]],
+                                      [xp[1], yp[1], edges[i_vtx+1, 2]],
+                                      xi)
+                pnts.append([xg[0], yg[0], zi])  
+                idxs.append(i_line)
+
+    return np.array(pnts), min(idxs)
+                
+
+def _line3d(pnt1, pnt2):
+    return [pnt2[0]-pnt1[0], pnt2[1]-pnt1[1], pnt2[2]-pnt1[2]] 
+
+
+def _get_point_depth(pnt1, pnt2, xco):
+    vect = _line3d(pnt1, pnt2)
+    ratio = (xco - pnt1[0]) / vect[0]
+    return vect[2] * ratio + pnt1[2]
+
+
+def _compute_lines(coos, i_from, proj, new_lines_profiles):
+    
+    # Create the profiles
+    profs = []
+    for i_coo, coo in enumerate(coos):
+        if coo[0] == i_from:
+            for i_c, c in enumerate(coo[2]):
+                if len(profs) == i_c:
+                    profs.append([list(coo[2][i_c])])
+                else:
+                    profs[i_c].append(list(coo[2][i_c]))
+
+    for prof in profs:
+        prof = np.array(prof)
+        xp, yp = proj(prof[:, 0], prof[:, 1])
+        slope, intercept, _, _, _ = stats.linregress(xp, yp)        
+        new_lines_profiles.append([slope, intercept])
+
+
 def _lo_la_de(line, sampling_dist, g):
     lo = line.coo[:, 0].copy()
     la = line.coo[:, 1].copy()
@@ -1015,7 +1139,9 @@ def _resample_profile(line, sampling_dist):
     return Line.from_coo(coo)
 
 
-def _set_indexes(forward, ref_idx, len_profs):
+def _set_indexes(
+    forward: bool, ref_idx: int, len_profs: int) -> tuple[int, int, int]:
+    # Defines the indexes of the original profiles to be investigated
     step = 1
     low = ref_idx
     upp = len_profs
@@ -1024,3 +1150,37 @@ def _set_indexes(forward, ref_idx, len_profs):
         low = ref_idx
         upp = -1
     return low, upp, step
+
+
+def fix_mesh(msh: npt.ArrayLike) -> np.ndarray:
+    """
+    Check that the quadrilaterals composing the final mesh are correctly
+    defined i.e. all the vertexes are finite.
+
+    :param msh:
+        A :class:`numpy.ndarray` instance with the coordinates of the mesh
+    :returns:
+        A revised :class:`numpy.ndarray` instance with the coordinates of
+        the mesh. The shape of this array num_rows x num_cols x 3
+    """
+    for i in range(msh.shape[0]):
+        ru = i + 1
+        rl = i - 1
+
+        for j in range(msh.shape[1]):
+            cu = j + 1
+            cl = j - 1
+
+            trl = False if cl < 0 else np.isfinite(msh[i, cl, 0])
+            tru = (False if cu > msh.shape[1] - 1 else
+                   np.isfinite(msh[i, cu, 0]))
+            tcl = False if rl < 0 else np.isfinite(msh[rl, j, 0])
+            tcu = (False if ru > msh.shape[0] - 1 else
+                   np.isfinite(msh[ru, j, 0]))
+
+            check_row = trl or tru
+            check_col = tcl or tcu
+
+            if not (check_row and check_col):
+                msh[i, j, :] = np.nan
+    return msh
