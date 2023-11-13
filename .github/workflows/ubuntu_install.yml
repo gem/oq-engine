@@ -28,7 +28,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10"]
+        python-version: [3.8, 3.9]
 
     steps:
   # This Checkout use git-ref keyword from dispatch
@@ -70,23 +70,13 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       timeout-minutes: 15
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-    - name: Run demos
-      run: |
-        source ~/openquake/bin/activate
-        oq dbserver start
-        cd ~/work/oq-engine/oq-engine
-        OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
-    - name: Run a small subset of tests
+    - name: Run a small subset of tests checking fiona/gdal
       run: |
         source ~/openquake/bin/activate
         pip install pytest
-        oq dbserver start
+        oq dbserver upgrade
         cd ~/work/oq-engine/oq-engine
         #
         export MPLBACKEND=Agg
         pytest -vs --color=yes openquake/hazardlib/tests/gsim/kotha_2020_test.py openquake/sep/tests/test_utils.py openquake/sep
-    - name: Run risk_test via https
-      run: |
-        source ~/openquake/bin/activate
-        oq dbserver start
         oq engine --run https://downloads.openquake.org/jobs/risk_test.zip

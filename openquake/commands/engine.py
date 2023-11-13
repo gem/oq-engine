@@ -124,7 +124,7 @@ def main(
         os.makedirs(datadir)
 
     fname = os.path.expanduser(config.dbserver.file)
-    if config.dbserver.host == 'local':
+    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
         if not os.path.exists(fname):
             upgrade_db = True  # automatically creates the db
             yes = True

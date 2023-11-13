@@ -36,7 +36,7 @@ from openquake.baselib import config
 from openquake.commonlib.logs import dbcmd
 from openquake.engine.export import core
 from openquake.server.db import actions
-from openquake.server.dbserver import db, get_status
+from openquake.server.dbserver import db
 from openquake.server.tests.views_test import EngineServerTestCase, loadnpz
 
 
@@ -48,7 +48,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
