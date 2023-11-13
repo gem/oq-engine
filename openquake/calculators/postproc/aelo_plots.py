@@ -272,7 +272,8 @@ def plot_disagg_by_src(dstore, update_dstore=False):
             afes = mrs[0, m, :, i]
             if (afes == 0).all():
                 continue
-            afe_uhgm = _find_afe_target(imls, afes + 1E-15, rtgm_probmce[m])
+            afe_uhgm = _find_afe_target(
+                imls, numpy.clip(afes, 1E-15, numpy.inf), rtgm_probmce[m])
             # get % contribution of that source
             contr_source = afe_uhgm/afe_target
             out_contr_all[i] = contr_source * 100
