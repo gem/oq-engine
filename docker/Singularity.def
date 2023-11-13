@@ -55,4 +55,4 @@ Stage: compile-build
     export PATH="$VIRTUAL_ENV/bin:$PATH"
 
 %runscript
-    exec /bin/bash -c /opt/openquake/bin/oq-db_start.sh "$@"
+    exec /bin/bash -c "$@"
