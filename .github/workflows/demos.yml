@@ -77,7 +77,7 @@ jobs:
           source ~/openquake/bin/activate
           oq dbserver upgrade
           zip -q -r /tmp/demos.zip demos/
-          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+          OQ_DATABASE=localhost OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
