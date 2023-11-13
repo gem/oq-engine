@@ -64,8 +64,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
-    tcp = 'tcp://%s:%d' % (dbhost, config.dbserver.host)
-    sock = zeromq.Socket('tcp://' + tcp, zeromq.zmq.REQ, 'connect',
+    tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
+    sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
                          timeout=600)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)

@@ -1,5 +1,5 @@
 #!/bin/bash
-OQ_DATABASE=localhost
+export OQ_DATABASE=localhost
 set -e
 if [ ! -d "$1" ]; then
     echo "Please specify the location of the folder containing the demos. Aborting." >&2

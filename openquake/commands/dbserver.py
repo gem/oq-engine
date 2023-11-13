@@ -49,6 +49,7 @@ def main(cmd,
         return
 
     if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
+        import pdb; pdb.set_trace()
         print('Doing nothing since OQ_DATABASE=local')
         return
 
