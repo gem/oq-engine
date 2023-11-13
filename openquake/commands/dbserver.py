@@ -48,7 +48,7 @@ def main(cmd,
         dbapi.db.close()
         return
 
-    if os.environ.get('OQ_DATABASE') == 'local':
+    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
         print('Doing nothing since OQ_DATABASE=local')
         return
 
