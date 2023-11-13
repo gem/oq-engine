@@ -68,19 +68,10 @@
         });
     var outputs = new Outputs();
 
-    var refresh_outputs;
-
-    function setTimer() {
-        refresh_outputs = setInterval(function() { outputs.fetch({reset: true}) }, 30000);
-    }
-
     /* classic event management */
     $(document).ready(
         function() {
-
             var output_table = new OutputTable({ outputs: outputs });
             outputs.fetch({reset: true});
-            setTimer()
-
         });
 })($, Backbone, _, gem_oq_server_url, gem_calc_id);

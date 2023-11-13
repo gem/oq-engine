@@ -469,13 +469,13 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
-        required = .5 * (1 if dist == 'no' else parallel.Starmap.num_cores)
+        required = .25 * (1 if dist == 'no' else parallel.Starmap.num_cores)
         if (dist == 'processpool' and avail < required and
                 sys.platform != 'darwin'):
             # macos tells that there is no memory when there is, so we
             # must not enter in SLOW MODE there
             msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
-                   'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
+                   'engine would like at least 0.25 GB per core, i.e. %.1f GB: '
                    'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
                    ) % (avail, required)
             if oq.concurrent_tasks:
@@ -1269,6 +1269,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     dstore.create_df('gmf_data', items)  # not gzipping for speed
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
+                     investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
     if data is not None:
         _df = pandas.DataFrame(dict(items))

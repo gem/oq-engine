@@ -61,6 +61,16 @@ if settings.LOCKDOWN:
 
     admin.autodiscover()
     admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
+    if settings.APPLICATION_MODE.upper() == 'AELO':
+        email_template_name = (
+            'registration/password_reset_email_aelo.txt')
+        subject_template_name = (
+            'registration/password_reset_subject_aelo.txt')
+    else:
+        email_template_name = (
+            'registration/password_reset_email.txt')
+        subject_template_name = (
+            'registration/password_reset_subject.txt')
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$', LoginView.as_view(
@@ -70,19 +80,22 @@ if settings.LOCKDOWN:
         re_path(r'^accounts/ajax_login/$', views.ajax_login),
         re_path(r'^accounts/ajax_logout/$', views.ajax_logout),
         path('reset_password/',
-             PasswordResetView.as_view(template_name='reset_password.html'),
+             PasswordResetView.as_view(
+                 template_name='registration/reset_password.html',
+                 subject_template_name=subject_template_name,
+                 email_template_name=email_template_name),
              name='reset_password'),
         path('reset_password_sent/',
              PasswordResetDoneView.as_view(
-                 template_name='password_reset_sent.html'),
+                 template_name='registration/password_reset_sent.html'),
              name='password_reset_done'),
         path('reset/<uidb64>/<token>',
              PasswordResetConfirmView.as_view(
-                 template_name='password_reset_form.html'),
+                 template_name='registration/password_reset_form.html'),
              name='password_reset_confirm'),
         path('reset_password_complete/',
              PasswordResetCompleteView.as_view(
-                 template_name='password_reset_done.html'),
+                 template_name='registration/password_reset_done.html'),
              name='password_reset_complete'),
     ]
 
