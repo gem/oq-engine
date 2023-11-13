@@ -25,7 +25,6 @@ import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
-from openquake.hazardlib import valid
 from openquake.commonlib import readinput, dbapi, mosaic
 
 LEVELS = {'debug': logging.DEBUG,
@@ -34,7 +33,6 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DATABASE = '%s:%d' % valid.host_port()
 MODELS = []  # to be populated in get_tag
 
 
@@ -57,7 +55,8 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
+    dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
+    if dbhost == 'local':
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
@@ -65,7 +64,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
-    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
+    tcp = 'tcp://%s:%d' % (dbhost, config.dbserver.host)
+    sock = zeromq.Socket('tcp://' + tcp, zeromq.zmq.REQ, 'connect',
                          timeout=600)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
