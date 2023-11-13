@@ -76,8 +76,6 @@ def _find_fact_maxC(T, code):
 
 def _find_afe_target(imls, afe, sa_target):
     # find the target afe (or poe) for a given acceleration
-    if len(imls) != len(afe):
-        afe.extend([1E-15] * (len(imls) - len(afe)))
     f = interpolate.interp1d(numpy.log(imls), numpy.log(afe))
     afe_target = numpy.exp(f(numpy.log(sa_target)))
     return afe_target
@@ -118,7 +116,7 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
         AFE.append(to_rates(hcurve, window, minrate=1E-12))
         # get the AFE of the iml that will be disaggregated for each IMT
         afe_RTGM.append(_find_afe_target(
-            imls[m], AFE[m], rtgm_probmce[m]))
+            numpy.array(imls[m]), numpy.array(AFE[m]), rtgm_probmce[m]))
 
     plt = import_plt()
     plt.figure(figsize=(12, 9))
@@ -218,37 +216,10 @@ def plot_governing_mce(dstore, update_dstore=False):
     return plt
 
 
-# TODO: this is horrible code to be removed
-def _disaggr_by_src(dstore):
-
-    # get info : specific to disagg by src
-    df = dstore['mean_rates_by_src'].to_dframe().set_index('src_id')
-    grouped_m = df.groupby(['src_id', 'site_id', 'imt']).agg(
-        {"value": list}).reset_index()
-    # remove the sources that aren't contributing at all to the hazard
-    mask = grouped_m.value.apply(lambda x: sum(x) > 0)
-    gm = grouped_m[mask].reset_index()
-    grouped_2 = gm.groupby(['imt', 'src_id']).agg(
-        {"value": numpy.array}).reset_index()
-    total_poe = []
-    for wp in grouped_2.value.values:
-        wsp = []
-        if isinstance(wp, list):
-            total_poe.append(wp)
-        else:
-            for wp_i in wp:
-                wsp.append(wp_i)
-            total_poe.append([sum(t) for t in numpy.array(wsp).T])
-    grouped_2['poes'] = total_poe
-    return grouped_2
-
-
 def plot_disagg_by_src(dstore, update_dstore=False):
-    df = _disaggr_by_src(dstore)
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
-    imts = ['PGA', 'SA(0.2)', 'SA(1.0)']
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm')
     # get the IML for the 2475 RP
@@ -261,17 +232,16 @@ def plot_disagg_by_src(dstore, update_dstore=False):
     # identify the sources that have a contribution > than fact (here 10%) of
     # the largest contributor;
     fact = 0.1
-
-    for m, imt in enumerate(imts):
-        out_contr_all = []
+    mrs = dstore['mean_rates_by_src']  # (site_id, imt, lvl, src_id)
+    for m, imt in enumerate(imtls):
+        out_contr_all = {}
         fig1, ax1 = plt.subplots()
 
-        dms = df[(df['imt'] == imt)]
         # annual frequency of exceedance:
         T = from_string(imt).period
         f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
         imls_o = imtls[imt]
-        imls = [iml*f for iml in imls_o]
+        imls = numpy.array([iml*f for iml in imls_o])
         # have to compute everything for max comp. and for geom. mean
         RTGM = rtgm_probmce[m]
         RTGM_o = rtgm_probmce[m]/f
@@ -297,17 +267,19 @@ def plot_disagg_by_src(dstore, update_dstore=False):
         ax1.loglog([RTGM_o], [afe_target_o], 'ko', label='Probabilistic MCE',
                    linewidth=2, zorder=3)
 
-        # poes from dms are now rates
-        for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
+        for i, src in enumerate(mrs.src_id):
             # get contribution at target level for that source
-            afe_uhgm = _find_afe_target(imls, afes, rtgm_probmce[m])
+            afes = mrs[0, m, :, i]
+            if (afes == 0).all():
+                continue
+            afe_uhgm = _find_afe_target(imls, afes + 1E-15, rtgm_probmce[m])
             # get % contribution of that source
             contr_source = afe_uhgm/afe_target
-            out_contr_all.append(contr_source * 100)
+            out_contr_all[i] = contr_source * 100
 
         # identify contribution of largest contributor, make color scale
-        largest_contr = numpy.max(out_contr_all)
-        sample = sum(out_contr_all > fact*largest_contr)
+        largest_contr = max(out_contr_all.values())
+        sample = sum(val > fact*largest_contr for val in out_contr_all.values())
         viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
 
         # find and plot the sources, highlighting the ones that contribute more
@@ -315,24 +287,23 @@ def plot_disagg_by_src(dstore, update_dstore=False):
         # use j to only add the "other sources" label once
         # use i to cycle through the colors for the major source contributors
         i = j = 0
-        for ind, (afes, src) in enumerate(zip(dms.poes, dms.src_id)):
-            # pad to have the same length of imls and afes
-            afe_pad = afes + [0] * (len(imls) - len(afes))
+        for ind in out_contr_all:
+            afes = mrs[0, m, :, ind]
             # if it's not a big contributor, plot in silver
-            if out_contr_all[ind] <= fact*largest_contr:
+            if out_contr_all[ind] <= fact * largest_contr:
                 if j == 0:
-                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7,
+                    ax[m].loglog(imls, afes, 'silver', linewidth=0.7,
                                  label='other sources')
-                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7,
+                    ax1.loglog(imls_o, afes, 'silver', linewidth=0.7,
                                label='other source')
                     j += 1
                 else:
-                    ax[m].loglog(imls, afe_pad, 'silver', linewidth=0.7)
-                    ax1.loglog(imls_o, afe_pad, 'silver', linewidth=0.7)
+                    ax[m].loglog(imls, afes, 'silver', linewidth=0.7)
+                    ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
             # if it is, plot in color
             else:
-                ax[m].loglog(imls, afe_pad, c=viridis(i), label=str(src))
-                ax1.loglog(imls_o, afe_pad, c=viridis(i), label=str(src))
+                ax[m].loglog(imls, afes, c=viridis(i), label=str(src))
+                ax1.loglog(imls_o, afes, c=viridis(i), label=str(src))
                 i += 1
         # populate subplot - maximum component
         ax[m].grid('both')
