@@ -1157,7 +1157,8 @@ def host_port(value=None):
     If value is missing returns the parameters in openquake.cfg
     """
     if not value:
-        return (config.dbserver.host, config.dbserver.port)
+        host = os.environ.get('OQ_DATABASE', config.dbserver.host)
+        return (host, config.dbserver.port)
     host, port = value.split(':')
     return socket.gethostbyname(host), int(port)
 
