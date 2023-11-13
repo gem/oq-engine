@@ -144,6 +144,11 @@ $ sudo oq webui collectstatic
 
 *nginx* must be configured to act as a reverse proxy for *gunicorn* and to provide static content. A [sample configuration file](examples/nginx.md) is provided.
 
+When the reverse proxy is configured, add the following to `openquake/server/local_settings.py`:
+```python
+USE_REVERSE_PROXY = True
+```
+
 ***
 
 ## Getting help
