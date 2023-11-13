@@ -180,6 +180,11 @@ APPLICATION_MODES = ['PUBLIC', 'RESTRICTED', 'AELO', 'READ_ONLY']
 # case insensitive
 APPLICATION_MODE = 'public'
 
+# Set to True if using NGINX or some other reverse proxy
+# Externally visible url and port number is different from Django visible
+# values
+USE_REVERSE_PROXY = False
+
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
 
@@ -251,7 +256,6 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
                 f' must all be defined')
 
 if LOCKDOWN:
-
     # do not log to file unless running through the webui
     if getpass.getuser() == 'openquake':  # the user that runs the webui
         try:
