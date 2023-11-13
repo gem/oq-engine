@@ -28,7 +28,7 @@ from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_afe_rtgm, plot_disagg_by_src, plot_governing_mce)
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
 
 
 def import_plt():
@@ -712,13 +712,13 @@ def make_figure_tot_curves(extractors, what):
     return make_figure_agg_curves(extractors, what)
 
 
-def make_figure_mean_hcurves_afe_rtgm(extractors, what):
+def make_figure_mean_hcurves_rtgm(extractors, what):
     """
-    $ oq plot "mean_hcurves_afe_rtgm?"
+    $ oq plot "mean_hcurves_rtgm?"
     """
     [ex] = extractors
     dstore = ex.dstore
-    plt = plot_mean_hcurves_afe_rtgm(dstore)
+    plt = plot_mean_hcurves_rtgm(dstore)
     return plt
 
 

@@ -53,7 +53,7 @@ from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
 from openquake.calculators.postproc.aelo_plots import (
-    plot_mean_hcurves_afe_rtgm, plot_disagg_by_src, plot_governing_mce,
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce,
     _find_fact_maxC)
 
 DLL_df = pd.read_csv(io.StringIO('''\
@@ -377,7 +377,7 @@ def main(dstore, csm):
         if Image is None:  # missing PIL
             logging.warning('Missing module PIL: skipping plotting curves')
         else:
-            plot_mean_hcurves_afe_rtgm(dstore, update_dstore=True)
+            plot_mean_hcurves_rtgm(dstore, update_dstore=True)
             plot_governing_mce(dstore, update_dstore=True)
         return
 
@@ -400,6 +400,6 @@ def main(dstore, csm):
     if Image is None:  # missing PIL
         logging.warning('Missing module PIL: skipping plotting curves')
     else:
-        plot_mean_hcurves_afe_rtgm(dstore, update_dstore=True)
+        plot_mean_hcurves_rtgm(dstore, update_dstore=True)
         plot_disagg_by_src(dstore, update_dstore=True)
         plot_governing_mce(dstore, update_dstore=True)

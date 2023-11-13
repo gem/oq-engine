@@ -89,7 +89,7 @@ def _get_label(imt):
     return imtlab + ' - ' + comp
 
 
-def plot_mean_hcurves_afe_rtgm(dstore, update_dstore=False):
+def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     """
     :param dstore: the datastore
     :returns: figure of hazard curves
