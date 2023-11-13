@@ -1,3 +1,7 @@
+  [Anirudh Rao]
+  * Limited the cross-correlation coefficient of GodaAtkinson2009 
+    to have an upper bound of 1.0
+
   [Paolo Tormene]
   * Added commands `oq plot mean_hcurves_rtgm,governing_mce,disagg_by_src`
 
