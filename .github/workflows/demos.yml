@@ -72,9 +72,8 @@ jobs:
           GITHUB_BS_REF:  ${{ github.base_ref }}
         run: |
           source ~/openquake/bin/activate
-          OQ_DATABASE=localhost oq dbserver start
           zip -q -r /tmp/demos.zip demos/
-          OQ_DATABASE=localhost OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
+          OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
