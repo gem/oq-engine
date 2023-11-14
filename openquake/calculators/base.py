@@ -787,9 +787,7 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if oq.calculation_mode == 'aftershock':
-            haz_sitecol = None
-        elif (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
+        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
                 not in oq.inputs and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])

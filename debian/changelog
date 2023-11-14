@@ -1,5 +1,9 @@
+  [Michele Simionato]
+  * Removed the experimental aftershock calculator; aftershocks can
+    be computed by simply including a file delta_rates.csv
+
   [Anirudh Rao]
-  * Limited the cross-correlation coefficient of GodaAtkinson2009 
+  * Limited the cross-correlation coefficient of GodaAtkinson2009
     to have an upper bound of 1.0
 
   [Paolo Tormene]
