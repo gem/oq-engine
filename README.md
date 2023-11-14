@@ -1,4 +1,4 @@
-# OpenQuake Engine
+# The OpenQuake Engine
 
 ![OpenQuake Logo](https://raw.githubusercontent.com/gem/oq-infrastructure/master/logos/oq-logo.png)
 
