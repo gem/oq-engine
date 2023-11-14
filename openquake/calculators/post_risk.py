@@ -27,13 +27,29 @@ from openquake.baselib import general, parallel, python3compat
 from openquake.commonlib import datastore, logs
 from openquake.risklib import asset, scientific, reinsurance
 from openquake.engine import engine
-from openquake.calculators import base, views, event_based_risk as ebr
+from openquake.calculators import base, views
 
 U8 = numpy.uint8
 F32 = numpy.float32
 F64 = numpy.float64
 U16 = numpy.uint16
 U32 = numpy.uint32
+
+
+def fix_investigation_time(oq, dstore):
+    """
+    If starting from GMFs, fix oq.investigation_time.
+    :returns: the number of hazard realizations
+    """
+    R = len(dstore['weights'])
+    if 'gmfs' in oq.inputs and not oq.investigation_time:
+        attrs = dstore['gmf_data'].attrs
+        inv_time = attrs['investigation_time']
+        eff_time = attrs['effective_time']
+        if inv_time:  # is zero in scenarios
+            oq.investigation_time = inv_time
+            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+    return R
 
 
 def save_curve_stats(dstore):
@@ -467,7 +483,7 @@ class PostRiskCalculator(base.RiskCalculator):
 
     def execute(self):
         oq = self.oqparam
-        R = ebr.fix_investigation_time(oq, self.datastore)
+        R = fix_investigation_time(oq, self.datastore)
         if oq.investigation_time:
             eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
 
