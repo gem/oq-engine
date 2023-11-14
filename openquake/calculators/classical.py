@@ -315,7 +315,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
     precalc = 'preclassical'
-    accept_precalc = ['preclassical', 'classical', 'aftershock']
+    accept_precalc = ['preclassical', 'classical']
     SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
@@ -720,8 +720,8 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-        if 'delta_rates' in self.datastore.parent:
-            pass  # do nothing for the aftershock calculator, avoids an error
+        if 'delta_rates' in oq.inputs:
+            pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
         parallel.Starmap(
