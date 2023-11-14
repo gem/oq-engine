@@ -1267,6 +1267,27 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
     return good, total
 
 
+def read_delta_rates(fname, idx_nr):
+    """
+    :param fname:
+        path to a CSV file with fields (source_id, rup_id, delta)
+    :param idx_nr:
+        dictionary source_id -> (src_id, num_ruptures) with Ns sources
+    :returns:
+        list of Ns floating point arrays of different lenghts
+    """
+    delta_df = pandas.read_csv(fname, converters=dict(
+        source_id=str, rup_id=int, delta=float), index_col=0)
+    assert list(delta_df.columns) == ['rup_id', 'delta']
+    delta = [numpy.zeros(0) for _ in idx_nr]
+    for src, df in delta_df.groupby(delta_df.index):
+        idx, nr = idx_nr[src]
+        rupids = df.rup_id.to_numpy()
+        numpy.testing.assert_equal(rupids, numpy.arange(nr))
+        delta[idx] = df.delta.to_numpy()
+    return delta
+
+
 def get_shapefiles(dirname):
     """
     :param dirname: directory containing the shapefiles

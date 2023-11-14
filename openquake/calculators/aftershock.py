@@ -23,6 +23,7 @@ import operator
 import numpy
 import pandas
 from openquake.baselib import parallel, general
+from openquake.commonlib import readinput
 from openquake.calculators import base, preclassical
 
 U32 = numpy.uint32
