@@ -1,67 +1,62 @@
-Package            Version  Editable project location
------------------- -------- -------------------------
-asgiref            3.4.1
-attrs              22.1.0
-certifi            2019.3.9
-chardet            3.0.4
-click              8.1.3
-click-plugins      1.0.4
-cligj              0.7.2
-coloredlogs        15.0.1
-contourpy          1.2.0
-cycler             0.10.0
-decorator          4.4.2
-Django             3.2.23
-django-pam         2.0.1
-docutils           0.14
-fiona              1.9.5
-flake8             6.1.0
-flatbuffers        23.5.26
-fonttools          4.38.0
-h5py               3.10.0
-humanfriendly      10.0
-idna               2.8
-importlib-metadata 5.0.0
-iniconfig          2.0.0
-kiwisolver         1.4.4
-llvmlite           0.41.1
-matplotlib         3.8.1
-mccabe             0.7.0
-mpmath             1.3.0
-munch              2.5.0
-networkx           2.8.2
-numba              0.58.1
-numpy              1.26.1
-onnxruntime        1.16.0
-openquake.engine   3.19.0   /io
-packaging          21.3
-pandas             2.0.3
-pbr                5.2.0
-Pillow             10.1.0
-pip                23.3.1
-pluggy             1.3.0
-protobuf           4.24.3
-psutil             5.9.2
-pycodestyle        2.11.1
-pyflakes           3.1.0
-pyparsing          2.4.0
-pyproj             3.6.1
-pyreadline3        3.4.1
-pyshp              2.3.1
-pytest             7.4.3
-python-dateutil    2.8.2
-python-pam         1.8.4
-pytz               2022.1
-pyzmq              23.2.1
-requests           2.22.0
-scipy              1.11.3
-setproctitle       1.3.2
-setuptools         65.5.0
-shapely            2.0.1
-six                1.12.0
-sqlparse           0.3.0
-sympy              1.12
-toml               0.10.2
-tzdata             2023.3
-urllib3            1.25.3
-zipp               3.10.0
+asgiref==3.4.1
+attrs==22.1.0
+certifi==2019.3.9
+chardet==3.0.4
+click==8.1.3
+click-plugins==1.0.4
+cligj==0.7.2
+coloredlogs==15.0.1
+contourpy==1.2.0
+cycler==0.10.0
+decorator==4.4.2
+Django==3.2.23
+django-pam==2.0.1
+docutils==0.14
+flake8==6.1.0
+flatbuffers==23.5.26
+fonttools==4.38.0
+h5py==3.10.0
+humanfriendly==10.0
+idna==2.8
+importlib-metadata== .0.0
+iniconfig==2.0.0
+kiwisolver==1.4.4
+llvmlite==0.41.1
+matplotlib==3.8.1
+mccabe==0.7.0
+mpmath==1.3.0
+munch==2.5.0
+networkx==2.8.2
+numba==0.58.1
+numpy==1.26.1
+onnxruntime==1.16.0
+packaging==21.3
+pandas==2.0.3
+pbr==5.2.0
+Pillow==10.1.0
+pip==23.3.1
+pluggy==1.3.0
+protobuf==4.24.3
+psutil==5.9.2
+pycodestyle==2.11.1
+pyflakes==3.1.0
+pyparsing==2.4.0
+pyreadline3==3.4.1
+pyshp==2.3.1
+pytest==7.4.3
+python-dateutil==2.8.2
+python-pam==1.8.4
+pytz==2022.1
+pyzmq==23.2.1
+requests==2.22.0
+scipy==1.11.3
+setproctitle==1.3.2
+setuptools==65.5.0
+shapely==2.0.1
+six==1.12.0
+sqlparse==0.3.0
+sympy==1.12
+toml==0.10.2
+tzdata==2023.3
+urllib3==1.25.3
+zipp==3.10.0
