@@ -1283,8 +1283,11 @@ def read_delta_rates(fname, idx_nr):
     for src, df in delta_df.groupby(delta_df.index):
         idx, nr = idx_nr[src]
         rupids = df.rup_id.to_numpy()
-        numpy.testing.assert_equal(rupids, numpy.arange(nr))
-        delta[idx] = df.delta.to_numpy()
+        if len(numpy.unique(rupids)) < len(rupids):
+            raise InvalidFile('%s: duplicated rup_id for %s' % (fname, src))
+        drates = numpy.zeros(nr)
+        drates[rupids] = df.delta.to_numpy()
+        delta[idx] = drates
     return delta
 
 
