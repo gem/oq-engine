@@ -30,11 +30,7 @@ class AftershockTestCase(CalculatorTestCase):
 
     def test_case_1(self):
         # run aftershock
-        self.run_calc(case_1.__file__, 'pre_job.ini')
-
-        # run classical
-        hc_id = str(self.calc.datastore.calc_id)
-        self.run_calc(case_1.__file__, 'job.ini', hazard_calculation_id=hc_id)
+        self.run_calc(case_1.__file__, 'job.ini')
 
         # checking hazard curves
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
