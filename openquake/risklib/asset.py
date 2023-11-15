@@ -41,6 +41,7 @@ TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
+ANR_FIELDS = {'area', 'number', 'residents'}
 
 
 def get_case_similar(names):
@@ -588,10 +589,15 @@ def _get_exposure(fname, stop=None):
         conversions = exposure.conversions
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
-    fieldmap = {}  # input_field -> oq_field
+    fieldmap = {'area': 'value-area',
+                'number': 'value-number',
+                'residents': 'value-residents'}  # input_field -> oq_field
     try:
         for node in exposure.exposureFields:
-            fieldmap[node['input']] = node['oq']
+            if node['oq'] in ANR_FIELDS:
+                fieldmap[node['input']] = 'value-' + node['oq']
+            else:
+                fieldmap[node['input']] = node['oq']
     except AttributeError:
         pass  # no fieldmap
     try:
@@ -987,7 +993,8 @@ class Exposure(object):
         if wrong:
             raise InvalidFile('Found case-duplicated fields %s in %s' %
                               (wrong, self.datafiles))
-        return sorted(set(fields))
+        return sorted('value-' + f if f in ANR_FIELDS else f
+                      for f in set(fields))
 
     def _read_csv(self, errors=None):
         """
@@ -1026,8 +1033,7 @@ class Exposure(object):
             if oq in conv:
                 conv[inp] = conv[oq]
         rename = self.fieldmap.copy()
-        vfields = set(self.cost_types['name']) | {
-            'area', 'number', 'residents'}
+        vfields = set(self.cost_types['name']) | ANR_FIELDS
         for field in vfields:
             f = revmap.get(field, field)
             conv[f] = float
