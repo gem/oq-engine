@@ -1026,8 +1026,8 @@ class Exposure(object):
             if oq in conv:
                 conv[inp] = conv[oq]
         rename = self.fieldmap.copy()
-        vfields = set(self.cost_types['name']) | {'area', 'number',
-                                                  'residents'}
+        vfields = set(self.cost_types['name']) | {
+            'area', 'number', 'residents'}
         for field in vfields:
             f = revmap.get(field, field)
             conv[f] = float

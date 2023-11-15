@@ -1,5 +1,5 @@
 #,,,,,,,,,,trts=['Active Shallow Crust']
-serial,mag,rake,lon,lat,dep,multiplicity,trt,kind,mesh,extra
+seed,mag,rake,lon,lat,dep,multiplicity,trt,kind,mesh,extra
 58,7.250000E+00,0.000000E+00,90.26716,25.44606,1.500000E+01,1,Active Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[[90.44533, 90.07993, 90.4546, 90.08872]], [[25.35953, 25.37682, 25.51507, 25.53238]], [[0.0, 0.0, 30.0, 30.0]]]]","{""occurrence_rate"": 1e-05}"
 2785,7.250000E+00,0.000000E+00,85.36445,28.22020,1.500000E+01,1,Active Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[[85.58052, 85.14832, 85.58052, 85.14832]], [[28.20672, 28.23335, 28.20672, 28.23335]], [[0.0, 0.0, 30.0, 30.0]]]]","{""occurrence_rate"": 1e-05}"
 2787,7.250000E+00,0.000000E+00,85.26187,28.13027,1.500000E+01,1,Active Shallow Crust,ParametricProbabilisticRupture PlanarSurface,"[[[[85.47776, 85.04592, 85.47776, 85.04592]], [[28.11679, 28.14342, 28.11679, 28.14342]], [[0.0, 0.0, 30.0, 30.0]]]]","{""occurrence_rate"": 1e-05}"
