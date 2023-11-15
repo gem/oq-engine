@@ -208,7 +208,7 @@ class ConditionedGmfComputer(GmfComputer):
         self.observed_imt_strs = observed_imt_strs
         observed_imtls = {imt_str: [0]
                           for imt_str in observed_imt_strs
-                          if imt_str not in ["MMI", "PGV"]}
+                          if imt_str not in ["MMI"]}
         self.observed_imts = sorted(map(from_string, observed_imtls))
         self.num_events = number_of_ground_motion_fields
 
@@ -464,12 +464,13 @@ def get_mean_covs(
         rupture = rupture.rupture
 
     observed_imtls = {imt_str: [0] for imt_str in observed_imt_strs
-                      if imt_str not in ["MMI", "PGV"]}
+                      if imt_str not in ["MMI"]}
     observed_imts = sorted(from_string(imt_str) for imt_str in observed_imtls)
 
     # Target IMT is not PGA or SA: Currently not supported
     target_imts = [imt for imt in target_imts
-                   if imt.period or imt.string == "PGA"]
+                   if imt.period or imt.string == "PGA"
+                   or imt.string == "PGV"]
 
     # Generate the contexts and calculate the means and
     # standard deviations at the *station* sites ("_D")
