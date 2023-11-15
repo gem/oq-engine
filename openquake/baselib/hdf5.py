@@ -907,11 +907,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
-        if isinstance(dtypedict, dict):
-            dt = build_dt(dtypedict, header)
-        else:
-            # in test_recompute dt is already a composite dtype
-            dt = dtypedict
+        dt = build_dt(dtypedict, header)
         try:
             df = _read_csv(f, dt)
         except KeyError:
