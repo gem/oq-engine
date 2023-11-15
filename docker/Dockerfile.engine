@@ -38,9 +38,7 @@ ENV HOME /home/openquake
 WORKDIR ${HOME}
 ENV PATH="/opt/openquake/bin:$PATH"
 #
-ADD scripts/oq-start.sh ${HOME}
 RUN mkdir oqdata 
 EXPOSE 8800:8800
 STOPSIGNAL SIGINT
 ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["./oq-start.sh"]  

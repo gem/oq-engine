@@ -514,7 +514,7 @@ class EventBasedCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         sav_mon = self.monitor('saving gmfs')
         primary = self.oqparam.get_primary_imtls()
-        sec_imts = self.oqparam.get_sec_imts()
+        sec_imts = self.oqparam.sec_imts
         with sav_mon:
             gmfdata = result.pop('gmfdata')
             if len(gmfdata):
@@ -634,7 +634,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if oq.ground_motion_fields:
             imts = oq.get_primary_imtls()
-            base.create_gmf_data(dstore, imts, oq.get_sec_imts())
+            base.create_gmf_data(dstore, imts, oq.sec_imts)
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/rup_info', rup_dt)
             if self.N >= SLICE_BY_EVENT_NSITES:
@@ -668,7 +668,7 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs = self.datastore['events']['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
-        for sec_imt in self.oqparam.get_sec_imts():  # ignore secondary perils
+        for sec_imt in self.oqparam.sec_imts:  # ignore secondary perils
             del gmf_df[sec_imt]
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)

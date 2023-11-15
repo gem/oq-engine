@@ -122,12 +122,16 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
 
     # NB: disagg_by_src is disabled in case of tiling
     assert not (itiles > 1 and cmaker.disagg_by_src)
+    N = len(sitecol)
     for sites in sitecol.split_in_tiles(itiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
-        result['pnemap'] = ~pmap.remove_zeros()
+        if N > cmaker.max_sites_disagg:  # save data transfer
+            result['pnemap'] = ~pmap.remove_zeros()
+        else:  # keep the shape of the underlying array in store_mean_rates
+            result['pnemap'] = ~pmap
         result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
@@ -295,13 +299,11 @@ class Hazard:
         Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
         """
         mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
-        first = []
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
-                idx = self.srcidx[basename(key, '!;:')]
+                idx = self.srcidx[basename(key, ';:')]
                 mean_rates_by_src[..., idx] += self.get_rates(pmap)
-                first.append(self.get_rates(pmap)[0, 0, 0])
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
         return mean_rates_by_src
 
@@ -313,7 +315,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
     precalc = 'preclassical'
-    accept_precalc = ['preclassical', 'classical', 'aftershock']
+    accept_precalc = ['preclassical', 'classical']
     SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
@@ -344,10 +346,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
         pnemap = dic['pnemap']  # probabilities of no exceedence
-        pmap_by_src = dic.pop('pmap_by_src', {})  # non-empty for disagg_by_src
-        # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
-        for source_id, pm in pmap_by_src.items():
+        source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
+        if source_id:
             # store the poes for the given source
+            pm = ~pnemap
             acc[source_id] = pm
             pm.grp_id = grp_id
             pm.trt_smrs = pnemap.trt_smrs
@@ -718,8 +720,8 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-        if 'delta_rates' in self.datastore.parent:
-            pass  # do nothing for the aftershock calculator, avoids an error
+        if 'delta_rates' in oq.inputs:
+            pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
         parallel.Starmap(

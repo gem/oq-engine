@@ -41,7 +41,9 @@ TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
 ae = numpy.testing.assert_equal
 OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
-
+ANR_FIELDS = {'area', 'number', 'residents'}
+VAL_FIELDS = {'structural', 'nonstructural', 'contents',
+              'business_interruption'}
 
 def get_case_similar(names):
     """
@@ -588,19 +590,14 @@ def _get_exposure(fname, stop=None):
         conversions = exposure.conversions
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
-    fieldmap = {}  # input_field -> oq_field
+    # input_field -> oq_field
+    fieldmap = {f: 'value-' + f for f in ANR_FIELDS | VAL_FIELDS}
     try:
         for node in exposure.exposureFields:
-            if node['input'] in fieldmap:
-                clashing_oq_fields = [fieldmap[node['input']], node['oq']]
-                err_msg = (f'The {fname} maps the following oq fields'
-                           f' {clashing_oq_fields} to the same column'
-                           f' \'{node["input"]}\'. Please only provide unique'
-                           f' column names to each oq field. As a workaround,'
-                           f' you can duplicate \'{node["input"]}\', assign a'
-                           f' new name, and map to the other oq field.')
-                raise InvalidFile(err_msg)
-            fieldmap[node['input']] = node['oq']
+            if node['oq'] in ANR_FIELDS | VAL_FIELDS:
+                fieldmap[node['input']] = 'value-' + node['oq']
+            else:
+                fieldmap[node['input']] = node['oq']
     except AttributeError:
         pass  # no fieldmap
     try:
@@ -951,20 +948,23 @@ class Exposure(object):
                          for f in fnames]
         assets_df = pandas.concat(dfs)
         del dfs  # save memory
-        exp.loss_types = []
+        vfields = []
         occupancy_periods = []
+        missing = VAL_FIELDS - set(exp.cost_calculator.cost_types)
         for name in assets_df.columns:
             if name.startswith('occupants_'):
                 period = name.split('_', 1)[1]
                 # see scenario_risk test_case_2d
                 if period != 'avg':
                     occupancy_periods.append(period)
-                exp.loss_types.append(name)
+                vfields.append(name)
             elif name.startswith('value-'):
-                exp.loss_types.append(name)
+                field = name[6:]
+                if field not in missing:
+                    vfields.append(name)
         exp.occupancy_periods = ' '.join(occupancy_periods)
         exp.mesh, exp.assets = _get_mesh_assets(
-            assets_df, exp.tagcol, exp.cost_calculator, exp.loss_types)
+            assets_df, exp.tagcol, exp.cost_calculator, vfields)
         return exp
 
     @staticmethod
@@ -996,7 +996,8 @@ class Exposure(object):
         if wrong:
             raise InvalidFile('Found case-duplicated fields %s in %s' %
                               (wrong, self.datafiles))
-        return sorted(set(fields))
+        return sorted('value-' + f if f in ANR_FIELDS|VAL_FIELDS else f
+                      for f in set(fields))
 
     def _read_csv(self, errors=None):
         """
@@ -1029,22 +1030,17 @@ class Exposure(object):
                 'retrofitted': float, 'ideductible': float, None: object}
         for f in strfields:
             conv[f] = str
-        revmap = {}  # oq -> inp
         for inp, oq in self.fieldmap.items():
-            revmap[oq] = inp
             if oq in conv:
                 conv[inp] = conv[oq]
         rename = self.fieldmap.copy()
-        vfields = set(self.cost_types['name']) | {'area', 'number',
-                                                  'residents'}
-        for field in vfields:
-            f = revmap.get(field, field)
+        vfields = set(self.cost_types['name']) | ANR_FIELDS
+        for f in vfields:
             conv[f] = float
-            rename[f] = 'value-' + field
-        for field in self.occupancy_periods.split():
-            f = revmap.get(field, field)
+            rename[f] = 'value-' + f
+        for f in self.occupancy_periods.split():
             conv[f] = float
-            rename[f] = 'occupants_' + field
+            rename[f] = 'occupants_' + f
         for fname in self.datafiles:
             t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')

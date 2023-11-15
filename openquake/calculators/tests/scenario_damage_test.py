@@ -283,9 +283,7 @@ class ScenarioDamageTestCase(CalculatorTestCase):
         # Exposure model mapping 2 oq fields to the same column
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_18.__file__, 'job.ini')
-        self.assertIn(
-            "Please only provide unique column names to each oq field",
-            str(ctx.exception))
+        self.assertIn("missing {'night'}", str(ctx.exception))
 
 
 def losses(aid, alt):

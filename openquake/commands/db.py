@@ -23,7 +23,6 @@ from decorator import getfullargspec
 from openquake.baselib import config
 from openquake.calculators.views import text_table
 from openquake.commonlib import logs
-from openquake.server import dbserver
 from openquake.server.db import actions
 
 commands = {}
@@ -55,7 +54,6 @@ def main(cmd, args=()):
     elif (cmd not in commands and not cmd.upper().startswith('SELECT') and
           config.multi_user and getpass.getuser() != 'openquake'):
         sys.exit('You have no permission to run %s' % cmd)
-    dbserver.ensure_on()
     res = logs.dbcmd(cmd, *convert(args))
     if hasattr(res, '_fields') and res.__class__.__name__ != 'Row':
         print(text_table(res))

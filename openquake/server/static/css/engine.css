@@ -217,3 +217,16 @@ footer.footer form label {
      line-height: 12px;
      margin: 0px;
 }
+
+tr.asce_output {
+    font-weight: bold;
+}
+.asce-key {
+    font-weight: normal;
+    float: left;
+    width: 100px;
+}
+.asce-value {
+    font-weight: normal;
+    float: left;
+}

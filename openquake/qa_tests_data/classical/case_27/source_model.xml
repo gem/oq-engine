@@ -14,8 +14,8 @@ xmlns:gml="http://www.opengis.net/gml"
         srcs_weights="0.625 0.375"
         tectonicRegion="Subduction Interface"
         >
-            <nonParametricSeismicSource id="case_01" name="Nankai Trough - CASE 1"/>
-            <nonParametricSeismicSource id="case_02" name="Nankai Trough - CASE 2"/>
+            <nonParametricSeismicSource id="case:01" name="Nankai Trough - CASE 1"/>
+            <nonParametricSeismicSource id="case:02" name="Nankai Trough - CASE 2"/>
         </sourceGroup>
         <sourceGroup
             name="point source"

@@ -836,7 +836,7 @@ def parse_comment(comment):
     return list(dic.items())
 
 
-def build_dt(dtypedict, names):
+def build_dt(dtypedict, names, fname):
     """
     Build a composite dtype for a list of names and dictionary
     name -> dtype with a None entry corresponding to the default dtype.
@@ -849,7 +849,8 @@ def build_dt(dtypedict, names):
             if None in dtypedict:
                 dt = dtypedict[None]
             else:
-                raise KeyError('Missing dtype for field %r' % name)
+                raise InvalidFile('%s: missing dtype for field %r' %
+                                  (fname, name))
         lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
@@ -875,16 +876,13 @@ def _read_csv(fileobj, compositedt):
         dt = compositedt[name]
         # NOTE: pandas.read_csv raises a warning and ignores a field dtype if a
         # converter for the same field is given
-        if dt.kind == 'S':  # limit of the length of byte-fields
+        if dt.kind == 'S':  # byte-fields
             conv[name] = check_length(name, dt.itemsize)
         else:
             dic[name] = dt
     df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
                          dtype=dic, keep_default_na=False, na_filter=False)
-    arr = numpy.zeros(len(df), compositedt)
-    for col in df.columns:
-        arr[col] = df[col].to_numpy()
-    return arr
+    return df
 
 
 # NB: it would be nice to use numpy.loadtxt(
@@ -910,17 +908,14 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
-        if isinstance(dtypedict, dict):
-            dt = build_dt(dtypedict, header)
-        else:
-            # in test_recompute dt is already a composite dtype
-            dt = dtypedict
+        dt = build_dt(dtypedict, header, fname)
         try:
-            arr = _read_csv(f, dt)
-        except KeyError:
-            raise KeyError('Missing None -> default in dtypedict')
+            df = _read_csv(f, dt)
         except Exception as exc:
             raise InvalidFile('%s: %s' % (fname, exc))
+    arr = numpy.zeros(len(df), dt)
+    for col in df.columns:
+        arr[col] = df[col].to_numpy()
     if renamedict:
         newnames = []
         for name in arr.dtype.names:
