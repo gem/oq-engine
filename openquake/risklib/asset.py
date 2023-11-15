@@ -950,7 +950,7 @@ class Exposure(object):
         del dfs  # save memory
         vfields = []
         occupancy_periods = []
-        ctypes = set(exp.cost_calculator.cost_types)
+        missing = VAL_FIELDS - set(exp.cost_calculator.cost_types)
         for name in assets_df.columns:
             if name.startswith('occupants_'):
                 period = name.split('_', 1)[1]
@@ -960,12 +960,11 @@ class Exposure(object):
                 vfields.append(name)
             elif name.startswith('value-'):
                 field = name[6:]
-                if field not in VAL_FIELDS - ctypes:
+                if field not in missing:
                     vfields.append(name)
-        exp.loss_types = vfields
         exp.occupancy_periods = ' '.join(occupancy_periods)
         exp.mesh, exp.assets = _get_mesh_assets(
-            assets_df, exp.tagcol, exp.cost_calculator, exp.loss_types)
+            assets_df, exp.tagcol, exp.cost_calculator, vfields)
         return exp
 
     @staticmethod
