@@ -45,6 +45,23 @@ ANR_FIELDS = {'area', 'number', 'residents'}
 VAL_FIELDS = {'structural', 'nonstructural', 'contents',
               'business_interruption'}
 
+
+def add_dupl_fields(df, oqfields):
+    """
+    Add duplicated fields to the DataFrame, if any.
+
+    :param df: exposure dataframe
+    :param oqfields: dictionary csvfield -> oqfields
+    """
+    columns = set(df.columns)
+    for f in oqfields:
+        if len(oqfields[f]) > 1:
+            okfield = (oqfields[f] & columns).pop()
+            for oqfield in oqfields[f]:
+                if oqfield != okfield:
+                    df[oqfield] = df[okfield]
+
+
 def get_case_similar(names):
     """
     :param names: a list of strings
@@ -1007,6 +1024,9 @@ class Exposure(object):
         expected_header = set(self._csv_header('', ''))
         floatfields = set()
         strfields = self.tagcol.tagnames + self.occupancy_periods.split()
+        oqfields = general.AccumDict(accum=set())
+        for csvfield, oqfield in self.pairs:
+            oqfields[csvfield].add(oqfield)
         for fname in self.datafiles:
             with open(fname, encoding='utf-8-sig', errors=errors) as f:
                 try:
@@ -1016,7 +1036,9 @@ class Exposure(object):
                            "and then o.fix_latin1('%s')\nor set "
                            "ignore_encoding_errors=true" % (fname, fname))
                     raise RuntimeError(msg)
-                header = set(self.fieldmap.get(f, f) for f in fields)
+                header = set()
+                for f in fields:
+                    header.update(oqfields.get(f, [f]))
                 for field in fields:
                     if field not in strfields:
                         floatfields.add(field)
@@ -1045,6 +1067,7 @@ class Exposure(object):
         for fname in self.datafiles:
             t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            add_dupl_fields(df, oqfields)
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
