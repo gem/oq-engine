@@ -849,7 +849,8 @@ def build_dt(dtypedict, names, fname):
             if None in dtypedict:
                 dt = dtypedict[None]
             else:
-                raise KeyError('%s: missing dtype for field %r' % (fname, name))
+                raise InvalidFile('%s: missing dtype for field %r' %
+                                  (fname, name))
         lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
@@ -910,8 +911,6 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
         dt = build_dt(dtypedict, header, fname)
         try:
             df = _read_csv(f, dt)
-        except KeyError:
-            raise KeyError('Missing None -> default in dtypedict')
         except Exception as exc:
             raise InvalidFile('%s: %s' % (fname, exc))
     arr = numpy.zeros(len(df), dt)
