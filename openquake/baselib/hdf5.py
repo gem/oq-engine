@@ -836,7 +836,7 @@ def parse_comment(comment):
     return list(dic.items())
 
 
-def build_dt(dtypedict, names):
+def build_dt(dtypedict, names, fname):
     """
     Build a composite dtype for a list of names and dictionary
     name -> dtype with a None entry corresponding to the default dtype.
@@ -849,7 +849,7 @@ def build_dt(dtypedict, names):
             if None in dtypedict:
                 dt = dtypedict[None]
             else:
-                raise KeyError('Missing dtype for field %r' % name)
+                raise KeyError('%s: missing dtype for field %r' % (fname, name))
         lst.append((name, vstr if dt is str else dt))
     return numpy.dtype(lst)
 
@@ -907,7 +907,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
                 continue
             break
         header = first.strip().split(sep)
-        dt = build_dt(dtypedict, header)
+        dt = build_dt(dtypedict, header, fname)
         try:
             df = _read_csv(f, dt)
         except KeyError:
