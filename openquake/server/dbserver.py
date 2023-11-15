@@ -137,6 +137,7 @@ def ensure_on():
     """
     if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
         print('Using local database')
+        actions.upgrade_db(db)
         return
     if get_status() == 'not-running':
         if config.multi_user and getpass.getuser() != 'openquake':
