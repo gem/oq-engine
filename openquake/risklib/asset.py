@@ -591,13 +591,13 @@ def _get_exposure(fname, stop=None):
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     # input_field -> oq_field
-    fieldmap = {f: 'value-' + f for f in ANR_FIELDS | VAL_FIELDS}
+    pairs = [(f, 'value-' + f) for f in ANR_FIELDS | VAL_FIELDS]
     try:
         for node in exposure.exposureFields:
             if node['oq'] in ANR_FIELDS | VAL_FIELDS:
-                fieldmap[node['input']] = 'value-' + node['oq']
+                pairs.append((node['input'], 'value-' + node['oq']))
             else:
-                fieldmap[node['input']] = node['oq']
+                pairs.append((node['input'], node['oq']))
     except AttributeError:
         pass  # no fieldmap
     try:
@@ -670,7 +670,7 @@ def _get_exposure(fname, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], cc, TagCollection(tagnames), fieldmap)
+        area.attrib, [], cc, TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -892,7 +892,7 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'cost_calculator', 'tagcol', 'fieldmap']
+              'area', 'assets', 'cost_calculator', 'tagcol', 'pairs']
 
     @staticmethod
     def check(fname):
@@ -979,6 +979,7 @@ class Exposure(object):
         assert len(values) == len(self.fields)
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
+        self.fieldmap = dict(self.pairs)  # inp -> oq
 
     def _csv_header(self, value='value-', occupants='occupants_'):
         """
