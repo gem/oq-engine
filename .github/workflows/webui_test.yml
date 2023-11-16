@@ -2,26 +2,15 @@
 name: RPM build of engine in Fedora Copr
 on:
   workflow_dispatch:
-    inputs:
-      lts-ver:
-        description: Engine Release (0 for nightly)
-        default: 0
-        required: true
-      pkg-num:
-        description: Engine PKG number (for LTS Release)
-        default: 1
-        required: true
       git-ref:
         description: Git Ref Branch
         default: master
         required: true
-      copr:
-        description: COPR Repository development for default
-        default: openquake-staging
-        required: true
+  schedule:
+    - cron: "0 19 * * *"
   push:
     branches:
-      - test_action_rpm
+      - webui_test
 
 jobs:
 
@@ -152,12 +141,12 @@ jobs:
           #
           mkdir /var/log/oq-engine/
           chown -R openquake /var/log/oq-engine/
-          runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
+          runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver upgrade'
           # Wait the DbServer to come up
-          echo "Waiting DBServer up on port 1907...."
-          while ! nc -z localhost 1907; do
-            sleep 2 # wait for 1/10 of the second before check again
-          done
+          #echo "Waiting DBServer up on port 1907...."
+          #while ! nc -z localhost 1907; do
+          #  sleep 2 # wait for 1/10 of the second before check again
+          #done
           sleep 3
           oq --version
           #
@@ -212,47 +201,3 @@ jobs:
           # Run a calcs using https
           #
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-
-  upload_copr:
-    name: downloads artifacts and publish from Fedora 38 container
-    needs: test_rpm
-    runs-on: ubuntu-latest
-    env:
-      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
-    strategy:
-      matrix:
-        epel-release: [rocky+epel-9-x86_64]
-    container:
-      image: fedora:38
-      options: --privileged
-    steps:
-      - name: Create structure of downloaded files
-        run: mkdir -p ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
-      - name: Download artifact of workflow to upload
-        uses: actions/download-artifact@v3
-        with:
-          name: srpm_files
-          path: ~/rpmbuild/SRPMS
-      - name: Display structure of downloaded files
-        run: ls -rl ~/rpmbuild/{RPMS,SOURCES,SPECS,SRPMS}
-      - name: Install tooling for source RPM build
-        run: |
-          dnf --refresh -y install @development-tools @rpm-development-tools \
-          copr-cli mock make gcc openssl-devel bzip2-devel libffi-devel
-      - name: Publish Package on COPR ${COPR_REPO}
-        env:
-          API_TOKEN_CONTENT: ${{ secrets.COPR_API_TOKEN }}
-          COPR_REPO: ${{ github.event.inputs.copr }}
-        run: |
-          mkdir -p "$HOME/.config"
-          echo "$API_TOKEN_CONTENT" > "$HOME/.config/copr"
-          if [ "$COPR_REPO" != "" ]; then
-           echo "COPR REPO: $COPR_REPO"
-           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-           copr-cli build ${COPR_REPO} $SRPM
-          else
-           COPR_REPO=openquake
-           echo "COPR REPO: $COPR_REPO"
-           SRPM=$(ls ~/rpmbuild/SRPMS/*.src.rpm)
-           copr-cli build ${COPR_REPO} $SRPM
-          fi
