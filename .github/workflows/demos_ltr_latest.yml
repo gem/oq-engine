@@ -5,19 +5,11 @@ on:
     inputs:
       git-ref:
         description: Git Ref
-        default: master
+        default: engine-3.16  # FIXME: point to ltr
         required: true
-      oq-release:  # FIXME: this looks unused
-        description: 'OQ Release'
-        required: true
-        default: 'latest'
-        type: choice
-        options:
-        - latest
-        - LTS
-        - dev
   push:
-    branches: [ master ]
+    # FIXME: it would be better to point to ltr and latest
+    branches: [ engine-3.16, engine-3.17, engine-3.18 ]
 jobs:
   demos:
     runs-on: ubuntu-latest
