@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Extended the exposure field mapping functionality to map the same
+    input field to multiple columns in the asset collection
   * Removed the experimental aftershock calculator; aftershocks can
     be computed by simply including a file delta_rates.csv
 
