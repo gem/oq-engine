@@ -468,9 +468,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
-            raise RuntimeError(
-                'The hazard is 0 since the site(s) is(are) far from all'
-                ' seismic sources included in the hazard model.')
+            raise RuntimeError('There are no ruptures close to the site(s)')
         logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
             int(self.cfactor[1]), int(self.cfactor[0]),
             self.cfactor[1] / self.cfactor[0]))
