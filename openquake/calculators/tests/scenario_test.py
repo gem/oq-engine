@@ -174,10 +174,9 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(
             sorted(assetcol.array.dtype.names),
             ['ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY', 'id',
-             'ideductible', 'lat', 'lon', 'ordinal', 'site_id', 'taxonomy',
-             'value-area', 'value-contents', 'value-nonstructural',
-             'value-number', 'value-structural'])
-
+             'ideductible', 'lat', 'lon', 'occupants_avg', 'occupants_night',
+             'ordinal', 'site_id', 'taxonomy', 'value-area', 'value-contents',
+             'value-nonstructural', 'value-number', 'value-structural'])
 
     def test_case_17(self):
         # CSV exposure in latin1

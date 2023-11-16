@@ -40,7 +40,7 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
 ae = numpy.testing.assert_equal
-OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
+OCC_FIELDS = ('day', 'night', 'transit')
 ANR_FIELDS = {'area', 'number', 'residents'}
 VAL_FIELDS = {'structural', 'nonstructural', 'contents',
               'business_interruption'}
@@ -80,7 +80,7 @@ def calc_occupants_avg(adf):
     """
     :returns: the average number of occupants, (day+night+transit)/3
     """
-    occfields = [col for col in adf.columns if col in OCC_FIELDS]
+    occfields = [col for col in adf.columns if col[10:] in OCC_FIELDS]
     occ = adf[occfields[0]].to_numpy().copy()
     for f in occfields[1:]:
         occ += adf[f].to_numpy()
@@ -608,13 +608,17 @@ def _get_exposure(fname, stop=None):
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     # input_field -> oq_field
-    pairs = [(f, 'value-' + f) for f in ANR_FIELDS | VAL_FIELDS]
+    pairs = [(f, 'value-' + f) for f in ANR_FIELDS | VAL_FIELDS] + [
+        (f, 'occupants_' + f) for f in OCC_FIELDS]
     try:
         for node in exposure.exposureFields:
-            if node['oq'] in ANR_FIELDS | VAL_FIELDS:
-                pairs.append((node['input'], 'value-' + node['oq']))
+            noq = node['oq']
+            if noq in ANR_FIELDS | VAL_FIELDS:
+                pairs.append((node['input'], 'value-' + noq))
+            elif noq in OCC_FIELDS:
+                pairs.append((node['input'], 'occupants_' + noq))
             else:
-                pairs.append((node['input'], node['oq']))
+                pairs.append((node['input'], noq))
     except AttributeError:
         pass  # no fieldmap
     try:
@@ -1021,9 +1025,9 @@ class Exposure(object):
         """
         :yields: asset nodes
         """
-        expected_header = set(self._csv_header('', ''))
+        expected_header = set(self._csv_header(''))
         floatfields = set()
-        strfields = self.tagcol.tagnames + self.occupancy_periods.split()
+        strfields = self.tagcol.tagnames
         oqfields = general.AccumDict(accum=set())
         for csvfield, oqfield in self.pairs:
             oqfields[csvfield].add(oqfield)
@@ -1050,7 +1054,9 @@ class Exposure(object):
                 elif missing:
                     raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
-                'retrofitted': float, 'ideductible': float, None: object}
+                'residents': float, 'retrofitted': float, 'ideductible': float,
+                'occupants_day': float, 'occupants_night': float,
+                'occupants_transit': float, None: object}
         for f in strfields:
             conv[f] = str
         for inp, oq in self.fieldmap.items():
@@ -1062,7 +1068,6 @@ class Exposure(object):
             conv[f] = float
             rename[f] = 'value-' + f
         for f in self.occupancy_periods.split():
-            conv[f] = float
             rename[f] = 'occupants_' + f
         for fname in self.datafiles:
             t0 = time.time()
