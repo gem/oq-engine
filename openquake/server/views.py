@@ -1005,9 +1005,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
                 asce41_with_units[key + ' (g)'] = value
+        low_hazard = asce7 is None or asce41 is None
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
-                       asce7=asce7_with_units, asce41=asce41_with_units))
+                       asce7=asce7_with_units, asce41=asce41_with_units,
+                       low_hazard=low_hazard))
 
 
 @csrf_exempt
