@@ -21,7 +21,7 @@ jobs:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
     strategy:
       matrix:
-        epel-release: [epel-7-x86_64, rocky+epel-8-x86_64, rocky+epel-9-x86_64]
+        epel-release: [rocky+epel-9-x86_64]
         #epel-release: [epel-7-x86_64, rocky+epel-8-x86_64]
     # Run in Fedora container on Ubuntu VM
     container:
