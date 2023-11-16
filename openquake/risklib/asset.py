@@ -1065,9 +1065,9 @@ class Exposure(object):
             elif oq not in strfields:
                 conv[inp] = float
         rename = self.fieldmap.copy()
-        for f in set(self.cost_types['name']) | ANR_FIELDS:
+        for f in ANR_FIELDS:
             rename[f] = 'value-' + f
-        for f in self.occupancy_periods.split():
+        for f in OCC_FIELDS:
             rename[f] = 'occupants_' + f
         for fname in self.datafiles:
             t0 = time.time()
