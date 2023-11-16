@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed a bug with --hc taking the parent site collection instead of
+    the child site collection
   * Extended the exposure field mapping functionality to map the same
     input field to multiple columns in the asset collection
   * Removed the experimental aftershock calculator; aftershocks can

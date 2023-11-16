@@ -575,7 +575,7 @@ class HazardCalculator(BaseCalculator):
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
-            haz_sitecol = readinput.get_site_collection(oq, self.datastore)
+            haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             df = readinput.Global.pmap.to_dframe()
@@ -798,7 +798,8 @@ class HazardCalculator(BaseCalculator):
                 with hdf5.File(oq.inputs['gmfs']) as f:
                     haz_sitecol = f['sitecol']
             else:
-                haz_sitecol = readinput.get_site_collection(oq, self.datastore)
+                haz_sitecol = readinput.get_site_collection(
+                    oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -846,7 +847,7 @@ class HazardCalculator(BaseCalculator):
         else:  # no exposure
             if oq.hazard_calculation_id:  # read the sitecol of the child
                 self.sitecol = readinput.get_site_collection(
-                    oq, self.datastore)
+                    oq, self.datastore.hdf5)
                 self.datastore['sitecol'] = self.sitecol
             else:
                 self.sitecol = haz_sitecol
@@ -1396,7 +1397,7 @@ def read_parent_sitecol(oq, dstore):
         if 'sitecol' in parent:
             haz_sitecol = parent['sitecol'].complete
         else:
-            haz_sitecol = readinput.get_site_collection(oq, dstore)
+            haz_sitecol = readinput.get_site_collection(oq, dstore.hdf5)
         if ('amplification' in oq.inputs and
                 'ampcode' not in haz_sitecol.array.dtype.names):
             haz_sitecol.add_col('ampcode', site.ampcode_dt)

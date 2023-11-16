@@ -569,8 +569,6 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.calculation_mode == 'aftershock':
-        return
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
