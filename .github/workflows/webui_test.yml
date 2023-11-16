@@ -1,5 +1,5 @@
 ---
-name: RPM build of engine in Fedora Copr
+name: Test WebUI with Django login
 on:
   workflow_dispatch:
       git-ref:
