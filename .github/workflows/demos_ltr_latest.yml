@@ -1,5 +1,5 @@
 ---
-name: demos
+name: Demos for a chosen branch/release
 on:
   workflow_dispatch:
     inputs:
