@@ -527,7 +527,6 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         The sum of the mean_rates_by_src must correspond to the mean_rates_ss
         """
-        return
         exp = self.datastore['mean_rates_ss'][:]
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
         numpy.testing.assert_allclose(got, exp)
