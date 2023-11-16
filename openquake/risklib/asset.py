@@ -1027,7 +1027,7 @@ class Exposure(object):
         """
         expected_header = set(self._csv_header(''))
         floatfields = set()
-        strfields = self.tagcol.tagnames
+        strfields = self.tagcol.tagnames + ['id']
         oqfields = general.AccumDict(accum=set())
         for csvfield, oqfield in self.pairs:
             oqfields[csvfield].add(oqfield)
