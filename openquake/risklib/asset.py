@@ -1062,6 +1062,8 @@ class Exposure(object):
         for inp, oq in self.fieldmap.items():
             if oq in conv:
                 conv[inp] = conv[oq]
+            elif oq not in strfields:
+                conv[inp] = float
         rename = self.fieldmap.copy()
         vfields = set(self.cost_types['name']) | ANR_FIELDS
         for f in vfields:

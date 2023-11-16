@@ -9,7 +9,7 @@
 
 	<exposureFields>
     <field oq="night" input="total_occupants" />
-    <!--<field oq="residents" input="total_occupants" />-->
+    <field oq="residents" input="total_occupants" />
     </exposureFields>
 
 	</exposureModel>

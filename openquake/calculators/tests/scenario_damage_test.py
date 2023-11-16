@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import unittest
 import numpy
 from openquake.hazardlib import InvalidFile
 from openquake.baselib.writers import write_csv
@@ -281,9 +280,11 @@ class ScenarioDamageTestCase(CalculatorTestCase):
             'expected/avg_damages-rlz-000_time_event_day.csv', fname)
 
     def test_case_18(self):
-        raise unittest.SkipTest
         # Exposure model mapping 2 oq fields to the same column
-        self.run_calc(case_18.__file__, 'job.ini')
+        out = self.run_calc(case_18.__file__, 'job.ini', exports='csv')
+        [fname] = out[('aggrisk', 'csv')]
+        self.assertEqualFiles('expected/aggrisk.csv', fname)
+
 
 
 def losses(aid, alt):
