@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * If there are no ruptures close the the site, does not raise an error
   * Fixed a bug with --hc taking the parent site collection instead of
     the child site collection
   * Extended the exposure field mapping functionality to map the same

@@ -468,10 +468,14 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
-            raise RuntimeError('There are no ruptures close to the site(s)')
-        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
-            int(self.cfactor[1]), int(self.cfactor[0]),
-            self.cfactor[1] / self.cfactor[0]))
+            if self.N == 1:
+                logging.error('There are no ruptures close to the site(s)')
+            else:
+                raise RuntimeError('There are no ruptures close to the site(s)')
+        else:
+            logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
+                int(self.cfactor[1]), int(self.cfactor[0]),
+                self.cfactor[1] / self.cfactor[0]))
         if '_rates' in self.datastore:
             self.build_curves_maps()
         if not oq.hazard_calculation_id:

@@ -350,6 +350,9 @@ def main(dstore, csm):
     if not rtgmpy:
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
+    if len(dstore['rup/mag']) == 0:
+        logging.warning('Zero hazard: skipping AELO calculation')
+        return
     if dstore['mean_rates_ss'][:].max() < MIN_AFE:
         logging.warning('Ultra-low hazard: skipping AELO calculation')
         return
