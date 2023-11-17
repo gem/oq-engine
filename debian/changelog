@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed wrong `mean_rates_by_src` in presence of the colon convention
   * If there are no sources close to the (single) site, do not raise an error
   * Fixed a bug with --hc taking the parent site collection instead of
     the child site collection
