@@ -1005,10 +1005,14 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
                 asce41_with_units[key + ' (g)'] = value
-        low_hazard = asce7 is None or asce41 is None
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
+    low_hazard = asce7 is None or asce41 is None
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce7=asce7_with_units, asce41=asce41_with_units,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
                        low_hazard=low_hazard))
 
 

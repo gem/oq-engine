@@ -12,7 +12,7 @@
           </div>
           {% endif %}
           <div class="span12">
-              <h2>Outputs from calculation {{ calc_id }}</h2>
+              <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
               <div id="my-outputs" class="well"></div>
               <div id="to-full-outputs">
                 <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs" class="btn btn-sm">
