@@ -1021,13 +1021,17 @@ and loss curves that consider the sum of losses in a year, commonly referred to 
 Aggregate Exceedance Probability (AEP).
 
 OEP and AEP curves can be calculated for event-based damage and risk calculations. To do so, the configuration file, 
-``job.ini``, needs to specify the parameters presented below, in addition to the parameters generally indicated for these 
+``job.ini``, needs to specify the parameter ``aggregate_loss_curves_types`` with required curve types, in addition to the parameters generally indicated for these 
 type of calculations::
 
 	[risk_calculation]
-	aggregate_loss_curves_types = oep, aep
+	aggregate_loss_curves_types = ep, oep, aep
 
-By default, all event-based damage and risk calculations include the aggregated loss curves considering each event individually (EP), corresponding with the aggregated loss curves traditionally implemented in the engine.
+- ``ep``: aggregated loss curves considering each event individually (EP). Currently implemented in the engine.
+- ``oep``: aggregated loss curves that consider only the maximum loss in a year (OEP).
+- ``aep``: aggregated loss curves that consider the sum of losses in a year (AEP).
+
+By default, all event-based damage and risk calculations include the EP curves.
 
 _NOTE:_ When the calculation includes reinsurance treaties, the reinsurance curves (aggregated loss curves for retention, 
 claim, cession per treaty and overspills) are also estimated for OEP and AEP.
