@@ -272,7 +272,7 @@ def basename(src, splitchars='.:'):
     :returns: the base name of a split source
 
     >>> basename('SC:10;0')
-    "SC;0"
+    'SC;0'
     """
     src_id = src if isinstance(src, str) else src.source_id
     for char in splitchars:
