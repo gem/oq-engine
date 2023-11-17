@@ -535,7 +535,10 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         The sum of the mean_rates_by_src must correspond to the mean_rates_ss
         """
-        exp = self.datastore['mean_rates_ss'][:]
+        try:
+            exp = self.datastore['mean_rates_ss'][:]
+        except KeyError:  # if there are no ruptures close to the site
+            return
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
         # skipping the first value which can be wrong due to the cutoff
         # (happens in logictree/case_05)
