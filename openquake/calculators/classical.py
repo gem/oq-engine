@@ -30,7 +30,8 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import performance, parallel, hdf5, config, python3compat
+from openquake.baselib import (
+    performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import InvalidFile
@@ -117,7 +118,8 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     # maximum size of the pmap array in GB
-    size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
+    size_mb = (
+        len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2)
     itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
 
     # NB: disagg_by_src is disabled in case of tiling
@@ -288,7 +290,7 @@ class Hazard:
             self.offset += len(sids)
             if self.N == 1:  # single site, store mean_rates_ss
                 mean_rates_ss[m] += rates[0] @ self.weig
-        
+
         if self.N == 1:  # single site
             self.datastore['mean_rates_ss'] = mean_rates_ss
         self.acc['nsites'] = self.offset
@@ -468,10 +470,16 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
-            raise RuntimeError('There are no ruptures close to the site(s)')
-        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
-            int(self.cfactor[1]), int(self.cfactor[0]),
-            self.cfactor[1] / self.cfactor[0]))
+            if self.N == 1:
+                logging.error('The site is far from all seismic sources'
+                              ' included in the hazard model')
+            else:
+                raise RuntimeError('The sites are far from all seismic sources'
+                                   ' included in the hazard model')
+        else:
+            logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
+                int(self.cfactor[1]), int(self.cfactor[0]),
+                self.cfactor[1] / self.cfactor[0]))
         if '_rates' in self.datastore:
             self.build_curves_maps()
         if not oq.hazard_calculation_id:
@@ -557,7 +565,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
-        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
+        for dic in parallel.Starmap(
+                classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
