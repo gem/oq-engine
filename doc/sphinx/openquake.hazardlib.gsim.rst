@@ -1096,6 +1096,14 @@ somerville_2009
     :undoc-members:
     :show-inheritance:
 
+stafford_2022
+-----------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.stafford_2022
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 stewart_2016
 -----------------------------------------------------
 
