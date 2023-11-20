@@ -719,6 +719,11 @@ def export_asce(ekey, dstore):
     writer = writers.CsvWriter(fmt='%.5f')
     fname = dstore.export_path('%s.csv' % ekey[0])
     comment = dstore.metadata.copy()
+    lon, lat = dstore['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+    comment['lon'] = lon
+    comment['lat'] = lat
+    comment['vs30'] = dstore['oqparam'].override_vs30  # e.g. 760.0
+    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
     writer.save(dic.items(), fname, header=['parameter', 'value'],
                 comment=comment)
     return [fname]
