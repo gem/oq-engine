@@ -775,6 +775,15 @@ def calc_results(request, calc_id):
     if not results:
         return HttpResponseNotFound()
 
+    # move asce7 on top of the outputs list
+    for idx, item in enumerate(results):
+        if item.ds_key == 'asce7':
+            break
+    else:
+        idx = -1
+    if idx > 0:
+        results.insert(0, results.pop(idx))
+
     response_data = []
     for result in results:
         try:  # output from the datastore
