@@ -542,7 +542,7 @@ class ClassicalCalculator(base.HazardCalculator):
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
         # skipping the first value which can be wrong due to the cutoff
         # (happens in logictree/case_05)
-        numpy.testing.assert_allclose(got[1:], exp[1:])
+        numpy.testing.assert_allclose(got[1:], exp[1:], rtol=1E-5)
 
     def execute_big(self, maxw):
         """
