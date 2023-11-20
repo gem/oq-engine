@@ -1008,11 +1008,6 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         if 'asce7' in ds:
             asce7_js = ds['asce7'][()].decode('utf8')
             asce7 = json.loads(asce7_js)
-
-            # uniform to asce41
-            asce7 = {'Ss'+k[2:] if k.startswith('SS') else k: v
-                     for k, v in asce7.items()}
-
             for key, value in asce7.items():
                 if key not in ('PGA', 'Ss', 'S1'):
                     continue
