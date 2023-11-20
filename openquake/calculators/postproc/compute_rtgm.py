@@ -396,8 +396,8 @@ def main(dstore, csm):
     dstore['asce7'] = hdf5.dumps(asce7)
     asce41 = get_asce41(dstore, mce, facts)
     dstore['asce41'] = hdf5.dumps(asce41)
-    logging.info('ASCE-41=%s' % asce41)
-    logging.info('ASCE-7=%s' % asce7)
+    logging.info('ASCE 7-16 Parameters=%s' % asce7)
+    logging.info('ASCE 41-17 Parameters=%s' % asce41)
 
     if Image is None:  # missing PIL
         logging.warning('Missing module PIL: skipping plotting curves')
