@@ -304,6 +304,9 @@ class Db(object):
         try:
             return self.local.conn
         except AttributeError:
+            dname = os.path.dirname(self.args[0])
+            if not os.path.exists(dname):
+                os.makedirs(dname)
             self.local.conn = self.connect(*self.args, **self.kw)
             #  honor ON DELETE CASCADE
             self.local.conn.execute('PRAGMA foreign_keys = ON')
