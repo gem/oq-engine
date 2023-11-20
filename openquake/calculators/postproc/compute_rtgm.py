@@ -93,7 +93,7 @@ D = DLL_df.BC.loc  # site class BC for vs30=760m/s
 DLLs = [D[imt] for imt in IMTS]
 assert DLLs == [0.5, 1.5, 0.6]
 MIN_AFE = 1/2475
-ASCE_DECIMALS = 5
+ASCE_DECIMALS = 7
 
 
 def norm_imt(imt):
