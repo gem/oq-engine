@@ -241,7 +241,8 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     Implements NZ NSHM 2022 Soil nonlinearity sigma model modification of ParkerEtAl2020SInter for NZ NSHM 2022.
     """
 
-    def __init__(self, region=None, saturation_region=None, basin=None, sigma_mu_epsilon=0.0, which_sigma = "Modified",
+    def __init__(self, region=None, saturation_region=None, basin=None,
+                 sigma_mu_epsilon=0.0, which_sigma = "Modified",
                  **kwargs):
         """
         Enable setting regions to prevent messy overriding
