@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-from openquake.hazardlib.gsim.parker_2021 import (
-    ParkerEtAl2021SInter, ParkerEtAl2021SSlab)
+from openquake.hazardlib.gsim.nz22.nz_nshm2022_parker import (
+    NZNSHM2022_ParkerEtAl2020SInter, NZNSHM2022_ParkerEtAl2020SSlab)
 
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
@@ -25,8 +25,8 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 # Received 17 September 2020.
 
 
-class ParkerEtAl2021SInterTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ParkerEtAl2021SInter
+class NZNSHM2022_ParkerEtAl2021SInterTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = NZNSHM2022_ParkerEtAl2020SInter
 
     def test_all(self):
         self.check('NZNSH2022_PARKER20/PARKER2021_INTERFACE_GLO_GNS_MEAN.csv',
@@ -49,8 +49,8 @@ class ParkerEtAl2021SInterTestCase(BaseGSIMTestCase):
     #                max_discrep_percentage=0.1)
 
 
-class ParkerEtAl2021SSlabTestCase(BaseGSIMTestCase):
-    GSIM_CLASS = ParkerEtAl2021SSlab
+class NZNSHM2022_ParkerEtAl2021SSlabTestCase(BaseGSIMTestCase):
+    GSIM_CLASS = NZNSHM2022_ParkerEtAl2020SSlab
 
     def test_all(self):
         self.check('NZNSH2022_PARKER20/PARKER2021_SLAB_GLO_GNS_MEAN.csv',

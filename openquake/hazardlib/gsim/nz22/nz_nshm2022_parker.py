@@ -330,25 +330,36 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     10.0   0.046 0.708796298 -1.290203702 -0.193      -0.864100092 -0.864100092 1.364125851 -0.195874149  1.271671414 1.462671414 -0.473153721 -0.473153721  2.72   2.031     2.95            2.422           2.408      2.791     1.939       1.939       3.166    -1.676 -2.047  0.1  0         0         0         0         0         0         0         0         0               0          0         0          0        1.69  -0.067 1.194 2.35  -0.154  0.745  0      0       0  760 -0.395 -0.261 -0.321 -1.06  -0.302      -0.395 -0.42  -0.352  0.00000  0.00000 -0.0031  -0.327  0.182  0.121 0      0.345  0.265 -0.331    0.117       0.492 0.231 0.231  0     427 0.181     0.04  0.11     0.11     0.017
     """)
 
-class NZNSHM2022_ParkerEtAl2020SInterB(NZNSHM2022_ParkerEtAl2020SInter, ParkerEtAl2020SInterB):
+class NZNSHM2022_ParkerEtAl2020SInterB(NZNSHM2022_ParkerEtAl2020SInter):
     """
     For Cascadia and Japan where basins are defined (also require z2pt5).
     """
-    pass
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
 
-class NZNSHM2022_ParkerEtAl2020SSlab(NZNSHM2022_ParkerEtAl2020SInter, ParkerEtAl2020SSlab):
+class NZNSHM2022_ParkerEtAl2020SSlab(NZNSHM2022_ParkerEtAl2020SInter):
     """
     Modifications for subduction slab.
     """
-    pass
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
+
+    # slab also requires hypo_depth
+    REQUIRES_RUPTURE_PARAMETERS = {'mag', 'hypo_depth'}
+
+    # constant table suffix
+    SUFFIX = "slab"
+
+    MB_REGIONS = {"Aleutian": 7.98, "AK": 7.2, "Cascadia": 7.2,
+                  "CAM_S": 7.6, "CAM_N": 7.4, "JP_Pac": 7.65, "JP_Phi": 7.55,
+                  "SA_N": 7.3, "SA_S": 7.25, "TW_W": 7.7, "TW_E": 7.7,
+                  "default": 7.6}
 
 
-class NZNSHM2022_ParkerEtAl2020SSlabB(NZNSHM2022_ParkerEtAl2020SSlab, ParkerEtAl2020SSlabB):
+class NZNSHM2022_ParkerEtAl2020SSlabB(NZNSHM2022_ParkerEtAl2020SSlab):
     """
     For Cascadia and Japan where basins are defined (also require z2pt5).
     """
-    pass
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'z2pt5'}
 
 
 add_alias('NZNSHM2022_ParkerEtAl2020SInterAleutian', NZNSHM2022_ParkerEtAl2020SInter,
