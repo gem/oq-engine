@@ -16,11 +16,11 @@ https://wheelhouse.openquake.org/v3/macos/py39/setproctitle-1.3.2-cp39-cp39-maco
 https://wheelhouse.openquake.org/v3/macos/py39/llvmlite-0.39.1-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/pyproj-3.4.0-cp39-cp39-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/numba-0.56.2-cp39-cp39-macosx_10_14_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py39/Fiona-1.8.21-cp39-cp39-macosx_10_10_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py39/GDAL-3.4.3-cp39-cp39-macosx_10_10_x86_64.whl
-https://wheelhouse.openquake.org/v3/macos/py39/pyproj-3.4.0-cp39-cp39-macosx_10_10_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/pandas-2.0.3-cp39-cp39-macosx_10_9_x86_64.whl
 https://wheelhouse.openquake.org/v3/macos/py39/shapely-2.0.1-cp39-cp39-macosx_10_9_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py39/pyproj-3.6.1-cp39-cp39-macosx_10_15_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py39/GDAL-3.7.3-cp39-cp39-macosx_10_15_x86_64.whl
+https://wheelhouse.openquake.org/v3/macos/py39/fiona-1.9.5-cp39-cp39-macosx_10_15_x86_64.whl
 #
 https://wheelhouse.openquake.org/v3/py/python_dateutil-2.8.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/pyparsing-2.4.0-py2.py3-none-any.whl
