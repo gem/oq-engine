@@ -324,18 +324,17 @@ def get_asce41(dstore, mce, facts):
     S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
     asce41 = {'BSE2N_Ss': BSE2N_Ss,
-              'Ss_5_50': Ss_5_50,
               'BSE2E_Ss': BSE2E_Ss,
-              'BSE1E_Ss': BSE1E_Ss,
-              'Ss_20_50': Ss_20_50,
               'BSE1N_Ss': BSE1N_Ss,
-
+              'BSE1E_Ss': BSE1E_Ss,
               'BSE2N_S1': BSE2N_S1,
-              'S1_5_50': S1_5_50,
               'BSE2E_S1': BSE2E_S1,
-              'BSE1E_S1': BSE1E_S1,
-              'S1_20_50': S1_20_50,
               'BSE1N_S1': BSE1N_S1,
+              'BSE1E_S1': BSE1E_S1,
+              'Ss_5_50': Ss_5_50,
+              'Ss_20_50': Ss_20_50,
+              'S1_5_50': S1_5_50,
+              'S1_20_50': S1_20_50,
               }
     for key in asce41:
         asce41[key] = round(asce41[key], ASCE_DECIMALS)

@@ -1023,6 +1023,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
             asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
+                if not key.startswith('BSE'):
+                    continue
                 asce41_with_units[key + ' (g)'] = round(
                     value, ASCE_VIEW_DECIMALS)
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
