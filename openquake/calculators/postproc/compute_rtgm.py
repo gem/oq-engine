@@ -238,15 +238,15 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low_haz=False):
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
-        SS_seismicity = "Low"
+        Ss_seismicity = "Low"
     elif mce['SA(0.2)'] < 0.5:
-        SS_seismicity = "Moderate"
+        Ss_seismicity = "Moderate"
     elif mce['SA(0.2)'] < 1:
-        SS_seismicity = "Moderately High"
+        Ss_seismicity = "Moderately High"
     elif mce['SA(0.2)'] < 1.5:
-        SS_seismicity = "High"
+        Ss_seismicity = "High"
     else:
-        SS_seismicity = "Very High"
+        Ss_seismicity = "Very High"
 
     if mce['SA(1.0)'] < 0.1:
         S1_seismicity = "Low"
@@ -265,12 +265,12 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low_haz=False):
              'PGA_84th': det_imt['PGA'],
              'PGA_det': det_mce['PGA'],
 
-             'SS': mce['SA(0.2)'],
-             'SS_RT': prob_mce_out['SA(0.2)'],
+             'Ss': mce['SA(0.2)'],
+             'Ss_RT': prob_mce_out['SA(0.2)'],
              'CRS': crs,
-             'SS_84th': det_imt['SA(0.2)'],
-             'SS_det': det_mce['SA(0.2)'],
-             'SS_seismicity': SS_seismicity,
+             'Ss_84th': det_imt['SA(0.2)'],
+             'Ss_det': det_mce['SA(0.2)'],
+             'Ss_seismicity': Ss_seismicity,
 
              'S1': mce['SA(1.0)'],
              'S1_RT': prob_mce_out['SA(1.0)'],
@@ -280,12 +280,10 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low_haz=False):
              'S1_seismicity': S1_seismicity,
              }
     for key in asce7:
-        if key in ('PGA_2_50', 'PGA_84th', 'PGA_det', 'PGA', 'SS_RT', 'CRS',
-                   'SS_84th', 'SS_det', 'SS', 'S1_RT', 'CR1', 'S1_84th',
-                   'S1_det', 'S1'):
+        if not isinstance(asce7[key], str):
             asce7[key] = (
-                round(asce7[key], ASCE_DECIMALS)
-                if asce7[key] is not None else 'n.a.')
+                round(asce7[key], ASCE_DECIMALS) if asce7[key] is not None
+                else 'n.a.')
 
     return prob_mce_out, mce, det_mce, asce7
 

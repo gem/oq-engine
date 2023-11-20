@@ -171,7 +171,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     plt = import_plt()
     js = dstore['asce7'][()].decode('utf8')
     dic = json.loads(js)
-    MCEr = [dic['PGA'], dic['SS'], dic['S1']]
+    MCEr = [dic['PGA'], dic['Ss'], dic['S1']]
     T = [from_string(imt).period for imt in imtls]
 
     limit_det = [0.5, 1.5, 0.6]
@@ -184,7 +184,7 @@ def plot_governing_mce(dstore, update_dstore=False):
              linewidth=3)
     plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
+    MCEr_det = [dic['PGA_84th'], dic['Ss_84th'], dic['S1_84th']]
     if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
         plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
     else:
