@@ -25,53 +25,44 @@ from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 #test case
 class Stafford2022TestCase(BaseGSIMTestCase):
     """
-    Test the default model, the total standard deviation, the between- and the within-event
-    standard deviation.
+    Test the default model. Here only the mean values are tested.
     """
 
-    GSIM_CLASS = Stafford2022
+    GSIM_CLASS =  Stafford2022
 
-    def test_central(self):
+    def test_central_mean(self):
         self.check('STAFFORD2022/STAFFORD_NZ_SS_MEAN_CENTRAL_v2.csv',
-                'STAFFORD2022/STAFFORD_NZ_SS_SIGMA_CENTRAL_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_REV_MEAN_CENTERAL_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_NM_MEAN_CENTRAL_v2.csv',
                    max_discrep_percentage=0.01, mu_branch = "Central", sigma_branch = "Central")
+        
+        
+    def test_lower_mean(self):
+        self.check('STAFFORD2022/STAFFORD_NZ_SS_MEAN_LOWER_v2_EPI_SCALED.csv',
+                   'STAFFORD2022/STAFFORD_NZ_REV_MEAN_LOWER_v2_EPI_SCALED.csv',
+                   'STAFFORD2022/STAFFORD_NZ_NM_MEAN_LOWER_v2_EPI_SCALED.csv',
+                   max_discrep_percentage=0.01, mu_branch = "Lower", sigma_branch = "Central")
 
-    def test_lower(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_SS_MEAN_LOWER_v2.csv',
-                    'STAFFORD2022/STAFFORD_NZ_SS_SIGMA_LOWER_v2.csv',
-                       max_discrep_percentage=0.01, mu_branch = "Lower", sigma_branch = "Lower")
+    def test_upper_mean(self):
+        self.check('STAFFORD2022/STAFFORD_NZ_SS_MEAN_UPPER_v2_EPI_SCALED.csv',
+                   'STAFFORD2022/STAFFORD_NZ_REV_MEAN_UPPER_v2_EPI_SCALED.csv',
+                   'STAFFORD2022/STAFFORD_NZ_NM_MEAN_UPPER_v2_EPI_SCALED.csv',
+                    max_discrep_percentage=0.01, mu_branch = "Upper", sigma_branch = "Central")
 
-    def test_upper(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_SS_MEAN_UPPER_v2.csv',
-                        'STAFFORD2022/STAFFORD_NZ_SS_SIGMA_UPPER_v2.csv',
-                           max_discrep_percentage=0.01, mu_branch = "Upper", sigma_branch = "Upper")
-
-    def test_upper_rev(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_REV_MEAN_UPPER_v2.csv',
-                        'STAFFORD2022/STAFFORD_NZ_REV_SIGMA_UPPER_v2.csv',
-                           max_discrep_percentage=0.01, mu_branch = "Upper", sigma_branch = "Upper")
-
-    def test_lower_rev(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_REV_MEAN_LOWER_v2.csv',
-                        'STAFFORD2022/STAFFORD_NZ_REV_SIGMA_LOWER_v2.csv',
-                           max_discrep_percentage=0.01, mu_branch = "Lower", sigma_branch = "Lower")
-
-    def test_central_rev(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_REV_MEAN_CENTRAL_v2.csv',
-            'STAFFORD2022/STAFFORD_NZ_REV_SIGMA_CENTRAL_v2.csv',
-               max_discrep_percentage=0.01, mu_branch = "Central", sigma_branch = "Central")
-
-    def test_upper_nm(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_NM_MEAN_UPPER_v2.csv',
-                            'STAFFORD2022/STAFFORD_NZ_NM_SIGMA_UPPER_v2.csv',
-                               max_discrep_percentage=0.01, mu_branch = "Upper", sigma_branch = "Upper")
-
-    def test_lower_nm(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_NM_MEAN_LOWER_v2.csv',
-                            'STAFFORD2022/STAFFORD_NZ_NM_SIGMA_LOWER_v2.csv',
-                               max_discrep_percentage=0.01, mu_branch = "Lower", sigma_branch = "Lower")
-
-    def test_central_nm(self):
-        self.check('STAFFORD2022/STAFFORD_NZ_NM_MEAN_CENTRAL_v2.csv',
-                                'STAFFORD2022/STAFFORD_NZ_NM_SIGMA_CENTRAL_v2.csv',
-                                   max_discrep_percentage=0.01, mu_branch = "Central", sigma_branch = "Central")
+    def test_central_sigma(self):
+        self.check('STAFFORD2022/STAFFORD_NZ_SS_SIGMA_CENTRAL_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_REV_SIGMA_CENTRAL_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_NM_SIGMA_CENTRAL_v2.csv',
+                    max_discrep_percentage=0.01, mu_branch = "Central", sigma_branch = "Central")
+        
+    def test_lower_sigma(self):
+        self.check('STAFFORD2022/STAFFORD_NZ_SS_SIGMA_LOWER_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_REV_SIGMA_LOWER_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_NM_SIGMA_LOWER_v2.csv',
+                    max_discrep_percentage=0.01, mu_branch = "Central", sigma_branch = "Lower")
+        
+    def test_upper_sigma(self):
+        self.check('STAFFORD2022/STAFFORD_NZ_SS_SIGMA_UPPER_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_REV_SIGMA_UPPER_v2.csv',
+                   'STAFFORD2022/STAFFORD_NZ_NM_SIGMA_UPPER_v2.csv',
+                    max_discrep_percentage=0.01, mu_branch = "Central", sigma_branch = "Upper")
