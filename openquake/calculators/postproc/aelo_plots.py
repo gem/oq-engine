@@ -180,7 +180,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     plt.figure(figsize=(8, 6))
     plt.rcParams.update({'font.size': 15})
     plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
-    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{GM}$',
+    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{2/50}$',
              linewidth=3)
     plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
