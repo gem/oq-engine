@@ -259,23 +259,24 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low_haz=False):
     else:
         S1_seismicity = "Very High"
 
-    asce7 = {'PGA_2_50': prob_mce_out['PGA'],
+    asce7 = {
+             'PGA': mce['PGA'],
+             'PGA_2_50': prob_mce_out['PGA'],
              'PGA_84th': det_imt['PGA'],
              'PGA_det': det_mce['PGA'],
-             'PGA': mce['PGA'],
 
+             'SS': mce['SA(0.2)'],
              'SS_RT': prob_mce_out['SA(0.2)'],
              'CRS': crs,
              'SS_84th': det_imt['SA(0.2)'],
              'SS_det': det_mce['SA(0.2)'],
-             'SS': mce['SA(0.2)'],
              'SS_seismicity': SS_seismicity,
 
+             'S1': mce['SA(1.0)'],
              'S1_RT': prob_mce_out['SA(1.0)'],
              'CR1': cr1,
              'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
-             'S1': mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity,
              }
     for key in asce7:
@@ -325,15 +326,15 @@ def get_asce41(dstore, mce, facts):
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
     asce41 = {'BSE2N_Ss': BSE2N_Ss,
               'BSE2E_Ss': BSE2E_Ss,
+              'Ss_5_50': Ss_5_50,
               'BSE1N_Ss': BSE1N_Ss,
               'BSE1E_Ss': BSE1E_Ss,
+              'Ss_20_50': Ss_20_50,
               'BSE2N_S1': BSE2N_S1,
               'BSE2E_S1': BSE2E_S1,
+              'S1_5_50': S1_5_50,
               'BSE1N_S1': BSE1N_S1,
               'BSE1E_S1': BSE1E_S1,
-              'Ss_5_50': Ss_5_50,
-              'Ss_20_50': Ss_20_50,
-              'S1_5_50': S1_5_50,
               'S1_20_50': S1_20_50,
               }
     for key in asce41:
