@@ -60,3 +60,6 @@ toml==0.10.2
 tzdata==2023.3
 urllib3==1.25.3
 zipp==3.10.0
+https://wheelhouse.openquake.org/v3/linux/py311/pyproj-3.6.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py311/GDAL-3.7.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py311/fiona-1.9.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
