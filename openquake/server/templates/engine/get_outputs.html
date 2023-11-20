@@ -31,6 +31,13 @@
                   Show hazard map</a>
               </div>
               {% endif %}
+              {% if governing_mce %}
+              </br>
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
+                  Show governing MCE</a>
+              </div>
+              {% endif %}
               {% if hcurves %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/hcurves.png" class="btn btn-sm">
@@ -43,12 +50,6 @@
                   Show disaggregation by sources - {{ img|get_disagg_by_src_imt }}</a>
               </div>
               {% endfor %}
-              {% if governing_mce %}
-              <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
-                  Show governing MCE</a>
-              </div>
-              {% endif %}
           </div>
         </div>
       </div>
