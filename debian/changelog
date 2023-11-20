@@ -1,4 +1,10 @@
   [Michele Simionato]
+  * Fixed wrong `mean_rates_by_src` in presence of the colon convention
+  * If there are no sources close to the (single) site, do not raise an error
+  * Fixed a bug with --hc taking the parent site collection instead of
+    the child site collection
+  * Extended the exposure field mapping functionality to map the same
+    input field to multiple columns in the asset collection
   * Removed the experimental aftershock calculator; aftershocks can
     be computed by simply including a file delta_rates.csv
 

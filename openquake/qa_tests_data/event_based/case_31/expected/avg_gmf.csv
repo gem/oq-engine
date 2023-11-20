@@ -1,4 +1,4 @@
-#,,,,"generated_by='OpenQuake engine 3.18.0-git6ee84744a4', start_date='2023-10-18T08:46:31', checksum=193965386"
+#,,,,"generated_by='OpenQuake engine 3.19.0-gitfdd7c437f8', start_date='2023-11-16T07:44:38', checksum=193965386"
 site_id,lon,lat,gmv_SA(0.3),gsd_SA(0.3)
 0,-2.00061E+00,2.02920E-01,1.66161E-08,3.83684E+03
 1,-2.00061E+00,-2.46750E-01,7.08940E-08,6.33337E+03

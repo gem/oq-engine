@@ -40,7 +40,26 @@ TWO16 = 2 ** 16
 TWO32 = 2 ** 32
 by_taxonomy = operator.attrgetter('taxonomy')
 ae = numpy.testing.assert_equal
-OCC_FIELDS = ('occupants_day', 'occupants_night', 'occupants_transit')
+OCC_FIELDS = ('day', 'night', 'transit')
+ANR_FIELDS = {'area', 'number', 'residents'}
+VAL_FIELDS = {'structural', 'nonstructural', 'contents',
+              'business_interruption'}
+
+
+def add_dupl_fields(df, oqfields):
+    """
+    Add duplicated fields to the DataFrame, if any.
+
+    :param df: exposure dataframe
+    :param oqfields: dictionary csvfield -> oqfields
+    """
+    columns = set(df.columns)
+    for f in oqfields:
+        if len(oqfields[f]) > 1:
+            okfield = (oqfields[f] & columns).pop()
+            for oqfield in oqfields[f]:
+                if oqfield != okfield:
+                    df[oqfield] = df[okfield]
 
 
 def get_case_similar(names):
@@ -61,7 +80,7 @@ def calc_occupants_avg(adf):
     """
     :returns: the average number of occupants, (day+night+transit)/3
     """
-    occfields = [col for col in adf.columns if col in OCC_FIELDS]
+    occfields = [col for col in adf.columns if col[10:] in OCC_FIELDS]
     occ = adf[occfields[0]].to_numpy().copy()
     for f in occfields[1:]:
         occ += adf[f].to_numpy()
@@ -588,10 +607,18 @@ def _get_exposure(fname, stop=None):
         conversions = exposure.conversions
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
-    fieldmap = {}  # input_field -> oq_field
+    # input_field -> oq_field
+    pairs = [(f, 'value-' + f) for f in ANR_FIELDS | VAL_FIELDS] + [
+        (f, 'occupants_' + f) for f in OCC_FIELDS]
     try:
         for node in exposure.exposureFields:
-            fieldmap[node['input']] = node['oq']
+            noq = node['oq']
+            if noq in ANR_FIELDS | VAL_FIELDS:
+                pairs.append((node['input'], 'value-' + noq))
+            elif noq in OCC_FIELDS:
+                pairs.append((node['input'], 'occupants_' + noq))
+            else:
+                pairs.append((node['input'], noq))
     except AttributeError:
         pass  # no fieldmap
     try:
@@ -664,7 +691,7 @@ def _get_exposure(fname, stop=None):
     exp = Exposure(
         exposure['id'], exposure['category'],
         description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], cc, TagCollection(tagnames), fieldmap)
+        area.attrib, [], cc, TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -886,7 +913,7 @@ class Exposure(object):
     """
     fields = ['id', 'category', 'description', 'cost_types',
               'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'cost_calculator', 'tagcol', 'fieldmap']
+              'area', 'assets', 'cost_calculator', 'tagcol', 'pairs']
 
     @staticmethod
     def check(fname):
@@ -942,20 +969,23 @@ class Exposure(object):
                          for f in fnames]
         assets_df = pandas.concat(dfs)
         del dfs  # save memory
-        exp.loss_types = []
+        vfields = []
         occupancy_periods = []
+        missing = VAL_FIELDS - set(exp.cost_calculator.cost_types)
         for name in assets_df.columns:
             if name.startswith('occupants_'):
                 period = name.split('_', 1)[1]
                 # see scenario_risk test_case_2d
                 if period != 'avg':
                     occupancy_periods.append(period)
-                exp.loss_types.append(name)
+                vfields.append(name)
             elif name.startswith('value-'):
-                exp.loss_types.append(name)
+                field = name[6:]
+                if field not in missing:
+                    vfields.append(name)
         exp.occupancy_periods = ' '.join(occupancy_periods)
         exp.mesh, exp.assets = _get_mesh_assets(
-            assets_df, exp.tagcol, exp.cost_calculator, exp.loss_types)
+            assets_df, exp.tagcol, exp.cost_calculator, vfields)
         return exp
 
     @staticmethod
@@ -970,6 +1000,7 @@ class Exposure(object):
         assert len(values) == len(self.fields)
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
+        self.fieldmap = dict(self.pairs)  # inp -> oq
 
     def _csv_header(self, value='value-', occupants='occupants_'):
         """
@@ -987,15 +1018,19 @@ class Exposure(object):
         if wrong:
             raise InvalidFile('Found case-duplicated fields %s in %s' %
                               (wrong, self.datafiles))
-        return sorted(set(fields))
+        return sorted('value-' + f if f in ANR_FIELDS|VAL_FIELDS else f
+                      for f in set(fields))
 
     def _read_csv(self, errors=None):
         """
         :yields: asset nodes
         """
-        expected_header = set(self._csv_header('', ''))
+        expected_header = set(self._csv_header(''))
         floatfields = set()
-        strfields = self.tagcol.tagnames + self.occupancy_periods.split()
+        strfields = self.tagcol.tagnames + ['id']
+        oqfields = general.AccumDict(accum=set())
+        for csvfield, oqfield in self.pairs:
+            oqfields[csvfield].add(oqfield)
         for fname in self.datafiles:
             with open(fname, encoding='utf-8-sig', errors=errors) as f:
                 try:
@@ -1005,7 +1040,9 @@ class Exposure(object):
                            "and then o.fix_latin1('%s')\nor set "
                            "ignore_encoding_errors=true" % (fname, fname))
                     raise RuntimeError(msg)
-                header = set(self.fieldmap.get(f, f) for f in fields)
+                header = set()
+                for f in fields:
+                    header.update(oqfields.get(f, [f]))
                 for field in fields:
                     if field not in strfields:
                         floatfields.add(field)
@@ -1017,28 +1054,25 @@ class Exposure(object):
                 elif missing:
                     raise InvalidFile('%s: missing %s' % (fname, missing))
         conv = {'lon': float, 'lat': float, 'number': float, 'area': float,
-                'retrofitted': float, 'ideductible': float, None: object}
+                'residents': float, 'retrofitted': float, 'ideductible': float,
+                'occupants_day': float, 'occupants_night': float,
+                'occupants_transit': float, None: object}
         for f in strfields:
             conv[f] = str
-        revmap = {}  # oq -> inp
         for inp, oq in self.fieldmap.items():
-            revmap[oq] = inp
             if oq in conv:
                 conv[inp] = conv[oq]
+            elif oq not in strfields:
+                conv[inp] = float
         rename = self.fieldmap.copy()
-        vfields = set(self.cost_types['name']) | {'area', 'number',
-                                                  'residents'}
-        for field in vfields:
-            f = revmap.get(field, field)
-            conv[f] = float
-            rename[f] = 'value-' + field
-        for field in self.occupancy_periods.split():
-            f = revmap.get(field, field)
-            conv[f] = float
-            rename[f] = 'occupants_' + field
+        for f in ANR_FIELDS:
+            rename[f] = 'value-' + f
+        for f in OCC_FIELDS:
+            rename[f] = 'occupants_' + f
         for fname in self.datafiles:
             t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            add_dupl_fields(df, oqfields)
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
             sa = float(os.environ.get('OQ_SAMPLE_ASSETS', 0))
