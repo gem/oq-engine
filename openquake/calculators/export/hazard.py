@@ -565,6 +565,7 @@ def export_mean_rates_by_src(ekey, dstore):
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
+        com['vs30'] = site.vs30
         fname = dstore.export_path('mean_rates_by_src-%d.csv' % site.id)
         writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
