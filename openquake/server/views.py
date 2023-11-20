@@ -981,11 +981,17 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             hmaps = hcurves = governing_mce = False
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    lon = lat = vs30 = site_name = None
+    if application_mode == 'AELO':
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
                        application_mode=application_mode))
 
 
