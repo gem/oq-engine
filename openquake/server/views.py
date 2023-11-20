@@ -1008,6 +1008,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                      for k, v in asce7.items()}
 
             for key, value in asce7.items():
+                if key not in ('PGA', 'Ss', 'S1'):
+                    continue
                 if not isinstance(value, float):
                     asce7_with_units[key] = value
                 elif key in ('CRS', 'CR1'):
