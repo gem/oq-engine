@@ -197,9 +197,9 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
         imts.append(imt)
         dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
         mag_dist_eps_sig.append((src, mag, dist, eps, sigma, imt))
-    df = pd.DataFrame(dict(src=srcs, imt=imts, det=dets))
+    df = pd.DataFrame(dict(source_id=srcs, imt=imts, det=dets))
     det = df.groupby('imt').det.max()
-    dt = [('src', hdf5.vstr), ('mag', float), ('dst', float),
+    dt = [('source_id', hdf5.vstr), ('mag', float), ('dist', float),
           ('eps', float), ('sig', float), ('imt', hdf5.vstr)]
     return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
