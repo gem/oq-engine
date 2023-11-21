@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
+import pathlib
 import numpy as np
 
 from openquake.hazardlib.geo.mesh import Mesh
@@ -33,6 +34,8 @@ POINTSIDL = [Point(179.5, 0, 0.1), Point(179.5, 1, 0), Point(-179.5, 1, 0.1),
              Point(-179.5, 0, 0.1)]
 
 aae = np.testing.assert_almost_equal
+
+HERE = pathlib.Path(__file__).parent.resolve()
 
 
 class GriddedSurfaceTestCase(unittest.TestCase):
@@ -93,7 +96,7 @@ class GriddedSurfaceTestCase(unittest.TestCase):
 def _get_grd(fault_trace, usd, lsd, dip, mesh_spacing):
     # Build the surface
     sfc = SimpleFaultSurface.from_fault_data(
-            fault_trace, usd, lsd, dip, mesh_spacing)
+        fault_trace, usd, lsd, dip, mesh_spacing)
     return GriddedSurface(sfc.mesh)
 
 
@@ -225,3 +228,28 @@ class GriddedSurfaceTestCaseIDL(unittest.TestCase):
         self.assertEqual(point.x, 179.5)
         self.assertEqual(point.y, 0)
         self.assertEqual(point.z, 0.1)
+
+
+class GriddedSurfaceRetrace(unittest.TestCase):
+
+    def setUp(self):
+
+        fname = str(HERE / 'data' / 'fault_n_bora.csv')
+        dat = np.loadtxt(fname, delimiter=',')
+        points = [Point(d[0], d[1], d[2]) for d in dat]
+        self.surf = GriddedSurface.from_points_list(points)
+
+    def test_get_jb_distance(self):
+        mesh = Mesh(np.array([13.1]), np.array([42.57]), np.array([0.0]))
+        dists = self.surf.get_joyner_boore_distance(mesh)
+        aae(dists, [0.0])
+
+        mesh = Mesh(np.array([13.06]), np.array([42.615]), np.array([0.0]))
+        dists = self.surf.get_joyner_boore_distance(mesh)
+        aae(dists, [0.5105325])
+
+        mesh = Mesh(np.array([13.14]), np.array([42.53867]), np.array([0.0]))
+        dists = self.surf.get_joyner_boore_distance(mesh)
+        # Very close value obtained using the `distance` method in the
+        # `geodetic` module
+        aae(dists, [2.1006229])
