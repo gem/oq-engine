@@ -545,7 +545,9 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
-        if oq.inputs['rupture_model'].endswith('.xml'):
+        rup = (oq.rupture_dict or 'rupture_dict' in oq.inputs and
+                   oq.inputs['rupture_model'].endswith('.xml'))
+        if rup:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
             if bsets > 1:
@@ -618,7 +620,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        elif 'rupture_model' not in oq.inputs:
+        elif not oq.rupture_dict and 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
                 'import data without performing any calculation')

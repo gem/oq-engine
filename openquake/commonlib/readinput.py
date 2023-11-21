@@ -48,6 +48,7 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import BBoxError, cross_idl
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
@@ -694,10 +695,17 @@ def get_rupture(oqparam):
     :returns:
         an hazardlib rupture
     """
-    [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
-    conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
-    rup = conv.convert_node(rup_node)
-    rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
+    if oqparam.rupture_dict:
+        r = oqparam.rupture_dict
+        hypo = Point(r['lon'], r['lat'], r['dep'])
+        rup = source.rupture.build_planar(
+            hypo, r['mag'], r.get('rake'),
+            r.get('strike', 0), r.get('dip', 90), r.get('trt', '*'))
+    else:
+        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
     return rup
 
 
