@@ -1,4 +1,4 @@
 #,,,"generated_by='OpenQuake engine 3.19.0-git0126a3571f', start_date='2023-10-25T18:21:17', checksum=4113864877, lon=135.68, lat=35.68"
-src_id,imt,iml,value
+source_id,imt,iml,afoe
 case,PGV,2.00000E+01,2.58990E-01
 gs_PSE_CPCF_2_100,PGV,2.00000E+01,2.40458E-03
