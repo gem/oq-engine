@@ -36,17 +36,14 @@ from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 
 from openquake.hazardlib.gsim.parker_2020 import (
-    CONSTANTS,
     ParkerEtAl2020SInter,
-    ParkerEtAl2020SInterB,
-    ParkerEtAl2020SSlab,
-    ParkerEtAl2020SSlabB,
     _c0,
+    _depth_scaling,
+    _linear_amplification,
     _magnitude_scaling,
     _path_term,
-    _depth_scaling,
     _basin_term,
-    _linear_amplification,
+    CONSTANTS,
 )
 
 
@@ -247,15 +244,15 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     """
 
     def __init__(self, region=None, saturation_region=None, basin=None,
-                 sigma_mu_epsilon=0.0, which_sigma = "Modified",
+                 sigma_mu_epsilon=0.0, sigma_type = "Original",
                  **kwargs):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
         super().__init__(region=region, saturation_region=saturation_region,
-                         basin=basin, sigma_mu_epsilon = sigma_mu_epsilon, which_sigma = which_sigma, **kwargs)
-        self.which_sigma = which_sigma
+                         basin=basin, sigma_mu_epsilon = sigma_mu_epsilon, sigma_type = sigma_type, **kwargs)
+        self.sigma_type = sigma_type
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
 
@@ -298,7 +295,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
                 # Apply an epistmic adjustment factor. Currently, its applied to only global model.
                 mean[m] += (self.sigma_mu_epsilon * get_sigma_epistemic(trt, self.region, imt))
             # The default sigma is modified sigma that accounts for soil nonliearity.
-            if self.which_sigma == "Modified":
+            if self.sigma_type.lower() == "modified":
                 pgar = np.exp(fp_pga + fm_pga + c0_pga + fd_pga) # Note that the backarc correction is already applied in f_pga.
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30)
             else:
