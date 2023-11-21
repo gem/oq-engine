@@ -897,11 +897,11 @@ def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
 
 
 def _width_length(mag, rake):
-    assert rake is None or -180 <= rake <= 180
+    assert rake is None or -180 <= rake <= 180, rake
     if rake is None:
         # "All" case
         return 10.0 ** (-1.01 + 0.32 * mag), 10.0 ** (-2.44 + 0.59 * mag)
-    elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+    elif -45 <= rake <= 45 or rake >= 135 or rake <= -135:
         # strike slip
         return 10.0 ** (-0.76 + 0.27 * mag), 10.0 ** (-2.57 + 0.62 * mag)
     elif rake > 0:
