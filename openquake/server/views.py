@@ -974,8 +974,9 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
             hcurves = 'hcurves.png' in ds['png']
+            # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
-                             if k.startswith('disagg_by_src-')]
+                             if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
             hmaps = hcurves = governing_mce = False

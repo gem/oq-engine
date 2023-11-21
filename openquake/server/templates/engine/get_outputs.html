@@ -47,7 +47,9 @@
               {% for img in disagg_by_src %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
-                  Show hazard curves per source - {{ img|get_disagg_by_src_imt }}</a>
+                  {# NOTE: uncomment below to show the IMT #}
+                  {# Show hazard curves per source - {{ img|get_disagg_by_src_imt }}</a> #}
+                  Show hazard curves per source</a>
               </div>
               {% endfor %}
           </div>
