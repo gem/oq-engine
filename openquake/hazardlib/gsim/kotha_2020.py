@@ -552,9 +552,9 @@ class KothaEtAl2020regional(KothaEtAl2020):
         self.delta_c3_epsilon = delta_c3_epsilon
         self.ergodic = ergodic
         attenuation_file = os.path.join(DATA_FOLDER, 'kotha_attenuation_regions.geojson')
-        self.att = np.array(fiona.open(attenuation_file), dtype=object)
+        self.att = list(fiona.open(attenuation_file))
         tectonic_file = os.path.join(DATA_FOLDER, 'kotha_tectonic_regions.geojson')
-        self.tec = np.array(fiona.open(tectonic_file), dtype=object)
+        self.tec = list(fiona.open(tectonic_file))
 
 
 class KothaEtAl2020Site(KothaEtAl2020):
