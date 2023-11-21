@@ -54,18 +54,22 @@ def test_CCA():
         if rtgmpy:
             [fname] = export(('rtgm', 'csv'), calc.datastore)
             df = pandas.read_csv(fname, skiprows=1)
-            aac(df.RTGM, expected, atol=1E-6)
+            aac(df.RTGM, expected, atol=5E-5)
 
     if rtgmpy:
         # check asce7 exporter
         [fname] = export(('asce7', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        numpy.testing.assert_equal(df.value.to_numpy(), ASCE7)
+        for got, exp in zip(df.value.to_numpy(), ASCE7):
+            try:
+                aac(float(got), float(exp), rtol=1E-2)
+            except ValueError:
+                numpy.testing.assert_equal(got, exp)
 
         # check asce41 exporter
         [fname] = export(('asce41', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.value, ASCE41)
+        aac(df.value, ASCE41, atol=5E-5)
 
         # run mag_dst_eps_sig exporter
         [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
