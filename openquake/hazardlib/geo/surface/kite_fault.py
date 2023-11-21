@@ -24,12 +24,10 @@ import numpy.typing as npt
 from scipy import stats
 from pyproj import Geod
 from shapely.geometry import Polygon
-from scipy.interpolate import splev, splrep
 
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
-from openquake.hazardlib.geo.line import find_t
 from openquake.hazardlib.geo.line import _resample
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
@@ -37,7 +35,6 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
-from openquake.hazardlib.geo.surface.base import _angle_difference
 
 TOL = 0.4
 SMALL = 1e-5
@@ -707,7 +704,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
 
     # Create the mesh in the forward direction
     prfr = []
-    cond = ref_idx > 0 and ref_idx < len(rprof) - 1
+    cond = ref_idx >= 0 and ref_idx < len(rprof) - 1
     if cond:
         prfr = _get_resampled_profs(prfr, rprof, edge_sd, proj, idl, ref_idx)
 
@@ -719,8 +716,11 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
         prfl = _get_resampled_profs(
             prfl, rprof, edge_sd, proj, idl, ref_idx, last)
 
+    # Align the profiles
+
     # Remove the reference profile from the second subset of profiles
     if len(prfr) > 0 and len(prfl) > 0:
+        _align_profiles(prfr, prfl)
         prfl = prfl[1:]
 
     # Final profiles
@@ -732,21 +732,65 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     else:
         # Check the profiles have the same number of samples
         chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
-        top_depths = np.array([p[0, 0] for p in rprof])
 
         # Check profiles have the same top depth
-        chk2 = np.all(np.abs(top_depths - rprof[0][0, 0]) < 0.1 * edge_sd)
+        top_depths = np.array([p[0, 2] for p in rprof])
+        chk2 = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
 
         if chk1 and chk2:
             msh = np.array(rprof)
         else:
-            raise ValueError('Cannot build the mesh')
+            msg = 'Cannot build the mesh.'
+            if not chk1:
+                msg += ' Profiles do not have the same num. samples.'
+            if not chk2:
+                msg += ' Profiles do not have the same top depth.'
+            raise ValueError(msg)
 
     # Convert from profiles to edges
     msh = msh.swapaxes(0, 1)
     msh = fix_mesh(msh)
 
     return msh
+
+
+def _align_profiles(prfr, prfl):
+
+    # Check that the two sets contain profiles with the same length
+    lenr = len(prfr[0])
+    lenl = len(prfl[0])
+    assert np.all(np.array([len(l) for l in prfr]) - lenr) == 0.0
+    assert np.all(np.array([len(l) for l in prfl]) - lenl) == 0.0
+
+    # Find the alignment between left and right
+    delta = 0
+    if prfr[0][0][2] <= prfl[0][0][2]:
+        # Initial depth of the right profile shallower
+        for i_dep, dep in enumerate(prfr[0][:][2]):
+            if np.abs(dep - prfl[0][0][2]) < SMALL:
+                delta = i_dep
+                break
+            for i_pro, pro in enumerate(prfl):
+                prfl[i_pro] = _fill(delta, pro)
+    else:
+        # Initial depth of the left profile shallower
+        for i_dep, dep in enumerate(prfl[0][:][2]):
+            if np.abs(dep - prfr[0][0][2]) < SMALL:
+                delta = i_dep
+                break
+            for i_pro, pro in enumerate(prfr):
+                prfr[i_pro] = _fill(delta, pro)
+
+    # Pad at the end to get the same length
+    delta = len(prfl[0]) - len(prfr[0])
+    if delta > 0:
+        for i_pro, pro in enumerate(prfr):
+            for _ in range(abs(delta)):
+                prfr[i_pro].append([np.nan, np.nan, np.nan])
+    elif delta < 0:
+        for i_pro, pro in enumerate(prfl):
+            for _ in range(abs(delta)):
+                prfl[i_pro].append([np.nan, np.nan, np.nan])
 
 
 def _fix_profiles(profiles, profile_sd, align, idl):
@@ -826,8 +870,8 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     return rprof, ref_idx
 
 
-def _from_prf_to_array(prfs: list, low: int, upp:int, step:int):
-    # Converts a set of profiles into a numpy array 
+def _from_prf_to_array(prfs: list, low: int, upp: int, step: int):
+    # Converts a set of profiles into a numpy array
     idxs = list(range(low, upp, step))
     out = np.zeros((len(idxs), len(prfs[low]), 3))
     for i, idx in enumerate(idxs):
@@ -836,16 +880,16 @@ def _from_prf_to_array(prfs: list, low: int, upp:int, step:int):
 
 
 def _find_continuous_segments(mtx, i_seg: int):
-    # Returns a list of lists where each element contains the index of the 
+    # Returns a list of lists where each element contains the index of the
     # start and end profiles and the index of the edge
     #
     # :param mtx:
     #
     # :param i_seg:
-    # 
+    #
     i_from = -1
     i_to = -1
-    out = [] 
+    out = []
     for i in range(len(mtx)):
         if np.isfinite(mtx[i, 0]):
             if i_from < 0:
@@ -855,11 +899,11 @@ def _find_continuous_segments(mtx, i_seg: int):
                 i_to = i
         else:
             if i_from >= 0 and i_to >= 0 and np.abs(i_from - i_to) > 0:
-                out.append([i_from, i_to+1, i_seg])
+                out.append([i_from, i_to + 1, i_seg])
             i_from = -1
             i_to = -1
     if i_from >= 0 and i_to >= 0 and np.abs(i_from - i_to) > 0:
-        out.append([i_from, i_to+1, i_seg])
+        out.append([i_from, i_to + 1, i_seg])
     return out
 
 
@@ -872,29 +916,25 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Get the array with all the profiles
     parr = _from_prf_to_array(profs, low, upp, step)
 
-    # Process each edge 
+    # Process each edge
     csegs = []
-
     for i_edge in range(parr.shape[1]):
         for tmp in _find_continuous_segments(parr[:, i_edge], i_edge):
-            # Here `tmp` contains many triples with the indexes of the first 
+            # Here `tmp` contains many triples with the indexes of the first
             # and last profile and the index of the edge
             csegs.append(tmp)
-    csegs = np.array(csegs) 
-    try:
-        idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
-    except:
-        breakpoint()
+    csegs = np.array(csegs)
+    idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
     csegs = csegs[idxs]
 
     # Coordinates of the resampled edges
     coos = []
-
     new_prof_lines = []
     unique = np.unique(csegs[:, 0])
+    cnt = 0
     for i_from in unique:
+        # Process all the edges that start with index `i_from`
         for cseg in csegs[csegs[:, 0] == i_from, :]:
-
             if i_from == unique[0]:
                 tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
                 tmp = tmp[:-1, :]
@@ -903,6 +943,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
                 edge = parr[cseg[0]:cseg[1], cseg[2]]
                 tmp, i_prof = _get_intersections(edge, new_prof_lines, proj)
 
+            cnt += 1
             coos.append([i_prof, cseg[2], tmp])
 
         # Update the set of lines describing the new profiles
@@ -913,14 +954,14 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
     # Build profiles
     npr = _build_profiles(new_edges)
-        
+
     return npr
-    
+
 
 def _build_profiles(edges: list) -> list:
     # Find the longest edge
-    num_cols = max([len(edges[k]) for k in edges.keys()])
-    num_rows = len(edges)
+    # num_cols = max([len(edges[k]) for k in edges.keys()])
+    # num_rows = len(edges)
     profs = []
     for key in edges:
         edge = edges[key]
@@ -929,9 +970,9 @@ def _build_profiles(edges: list) -> list:
                 profs.append([c])
             else:
                 profs[i_r].append(c)
-    
+
     max_len = max([len(p) for p in profs])
-    
+
     # Set the same length for all the profiles
     for i_prof, prof in enumerate(profs):
         if len(prof) < max_len:
@@ -941,39 +982,39 @@ def _build_profiles(edges: list) -> list:
 
 
 def _build_edges(coos):
-    # `coos` is a list with a triple 
+    # `coos` is a list with a triple
     edges = {}
     for coo in coos:
         if coo[1] not in edges:
             if coo[0] > 0:
-                tmp = _fill(0, coo[0], coo[2])
+                tmp = _fill(coo[0], coo[2])
             else:
                 tmp = np.squeeze(coo[2]).tolist()
             edges[coo[1]] = tmp
         else:
             if coo[0] > 0:
-                tmp = _fill(len(edges[coo[1]]), coo[0], coo[2])
+                tmp = _fill(coo[0] - len(edges[coo[1]]), coo[2])
             else:
                 tmp = coo[2].tolist()
             edges[coo[1]].extend(tmp)
     return edges
 
 
-def _fill(i_from, i_to, coo):
-    delta = int(i_to - i_from)
-    add = np.empty((delta, 3)) 
+def _fill(delta, coo):
+    delta = int(delta)
+    add = np.empty((delta, 3))
     add[:] = np.nan
     out = np.vstack((add, coo))
     return out.tolist()
-    
+
 
 def _get_intersections(edges, lines, proj):
     pnts = []
     idxs = []
-    for i_vtx in range(len(edges)-1):
+    for i_vtx in range(len(edges) - 1):
 
-        xp, yp = proj(edges[i_vtx:i_vtx+2, 0], edges[i_vtx:i_vtx+2, 1])
-        slope, intercept, _, _, _ = stats.linregress(xp, yp)   
+        xp, yp = proj(edges[i_vtx:i_vtx + 2, 0], edges[i_vtx:i_vtx + 2, 1])
+        slope, intercept, _, _, _ = stats.linregress(xp, yp)
 
         for i_line, line in enumerate(lines):
 
@@ -983,19 +1024,19 @@ def _get_intersections(edges, lines, proj):
 
             # Check if intercept is along the segment
             if (xi > np.min([xp]) and xi < np.max([xp]) and
-                yi > np.min([yp]) and yi < np.max([yp])):
+                    yi > np.min([yp]) and yi < np.max([yp])):
                 xg, yg = proj(np.array([xi]), np.array([yi]), reverse=True)
                 zi = _get_point_depth([xp[0], yp[0], edges[i_vtx, 2]],
-                                      [xp[1], yp[1], edges[i_vtx+1, 2]],
+                                      [xp[1], yp[1], edges[i_vtx + 1, 2]],
                                       xi)
-                pnts.append([xg[0], yg[0], zi])  
+                pnts.append([xg[0], yg[0], zi])
                 idxs.append(i_line)
 
     return np.array(pnts), min(idxs)
-                
+
 
 def _line3d(pnt1, pnt2):
-    return [pnt2[0]-pnt1[0], pnt2[1]-pnt1[1], pnt2[2]-pnt1[2]] 
+    return [pnt2[0] - pnt1[0], pnt2[1] - pnt1[1], pnt2[2] - pnt1[2]]
 
 
 def _get_point_depth(pnt1, pnt2, xco):
@@ -1005,7 +1046,7 @@ def _get_point_depth(pnt1, pnt2, xco):
 
 
 def _compute_lines(coos, i_from, proj, new_lines_profiles):
-    
+
     # Create the profiles
     profs = []
     for i_coo, coo in enumerate(coos):
@@ -1019,7 +1060,7 @@ def _compute_lines(coos, i_from, proj, new_lines_profiles):
     for prof in profs:
         prof = np.array(prof)
         xp, yp = proj(prof[:, 0], prof[:, 1])
-        slope, intercept, _, _, _ = stats.linregress(xp, yp)        
+        slope, intercept, _, _, _ = stats.linregress(xp, yp)
         new_lines_profiles.append([slope, intercept])
 
 
@@ -1140,7 +1181,7 @@ def _resample_profile(line, sampling_dist):
 
 
 def _set_indexes(
-    forward: bool, ref_idx: int, len_profs: int) -> tuple[int, int, int]:
+        forward: bool, ref_idx: int, len_profs: int) -> tuple[int, int, int]:
     # Defines the indexes of the original profiles to be investigated
     step = 1
     low = ref_idx
@@ -1184,3 +1225,56 @@ def fix_mesh(msh: npt.ArrayLike) -> np.ndarray:
             if not (check_row and check_col):
                 msh[i, j, :] = np.nan
     return msh
+
+
+def profiles_depth_alignment(pro1, pro2):
+    """
+    Find the indexes needed to align the profiles i.e. define profiles whose
+    edges are as much as possible horizontal. Note that this method expects
+    that the two profiles had been already resampled, therefore, vertexes in
+    each profile should be equally spaced.
+
+    :param pro1:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    :param pro2:
+        An instance of :class:`openquake.hazardlib.geo.line.Line`
+    :returns:
+        An integer
+    """
+    # Create two numpy.ndarray with the coordinates of the two profiles
+    coo1 = pro1.coo
+    coo2 = pro2.coo
+
+    # Set the profile with the smaller number of points as the first one
+    swap = 1
+    if coo2.shape[0] < coo1.shape[0]:
+        coo1, coo2 = coo2, coo1
+        swap = -1
+
+    # Process the profiles. Note that in the ideal case the two profiles
+    # require at least 5 points
+    if len(coo1) > 5 and len(coo2) > 5:
+        #
+        # create two arrays of the same lenght
+        coo1 = np.array(coo1)
+        coo2 = np.array(coo2[:coo1.shape[0]])
+        #
+        indexes = np.arange(-2, 3)
+        dff = np.zeros_like(indexes)
+        for i, shf in enumerate(indexes):
+            if shf < 0:
+                dff[i] = np.mean(abs(coo1[:shf, 2] - coo2[-shf:, 2]))
+            elif shf == 0:
+                dff[i] = np.mean(abs(coo1[:, 2] - coo2[:, 2]))
+            else:
+                dff[i] = np.mean(abs(coo1[shf:, 2] - coo2[:-shf, 2]))
+        amin = np.amin(dff)
+        res = indexes[np.amax(np.nonzero(dff == amin))] * swap
+    else:
+        d1 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
+        d2 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
+        for i in np.arange(0, len(coo2) - len(coo1) + 1):
+            d2[i, :] = [coo2[d, 2] for d in range(i, i + len(coo1))]
+            d1[i, :] = coo1[:, 2]
+        res = np.argmin(np.sum(abs(d2 - d1), axis=1))
+    return res
