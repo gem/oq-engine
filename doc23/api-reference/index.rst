@@ -4,7 +4,8 @@ API Reference
 =============
 
 .. toctree::
-   :maxdepth: 2
-
+   :maxdepth: 3
+   
+   working-with-the-dstore
    regular-api
    rest-api
