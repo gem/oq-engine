@@ -578,6 +578,7 @@ def export_mean_disagg_by_src(ekey, dstore):
     aw = dstore['mean_disagg_by_src']
     df = aw.to_dframe()
     df = df[df.value > 0]  # don't export zeros
+    df.rename(columns={'value': 'afoe'}, inplace=True)
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
