@@ -29,15 +29,15 @@ class NZNSHM2022_ParkerEtAl2021SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = NZNSHM2022_ParkerEtAl2020SInter
 
     def test_all(self):
-        self.check('NZNSH2022_PARKER20/PARKER2021_INTERFACE_GLO_GNS_MEAN.csv',
+        self.check('nz22/NZNSH2022_PARKER20/PARKER2021_INTERFACE_GLO_GNS_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_total_stddev_mod(self):
-        self.check('NZNSH2022_PARKER20/PARKER2021_INTERFACE_GLO_GNS_TOTAL_STDDEV_MODIFIED_SIGMA.csv',
+        self.check('nz22/NZNSH2022_PARKER20/PARKER2021_INTERFACE_GLO_GNS_TOTAL_STDDEV_MODIFIED_SIGMA.csv',
                    max_discrep_percentage=0.1)
 
     def test_total_stddev_orig(self):
-        self.check('NZNSH2022_PARKER20/PARKER2021_INTERFACE_GLO_GNS_TOTAL_STDDEV_ORIGINAL_SIGMA.csv',
+        self.check('nz22/NZNSH2022_PARKER20/PARKER2021_INTERFACE_GLO_GNS_TOTAL_STDDEV_ORIGINAL_SIGMA.csv',
                    max_discrep_percentage=0.1, which_sigma = "Origional")
 
     # def test_intra_event_stddev(self):
@@ -53,13 +53,13 @@ class NZNSHM2022_ParkerEtAl2021SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = NZNSHM2022_ParkerEtAl2020SSlab
 
     def test_all(self):
-        self.check('NZNSH2022_PARKER20/PARKER2021_SLAB_GLO_GNS_MEAN.csv',
+        self.check('nz22/NZNSH2022_PARKER20/PARKER2021_SLAB_GLO_GNS_MEAN.csv',
                    max_discrep_percentage=0.1)
 
     def test_total_stddev_mod(self):
-        self.check('NZNSH2022_PARKER20/PARKER2021_SLAB_GLO_GNS_TOTAL_STDDEV_MODIFIED_SIGMA.csv',
+        self.check('nz22/NZNSH2022_PARKER20/PARKER2021_SLAB_GLO_GNS_TOTAL_STDDEV_MODIFIED_SIGMA.csv',
                    max_discrep_percentage=0.1)
 
     def test_total_stddev_orig(self):
-        self.check('NZNSH2022_PARKER20/PARKER2021_SLAB_GLO_GNS_TOTAL_STDDEV_ORIGINAL_SIGMA.csv',
+        self.check('nz22/NZNSH2022_PARKER20/PARKER2021_SLAB_GLO_GNS_TOTAL_STDDEV_ORIGINAL_SIGMA.csv',
                    max_discrep_percentage=0.1, which_sigma = "Origional")

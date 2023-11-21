@@ -19,6 +19,11 @@ Bull. Seismol. Soc. Am.
 Lee, R.L., B.A. Bradley, E.F. Manea, J.A. Hutchinson, S.S.
 Bora (2022). Evaluation of Empirical Ground-Motion Models for the 2022 New
 Zealand National Seismic Hazard Model Revision, Bull. Seismol. Soc. Am.
+
+Module exports :class:`NZNSHM2022_ParkerEtAl2020SInter`
+               :class:`NZNSHM2022_ParkerEtAl2020SInterB`
+               :class:`NZNSHM2022_ParkerEtAl2020SSlab`
+               :class:`NZNSHM2022_ParkerEtAl2020SSlabB`
 """
 
 import math
