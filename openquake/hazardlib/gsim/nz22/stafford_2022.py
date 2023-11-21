@@ -20,13 +20,23 @@
 Module exports :class:`Stafford2022`
 """
 
-
 import numpy as np
 from scipy import stats
 
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, SA
+from openquake.hazardlib.gsim.chiou_youngs_2014 import (
+    _get_centered_z1pt0,
+    _get_centered_ztor,
+    get_hanging_wall_term,
+    get_geometric_spreading,
+    get_magnitude_scaling,
+    get_directivity,
+    get_basin_depth_term,
+    get_linear_site_term,
+    get_nonlinear_site_term,
+)
 
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
@@ -63,7 +73,11 @@ def _saturation_sigma(m, r):
     Standard deviation of the near-source saturation model.
     Takes a magnitude `m` and rupture distance `r`
     """
-    return _sigmoid1d(np.log(np.clip(r, 10**-10, None)), 0.6638 - 0.2570 * (np.clip(m, -np.inf, 7.0) - 6.0), 0.0, 0.7990, 0.9835)
+    return _sigmoid1d(
+        np.log(np.clip(r, 10**-10, None)),
+        0.6638 - 0.2570 * (np.clip(m, -np.inf, 7.0) - 6.0),
+        0.0, 0.7990, 0.9835
+    )
 
 
 def _anelastic_correction(T):
@@ -136,73 +150,50 @@ def get_adjustments (T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     # Brendon on slack.
     MEAN_ADJUSTMENT_TERMS_IF = {
     "Lower": {
-        'delta_c1': -1.28155*epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag) if adjust_c1==True else 0.0,
-        'delta_c1hm': -1.28155*epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup) if adjust_chm==True else 0.0,
-        'delta_c7':-0.02578 if adjust_c7==True else 0.0,
-        'delta_c7b': _sigmoid1d(np.log(T), -0.05737, 0.05733, -1.0324, 0.04875) if adjust_c7==True else 0.0,
-        'delta_cg1' : _anelastic_correction(T) - 1.28155*epistemic_scale_factor * _anelastic_sigma(T) if adjust_cg1==True else 0.0,
+        'delta_c1':(-1.28155 * epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag)
+                     if adjust_c1==True
+                     else 0.0),
+        'delta_c1hm':(-1.28155 * epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup)
+                       if adjust_chm==True
+                       else 0.0),
+        'delta_c7':(-0.02578
+                    if adjust_c7==True
+                    else 0.0),
+        'delta_c7b':(_sigmoid1d(np.log(T), -0.05737, 0.05733, -1.0324, 0.04875)
+                     if adjust_c7==True
+                     else 0.0),
+        'delta_cg1':(_anelastic_correction(T) - 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
+                     if adjust_cg1==True
+                     else 0.0),
     },
     "Central":{'delta_c1': 0.0,
                'delta_c1hm' : 0.0,
                'delta_c7':0.0,
-               'delta_c7b': _sigmoid1d(np.log(T), -0.0865, 0.0, -1.5364, 0.3266) if adjust_c7==True else 0.0,
-               'delta_cg1': _anelastic_correction(T) if adjust_cg1==True else 0.0
+               'delta_c7b':(_sigmoid1d(np.log(T), -0.0865, 0.0, -1.5364, 0.3266)
+                            if adjust_c7==True
+                            else 0.0),
+               'delta_cg1':(_anelastic_correction(T)
+                            if adjust_cg1==True
+                            else 0.0),
                },
     "Upper":{
-        'delta_c1': 1.28155*epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag) if adjust_c1==True else 0.0,
-        'delta_c1hm':1.28155*epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup) if adjust_chm==True else 0.0,
+        'delta_c1':(1.28155 * epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag)
+                    if adjust_c1==True
+                    else 0.0),
+        'delta_c1hm':(1.28155 * epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup)
+                      if adjust_chm==True
+                      else 0.0),
         'delta_c7': 0.0,
         'delta_c7b':0.0,
-        'delta_cg1': _anelastic_correction(T) + 1.28155*epistemic_scale_factor * _anelastic_sigma(T) if adjust_cg1==True else 0.0
+        'delta_cg1':(_anelastic_correction(T) + 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
+                     if adjust_cg1==True
+                     else 0.0),
         }
     }
     return MEAN_ADJUSTMENT_TERMS_IF
 
 
-############### From here the GEM's CY14 codes starts
-
-def _get_centered_cdpp(ctx):
-    """
-    Returns the centred dpp term (zero by default)
-    """
-    return np.zeros(ctx.rrup.shape)
-
-
-def _get_centered_z1pt0(ctx):
-    """
-    Get z1pt0 centered on the Vs30- dependent average z1pt0(m)
-    California.
-    """
-    #: California and non-Japan regions
-    mean_z1pt0 = (-7.15 / 4.) * np.log(((ctx.vs30) ** 4. + 570.94 ** 4.)
-                                       / (1360 ** 4. + 570.94 ** 4.))
-    return ctx.z1pt0 - np.exp(mean_z1pt0)
-
-
-def _get_centered_ztor(ctx):
-    """
-    Get ztor centered on the M- dependent avarage ztor(km)
-    by different fault types.
-    """
-    # Strike-slip and normal faulting
-    mean_ztor = np.clip(2.673 - 1.136 * np.clip(ctx.mag - 4.970, 0., None), 0., None) ** 2
-    # Reverse and reverse-oblique faulting
-    rev = (30. <= ctx.rake) & (ctx.rake <= 150.)
-    mean_ztor[rev] = np.clip(2.704 - 1.226 * np.clip(ctx.mag[rev] - 5.849, 0.0, None), 0., None) ** 2
-    return ctx.ztor - mean_ztor
-
-def get_hanging_wall_term(C, ctx):
-    """
-    Returns the hanging wall term
-    """
-    fhw = np.zeros(ctx.rrup.shape)
-    idx = ctx.rx >= 0.0
-    if np.any(idx):
-        fdist = 1.0 - (np.sqrt(ctx.rjb[idx] ** 2. + ctx.ztor[idx] ** 2.) /
-                       (ctx.rrup[idx] + 1.0))
-        fdist *= C["c9a"] + (1.0 - C["c9a"]) * np.tanh(ctx.rx[idx] / C["c9b"])
-        fhw[idx] += C["c9"] * np.cos(np.radians(ctx.dip[idx])) * fdist
-    return fhw
+# Modified CY14 fucntions:
 
 def get_stress_scaling(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     """This term includes adjustments related to stress scaling."""
@@ -210,12 +201,6 @@ def get_stress_scaling(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, a
     delta_c1hm = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_c1hm"]
     return C['c1'] + delta_c1 + delta_c1hm
 
-def get_geometric_spreading(C, mag, rrup):
-    """
-    Returns the near-field geometric spreading term
-    """
-    # Get the near-field magnitude scaling
-    return CONSTANTS["c4"] * np.log(rrup + C["c5"] * np.cosh(C["c6"] * np.clip(mag - C["chm"], 0.0, None)))
 
 def get_far_field_distance_scaling(T, C, ctx, mu_branch,adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     """
@@ -230,18 +215,12 @@ def get_far_field_distance_scaling(T, C, ctx, mu_branch,adjust_c1, adjust_chm, a
     f_rm = C["cg1"] + delta_cg1 + C["cg2"] / np.cosh(np.clip(ctx.mag - C["cg3"], 0.0, None))
     return f_r + f_rm * ctx.rrup
 
-def get_magnitude_scaling(C, mag):
-    """
-    Returns the magnitude scaling
-    """
-    f_m = np.log(1.0 + np.exp(C["cn"] * (C["cm"] - mag)))
-    f_m = CONSTANTS["c2"] * (mag - 6.0) +((CONSTANTS["c2"] - C["c3"]) / C["cn"]) * f_m
-    return f_m
 
 def get_source_scaling_terms(T, C, ctx, delta_ztor, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     """
     Returns additional source scaling parameters related to style of
-    faulting, dip and top of rupture depth. It includes adjustments for NZ backbone model through delta_c7 and delta_c7b.
+    faulting, dip and top of rupture depth. It includes adjustments for NZ backbone model through
+    delta_c7 and delta_c7b.
     """
     delta_c7 = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_c7"]
     delta_c7b = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_c7b"]
@@ -261,49 +240,6 @@ def get_source_scaling_terms(T, C, ctx, delta_ztor, mu_branch, adjust_c1, adjust
     f_src += ((CONSTANTS["c11"] + (C["c11b"] / coshm)) * np.cos(np.radians(ctx.dip))**2)
     return f_src
 
-def get_directivity(C, ctx):
-    """
-    Returns the directivity term.
-
-    The directivity prediction parameter is centered on the average
-    directivity prediction parameter. Here we set the centered_dpp
-    equal to zero, since the near fault directivity effect prediction is
-    off by default in our calculation.
-    """
-    cdpp = _get_centered_cdpp(ctx)
-    if not np.any(cdpp > 0.0):
-        # No directivity term
-        return 0.0
-    f_dir = np.exp(-C["c8a"] * ((ctx.mag - C["c8b"]) ** 2.)) * cdpp
-    f_dir *= np.clip((ctx.mag - 5.5) / 0.8, 0., 1.)
-    rrup_max = ctx.rrup - 40.
-    rrup_max[rrup_max < 0.0] = 0.0
-    rrup_max = 1.0 - (rrup_max / 30.)
-    rrup_max[rrup_max < 0.0] = 0.0
-    return C["c8"] * rrup_max * f_dir
-
-def get_basin_depth_term(C, delta_z1pt0):
-    """
-    Returns the basin depth scaling
-    """
-    return C["phi5"] * (1.0 - np.exp(-delta_z1pt0 /
-                                     CONSTANTS["phi6"]))
-def get_linear_site_term(C, ctx):
-    """
-    Returns the linear site scaling term
-    """
-    return C["phi1"] * np.log(ctx.vs30 / 1130).clip(-np.inf, 0.0)
-
-def get_nonlinear_site_term(C, ctx, y_ref):
-    """
-    Returns the nonlinear site term and the Vs-scaling factor (to be
-    used in the standard deviation model
-    """
-    vs = ctx.vs30.clip(-np.inf, 1130.0)
-    f_nl_scaling = C["phi2"] * (np.exp(C["phi3"] * (vs - 360.)) -
-                                np.exp(C["phi3"] * (1130. - 360.)))
-    f_nl = np.log((y_ref + C["phi4"]) / C["phi4"]) * f_nl_scaling
-    return f_nl, f_nl_scaling
 
 def get_ln_y_ref(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     """
@@ -316,13 +252,15 @@ def get_ln_y_ref(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_
             get_hanging_wall_term(C, ctx) +
             get_geometric_spreading(C, ctx.mag, ctx.rrup) +
             get_far_field_distance_scaling(T, C, ctx, mu_branch,adjust_c1, adjust_chm, adjust_c7, adjust_cg1) +
-            get_directivity(C, ctx))
+            get_directivity("Stafford2022", C, ctx))
+
 
 def _nl_sigma (C, ctx, ln_y_ref):
     vs = ctx.vs30.clip(-np.inf, 1130.0)
     NL = C['phi2'] * ((np.exp(C['phi3'] * (vs - 360.0)) - np.exp(C['phi3'] * (1130.0 - 360.0))) *
                       (np.exp(ln_y_ref) / (np.exp(ln_y_ref) + C['phi4'])))
     return NL
+
 
 def get_stddevs (T, ln_y_ref, C, ctx, sigma_branch):
     """
@@ -350,7 +288,8 @@ def get_stddevs (T, ln_y_ref, C, ctx, sigma_branch):
     else:
         print("sigma branch not recognised: must be one of :Lower, :Central, :Upper")
         sigma = np.NaN
-    return sigma, (1.0 + NL) * tau, phi
+    return sigma, np.abs((1.0 + NL) * tau), phi
+
 
 def get_mean_stddevs(T, mu_branch, sigma_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1, C, ctx):
     """
@@ -361,12 +300,12 @@ def get_mean_stddevs(T, mu_branch, sigma_branch, adjust_c1, adjust_chm, adjust_c
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
-    dz1pt0 = _get_centered_z1pt0(ctx)
+    dz1pt0 = _get_centered_z1pt0("Stafford2022", ctx)
     # for Z1.0 = 0.0 no deep soil correction is applied
     dz1pt0[ctx.z1pt0 <= 0.0] = 0.0
-    f_z1pt0 = get_basin_depth_term(C, dz1pt0)
+    f_z1pt0 = get_basin_depth_term("Stafford2022", C, dz1pt0)
     # Get linear amplification term
-    f_lin = get_linear_site_term(C, ctx)
+    f_lin = get_linear_site_term("Stafford2022", C, ctx)
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = get_nonlinear_site_term(C, ctx, y_ref)
 
@@ -376,6 +315,7 @@ def get_mean_stddevs(T, mu_branch, sigma_branch, adjust_c1, adjust_chm, adjust_c
     sig, tau, phi = get_stddevs(T, ln_y_ref, C, ctx, sigma_branch)
 
     return mean, sig, tau, phi
+
 
 class Stafford2022(GMPE):
     """
