@@ -10,21 +10,20 @@ Here we document some of the most common operations for end-users.
 Read dstore with python
 -----------------------
 
-Read the dstore for a given calculation id::
+Read the dstore for a given calculation id and list availabe datastore keys::
 
 	>> from openquake.commonlib.datastore import read
-	>> dstore = read(calc_id)   # Read a given calculation id
-    >> list(dstore)             # See availabe datastore keys
+	>> dstore = read(calc_id)
+	>> list(dstore)
 
 Extract the parameters used in the calculation::
 
 	>> oq = dstore["oqparam"]
-    >> list(oq)                 # See available parameters
-    >> oq.rupture_mesh_spacing
-    2.0
-    >> oq.ses_per_logic_tree_path
-    1000
-
+	>> list(oq)
+	>> oq.rupture_mesh_spacing
+	2.0
+	>> oq.ses_per_logic_tree_path
+	1000
 
 Reading outputs with pandas
 ---------------------------
