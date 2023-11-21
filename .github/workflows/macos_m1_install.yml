@@ -77,8 +77,8 @@ jobs:
           fi
           source ~/openquake/bin/activate
           pip3 install pytest pyshp flake8
-          oq dbserver start
-          sleep 10
+          oq dbserver upgrade
+          sleep 5
 
       - name: Run tests for calculators and advanced manual to test installation
         if: always()
