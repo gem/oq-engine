@@ -1,5 +1,8 @@
 """
 New Zealand National Seismic Hazard Model 2022 Revision modification of Kuehn 2020 GMMs.
+Adjustment in aleatory uncertainty to account for the effect of magnitude and distance
+dependence towards smaller Vs30 values. In the intraslab model the adjustment for
+backarc attenuation which is based on Abrahamson et al 2016 BC Hydro GMM.
 
 Bradley, B. A., S. Bora, R. L. Lee, E. F. Manea, M. C. Gerstenberger, P.
 J. Stafford, G. M. Atkinson, G. Weatherill, J. Hutchinson, C. A. de
