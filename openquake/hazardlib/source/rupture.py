@@ -894,3 +894,97 @@ def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     rup.rup_id = 0
     vars(rup).update(vars(site))
     return rup
+
+
+def _width_length(mag, rake):
+    assert rake is None or -180 <= rake <= 180
+    if rake is None:
+        # "All" case
+        return 10.0 ** (-1.01 + 0.32 * mag), 10.0 ** (-2.44 + 0.59 * mag)
+    elif (-45 <= rake <= 45) or (rake >= 135) or (rake <= -135):
+        # strike slip
+        return 10.0 ** (-0.76 + 0.27 * mag), 10.0 ** (-2.57 + 0.62 * mag)
+    elif rake > 0:
+        # thrust/reverse
+        return 10.0 ** (-1.61 + 0.41 * mag), 10.0 ** (-2.42 + 0.58 * mag)
+    else:
+        # normal
+        return 10.0 ** (-1.14 + 0.35 * mag), 10.0 ** (-1.88 + 0.50 * mag)
+
+
+def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
+    """
+    Build a rupture with a PlanarSurface suitable for scenario calculations
+    """
+    rdip = math.radians(dip)
+
+    # precalculated azimuth values for horizontal-only and vertical-only
+    # moves from one point to another on the plane defined by strike
+    # and dip:
+    azimuth_right = strike
+    azimuth_down = (azimuth_right + 90) % 360
+    rup_width, rup_length = _width_length(mag, rake)
+    # calculate the height of the rupture being projected
+    # on the vertical plane:
+    rup_proj_height = rup_width * math.sin(rdip)
+    # and its width being projected on the horizontal one:
+    rup_proj_width = rup_width * math.cos(rdip)
+
+    # half height of the vertical component of rupture width
+    # is the vertical distance between the rupture geometrical
+    # center and it's upper and lower borders:
+    hheight = rup_proj_height / 2.
+    # calculate how much shallower the upper border of the rupture
+    # is than the upper seismogenic depth:
+    vshift = hheight - hypocenter["depth"]
+    # if it is shallower (vshift > 0) than we need to move the rupture
+    # by that value vertically.
+
+    rupture_center = hypocenter
+
+    if vshift > 0:
+        # we need to move the rupture center to make the rupture plane
+        # lie below the surface
+        hshift = abs(vshift / math.tan(rdip))
+        rupture_center = hypocenter.point_at(
+            horizontal_distance=hshift, vertical_increment=vshift,
+            azimuth=azimuth_down)
+
+    # From the rupture center we can now compute the coordinates of the
+    # four corners by moving along the diagonals of the plane. This seems
+    # to be better then moving along the perimeter, because in this case
+    # errors are accumulated that induce distorsions in the shape with
+    # consequent raise of exceptions when creating PlanarSurface objects
+    # theta is the angle between the diagonal of the surface projection
+    # and the line passing through the rupture center and parallel to the
+    # top and bottom edges. Theta is zero for vertical ruptures (because
+    # rup_proj_width is zero)
+    theta = math.degrees(
+        math.atan((rup_proj_width / 2.) / (rup_length / 2.)))
+    hor_dist = math.sqrt((rup_length / 2.)**2 + (rup_proj_width / 2.)**2)
+
+    top_left = rupture_center.point_at(
+        horizontal_distance=hor_dist,
+        vertical_increment=-rup_proj_height / 2.,
+        azimuth=(strike + 180 + theta) % 360)
+    top_right = rupture_center.point_at(
+        horizontal_distance=hor_dist,
+        vertical_increment=-rup_proj_height / 2.,
+        azimuth=(strike - theta) % 360)
+    bottom_left = rupture_center.point_at(
+        rupture_center,
+        horizontal_distance=hor_dist,
+        vertical_increment=rup_proj_height / 2.,
+        azimuth=(strike + 180 - theta) % 360)
+    bottom_right = rupture_center.point_at(
+        rupture_center,
+        horizontal_distance=hor_dist,
+        vertical_increment=rup_proj_height / 2.,
+        azimuth=(strike + theta) % 360)
+    surf = PlanarSurface(strike, dip, top_left, top_right,
+                         bottom_right, bottom_left)
+    rup = BaseRupture(mag, rake, trt, hypocenter, surf)
+    rup.rup_id = 0
+    vars(rup).update(vars(hypocenter))
+    return rup
+    
