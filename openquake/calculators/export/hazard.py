@@ -557,12 +557,13 @@ def export_mean_rates_by_src(ekey, dstore):
     rates_df = _add_iml(dstore['mean_rates_by_src'].to_dframe(), oq.imtls)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    header = ['src_id', 'imt', 'iml', 'afoe']
+    header = ['source_id', 'imt', 'iml', 'afoe']
     for site in sitecol:
         df = rates_df[rates_df.site_id == site.id]
         del df['site_id']
         df = df[df.value > 0]  # don't export zeros
-        df.rename(columns={'value': 'afoe'}, inplace=True)
+        df.rename(columns={'src_id': 'source_id',
+                           'value': 'afoe'}, inplace=True)
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
