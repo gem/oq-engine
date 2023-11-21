@@ -17,6 +17,9 @@ Bull. Seismol. Soc. Am.
 Lee, R.L., B.A. Bradley, E.F. Manea, J.A. Hutchinson, S.S.
 Bora (2022). Evaluation of Empirical Ground-Motion Models for the 2022 New
 Zealand National Seismic Hazard Model Revision, Bull. Seismol. Soc. Am.
+
+Module exports :class:`NZNSHM2022_KuehnEtAl2020SInter`
+               :class:`NZNSHM2022_KuehnEtAl2020SSlab`
 """
 
 import numpy as np
@@ -227,10 +230,10 @@ def get_backarc_term(trt, imt, ctx):
 
 class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, which_sigma = "Original", **kwargs):
+    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, sigma_type="Original", **kwargs):
 
-        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon, which_sigma = which_sigma, **kwargs)
-        self.which_sigma = which_sigma
+        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon, sigma_type=sigma_type, **kwargs)
+        self.sigma_type = sigma_type
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
         if self.region in ("NZL"):
@@ -297,7 +300,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                     self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
-            if self.which_sigma == "Modified":
+            if self.sigma_type.lower() == "modified":
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(C, C_PGA, imt, ctx.vs30, pga1100)
             else:
                 tau[m] = C["tau"]

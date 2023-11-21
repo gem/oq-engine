@@ -34,6 +34,6 @@ class NZNSHM2022KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
                 sigma = test_case["sigma"]
                 mean_file, *std_files = [f.format(trt) for f in files]
                 self.check(mean_file,
-                           max_discrep_percentage=0.03, region=region, which_sigma=sigma)
+                           max_discrep_percentage=0.03, region=region, sigma_type=sigma)
                 self.check(*std_files,
-                           max_discrep_percentage=0.03, region=region, which_sigma=sigma)
+                           max_discrep_percentage=0.03, region=region, sigma_type=sigma)
