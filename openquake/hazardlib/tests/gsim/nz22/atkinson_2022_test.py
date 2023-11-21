@@ -19,7 +19,11 @@
 # Test data have been generated from the Python implementation available from the authors
 
 
-from openquake.hazardlib.gsim.atkinson_2022 import Atkinson2022Crust, Atkinson2022SInter, Atkinson2022SSlab
+from openquake.hazardlib.gsim.nz22.atkinson_2022 import (
+    Atkinson2022Crust,
+    Atkinson2022SInter,
+    Atkinson2022SSlab,
+)
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 #test case
@@ -31,23 +35,23 @@ class Atkinson2022CrustTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Atkinson2022Crust
 
     def test_central_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_CRUST_CENTRAL_MEAN.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_CRUST_CENTRAL_MEAN.csv',
                    max_discrep_percentage=0.5, epistemic = "Central")
 
     def test_lower_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_CRUST_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_CRUST_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
                    max_discrep_percentage=0.5, epistemic = "Lower")
 
     def test_upper_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_CRUST_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_CRUST_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
                        max_discrep_percentage=0.5, epistemic = "Upper")
 
     def test_modified_sigma(self):
-        self.check('ATKINSON2022/ATKINSON2022_CRUST_MODIFIED_SIGMA.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON2022_CRUST_MODIFIED_SIGMA.csv',
                        max_discrep_percentage=0.5, sigma_type = "Modified")
 
-    def test_origional_sigma(self):
-        self.check('ATKINSON2022/ATKINSON2022_CRUST_ORIGINAL_SIGMA.csv',
+    def test_original_sigma(self):
+        self.check('nz22/ATKINSON2022/ATKINSON2022_CRUST_ORIGINAL_SIGMA.csv',
                            max_discrep_percentage=0.5, sigma_type = "Original")
 
 class Atkinson2022SInterTestCase(BaseGSIMTestCase):
@@ -58,23 +62,23 @@ class Atkinson2022SInterTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Atkinson2022SInter
 
     def test_central_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_INTER_CENTRAL_MEAN.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_INTER_CENTRAL_MEAN.csv',
                    max_discrep_percentage=0.5, epistemic = "Central")
 
     def test_lower_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_INTER_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_INTER_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
                    max_discrep_percentage=0.5, epistemic = "Lower")
 
     def test_upper_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_INTER_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_INTER_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
                        max_discrep_percentage=0.5, epistemic = "Upper")
 
     def test_modified_sigma(self):
-        self.check('ATKINSON2022/ATKINSON2022_INTERFACE_MODIFIED_SIGMA.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON2022_INTERFACE_MODIFIED_SIGMA.csv',
                        max_discrep_percentage=0.5, sigma_type = "Modified")
 
-    def test_origional_sigma(self):
-        self.check('ATKINSON2022/ATKINSON2022_INTERFACE_ORIGINAL_SIGMA.csv',
+    def test_original_sigma(self):
+        self.check('nz22/ATKINSON2022/ATKINSON2022_INTERFACE_ORIGINAL_SIGMA.csv',
                            max_discrep_percentage=0.5, sigma_type = "Original")
 
 class Atkinson2022SSlabTestCase(BaseGSIMTestCase):
@@ -85,21 +89,21 @@ class Atkinson2022SSlabTestCase(BaseGSIMTestCase):
     GSIM_CLASS = Atkinson2022SSlab
 
     def test_central_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_SLAB_CENTRAL_MEAN.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_SLAB_CENTRAL_MEAN.csv',
                    max_discrep_percentage=0.5, epistemic = "Central")
 
     def test_lower_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_SLAB_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_SLAB_LOWER_MEAN_EPI_SCALE_CORRECTED.csv',
                    max_discrep_percentage=0.5, epistemic = "Lower")
 
     def test_upper_mean(self):
-        self.check('ATKINSON2022/ATKINSON22_SLAB_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON22_SLAB_UPPER_MEAN_EPI_SCALE_CORRECTED.csv',
                        max_discrep_percentage=0.5, epistemic = "Upper")
 
     def test_modified_sigma(self):
-        self.check('ATKINSON2022/ATKINSON2022_SLAB_MODIFIED_SIGMA.csv',
+        self.check('nz22/ATKINSON2022/ATKINSON2022_SLAB_MODIFIED_SIGMA.csv',
                        max_discrep_percentage=0.5, sigma_type = "Modified")
 
-    def test_origional_sigma(self):
-        self.check('ATKINSON2022/ATKINSON2022_SLAB_ORIGINAL_SIGMA.csv',
+    def test_original_sigma(self):
+        self.check('nz22/ATKINSON2022/ATKINSON2022_SLAB_ORIGINAL_SIGMA.csv',
                            max_discrep_percentage=0.5, sigma_type = "Original")

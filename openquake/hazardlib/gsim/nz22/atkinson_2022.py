@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2015-2018 GEM Foundation
+# Copyright (C) 2015-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -17,15 +17,13 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Author: s.bora@gns.cri.nz/e.manea@gns.cri.nz
-
 Module exports :class:`Atkinson2022Crust`
                :class:`Atkinson2022SSlab`
                :class:`Atkinson2022SInter`
 """
 
-import math
-import os
+from pathlib import Path
+
 import numpy as np
 from scipy.interpolate import interp1d
 
@@ -33,8 +31,7 @@ from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.imt import PGA, SA
 
-Atk22_COEFFS = os.path.join(os.path.dirname(__file__),
-                          "Atkinson22_coeffs_mod_v8b_sanjay_v2.csv")
+Atk22_COEFFS = Path(Path(__file__).parent, "Atkinson22_coeffs_mod_v8b_sanjay_v2.csv")
 
 def _fmag(suffix, C, mag):
     """
@@ -269,7 +266,7 @@ class Atkinson2022Crust(GMPE):
     # define constant parameters
     suffix = "crust"
 
-    def __init__(self, epistemic = 'Central', sigma_type = "Origional", **kwargs):
+    def __init__(self, epistemic = 'Central', sigma_type = "Original", **kwargs):
         """
         Aditional parameter for epistemic central,
         lower and upper bounds.
@@ -317,7 +314,8 @@ class Atkinson2022Crust(GMPE):
                 sig[m], tau[m], phi[m] = get_stddevs(self.suffix, C)
 
     # periods given by 1 / 10 ** COEFFS['f']
-    COEFFS = CoeffsTable(sa_damping=5, table=open(Atk22_COEFFS).read())
+    with Atk22_COEFFS.open() as coefs_file:
+        COEFFS = CoeffsTable(sa_damping=5, table=coefs_file.read())
 
 
 class Atkinson2022SInter(Atkinson2022Crust):
