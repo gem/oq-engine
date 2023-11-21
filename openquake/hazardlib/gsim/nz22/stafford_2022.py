@@ -17,16 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 """
-Author: s.bora@gns.cri.nz /sanjay.singh1986@gmail.com
 Module exports :class:`Stafford2022`
 """
+
+
 import numpy as np
 from scipy import stats
 
-from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib import const
-from openquake.hazardlib.imt import PGA, PGV, SA
+from openquake.hazardlib.imt import PGA, SA
 
 CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
              "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
