@@ -105,7 +105,9 @@ def get_stddevs(C, rrup, vs30):
 
 def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
     """
-    This NZ specific modification. Get the nonlinear tau and phi terms for Parker's model. This routine is based upon Peter Stafford suggested implementation shared on slack, which is based on AG20 implementation.
+    This NZ specific modification. Get the nonlinear tau and phi terms for Parker's model.
+    This routine is based upon Peter Stafford suggested implementation shared on slack,
+    which is based on AG20 implementation.
     """
     period = imt.period
     # Linear Tau
@@ -126,8 +128,10 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
             phi2_rv[i] = C["phi22"]
             phi2_rv_pga[i] = C_PGA["phi22"]
         else:
-            phi2_rv[i] = ((C["phi22"] - C["phi21"]) / (math.log(r2) - math.log(r1))) * (math.log(rrup[i]) - math.log(r1)) + C["phi21"]
-            phi2_rv_pga[i] = ((C_PGA["phi22"] - C_PGA["phi21"]) / (math.log(r2) - math.log(r1))) * (math.log(rrup[i]) - math.log(r1)) + C_PGA["phi21"]
+            phi2_rv[i] = (((C["phi22"] - C["phi21"]) / (math.log(r2) - math.log(r1))) *
+                          (math.log(rrup[i]) - math.log(r1)) + C["phi21"])
+            phi2_rv_pga[i] = (((C_PGA["phi22"] - C_PGA["phi21"]) / (math.log(r2) - math.log(r1))) *
+                              (math.log(rrup[i]) - math.log(r1)) + C_PGA["phi21"])
 
     phi_lin = np.sqrt(phi2_rv)
     phi_lin_pga = np.sqrt(phi2_rv_pga)
@@ -138,9 +142,18 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
     phi_B_pga = np.sqrt(phi_lin_pga**2 - phi_amp**2)
 
     # correlation coefficients from AG20
-    periods_AG20 = [0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0]
-    rho_Ws = [1.0, 0.99, 0.99, 0.97, 0.95, 0.92, 0.9, 0.87, 0.84, 0.82, 0.74, 0.66, 0.59, 0.5, 0.41, 0.33, 0.3, 0.27, 0.25, 0.22, 0.19, 0.17, 0.14, 0.1]
-    rho_Bs = [1.0, 0.99, 0.99, 0.985, 0.98, 0.97, 0.96, 0.94, 0.93, 0.91, 0.86, 0.8, 0.78, 0.73, 0.69, 0.62, 0.56, 0.52, 0.495, 0.43, 0.4, 0.37, 0.32, 0.28]
+    periods_AG20 = [
+        0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5,
+        0.6, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0
+    ]
+    rho_Ws = [
+        1.0, 0.99, 0.99, 0.97, 0.95, 0.92, 0.9, 0.87, 0.84, 0.82, 0.74, 0.66,
+        0.59, 0.5, 0.41, 0.33, 0.3, 0.27, 0.25, 0.22, 0.19, 0.17, 0.14, 0.1
+    ]
+    rho_Bs = [
+        1.0, 0.99, 0.99, 0.985, 0.98, 0.97, 0.96, 0.94, 0.93, 0.91, 0.86, 0.8,
+        0.78, 0.73, 0.69, 0.62, 0.56, 0.52, 0.495, 0.43, 0.4, 0.37, 0.32, 0.28
+    ]
 
     rho_W_itp = interp1d(np.log(periods_AG20), rho_Ws)
     rho_B_itp = interp1d(np.log(periods_AG20), rho_Bs)
@@ -151,8 +164,10 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
         rhoW = rho_W_itp(np.log(period))
         rhoB = rho_B_itp(np.log(period))
 
-    f2 = C["f4"] * (np.exp(C["f5"] * (np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"])) - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
-    #f2 = C["f4"] * (np.exp(C["f5"] * (np.minimum(vs30, 760.0) - 200.0)) - np.exp(C["f5"] * (760.0 - 200.0)))
+    f2 = (
+        C["f4"] * (np.exp(C["f5"] * (np.minimum(vs30, CONSTANTS["vref_fnl"]) -CONSTANTS["Vb"])) -
+                     math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"])))
+    )
     f3 = CONSTANTS["f3"]
 
     partial_f_pga = f2 * pgar / (pgar + f3)
@@ -166,7 +181,11 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
 
 
 def get_sigma_epistemic (trt, region, imt):
-    ''' This is a NZ-NSHM-2022 specific modification. Currently the epistemic sigma model is applied to Global model only. As for NZ we are using only the global model. Henec below the coefficients are just for the global model.'''
+    """
+    This is a NZ-NSHM-2022 specific modification. Currently the epistemic sigma model is
+    applied to Global model only. As for NZ we are using only the global model.
+    Henec below the coefficients are just for the global model.
+    """
 
     if region is None:
         if trt == const.TRT.SUBDUCTION_INTRASLAB:
@@ -198,8 +217,12 @@ def get_sigma_epistemic (trt, region, imt):
 
 
 def get_backarc_term(trt, imt, ctx):
-
-    """ This is a NZ NSHM-2022 specific modification. The backarc correction factors to be applied with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab events. It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016) Earthquake Spectra. The correction is applied only for sites in the backarc region as function of distance."""
+    """
+    This is a NZ NSHM-2022 specific modification. The backarc correction factors to be applied
+    with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab
+    events. It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016)
+    Earthquake Spectra. The correction is applied only for sites in the backarc region as function of distance.
+    """
 
     periods =  [0.0, 0.02, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.5, 10.0]
     theta7s = [1.0988, 1.0988, 1.2536, 1.4175, 1.3997, 1.3582, 1.1648, 0.994, 0.8821, 0.7046, 0.5799, 0.5021, 0.3687, 0.1746,
