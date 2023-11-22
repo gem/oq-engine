@@ -17,6 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import csv
 import sys
 import inspect
 import tempfile
@@ -885,6 +886,22 @@ def _read_csv(fileobj, compositedt):
     return df
 
 
+def find_error(fname, errors, dtype):
+    """
+    Given a CSV file with an error, parse it with the csv.reader
+    and get a better exception including the first line with an error
+    """
+    with open(fname, encoding='utf-8-sig', errors=errors) as f:
+        reader = csv.reader(f)
+        try:
+            for i, row in enumerate(reader, 2):
+                pass
+        except Exception as exc:
+            exc.lineno = i
+            exc.line = ','.join(row)
+            return exc
+
+
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
@@ -912,7 +929,11 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
         try:
             df = _read_csv(f, dt)
         except Exception as exc:
-            raise InvalidFile('%s: %s' % (fname, exc))
+            err = find_error(fname, errors, dt)
+            if err:
+                raise InvalidFile('%s:%d: %s' % (fname, err.lineno, err))
+            else:
+                raise InvalidFile('%s: %s' % (fname, exc))
     arr = numpy.zeros(len(df), dt)
     for col in df.columns:
         arr[col] = df[col].to_numpy()
