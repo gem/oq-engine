@@ -233,10 +233,10 @@ def get_backarc_term(trt, imt, ctx):
 
 class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
 
-    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, sigma_type="Original", **kwargs):
+    def __init__(self, region="GLO", m_b=None, sigma_mu_epsilon=0.0, modified_sigma=False, **kwargs):
 
-        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon, sigma_type=sigma_type, **kwargs)
-        self.sigma_type = sigma_type
+        super().__init__(region=region, m_b=m_b, sigma_mu_epsilon=sigma_mu_epsilon, modified_sigma=modified_sigma, **kwargs)
+        self.modified_sigma = modified_sigma
 
         # reset override of REQUIRES_SITES_PARAMETERS done by super
         if self.region in ("NZL"):
@@ -303,7 +303,7 @@ class NZNSHM2022_KuehnEtAl2020SInter(KuehnEtAl2020SInter):
                     self.sigma_mu_model, imt, ctx.mag, ctx.rrup)
                 mean[m] += self.sigma_mu_epsilon * sigma_mu_adjust
             # Get standard deviations
-            if self.sigma_type.lower() == "modified":
+            if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(C, C_PGA, imt, ctx.vs30, pga1100)
             else:
                 tau[m] = C["tau"]

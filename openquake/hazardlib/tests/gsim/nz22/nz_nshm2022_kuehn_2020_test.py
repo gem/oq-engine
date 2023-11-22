@@ -13,14 +13,14 @@ class NZNSHM2022KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
             "files": [
                 "nz22/kuehn2020/KUEHN20_{}_NZL_GNS_MEAN.csv",
                 "nz22/kuehn2020/KUEHN20_{}_NZL_GNS_TOTAL_STDDEV_ORIGINAL_SIGMA.csv"],
-            "sigma": "Original",
+            "modified_sigma": False,
         },
         {
             "region": "NZL",
             "files": [
                 "nz22/kuehn2020/KUEHN20_{}_NZL_GNS_MEAN.csv",
                 "nz22/kuehn2020/KUEHN20_{}_NZL_GNS_TOTAL_STDDEV_MODIFIED_SIGMA.csv"],
-            "sigma": "Modified",
+            "modified_sigma": True,
         },
     ]
 
@@ -31,9 +31,9 @@ class NZNSHM2022KuehnEtAl2020RegionTestCase(BaseGSIMTestCase):
             for test_case in self.FILES:
                 region = test_case["region"]
                 files = test_case["files"]
-                sigma = test_case["sigma"]
+                modified_sigma = test_case["modified_sigma"]
                 mean_file, *std_files = [f.format(trt) for f in files]
                 self.check(mean_file,
-                           max_discrep_percentage=0.03, region=region, sigma_type=sigma)
+                           max_discrep_percentage=0.03, region=region, modified_sigma=modified_sigma)
                 self.check(*std_files,
-                           max_discrep_percentage=0.03, region=region, sigma_type=sigma)
+                           max_discrep_percentage=0.03, region=region, modified_sigma=modified_sigma)
