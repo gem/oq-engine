@@ -931,7 +931,8 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
         except Exception as exc:
             err = find_error(fname, errors, dt)
             if err:
-                raise InvalidFile('%s:%d: %s' % (fname, err.lineno, err))
+                raise InvalidFile('%s: %s\nline:%d:%s' %
+                                  (fname, err, err.lineno, err.line))
             else:
                 raise InvalidFile('%s: %s' % (fname, exc))
     arr = numpy.zeros(len(df), dt)
