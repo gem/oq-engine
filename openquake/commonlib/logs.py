@@ -25,7 +25,7 @@ import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
-from openquake.commonlib import readinput, dbapi, mosaic
+from openquake.commonlib import readinput, dbapi, model_getter
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -41,7 +41,7 @@ def get_tag(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     if not MODELS:  # first time
-        MODELS.extend(mosaic.MosaicGetter().get_models_list())
+        MODELS.extend(model_getter.ModelGetter().get_models_list())
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
     if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR
@@ -80,8 +80,8 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     """
     task = 'task #%d' % task_no
     return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
-                 
-    
+
+
 def get_datadir():
     """
     Extracts the path of the directory where the openquake data are stored
@@ -285,7 +285,8 @@ def init(dummy, job_ini, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
-    :param tag: tag (for instance the model name) to show before the log message
+    :param tag: tag (for instance the model name) to show before the log
+        message
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)

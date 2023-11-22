@@ -11,19 +11,32 @@ from shapely.geometry import Point, shape
 from collections import Counter
 from openquake.baselib import sap
 from openquake.hazardlib.geo.packager import fiona
-from openquake.qa_tests_data import mosaic
+from openquake.qa_tests_data import mosaic, aristotle
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
 
-class MosaicGetter:
+class ModelGetter:
     """
-    Class with methods to associate coordinates to mosaic models
+    Class with methods to associate coordinates to models
     """
-    def __init__(self, shapefile_path=None):
+    def __init__(self, kind='mosaic', shapefile_path=None):
+        if kind not in ('mosaic', 'aristotle'):
+            raise ValueError('Model getter for {kind} is not implemented')
+        self.kind = kind
+        if self.kind == 'mosaic':
+            self.model_code = 'code'
+        elif self.kind == 'aristotle':
+            self.model_code = 'shapeGroup'
         if shapefile_path is None:  # read from openquake.cfg
-            mosaic_dir = os.path.dirname(mosaic.__file__)
-            shapefile_path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
+            if kind == 'mosaic':
+                mosaic_dir = os.path.dirname(mosaic.__file__)
+                shapefile_path = os.path.join(
+                    mosaic_dir, 'ModelBoundaries.shp')
+            elif kind == 'aristotle':
+                aristotle_dir = os.path.dirname(aristotle.__file__)
+                shapefile_path = os.path.join(
+                    aristotle_dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.shapefile_path = shapefile_path
 
     def get_models_list(self):
@@ -34,39 +47,65 @@ class MosaicGetter:
             print('fiona/GDAL is not installed properly!', sys.stderr)
             return []
         with fiona.open(self.shapefile_path, 'r') as shp:
-            models = [polygon['properties']['code'] for polygon in shp]
+            models = [polygon['properties'][self.model_code]
+                      for polygon in shp]
         return models
 
-    def get_model_by_lon_lat(self, lon, lat, strict=True):
+    def get_model_by_lon_lat(
+            self, lon, lat, strict=True, check_overlaps=True,
+            measure_time=False):
         """
-        Given a longitude and latitude, finds the corresponding hazard model
-        in the global mosaic.
+        Given a longitude and latitude, finds the corresponding model
 
         :param lon:
             The site longitude
         :param lat:
             The site latitude
         :param strict:
-             If True (the default) raise an error, otherwise log an error
+            If True (the default) raise an error, otherwise log an error
+        :param check_overlaps:
+            If True (the default) check if the site is close to the border
+            between multiple models
+        :param measure_time:
+            If True log the time spent to search the model
+        :returns: the code of the closest (or only) model
         """
         t0 = time.time()
         lon = float(lon)
         lat = float(lat)
         point = Point(lon, lat)
 
-        # # If we prefer to make a point-in-polygon search:
-        # models = []
         with fiona.open(self.shapefile_path, 'r') as shp:
-            # # If we prefer to make a point-in-polygon search:
-            # models.extend([polygon['properties']['code']
-            #                for polygon in shp
-            #                if point.within(shape(polygon['geometry']))])
+            if not check_overlaps:
+                for polygon in shp:
+                    if point.within(shape(polygon['geometry'])):
+                        model = polygon['properties'][self.model_code]
+                        logging.info(f'Site at lon={lon} lat={lat} is'
+                                     f' covered by model {model}')
+                        break
+                else:
+                    if measure_time:
+                        logging.info(
+                            f'Model search took {time.time() - t0} seconds')
+                    if strict:
+                        raise ValueError(
+                            f'Site at lon={lon} lat={lat} is not covered'
+                            f' by any model!')
+                    else:
+                        logging.error(
+                            f'Site at lon={lon} lat={lat} is not covered'
+                            f' by any model!')
+                    return None
+                if measure_time:
+                    logging.info(
+                        f'Model search took {time.time() - t0} seconds')
+                return model
 
             # NOTE: poly.distance(point) returns 0.0 if point is within poly
             #       To calculate the distance to the nearest edge, one would do
             #       poly.exterior.distance(point) instead
             model_dist = {
-                polygon['properties']['code']:
+                polygon['properties'][self.model_code]:
                     shape(polygon['geometry']).distance(point)
                 for polygon in shp
             }
@@ -96,13 +135,14 @@ class MosaicGetter:
             logging.info(
                 f'Site at lon={lon} lat={lat} is covered by model {model}'
                 f' (distance: {model_dist[model]})')
-        logging.debug(f'Model search took {time.time() - t0} seconds')
+        if measure_time:
+            logging.info(f'Model search took {time.time() - t0} seconds')
         return model
 
     def get_models_by_sites_csv(self, csv_path):
         """
         Given a csv file with (Longitude, Latitude) of sites, returns a
-        dictionary having as key the site location and as value the mosaic
+        dictionary having as key the site location and as value the
         model that covers that site
 
         :param csv_path:
@@ -125,14 +165,14 @@ class MosaicGetter:
 
 def main(sites_csv_path, models_boundaries_shp_path):
     logging.basicConfig(level=logging.INFO)
-    model_by_site = MosaicGetter(
+    model_by_site = ModelGetter(
         models_boundaries_shp_path).get_models_by_sites_csv(sites_csv_path)
     pprint.pprint(model_by_site)
 
 
 main.sites_csv_path = 'path of a csv file containing sites coordinates'
 main.models_boundaries_shp_path = \
-    'path of a shapefile containing boundaries of mosaic models'
+    'path of a shapefile containing boundaries of models'
 
 if __name__ == '__main__':
     sap.run(main)
