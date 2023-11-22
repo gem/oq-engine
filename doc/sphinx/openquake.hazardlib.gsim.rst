@@ -172,14 +172,6 @@ atkinson_2015
     :undoc-members:
     :show-inheritance:
     
-atkinson_2022
----------------------------------------------
-
-.. automodule:: openquake.hazardlib.gsim.atkinson_2022
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 atkinson_boore_1995
 ---------------------------------------------------
 
