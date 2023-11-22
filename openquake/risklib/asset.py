@@ -811,6 +811,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                 check_dupl=True, by_country=False, asset_prefix='',
                 tagcol=None, errors=None, infr_conn_analysis=False,
                 aggregate_by=None, monitor=None):
+    # NB: errors is not None only for scenario_test/case_17
     logging.info('Reading %s', fname)
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
@@ -827,7 +828,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     # loop on each CSV file associated to exposure.xml
     dfs = []
     for fname, df in fname_dfs:
-        if len(df) == 0:
+        if len(df) == 0 and errors != 'ignore':
             raise InvalidFile('%s is empty' % fname)
         elif by_country:
             df['country'] = asset_prefix[:-1]
@@ -917,12 +918,12 @@ class Exposure(object):
 
     @staticmethod
     def check(fname):
-        exp = Exposure.read([fname])
+        exp = Exposure.read_all([fname])
         err = []
         for asset in exp.assets:
-            if asset.number > 65535:
+            if asset['value-number'] > 65535:
                 err.append('Asset %s has number %s > 65535' %
-                           (asset.asset_id, asset.number))
+                           (asset['id'].decode('utf8'), asset['value-number']))
         return '\n'.join(err)
 
     @staticmethod
