@@ -41,14 +41,14 @@
         <%   return; // works like continue in underscore.js %>
         <% }%>
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
-        <tr class= <%= ['asce7', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
+        <tr class= <%= ['asce07', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
           <td><%= output.get('id') || 'New' %></td>
           <td>
             <%= output.get('name') %>
             <p style="clear:both;"></p>
             {# NOTE: I couldn't easily factorize the two asce cases because of the mixed javascript and django templating syntaxes #}
-            <% if (output.get('type') == 'asce7') { %>
-              {% for key, value in asce7.items %}
+            <% if (output.get('type') == 'asce07') { %>
+              {% for key, value in asce07.items %}
                 {# NOTE: it's not trivial to format values, that might be either floats or strings #}
                 <div class="asce-key">{{ key }}</div>
                 <div class="asce-value">{{ value }}</div><br/>

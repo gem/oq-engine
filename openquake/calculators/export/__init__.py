@@ -22,7 +22,7 @@ from openquake.baselib.writers import write_csv
 
 
 DISPLAY_NAME = {
-    'asce7': 'ASCE 7-16 Parameters',
+    'asce07': 'ASCE 7-16 Parameters',
     'asce41': 'ASCE 41-17 Parameters',
     'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'asset_risk': 'Exposure + Risk',

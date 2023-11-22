@@ -716,7 +716,7 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
-@export.add(('asce7', 'csv'), ('asce41', 'csv'))
+@export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     js = dstore[ekey[0]][()].decode('utf8')
     sitecol = dstore['sitecol']

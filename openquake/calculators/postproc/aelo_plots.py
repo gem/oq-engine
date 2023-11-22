@@ -169,7 +169,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    js = dstore['asce7'][()].decode('utf8')
+    js = dstore['asce07'][()].decode('utf8')
     dic = json.loads(js)
     MCEr = [dic['PGA'], dic['Ss'], dic['S1']]
     T = [from_string(imt).period for imt in imtls]
@@ -280,7 +280,8 @@ def plot_disagg_by_src(dstore, update_dstore=False):
 
         # identify contribution of largest contributor, make color scale
         largest_contr = max(out_contr_all.values())
-        sample = sum(val > fact*largest_contr for val in out_contr_all.values())
+        sample = sum(val > fact*largest_contr
+                     for val in out_contr_all.values())
         viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
 
         # find and plot the sources, highlighting the ones that contribute more

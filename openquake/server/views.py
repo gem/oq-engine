@@ -775,15 +775,6 @@ def calc_results(request, calc_id):
     if not results:
         return HttpResponseNotFound()
 
-    # move asce7 on top of the outputs list
-    for idx, item in enumerate(results):
-        if item.ds_key == 'asce7':
-            break
-    else:
-        idx = -1
-    if idx > 0:
-        results.insert(0, results.pop(idx))
-
     response_data = []
     for result in results:
         try:  # output from the datastore
@@ -1001,25 +992,25 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce7 = asce41 = None
-    asce7_with_units = {}
+    asce07 = asce41 = None
+    asce07_with_units = {}
     asce41_with_units = {}
     ASCE_VIEW_DECIMALS = 2
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        if 'asce7' in ds:
-            asce7_js = ds['asce7'][()].decode('utf8')
-            asce7 = json.loads(asce7_js)
-            for key, value in asce7.items():
+        if 'asce07' in ds:
+            asce07_js = ds['asce07'][()].decode('utf8')
+            asce07 = json.loads(asce07_js)
+            for key, value in asce07.items():
                 if key not in ('PGA', 'Ss', 'S1'):
                     continue
                 if not isinstance(value, float):
-                    asce7_with_units[key] = value
+                    asce07_with_units[key] = value
                 elif key in ('CRS', 'CR1'):
                     # NOTE: (-) stands for adimensional
-                    asce7_with_units[key + ' (-)'] = round(
+                    asce07_with_units[key + ' (-)'] = round(
                         value, ASCE_VIEW_DECIMALS)
                 else:
-                    asce7_with_units[key + ' (g)'] = round(
+                    asce07_with_units[key + ' (g)'] = round(
                         value, ASCE_VIEW_DECIMALS)
         if 'asce41' in ds:
             asce41_js = ds['asce41'][()].decode('utf8')
@@ -1032,10 +1023,10 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
-    low_hazard = asce7 is None or asce41 is None
+    low_hazard = asce07 is None or asce41 is None
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
-                       asce7=asce7_with_units, asce41=asce41_with_units,
+                       asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
                        low_hazard=low_hazard))
 

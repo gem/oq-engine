@@ -35,9 +35,9 @@ aac = numpy.testing.assert_allclose
 
 SITES = ['far -90.071 16.60'.split(), 'close -85.071 10.606'.split()]
 EXPECTED = [[0.30846, 0.63827, 0.727454], [0.73277, 1.76939, 1.22298]]
-ASCE7 = ['0.50000', '0.75315', '0.34598', '0.50000', '1.50000', '1.76943',
-         '0.95838', '0.80949', '1.50000', 'Very High', '0.60000', '1.22296',
-         '0.95015', '0.48815', '0.60000', 'Very High']
+ASCE07 = ['0.50000', '0.75315', '0.34598', '0.50000', '1.50000', '1.76943',
+          '0.95838', '0.80949', '1.50000', 'Very High', '0.60000', '1.22296',
+          '0.95015', '0.48815', '0.60000', 'Very High']
 ASCE41 = [1.5, 1.4308, 1.4308, 1.0, 0.83393, 0.83393, 0.6, 0.6, 0.98649, 0.4,
           0.4, 0.56995]
 
@@ -57,10 +57,10 @@ def test_CCA():
             aac(df.RTGM, expected, atol=5E-5)
 
     if rtgmpy:
-        # check asce7 exporter
-        [fname] = export(('asce7', 'csv'), calc.datastore)
+        # check asce07 exporter
+        [fname] = export(('asce07', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        for got, exp in zip(df.value.to_numpy(), ASCE7):
+        for got, exp in zip(df.value.to_numpy(), ASCE07):
             try:
                 aac(float(got), float(exp), rtol=1E-2)
             except ValueError:
