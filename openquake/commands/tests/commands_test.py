@@ -352,6 +352,9 @@ class SampleSmTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline(f'openquake.commands sample {dest} 0.5')
         self.assertIn('Extracted 8 nodes out of 13', str(p))
+
+        # check the exposure is still valid
+        sap.runline(f'openquake.commands check_input {dest}')
         shutil.rmtree(tempdir)
 
     def test_source_model(self):
