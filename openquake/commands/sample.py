@@ -19,19 +19,12 @@
 import csv
 import shutil
 import numpy
+import pandas
 from openquake.hazardlib import valid, nrml, sourceconverter, sourcewriter
-from openquake.baselib import general
+from openquake.baselib import general, writers
 from openquake.commonlib import logictree
 
 conv = sourceconverter.SourceConverter(area_source_discretization=20.)
-
-
-def _save_csv(fname, rows, header):
-    with open(fname, 'w', newline='', encoding='utf8') as f:
-        w = csv.writer(f)
-        if header:
-            w.writerow(header)
-        w.writerows(rows)
 
 
 def save_bak(fname, node, num_nodes, total):
@@ -74,20 +67,13 @@ def main(fname, reduction_factor: valid.probability):
     This is a debugging utility to reduce large computations to small ones.
     """
     if fname.endswith('.csv'):
-        sniffer = csv.Sniffer()
-        with open(fname, encoding='utf-8-sig') as f:
-            line = f.readline()  # read the first line
-            dl = sniffer.sniff(line).delimiter
-            header = line.split(dl)
-            if not sniffer.has_header(line):
-                f.seek(0)
-                header = []
-            rows = list(csv.reader(f, delimiter=dl))
-        lines = general.random_filter(rows, reduction_factor)
+        df = pandas.read_csv(fname, dtype=str)
+        idxs = general.random_filter(numpy.arange(len(df)), reduction_factor)
         shutil.copy(fname, fname + '.bak')
         print('Copied the original file in %s.bak' % fname)
-        _save_csv(fname, lines, header)
-        print('Extracted %d lines out of %d' % (len(lines), len(rows)))
+        df.loc[idxs].to_csv(fname, index=False,
+                            lineterminator='\r\n', na_rep='nan')
+        print('Extracted %d lines out of %d' % (len(idxs), len(df)))
         return
     elif fname.endswith('.npy'):
         array = numpy.load(fname)
