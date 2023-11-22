@@ -266,14 +266,14 @@ class Atkinson2022Crust(GMPE):
     # define constant parameters
     suffix = "crust"
 
-    def __init__(self, epistemic = 'Central', sigma_type = "Original", **kwargs):
+    def __init__(self, epistemic='Central', modified_sigma=False, **kwargs):
         """
         Aditional parameter for epistemic central,
         lower and upper bounds.
         """
-        super().__init__(epistemic=epistemic, sigma_type = sigma_type, **kwargs)
+        super().__init__(epistemic=epistemic, modified_sigma=modified_sigma, **kwargs)
         self.epistemic = epistemic
-        self.sigma_type = sigma_type
+        self.modified_sigma = modified_sigma
 
     def compute(self, ctx:np.recarray, imts, mean, sig, tau, phi):
         trt = self.DEFINED_FOR_TECTONIC_REGION_TYPE
@@ -308,7 +308,7 @@ class Atkinson2022Crust(GMPE):
             else:
                 mean[m] = mean[m]
             # Aleatory Uncertainty terms.
-            if self.sigma_type.lower() == "modified":
+            if self.modified_sigma:
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(self.suffix, C, C_PGA, imt, pga_rock, ctx.vs30)
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(self.suffix, C)
