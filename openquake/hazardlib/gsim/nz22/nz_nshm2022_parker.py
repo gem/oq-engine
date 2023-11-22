@@ -267,15 +267,15 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     """
 
     def __init__(self, region=None, saturation_region=None, basin=None,
-                 sigma_mu_epsilon=0.0, sigma_type = "Original",
+                 sigma_mu_epsilon=0.0, modified_sigma=False,
                  **kwargs):
         """
         Enable setting regions to prevent messy overriding
         and code duplication.
         """
         super().__init__(region=region, saturation_region=saturation_region,
-                         basin=basin, sigma_mu_epsilon = sigma_mu_epsilon, sigma_type = sigma_type, **kwargs)
-        self.sigma_type = sigma_type
+                         basin=basin, sigma_mu_epsilon=sigma_mu_epsilon, modified_sigma=modified_sigma, **kwargs)
+        self.modified_sigma = modified_sigma
         self.sigma_mu_epsilon = sigma_mu_epsilon
 
 
@@ -318,7 +318,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
                 # Apply an epistmic adjustment factor. Currently, its applied to only global model.
                 mean[m] += (self.sigma_mu_epsilon * get_sigma_epistemic(trt, self.region, imt))
             # The default sigma is modified sigma that accounts for soil nonliearity.
-            if self.sigma_type.lower() == "modified":
+            if self.modified_sigma:
                 pgar = np.exp(fp_pga + fm_pga + c0_pga + fd_pga) # Note that the backarc correction is already applied in f_pga.
                 sig[m], tau[m], phi[m] = get_nonlinear_stddevs(C, C_PGA, imt, pgar, ctx.rrup, ctx.vs30)
             else:
