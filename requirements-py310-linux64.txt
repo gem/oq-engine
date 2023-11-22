@@ -4,6 +4,7 @@
 # GEM Mirror
 #
 https://wheelhouse.openquake.org/v3/linux/py310/onnxruntime-1.16.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+https://wheelhouse.openquake.org/v3/linux/py310/pandas-2.0.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/scipy-1.8.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/h5py-3.7.0-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl
 https://wheelhouse.openquake.org/v3/linux/py310/Pillow-9.2.0-cp310-cp310-manylinux_2_28_x86_64.whl

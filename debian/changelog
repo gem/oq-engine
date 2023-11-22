@@ -1,4 +1,7 @@
   [Michele Simionato]
+  * Changed `oq sample` to use pandas for reading/writing CSVs, thus fixing
+    the issue of quoted newlines
+  * Fixed `oq check_input exposure.xml`
   * Added `rupture_dict` parameter to be used in scenarios
   * Fixed wrong `mean_rates_by_src` in presence of the colon convention
   * If there are no sources close to the (single) site, do not raise an error

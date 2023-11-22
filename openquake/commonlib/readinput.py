@@ -546,7 +546,7 @@ def get_site_model(oqparam):
                     f'Fields {fieldsets_diff} present in'
                     f' {this_sm_fname} were not found in {other_sm_fname}')
 
-    return numpy.concatenate(arrays)
+    return numpy.concatenate(arrays, dtype=arrays[0].dtype)
 
 
 def get_no_vect(gsim_lt):
