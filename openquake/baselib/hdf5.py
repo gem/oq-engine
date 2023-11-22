@@ -893,9 +893,14 @@ def find_error(fname, errors, dtype):
     """
     with open(fname, encoding='utf-8-sig', errors=errors) as f:
         reader = csv.reader(f)
-        names = next(reader) # header
+        start = 1
+        while True:
+            names = next(reader) # header
+            start += 1
+            if not names[0].startswith('#'):
+                break
         try:
-            for i, row in enumerate(reader, 3):
+            for i, row in enumerate(reader, start):
                 for name, val in zip(names, row):
                     numpy.array([val], dtype[name])
         except Exception as exc:
