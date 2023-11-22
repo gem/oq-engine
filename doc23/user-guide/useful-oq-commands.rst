@@ -4,10 +4,11 @@ Useful OpenQuake Commands
 =========================
 
 The oq command-line script is the entry point for several commands, the most important one being *oq engine*, which is 
-documented in the manual.
+the recommended way for using the engine thorught the manual.
 
-The commands documented here are not in the manual because they have not reached the same level of maturity and 
-stability. Still, some of them are quite stable and quite useful for the final users, so feel free to use them.
+The commands documented here are consider experimental (some may disappear, others are meant for debugging). 
+Still, some of them are quite stable and quite useful for the end-users. Here we document only the commands 
+that are useful for the general public and have reached some level of stability.
 
 You can see the full list of commands by running *oq –help*::
 
@@ -24,8 +25,8 @@ You can see the full list of commands by running *oq –help*::
 	  -h, --help            show this help message and exit
 	  -v, --version         show program's version number and exit
 
-This is the output that you get at the present time (engine 3.17); depending on your version of the engine you may get a 
-different output. As you see, there are several commands, like *purge, show_attrs, export, restore,* … You can get 
+This output may change depending on the engine version. There are several commands, like 
+*purge, show_attrs, export, restore,* … You can get 
 information about each command with *oq <command> –help*; for instance, here is the help for *purge*::
 
 	$ oq purge --help
@@ -41,14 +42,24 @@ information about each command with *oq <command> –help*; for instance, here i
 	  -h, --help   show this help message and exit
 	  -f, --force  ignore dependent calculations
 
-Some of these commands are highly experimental and may disappear; others are meant for debugging and are not meant to be 
-used by end-users. Here I will document only the commands that are useful for the general public and have reached some 
-level of stability.
 
-Probably the most important command is *oq info*. It has several features.
+oq info
+-------
 
-1. It can be invoked with a *job.ini* file to extract information about the logic tree of the calculation.
-2. When invoked with the *–report* option, it produces a *.rst* report with important information about the computation. 
+Probably the most important command. *oq info* has several features.
+
+3. It can be invoked to provide global information about the engine and its 
+   libraries. Try, for instance::
+
+	$ oq info calculators # list available calculators
+	$ oq info gsims       # list available GSIMs
+	$ oq info views       # list available views
+	$ oq info exports     # list available exports
+	$ oq info parameters  # list all job.ini parameters
+
+2. It can be invoked with a *job.ini* file to extract information about the logic tree of the calculation.
+
+3. When invoked with the *–report* option, it produces a *.rst* report with important information about the computation. 
    It is ESSENTIAL in the case of large calculations, since it will give you an idea of the feasibility of the computation 
    without running it. Here is an example of usage::
 
@@ -58,14 +69,9 @@ Probably the most important command is *oq info*. It has several features.
 
    You can open */tmp/report_1644.rst* and read the information listed there (*1644* is the calculation ID, the number will 
    be different each time).
-3. It can be invoked without a *job.ini* file, and it that case it provides global information about the engine and its 
-   libraries. Try, for instance::
 
-	$ oq info calculators # list available calculators
-	$ oq info gsims       # list available GSIMs
-	$ oq info views       # list available views
-	$ oq info exports     # list available exports
-	$ oq info parameters  # list all job.ini parameters
+oq export
+---------
 
 The second most important command is *oq export*. It allows customization of the exports from the datastore with 
 additional flexibility compared to the *oq engine* export commands. In the future the *oq engine* exports commands 
@@ -88,8 +94,8 @@ Here is the usage message::
 	                      export formats (comma separated)
 	  -d ., --export-dir .  export directory
 
-The list of available exports (i.e. the datastore keys and the available export formats) can be extracted with the oq 
-info exports command; the number of exporters defined changes at each version::
+The list of available exports (i.e. the datastore keys and the available export formats) can be extracted with the *oq 
+info exports* command; the number of exporters defined changes at each version::
 
 	$ oq info exports
 	? "aggregate_by" ['csv']
@@ -195,54 +201,8 @@ Then you can import any calculation by simply giving its ID, as in this example:
 	 'engine_version': '3.12.0-gita399903317'}
 	INFO:root:Imported calculation 41214 successfully
 
-plotting commands
------------------
-
-The engine provides several plotting commands. They are all experimental and subject to change. They will always be. The 
-official way to plot the engine results is by using the QGIS plugin. Still, the *oq* plotting commands are useful for 
-debugging purposes. Here I will describe the *plot_assets* command, which allows to plot the exposure used in a 
-calculation together with the hazard sites::
-
-	$ oq plot_assets --help
-	usage: oq plot_assets [-h] [calc_id]
-	
-	Plot the sites and the assets
-	
-	positional arguments:
-	  calc_id     a computation id [default: -1]
-	
-	optional arguments:
-	  -h, --help  show this help message and exit
-
-This is particularly interesting when the hazard sites do not coincide with the asset locations, which is normal when 
-gridding the exposure.
-
-Very often, it is interesting to plot the sources. While there is a primitive functionality for that in *oq plot*, we 
-recommend to convert the sources into .gpkg format and use QGIS to plot them::
-
-	$ oq nrml_to --help
-	usage: oq nrml_to [-h] [-o .] [-c] {csv,gpkg} fnames [fnames ...]
-	
-	Convert source models into CSV files or a geopackage.
-	
-	positional arguments:
-	  {csv,gpkg}        csv or gpkg
-	  fnames            source model files in XML
-	
-	optional arguments:
-	  -h, --help        show this help message and exit
-	  -o ., --outdir .  output directory
-	  -c, --chatty      display sources in progress
-
-For instance `$ oq nrml_to gpkg source_model.xml -o source_model.gpkg` will convert the sources in .gpkg format while
-`$ oq nrml_to csv source_model.xml -o source_model.csv` will convert the sources in .csv format. Both are fully supported 
-by QGIS. The CSV format has the advantage of being transparent and easily editable; it also can be imported in a 
-geospatial database like Postgres, if needed.
-
-.. _prepare-site-model:
-
-prepare_site_model
-------------------
+oq prepare_site_model
+---------------------
 
 The command oq *prepare_site_model*, introduced in engine 3.3, is quite useful if you have a vs30 file with fields lon, 
 lat, vs30 and you want to generate a site model from it. Normally this feature is used for risk calculations: given an 
@@ -294,6 +254,83 @@ Gridding of the exposure makes large calculations more manageable. The command i
 once. Here is an example of usage::
 
 	$ oq prepare_site_model Vs30/Ecuador.csv Vs30/Bolivia.csv -e Exposure/Exposure_Res_Ecuador.csv Exposure/Exposure_Res_Bolivia.csv --grid-spacing=10
+
+oq show_attrs 
+--------------
+
+The command *oq show_attrs* offers a convenient way to retrieve the attributes of a calculation without needing to open 
+the datastore with any external tools::
+
+	$ oq show_attrs -h
+	usage: oq show_attrs [-h] key [calc_id]
+	
+	Show the attributes of a HDF5 dataset in the datastore.
+	
+	positional arguments:
+	  key         key of the datastore
+	  calc_id     calculation ID [default: -1]
+	
+	options:
+	  -h, --help  show this help message and exit
+
+If the key / is requested, the root attributes are retrieved. For instance::
+
+	$ oq show_attrs / 4
+	
+	checksum32 1572793419
+	date 2023-04-25T08:19:33
+	engine_version 3.17.0-gitcae0748
+	input_size 4021
+
+If the calculation id is not specified, the value of the requested key is retrieved for the latest calculation.
+
+
+Plotting commands
+-----------------
+
+The engine provides several plotting commands. They are all experimental and subject to change. They will always be. The 
+official way to plot the engine results is by using the QGIS plugin. Still, the *oq* plotting commands are useful for 
+debugging purposes. Here I will describe the *plot_assets* command, which allows to plot the exposure used in a 
+calculation together with the hazard sites::
+
+	$ oq plot_assets --help
+	usage: oq plot_assets [-h] [calc_id]
+	
+	Plot the sites and the assets
+	
+	positional arguments:
+	  calc_id     a computation id [default: -1]
+	
+	optional arguments:
+	  -h, --help  show this help message and exit
+
+This is particularly interesting when the hazard sites do not coincide with the asset locations, which is normal when 
+gridding the exposure.
+
+Very often, it is interesting to plot the sources. While there is a primitive functionality for that in *oq plot*, we 
+recommend to convert the sources into .gpkg format and use QGIS to plot them::
+
+	$ oq nrml_to --help
+	usage: oq nrml_to [-h] [-o .] [-c] {csv,gpkg} fnames [fnames ...]
+	
+	Convert source models into CSV files or a geopackage.
+	
+	positional arguments:
+	  {csv,gpkg}        csv or gpkg
+	  fnames            source model files in XML
+	
+	optional arguments:
+	  -h, --help        show this help message and exit
+	  -o ., --outdir .  output directory
+	  -c, --chatty      display sources in progress
+
+For instance `$ oq nrml_to gpkg source_model.xml -o source_model.gpkg` will convert the sources in .gpkg format while
+`$ oq nrml_to csv source_model.xml -o source_model.csv` will convert the sources in .csv format. Both are fully supported 
+by QGIS. The CSV format has the advantage of being transparent and easily editable; it also can be imported in a 
+geospatial database like Postgres, if needed.
+
+.. _prepare-site-model:
+
 
 Reducing the source model
 -------------------------
@@ -379,34 +416,6 @@ examples::
 
 Notice the ``compare uhs`` is able to compare all IMTs at once, so it is the most convenient to use if there are many IMTs.
 
-Showing calculation attributes
-------------------------------
-
-The command *oq show_attrs* offers a convenient way to retrieve the attributes of a calculation without needing to open 
-the datastore with any external tools::
-
-	$ oq show_attrs -h
-	usage: oq show_attrs [-h] key [calc_id]
-	
-	Show the attributes of a HDF5 dataset in the datastore.
-	
-	positional arguments:
-	  key         key of the datastore
-	  calc_id     calculation ID [default: -1]
-	
-	options:
-	  -h, --help  show this help message and exit
-
-If the key / is requested, the root attributes are retrieved. For instance::
-
-	$ oq show_attrs / 4
-	
-	checksum32 1572793419
-	date 2023-04-25T08:19:33
-	engine_version 3.17.0-gitcae0748
-	input_size 4021
-
-If the calculation id is not specified, the value of the requested key is retrieved for the latest calculation.
 
 Mosaic-related commands
 -----------------------
@@ -496,151 +505,3 @@ effective investigation time of 100,000 years::
 	  -s SLOWEST, --slowest SLOWEST
 	                        profile and show the slowest operations
 
-Using ``collect_rlzs=true`` in the risk calculation
----------------------------------------------------
-
-Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in the risk configuration file. When the flag is set 
-to true, then the hazard realizations are collected together when computing the risk results and considered as one.
-
-Setting ``collect_rlzs=true`` is possible only when the weights of the realizations are all equal, otherwise, the engine 
-raises an error. Collecting the realizations makes the calculation of the average losses and loss curves much faster 
-and more memory efficient. It is the recommended way to proceed when you are interested only in mean results. When you 
-have a large exposure and many realizations (say 5 million assets and 1000 realizations, as it is the case for Chile) 
-setting ``collect_rlzs=true`` can make possible a calculation that otherwise would run out of memory.
-
-Note 1: when using sampling, ``collect_rlzs`` is implicitly set to ``True``, so if you want to export the individual 
-results per realization you must set explicitly ``collect_rlzs=false``.
-
-Note 2: ``collect_rlzs`` is not the inverse of the ``individual_rlzs`` flag. The ``collect_rlzs`` flag indicates to the 
-engine that it should pool together the hazard realizations into a single collective bucket that will then be used to 
-approximate the branch-averaged risk metrics directly, without going through the process of first computing the 
-individual branch results and then getting the weighted average results from the branch results. Whereas the 
-``individual_rlzs`` flag indicates to the engine that the user is interested in storing and exporting the hazard (or risk) 
-results for every realization. Setting ``individual_rlzs`` to ``false`` means that the engine will store only the 
-statistics (mean and quantile results) in the datastore.
-
-Note 3: ``collect_rlzs`` is completely ignored in the hazard part of the calculation, i.e. it does not affect at all 
-the computation of the GMFs, only the computation of the risk metrics.
-
-ignore_covs vs ignore_master_seed
----------------------------------
-
-The vulnerability functions using continuous distributions (lognormal/beta) to characterize the uncertainty in the loss 
-ratio, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels.
-
-There is clearly a performance/memory penalty associated with the propagation of uncertainty in the vulnerability to 
-losses. You can completely remove it by setting
-
-``ignore_covs = true``
-
-in the *job.ini* file. Then the engine would compute just the mean loss ratios by ignoring the uncertainty i.e. the 
-coefficients of variation. Since engine 3.12 there is a better solution: setting
-
-``ignore_master_seed = true``
-
-in the *job.ini* file. Then the engine will compute the mean loss ratios but also store information about the 
-uncertainty of the results in the asset loss table, in the column “variance”, by using the formulae
-
-.. math::
-
-  variance = {\sum}_{i}{\sigma_{i}}^2\ for\ asset\_correl = 0\\
-  variance = ({\sum}_{i}{\sigma_{i}})^2\ for\ asset\_correl = 1
-
-in terms of the variance of each asset for the event and intensity level in consideration, extracted from the asset 
-loss and the coefficients of variation. People interested in the details should look at the implementation in 
-`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/openquake/risklib/scientific.py>`_.
-
-Aggregating by multiple tags
-----------------------------
-
-The engine also supports aggregation by multiple tags. Multiple tags can be indicated as multi-tag and/or various 
-single-tag aggregations:
-
-``aggregate_by = NAME_1, taxonomy``
-
-or
-
-``aggregate_by = NAME_1; taxonomy``
-
-Comma ``,`` separated values will generate keys for all the possible combinations of the indicated tag values, while 
-semicolon ``;`` will generate keys for the single tags.
-
-For instance the second event based risk demo (the file ``job_eb.ini``) has a line
-
-``aggregate_by = NAME_1, taxonomy``
-
-and it is able to aggregate both on geographic region (``NAME_1``) and on ``taxonomy``. There are 25 possible 
-combinations, that you can see with the command oq show agg_keys::
-
-	$ oq show agg_keys
-	| NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
-	+---------+-----------+-------------+----------------------------+
-	| 1       | 1         | Mid-Western | Wood                       |
-	| 1       | 2         | Mid-Western | Adobe                      |
-	| 1       | 3         | Mid-Western | Stone-Masonry              |
-	| 1       | 4         | Mid-Western | Unreinforced-Brick-Masonry |
-	| 1       | 5         | Mid-Western | Concrete                   |
-	| 2       | 1         | Far-Western | Wood                       |
-	| 2       | 2         | Far-Western | Adobe                      |
-	| 2       | 3         | Far-Western | Stone-Masonry              |
-	| 2       | 4         | Far-Western | Unreinforced-Brick-Masonry |
-	| 2       | 5         | Far-Western | Concrete                   |
-	| 3       | 1         | West        | Wood                       |
-	| 3       | 2         | West        | Adobe                      |
-	| 3       | 3         | West        | Stone-Masonry              |
-	| 3       | 4         | West        | Unreinforced-Brick-Masonry |
-	| 3       | 5         | West        | Concrete                   |
-	| 4       | 1         | East        | Wood                       |
-	| 4       | 2         | East        | Adobe                      |
-	| 4       | 3         | East        | Stone-Masonry              |
-	| 4       | 4         | East        | Unreinforced-Brick-Masonry |
-	| 4       | 5         | East        | Concrete                   |
-	| 5       | 1         | Central     | Wood                       |
-	| 5       | 2         | Central     | Adobe                      |
-	| 5       | 3         | Central     | Stone-Masonry              |
-	| 5       | 4         | Central     | Unreinforced-Brick-Masonry |
-	| 5       | 5         | Central     | Concrete                   |
-
-The lines in this table are associated to the generalized *aggregation ID*, ``agg_id`` which is an index going from ``0`` 
-(meaning aggregate assets with NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets with 
-NAME_1=*Central* and taxonomy=*Concrete*); moreover ``agg_id=25`` means full aggregation.
-
-The ``agg_id`` field enters in risk_by_event and in outputs like the aggregate losses; for instance::
-
-	$ oq show agg_losses-rlzs
-	| agg_id | rlz | loss_type     | value       |
-	+--------+-----+---------------+-------------+
-	| 0      | 0   | nonstructural | 2_327_008   |
-	| 0      | 0   | structural    | 937_852     |
-	+--------+-----+---------------+-------------+
-	| ...    + ... + ...           + ...         +
-	+--------+-----+---------------+-------------+
-	| 25     | 1   | nonstructural | 100_199_448 |
-	| 25     | 1   | structural    | 157_885_648 |
-
-The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id`` to the proper combination of tags; ``agg_id=25``, 
-i.e. full aggregation, is replaced with the string ``*total*``.
-
-It is possible to see the ``agg_id`` field with the command ``$ oq show agg_id``.
-
-By knowing the number of events, the number of aggregation keys and the number of loss types, it is possible to give an 
-upper limit to the size of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation keys and 2 loss types, 
-so ``risk_by_event`` contains at most::
-
-	1703 * 26 * 2 = 88,556 rows
-
-This is an upper limit, since some combination can produce zero losses and are not stored, especially if the 
-``minimum_asset_loss`` feature is used. In the case of the demo actually only 20,877 rows are nonzero::
-
-	$ oq show risk_by_event
-	       event_id  agg_id  loss_id           loss      variance
-	...
-	[20877 rows x 5 columns]
-
-It is also possible to perform the aggregation by various single-tag aggregations, using the ``;`` separator instead of 
-``,``. For example, a line like::
-
-	aggregate_by = NAME_1; taxonomy
-
-would produce first the aggregation by geographic region (``NAME_1``), then by ``taxonomy``. In this case, instead of 
-producing 5 x 5 combinations, only 5 + 5 outputs would be obtained.

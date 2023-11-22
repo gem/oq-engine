@@ -1,4 +1,4 @@
-name: Ubuntu test of OpenQuake Engine
+name: Test new wheels
 
 on:
   workflow_dispatch:
@@ -12,8 +12,6 @@ on:
         description: 'Run the build with tmate debugging enabled'
         required: false
         default: false
-  schedule:
-    - cron: "0 4 * * *"
 
 jobs:
 
@@ -28,7 +26,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: [3.9, "3.10", "3.11"]
 
     steps:
   # This Checkout use git-ref keyword from dispatch
@@ -47,7 +45,7 @@ jobs:
     # You can test your matrix by printing the current Python version
     - name: Display Python version
       run: python -c "import sys; print(sys.version)"
-    - name: Install engine with install script 
+    - name: Install engine with install script
       env:
         BRANCH: ${{ github.event.inputs.git-ref }}
       run: |

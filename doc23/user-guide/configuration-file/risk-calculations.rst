@@ -1013,6 +1013,30 @@ aspects of the calculation are listed below:
 - ``asset_correlation``: if the uncertainty in the loss ratios has been defined within the *Vulnerability Model*, users can specify a coefficient of correlation that will be used in the Monte Carlo sampling process of the loss ratios, between the assets that share the same taxonomy. If the ``asset_correlation`` is set to one, the loss ratio residuals will be perfectly correlated. On the other hand, if this parameter is set to zero, the loss ratios will be sampled independently. If this parameter is not defined, the OpenQuake engine will assume zero correlation in the vulnerability. As of OpenQuake engine v1.8, ``asset_correlation`` applies only to continuous vulnerabilityfunctions using the lognormal or Beta distribution; it does not apply to vulnerabilityfunctions defined using the PMF distribution. Although partial correlation was supported in previous versions of the engine, beginning from OpenQuake engine v2.2, values between zero and one are no longer supported due to performance considerations. The only two values permitted are ``asset_correlation = 0`` and ``asset_correlation = 1``.
 - ``ignore_covs``: this parameter controls the propagation of vulnerability uncertainty to losses. The vulnerability functions using continuous distributions (such as the lognormal distribution or beta distribution) to characterize the uncertainty in the loss ratio conditional on the shaking intensity level, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels. They are used to build the so called *Epsilon* matrix within the engine, which is how loss ratios are sampled from the distribution for each asset. There is clearly a performance penalty associated with the propagation of uncertainty in the vulnerability to losses. The *Epsilon* matrix has to be computed and stored, and then the worker processes have to read it, which involves large quantities of data transfer and memory usage. Setting ``ignore_covs = true`` in the job file will result in the engine using just the mean loss ratio conditioned on the shaking intensity and ignoring the uncertainty. This tradeoff of not propagating the vulnerabilty uncertainty to the loss estimates can lead to a significant boost in performance and tractability. The default value of ``ignore_covs`` is ``false``.
 
+**Additional exceedance probability curves**
+
+Starting from engine v3.18, it is possible to export aggregated loss curves that consider only 
+the maximum loss in a year, commonly referred to as Occurrence Exceedance Probability (OEP), 
+and loss curves that consider the sum of losses in a year, commonly referred to as 
+Aggregate Exceedance Probability (AEP).
+
+OEP and AEP curves can be calculated for event-based damage and risk calculations. To do so, the configuration file, 
+``job.ini``, needs to specify the parameter ``aggregate_loss_curves_types`` with required curve types, in addition to the parameters generally indicated for these 
+type of calculations::
+
+	[risk_calculation]
+	aggregate_loss_curves_types = ep, oep, aep
+
+- ``ep``: aggregated loss curves considering each event individually (EP). Currently implemented in the engine.
+- ``oep``: aggregated loss curves that consider only the maximum loss in a year (OEP).
+- ``aep``: aggregated loss curves that consider the sum of losses in a year (AEP).
+
+By default, all event-based damage and risk calculations include the EP curves.
+
+_NOTE:_ When the calculation includes reinsurance treaties, the reinsurance curves (aggregated loss curves for retention, 
+claim, cession per treaty and overspills) are also estimated for OEP and AEP.
+
+
 **************************************
 Retrofit Benefit-Cost Ratio Calculator
 **************************************
@@ -1111,3 +1135,154 @@ type of calculations::
   *NOTE: The current implementation works only with a single reinsurance file.*
 
 - ``total_losses``: (or total exposed value) needs to be specified when the reinsurance needs to be applied over the sum of two or more loss types (e.g. ``structural+contents``). The definition of total losses is also reflected in the risk outputs of the calculation. NB: if there is a single loss type (e.g. ``structural``) there is no need to specify this parameter, just write ``reinsurance_file = {'structural': 'reinsurance.xml'}``
+
+
+Using ``collect_rlzs=true`` in the risk calculation
+---------------------------------------------------
+
+Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in the risk configuration file. When the flag is set 
+to true, then the hazard realizations are collected together when computing the risk results and considered as one.
+
+Setting ``collect_rlzs=true`` is possible only when the weights of the realizations are all equal, otherwise, the engine 
+raises an error. Collecting the realizations makes the calculation of the average losses and loss curves much faster 
+and more memory efficient. It is the recommended way to proceed when you are interested only in mean results. When you 
+have a large exposure and many realizations (say 5 million assets and 1000 realizations, as it is the case for Chile) 
+setting ``collect_rlzs=true`` can make possible a calculation that otherwise would run out of memory.
+
+Note 1: when using sampling, ``collect_rlzs`` is implicitly set to ``True``, so if you want to export the individual 
+results per realization you must set explicitly ``collect_rlzs=false``.
+
+Note 2: ``collect_rlzs`` is not the inverse of the ``individual_rlzs`` flag. The ``collect_rlzs`` flag indicates to the 
+engine that it should pool together the hazard realizations into a single collective bucket that will then be used to 
+approximate the branch-averaged risk metrics directly, without going through the process of first computing the 
+individual branch results and then getting the weighted average results from the branch results. Whereas the 
+``individual_rlzs`` flag indicates to the engine that the user is interested in storing and exporting the hazard (or risk) 
+results for every realization. Setting ``individual_rlzs`` to ``false`` means that the engine will store only the 
+statistics (mean and quantile results) in the datastore.
+
+Note 3: ``collect_rlzs`` is completely ignored in the hazard part of the calculation, i.e. it does not affect at all 
+the computation of the GMFs, only the computation of the risk metrics.
+
+
+Aggregating by multiple tags
+----------------------------
+
+The engine also supports aggregation by multiple tags. Multiple tags can be indicated as multi-tag and/or various 
+single-tag aggregations:
+
+``aggregate_by = NAME_1, taxonomy``
+
+or
+
+``aggregate_by = NAME_1; taxonomy``
+
+Comma ``,`` separated values will generate keys for all the possible combinations of the indicated tag values, while 
+semicolon ``;`` will generate keys for the single tags.
+
+For instance the second event based risk demo (the file ``job_eb.ini``) has a line
+
+``aggregate_by = NAME_1, taxonomy``
+
+and it is able to aggregate both on geographic region (``NAME_1``) and on ``taxonomy``. There are 25 possible 
+combinations, that you can see with the command oq show agg_keys::
+
+	$ oq show agg_keys
+	| NAME_1_ | taxonomy_ | NAME_1      | taxonomy                   |
+	+---------+-----------+-------------+----------------------------+
+	| 1       | 1         | Mid-Western | Wood                       |
+	| 1       | 2         | Mid-Western | Adobe                      |
+	| 1       | 3         | Mid-Western | Stone-Masonry              |
+	| 1       | 4         | Mid-Western | Unreinforced-Brick-Masonry |
+	| 1       | 5         | Mid-Western | Concrete                   |
+	| 2       | 1         | Far-Western | Wood                       |
+	| 2       | 2         | Far-Western | Adobe                      |
+	| 2       | 3         | Far-Western | Stone-Masonry              |
+	| 2       | 4         | Far-Western | Unreinforced-Brick-Masonry |
+	| 2       | 5         | Far-Western | Concrete                   |
+	| 3       | 1         | West        | Wood                       |
+	| 3       | 2         | West        | Adobe                      |
+	| 3       | 3         | West        | Stone-Masonry              |
+	| 3       | 4         | West        | Unreinforced-Brick-Masonry |
+	| 3       | 5         | West        | Concrete                   |
+	| 4       | 1         | East        | Wood                       |
+	| 4       | 2         | East        | Adobe                      |
+	| 4       | 3         | East        | Stone-Masonry              |
+	| 4       | 4         | East        | Unreinforced-Brick-Masonry |
+	| 4       | 5         | East        | Concrete                   |
+	| 5       | 1         | Central     | Wood                       |
+	| 5       | 2         | Central     | Adobe                      |
+	| 5       | 3         | Central     | Stone-Masonry              |
+	| 5       | 4         | Central     | Unreinforced-Brick-Masonry |
+	| 5       | 5         | Central     | Concrete                   |
+
+The lines in this table are associated to the generalized *aggregation ID*, ``agg_id`` which is an index going from ``0`` 
+(meaning aggregate assets with NAME_1=*Mid-Western* and taxonomy=*Wood*) to ``24`` (meaning aggregate assets with 
+NAME_1=*Central* and taxonomy=*Concrete*); moreover ``agg_id=25`` means full aggregation.
+
+The ``agg_id`` field enters in risk_by_event and in outputs like the aggregate losses; for instance::
+
+	$ oq show agg_losses-rlzs
+	| agg_id | rlz | loss_type     | value       |
+	+--------+-----+---------------+-------------+
+	| 0      | 0   | nonstructural | 2_327_008   |
+	| 0      | 0   | structural    | 937_852     |
+	+--------+-----+---------------+-------------+
+	| ...    + ... + ...           + ...         +
+	+--------+-----+---------------+-------------+
+	| 25     | 1   | nonstructural | 100_199_448 |
+	| 25     | 1   | structural    | 157_885_648 |
+
+The exporter (``oq export agg_losses-rlzs``) converts back the ``agg_id`` to the proper combination of tags; ``agg_id=25``, 
+i.e. full aggregation, is replaced with the string ``*total*``.
+
+It is possible to see the ``agg_id`` field with the command ``$ oq show agg_id``.
+
+By knowing the number of events, the number of aggregation keys and the number of loss types, it is possible to give an 
+upper limit to the size of ``risk_by_event``. In the demo there are 1703 events, 26 aggregation keys and 2 loss types, 
+so ``risk_by_event`` contains at most::
+
+	1703 * 26 * 2 = 88,556 rows
+
+This is an upper limit, since some combination can produce zero losses and are not stored, especially if the 
+``minimum_asset_loss`` feature is used. In the case of the demo actually only 20,877 rows are nonzero::
+
+	$ oq show risk_by_event
+	       event_id  agg_id  loss_id           loss      variance
+	...
+	[20877 rows x 5 columns]
+
+It is also possible to perform the aggregation by various single-tag aggregations, using the ``;`` separator instead of 
+``,``. For example, a line like::
+
+	aggregate_by = NAME_1; taxonomy
+
+would produce first the aggregation by geographic region (``NAME_1``), then by ``taxonomy``. In this case, instead of 
+producing 5 x 5 combinations, only 5 + 5 outputs would be obtained.
+
+ignore_covs vs ignore_master_seed
+---------------------------------
+
+The vulnerability functions using continuous distributions (lognormal/beta) to characterize the uncertainty in the loss 
+ratio, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels.
+
+There is clearly a performance/memory penalty associated with the propagation of uncertainty in the vulnerability to 
+losses. You can completely remove it by setting
+
+``ignore_covs = true``
+
+in the *job.ini* file. Then the engine would compute just the mean loss ratios by ignoring the uncertainty i.e. the 
+coefficients of variation. Since engine 3.12 there is a better solution: setting
+
+``ignore_master_seed = true``
+
+in the *job.ini* file. Then the engine will compute the mean loss ratios but also store information about the 
+uncertainty of the results in the asset loss table, in the column “variance”, by using the formulae
+
+.. math::
+
+  variance = {\sum}_{i}{\sigma_{i}}^2\ for\ asset\_correl = 0\\
+  variance = ({\sum}_{i}{\sigma_{i}})^2\ for\ asset\_correl = 1
+
+in terms of the variance of each asset for the event and intensity level in consideration, extracted from the asset 
+loss and the coefficients of variation. People interested in the details should look at the implementation in 
+`gem/oq-engine <https://github.com/gem/oq-engine/blob/master/openquake/risklib/scientific.py>`_.
