@@ -16,23 +16,15 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import csv
+
 import shutil
 import numpy
+import pandas
 from openquake.hazardlib import valid, nrml, sourceconverter, sourcewriter
-from openquake.baselib.python3compat import encode
 from openquake.baselib import general
 from openquake.commonlib import logictree
 
 conv = sourceconverter.SourceConverter(area_source_discretization=20.)
-
-
-def _save_csv(fname, lines, header):
-    with open(fname, 'wb') as f:
-        if header:
-            f.write(encode(header))
-        for line in lines:
-            f.write(encode(line))
 
 
 def save_bak(fname, node, num_nodes, total):
@@ -75,20 +67,13 @@ def main(fname, reduction_factor: valid.probability):
     This is a debugging utility to reduce large computations to small ones.
     """
     if fname.endswith('.csv'):
-        with open(fname) as f:
-            line = f.readline()  # read the first line
-            if csv.Sniffer().has_header(line):
-                header = line
-                all_lines = f.readlines()
-            else:
-                header = None
-                f.seek(0)
-                all_lines = f.readlines()
-        lines = general.random_filter(all_lines, reduction_factor)
+        df = pandas.read_csv(fname, dtype=str)
+        idxs = general.random_filter(numpy.arange(len(df)), reduction_factor)
         shutil.copy(fname, fname + '.bak')
         print('Copied the original file in %s.bak' % fname)
-        _save_csv(fname, lines, header)
-        print('Extracted %d lines out of %d' % (len(lines), len(all_lines)))
+        df.loc[idxs].to_csv(fname, index=False,
+                            lineterminator='\r\n', na_rep='nan')
+        print('Extracted %d lines out of %d' % (len(idxs), len(df)))
         return
     elif fname.endswith('.npy'):
         array = numpy.load(fname)
