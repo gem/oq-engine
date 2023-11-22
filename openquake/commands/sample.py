@@ -16,12 +16,12 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-import csv
+
 import shutil
 import numpy
 import pandas
 from openquake.hazardlib import valid, nrml, sourceconverter, sourcewriter
-from openquake.baselib import general, writers
+from openquake.baselib import general
 from openquake.commonlib import logictree
 
 conv = sourceconverter.SourceConverter(area_source_discretization=20.)

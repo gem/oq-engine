@@ -901,7 +901,6 @@ def find_error(fname, errors, dtype):
         except Exception as exc:
             exc.lineno = i
             exc.line = ','.join(row)
-            import pdb; pdb.set_trace()
             return exc
 
 
