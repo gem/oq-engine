@@ -794,12 +794,13 @@ def bbox2poly(bbox):
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
 # used in SiteCollection.geohash
-@compile(['(f8[:],f8[:],u1)', '(f4[:],f4[:],u1)'])
+@compile(['(f8[:],f8[:],u1)',
+          '(f4[:],f4[:],u1)'])
 def geohash(lons, lats, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
 
-    >>> arr = geohash(F64([10., 10.]), F64([45., 46.]), length=5)
+    >>> arr = CODE32[geohash(F64([10., 10.]), F64([45., 46.]), length=5)]
     >>> [row.tobytes() for row in arr]
     [b'spzpg', b'u0pje']
     """
@@ -837,8 +838,19 @@ def geohash(lons, lats, length):
             if bit < 4:
                 bit += 1
             else:
-                chars[p, i] = CODE32[ch]
+                chars[p, i] = ch
                 bit = 0
                 ch = 0
                 i += 1
     return chars
+
+
+def geohash3(lons, lats):
+    """
+    :returns: a geohash of length 3 as a 16 bit integer
+
+    >>> geohash3(F64([10., 10.]), F64([45., 46.]))
+    array([24767, 26645], dtype=uint16)
+    """
+    arr = geohash(lons, lats, 3)
+    return arr[:, 0] * 1024 + arr[:, 1] * 32 + arr[:, 2]

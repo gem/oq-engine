@@ -24,8 +24,8 @@ from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian,
-    get_middle_point)
+    fix_lon, cross_idl, _GeographicObjects, geohash, CODE32,
+    spherical_to_cartesian, get_middle_point)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -699,7 +699,7 @@ class SiteCollection(object):
         :returns: an array of N geohashes, one per site
         """
         l = numpy.uint8(length)
-        arr = geohash(self['lon'], self['lat'], l)
+        arr = CODE32[geohash(self['lon'], self['lat'], l)]
         return [row.tobytes() for row in arr]
 
     def num_geohashes(self, length):
