@@ -29,6 +29,7 @@ from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
+from openquake.hazardlib.geo.utils import geohash
 from openquake.risklib import countries
 
 U8 = numpy.uint8
@@ -806,7 +807,30 @@ def check_exposure_for_infr_conn_analysis(df, fname):
             f'Column "purpose" of {fname} can not contain at the same time'
             f' the value "TAZ" and either "source" or "demand".')
 
+def add_geohash(array):
+    if len(array) == 0:
+        return ()
+    dt = array.dtype
+    dtlist = [('geohash', 'S3')] + [(n, dt[n]) for n in dt.names]
+    out = numpy.zeros(len(array), dtlist)
+    for n in dt.names:
+        out[n] = array[n]
+        gh = geohash(F32(array['LONGITUDE']), F32(array['LATITUDE']), 3)
+        out['geohash'] = [row.tobytes() for row in gh]
+    return out
 
+
+def read_xml(fname, common=slice(None), errors='ignore'):
+    """
+    Read exposure files and build a geohash field
+    """
+    exposure, _ = _get_exposure(fname)
+    aws = [hdf5.read_csv(f, {None: str}, errors=errors)
+           for f in exposure.datafiles]
+    arrays = [aw.array[common] for aw in aws if hasattr(aw, 'array')]
+    return add_geohash(general.smart_concat(arrays))
+
+    
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
                 check_dupl=True, by_country=False, asset_prefix='',
                 tagcol=None, errors=None, infr_conn_analysis=False,

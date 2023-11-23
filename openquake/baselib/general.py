@@ -1576,6 +1576,22 @@ def chdir(path):
     finally:
         os.chdir(oldpwd)
 
+
+def smart_concat(arrays):
+    """
+    Concatenated structured arrays by considering only the common fields
+    """
+    if len(arrays) == 0:
+        return ()
+    common = set(arrays[0].dtype.names)
+    for array in arrays[1:]:
+        common &= set(array.dtype.names)
+    assert common, 'There are no common field names'
+    common = sorted(common)
+    dt = arrays[0][common].dtype
+    return numpy.concatenate([arr[common] for arr in arrays], dtype=dt)
+
+    
 # #################### COMPRESSION/DECOMPRESSION ##################### #
 
 # Compressing the task outputs makes everything slower, so you should NOT
