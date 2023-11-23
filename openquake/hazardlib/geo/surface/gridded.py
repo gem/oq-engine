@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.surface.base import BaseSurface
+from openquake.hazardlib.geo.surface.base import BaseSurface, _get_finite_mesh
 
 
 class GriddedSurface(BaseSurface):
@@ -102,6 +102,21 @@ class GriddedSurface(BaseSurface):
         # FIXME: implement real boundaries, not bounding box
         xs, ys = zip(*utils.bbox2poly(self.get_bounding_box()))
         return xs, ys, (0, 0, 0, 0, 0)
+
+    def get_joyner_boore_distance(self, mesh):
+        """
+        Compute and return Joyner-Boore (also known as ``Rjb``) distance
+        to each point of ``mesh``.
+
+        :param mesh:
+            :class:`~openquake.hazardlib.geo.mesh.Mesh` of points to calculate
+            Joyner-Boore distance to.
+        :returns:
+            Numpy array of closest distances between the projections of surface
+            and each point of the ``mesh`` to the earth surface.
+        """
+        fmesh = _get_finite_mesh(self.mesh)
+        return fmesh.get_joyner_boore_distance(mesh, unstructured=True)
 
     def get_rx_distance(self, mesh):
         """
@@ -185,7 +200,6 @@ class GriddedSurface(BaseSurface):
         self.dip = 90 - delta
 
         return self.strike
-
 
     def get_dip(self):
         """
