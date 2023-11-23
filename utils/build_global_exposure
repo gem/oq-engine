@@ -33,6 +33,18 @@ def exposure_by_geohash(fname, common, monitor):
             yield gh.decode('utf8'), arr[arr['geohash']==gh]
 
 
+def collect_exposures(grm_dir):
+    out = []
+    for region in os.listdir(grm_dir):
+        expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
+        if not os.path.exists(expodir):
+            continue
+        for fname in os.listdir(expodir):
+            if fname.startswith('Exposure_'):  # i.e. Exposure_Chile.xml
+                out.append(os.path.join(expodir, fname))
+    return out
+
+
 def read_world_exposure(grm_dir, dstore):
     """
     Read the exposure files for the entire world (assume some conventions
@@ -40,16 +52,11 @@ def read_world_exposure(grm_dir, dstore):
 
     :param grm_dir: directory containing the global risk model
     """
-    fnames = []
+    fnames = collect_exposures(grm_dir)
     csvfiles = []
-    for cwd, dirs, files in os.walk(grm_dir):
-        for f in files:
-            if f.startswith('Exposure') and f.endswith('.xml'):
-                fname = os.path.join(cwd, f)
-                exposure, _ = _get_exposure(fname)
-                if all(os.path.exists(df) for df in exposure.datafiles):
-                    fnames.append(fname)
-                    csvfiles.extend(exposure.datafiles)
+    for fname in fnames:
+        exposure, _ = _get_exposure(fname)
+        csvfiles.extend(exposure.datafiles)
 
     common = hdf5.read_common_header(csvfiles)
     assert common
