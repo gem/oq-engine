@@ -35,6 +35,7 @@ OCCUPANTS_PER_ASSET_AVERAGE OCCUPANTS_PER_ASSET_DAY
 OCCUPANTS_PER_ASSET_NIGHT OCCUPANTS_PER_ASSET_TRANSIT
 TOTAL_AREA_SQM TOTAL_REPL_COST_USD'''.split()}
 CONV[None] = str
+IGNORE = set('NAME_0 NAME_1 SETTLEMENT'.split())
 
 
 def add_geohash3(array):
@@ -49,11 +50,21 @@ def add_geohash3(array):
     return out
 
 
+def fix(arr):
+    ID0 = arr['ID_0']
+    ID1 = arr['ID_1']
+    arr['ASSET_ID'] = ID0 + arr['ASSET_ID']
+    for i, (id0, id1) in enumerate(zip(ID0, ID1)):
+        if not id1.startswith(id0):
+            ID1[i] = id0 + ID1[i]
+
+
 def exposure_by_geohash(fname, common, monitor):
-    aw = hdf5.read_csv(fname, CONV, errors='ignore')
+    aw = hdf5.read_csv(fname + '.bak', CONV, errors='ignore')
     if hasattr(aw, 'array') and len(aw.array):
         for slc in general.gen_slices(0, len(aw.array), 1_000_000):
             arr = add_geohash3(aw.array[slc][common])
+            fix(arr)
             for gh in numpy.unique(arr['geohash3']):
                 yield gh, arr[arr['geohash3']==gh]
 
@@ -86,7 +97,7 @@ def read_world_exposure(grm_dir, dstore):
         exposure, _ = _get_exposure(fname)
         csvfiles.extend(exposure.datafiles)
 
-    common = hdf5.read_common_header(csvfiles)
+    common = sorted(hdf5.read_common_header(csvfiles) - IGNORE)
     assert common, 'There is no common header subset among %s' % csvfiles
 
     dstore.create_df('exposure', [(c, F32 if c in CONV else hdf5.vstr)

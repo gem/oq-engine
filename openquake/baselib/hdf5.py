@@ -925,7 +925,7 @@ def read_common_header(fnames, sep=','):
                 common = set(first.strip().split(sep))
             else:
                 common &= set(first.strip().split(sep))
-    return sorted(common)
+    return common
 
 
 # NB: it would be nice to use numpy.loadtxt(
