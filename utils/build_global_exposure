@@ -19,16 +19,19 @@
 
 import os
 import numpy
-from openquake.baselib import hdf5, sap
+from openquake.baselib import general, hdf5, sap
 from openquake.baselib.parallel import Starmap
 from openquake.commonlib.datastore import build_dstore_log
-from openquake.risklib.asset import read_xml, _get_exposure
+from openquake.risklib.asset import _get_exposure, add_geohash
 
 
 def exposure_by_geohash(fname, common, monitor):
-    for arr in read_xml(fname, common):
-        for gh in numpy.unique(arr['geohash']):
-            yield gh.decode('utf8'), arr[arr['geohash']==gh]
+    aw = hdf5.read_csv(fname, {None: str}, errors='ignore')
+    if hasattr(aw, 'array') and len(aw.array):
+        for slc in general.gen_slices(0, len(aw.array), 1_000_000):
+            arr = add_geohash(aw.array[slc][common])
+            for gh in numpy.unique(arr['geohash']):
+                yield gh.decode('utf8'), arr[arr['geohash']==gh]
 
 
 def collect_exposures(grm_dir):
@@ -62,7 +65,7 @@ def read_world_exposure(grm_dir, dstore):
     common = hdf5.read_common_header(csvfiles)
     assert common, 'There is no common header subset among %s' % csvfiles
     dstore.create_df('exposure', [(c, hdf5.vstr) for c in common], 'gzip')
-    smap = Starmap(exposure_by_geohash, [(fname, common) for fname in fnames],
+    smap = Starmap(exposure_by_geohash, [(c, common) for c in csvfiles],
                    h5=dstore.hdf5)
     n = 0
     for k, v in smap:
