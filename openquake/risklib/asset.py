@@ -822,17 +822,14 @@ def add_geohash(array):
 
 def read_xml(fname, common=slice(None), errors='ignore'):
     """
-    Read exposure files and build a geohash field
+    Read exposure files and yield arrays with a 'geohash' field.
     """
     exposure, _ = _get_exposure(fname)
-    aws = [hdf5.read_csv(f, {None: str}, errors=errors)
-           for f in exposure.datafiles]
-    arrays = [aw.array for aw in aws if hasattr(aw, 'array')]
-    if len(arrays):
-        n = len(arrays[0])
-        for slc in general.gen_slices(0, n, 1_000_000):
-            arr = general.smart_concat([arr[slc][common] for arr in arrays])
-            yield add_geohash(arr)
+    for f in exposure.datafiles:
+        aw = hdf5.read_csv(f, {None: str}, errors=errors)
+        if hasattr(aw, 'array') and len(aw.array):
+            for slc in general.gen_slices(0, len(aw.array), 1_000_000):
+                yield add_geohash(aw.array[slc][common])
 
     
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
