@@ -909,6 +909,25 @@ def find_error(fname, errors, dtype):
             return exc
 
 
+def read_common_header(fnames, sep=','):
+    """
+    Infer the common fields of a set of CSV files (stripping the pre-headers)
+    """
+    common = None
+    for fname in fnames:
+        with open(fname, encoding='utf-8-sig', errors='ignore') as f:
+            while True:
+                first = next(f)
+                if first.startswith('#'):
+                    continue
+                break
+            if common is None:
+                common = set(first.strip().split(sep))
+            else:
+                common &= set(first.strip().split(sep))
+    return sorted(common)
+
+
 # NB: it would be nice to use numpy.loadtxt(
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
