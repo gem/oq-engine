@@ -39,7 +39,6 @@ def main(cmd,
                      f'but you are {user}')
 
     if cmd == 'upgrade':
-        dbapi.db('PRAGMA foreign_keys = ON')  # honor ON DELETE CASCADE
         applied = db.actions.upgrade_db(dbapi.db)
         if applied:
             print('Applied upgrades', applied)
