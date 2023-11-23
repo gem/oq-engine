@@ -26,14 +26,15 @@ from openquake.risklib.asset import read_xml, _get_exposure
 
 
 def exposure_by_geohash(fname, common, monitor):
-    with monitor('read exposure', measuremem=True):
-        arr = read_xml(fname, common)  # can be empty
-    if len(arr):
+    for arr in read_xml(fname, common):
         for gh in numpy.unique(arr['geohash']):
             yield gh.decode('utf8'), arr[arr['geohash']==gh]
 
 
 def collect_exposures(grm_dir):
+    """
+    Collect the files of kind Exposure_<Country>.xml
+    """
     out = []
     for region in os.listdir(grm_dir):
         expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
@@ -59,7 +60,7 @@ def read_world_exposure(grm_dir, dstore):
         csvfiles.extend(exposure.datafiles)
 
     common = hdf5.read_common_header(csvfiles)
-    assert common
+    assert common, 'There is no common header subset among %s' % csvfiles
     dstore.create_df('exposure', [(c, hdf5.vstr) for c in common], 'gzip')
     smap = Starmap(exposure_by_geohash, [(fname, common) for fname in fnames],
                    h5=dstore.hdf5)

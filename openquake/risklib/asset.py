@@ -827,8 +827,12 @@ def read_xml(fname, common=slice(None), errors='ignore'):
     exposure, _ = _get_exposure(fname)
     aws = [hdf5.read_csv(f, {None: str}, errors=errors)
            for f in exposure.datafiles]
-    arrays = [aw.array[common] for aw in aws if hasattr(aw, 'array')]
-    return add_geohash(general.smart_concat(arrays))
+    arrays = [aw.array for aw in aws if hasattr(aw, 'array')]
+    if len(arrays):
+        n = len(arrays[0])
+        for slc in general.gen_slices(0, n, 1_000_000):
+            arr = general.smart_concat([arr[slc][common] for arr in arrays])
+            yield add_geohash(arr)
 
     
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
