@@ -53,6 +53,7 @@ def read_world_exposure(grm_dir, dstore):
                         csvfiles.append(csvfile)
 
     common = hdf5.read_common_header(csvfiles)
+    assert common
     dstore.create_df('exposure', [(c, hdf5.vstr) for c in common], 'gzip')
     smap = Starmap(exposure_by_geohash, [(fname, common) for fname in fnames],
                    h5=dstore.hdf5)
