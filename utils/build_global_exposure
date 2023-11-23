@@ -21,9 +21,12 @@ import os
 import numpy
 from openquake.baselib import general, hdf5, sap
 from openquake.baselib.parallel import Starmap
+from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import build_dstore_log
-from openquake.risklib.asset import _get_exposure, add_geohash
+from openquake.risklib.asset import _get_exposure
 
+U16 = numpy.uint16
+U32 = numpy.uint32
 F32 = numpy.float32
 CONV = {n: F32 for n in '''
 BUILDINGS COST_CONTENTS_USD COST_NONSTRUCTURAL_USD COST_PER_AREA_USD
@@ -34,13 +37,25 @@ TOTAL_AREA_SQM TOTAL_REPL_COST_USD'''.split()}
 CONV[None] = str
 
 
+def add_geohash3(array):
+    if len(array) == 0:
+        return ()
+    dt = array.dtype
+    dtlist = [('geohash3', U16)] + [(n, dt[n]) for n in dt.names]
+    out = numpy.zeros(len(array), dtlist)
+    for n in dt.names:
+        out[n] = array[n]
+        out['geohash3'] = geohash3(array['LONGITUDE'], array['LATITUDE'])
+    return out
+
+
 def exposure_by_geohash(fname, common, monitor):
     aw = hdf5.read_csv(fname, CONV, errors='ignore')
     if hasattr(aw, 'array') and len(aw.array):
         for slc in general.gen_slices(0, len(aw.array), 1_000_000):
-            arr = add_geohash(aw.array[slc][common])
-            for gh in numpy.unique(arr['geohash']):
-                yield gh.decode('utf8'), arr[arr['geohash']==gh]
+            arr = add_geohash3(aw.array[slc][common])
+            for gh in numpy.unique(arr['geohash3']):
+                yield gh, arr[arr['geohash3']==gh]
 
 
 def collect_exposures(grm_dir):
@@ -73,15 +88,21 @@ def read_world_exposure(grm_dir, dstore):
 
     common = hdf5.read_common_header(csvfiles)
     assert common, 'There is no common header subset among %s' % csvfiles
+
     dstore.create_df('exposure', [(c, F32 if c in CONV else hdf5.vstr)
                                   for c in common])
+    slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
+    dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
     smap = Starmap(exposure_by_geohash, [(c, common) for c in csvfiles],
                    h5=dstore.hdf5)
-    n = 0
-    for k, v in smap:
+    s = 0
+    for gh3, arr in smap:
         for name in common:
-             hdf5.extend(dstore[f'exposure/{name}'], v[name])
-        n += len(v)
+             hdf5.extend(dstore[f'exposure/{name}'], arr[name])
+        n = len(arr)
+        slc = numpy.array([(gh3, s, s + n)], slc_dt)
+        hdf5.extend(dstore['exposure/slice_by_gh3'], slc)
+        s += n
     print(dstore)
 
 
