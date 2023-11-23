@@ -47,10 +47,9 @@ def read_world_exposure(grm_dir, dstore):
             if f.startswith('Exposure') and f.endswith('.xml'):
                 fname = os.path.join(cwd, f)
                 exposure, _ = _get_exposure(fname)
-                fnames.append(fname)
-                for csvfile in exposure.datafiles:
-                    if os.path.exists(csvfile):
-                        csvfiles.append(csvfile)
+                if all(os.path.exists(df) for df in exposure.datafiles):
+                    fnames.append(fname)
+                    csvfiles.extend(exposure.datafiles)
 
     common = hdf5.read_common_header(csvfiles)
     assert common
