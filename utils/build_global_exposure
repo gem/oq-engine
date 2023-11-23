@@ -1,0 +1,73 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2023, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import numpy
+from openquake.baselib import hdf5, sap
+from openquake.baselib.parallel import Starmap
+from openquake.commonlib.datastore import build_dstore_log
+from openquake.risklib.asset import read_xml, _get_exposure
+
+
+def exposure_by_geohash(fname, common, monitor):
+    with monitor('read exposure', measuremem=True):
+        arr = read_xml(fname, common)  # can be empty
+    if len(arr):
+        for gh in numpy.unique(arr['geohash']):
+            yield gh.decode('utf8'), arr[arr['geohash']==gh]
+
+
+def read_world_exposure(grm_dir, dstore):
+    """
+    Read the exposure files for the entire world (assume some conventions
+    on the file names are respected).
+
+    :param grm_dir: directory containing the global risk model
+    """
+    fnames = []
+    csvfiles = []
+    for cwd, dirs, files in os.walk(grm_dir):
+        for f in files:
+            if f.startswith('Exposure') and f.endswith('.xml'):
+                fname = os.path.join(cwd, f)
+                exposure, _ = _get_exposure(fname)
+                fnames.append(fname)
+                csvfiles.extend(exposure.datafiles)
+
+    common = hdf5.read_common_header(csvfiles)
+    dstore.create_df('exposure', [(c, hdf5.vstr) for c in common], 'gzip')
+    smap = Starmap(exposure_by_geohash, [(fname, common) for fname in fnames],
+                   h5=dstore.hdf5)
+    n = 0
+    for k, v in smap:
+        for name in common:
+             hdf5.extend(dstore[f'exposure/{name}'], v[name])
+        n += len(v)
+    print(dstore)
+
+
+def main(grm_dir):
+    dstore, log = build_dstore_log()
+    with dstore, log:
+        read_world_exposure(grm_dir, dstore)
+main.grm_dir = 'global risk model directory'
+
+
+if __name__ == '__main__':
+    sap.run(main)
