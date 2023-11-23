@@ -839,7 +839,7 @@ def get_ruptures(fname_csv):
     if not BaseRupture._code:
         BaseRupture.init()  # initialize rupture codes
     code = BaseRupture.str2code
-    aw = hdf5.read_csv(fname_csv, rup_dt)
+    aw = hdf5.read_csv(fname_csv, {n: rup_dt[n] for n in rup_dt.names})
     rups = []
     geoms = []
     n_occ = 1

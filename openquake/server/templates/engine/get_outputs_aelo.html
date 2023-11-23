@@ -6,6 +6,11 @@
     <div class="container">
       <div class="row">
         <div id="oq-body-wrapper">
+          {% if low_hazard %}
+          <div id="warning-box" class="alert alert-warning" style=>
+            Warning: the ASCE outputs are missing since the hazard is too low
+          </div>
+          {% endif %}
           <div class="span12">
               <h2>Outputs from calculation {{ calc_id }}</h2>
               <div id="my-outputs" class="well"></div>

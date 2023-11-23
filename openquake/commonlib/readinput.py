@@ -569,8 +569,6 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.calculation_mode == 'aftershock':
-        return
     ss = oqparam.sites_slice  # can be None or (start, stop)
     if h5 and 'sitecol' in h5 and not ss:
         return h5['sitecol']
@@ -1265,6 +1263,30 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
     parallel.Starmap.shutdown()
     return good, total
+
+
+def read_delta_rates(fname, idx_nr):
+    """
+    :param fname:
+        path to a CSV file with fields (source_id, rup_id, delta)
+    :param idx_nr:
+        dictionary source_id -> (src_id, num_ruptures) with Ns sources
+    :returns:
+        list of Ns floating point arrays of different lenghts
+    """
+    delta_df = pandas.read_csv(fname, converters=dict(
+        source_id=str, rup_id=int, delta=float), index_col=0)
+    assert list(delta_df.columns) == ['rup_id', 'delta']
+    delta = [numpy.zeros(0) for _ in idx_nr]
+    for src, df in delta_df.groupby(delta_df.index):
+        idx, nr = idx_nr[src]
+        rupids = df.rup_id.to_numpy()
+        if len(numpy.unique(rupids)) < len(rupids):
+            raise InvalidFile('%s: duplicated rup_id for %s' % (fname, src))
+        drates = numpy.zeros(nr)
+        drates[rupids] = df.delta.to_numpy()
+        delta[idx] = drates
+    return delta
 
 
 def get_shapefiles(dirname):

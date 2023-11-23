@@ -122,6 +122,8 @@ class LogicTreeTestCase(CalculatorTestCase):
                                    'SSC-AS-001!KOR_c1_M1_2',
                                    'SSC-AS-001!KOR_c1_M1_3'])
 
+    # NB: this test is sensitive to the lower cutoff for the rates
+    # it produces a huge rate 103.6 for the minimum level, cut off at 19.5
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
