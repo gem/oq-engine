@@ -48,7 +48,9 @@ def read_world_exposure(grm_dir, dstore):
                 fname = os.path.join(cwd, f)
                 exposure, _ = _get_exposure(fname)
                 fnames.append(fname)
-                csvfiles.extend(exposure.datafiles)
+                for csvfile in exposure.datafiles:
+                    if os.path.exists(csvfile):
+                        csvfiles.append(csvfile)
 
     common = hdf5.read_common_header(csvfiles)
     dstore.create_df('exposure', [(c, hdf5.vstr) for c in common], 'gzip')
