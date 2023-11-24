@@ -19,7 +19,12 @@ from openquake.qa_tests_data import mosaic, aristotle
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
-POLYGON_EXAMPLE = 'Polygon ((7.43382776637826836 49.91743762278053964, 7.83778658614323476 44.7847843834139141, 12.06747305191758102 48.08774179208040067, 7.43382776637826836 49.91743762278053964))'
+# A triangle intersecting ['AUT', 'CHE', 'DEU', 'FRA', 'ITA', 'LIE']
+POLYGON_EXAMPLE = (
+    'Polygon ((7.43382776637826836 49.91743762278053964,'
+    ' 7.83778658614323476 44.7847843834139141,'
+    ' 12.06747305191758102 48.08774179208040067,'
+    ' 7.43382776637826836 49.91743762278053964))')
 
 
 class ModelGetter:
@@ -125,12 +130,13 @@ class ModelGetter:
         logging.info(f'Models retrieved in {time.time() - t0} seconds')
         return models
 
-    def get_model_by_lon_lat_sindex(self, lon, lat, strict=True):
+    def get_nearest_model_by_lon_lat_sindex(self, lon, lat, strict=True):
         lon = float(lon)
         lat = float(lat)
         point = Point(lon, lat)
-        nearest = self.sindex.nearest(point)
-        print(self.model_codes[nearest])
+        idx = self.sindex.nearest(point)
+        model = self.model_info[idx][self.model_code]
+        return model
 
     def get_model_by_lon_lat(
             self, lon, lat, strict=True, check_overlaps=True,
