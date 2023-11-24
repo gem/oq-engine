@@ -7,7 +7,11 @@ import time
 import csv
 import sys
 import os
+import pickle
+import numpy as np
 from shapely.geometry import Point, shape
+from shapely.strtree import STRtree
+from shapely import wkt
 from collections import Counter
 from openquake.baselib import sap
 from openquake.hazardlib.geo.packager import fiona
@@ -15,12 +19,15 @@ from openquake.qa_tests_data import mosaic, aristotle
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
+POLYGON_EXAMPLE = 'Polygon ((7.43382776637826836 49.91743762278053964, 7.83778658614323476 44.7847843834139141, 12.06747305191758102 48.08774179208040067, 7.43382776637826836 49.91743762278053964))'
+
 
 class ModelGetter:
     """
     Class with methods to associate coordinates to models
     """
-    def __init__(self, kind='mosaic', shapefile_path=None):
+    def __init__(self, kind='mosaic', shapefile_path=None, sindex_path=None,
+                 sinfo_path=None, replace_sindex=False, replace_sinfo=False):
         if kind not in ('mosaic', 'aristotle'):
             raise ValueError('Model getter for {kind} is not implemented')
         self.kind = kind
@@ -38,6 +45,64 @@ class ModelGetter:
                 shapefile_path = os.path.join(
                     aristotle_dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.shapefile_path = shapefile_path
+        self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
+        self.model_info = self.get_model_info(sinfo_path, replace_sinfo)
+
+    def get_spatial_index(self, sindex_path, replace_sindex):
+        if not replace_sindex:
+            # retrieve it if available
+            if sindex_path is not None and os.path.isfile(sindex_path):
+                t0 = time.time()
+                with open(sindex_path, 'rb') as f:
+                    sindex = pickle.load(f)
+                time_spent = time.time() - t0
+                logging.info(
+                    f'Spatial index retrieved in {time_spent} seconds')
+                return sindex
+        logging.info('Building spatial index')
+        t0 = time.time()
+        with fiona.open(self.shapefile_path, 'r') as shp:
+            shapes = [shape(polygon['geometry']) for polygon in shp]
+            sindex = STRtree(shapes)
+        sindex_building_time = time.time() - t0
+        logging.info(f'Spatial index built in {sindex_building_time} seconds')
+        if replace_sindex:
+            logging.info('Storing spatial index')
+            t0 = time.time()
+            with open(sindex_path, 'wb+') as f:
+                pickle.dump(sindex, f)
+            sindex_storing_time = time.time() - t0
+            logging.info(f'Spatial index stored to {sindex_path}'
+                         f' in {sindex_storing_time} seconds')
+        return sindex
+
+    def get_model_info(self, sinfo_path, replace_sinfo):
+        if not replace_sinfo:
+            # retrieve it if available
+            if sinfo_path is not None and os.path.isfile(sinfo_path):
+                t0 = time.time()
+                with open(sinfo_path, 'rb') as f:
+                    sinfo = pickle.load(f)
+                time_spent = time.time() - t0
+                logging.info(
+                    f'Spatial info retrieved in {time_spent} seconds')
+                return sinfo
+        logging.info('Reading spatial info')
+        t0 = time.time()
+        with fiona.open(self.shapefile_path, 'r') as shp:
+            model_info = np.array(
+                [dict(polygon['properties']) for polygon in shp])
+        reading_time = time.time() - t0
+        logging.info(f'Data read in {reading_time} seconds')
+        if replace_sinfo:
+            t0 = time.time()
+            logging.info('Storing spatial info')
+            with open(sinfo_path, 'wb+') as f:
+                pickle.dump(model_info, f)
+            sinfo_storing_time = time.time() - t0
+            logging.info(f'Spatial info stored to {sinfo_path}'
+                         f' in {sinfo_storing_time} seconds')
+        return model_info
 
     def get_models_list(self):
         """
@@ -50,6 +115,22 @@ class ModelGetter:
             models = [polygon['properties'][self.model_code]
                       for polygon in shp]
         return models
+
+    def get_models_by_wkt(self, geom_wkt, predicate='intersects'):
+        t0 = time.time()
+        geom = wkt.loads(geom_wkt)
+        idxs = self.sindex.query(geom, predicate)
+        models = list(np.unique([info[self.model_code]
+                                 for info in self.model_info[idxs]]))
+        logging.info(f'Models retrieved in {time.time() - t0} seconds')
+        return models
+
+    def get_model_by_lon_lat_sindex(self, lon, lat, strict=True):
+        lon = float(lon)
+        lat = float(lat)
+        point = Point(lon, lat)
+        nearest = self.sindex.nearest(point)
+        print(self.model_codes[nearest])
 
     def get_model_by_lon_lat(
             self, lon, lat, strict=True, check_overlaps=True,
