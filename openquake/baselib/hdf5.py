@@ -870,7 +870,7 @@ def check_length(field, size):
     return check
 
 
-def _read_csv(fileobj, compositedt):
+def _read_csv(fileobj, compositedt, usecols=None):
     dic = {}
     conv = {}
     for name in compositedt.names:
@@ -882,7 +882,8 @@ def _read_csv(fileobj, compositedt):
         else:
             dic[name] = dt
     df = pandas.read_csv(fileobj, names=compositedt.names, converters=conv,
-                         dtype=dic, keep_default_na=False, na_filter=False)
+                         dtype=dic, usecols=usecols,
+                         keep_default_na=False, na_filter=False)
     return df
 
 
@@ -932,7 +933,7 @@ def read_common_header(fnames, sep=','):
 #  f, build_dt(dtypedict, header), delimiter=sep, ndmin=1, comments=None)
 # however numpy does not support quoting, and "foo,bar" would be split :-(
 def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
-             index=None, errors=None):
+             index=None, errors=None, usecols=None):
     """
     :param fname: a CSV file with an header and float fields
     :param dtypedict: a dictionary fieldname -> dtype, None -> default
@@ -940,6 +941,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
     :param sep: separator (default comma)
     :param index: if not None, returns a pandas DataFrame
     :param errors: passed to the underlying open function (default None)
+    :param usecols: columns to read
     :returns: an ArrayWrapper, unless there is an index
     """
     attrs = {}
@@ -953,7 +955,7 @@ def read_csv(fname, dtypedict={None: float}, renamedict={}, sep=',',
         header = first.strip().split(sep)
         dt = build_dt(dtypedict, header, fname)
         try:
-            df = _read_csv(f, dt)
+            df = _read_csv(f, dt, usecols)
         except Exception as exc:
             err = find_error(fname, errors, dt)
             if err:

@@ -1073,6 +1073,7 @@ class Exposure(object):
         for fname in self.datafiles:
             t0 = time.time()
             df = hdf5.read_csv(fname, conv, rename, errors=errors, index='id')
+            print(fname)
             add_dupl_fields(df, oqfields)
             df['lon'] = numpy.round(df.lon, 5)
             df['lat'] = numpy.round(df.lat, 5)
