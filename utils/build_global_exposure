@@ -64,24 +64,29 @@ def fix(arr):
             ID1[i] = '%s-%s' % (id0, ID1[i])
 
 
-def array_by_geohash(array, monitor):
-    arr = add_geohash3(array)
-    fix(arr)
-    for gh in numpy.unique(arr['geohash3']):
-        yield gh, arr[arr['geohash3']==gh]
+def array_by_geohash(arrays, monitor):
+    for array in arrays:
+        arr = add_geohash3(array)
+        fix(arr)
+        for gh in numpy.unique(arr['geohash3']):
+            yield gh, arr[arr['geohash3']==gh]
 
 
-def exposure_by_geohash(fname, common, monitor):
-    aw = hdf5.read_csv(fname + '.bak', CONV, errors='ignore', usecols=common)
-    if hasattr(aw, 'array') and len(aw.array):
-        for i, slc in enumerate(
-                general.gen_slices(0, len(aw.array), 500_000)):
-            arr = aw.array[slc]
-            if i == 0:
-                yield from array_by_geohash(arr, monitor)
-            else:
-                print(fname)
-                yield array_by_geohash, arr
+def exposure_by_geohash(exposure_xml, common, monitor):
+    exposure, _ = _get_exposure(exposure_xml)
+    small = []
+    for fname in exposure.datafiles:
+        aw = hdf5.read_csv(fname, CONV, errors='ignore', usecols=common)
+        if hasattr(aw, 'array') and len(aw.array):
+            for i, slc in enumerate(
+                    general.gen_slices(0, len(aw.array), 2_000_000)):
+                arr = aw.array[slc]
+                if i == 0:  # smaller than 500k elements
+                    small.append(arr)
+                else:
+                    print(fname)
+                    yield array_by_geohash, [arr]
+    yield from array_by_geohash(small, monitor)
 
 
 def collect_exposures(grm_dir):
@@ -125,7 +130,7 @@ def read_world_exposure(grm_dir, dstore):
     dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
 
     dstore.swmr_on()
-    smap = Starmap(exposure_by_geohash, [(c, common) for c in csvfiles],
+    smap = Starmap(exposure_by_geohash, [(f, common) for f in fnames],
                    h5=dstore.hdf5)
     s = 0
     for gh3, arr in smap:
