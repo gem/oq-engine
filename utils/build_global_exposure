@@ -128,7 +128,7 @@ def read_world_exposure(grm_dir, dstore):
     dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
 
     dstore.swmr_on()
-    Starmap.num_cores = 10
+    #Starmap.num_cores = 10
     smap = Starmap(exposure_by_geohash, [(f, common) for f in fnames],
                    h5=dstore.hdf5)
     s = 0
