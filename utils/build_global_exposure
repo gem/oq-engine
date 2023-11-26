@@ -64,14 +64,24 @@ def fix(arr):
             ID1[i] = '%s-%s' % (id0, ID1[i])
 
 
+def array_by_geohash(array, monitor):
+    arr = add_geohash3(array)
+    fix(arr)
+    for gh in numpy.unique(arr['geohash3']):
+        yield gh, arr[arr['geohash3']==gh]
+
+
 def exposure_by_geohash(fname, common, monitor):
-    aw = hdf5.read_csv(fname, CONV, errors='ignore', usecols=common)
+    aw = hdf5.read_csv(fname + '.bak', CONV, errors='ignore', usecols=common)
     if hasattr(aw, 'array') and len(aw.array):
-        for slc in general.gen_slices(0, len(aw.array), 1_000_000):
-            arr = add_geohash3(aw.array[slc])
-            fix(arr)
-            for gh in numpy.unique(arr['geohash3']):
-                yield gh, arr[arr['geohash3']==gh]
+        for i, slc in enumerate(
+                general.gen_slices(0, len(aw.array), 500_000)):
+            arr = aw.array[slc]
+            if i == 0:
+                yield from array_by_geohash(arr, monitor)
+            else:
+                print(fname)
+                yield array_by_geohash, arr
 
 
 def collect_exposures(grm_dir):
@@ -136,6 +146,7 @@ def read_world_exposure(grm_dir, dstore):
         logging.info('Storing %s[%d]', tagname, len(uvals))
         hdf5.extend(dstore[f'exposure/{tagname}'], inv)
         dstore['tagcol/' + tagname] = uvals
+    logging.info('Total {:_d} assets'.format(len(inv)))
 
 
 def main(grm_dir):
