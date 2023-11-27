@@ -18,7 +18,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import io
 import logging
 import operator
 import pandas
@@ -89,19 +88,14 @@ def collect_exposures(grm_dir):
     return out, csvfiles
 
 
-def exposure_by_geohash(df, monitor):
+def exposure_by_geohash(array, monitor):
     """
     Yields pairs (geohash, array)
     """
-    if len(df):
-        dt = hdf5.build_dt(CONV, df.columns, '<BytesIO>')
-        array = numpy.zeros(len(df), dt)
-        for col in df.columns:
-            array[col] = df[col].to_numpy()
-        array = add_geohash3(array)
-        fix(array)
-        for gh in numpy.unique(array['geohash3']):
-            yield gh, array[array['geohash3']==gh]
+    array = add_geohash3(array)
+    fix(array)
+    for gh in numpy.unique(array['geohash3']):
+        yield gh, array[array['geohash3']==gh]
 
 
 def gen_tasks(files, monitor):
@@ -110,14 +104,19 @@ def gen_tasks(files, monitor):
     """
     for file in files:
         dfs = pandas.read_csv(
-            file.fname, names=file.header, dtype=CONV, usecols=file.fields,
-            skiprows=1, chunksize=500_000)
+            file.fname + '.bak', names=file.header, dtype=CONV,
+            usecols=file.fields,
+            skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
-            if i == 0:
-                yield from exposure_by_geohash(df, monitor)
+            dt = hdf5.build_dt(CONV, df.columns, file.fname)
+            array = numpy.zeros(len(df), dt)
+            for col in df.columns:
+                array[col] = df[col].to_numpy()
+            if i < 3:
+                yield from exposure_by_geohash(array, monitor)
             else:
                 print(file.fname)
-                yield exposure_by_geohash, df
+                yield exposure_by_geohash, array
 
 
 def read_world_exposure(grm_dir, dstore):
