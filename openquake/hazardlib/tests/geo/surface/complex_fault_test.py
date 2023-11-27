@@ -141,6 +141,15 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
             str(cm.exception)
         )
 
+def plot(edges):
+    import matplotlib.pyplot as plt
+    ax = plt.figure().add_subplot(projection='3d')
+    for edge in edges:
+        coo = edges.coo
+        plt.plot(coo[:, 0], coo[:, 1], coo[:, 2], '-r') 
+    plt.show()
+
+
 
 class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
     def test_1(self):
@@ -163,6 +172,9 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
         edge1 = Line([Point(0, 0, 1), Point(0, 0.02, 1)])
         edge2 = Line([Point(0.02, 0, 1.5), Point(0.02, 0.01, 1.5)])
         edge3 = Line([Point(0, 0, 2), Point(0, 0.02, 2)])
+        breakpoint()
+        plot([edge1, edge2, edge3])
+        """
         surface = ComplexFaultSurface.from_fault_data([edge1, edge2, edge3],
                                                       mesh_spacing=1)
         self.assert_mesh_is(surface=surface, expected_mesh=[
@@ -190,6 +202,8 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
              (0.0, 0.01, 2.0),
              (0.0, 0.02, 2.0)],
         ])
+        """
+
 
     def test_mesh_spacing_more_than_two_lengths(self):
         edge1 = Line([Point(0, 0, 0), Point(0, 0.1, 0)])

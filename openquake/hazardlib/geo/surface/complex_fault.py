@@ -278,8 +278,18 @@ class ComplexFaultSurface(BaseSurface):
                 'mesh spacing %.1f km is too big for mean length %.1f km' %
                 (mesh_spacing, mean_length)
             )
-        edges = [edge.resample_to_num_points(num_hor_points).points
-                 for i, edge in enumerate(edges)]
+        
+        from openquake.hazardlib.geo.line import _resample
+        #breakpoint()
+
+        lengths = [sum(edge.get_lengths()) for edge in edges]
+        redges = [_resample(edge.coo, tlen/num_hor_points, False) for edge, tlen in zip(edges, lengths)]
+
+        edges = [[Point(c[0], c[1], c[2]) for c in coo] for coo in redges]
+
+        #edges = [edge.resample_to_num_points(num_hor_points)
+        #         for i, edge in enumerate(edges)]
+        #breakpoint()
 
         vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
         mean_width = numpy.mean([v_edge.get_length() for v_edge in vert_edges])
