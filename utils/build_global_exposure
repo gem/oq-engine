@@ -100,7 +100,7 @@ def exposure_by_geohash(lines, names, common, monitor):
 
 
 def gen_tasks(fname, fields, monitor):
-    f = open(fname + '.bak', newline='', encoding='utf-8-sig', errors='ignore')
+    f = open(fname, newline='', encoding='utf-8-sig', errors='ignore')
     with f:
         lines = list(f)
     header = [col.strip() for col in lines[0].split(',')]
@@ -140,7 +140,6 @@ def read_world_exposure(grm_dir, dstore):
     dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
 
     dstore.swmr_on()
-    Starmap.num_cores = 8
     smap = Starmap(gen_tasks, [(c, common) for c in csvfiles],
                    h5=dstore.hdf5)
     s = 0
