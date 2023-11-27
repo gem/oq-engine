@@ -702,6 +702,26 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
         north = np.maximum(north, np.max(pro[idx, 1]))
     proj = geo_utils.OrthographicProjection(west, east, north, south)
 
+    # TODO
+    # ------------------------------------
+    # Check the profiles have the same number of samples
+    chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
+
+    # Check profiles have the same top depth
+    top_depths = np.array([p[0, 2] for p in rprof])
+    chk2 = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
+
+    if chk1 and chk2:
+        msh = np.array(rprof)
+    else:
+        msg = 'Cannot build the mesh.'
+        if not chk1:
+            msg += ' Profiles do not have the same num. samples.'
+        if not chk2:
+            msg += ' Profiles do not have the same top depth.'
+        raise ValueError(msg)
+    # ------------------------------------
+
     # Create the mesh in the forward direction
     prfr = []
     cond = ref_idx >= 0 and ref_idx < len(rprof) - 1
@@ -716,36 +736,19 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
         prfl = _get_resampled_profs(
             prfl, rprof, edge_sd, proj, idl, ref_idx, last)
 
-    # Align the profiles
-
     # Remove the reference profile from the second subset of profiles
     if len(prfr) > 0 and len(prfl) > 0:
         _align_profiles(prfr, prfl)
         prfl = prfl[1:]
 
     # Final profiles
-    prf = prfr + prfl
+    prf = prfr[::-1] + prfl
 
     # Create the whole mesh
     if len(prf) > 1:
         msh = np.array(prf)
     else:
-        # Check the profiles have the same number of samples
-        chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
-
-        # Check profiles have the same top depth
-        top_depths = np.array([p[0, 2] for p in rprof])
-        chk2 = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
-
-        if chk1 and chk2:
-            msh = np.array(rprof)
-        else:
-            msg = 'Cannot build the mesh.'
-            if not chk1:
-                msg += ' Profiles do not have the same num. samples.'
-            if not chk2:
-                msg += ' Profiles do not have the same top depth.'
-            raise ValueError(msg)
+        raise ValueError('Not enough profiles. Decrease the spacing')
 
     # Convert from profiles to edges
     msh = msh.swapaxes(0, 1)
@@ -754,13 +757,13 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     return msh
 
 
-def _align_profiles(prfr, prfl):
+def _align_profiles(prfr: list, prfl: list):
 
     # Check that the two sets contain profiles with the same length
     lenr = len(prfr[0])
     lenl = len(prfl[0])
-    assert np.all(np.array([len(l) for l in prfr]) - lenr) == 0.0
-    assert np.all(np.array([len(l) for l in prfl]) - lenl) == 0.0
+    assert np.all(np.array([len(pr) for pr in prfr]) - lenr) == 0.0
+    assert np.all(np.array([len(pr) for pr in prfl]) - lenl) == 0.0
 
     # Find the alignment between left and right
     delta = 0
@@ -913,16 +916,20 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # i.e. forward or backward
     low, upp, step = _set_indexes(forward, ref_idx, len(profs))
 
-    # Get the array with all the profiles
+    # Get the array with all the profiles (resampled at a `step` distance)
     parr = _from_prf_to_array(profs, low, upp, step)
 
     # Process each edge
     csegs = []
     for i_edge in range(parr.shape[1]):
+
+        # Find the continuous parts of an edge
         for tmp in _find_continuous_segments(parr[:, i_edge], i_edge):
+
             # Here `tmp` contains many triples with the indexes of the first
             # and last profile and the index of the edge
             csegs.append(tmp)
+
     csegs = np.array(csegs)
     idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
     csegs = csegs[idxs]
@@ -932,9 +939,13 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     new_prof_lines = []
     unique = np.unique(csegs[:, 0])
     cnt = 0
+
+    # Loop over the unique start indexes of continuous parts of an edge
     for i_from in unique:
+
         # Process all the edges that start with index `i_from`
         for cseg in csegs[csegs[:, 0] == i_from, :]:
+
             if i_from == unique[0]:
                 tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
                 tmp = tmp[:-1, :]
@@ -955,21 +966,52 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Build profiles
     npr = _build_profiles(new_edges)
 
+    import matplotlib.pyplot as plt
+    ax = plt.figure().add_subplot(projection='3d')
+    for key in new_edges:
+        edg = np.array(new_edges[key])
+        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'g', lw=1)
+    for pro in profs:
+        edg = np.array(pro)
+        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'r', lw=1)
+    for pro in npr:
+        edg = np.array(pro)
+        idx = np.nonzero(np.isfinite(edg[:, 0]))
+        edg = np.squeeze(edg[idx, :])
+        try:
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'b')
+        except:
+            pass
+    ax.invert_zaxis()
+    plt.show()
+
     return npr
 
 
 def _build_profiles(edges: list) -> list:
-    # Find the longest edge
-    # num_cols = max([len(edges[k]) for k in edges.keys()])
-    # num_rows = len(edges)
     profs = []
-    for key in edges:
+    max_len = -1
+    tc = [np.nan, np.nan, np.nan]
+    for i_edge, key in enumerate(edges):
         edge = edges[key]
+        max_len = max([len(edge), max_len])
+        # Add the values in this edge to the profiles
         for i_r, c in enumerate(edge):
-            if len(profs) == i_r:
+            if len(profs) == i_r and i_edge > 0:
+                # Adding a new profile
+                tmp = []
+                if i_edge > 0 and i_r > 0:
+                    tmp = [tc for i in range(len(profs[i_r-1])-1)]
+                profs.append(tmp + [c])
+                #profs.append([c])
+            elif len(profs) == i_r and i_edge == 0:
                 profs.append([c])
             else:
                 profs[i_r].append(c)
+
+        if len(edge) < max_len:
+            for i_r in range(len(edge), max_len):
+                profs[i_r].append(tc)
 
     max_len = max([len(p) for p in profs])
 
@@ -1045,7 +1087,18 @@ def _get_point_depth(pnt1, pnt2, xco):
     return vect[2] * ratio + pnt1[2]
 
 
-def _compute_lines(coos, i_from, proj, new_lines_profiles):
+def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
+    #
+    # :param coos:
+    #   A list of lists. Each element contains two intergers and one array with
+    #   the coordinates of the edge. The two integers indicate the index from
+    #   where this edge starts.
+    # :param i_from:
+    #   The index from where
+    # :param proj:
+    #   An instance of
+    #   :class:`openquake.hazardlib.geo.utils.OrthographicProjection`
+    # :param new_lines_profiles:
 
     # Create the profiles
     profs = []
