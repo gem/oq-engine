@@ -42,6 +42,7 @@ vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
+CSVFile = collections.namedtuple('CSVFile', 'fname header fields weight')
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
@@ -910,11 +911,12 @@ def find_error(fname, errors, dtype):
             return exc
 
 
-def read_common_header(fnames, sep=','):
+def sniff(fnames, sep=',', ignore=set()):
     """
     Infer the common fields of a set of CSV files (stripping the pre-headers)
     """
     common = None
+    files = []
     for fname in fnames:
         with open(fname, encoding='utf-8-sig', errors='ignore') as f:
             while True:
@@ -922,11 +924,15 @@ def read_common_header(fnames, sep=','):
                 if first.startswith('#'):
                     continue
                 break
+            header = first.strip().split(sep)
             if common is None:
-                common = set(first.strip().split(sep))
+                common = set(header)
             else:
-                common &= set(first.strip().split(sep))
-    return common
+                common &= set(header)
+            files.append(CSVFile(fname, header, common, os.path.getsize(fname)))
+    common -= ignore
+    assert common, 'There is no common header subset among %s' % fnames
+    return files
 
 
 # NB: it would be nice to use numpy.loadtxt(
