@@ -18,7 +18,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import zlib
 import logging
 import numpy
 import h5py
@@ -136,8 +135,7 @@ def read_world_exposure(grm_dir, dstore):
     for gh3, arr in smap:
         for name in common:
             if name in TAGS:
-                comp = zlib.compress('\n'.join(arr[name]).encode('utf8'))
-                TAGS[name].append(comp)
+                TAGS[name].append(arr[name])
             else:
                 hdf5.extend(dstore['exposure/' + name], arr[name])
         n = len(arr)
@@ -147,9 +145,7 @@ def read_world_exposure(grm_dir, dstore):
     Starmap.shutdown()
 
     for tagname in TAGS:
-        tagvalues = []
-        for comp in TAGS[tagname]:
-            tagvalues.extend(zlib.decompress(comp).decode('utf8').split())
+        tagvalues = numpy.concatenate(TAGS[tagname])
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
         logging.info('Storing %s[%d]', tagname, len(uvals))
         hdf5.extend(dstore[f'exposure/{tagname}'], inv)
