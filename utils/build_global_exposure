@@ -19,6 +19,7 @@
 
 import os
 import io
+import zlib
 import logging
 import pandas
 import numpy
@@ -68,7 +69,7 @@ def fix(arr):
 
 
 def exposure_by_geohash(lines, names, common, monitor):
-    df = pandas.read_csv(io.StringIO('\r\n'.join(lines)), names=names,
+    df = pandas.read_csv(io.BytesIO(zlib.decompress(lines)), names=names,
                          dtype=CONV, usecols=common)
     if len(df):
         dt = hdf5.build_dt(CONV, names, '<StringIO>')
@@ -96,13 +97,14 @@ def collect_exposures(grm_dir):
     return out
 
 
-def gen_chunks(fnames, fields, csize=1_000_000):
+def gen_chunks(fnames, fields, csize=200_000):
     for fname in fnames:
-        lines = list(open(fname, newline='', encoding='utf-8-sig',
+        lines = list(open(fname + '.bak', newline='', encoding='utf-8-sig',
                           errors='ignore'))
         header = [col.strip() for col in lines[0].split(',')]
         for block in general.block_splitter(lines[1:], csize):
-            yield block, header, fields
+            comp = zlib.compress('\r\n'.join(block).encode('utf8'))
+            yield comp, header, fields
 
 
 def read_world_exposure(grm_dir, dstore):
