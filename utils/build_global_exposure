@@ -68,20 +68,6 @@ def fix(arr):
             ID1[i] = '%s-%s' % (id0, ID1[i])
 
 
-def exposure_by_geohash(lines, names, common, monitor):
-    df = pandas.read_csv(io.BytesIO(zlib.decompress(lines)), names=names,
-                         dtype=CONV, usecols=common)
-    if len(df):
-        dt = hdf5.build_dt(CONV, names, '<StringIO>')
-        array = numpy.zeros(len(df), dt)
-        for col in df.columns:
-            array[col] = df[col].to_numpy()
-        array = add_geohash3(array)
-        fix(array)
-        for gh in numpy.unique(array['geohash3']):
-            yield gh, array[array['geohash3']==gh]
-
-
 def collect_exposures(grm_dir):
     """
     Collect the files of kind Exposure_<Country>.xml
@@ -97,14 +83,33 @@ def collect_exposures(grm_dir):
     return out
 
 
-def gen_chunks(fnames, fields, csize=200_000):
-    for fname in fnames:
-        lines = list(open(fname + '.bak', newline='', encoding='utf-8-sig',
-                          errors='ignore'))
-        header = [col.strip() for col in lines[0].split(',')]
-        for block in general.block_splitter(lines[1:], csize):
-            comp = zlib.compress('\r\n'.join(block).encode('utf8'))
-            yield comp, header, fields
+def exposure_by_geohash(lines, names, common, monitor):
+    if isinstance(lines, bytes):
+        data = io.BytesIO(lines)
+    else:
+        data = io.StringIO(lines)
+    df = pandas.read_csv(data, names=names, dtype=CONV, usecols=common)
+    dt = hdf5.build_dt(CONV, names, '<BytesIO>')
+    array = numpy.zeros(len(df), dt)
+    for col in df.columns:
+        array[col] = df[col].to_numpy()
+    array = add_geohash3(array)
+    fix(array)
+    for gh in numpy.unique(array['geohash3']):
+        yield gh, array[array['geohash3']==gh]
+
+
+def gen_tasks(fname, fields, monitor):
+    lines = list(open(fname + '.bak', newline='', encoding='utf-8-sig',
+                      errors='ignore'))
+    header = [col.strip() for col in lines[0].split(',')]
+    for i, block in enumerate(general.block_splitter(lines[1:], 200_000)):
+        data = '\r\n'.join(block)
+        if i == 0:
+            yield from exposure_by_geohash(data, header, fields, monitor)
+        else:
+            data = zlib.compress(data.encode('utf8'))
+            yield exposure_by_geohash, data, header, fields
 
 
 def read_world_exposure(grm_dir, dstore):
@@ -133,7 +138,8 @@ def read_world_exposure(grm_dir, dstore):
     dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
 
     dstore.swmr_on()
-    smap = Starmap(exposure_by_geohash, gen_chunks(csvfiles, common),
+    Starmap.num_cores = 8
+    smap = Starmap(gen_tasks, [(c, common) for c in csvfiles],
                    h5=dstore.hdf5)
     s = 0
     for gh3, arr in smap:
