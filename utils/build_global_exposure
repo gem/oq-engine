@@ -91,6 +91,9 @@ def collect_exposures(grm_dir):
 
 
 def exposure_by_geohash(data, file, monitor):
+    """
+    Yields pairs (geohash, array)
+    """
     if data is None:
         inp = file.fname
         skip = 1
@@ -114,6 +117,9 @@ def exposure_by_geohash(data, file, monitor):
 
 
 def gen_tasks(files, monitor):
+    """
+    Generate tasks of kind exposure_by_geohash for large files
+    """
     for file in files:
         if file.size < 10_000_000:  # small file
             yield from exposure_by_geohash(None, file, monitor)
