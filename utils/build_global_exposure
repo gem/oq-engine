@@ -90,20 +90,20 @@ def collect_exposures(grm_dir):
     return out, csvfiles
 
 
-def exposure_by_geohash(lines, names, common, monitor):
-    if hasattr(lines, 'fname'):
-        inp = lines.fname
+def exposure_by_geohash(data, file, monitor):
+    if data is None:
+        inp = file.fname
         skip = 1
-    elif isinstance(lines, bytes):
-        inp = io.BytesIO(zlib.decompress(lines))
+    elif isinstance(data, bytes):
+        inp = io.BytesIO(zlib.decompress(data))
         skip = 0
     else:
-        inp = io.StringIO(lines)
+        inp = io.StringIO(data)
         skip = 0
-    df = pandas.read_csv(inp, names=names, dtype=CONV, usecols=common,
-                         skiprows=skip)
+    df = pandas.read_csv(
+        inp, names=file.header, dtype=CONV, usecols=file.fields, skiprows=skip)
     if len(df):
-        dt = hdf5.build_dt(CONV, names, '<BytesIO>')
+        dt = hdf5.build_dt(CONV, file.header, '<BytesIO>')
         array = numpy.zeros(len(df), dt)
         for col in df.columns:
             array[col] = df[col].to_numpy()
@@ -115,25 +115,22 @@ def exposure_by_geohash(lines, names, common, monitor):
 
 def gen_tasks(files, monitor):
     for file in files:
-        if file.weight < 10_000_000:  # small file
-            yield from exposure_by_geohash(
-                file, file.header, file.fields, monitor)
+        if file.size < 10_000_000:  # small file
+            yield from exposure_by_geohash(None, file, monitor)
             continue
         f = open(file.fname, newline='',
                  encoding='utf-8-sig', errors='ignore')
         with f:
             lines = list(f)
-        header = [col.strip() for col in lines[0].split(',')]
         for i, block in enumerate(general.block_splitter(lines[1:], 500_000)):
             data = '\r\n'.join(block)
             if i == 0:
-                yield from exposure_by_geohash(
-                    data, header, file.fields, monitor)
+                yield from exposure_by_geohash(data, file, monitor)
             else:
                 print(file.fname)
                 # compressing saves memory when pickling-unpickling
                 data = zlib.compress(data.encode('utf8'))
-                yield exposure_by_geohash, data, header, file.fields
+                yield exposure_by_geohash, data, file
 
 
 def read_world_exposure(grm_dir, dstore):
@@ -155,7 +152,7 @@ def read_world_exposure(grm_dir, dstore):
     dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
     dstore.swmr_on()
     smap = Starmap.apply(gen_tasks, (files,),
-                         weight=operator.attrgetter('weight'), h5=dstore.hdf5)
+                         weight=operator.attrgetter('size'), h5=dstore.hdf5)
     s = 0
     for gh3, arr in smap:
         for name in files[0].fields:

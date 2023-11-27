@@ -42,7 +42,7 @@ vuint32 = h5py.special_dtype(vlen=numpy.uint32)
 vfloat32 = h5py.special_dtype(vlen=numpy.float32)
 vfloat64 = h5py.special_dtype(vlen=numpy.float64)
 
-CSVFile = collections.namedtuple('CSVFile', 'fname header fields weight')
+CSVFile = collections.namedtuple('CSVFile', 'fname header fields size')
 FLOAT = (float, numpy.float32, numpy.float64)
 INT = (int, numpy.int32, numpy.uint32, numpy.int64, numpy.uint64)
 MAX_ROWS = 10_000_000
@@ -913,7 +913,9 @@ def find_error(fname, errors, dtype):
 
 def sniff(fnames, sep=',', ignore=set()):
     """
-    Infer the common fields of a set of CSV files (stripping the pre-headers)
+    Read the first line of a set of CSV files by stripping the pre-headers.
+
+    :returns: a list of CSVFile namedtuples.
     """
     common = None
     files = []
