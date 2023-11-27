@@ -21,6 +21,7 @@ import os
 import io
 import zlib
 import logging
+import collections
 import pandas
 import numpy
 import h5py
@@ -44,6 +45,7 @@ for f in (None, 'ID_1'):
     CONV[f] = str
 TAGS = {'TAXONOMY': [], 'ID_0': [], 'ID_1': [], 'OCCUPANCY': []}
 IGNORE = set('NAME_0 NAME_1 SETTLEMENT'.split())
+File = collections.namedtuple('File', 'fname weight fields')
 
 
 def add_geohash3(array):
@@ -70,17 +72,25 @@ def fix(arr):
 
 def collect_exposures(grm_dir):
     """
-    Collect the files of kind Exposure_<Country>.xml
+    Collect the files of kind Exposure_<Country>.xml.
+
+    :returns: xmlfiles, csvfiles, csvsizes
     """
     out = []
+    sizes = []
+    csvfiles = []
     for region in os.listdir(grm_dir):
         expodir = os.path.join(grm_dir, region, 'Exposure', 'Exposure')
         if not os.path.exists(expodir):
             continue
         for fname in os.listdir(expodir):
             if fname.startswith('Exposure_'):  # i.e. Exposure_Chile.xml
-                out.append(os.path.join(expodir, fname))
-    return out
+                fullname = os.path.join(expodir, fname)
+                out.append(fullname)
+                exposure, _ = _get_exposure(fullname)
+                csvfiles.extend(exposure.datafiles)
+                sizes.extend(map(os.path.getsize, exposure.datafiles))
+    return out, csvfiles, sizes
 
 
 def exposure_by_geohash(lines, names, common, monitor):
@@ -99,19 +109,21 @@ def exposure_by_geohash(lines, names, common, monitor):
         yield gh, array[array['geohash3']==gh]
 
 
-def gen_tasks(fname, fields, monitor):
-    f = open(fname, newline='', encoding='utf-8-sig', errors='ignore')
-    with f:
-        lines = list(f)
-    header = [col.strip() for col in lines[0].split(',')]
-    for i, block in enumerate(general.block_splitter(lines[1:], 200_000)):
-        data = '\r\n'.join(block)
-        if i == 0:
-            yield from exposure_by_geohash(data, header, fields, monitor)
-        else:
-            print(fname)
-            data = zlib.compress(data.encode('utf8'))
-            yield exposure_by_geohash, data, header, fields
+def gen_tasks(rows, monitor):
+    for row in rows:
+        f = open(row.fname, newline='', encoding='utf-8-sig', errors='ignore')
+        with f:
+            lines = list(f)
+        header = [col.strip() for col in lines[0].split(',')]
+        for i, block in enumerate(general.block_splitter(lines[1:], 200_000)):
+            data = '\r\n'.join(block)
+            if i == 0:
+                yield from exposure_by_geohash(
+                    data, header, row.fields, monitor)
+            else:
+                print(row.fname)
+                data = zlib.compress(data.encode('utf8'))
+                yield exposure_by_geohash, data, header, row.fields
 
 
 def read_world_exposure(grm_dir, dstore):
@@ -121,12 +133,7 @@ def read_world_exposure(grm_dir, dstore):
 
     :param grm_dir: directory containing the global risk model
     """
-    fnames = collect_exposures(grm_dir)
-    csvfiles = []
-    for fname in fnames:
-        exposure, _ = _get_exposure(fname)
-        csvfiles.extend(exposure.datafiles)
-
+    fnames, csvfiles, csvsizes = collect_exposures(grm_dir)
     common = sorted(hdf5.read_common_header(csvfiles) - IGNORE)
     assert common, 'There is no common header subset among %s' % csvfiles
 
@@ -140,8 +147,8 @@ def read_world_exposure(grm_dir, dstore):
     dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
 
     dstore.swmr_on()
-    smap = Starmap(gen_tasks, [(c, common) for c in csvfiles],
-                   h5=dstore.hdf5)
+    files = [File(c, w, common) for c, w in zip(csvfiles, csvsizes)]
+    smap = Starmap.apply(gen_tasks, (files,), h5=dstore.hdf5)
     s = 0
     for gh3, arr in smap:
         for name in common:
