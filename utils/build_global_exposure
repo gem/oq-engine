@@ -85,7 +85,7 @@ def collect_exposures(grm_dir):
 
 def exposure_by_geohash(lines, names, common, monitor):
     if isinstance(lines, bytes):
-        data = io.BytesIO(lines)
+        data = io.BytesIO(zlib.decompress(lines))
     else:
         data = io.StringIO(lines)
     df = pandas.read_csv(data, names=names, dtype=CONV, usecols=common)
@@ -100,14 +100,16 @@ def exposure_by_geohash(lines, names, common, monitor):
 
 
 def gen_tasks(fname, fields, monitor):
-    lines = list(open(fname + '.bak', newline='', encoding='utf-8-sig',
-                      errors='ignore'))
+    f = open(fname + '.bak', newline='', encoding='utf-8-sig', errors='ignore')
+    with f:
+        lines = list(f)
     header = [col.strip() for col in lines[0].split(',')]
     for i, block in enumerate(general.block_splitter(lines[1:], 200_000)):
         data = '\r\n'.join(block)
         if i == 0:
             yield from exposure_by_geohash(data, header, fields, monitor)
         else:
+            print(fname)
             data = zlib.compress(data.encode('utf8'))
             yield exposure_by_geohash, data, header, fields
 
