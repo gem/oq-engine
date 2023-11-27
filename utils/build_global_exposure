@@ -21,6 +21,7 @@ import os
 import io
 import zlib
 import logging
+import operator
 import collections
 import pandas
 import numpy
@@ -111,11 +112,12 @@ def exposure_by_geohash(lines, names, common, monitor):
 
 def gen_tasks(rows, monitor):
     for row in rows:
-        f = open(row.fname, newline='', encoding='utf-8-sig', errors='ignore')
+        f = open(row.fname + '.bak', newline='',
+                 encoding='utf-8-sig', errors='ignore')
         with f:
             lines = list(f)
         header = [col.strip() for col in lines[0].split(',')]
-        for i, block in enumerate(general.block_splitter(lines[1:], 200_000)):
+        for i, block in enumerate(general.block_splitter(lines[1:], 500_000)):
             data = '\r\n'.join(block)
             if i == 0:
                 yield from exposure_by_geohash(
@@ -148,7 +150,8 @@ def read_world_exposure(grm_dir, dstore):
 
     dstore.swmr_on()
     files = [File(c, w, common) for c, w in zip(csvfiles, csvsizes)]
-    smap = Starmap.apply(gen_tasks, (files,), h5=dstore.hdf5)
+    smap = Starmap.apply(gen_tasks, (files,),
+                         weight=operator.attrgetter('weight'), h5=dstore.hdf5)
     s = 0
     for gh3, arr in smap:
         for name in common:
