@@ -105,14 +105,13 @@ def gen_tasks(files, monitor):
     for file in files:
         dfs = pandas.read_csv(
             file.fname + '.bak', names=file.header, dtype=CONV,
-            usecols=file.fields,
-            skiprows=1, chunksize=1_000_000)
+            usecols=file.fields, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
             array = numpy.zeros(len(df), dt)
             for col in df.columns:
                 array[col] = df[col].to_numpy()
-            if i < 3:
+            if i == 0:
                 yield from exposure_by_geohash(array, monitor)
             else:
                 print(file.fname)
@@ -155,7 +154,7 @@ def read_world_exposure(grm_dir, dstore):
     for tagname in TAGS:
         tagvalues = numpy.concatenate(TAGS[tagname])
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
-        logging.info('Storing %s[%d]', tagname, len(uvals))
+        logging.info('Storing %s[%d/%d]', tagname, len(uvals), len(inv))
         hdf5.extend(dstore[f'exposure/{tagname}'], inv)
         dstore['tagcol/' + tagname] = uvals
 
