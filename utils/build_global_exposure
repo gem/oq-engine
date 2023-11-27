@@ -65,7 +65,7 @@ def fix(arr):
 
 
 def exposure_by_geohash(fname, common, monitor):
-    aw = hdf5.read_csv(fname, CONV, errors='ignore', usecols=common)
+    aw = hdf5.read_csv(fname + '.bak', CONV, errors='ignore', usecols=common)
     if hasattr(aw, 'array') and len(aw.array):
         for slc in general.gen_slices(0, len(aw.array), 1_000_000):
             arr = add_geohash3(aw.array[slc])
