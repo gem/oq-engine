@@ -18,14 +18,12 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import io
-import zlib
 import logging
 import operator
 import pandas
 import numpy
 import h5py
-from openquake.baselib import general, hdf5, sap, performance
+from openquake.baselib import hdf5, sap, performance
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import build_dstore_log
@@ -90,30 +88,14 @@ def collect_exposures(grm_dir):
     return out, csvfiles
 
 
-def exposure_by_geohash(data, file, monitor):
+def exposure_by_geohash(array, monitor):
     """
     Yields pairs (geohash, array)
     """
-    if data is None:
-        inp = file.fname
-        skip = 1
-    elif isinstance(data, bytes):
-        inp = io.BytesIO(zlib.decompress(data))
-        skip = 0
-    else:
-        inp = io.StringIO(data)
-        skip = 0
-    df = pandas.read_csv(
-        inp, names=file.header, dtype=CONV, usecols=file.fields, skiprows=skip)
-    if len(df):
-        dt = hdf5.build_dt(CONV, file.header, '<BytesIO>')
-        array = numpy.zeros(len(df), dt)
-        for col in df.columns:
-            array[col] = df[col].to_numpy()
-        array = add_geohash3(array)
-        fix(array)
-        for gh in numpy.unique(array['geohash3']):
-            yield gh, array[array['geohash3']==gh]
+    array = add_geohash3(array)
+    fix(array)
+    for gh in numpy.unique(array['geohash3']):
+        yield gh, array[array['geohash3']==gh]
 
 
 def gen_tasks(files, monitor):
@@ -121,22 +103,19 @@ def gen_tasks(files, monitor):
     Generate tasks of kind exposure_by_geohash for large files
     """
     for file in files:
-        if file.size < 10_000_000:  # small file
-            yield from exposure_by_geohash(None, file, monitor)
-            continue
-        f = open(file.fname, newline='',
-                 encoding='utf-8-sig', errors='ignore')
-        with f:
-            lines = list(f)
-        for i, block in enumerate(general.block_splitter(lines[1:], 500_000)):
-            data = '\r\n'.join(block)
+        dfs = pandas.read_csv(
+            file.fname + '.bak', names=file.header, dtype=CONV,
+            usecols=file.fields, skiprows=1, chunksize=1_000_000)
+        for i, df in enumerate(dfs):
+            dt = hdf5.build_dt(CONV, df.columns, file.fname)
+            array = numpy.zeros(len(df), dt)
+            for col in df.columns:
+                array[col] = df[col].to_numpy()
             if i == 0:
-                yield from exposure_by_geohash(data, file, monitor)
+                yield from exposure_by_geohash(array, monitor)
             else:
                 print(file.fname)
-                # compressing saves memory when pickling-unpickling
-                data = zlib.compress(data.encode('utf8'))
-                yield exposure_by_geohash, data, file
+                yield exposure_by_geohash, array
 
 
 def read_world_exposure(grm_dir, dstore):
@@ -175,7 +154,7 @@ def read_world_exposure(grm_dir, dstore):
     for tagname in TAGS:
         tagvalues = numpy.concatenate(TAGS[tagname])
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
-        logging.info('Storing %s[%d]', tagname, len(uvals))
+        logging.info('Storing %s[%d/%d]', tagname, len(uvals), len(inv))
         hdf5.extend(dstore[f'exposure/{tagname}'], inv)
         dstore['tagcol/' + tagname] = uvals
 
