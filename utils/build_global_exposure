@@ -18,6 +18,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import zlib
 import logging
 import numpy
 import h5py
@@ -75,7 +76,7 @@ def exposure_by_geohash(exposure_xml, common, monitor):
     exposure, _ = _get_exposure(exposure_xml)
     for fname in exposure.datafiles:
         aw = hdf5.read_csv(
-            fname + '.bak', CONV, errors='ignore', usecols=common)
+            fname, CONV, errors='ignore', usecols=common)
         if hasattr(aw, 'array') and len(aw.array):
             for i, slc in enumerate(
                     general.gen_slices(0, len(aw.array), 200_000)):
@@ -135,7 +136,8 @@ def read_world_exposure(grm_dir, dstore):
     for gh3, arr in smap:
         for name in common:
             if name in TAGS:
-                TAGS[name].append(arr[name])
+                comp = zlib.compress('\n'.join(arr[name]).encode('utf8'))
+                TAGS[name].append(comp)
             else:
                 hdf5.extend(dstore['exposure/' + name], arr[name])
         n = len(arr)
@@ -145,7 +147,9 @@ def read_world_exposure(grm_dir, dstore):
     Starmap.shutdown()
 
     for tagname in TAGS:
-        tagvalues = numpy.concatenate(TAGS[tagname])
+        tagvalues = []
+        for comp in TAGS[tagname]:
+            tagvalues.extend(zlib.decompress(comp).decode('utf8').split())
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
         logging.info('Storing %s[%d]', tagname, len(uvals))
         hdf5.extend(dstore[f'exposure/{tagname}'], inv)
