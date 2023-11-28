@@ -32,6 +32,7 @@ import itertools
 
 import numpy
 import pandas
+from scipy.spatial import cKDTree
 import requests
 from shapely import wkt
 
@@ -49,7 +50,8 @@ from openquake.hazardlib import (
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.point import Point
-from openquake.hazardlib.geo.utils import BBoxError, cross_idl
+from openquake.hazardlib.geo.utils import (
+    BBoxError, cross_idl, spherical_to_cartesian)
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -438,21 +440,39 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
+def get_site_model_around(site_model_hdf5, rup, dist):
+    """
+    :returns: site model close to the rupture
+    """
+    with hdf5.File(site_model_hdf5) as f:
+        sm = f['site_model'][:]
+    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
+    xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
+    kdt = cKDTree(xyz_all)
+    sids = U32(kdt.query_ball_point(xyz, dist, eps=.001))
+    return sm[sids]
+
+    
 def get_site_model(oqparam):
     """
-    Convert the NRML file into an array of site parameters.
-
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    fnames = oqparam.inputs['site_model']
+    if len(fnames) == 1 and fnames[0].endswith('.hdf5'):
+        rup = oqparam.rupture_dict
+        # global site model close to the rupture
+        dist = oqparam.maximum_distance('*')(rup['mag'])
+        return get_site_model_around(fnames[0], rup, dist)
+
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if 'amplification' in oqparam.inputs:
         req_site_params.add('ampcode')
     arrays = []
     sm_fieldsets = {}
-    for fname in oqparam.inputs['site_model']:
+    for fname in fnames:
         if isinstance(fname, str) and not fname.endswith('.xml'):
 
             # check if the file is a list of lon,lat without header
@@ -572,11 +592,6 @@ def get_site_collection(oqparam, h5=None):
     """
     if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
         return h5['sitecol']
-    fnames = oqparam.inputs['site_model']
-    if len(fnames) == 1 and fnames[0].endswith('.hdf5'):
-        # global site model
-        with hdf5.File(fnames[0]) as f:
-            return f['sitecol']
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
