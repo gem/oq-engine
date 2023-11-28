@@ -104,7 +104,7 @@ def gen_tasks(files, monitor):
     """
     for file in files:
         dfs = pandas.read_csv(
-            file.fname + '.bak', names=file.header, dtype=CONV,
+            file.fname, names=file.header, dtype=CONV,
             usecols=file.fields, skiprows=1, chunksize=1_000_000)
         for i, df in enumerate(dfs):
             dt = hdf5.build_dt(CONV, df.columns, file.fname)
