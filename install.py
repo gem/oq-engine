@@ -404,7 +404,10 @@ def install(inst, version, from_fork):
             PYVER[:2] + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call(
-        [pycmd, '-m', 'pip', 'install', '-r', req])
+        [pycmd, '-m', 'pip', 'install',
+         '--trusted-host', 'wheelhouse.openquake.org',
+         '--trusted-host', 'raw.githubusercontent.com',
+         '-r', req])
 
     if (inst is devel or inst is devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
