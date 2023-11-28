@@ -409,8 +409,6 @@ def install(inst, version, from_fork):
 
     subprocess.check_call(
         [pycmd, '-m', 'pip', 'install',
-         '--trusted-host', 'wheelhouse.openquake.org',
-         '--trusted-host', 'raw.githubusercontent.com',
          '-r', req])
 
     if (inst is devel or inst is devel_server):  # install from the local repo
