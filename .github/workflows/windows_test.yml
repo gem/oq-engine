@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "30 13 * * *"
+    - cron: "00 14 * * *"
   push:
     branches: [ windows-all-tests ]
 
