@@ -270,11 +270,7 @@ def before_checks(inst, venv, port, remove, usage):
 
     # check python version
     if sys.platform == 'linux':
-        # requires Python >= 3.8.0
-        if PYVER < (3, 8, 0):
-            sys.exit('Error: you need at least Python 3.8, but you have %s' %
-                     '.'.join(map(str, sys.version_info)))
-    elif PYVER < (3, 10, 6):
+        if PYVER < (3, 10, 6):
         # requires Python >= 3.10.6
         sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
                  '.'.join(map(str, sys.version_info)))
@@ -408,8 +404,7 @@ def install(inst, version, from_fork):
             PYVER[:2] + PLATFORM[sys.platform] + mac)
 
     subprocess.check_call(
-        [pycmd, '-m', 'pip', 'install',
-         '-r', req])
+        [pycmd, '-m', 'pip', 'install', '-r', req])
 
     if (inst is devel or inst is devel_server):  # install from the local repo
         subprocess.check_call([pycmd, '-m', 'pip', 'install', '-e', CDIR])
