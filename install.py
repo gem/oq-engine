@@ -272,8 +272,8 @@ def before_checks(inst, venv, port, remove, usage):
     if sys.platform == 'linux':
         if PYVER < (3, 10, 6):
         # requires Python >= 3.10.6
-            sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
-                     '.'.join(map(str, sys.version_info)))
+        sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
+                 '.'.join(map(str, sys.version_info)))
 
     # check platform
     if ((inst is server and sys.platform != 'linux') or (
