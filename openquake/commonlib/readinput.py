@@ -570,9 +570,13 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    ss = oqparam.sites_slice  # can be None or (start, stop)
-    if h5 and 'sitecol' in h5 and not ss:
+    if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
         return h5['sitecol']
+    fnames = oqparam.inputs['site_model']
+    if len(fnames) == 1 and fnames[0].endswith('.hdf5'):
+        # global site model
+        with hdf5.File(fnames[0]) as f:
+            return f['sitecol']
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
         raise InvalidFile('You are missing sites.csv or site_model.csv in %s'
@@ -604,6 +608,7 @@ def get_site_collection(oqparam, h5=None):
             df = pandas.read_csv(oqparam.inputs['station_data'])
             sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
                                      df.LATITUDE.to_numpy())
+    ss = oqparam.sites_slice
     if ss:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
