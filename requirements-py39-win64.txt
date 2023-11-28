@@ -32,7 +32,7 @@ https://wheelhouse.openquake.org/v3/py/sqlparse-0.3.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/certifi-2019.3.9-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/chardet-3.0.4-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/idna-2.8-py2.py3-none-any.whl
-https://wheelhouse.openquake.org/v3/py/urllib3-1.25.3-py2.py3-none-any.whl
+https://wheelhouse.openquake.org/v3/py/urllib3-2.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/requests-2.22.0-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/toml-0.10.2-py2.py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.4.1-py3-none-any.whl
