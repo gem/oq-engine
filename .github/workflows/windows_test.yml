@@ -1,4 +1,4 @@
-name: Windows full tests of OpenQuake Engine
+name: Windows amd64 full tests of OpenQuake Engine
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "00 22 * * *"
+    - cron: "00 14 * * *"
   push:
     branches: [ windows-all-tests ]
 
@@ -67,13 +67,13 @@ jobs:
           {
             Write-Host "Install with workflow_dispatch"
             Write-Host "python install.py devel --version ${env:BRANCH}"
-            python install.py devel --version ${env:BRANCH}
+            python install.py user --version ${env:BRANCH}
           }
           else
           {
-            Write-Host "Install on scheduled task"
-            Write-Host "python install.py devel "
-            python install.py devel
+            Write-Host "Install on user mode on scheduled task"
+            Write-Host "python install.py user "
+            python install.py user
           }
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           python -m pip install pytest pyshp flake8

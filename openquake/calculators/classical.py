@@ -30,7 +30,8 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import performance, parallel, hdf5, config, python3compat
+from openquake.baselib import (
+    performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import InvalidFile
@@ -117,7 +118,8 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     # maximum size of the pmap array in GB
-    size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
+    size_mb = (
+        len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2)
     itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
 
     # NB: disagg_by_src is disabled in case of tiling
@@ -288,7 +290,7 @@ class Hazard:
             self.offset += len(sids)
             if self.N == 1:  # single site, store mean_rates_ss
                 mean_rates_ss[m] += rates[0] @ self.weig
-        
+
         if self.N == 1:  # single site
             self.datastore['mean_rates_ss'] = mean_rates_ss
         self.acc['nsites'] = self.offset
@@ -315,7 +317,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
     precalc = 'preclassical'
-    accept_precalc = ['preclassical', 'classical', 'aftershock']
+    accept_precalc = ['preclassical', 'classical']
     SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
@@ -468,10 +470,16 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
-            raise RuntimeError('There are no ruptures close to the site(s)')
-        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
-            int(self.cfactor[1]), int(self.cfactor[0]),
-            self.cfactor[1] / self.cfactor[0]))
+            if self.N == 1:
+                logging.error('The site is far from all seismic sources'
+                              ' included in the hazard model')
+            else:
+                raise RuntimeError('The sites are far from all seismic sources'
+                                   ' included in the hazard model')
+        else:
+            logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
+                int(self.cfactor[1]), int(self.cfactor[0]),
+                self.cfactor[1] / self.cfactor[0]))
         if '_rates' in self.datastore:
             self.build_curves_maps()
         if not oq.hazard_calculation_id:
@@ -527,10 +535,14 @@ class ClassicalCalculator(base.HazardCalculator):
         """
         The sum of the mean_rates_by_src must correspond to the mean_rates_ss
         """
-        return
-        exp = self.datastore['mean_rates_ss'][:]
+        try:
+            exp = self.datastore['mean_rates_ss'][:]
+        except KeyError:  # if there are no ruptures close to the site
+            return
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
-        numpy.testing.assert_allclose(got, exp)
+        # skipping the first value which can be wrong due to the cutoff
+        # (happens in logictree/case_05)
+        numpy.testing.assert_allclose(got[1:], exp[1:], atol=1E-5)
 
     def execute_big(self, maxw):
         """
@@ -557,7 +569,8 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
-        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
+        for dic in parallel.Starmap(
+                classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
@@ -720,8 +733,8 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-        if 'delta_rates' in self.datastore.parent:
-            pass  # do nothing for the aftershock calculator, avoids an error
+        if 'delta_rates' in oq.inputs:
+            pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
         parallel.Starmap(

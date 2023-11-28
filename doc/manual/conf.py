@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenQuake Engine Manual'
-copyright = u'2018-2022, GEM Foundation'
+copyright = u'2018-2023, GEM Foundation'
 
 # 'author' variable must be aligned with authors section in 'index_contents.rst_part' file
 author = u'M. Pagani, V. Silva, A. Rao, M. Simionato,\\\\K. Johnson'

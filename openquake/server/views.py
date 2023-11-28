@@ -965,18 +965,25 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
             # NOTE: only one hmap can be visualized currently
             hmaps = any([k.startswith('hmap') for k in ds['png']])
             hcurves = 'hcurves.png' in ds['png']
+            # NOTE: remove "and 'All' in k" to show the individual plots
             disagg_by_src = [k for k in ds['png']
-                             if k.startswith('disagg_by_src-')]
+                             if k.startswith('disagg_by_src-') and 'All' in k]
             governing_mce = 'governing_mce.png' in ds['png']
         else:
             hmaps = hcurves = governing_mce = False
             disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    lon = lat = vs30 = site_name = None
+    if application_mode == 'AELO':
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        hcurves=hcurves,
                        disagg_by_src=disagg_by_src,
                        governing_mce=governing_mce,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
                        application_mode=application_mode))
 
 
@@ -985,29 +992,43 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     job = logs.dbcmd('get_job', calc_id)
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
-    asce7 = asce41 = None
+    asce07 = asce41 = None
+    asce07_with_units = {}
+    asce41_with_units = {}
+    ASCE_VIEW_DECIMALS = 2
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        if 'asce7' in ds:
-            asce7_js = ds['asce7'][()].decode('utf8')
-            asce7 = json.loads(asce7_js)
+        if 'asce07' in ds:
+            asce07_js = ds['asce07'][()].decode('utf8')
+            asce07 = json.loads(asce07_js)
+            for key, value in asce07.items():
+                if key not in ('PGA', 'Ss', 'S1'):
+                    continue
+                if not isinstance(value, float):
+                    asce07_with_units[key] = value
+                elif key in ('CRS', 'CR1'):
+                    # NOTE: (-) stands for adimensional
+                    asce07_with_units[key + ' (-)'] = round(
+                        value, ASCE_VIEW_DECIMALS)
+                else:
+                    asce07_with_units[key + ' (g)'] = round(
+                        value, ASCE_VIEW_DECIMALS)
         if 'asce41' in ds:
             asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
-        asce7_with_units = {}
-        for key, value in asce7.items():
-            if not isinstance(value, float):
-                asce7_with_units[key] = value
-            elif key in ('CRS', 'CR1'):
-                # NOTE: (-) stands for adimensional
-                asce7_with_units[key + ' (-)'] = value
-            else:
-                asce7_with_units[key + ' (g)'] = value
-        asce41_with_units = {}
-        for key, value in asce41.items():
-            asce41_with_units[key + ' (g)'] = value
+            for key, value in asce41.items():
+                if not key.startswith('BSE'):
+                    continue
+                asce41_with_units[key + ' (g)'] = round(
+                    value, ASCE_VIEW_DECIMALS)
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
+    low_hazard = asce07 is None or asce41 is None
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
-                       asce7=asce7_with_units, asce41=asce41_with_units))
+                       asce07=asce07_with_units, asce41=asce41_with_units,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       low_hazard=low_hazard))
 
 
 @csrf_exempt

@@ -1102,9 +1102,7 @@ class FullLogicTree(object):
         """
         :returns: a list of Gt weights
         """
-        out = []
-        for g, trs in enumerate(trt_rlzs):
-            out.append(sum(self.weights[r] for r in trs % TWO24))
+        out = [sum(self.weights[r] for r in trs % TWO24) for trs in trt_rlzs]
         return out
 
     def get_smr_by_ltp(self):

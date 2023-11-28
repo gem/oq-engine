@@ -36,6 +36,22 @@ U16 = numpy.uint16
 U32 = numpy.uint32
 
 
+def fix_investigation_time(oq, dstore):
+    """
+    If starting from GMFs, fix oq.investigation_time.
+    :returns: the number of hazard realizations
+    """
+    R = len(dstore['weights'])
+    if 'gmfs' in oq.inputs and not oq.investigation_time:
+        attrs = dstore['gmf_data'].attrs
+        inv_time = attrs['investigation_time']
+        eff_time = attrs['effective_time']
+        if inv_time:  # is zero in scenarios
+            oq.investigation_time = inv_time
+            oq.ses_per_logic_tree_path = eff_time / (oq.investigation_time * R)
+    return R
+
+
 def save_curve_stats(dstore):
     """
     Save agg_curves-stats
@@ -126,36 +142,39 @@ def reagg_idxs(num_tags, tagnames):
     return arr.flatten()
 
 
-def get_loss_builder(dstore, return_periods=None, loss_dt=None,
+def get_loss_builder(dstore, oq, return_periods=None, loss_dt=None,
                      num_events=None):
     """
     :param dstore: datastore for an event based risk calculation
     :returns: a LossCurvesMapsBuilder instance
     """
-    oq = dstore['oqparam']
     weights = dstore['weights'][()]
-    try:
-        haz_time = dstore['gmf_data'].attrs['effective_time']
-    except KeyError:
-        haz_time = None
-    eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
+    haz_time = oq.investigation_time * oq.ses_per_logic_tree_path * (
         len(weights) if oq.collect_rlzs else 1)
     if oq.collect_rlzs:
-        if haz_time and haz_time != eff_time:
+        try:
+            etime = dstore['gmf_data'].attrs['effective_time']
+        except KeyError:
+            etime = None
+        haz_time = (oq.investigation_time * oq.ses_per_logic_tree_path *
+                    len(weights))
+        if etime and etime != haz_time:
             raise ValueError('The effective time stored in gmf_data is %d, '
                              'which is inconsistent with %d' %
-                             (haz_time, eff_time))
+                             (etime, haz_time))
         num_events = numpy.array([len(dstore['events'])])
         weights = numpy.ones(1)
-    elif num_events is None:
+    else:
+        haz_time = oq.investigation_time * oq.ses_per_logic_tree_path
+    if num_events is None:
         num_events = numpy.bincount(
             dstore['events']['rlz_id'], minlength=len(weights))
     periods = return_periods or oq.return_periods or scientific.return_periods(
-        eff_time, num_events.max())
+        haz_time, num_events.max())
     return scientific.LossCurvesMapsBuilder(
         oq.conditional_loss_poes, numpy.array(periods),
         loss_dt or oq.loss_dt(), weights, dict(enumerate(num_events)),
-        eff_time, oq.risk_investigation_time or oq.investigation_time)
+        haz_time, oq.risk_investigation_time or oq.investigation_time)
 
 
 def get_src_loss_table(dstore, loss_id):
@@ -249,7 +268,7 @@ def store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore):
     if oq.investigation_time and loss_cols:  # build aggcurves
         logging.info('Building aggcurves')
         units = dstore['cost_calculator'].get_units(oq.loss_types)
-        builder = get_loss_builder(dstore, num_events=num_events)
+        builder = get_loss_builder(dstore, oq, num_events=num_events)
         try:
             year = events['year']
             if len(numpy.unique(year)) == 1:  # there is a single year
@@ -277,11 +296,10 @@ def store_aggcurves(oq, agg_ids, rbe_df, columns, events, num_events, dstore):
 
     
 # aggcurves are built in parallel, aggrisk sequentially
-def build_store_agg(dstore, rbe_df, num_events):
+def build_store_agg(dstore, oq, rbe_df, num_events):
     """
     Build the aggrisk and aggcurves tables from the risk_by_event table
     """
-    oq = dstore['oqparam']
     size = dstore.getsize('risk_by_event')
     logging.info('Building aggrisk from %s of risk_by_event',
                  general.humansize(size))
@@ -306,7 +324,7 @@ def build_store_agg(dstore, rbe_df, num_events):
 
     agg_ids = rbe_df.agg_id.unique()
     K = agg_ids.max()
-    L = scientific.LOSSID['structural']
+    T = scientific.LOSSID[oq.total_losses or 'structural']
     logging.info("Performing %d aggregations", len(agg_ids))
 
     # double loop to avoid running out of memory
@@ -314,7 +332,7 @@ def build_store_agg(dstore, rbe_df, num_events):
 
         # build loss_by_event and loss_by_rupture
         if agg_id == K and ('loss' in columns or 'losses' in columns) and rups:
-            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == L)].copy()
+            df = rbe_df[(rbe_df.agg_id == K) & (rbe_df.loss_id == T)].copy()
             if len(df):
                 df['rup_id'] = rup_id[df.event_id.to_numpy()]
                 if 'losses' in columns:  # for consequences
@@ -348,13 +366,12 @@ def build_store_agg(dstore, rbe_df, num_events):
     return aggrisk
 
 
-def build_reinsurance(dstore, num_events):
+def build_reinsurance(dstore, oq, num_events):
     """
     Build and store the tables `reinsurance-avg_policy` and
     `reinsurance-avg_portfolio`;
     for event_based, also build the `reinsurance-aggcurves` table.
     """
-    oq = dstore['oqparam']
     size = dstore.getsize('reinsurance-risk_by_event')
     logging.info('Building reinsurance-aggcurves from %s of '
                  'reinsurance-risk_by_event', general.humansize(size))
@@ -377,7 +394,7 @@ def build_reinsurance(dstore, num_events):
     else:
         rbe_df['rlz_id'] = 0
     if oq.investigation_time:
-        builder = get_loss_builder(dstore, num_events=num_events)
+        builder = get_loss_builder(dstore, oq, num_events=num_events)
     avg = general.AccumDict(accum=[])
     dic = general.AccumDict(accum=[])
     for rlzid, df in rbe_df.groupby('rlz_id'):
@@ -466,6 +483,9 @@ class PostRiskCalculator(base.RiskCalculator):
 
     def execute(self):
         oq = self.oqparam
+        R = fix_investigation_time(oq, self.datastore)
+        if oq.investigation_time:
+            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path * R
 
         if 'reinsurance' in oq.inputs:
             logging.warning('Reinsurance calculations are still experimental')
@@ -499,9 +519,9 @@ class PostRiskCalculator(base.RiskCalculator):
             rbe = reinsurance.by_event(rbp, self.treaty_df, self._monitor)
             self.datastore.create_df('reinsurance_by_policy', rbp)
             self.datastore.create_df('reinsurance-risk_by_event', rbe)
+
         if oq.investigation_time and oq.return_periods != [0]:
             # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
             if eff_time < 2:
                 logging.warning(
                     'eff_time=%s is too small to compute loss curves',
@@ -530,9 +550,10 @@ class PostRiskCalculator(base.RiskCalculator):
             rbe_df['agg_id'] = idxs[rbe_df['agg_id'].to_numpy()]
             rbe_df = rbe_df.groupby(
                 ['event_id', 'loss_id', 'agg_id']).sum().reset_index()
-        self.aggrisk = build_store_agg(self.datastore, rbe_df, self.num_events)
+        self.aggrisk = build_store_agg(
+            self.datastore, oq, rbe_df, self.num_events)
         if 'reinsurance-risk_by_event' in self.datastore:
-            build_reinsurance(self.datastore, self.num_events)
+            build_reinsurance(self.datastore, oq, self.num_events)
         return 1
 
     def post_execute(self, ok):
@@ -542,9 +563,8 @@ class PostRiskCalculator(base.RiskCalculator):
         if not ok:  # the hazard is to small
             return
         oq = self.oqparam
-        # logging.info('Total portfolio loss\n' +
-        #              views.view('portfolio_loss', self.datastore))
         if oq.investigation_time and 'risk' in oq.calculation_mode:
+            self.datastore['oqparam'] = oq
             for ln in self.oqparam.loss_types:
                 li = scientific.LOSSID[ln]
                 dloss = views.view('delta_loss:%d' % li, self.datastore)

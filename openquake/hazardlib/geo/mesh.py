@@ -25,6 +25,7 @@ from scipy.spatial.distance import cdist
 import shapely.geometry
 import shapely.ops
 
+from alpha_shapes import Alpha_Shaper
 from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo import geodetic
@@ -419,7 +420,7 @@ class Mesh(object):
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
 
-    def get_joyner_boore_distance(self, mesh):
+    def get_joyner_boore_distance(self, mesh, unstructured=False):
         """
         Compute and return Joyner-Boore distance to each point of ``mesh``.
         Point's depth is ignored.
@@ -481,12 +482,27 @@ class Mesh(object):
         # to polygon distance, which gives the most accurate value
         # of distance in km (and that value is zero for points inside
         # the polygon).
-        proj, polygon = self._get_proj_enclosing_polygon()
+        if unstructured:
+
+            proj = geo_utils.OrthographicProjection(
+                *geo_utils.get_spherical_bounding_box(self.lons, self.lats))
+            # Points at distances lower than 40 km
+            mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
+            # Points representing the surface f the rupture
+            sfc_xx, sfc_yy = proj(self.lons, self.lats)
+            points = [(lo, la) for lo, la in zip(sfc_xx, sfc_yy)]
+            shaper = Alpha_Shaper(points)
+            alpha_opt, polygon = shaper.optimize()
+
+        else:
+            proj, polygon = self._get_proj_enclosing_polygon()
+
         if not isinstance(polygon, shapely.geometry.Polygon):
             # either line or point is our enclosing polygon. draw
             # a square with side of 10 m around in order to have
             # a proper polygon instead.
             polygon = polygon.buffer(self.DIST_TOLERANCE, 1)
+
         mesh_xx, mesh_yy = proj(mesh.lons[idxs], mesh.lats[idxs])
         # replace geodetic distance values for points-closer-than-the-threshold
         # by more accurate point-to-polygon distance values.

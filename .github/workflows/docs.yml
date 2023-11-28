@@ -285,15 +285,25 @@ jobs:
           fi
           set +x
 
-          gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
-          chmod 600 ./.deploy_rsa
-          eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
-
-          if [ -f "dot_ddown_man.json" ]; then
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_man.json"
+          if [ "$DOCS_SSH" ]; then
+              gpg --version
+              gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
+              chmod 600 ./.deploy_rsa
+              eval $(ssh-agent -s) && ssh-add ./.deploy_rsa
+          else
+              echo "DOCS_SSH env variable not found, skip deploy"
           fi
-          if [ -f "dot_ddown_adv.json" ]; then
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_adv.json"
+
+          if [ "$DOCS_SSH" ]; then
+              echo "publish dropdown version descriptions if exists"
+              if [ -f "dot_ddown_man.json" ]; then
+                  rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_man.json"
+              fi
+              if [ -f "dot_ddown_adv.json" ]; then
+                  rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_adv.json"
+              fi
+          else
+              echo "SKIP: publish dropdown version descriptions"
           fi
 
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
@@ -302,17 +312,25 @@ jobs:
           cd doc/manual && make html && make latexpdf
 
 
-          echo "Uploading OpenQuake Manual (PDF)"
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}PDF\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf"
-          ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf\" .'"
-          if [ "$PDF_VER_LINK" ]; then
-              echo "Found PDF_VER_LINK set [$PDF_VER_LINK]"
-              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}manuals/\"; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual (${PDF_VER_LINK}).pdf\"'"
+          if [ "$DOCS_SSH" ]; then
+              echo "Uploading OpenQuake Manual (PDF)"
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}PDF\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf"
+              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf\" .'"
+              if [ "$PDF_VER_LINK" ]; then
+                  echo "Found PDF_VER_LINK set [$PDF_VER_LINK]"
+                  ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}manuals/\"; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual (${PDF_VER_LINK}).pdf\"'"
+              fi
+          else
+              echo "SKIP Uploading OpenQuake Manual (PDF)"
           fi
 
 
-          echo "Uploading OpenQuake Manual (HTML)"
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
+          if [ "$DOCS_SSH" ]; then
+              echo "Uploading OpenQuake Manual (HTML)"
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
+          else
+              echo "SKIP Uploading OpenQuake Manual (HTML)"
+          fi
           echo "------"
 
 
@@ -320,8 +338,12 @@ jobs:
           cd ../sphinx && make html
 
 
-          echo "Upload Reference Manual (HTML)"
-          rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}reference/"
+          if [ "$DOCS_SSH" ]; then
+              echo "Upload Reference Manual (HTML)"
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}reference/"
+          else
+              echo "SKIP Upload Reference Manual (HTML)"
+          fi
           echo "------"
 
 
@@ -331,23 +353,39 @@ jobs:
           make clean && make latexpdf
 
 
-          echo "Upload OpenQuakeforAdvancedUsers (PDF)"
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/"
+          if [ "$DOCS_SSH" ]; then
+              echo "Upload OpenQuakeforAdvancedUsers (PDF)"
+              rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/"
 
-          ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuakeforAdvancedUsers.pdf\" \"OpenQuake for Advanced Users ${PDF_VER}.pdf\"'"
+              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuakeforAdvancedUsers.pdf\" \"OpenQuake for Advanced Users ${PDF_VER}.pdf\"'"
+          else
+              echo "SKIP Upload OpenQuakeforAdvancedUsers (PDF)"
+          fi
 
           echo "Make Advanced Manual (HTML)"
           cd ../adv-manual && make clean && make html
 
 
-          echo "Upload OpenQuakeforAdvancedUsers (HTML)"
-          rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}advanced/"
+          if [ "$DOCS_SSH" ]; then
+              echo "Upload OpenQuakeforAdvancedUsers (HTML)"
+              rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}advanced/"
+          else
+              echo "SKIP Upload OpenQuakeforAdvancedUsers (HTML)"
+          fi
 
           if [ "$BUILD" == "LTS" ]; then
-               ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" LTS'"
+              if [ "$DOCS_SSH" ]; then
+                  ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" LTS'"
+              else
+                  echo "SKIP create LTS link"
+              fi
           fi
           if [ "$BUILD" == "release" -o "$BUILD" == "LTS" ]; then
               if [ "$LATEST_VER" == "$ENG_VER" ]; then
-                  ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" latest'"
+                  if [ "$DOCS_SSH" ]; then
+                      ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}oq-engine/\"; ln -snf \"$ENG_VER\" latest'"
+                  else
+                      echo "SKIP create latest link"
+                  fi
               fi
           fi

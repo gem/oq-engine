@@ -1,0 +1,58 @@
+# Copyright (C) 2023-2023 GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+#
+# 
+# Singularity recipe does not have ARG like Dockerfile
+# Default value for oq_branch variable is master
+# Remember to change if needed
+
+Bootstrap: docker
+From: python:3.10-slim
+Stage: compile-build
+
+%labels
+    Author GEM Foundation <devops@openquake.org>
+
+%files
+   scripts/oq-db_start.sh /opt/openquake/bin/
+
+%post
+    ## for apt to be noninteractive
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    export LANG=en_US.UTF-8
+    oq_branch=master
+    export oq_branch
+    apt-get -y update
+    apt-get -y upgrade
+    apt-get install -y --no-install-recommends build-essential gcc git libcap-dev
+    apt-get clean
+    ## Create venv
+    export VIRTUAL_ENV=/opt/openquake
+    python3 -m venv $VIRTUAL_ENV
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+    ## Clone repository and install engine
+    git clone https://github.com/gem/oq-engine.git --depth=1 --branch $oq_branch && cd oq-engine && \
+    pip3 --disable-pip-version-check install . -r requirements-py310-linux64.txt --no-warn-script-location
+
+%environment
+
+## General environment variable
+    export LANG=en_US.UTF-8
+    export VIRTUAL_ENV=/opt/openquake
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+
+%runscript
+    exec /bin/bash -c "$@"

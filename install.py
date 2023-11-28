@@ -80,6 +80,7 @@ class server:
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
+    host = localhost
     port = %d
     file = %s
     [directory]
@@ -107,6 +108,7 @@ class devel_server:
     DBPATH = os.path.join(OQDATA, 'db.sqlite3')
     DBPORT = 1907
     CONFIG = '''[dbserver]
+    host = localhost
     port = %d
     file = %s
     [directory]
@@ -268,14 +270,10 @@ def before_checks(inst, venv, port, remove, usage):
 
     # check python version
     if sys.platform == 'linux':
-        # requires Python >= 3.8.0
-        if PYVER < (3, 8, 0):
-            sys.exit('Error: you need at least Python 3.8, but you have %s' %
+        if PYVER < (3, 10, 6):
+            # requires Python >= 3.10.6
+            sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
                      '.'.join(map(str, sys.version_info)))
-    elif PYVER < (3, 10, 6):
-        # requires Python >= 3.10.6
-        sys.exit('Error: you need at least Python 3.10.6, but you have %s' %
-                 '.'.join(map(str, sys.version_info)))
 
     # check platform
     if ((inst is server and sys.platform != 'linux') or (
@@ -389,11 +387,11 @@ def install(inst, version, from_fork):
     else:
         if os.path.exists('python\\python._pth.old'):
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
         else:
             subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
 
     # install the requirements
     branch = get_requirements_branch(version, inst, from_fork)

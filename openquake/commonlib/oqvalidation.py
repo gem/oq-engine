@@ -669,6 +669,11 @@ rlz_index:
   Example: *rlz_index = 0*.
   Default: None
 
+rupture_dict:
+  Dictionary with rupture parameters lon, lat, dep, mag, rake, strike., dip
+  Example: *rupture_dict = {'lon': 10, 'lat': 20, 'dep': 10, 'mag': 6, 'rake': 0}*
+  Default: {}
+
 rupture_mesh_spacing:
   Set the discretization parameter (in km) for rupture geometries.
   Example: *rupture_mesh_spacing = 2.0*.
@@ -883,7 +888,7 @@ class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
 
     KNOWN_INPUTS = {
-        'rupture_model', 'exposure', 'site_model',
+        'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
         'source_model_logic_tree', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
@@ -1044,6 +1049,7 @@ class OqParam(valid.ParamSet):
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
+    rupture_dict = valid.Param(valid.dictionary, {})
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, [])
@@ -1955,8 +1961,7 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights and number_of_logic_tree_samples
-        must be greater than 1.
+        sampling_method must be early_weights with collect_rlzs=true
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
@@ -1978,8 +1983,10 @@ class OqParam(valid.ParamSet):
         if hstats and hstats != ['mean']:
             msg = '%s: quantiles are not supported with collect_rlzs=true'
             raise InvalidFile(msg % self.inputs['job_ini'])
-        return self.number_of_logic_tree_samples > 1 and (
-            self.sampling_method == 'early_weights')
+        if self.number_of_logic_tree_samples == 0:
+            raise ValueError('collect_rlzs=true is inconsistent with '
+                             'full enumeration')
+        return self.sampling_method == 'early_weights'
 
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)
