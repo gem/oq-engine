@@ -196,25 +196,25 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
         srcs.append(src)
         imts.append(imt)
         dets.append(prob_mce[m] * np.exp(sigma) / np.exp(eps*sigma))
-        mag_dist_eps_sig.append((src, mag, dist, eps, sigma, imt))
-    df = pd.DataFrame(dict(src=srcs, imt=imts, det=dets))
+        mag_dist_eps_sig.append((imt, src, mag, dist, eps, sigma))
+    df = pd.DataFrame(dict(imt=imts, source_id=srcs, det=dets))
     det = df.groupby('imt').det.max()
-    dt = [('src', hdf5.vstr), ('mag', float), ('dst', float),
-          ('eps', float), ('sig', float), ('imt', hdf5.vstr)]
+    dt = [('imt', hdf5.vstr), ('source_id', hdf5.vstr), ('mag', float),
+          ('dist', float), ('eps', float), ('sig', float)]
     return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
 
-def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low_haz=False):
+def get_mce_asce07(prob_mce, det_imt, DLLs, dstore, low_haz=False):
     """
     :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
     :param det_imt: deterministic ground motion for each IMT
-    :param DLLs: deterministic lower limits according to ASCE7
+    :param DLLs: deterministic lower limits according to ASCE 7-16
     :param dstore: the datastore
     :param low_haz: boolean specifying if the hazard is lower than DLLs
     :returns: a dictionary imt -> probabilistic MCE
     :returns: a dictionary imt -> governing MCE
     :returns: a dictionary imt -> deterministic MCE
-    :returns: a dictionary all ASCE7 parameters
+    :returns: a dictionary all ASCE 7-16 parameters
     """
     rtgm = dstore['rtgm']
     imts = rtgm['IMT']
@@ -238,15 +238,15 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low_haz=False):
         prob_mce_out[imt] = prob_mce[i]
 
     if mce['SA(0.2)'] < 0.25:
-        SS_seismicity = "Low"
+        Ss_seismicity = "Low"
     elif mce['SA(0.2)'] < 0.5:
-        SS_seismicity = "Moderate"
+        Ss_seismicity = "Moderate"
     elif mce['SA(0.2)'] < 1:
-        SS_seismicity = "Moderately High"
+        Ss_seismicity = "Moderately High"
     elif mce['SA(0.2)'] < 1.5:
-        SS_seismicity = "High"
+        Ss_seismicity = "High"
     else:
-        SS_seismicity = "Very High"
+        Ss_seismicity = "Very High"
 
     if mce['SA(1.0)'] < 0.1:
         S1_seismicity = "Low"
@@ -259,34 +259,33 @@ def get_mce_asce7(prob_mce, det_imt, DLLs, dstore, low_haz=False):
     else:
         S1_seismicity = "Very High"
 
-    asce7 = {'PGA_2_50': prob_mce_out['PGA'],
+    asce07 = {
+             'PGA': mce['PGA'],
+             'PGA_2_50': prob_mce_out['PGA'],
              'PGA_84th': det_imt['PGA'],
              'PGA_det': det_mce['PGA'],
-             'PGA': mce['PGA'],
 
-             'SS_RT': prob_mce_out['SA(0.2)'],
+             'Ss': mce['SA(0.2)'],
+             'Ss_RT': prob_mce_out['SA(0.2)'],
              'CRS': crs,
-             'SS_84th': det_imt['SA(0.2)'],
-             'SS_det': det_mce['SA(0.2)'],
-             'SS': mce['SA(0.2)'],
-             'SS_seismicity': SS_seismicity,
+             'Ss_84th': det_imt['SA(0.2)'],
+             'Ss_det': det_mce['SA(0.2)'],
+             'Ss_seismicity': Ss_seismicity,
 
+             'S1': mce['SA(1.0)'],
              'S1_RT': prob_mce_out['SA(1.0)'],
              'CR1': cr1,
              'S1_84th': det_imt['SA(1.0)'],
              'S1_det': det_mce['SA(1.0)'],
-             'S1': mce['SA(1.0)'],
              'S1_seismicity': S1_seismicity,
              }
-    for key in asce7:
-        if key in ('PGA_2_50', 'PGA_84th', 'PGA_det', 'PGA', 'SS_RT', 'CRS',
-                   'SS_84th', 'SS_det', 'SS', 'S1_RT', 'CR1', 'S1_84th',
-                   'S1_det', 'S1'):
-            asce7[key] = (
-                round(asce7[key], ASCE_DECIMALS)
-                if asce7[key] is not None else 'n.a.')
+    for key in asce07:
+        if not isinstance(asce07[key], str):
+            asce07[key] = (
+                round(asce07[key], ASCE_DECIMALS) if asce07[key] is not None
+                else 'n.a.')
 
-    return prob_mce_out, mce, det_mce, asce7
+    return prob_mce_out, mce, det_mce, asce07
 
 
 def get_asce41(dstore, mce, facts):
@@ -324,18 +323,17 @@ def get_asce41(dstore, mce, facts):
     S1_20_50 = hmap[sa10, poe20_50] * fact['SA(1.0)']
     BSE1E_S1 = min(S1_20_50, BSE1N_S1)
     asce41 = {'BSE2N_Ss': BSE2N_Ss,
-              'Ss_5_50': Ss_5_50,
               'BSE2E_Ss': BSE2E_Ss,
+              'Ss_5_50': Ss_5_50,
+              'BSE1N_Ss': BSE1N_Ss,
               'BSE1E_Ss': BSE1E_Ss,
               'Ss_20_50': Ss_20_50,
-              'BSE1N_Ss': BSE1N_Ss,
-
               'BSE2N_S1': BSE2N_S1,
-              'S1_5_50': S1_5_50,
               'BSE2E_S1': BSE2E_S1,
+              'S1_5_50': S1_5_50,
+              'BSE1N_S1': BSE1N_S1,
               'BSE1E_S1': BSE1E_S1,
               'S1_20_50': S1_20_50,
-              'BSE1N_S1': BSE1N_S1,
               }
     for key in asce41:
         asce41[key] = round(asce41[key], ASCE_DECIMALS)
@@ -372,9 +370,9 @@ def main(dstore, csm):
     if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
         logging.warning('Low hazard, do not disaggregate by source')
         dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
-        prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(
+        prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
             prob_mce, dummy_det, DLLs, dstore, low_haz=True)
-        dstore['asce7'] = hdf5.dumps(asce7)
+        dstore['asce07'] = hdf5.dumps(asce07)
         asce41 = get_asce41(dstore, mce, facts)
         dstore['asce41'] = hdf5.dumps(asce41)
         if Image is None:  # missing PIL
@@ -390,15 +388,15 @@ def main(dstore, csm):
         prob_mce, mag_dist_eps, sigma_by_src)
     dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
     logging.info(f'{det_imt=}')
-    prob_mce_out, mce, det_mce, asce7 = get_mce_asce7(
+    prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
         prob_mce, det_imt, DLLs, dstore)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
-    dstore['asce7'] = hdf5.dumps(asce7)
+    dstore['asce07'] = hdf5.dumps(asce07)
     asce41 = get_asce41(dstore, mce, facts)
     dstore['asce41'] = hdf5.dumps(asce41)
-    logging.info('ASCE-41=%s' % asce41)
-    logging.info('ASCE-7=%s' % asce7)
+    logging.info('ASCE 7-16 Parameters=%s' % asce07)
+    logging.info('ASCE 41-17 Parameters=%s' % asce41)
 
     if Image is None:  # missing PIL
         logging.warning('Missing module PIL: skipping plotting curves')
