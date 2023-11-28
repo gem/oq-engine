@@ -66,15 +66,14 @@ jobs:
           if ($Env:BRANCH)
           {
             Write-Host "Install with workflow_dispatch"
-            Write-Host "python install.py user --version ${env:BRANCH}"
-            #python install.py user --version ${env:BRANCH}
-            python install.py user
+            Write-Host "python install.py devel --version ${env:BRANCH}"
+            python install.py user --version ${env:BRANCH}
           }
           else
           {
             Write-Host "Install on scheduled task"
-            Write-Host "python install.py user "
-            python install.py user
+            Write-Host "python install.py devel "
+            python install.py devel
           }
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           python -m pip install pytest pyshp flake8
