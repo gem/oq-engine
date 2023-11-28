@@ -66,13 +66,13 @@ jobs:
           if ($Env:BRANCH)
           {
             Write-Host "Install with workflow_dispatch"
-            Write-Host "python install.py devel --version ${env:BRANCH}"
+            Write-Host "python install.py user --version ${env:BRANCH}"
             python install.py devel --version ${env:BRANCH}
           }
           else
           {
             Write-Host "Install on scheduled task"
-            Write-Host "python install.py devel "
+            Write-Host "python install.py user "
             python install.py devel
           }
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
