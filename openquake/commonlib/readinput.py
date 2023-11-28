@@ -449,8 +449,8 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
     xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
     kdt = cKDTree(xyz_all)
-    sids = U32(kdt.query_ball_point(xyz, dist, eps=.001))
-    return sm[sids]
+    idxs = kdt.query_ball_point(xyz, dist, eps=.001)
+    return sm[idxs]
 
     
 def get_site_model(oqparam):
