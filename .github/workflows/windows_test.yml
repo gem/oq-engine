@@ -67,7 +67,8 @@ jobs:
           {
             Write-Host "Install with workflow_dispatch"
             Write-Host "python install.py user --version ${env:BRANCH}"
-            python install.py user --version ${env:BRANCH}
+            #python install.py user --version ${env:BRANCH}
+            python install.py user
           }
           else
           {
