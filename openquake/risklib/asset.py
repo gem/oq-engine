@@ -638,8 +638,8 @@ def _get_exposure(fname, stop=None):
     except AttributeError:
         tagNames = Node('tagNames', text='')
     tagnames = ~tagNames or []
-    if set(tagnames) & {'taxonomy', 'exposure', 'country'}:
-        raise InvalidFile('taxonomy, exposure and country are reserved names '
+    if set(tagnames) & {'taxonomy', 'exposure'}:
+        raise InvalidFile('taxonomy and exposure are reserved names '
                           'you cannot use it in <tagNames>: %s' % fname)
     tagnames.insert(0, 'taxonomy')
 
@@ -702,7 +702,7 @@ def _get_exposure(fname, stop=None):
     return exp, exposure.assets
 
 
-def _minimal_tagcol(fnames, by_country):
+def _minimal_tagcol(fnames):
     tagnames = None
     for exp in Exposure.read_headers(fnames):
         if tagnames is None:
@@ -711,8 +711,7 @@ def _minimal_tagcol(fnames, by_country):
             tagnames &= set(exp.tagcol.tagnames)
     tagnames -= set(['taxonomy'])
     if len(fnames) > 1:
-        alltags = ['taxonomy'] + list(tagnames) + [
-            'country' if by_country else 'exposure']
+        alltags = ['taxonomy'] + list(tagnames) + ['exposure']
     else:
         alltags = ['taxonomy'] + list(tagnames)
     return TagCollection(alltags)
@@ -808,7 +807,7 @@ def check_exposure_for_infr_conn_analysis(df, fname):
 
 
 def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
-                check_dupl=True, by_country=False, asset_prefix='',
+                check_dupl=True, asset_prefix='',
                 tagcol=None, errors=None, infr_conn_analysis=False,
                 aggregate_by=None, monitor=None):
     # NB: errors is not None only for scenario_test/case_17
@@ -830,8 +829,6 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     for fname, df in fname_dfs:
         if len(df) == 0 and errors != 'ignore':
             raise InvalidFile('%s is empty' % fname)
-        elif by_country:
-            df['country'] = asset_prefix[:-1]
         elif asset_prefix:  # multiple exposure files
             df['exposure'] = asset_prefix[:-1]
         names = df.columns
@@ -928,31 +925,23 @@ class Exposure(object):
 
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
-                 check_dupl=True, tagcol=None, by_country=False, errors=None,
+                 check_dupl=True, tagcol=None, errors=None,
                  infr_conn_analysis=False, aggregate_by=None):
         """
         :returns: an :class:`Exposure` instance keeping all the assets in
             memory
         """
-        if by_country:  # E??_ -> countrycode
-            prefix2cc = countries.from_exposures(
-                os.path.basename(f) for f in fnames)
-        else:
-            prefix = ''
         allargs = []
-        tagcol = _minimal_tagcol(fnames, by_country)
+        tagcol = _minimal_tagcol(fnames)
         for i, fname in enumerate(fnames, 1):
             if len(fnames) > 1:
                 # multiple exposure.xml files, add a prefix
                 # this is tested in oq-risk-tests/old_hazard
-                if by_country:
-                    prefix = prefix2cc['E%02d_' % i] + '_'
-                else:
-                    prefix = 'E%02d_' % i
+                prefix = 'E%02d_' % i
             else:
                 prefix = ''
             allargs.append((fname, calculation_mode, ignore_missing_costs,
-                            check_dupl, by_country, prefix, tagcol, errors,
+                            check_dupl, prefix, tagcol, errors,
                             infr_conn_analysis, aggregate_by))
         exp = None
         dfs = []
@@ -1047,7 +1036,7 @@ class Exposure(object):
                 for field in fields:
                     if field not in strfields:
                         floatfields.add(field)
-                missing = expected_header - header - {'exposure', 'country'}
+                missing = expected_header - header - {'exposure'}
                 if len(header) < len(fields):
                     raise InvalidFile(
                         '%s: The header %s contains a duplicated field' %

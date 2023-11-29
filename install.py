@@ -391,11 +391,11 @@ def install(inst, version, from_fork):
     else:
         if os.path.exists('python\\python._pth.old'):
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
         else:
             subprocess.check_call([pycmd, '-m', 'ensurepip', '--upgrade'])
             subprocess.check_call([pycmd, '-m', 'pip', 'install', '--upgrade',
-                                   'pip', 'wheel'])
+                                   'pip', 'wheel', 'urllib3'])
 
     # install the requirements
     branch = get_requirements_branch(version, inst, from_fork)

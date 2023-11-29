@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Removed the obsolete `by_country` hack when managing the global exposures
   * Changed `oq sample` to use pandas for reading/writing CSVs, thus fixing
     the issue of quoted newlines
   * Fixed `oq check_input exposure.xml`
