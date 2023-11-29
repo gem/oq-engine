@@ -55,7 +55,11 @@
                   </li>
                   {% endif %}
                   <li class="actions">
+                      {% if application_mode == 'AELO' %}
+                      <a href="https://docs.openquake.org/.aelo/AELO_Web_Service_User_Guide.pdf" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="{{ STATIC_URL }}img/oq-help.png"></a>
+                      {% else %}
                       <a href="https://docs.openquake.org/oq-engine/latest/manual/" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="{{ STATIC_URL }}img/oq-help.png"></a>
+                      {% endif %}
                   </li>
                 </ul>
               </div>
