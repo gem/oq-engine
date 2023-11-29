@@ -18,7 +18,7 @@ fonttools==4.38.0
 h5py==3.10.0
 humanfriendly==10.0
 idna==2.8
-importlib-metadata== .0.0
+importlib-metadata==6.8.0
 iniconfig==2.0.0
 kiwisolver==1.4.4
 llvmlite==0.41.1
