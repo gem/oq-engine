@@ -985,7 +985,6 @@ def get_exposure(oqparam, h5=None):
         exposure = Global.exposure = asset.Exposure.read_all(
             oqparam.inputs['exposure'], oqparam.calculation_mode,
             oqparam.ignore_missing_costs,
-            by_country='country' in asset.tagset(oqparam.aggregate_by),
             errors='ignore' if oqparam.ignore_encoding_errors else None,
             infr_conn_analysis=oqparam.infrastructure_connectivity_analysis,
             aggregate_by=oqparam.aggregate_by)
