@@ -15,7 +15,7 @@ from shapely import wkt
 from collections import Counter
 from openquake.baselib import sap
 from openquake.hazardlib.geo.packager import fiona
-from openquake.qa_tests_data import mosaic, aristotle
+from openquake.qa_tests_data import mosaic, global_risk
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
@@ -27,7 +27,7 @@ POLYGON_EXAMPLE = (
     ' 7.43382776637826836 49.91743762278053964))')
 
 
-class ModelGetter:
+class GlobalModelGetter:
     """
     Class with methods to associate coordinates to models
     """
@@ -38,17 +38,17 @@ class ModelGetter:
         self.kind = kind
         if self.kind == 'mosaic':
             self.model_code = 'code'
-        elif self.kind == 'aristotle':
+        elif self.kind == 'global_risk':
             self.model_code = 'shapeGroup'
         if shapefile_path is None:  # read from openquake.cfg
             if kind == 'mosaic':
                 mosaic_dir = os.path.dirname(mosaic.__file__)
                 shapefile_path = os.path.join(
                     mosaic_dir, 'ModelBoundaries.shp')
-            elif kind == 'aristotle':
-                aristotle_dir = os.path.dirname(aristotle.__file__)
+            elif kind == 'global_risk':
+                global_risk_dir = os.path.dirname(global_risk.__file__)
                 shapefile_path = os.path.join(
-                    aristotle_dir, 'geoBoundariesCGAZ_ADM0.shp')
+                    global_risk_dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.shapefile_path = shapefile_path
         self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
         self.model_info = self.get_model_info(sinfo_path, replace_sinfo)
@@ -252,7 +252,7 @@ class ModelGetter:
 
 def main(sites_csv_path, models_boundaries_shp_path):
     logging.basicConfig(level=logging.INFO)
-    model_by_site = ModelGetter(
+    model_by_site = GlobalModelGetter(
         models_boundaries_shp_path).get_models_by_sites_csv(sites_csv_path)
     pprint.pprint(model_by_site)
 

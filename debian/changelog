@@ -1,8 +1,22 @@
+  [Paolo Tormene]
+  * Internal: extended the MosaicGetter to a GlobalModelGetter class with
+    the ability to associate points to countries
+
   [Michele Simionato]
+  * Removed the obsolete `by_country` hack when managing the global exposures
   * Changed `oq sample` to use pandas for reading/writing CSVs, thus fixing
     the issue of quoted newlines
   * Fixed `oq check_input exposure.xml`
   * Added `rupture_dict` parameter to be used in scenarios
+
+  [Marco Pagani]
+  * Fixed a bug in the calculation of Rjb for gridded surfaces and added a
+    dependency from alpha_shapes
+
+  [Chris di Caprio]
+  * Contributed many new GMPEs for the New Zealand model
+
+  [Michele Simionato]
   * Fixed wrong `mean_rates_by_src` in presence of the colon convention
   * If there are no sources close to the (single) site, do not raise an error
   * Fixed a bug with --hc taking the parent site collection instead of
