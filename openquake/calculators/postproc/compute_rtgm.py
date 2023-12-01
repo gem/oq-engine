@@ -84,6 +84,7 @@ PGA,0.37,0.43,0.50,0.55,0.56,0.53,0.46,0.42
 '''), index_col='imt')
 
 # hard-coded for year 1
+# NOTE: consider lower thresholds of IMLs and impact on plots in Year 3
 # TODO: interpolate for vs30 != 760 and for different periods
 # NOTE: for meanHCs_afe_RTGM and disaggr_by_src we want to display these
 # three imts, that are mandatory in this context. For the plot of governing

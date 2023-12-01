@@ -115,8 +115,11 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     for m, hcurve in enumerate(mean_hcurve):
         AFE.append(to_rates(hcurve, window, minrate=1E-12))
         # get the AFE of the iml that will be disaggregated for each IMT
-        afe_RTGM.append(_find_afe_target(
-            numpy.array(imls[m]), numpy.array(AFE[m]), rtgm_probmce[m]))
+        if rtgm_probmce[m] < imls[m][0]:
+            afe_RTGM.append(0.0)
+        else:
+            afe_RTGM.append(_find_afe_target(
+                numpy.array(imls[m]), numpy.array(AFE[m]), rtgm_probmce[m]))
 
     plt = import_plt()
     plt.figure(figsize=(12, 9))
@@ -304,8 +307,8 @@ def plot_disagg_by_src(dstore, update_dstore=False):
                     ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
             # if it is, plot in color
             else:
-                ax[m].loglog(imls, afes, c=viridis(i), label=str(src))
-                ax1.loglog(imls_o, afes, c=viridis(i), label=str(src))
+                ax[m].loglog(imls, afes, c=viridis(i), label=str(mrs.src_id[ind]))
+                ax1.loglog(imls_o, afes, c=viridis(i), label=str(mrs.src_id[ind]))
                 i += 1
         # populate subplot - maximum component
         ax[m].grid('both')
