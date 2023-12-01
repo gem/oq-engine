@@ -40,6 +40,7 @@ from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import util, logs, readinput, logictree, datastore
+from openquake.commonlib.global_model_getter import GlobalModelGetter
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES)
@@ -476,6 +477,9 @@ class EventBasedCalculator(base.HazardCalculator):
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
+        model = logs.get_tag(oq.inputs['job_ini'])  # 3-letter mosaic model
+        if model:
+            gmg = GlobalModelGetter('mosaic')
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
@@ -484,6 +488,10 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array = dic['rup_array']
             if len(rup_array) == 0:
                 continue
+            # TODO: for Paolo to add a very fast method is_inside
+            #if model:
+            #    ok = gmg.is_inside(rup_array['lon'], rup_array['lat'], model)
+            #    rup_array = rup_array[ok]
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
