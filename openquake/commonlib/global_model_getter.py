@@ -33,7 +33,7 @@ class GlobalModelGetter:
     """
     def __init__(self, kind='mosaic', shapefile_path=None, sindex_path=None,
                  sinfo_path=None, replace_sindex=False, replace_sinfo=False):
-        if kind not in ('mosaic', 'aristotle'):
+        if kind not in ('mosaic', 'global_risk'):
             raise ValueError('Model getter for {kind} is not implemented')
         self.kind = kind
         if self.kind == 'mosaic':
@@ -50,20 +50,30 @@ class GlobalModelGetter:
                 shapefile_path = os.path.join(
                     global_risk_dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.shapefile_path = shapefile_path
-        self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
-        self.model_info = self.get_model_info(sinfo_path, replace_sinfo)
+        self.sindex = None
+        self.sinfo = None
+        if self.kind == 'global_risk':
+            self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
+            self.sinfo = self.get_spatial_info(sinfo_path, replace_sinfo)
 
-    def get_spatial_index(self, sindex_path, replace_sindex):
-        if not replace_sindex:
-            # retrieve it if available
-            if sindex_path is not None and os.path.isfile(sindex_path):
-                t0 = time.time()
-                with open(sindex_path, 'rb') as f:
-                    sindex = pickle.load(f)
-                time_spent = time.time() - t0
-                logging.info(
-                    f'Spatial index retrieved in {time_spent} seconds')
-                return sindex
+    def read_from_pickle(self, path):
+        logging.info(f'Reading from {path}...')
+        t0 = time.time()
+        with open(path, 'rb') as f:
+            obj = pickle.load(f)
+        time_spent = time.time() - t0
+        logging.info(f'Read from {path} in {time_spent} seconds')
+        return obj
+
+    def save_to_pickle(self, obj, path):
+        logging.info(f'Storing to {path}...')
+        t0 = time.time()
+        with open(path, 'wb+') as f:
+            pickle.dump(obj, f)
+        storing_time = time.time() - t0
+        logging.info(f'Stored to {path} in {storing_time} seconds')
+
+    def build_spatial_index(self):
         logging.info('Building spatial index')
         t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
@@ -71,48 +81,50 @@ class GlobalModelGetter:
             sindex = STRtree(shapes)
         sindex_building_time = time.time() - t0
         logging.info(f'Spatial index built in {sindex_building_time} seconds')
-        if replace_sindex:
-            logging.info('Storing spatial index')
-            t0 = time.time()
-            with open(sindex_path, 'wb+') as f:
-                pickle.dump(sindex, f)
-            sindex_storing_time = time.time() - t0
-            logging.info(f'Spatial index stored to {sindex_path}'
-                         f' in {sindex_storing_time} seconds')
         return sindex
 
-    def get_model_info(self, sinfo_path, replace_sinfo):
+    def build_spatial_info(self):
+        logging.info('Reading spatial information')
+        t0 = time.time()
+        with fiona.open(self.shapefile_path, 'r') as shp:
+            sinfo = np.array(
+                [dict(polygon['properties']) for polygon in shp])
+        reading_time = time.time() - t0
+        logging.info(f'Spatial information read in {reading_time} seconds')
+        return sinfo
+
+    def get_spatial_index(self, sindex_path, replace_sindex):
+        # read it from pickle only if we don't want to replace it
+        if not replace_sindex:
+            # retrieve it if available
+            if sindex_path is not None and os.path.isfile(sindex_path):
+                sindex = self.read_from_pickle(sindex_path)
+                return sindex
+        sindex = self.build_spatial_index()
+        if replace_sindex:
+            self.save_to_pickle(sindex, sindex_path)
+        return sindex
+
+    def get_spatial_info(self, sinfo_path, replace_sinfo):
+        # read it from pickle only if we don't want to replace it
         if not replace_sinfo:
             # retrieve it if available
             if sinfo_path is not None and os.path.isfile(sinfo_path):
-                t0 = time.time()
-                with open(sinfo_path, 'rb') as f:
-                    sinfo = pickle.load(f)
-                time_spent = time.time() - t0
-                logging.info(
-                    f'Spatial info retrieved in {time_spent} seconds')
+                sinfo = self.read_from_pickle(sinfo_path)
                 return sinfo
-        logging.info('Reading spatial info')
-        t0 = time.time()
-        with fiona.open(self.shapefile_path, 'r') as shp:
-            model_info = np.array(
-                [dict(polygon['properties']) for polygon in shp])
-        reading_time = time.time() - t0
-        logging.info(f'Data read in {reading_time} seconds')
+        sinfo = self.build_spatial_info()
         if replace_sinfo:
-            t0 = time.time()
-            logging.info('Storing spatial info')
-            with open(sinfo_path, 'wb+') as f:
-                pickle.dump(model_info, f)
-            sinfo_storing_time = time.time() - t0
-            logging.info(f'Spatial info stored to {sinfo_path}'
-                         f' in {sinfo_storing_time} seconds')
-        return model_info
+            self.save_to_pickle(sinfo, sinfo_path)
+        return sinfo
 
     def get_models_list(self):
         """
         Returns a list of all models in the shapefile
         """
+        if self.sinfo is not None:
+            models = list(np.unique([info[self.model_code]
+                                     for info in self.sinfo]))
+            return models
         if fiona is None:
             print('fiona/GDAL is not installed properly!', sys.stderr)
             return []
@@ -126,16 +138,19 @@ class GlobalModelGetter:
         geom = wkt.loads(geom_wkt)
         idxs = self.sindex.query(geom, predicate)
         models = list(np.unique([info[self.model_code]
-                                 for info in self.model_info[idxs]]))
+                                 for info in self.sinfo[idxs]]))
         logging.info(f'Models retrieved in {time.time() - t0} seconds')
         return models
+
+    def lonlat2wkt(self, lon, lat):
+        return wkt.dumps(Point(lon, lat))
 
     def get_nearest_model_by_lon_lat_sindex(self, lon, lat, strict=True):
         lon = float(lon)
         lat = float(lat)
         point = Point(lon, lat)
         idx = self.sindex.nearest(point)
-        model = self.model_info[idx][self.model_code]
+        model = self.sinfo[idx][self.model_code]
         return model
 
     def get_model_by_lon_lat(
