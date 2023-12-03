@@ -477,8 +477,7 @@ class EventBasedCalculator(base.HazardCalculator):
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
-        model = logs.get_tag(oq.inputs['job_ini'])  # 3-letter mosaic model
-        if model:
+        if oq.mosaic_model:  # 3-letter mosaic model
             gmg = GlobalModelGetter('mosaic')
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
@@ -489,8 +488,9 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(rup_array) == 0:
                 continue
             # TODO: for Paolo to add a very fast method is_inside
-            #if model:
-            #    ok = gmg.is_inside(rup_array['lon'], rup_array['lat'], model)
+            #if oq.mosaic_model:
+            #    ok = gmg.is_inside(
+            #         rup_array['lon'], rup_array['lat'], oq.mosaic_model)
             #    rup_array = rup_array[ok]
             if dic['source_data']:
                 source_data += dic['source_data']
