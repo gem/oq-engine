@@ -61,7 +61,8 @@ if settings.LOCKDOWN:
 
     admin.autodiscover()
     admin.site.site_url = '%s/engine/' % settings.WEBUI_PATHPREFIX
-    if settings.APPLICATION_MODE.upper() == 'AELO':
+    application_mode = settings.APPLICATION_MODE.upper()
+    if application_mode == 'AELO':
         email_template_name = (
             'registration/password_reset_email_aelo.txt')
         subject_template_name = (
@@ -73,8 +74,12 @@ if settings.LOCKDOWN:
             'registration/password_reset_subject.txt')
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
-        re_path(r'accounts/login/$', LoginView.as_view(
-            template_name='account/login.html'), name="login"),
+        re_path(r'accounts/login/$',
+            LoginView.as_view(
+                template_name='account/login.html',
+                extra_context={'application_mode': application_mode},
+            ),
+            name="login"),
         re_path(r'^accounts/logout/$', LogoutView.as_view(
             template_name='account/logout.html'), name="logout"),
         re_path(r'^accounts/ajax_login/$', views.ajax_login),
@@ -82,20 +87,24 @@ if settings.LOCKDOWN:
         path('reset_password/',
              PasswordResetView.as_view(
                  template_name='registration/reset_password.html',
+                 extra_context={'application_mode': application_mode},
                  subject_template_name=subject_template_name,
                  email_template_name=email_template_name),
              name='reset_password'),
         path('reset_password_sent/',
              PasswordResetDoneView.as_view(
-                 template_name='registration/password_reset_sent.html'),
+                 template_name='registration/password_reset_sent.html',
+                 extra_context={'application_mode': application_mode}),
              name='password_reset_done'),
         path('reset/<uidb64>/<token>',
              PasswordResetConfirmView.as_view(
-                 template_name='registration/password_reset_form.html'),
+                 template_name='registration/password_reset_form.html',
+                 extra_context={'application_mode': application_mode}),
              name='password_reset_confirm'),
         path('reset_password_complete/',
              PasswordResetCompleteView.as_view(
-                 template_name='registration/password_reset_done.html'),
+                 template_name='registration/password_reset_done.html',
+                 extra_context={'application_mode': application_mode}),
              name='password_reset_complete'),
     ]
 
