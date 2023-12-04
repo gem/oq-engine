@@ -85,3 +85,10 @@ class GlobalModelGetterTestCase(unittest.TestCase):
             mg.get_models_by_geoms_array(
                 points, return_indices_only=True),
             numpy.array([[0,  1], [99, 24]]))
+        rup_array = numpy.array(
+            [(9, 45), (6.733, 62.361)],
+            dtype=[('lon', float), ('lat', float)])
+        model = 'ITA'
+        numpy.testing.assert_array_equal(
+            mg.is_inside(rup_array, model),
+            numpy.array([True, False]))

@@ -11,7 +11,7 @@ import pickle
 import numpy as np
 from shapely.geometry import Point, shape
 from shapely.strtree import STRtree
-from shapely import wkt
+from shapely import wkt, points
 from collections import Counter
 from openquake.baselib import sap
 from openquake.hazardlib.geo.packager import fiona
@@ -79,8 +79,8 @@ class GlobalModelGetter:
         logging.info('Reading spatial information')
         t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
-            sinfo = np.array(
-                [dict(polygon['properties']) for polygon in shp])
+            dtype = [(name, 'U50') for name in list(shp[0]['properties'])]
+            sinfo = np.array([tuple(zone['properties'].values()) for zone in shp], dtype=dtype)
         reading_time = time.time() - t0
         logging.info(f'Spatial information read in {reading_time} seconds')
         return sinfo
@@ -124,6 +124,15 @@ class GlobalModelGetter:
             models = [polygon['properties'][self.model_code]
                       for polygon in shp]
         return models
+
+    def is_inside(self, rup_array, model_code):
+        # TODO: see if it is possible to use shapely.points to build point
+        # geometries from the array of ruptures
+        geoms = [Point(*rup[['lon', 'lat']]) for rup in rup_array]
+        # NOTE: the index is one for adm0 but it can be more for adm2
+        model_indices = np.where(self.sinfo[self.model_code] == model_code)
+        within = self.sindex.query(geoms, 'within')
+        return np.isin(within[1], model_indices)
 
     def get_models_by_wkt(self, geom_wkt, predicate='intersects'):
         t0 = time.time()
