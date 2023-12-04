@@ -19,13 +19,6 @@ from openquake.qa_tests_data import mosaic, global_risk
 
 CLOSE_DIST_THRESHOLD = 0.1  # degrees
 
-# A triangle intersecting ['AUT', 'CHE', 'DEU', 'FRA', 'ITA', 'LIE']
-POLYGON_EXAMPLE = (
-    'Polygon ((7.43382776637826836 49.91743762278053964,'
-    ' 7.83778658614323476 44.7847843834139141,'
-    ' 12.06747305191758102 48.08774179208040067,'
-    ' 7.43382776637826836 49.91743762278053964))')
-
 
 class GlobalModelGetter:
     """
