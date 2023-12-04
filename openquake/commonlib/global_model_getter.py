@@ -134,8 +134,35 @@ class GlobalModelGetter:
         logging.info(f'Models retrieved in {time.time() - t0} seconds')
         return models
 
+    def get_models_by_geoms_array(
+            self, geoms, predicate='intersects', distance=CLOSE_DIST_THRESHOLD,
+            return_indices_only=False):
+        t0 = time.time()
+        idxs = self.sindex.query(geoms, predicate=predicate, distance=distance)
+        if return_indices_only:
+            return idxs
+        models = list(np.unique([info[self.model_code]
+                                 for info in self.sinfo[idxs][1]]))
+        logging.info(f'Models retrieved in {time.time() - t0} seconds')
+        return models
+
     def lonlat2wkt(self, lon, lat):
         return wkt.dumps(Point(lon, lat))
+
+    def get_nearest_models_by_geoms_array(
+            self, geoms, max_distance=CLOSE_DIST_THRESHOLD,
+            return_distance=False, exclusive=False, all_matches=True,
+            return_indices_only=False):
+        t0 = time.time()
+        idxs = self.sindex.query_nearest(
+            geoms, max_distance=max_distance, return_distance=return_distance,
+            exclusive=exclusive, all_matches=all_matches)
+        if return_indices_only:
+            return idxs
+        models = list(np.unique([info[self.model_code]
+                                 for info in self.sinfo[idxs[1]]]))
+        logging.info(f'Models retrieved in {time.time() - t0} seconds')
+        return models
 
     def get_nearest_model_by_lon_lat_sindex(self, lon, lat, strict=True):
         lon = float(lon)
