@@ -839,7 +839,7 @@ def get_ruptures(fname_csv):
     if not BaseRupture._code:
         BaseRupture.init()  # initialize rupture codes
     code = BaseRupture.str2code
-    aw = hdf5.read_csv(fname_csv, rup_dt)
+    aw = hdf5.read_csv(fname_csv, {n: rup_dt[n] for n in rup_dt.names})
     rups = []
     geoms = []
     n_occ = 1
@@ -894,3 +894,73 @@ def get_planar(site, msr, mag, aratio, strike, dip, rake, trt, ztor=None):
     rup.rup_id = 0
     vars(rup).update(vars(site))
     return rup
+
+
+def _width_length(mag, rake):
+    assert rake is None or -180 <= rake <= 180, rake
+    if rake is None:
+        # "All" case
+        return 10.0 ** (-1.01 + 0.32 * mag), 10.0 ** (-2.44 + 0.59 * mag)
+    elif -45 <= rake <= 45 or rake >= 135 or rake <= -135:
+        # strike slip
+        return 10.0 ** (-0.76 + 0.27 * mag), 10.0 ** (-2.57 + 0.62 * mag)
+    elif rake > 0:
+        # thrust/reverse
+        return 10.0 ** (-1.61 + 0.41 * mag), 10.0 ** (-2.42 + 0.58 * mag)
+    else:
+        # normal
+        return 10.0 ** (-1.14 + 0.35 * mag), 10.0 ** (-1.88 + 0.50 * mag)
+
+
+def build_planar(hypocenter, mag, rake, strike=0., dip=90., trt='*'):
+    """
+    Build a rupture with a PlanarSurface suitable for scenario calculations
+    """
+    # copying the algorithm used in PlanarSurface.from_hypocenter
+    # with a fixed Magnitude-Scaling Relationship
+
+    rdip = math.radians(dip)
+    rup_width, rup_length = _width_length(mag, rake)
+    # calculate the height of the rupture being projected
+    # on the vertical plane:
+    rup_proj_height = rup_width * math.sin(rdip)
+    # and its width being projected on the horizontal one:
+    rup_proj_width = rup_width * math.cos(rdip)
+
+    # half height of the vertical component of rupture width
+    # is the vertical distance between the rupture geometrical
+    # center and it's upper and lower borders:
+    hheight = rup_proj_height / 2.
+    # calculate how much shallower the upper border of the rupture
+    # is than the upper seismogenic depth:
+    vshift = hheight - hypocenter.depth
+    # if it is shallower (vshift > 0) than we need to move the rupture
+    # by that value vertically.
+
+    rupture_center = hypocenter
+    if vshift > 0:
+        # we need to move the rupture center to make the rupture plane
+        # lie below the surface
+        hshift = abs(vshift / math.tan(rdip))
+        rupture_center = hypocenter.point_at(
+            hshift, vshift, azimuth=(strike + 90) % 360)
+
+    theta = math.degrees(
+        math.atan((rup_proj_width / 2.) / (rup_length / 2.)))
+    hor_dist = math.sqrt((rup_length / 2.)**2 + (rup_proj_width / 2.)**2)
+    vertical_increment = rup_proj_height / 2.
+    top_left = rupture_center.point_at(
+        hor_dist, -vertical_increment, azimuth=(strike + 180 + theta) % 360)
+    top_right = rupture_center.point_at(
+        hor_dist, -vertical_increment, azimuth=(strike - theta) % 360)
+    bottom_left = rupture_center.point_at(
+        hor_dist, vertical_increment, azimuth=(strike + 180 - theta) % 360)
+    bottom_right = rupture_center.point_at(
+        hor_dist, vertical_increment, azimuth=(strike + theta) % 360)
+    surf = PlanarSurface(strike, dip, top_left, top_right,
+                         bottom_right, bottom_left)
+    rup = BaseRupture(mag, rake, trt, hypocenter, surf)
+    rup.rup_id = 0
+    vars(rup).update(vars(hypocenter))
+    return rup
+    

@@ -1466,9 +1466,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
     if num_events is None:
         num_events = num_losses
     elif num_events < num_losses:
-        raise ValueError(
-            'There are not enough events (%d<%d) to compute the loss curve'
-            % (num_events, num_losses))
+        num_events = num_losses
     if eff_time is None:
         eff_time = return_periods[-1]
     if sorting_idxs is None:
@@ -1550,7 +1548,7 @@ def _agg(loss_dfs, weights=None):
         for loss_df, w in zip(loss_dfs, weights):
             loss_df['variance'] *= w
             loss_df['loss'] *= w
-    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
+    return pandas.concat(loss_dfs).groupby(['aid', 'eid']).sum().reset_index()
 
 
 class RiskComputer(dict):

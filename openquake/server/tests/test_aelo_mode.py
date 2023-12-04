@@ -35,7 +35,6 @@ import logging
 import django
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
-from openquake.server.dbserver import get_status
 from openquake.server.tests.views_test import EngineServerTestCase
 
 django.setup()
@@ -52,7 +51,6 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
 
     @classmethod
     def setUpClass(cls):
-        assert get_status() == 'running'
         dbcmd('reset_is_running')  # cleanup stuck calculations
         cls.job_ids = []
         env = os.environ.copy()
@@ -205,8 +203,8 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
     def test_aelo_invalid_siteid(self):
         params = dict(lon='-86', lat='12', vs30='800', siteid='CCA SITE')
         self.aelo_invalid_input(
-            params,
-            "Invalid ID 'CCA SITE': the only accepted chars are a-zA-Z0-9_-:")
+            params, "Invalid ID 'CCA SITE': the only accepted chars are"
+            ' ^[\\w_\\-:]+$')
 
     def test_aelo_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:

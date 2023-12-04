@@ -22,7 +22,7 @@ from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_26)
+    case_26, case_27, case_28)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
@@ -173,11 +173,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(assetcol), 2372)
         self.assertEqual(
             sorted(assetcol.array.dtype.names),
-            sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'value-area',
-                    'value-contents', 'value-nonstructural', 'value-number',
-                    'occupants_avg', 'occupants_night', 'value-structural',
-                    'ideductible', 'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
-                    'OCCUPANCY', 'NAME_1']))
+            ['ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY', 'id',
+             'ideductible', 'lat', 'lon', 'occupants_avg', 'occupants_night',
+             'ordinal', 'site_id', 'taxonomy', 'value-area', 'value-contents',
+             'value-nonstructural', 'value-number', 'value-structural'])
 
     def test_case_17(self):
         # CSV exposure in latin1
@@ -292,5 +291,17 @@ class ScenarioTestCase(CalculatorTestCase):
     def test_case_26_stations(self):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+
+    def test_case_27(self):
+        # TodorovicSilva2022NonParametric
+        self.run_calc(case_27.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+
+    def test_case_28(self):
+        # rupture_dict
+        self.run_calc(case_28.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)

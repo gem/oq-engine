@@ -376,7 +376,7 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
         self.assertIn("Invalid ID 'a 1': the only accepted chars are "
-                      "a-zA-Z0-9_-:, line 11", str(ctx.exception))
+                      "^[\w_\-:]+$, line 11", str(ctx.exception))
 
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()

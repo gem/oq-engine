@@ -25,8 +25,7 @@ import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
-from openquake.hazardlib import valid
-from openquake.commonlib import readinput, dbapi, mosaic
+from openquake.commonlib import readinput, dbapi, global_model_getter
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -34,7 +33,6 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DATABASE = '%s:%d' % valid.host_port()
 MODELS = []  # to be populated in get_tag
 
 
@@ -43,7 +41,7 @@ def get_tag(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     if not MODELS:  # first time
-        MODELS.extend(mosaic.MosaicGetter().get_models_list())
+        MODELS.extend(global_model_getter.GlobalModelGetter().get_models_list())
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
     if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR
@@ -57,7 +55,8 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    if os.environ.get('OQ_DATABASE') == 'local':
+    dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
+    if dbhost == 'local':
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
@@ -65,7 +64,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
-    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
+    tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
+    sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
                          timeout=600)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
@@ -80,8 +80,8 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     """
     task = 'task #%d' % task_no
     return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
-                 
-    
+
+
 def get_datadir():
     """
     Extracts the path of the directory where the openquake data are stored
@@ -285,7 +285,8 @@ def init(dummy, job_ini, log_level='info', log_file=None,
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
-    :param tag: tag (for instance the model name) to show before the log message
+    :param tag: tag (for instance the model name) to show before the log
+        message
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)

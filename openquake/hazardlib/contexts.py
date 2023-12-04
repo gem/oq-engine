@@ -270,9 +270,14 @@ class FarAwayRupture(Exception):
 def basename(src, splitchars='.:'):
     """
     :returns: the base name of a split source
+
+    >>> basename('SC:10;0')
+    'SC;0'
     """
     src_id = src if isinstance(src, str) else src.source_id
-    return re.split('[%s]' % splitchars, src_id)[0]
+    for char in splitchars:
+        src_id = re.sub(r'\%s\d+' % char, '', src_id)
+    return src_id
 
 
 def get_num_distances(gsims):

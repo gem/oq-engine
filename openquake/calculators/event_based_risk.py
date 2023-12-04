@@ -32,7 +32,7 @@ from openquake.risklib.scientific import (
     total_losses, insurance_losses, MultiEventRNG, LOSSID)
 from openquake.calculators import base, event_based
 from openquake.calculators.post_risk import (
-    PostRiskCalculator, post_aggregate, fix_dtypes)
+    PostRiskCalculator, post_aggregate, fix_dtypes, fix_investigation_time)
 
 U8 = numpy.uint8
 U16 = numpy.uint16
@@ -181,7 +181,8 @@ def ebr_from_gmfs(sbe, oqparam, dstore, monitor):
     del dic
     # if max_gmvs_chunk is too small, there is a huge data transfer in
     # avg_losses and the calculation may hang; if too large, run out of memory
-    slices = performance.split_slices(df.eid.to_numpy(), oqparam.max_gmvs_chunk)
+    slices = performance.split_slices(
+        df.eid.to_numpy(), oqparam.max_gmvs_chunk)
     for s0, s1 in slices:
         yield event_based_risk(df[s0:s1], oqparam, monitor)
 
@@ -239,6 +240,40 @@ def gen_outputs(df, crmodel, rng, monitor):
                 out = crmodel.get_output(
                     adf, gmf_df, crmodel.oqparam._sec_losses, rng)
             yield out
+
+
+def set_oqparam(oq, assetcol, dstore):
+    """
+    Set the attributes .M, .K, .A, .ideduc, ._sec_losses
+    """
+    try:
+        K = len(dstore['agg_keys'])
+    except KeyError:
+        K = 0
+    sec_losses = []  # one insured loss for each loss type with a policy
+    try:
+        policy_df = dstore.read_df('policy')
+    except KeyError:
+        pass
+    else:
+        if 'reinsurance' not in oq.inputs:
+            sec_losses.append(
+                partial(insurance_losses, policy_df=policy_df))
+
+    ideduc = assetcol['ideductible'].any()
+    if oq.total_losses:
+        sec_losses.append(
+            partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
+    elif ideduc:
+        # subtract the insurance deductible for a single loss_type
+        [lt] = oq.loss_types
+        sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
+
+    oq._sec_losses = sec_losses
+    oq.ideduc = int(ideduc)
+    oq.M = len(oq.all_imts())
+    oq.K = K
+    oq.A = assetcol['ordinal'].max() + 1
 
 
 def ebrisk(proxies, cmaker, stations, dstore, monitor):
@@ -303,14 +338,6 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                          len(parent['ruptures']), ne)
         else:
             self.parent_events = None
-
-        if oq.investigation_time and oq.return_periods != [0]:
-            # setting return_periods = 0 disable loss curves
-            eff_time = oq.investigation_time * oq.ses_per_logic_tree_path
-            if eff_time < 2:
-                logging.warning(
-                    'eff_time=%s is too small to compute loss curves',
-                    eff_time)
         super().pre_execute()
         parentdir = (os.path.dirname(self.datastore.ppath)
                      if self.datastore.ppath else None)
@@ -321,38 +348,19 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
                 len(self.datastore['ruptures']),
                 len(self.datastore['events'])))
         self.events_per_sid = numpy.zeros(self.N, U32)
-        try:
-            K = len(self.datastore['agg_keys'])
-        except KeyError:
-            K = 0
         self.datastore.swmr_on()
-        sec_losses = []  # one insured loss for each loss type with a policy
-        if hasattr(self, 'policy_df') and 'reinsurance' not in oq.inputs:
-            sec_losses.append(
-                partial(insurance_losses, policy_df=self.policy_df))
-        ideduc = self.assetcol['ideductible'].any()
-        if oq.total_losses:
-            sec_losses.append(
-                partial(total_losses, kind=oq.total_losses, ideduc=ideduc))
-        elif ideduc:
-            # subtract the insurance deductible for a single loss_type
-            [lt] = oq.loss_types
-            sec_losses.append(partial(total_losses, kind=lt, ideduc=ideduc))
-            
-        oq._sec_losses = sec_losses
-        oq.M = len(oq.all_imts())
-        oq.N = self.N
-        oq.K = K
-        oq.A = self.assetcol['ordinal'].max() + 1
+        set_oqparam(oq, self.assetcol, self.datastore)
         ct = oq.concurrent_tasks or 1
         oq.maxweight = int(oq.ebrisk_maxsize / ct)
         self.A = A = len(self.assetcol)
         self.L = L = len(oq.loss_types)
         if (oq.calculation_mode == 'event_based_risk' and
-                A * self.R > 1_000_000 and oq.avg_losses
-                and not oq.collect_rlzs):
-            raise ValueError('For large exposures you must set '
-                             'collect_rlzs=true or avg_losses=false')
+                not oq.collect_rlzs and oq.avg_losses):
+            if A * self.R > 10_000_000:
+                raise ValueError('For large exposures you must set '
+                                 'avg_losses=false or use sampling')
+            elif A * self.R > 100_000:
+                logging.warning('We recommend using sampling for performance')
         if (oq.aggregate_by and self.E * A > oq.max_potential_gmfs and
                 all(val == 0 for val in oq.minimum_asset_loss.values())):
             logging.warning('The calculation is really big; consider setting '
@@ -375,6 +383,7 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         oq = self.oqparam
         ws = self.datastore['weights']
         R = 1 if oq.collect_rlzs else len(ws)
+        fix_investigation_time(oq, self.datastore)
         if oq.collect_rlzs:
             if oq.investigation_time:  # event_based
                 self.avg_ratio = numpy.array([oq.time_ratio / len(ws)])
@@ -475,10 +484,12 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
             assert size <= upper_limit, (size, upper_limit)
             # sanity check on uniqueness by (agg_id, loss_id, event_id)
             arr = alt[['agg_id', 'loss_id', 'event_id']].to_numpy()
-            uni = numpy.unique(arr, axis=0)
+            uni, cnt = numpy.unique(arr, axis=0, return_counts=True)
             if len(uni) < len(arr):
-                raise RuntimeError('risk_by_event contains %d duplicates!' %
-                                   (len(arr) - len(uni)))
+                dupl = uni[cnt > 1]  # (agg_id, loss_id, event_id)
+                raise RuntimeError(
+                    'risk_by_event contains %d duplicates for event %s' %
+                    (len(arr) - len(uni), dupl[0, 2]))
 
         if oq.avg_losses:
             logging.info('Storing avg_losses-rlzs')

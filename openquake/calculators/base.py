@@ -469,13 +469,13 @@ class HazardCalculator(BaseCalculator):
         oq = self.oqparam
         dist = parallel.oq_distribute()
         avail = psutil.virtual_memory().available / 1024**3
-        required = .5 * (1 if dist == 'no' else parallel.Starmap.num_cores)
+        required = .25 * (1 if dist == 'no' else parallel.Starmap.num_cores)
         if (dist == 'processpool' and avail < required and
                 sys.platform != 'darwin'):
             # macos tells that there is no memory when there is, so we
             # must not enter in SLOW MODE there
             msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
-                   'engine would like at least 0.5 GB per core, i.e. %.1f GB: '
+                   'engine would like at least 0.25 GB per core, i.e. %.1f GB: '
                    'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
                    ) % (avail, required)
             if oq.concurrent_tasks:
@@ -575,7 +575,7 @@ class HazardCalculator(BaseCalculator):
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
-            haz_sitecol = readinput.get_site_collection(oq, self.datastore)
+            haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             df = readinput.Global.pmap.to_dframe()
@@ -623,7 +623,7 @@ class HazardCalculator(BaseCalculator):
                 raise ValueError(
                     'The parent calculation had stats %s != %s' %
                     (hstats, rstats))
-            sec_imts = set(oq.get_sec_imts())
+            sec_imts = set(oq.sec_imts)
             missing_imts = set(oq.risk_imtls) - sec_imts - set(oqp.imtls)
             if oqp.imtls and missing_imts:
                 raise ValueError(
@@ -787,9 +787,7 @@ class HazardCalculator(BaseCalculator):
         # site collection, possibly extracted from the exposure.
         oq = self.oqparam
         self.load_crmodel()  # must be called first
-        if oq.calculation_mode == 'aftershock':
-            haz_sitecol = None
-        elif (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
+        if (not oq.imtls and 'shakemap' not in oq.inputs and 'ins_loss'
                 not in oq.inputs and oq.ground_motion_fields):
             raise InvalidFile('There are no intensity measure types in %s' %
                               oq.inputs['job_ini'])
@@ -800,7 +798,8 @@ class HazardCalculator(BaseCalculator):
                 with hdf5.File(oq.inputs['gmfs']) as f:
                     haz_sitecol = f['sitecol']
             else:
-                haz_sitecol = readinput.get_site_collection(oq, self.datastore)
+                haz_sitecol = readinput.get_site_collection(
+                    oq, self.datastore.hdf5)
             if hasattr(self, 'rup'):
                 # for scenario we reduce the site collection to the sites
                 # within the maximum distance from the rupture
@@ -848,7 +847,7 @@ class HazardCalculator(BaseCalculator):
         else:  # no exposure
             if oq.hazard_calculation_id:  # read the sitecol of the child
                 self.sitecol = readinput.get_site_collection(
-                    oq, self.datastore)
+                    oq, self.datastore.hdf5)
                 self.datastore['sitecol'] = self.sitecol
             else:
                 self.sitecol = haz_sitecol
@@ -1039,7 +1038,7 @@ class RiskCalculator(HazardCalculator):
             a list of RiskInputs objects, sorted by IMT.
         """
         logging.info('Building risk inputs from %d realization(s)', self.R)
-        imtset = set(self.oqparam.imtls) | set(self.oqparam.get_sec_imts())
+        imtset = set(self.oqparam.imtls) | set(self.oqparam.sec_imts)
         if not set(self.oqparam.risk_imtls) & imtset:
             rsk = ', '.join(self.oqparam.risk_imtls)
             haz = ', '.join(imtset)
@@ -1181,7 +1180,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     data = numpy.concatenate(gmvlst)
     data.sort(order='eid')
     create_gmf_data(dstore, oqparam.get_primary_imtls(),
-                    oqparam.get_sec_imts(), data=data)
+                    oqparam.sec_imts, data=data)
     dstore['weights'] = numpy.ones(1)
     return eids
 
@@ -1226,17 +1225,24 @@ def import_gmfs_hdf5(dstore, oqparam):
     # already open, therefore you cannot run in parallel two calculations
     # starting from the same GMFs
     dstore['gmf_data'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "gmf_data")
+    dstore['complete'] = h5py.ExternalLink(oqparam.inputs['gmfs'], "sitecol")
     attrs = _getset_attrs(oqparam)
     oqparam.hazard_imtls = {imt: [0] for imt in attrs['imts']}
 
     # store the events
     E = attrs['num_events']
     events = numpy.zeros(E, rupture.events_dt)
-    events['id'] = numpy.arange(E)
     rel = numpy.unique(dstore['gmf_data/eid'])
-    logging.info('Storing %d events, %d relevant', E, len(rel))
+    e = len(rel)
+    assert E >= e, (E, e)
+    events['id'] = numpy.concatenate([rel, numpy.arange(E-e) + rel.max() + 1])
+    logging.info('Storing %d events, %d relevant', E, e)
     dstore['events'] = events
-    dstore['weights'] = numpy.ones(1)
+    n = oqparam.number_of_logic_tree_samples
+    if n:
+        dstore['weights'] = numpy.full(n, 1/n)
+    else:
+        dstore['weights'] = numpy.ones(1)
     return events['id']
 
 
@@ -1262,6 +1268,7 @@ def create_gmf_data(dstore, prim_imts, sec_imts=(), data=None):
     dstore.create_df('gmf_data', items)  # not gzipping for speed
     dstore.set_attrs('gmf_data', num_events=len(dstore['events']),
                      imts=' '.join(map(str, prim_imts)),
+                     investigation_time=oq.investigation_time or 0,
                      effective_time=eff_time)
     if data is not None:
         _df = pandas.DataFrame(dict(items))
@@ -1390,7 +1397,7 @@ def read_parent_sitecol(oq, dstore):
         if 'sitecol' in parent:
             haz_sitecol = parent['sitecol'].complete
         else:
-            haz_sitecol = readinput.get_site_collection(oq, dstore)
+            haz_sitecol = readinput.get_site_collection(oq, dstore.hdf5)
         if ('amplification' in oq.inputs and
                 'ampcode' not in haz_sitecol.array.dtype.names):
             haz_sitecol.add_col('ampcode', site.ampcode_dt)
