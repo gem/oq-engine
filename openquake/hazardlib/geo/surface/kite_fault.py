@@ -445,7 +445,7 @@ class KiteSurface(BaseSurface):
         rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
         # Create mesh
-        msh = _create_mesh(rprof, ref_idx, edge_sd, idl)
+        msh = _create_mesh(rprof, ref_idx, edge_sd, idl, align)
 
         return cls(RectangularMesh(msh[:, :, 0], msh[:, :, 1], msh[:, :, 2]),
                    profiles, sec_id)
@@ -672,7 +672,7 @@ def _check_distances(coo, sampling_dist):
             raise ValueError(msg)
 
 
-def _create_mesh(rprof, ref_idx, edge_sd, idl):
+def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     """
     Create the mesh in the forward and backward direction (from the reference
     profile)
@@ -707,19 +707,32 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     # Check the profiles have the same number of samples
     chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
 
-    # Check profiles have the same top depth
-    top_depths = np.array([p[0, 2] for p in rprof])
-    chk2 = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
+    # Check profiles have the same top depth. This
+    chk2 = True
+    if not align:
+        top_depths = np.array([p[0, 2] for p in rprof])
+        chk2 = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
 
+    """
     if chk1 and chk2:
         msh = np.array(rprof)
     else:
         msg = 'Cannot build the mesh.'
         if not chk1:
             msg += ' Profiles do not have the same num. samples.'
-        if not chk2:
+        if not chk2 and not align:
             msg += ' Profiles do not have the same top depth.'
         raise ValueError(msg)
+    """
+
+    if chk1:
+        msh = np.array(rprof)
+    else:
+        msg = 'Cannot build the mesh.'
+        if not chk1:
+            msg += ' Profiles do not have the same num. samples.'
+        raise ValueError(msg)
+
     # ------------------------------------
 
     # Create the mesh in the forward direction
@@ -753,6 +766,17 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl):
     # Convert from profiles to edges
     msh = msh.swapaxes(0, 1)
     msh = fix_mesh(msh)
+
+    # Resort edges of the mesh
+    mdep = []
+    for irow in range(msh.shape[0]):
+        tidx = np.isfinite(msh[irow, :, 2])
+        mdep.append(np.mean(msh[irow, tidx, 2]))
+    mdep = np.array(mdep)
+    idx = mdep.argsort()
+    msh[:, :, 0] = msh[idx, :, 0]
+    msh[:, :, 1] = msh[idx, :, 1]
+    msh[:, :, 2] = msh[idx, :, 2]
 
     return msh
 
@@ -798,7 +822,7 @@ def _align_profiles(prfr: list, prfl: list):
 
 def _fix_profiles(profiles, profile_sd, align, idl):
     """
-    Resample and align profiles
+    Resample and align profiles.
 
     :param profiles:
         A list of :class:`openquake.hazardlib.geo.Line` instances
@@ -813,7 +837,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     # Resample profiles using the resampling distance provided
     rprofiles = []
     for prf in profiles:
-        rprofiles.append(_resample_profile(prf, profile_sd))
+        rprofiles.append(prf.resample(profile_sd))
 
     # Set the reference profile i.e. the longest one
     ref_idx = 0
@@ -835,18 +859,30 @@ def _fix_profiles(profiles, profile_sd, align, idl):
         np.testing.assert_allclose(dst, profile_sd, rtol=1.)
 
     # Find the delta needed to align profiles if requested
-    shift = np.zeros(len(rprofiles) - 1)
+    shift = np.zeros((len(rprofiles)))
     if align is True:
-        for i in range(0, len(rprofiles) - 1):
-            shift[i] = profiles_depth_alignment(rprofiles[i],
-                                                rprofiles[i + 1])
-    shift = np.array([0] + list(shift))
 
+        # Find the shallower profile
+        idxmin = None
+        depmin = +1e10
+        for iii, prf in enumerate(rprofiles):
+            if np.min(prf.coo[:, 2]) < depmin:
+                depmin = np.min(prf.coo[:, 2])
+                idxmin = iii
+
+        for i, _ in enumerate(rprofiles):
+            if i != idxmin:
+                shift[i] = profiles_depth_alignment(rprofiles[idxmin],
+                                                    rprofiles[i])
+    add = shift
+
+    """
     # Find the maximum back-shift
-    ccsum = [shift[0]]
-    for i in range(1, len(shift)):
+    ccsum = []
+    for i in range(0, len(shift)):
         ccsum.append(shift[i] + ccsum[i - 1])
     add = ccsum - min(ccsum)
+    """
 
     # Create resampled profiles. Now the profiles should be all aligned
     # from the top (if align option is True)
@@ -919,7 +955,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Get the array with all the profiles (resampled at a `step` distance)
     parr = _from_prf_to_array(profs, low, upp, step)
 
-    # Process each edge
+    # Process each edge obtained from the resampled profiles
     csegs = []
     for i_edge in range(parr.shape[1]):
 
@@ -940,16 +976,22 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     unique = np.unique(csegs[:, 0])
     cnt = 0
 
-    # Loop over the unique start indexes of continuous parts of an edge
+    # Loop over the unique-start indexes of continuous parts of an edge
     for i_from in unique:
 
         # Process all the edges that start with index `i_from`
         for cseg in csegs[csegs[:, 0] == i_from, :]:
 
+            # If the edge starts with the first index
             if i_from == unique[0]:
                 tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
                 tmp = tmp[:-1, :]
                 i_prof = 0
+                #_check_sampling(tmp, proj)
+                #ddd = {0: tmp}
+                #_dbg_plot(ddd)
+                #_dbg_plot(ddd, profs, ref_idx=ref_idx)
+                #breakpoint()
             else:
                 edge = parr[cseg[0]:cseg[1], cseg[2]]
                 tmp, i_prof = _get_intersections(edge, new_prof_lines, proj)
@@ -966,26 +1008,58 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Build profiles
     npr = _build_profiles(new_edges)
 
-    import matplotlib.pyplot as plt
-    ax = plt.figure().add_subplot(projection='3d')
+    # Check the sampled edges
     for key in new_edges:
         edg = np.array(new_edges[key])
-        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'g', lw=1)
-    for pro in profs:
-        edg = np.array(pro)
-        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'r', lw=1)
-    for pro in npr:
-        edg = np.array(pro)
-        idx = np.nonzero(np.isfinite(edg[:, 0]))
-        edg = np.squeeze(edg[idx, :])
-        try:
-            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'b')
-        except:
-            pass
-    ax.invert_zaxis()
-    plt.show()
+        _check_sampling(edg, proj)
+
+    # ax = _dbg_plot(new_edges, profs, npr, ref_idx)
 
     return npr
+
+
+def _check_sampling(edg, proj):
+    # Check the sampled edges
+    xp, yp = proj(edg[:, 0], edg[:, 1])
+    dsts = np.diff(xp)**2 + np.diff(yp)**2 + np.diff(edg[:, 2])**2
+    np.testing.assert_allclose(dsts, dsts[0], rtol=1e-2)
+
+
+def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None, 
+              num=False, hold=False):
+
+    import matplotlib.pyplot as plt
+    ax = plt.figure().add_subplot(projection='3d')
+
+    if new_edges is not None:
+        for key in new_edges:
+            edg = np.array(new_edges[key])
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'g-x', lw=1)
+            for ie, ee in enumerate(edg):
+                ax.text(ee[0], ee[1], ee[2], s=f'{ie}')
+
+    if profs is not None:
+        for pro in profs:
+            edg = np.array(pro)
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'r', lw=3)
+        edg = np.array(profs[ref_idx])
+        plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'y--', lw=3, zorder=100)
+
+    if npr is not None:
+        for pro in npr:
+            edg = np.array(pro)
+            idx = np.nonzero(np.isfinite(edg[:, 0]))
+            edg = np.squeeze(edg[idx, :])
+            try:
+                plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'b')
+            except:
+                pass
+    ax.invert_zaxis()
+
+    if not hold:
+        plt.show()
+
+    return ax
 
 
 def _build_profiles(edges: list) -> list:
@@ -1144,95 +1218,6 @@ def _lo_la_de(line, sampling_dist, g):
     return lo, la, de
 
 
-def _resample_profile(line, sampling_dist):
-    """
-    :parameter line:
-        An instance of :class:`openquake.hazardlib.geo.line.Line`
-    :parameter sampling_dist:
-        A scalar defining the distance [km] used to sample the profile
-    :returns:
-        An instance of :class:`openquake.hazardlib.geo.line.Line`
-    """
-    # Set projection
-    g = Geod(ellps='WGS84')
-
-    # Initialize lo, la, de
-    lo, la, de = _lo_la_de(line, sampling_dist, g)
-
-    # Initialize the cumulated distance
-    cdist = 0.
-
-    # Get the azimuth of the profile
-    azim = azimuth(lo[0], la[0], lo[-1], la[-1])
-
-    # Initialise the list with the resampled nodes
-    idx = 0
-    resampled_cs = [(lo[idx], la[idx], de[idx])]
-
-    # Set the starting point
-    slo = lo[idx]
-    sla = la[idx]
-    sde = de[idx]
-
-    # Resampling
-    while idx <= len(lo) - 2:
-        # Compute the distance between the starting point and the next point
-        # on the profile
-        segment_len = distance(slo, sla, sde, lo[idx + 1], la[idx + 1],
-                               de[idx + 1])
-        azim = azimuth(slo, sla, lo[idx + 1], la[idx + 1])
-
-        # Search for the point along the profile
-        if cdist + segment_len > sampling_dist:
-            # This is the length of the last segment-fraction needed to
-            # obtain the sampling distance
-            delta = sampling_dist - cdist
-
-            # Compute the slope of the last segment and its horizontal length.
-            # We need to manage the case of a vertical segment TODO
-            segment_hlen = distance(slo, sla, 0., lo[idx + 1], la[idx + 1], 0.)
-            if segment_hlen > 1e-5:
-                segment_slope = np.arctan((de[idx + 1] - sde) / segment_hlen)
-            else:
-                segment_slope = 90.
-
-            # Horizontal and vertical length of delta
-            if segment_slope > ALMOST_RIGHT_ANGLE:
-                delta_v = delta
-                delta_h = 0.0
-            else:
-                delta_v = delta * np.sin(segment_slope)
-                delta_h = delta * np.cos(segment_slope)
-
-            # Add a new point to the cross section
-            if segment_slope > ALMOST_RIGHT_ANGLE:
-                pnts = [np.array([slo, slo]),
-                        np.array([sla, sla]),
-                        np.array([sde, sde + delta_v])]
-            else:
-                pnts = npoints_towards(
-                    slo, sla, sde, azim, delta_h, delta_v, 2)
-
-            # Update the starting point
-            slo = pnts[0][-1]
-            sla = pnts[1][-1]
-            sde = pnts[2][-1]
-            resampled_cs.append((slo, sla, sde))
-
-            # Reset the cumulative distance
-            cdist = 0.
-        else:
-            cdist += segment_len
-            idx += 1
-            slo = lo[idx]
-            sla = la[idx]
-            sde = de[idx]
-
-    coo = np.array(resampled_cs)
-    _check_distances(coo, sampling_dist)
-    return Line.from_coo(coo)
-
-
 def _set_indexes(
         forward: bool, ref_idx: int, len_profs: int) -> tuple[int, int, int]:
     # Defines the indexes of the original profiles to be investigated
@@ -1294,40 +1279,19 @@ def profiles_depth_alignment(pro1, pro2):
     :returns:
         An integer
     """
-    # Create two numpy.ndarray with the coordinates of the two profiles
+    minwdt = 2
+
+    # Arrays with coordinates
     coo1 = pro1.coo
     coo2 = pro2.coo
 
-    # Set the profile with the smaller number of points as the first one
-    swap = 1
-    if coo2.shape[0] < coo1.shape[0]:
-        coo1, coo2 = coo2, coo1
-        swap = -1
-
-    # Process the profiles. Note that in the ideal case the two profiles
-    # require at least 5 points
-    if len(coo1) > 5 and len(coo2) > 5:
-        #
-        # create two arrays of the same lenght
-        coo1 = np.array(coo1)
-        coo2 = np.array(coo2[:coo1.shape[0]])
-        #
-        indexes = np.arange(-2, 3)
-        dff = np.zeros_like(indexes)
-        for i, shf in enumerate(indexes):
-            if shf < 0:
-                dff[i] = np.mean(abs(coo1[:shf, 2] - coo2[-shf:, 2]))
-            elif shf == 0:
-                dff[i] = np.mean(abs(coo1[:, 2] - coo2[:, 2]))
-            else:
-                dff[i] = np.mean(abs(coo1[shf:, 2] - coo2[:-shf, 2]))
-        amin = np.amin(dff)
-        res = indexes[np.amax(np.nonzero(dff == amin))] * swap
-    else:
-        d1 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
-        d2 = np.zeros((len(coo2) - len(coo1) + 1, len(coo1)))
-        for i in np.arange(0, len(coo2) - len(coo1) + 1):
-            d2[i, :] = [coo2[d, 2] for d in range(i, i + len(coo1))]
-            d1[i, :] = coo1[:, 2]
-        res = np.argmin(np.sum(abs(d2 - d1), axis=1))
-    return res
+    # Compute the shift with the minimum difference
+    mindff = 1e20
+    minidx = None
+    for i1 in range(0, len(coo1) - minwdt):
+        lle = np.min([len(coo1[i1:, 2]), len(coo2[:, 2])])
+        dff = np.sum(np.abs(coo1[i1:i1+lle, 2] - coo2[0:lle, 2]))
+        if mindff > dff:
+            minidx = i1
+            mindff = dff
+    return minidx

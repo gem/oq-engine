@@ -33,7 +33,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
-PLOTTING = True
+#PLOTTING = True
 aae = np.testing.assert_almost_equal
 
 
@@ -68,7 +68,7 @@ def plot_mesh_3d(ax, smsh, zfa):
 
 
 def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
-        ax_equal=False):
+        ax_equal=False, hold=False):
     """
     Plots the 3D mesh
 
@@ -135,7 +135,11 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
     if ax_equal:
         set_axes_equal(ax)
     ax.invert_zaxis()
-    plt.show()
+
+    if not hold:
+        plt.show()
+
+    return ax
 
 
 class KiteSurfaceFromMeshTest(unittest.TestCase):
@@ -212,7 +216,6 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         perc_diff = abs(expected - np.sum(areas[idx])) / expected * 100
         self.assertTrue(perc_diff < 0.5)
 
-    @unittest.skip('')
     def test_get_tor(self):
         """ test calculation of trace (i.e. surface projection of tor) """
         lons = np.flipud([0.0, 0.05, 0.1, 0.15, 0.20])
@@ -266,14 +269,13 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         self.mlats = np.array(plats)
         self.mesh = Mesh(lons=self.mlons.flatten(), lats=self.mlats.flatten())
 
-    @unittest.skip('')
     def test_get_tor(self):
         tlo, tla = self.srfc.get_tor()
         # Expected results extracted manually from the mesh
-        elo = np.array([10.01157297, 10.04780614,
-                        10.09853744, 10.14926874, 10.2])
-        ela = np.array([44.99160022, 45.00003185,
-                        45.00004377, 45.00003315, 45.])
+        elo = np.array([10.2, 10.1491267, 10.0982533,
+                        10.04738, 10.0110047])
+        ela = np.array([45., 45.0000331, 45.0000436,
+                        45.0000316, 44.9913493])
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
@@ -364,7 +366,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
     # TODO
     def test_get_dip2(self):
         dip = self.srfc.get_dip()
-        self.assertAlmostEqual(dip, 47.29, places=2, msg='Wrong dip value')
+        self.assertAlmostEqual(dip, 47.0967, places=3, msg='Wrong dip value')
 
 
 class KiteSurfaceUCF1Tests(unittest.TestCase):
@@ -377,7 +379,7 @@ class KiteSurfaceUCF1Tests(unittest.TestCase):
             title = 'Profiles'
             ppp(self.prf, title=title, ax_equal=True)
 
-    def test_mesh_creation(self):
+    def test_mesh_creationA(self):
         # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 1.0
         vsmpl = 2.0
@@ -400,7 +402,7 @@ class KiteSurfaceUCF2Tests(unittest.TestCase):
             title = 'Profiles'
             ppp(self.prf, title=title, ax_equal=True)
 
-    def test_mesh_creation02(self):
+    def test_mesh_creationB(self):
         # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 0.2
         vsmpl = 2.0
@@ -451,7 +453,7 @@ class KiteSurfaceSimpleTests(unittest.TestCase):
         path = os.path.join(BASE_DATA_PATH, 'profiles05')
         self.prf, _ = _read_profiles(path)
 
-    def test_mesh_creation(self):
+    def test_mesh_creationC(self):
         # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
         vsmpl = 2
@@ -665,7 +667,7 @@ class IdealisedSimpleMeshTest(unittest.TestCase):
         path = os.path.join(BASE_DATA_PATH, 'profiles05')
         self.prf, _ = _read_profiles(path)
 
-    def test_mesh_creation(self):
+    def test_mesh_creationD(self):
         # Create the mesh: two parallel profiles - no top alignment
         hsmpl = 4
         vsmpl = 4
@@ -726,7 +728,6 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
         self.smsh = KiteSurface.from_profiles(self.profiles, self.v_sampl,
                                               self.h_sampl, idl, alg)
 
-    @unittest.skip('')
     def test_h_spacing(self):
 
         # Check h-spacing: two misaligned profiles - no top alignment
@@ -753,7 +754,6 @@ class IdealisedSimpleDisalignedMeshTest(unittest.TestCase):
             title += '(IdealisedSimpleDisalignedMeshTest)'
             ppp(self.profiles, srfc, title)
 
-    @unittest.skip('')
     def test_spacing(self):
         # Check v-spacing: two misaligned profiles - no top alignment
         srfc = self.smsh
@@ -783,7 +783,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         path = os.path.join(BASE_DATA_PATH, 'profiles03')
         self.profiles, _ = _read_profiles(path)
 
-    def test_mesh_creation(self):
+    def test_mesh_creationE(self):
         # Test construction of the mesh
         h_sampl = 5
         v_sampl = 5
@@ -792,7 +792,6 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         smsh = srfc.mesh
-        ppp(self.profiles, ax_equal=False)
         self.assertTrue(np.all(~np.isnan(smsh.lons[0, :])))
 
         if PLOTTING:
@@ -800,7 +799,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             title += '(IdealisedAsimmetricMeshTest)'
             ppp(self.profiles, srfc, title, ax_equal=False)
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_mesh_creation_with_alignment(self):
         # Test construction of the mesh
         h_sampl = 2.5
@@ -809,12 +808,14 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         alg = True
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
-        self.assertTrue(np.any(np.isnan(srfc.mesh.lons[0, :])))
 
         if PLOTTING:
             title = 'Simple case: Top alignment'
             title += '(IdealisedAsimmetricMeshTest)'
-            ppp(self.profiles, srfc, title)
+            ax = ppp(self.profiles, srfc, title)
+
+        # Test
+        self.assertTrue(np.any(np.isnan(srfc.mesh.lons[0, :])))
 
     def test_get_surface_projection(self):
         """ Test the calculation of the surface projection """
@@ -827,7 +828,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         lons, lats = srfc.surface_projection
         # TODO
 
-    @unittest.skip('')
+    # @unittest.skip('')
     def test_get_width(self):
         """ Test the calculation of the width """
         h_sampl = 2.5
@@ -837,7 +838,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         srfc = KiteSurface.from_profiles(self.profiles, v_sampl, h_sampl,
                                          idl, alg)
         width = srfc.get_width()
-        np.testing.assert_almost_equal(38.465767929, width)
+        np.testing.assert_almost_equal(37.2501538, width)
 
 
 class IdealizedATest(unittest.TestCase):
@@ -850,7 +851,6 @@ class IdealizedATest(unittest.TestCase):
         path = os.path.join(BASE_DATA_PATH, 'profiles04')
         self.profiles, _ = _read_profiles(path)
 
-    @unittest.skip('')
     def test_mesh_creation_no_alignment(self):
         # Test construction of the mesh
         h_sampl = 4
@@ -865,7 +865,6 @@ class IdealizedATest(unittest.TestCase):
             title = 'Simple mesh creation - no top alignment'
             ppp(self.profiles, smsh, title)
 
-    @unittest.skip('')
     def test_mesh_creation_with_alignment(self):
         # Test construction of the mesh
         h_sampl = 4
