@@ -350,10 +350,27 @@ def main(dstore, csm):
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
     if len(dstore['rup/mag']) == 0:
-        logging.warning('Zero hazard: skipping AELO calculation')
+        warning = (
+            'The seismic hazard at the site is 0: there are no ruptures'
+            ' close to the site. ASCE 7-16 and ASCE 41-17 parameters'
+            ' cannot be computed.')
+        if 'warnings' in dstore:
+            warnings = dstore['warnings'][()].decode('utf8')
+            dstore['warnings'] = warnings + '\n' + warning
+        else:
+            dstore['warnings'] = warning
+        logging.warning(warning)
         return
     if dstore['mean_rates_ss'][:].max() < MIN_AFE:
-        logging.warning('Ultra-low hazard: skipping AELO calculation')
+        warning = (
+            'The seismic hazard at the site is very low. ASCE 7-16 and'
+            ' ASCE 41-17 parameters cannot be computed.')
+        if 'warnings' in dstore:
+            warnings = dstore['warnings'][()].decode('utf8')
+            dstore['warnings'] = warnings + '\n' + warning
+        else:
+            dstore['warnings'] = warning
+        logging.warning(warning)
         return
     logging.info('Computing Risk Targeted Ground Motion')
     oq = dstore['oqparam']

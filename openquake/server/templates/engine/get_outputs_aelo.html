@@ -6,9 +6,9 @@
     <div class="container">
       <div class="row">
         <div id="oq-body-wrapper">
-          {% if low_hazard %}
+          {% if warnings %}
           <div id="warning-box" class="alert alert-warning" style=>
-            Warning: the ASCE outputs are missing since the hazard is too low
+            {{ warnings }}
           </div>
           {% endif %}
           <div class="span12">
