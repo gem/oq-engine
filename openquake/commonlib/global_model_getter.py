@@ -30,9 +30,9 @@ class GlobalModelGetter:
             raise ValueError(f'Model getter for {kind} is not implemented')
         self.kind = kind
         if self.kind == 'mosaic':
-            self.model_code = 'code'
+            self.model_code_field = 'code'
         elif self.kind == 'global_risk':
-            self.model_code = 'shapeGroup'
+            self.model_code_field = 'shapeGroup'
         if shapefile_path is None:  # read from openquake.cfg
             if kind == 'mosaic':
                 self.dir = os.path.dirname(mosaic.__file__)
@@ -114,23 +114,24 @@ class GlobalModelGetter:
         Returns a list of all models in the shapefile
         """
         if self.sinfo is not None:
-            models = list(np.unique([info[self.model_code]
+            models = list(np.unique([info[self.model_code_field]
                                      for info in self.sinfo]))
             return models
         if fiona is None:
             print('fiona/GDAL is not installed properly!', sys.stderr)
             return []
         with fiona.open(self.shapefile_path, 'r') as shp:
-            models = [polygon['properties'][self.model_code]
+            models = [polygon['properties'][self.model_code_field]
                       for polygon in shp]
         return models
 
-    def is_inside(self, rup_array, model_code):
-        # TODO: see if it is possible to use shapely.points to build point
-        # geometries from the array of ruptures
-        geoms = [Point(*rup[['lon', 'lat']]) for rup in rup_array]
+    def is_inside(self, site_array, model_code):
         # NOTE: the index is one for adm0 but it can be more for adm2
-        model_indices = np.where(self.sinfo[self.model_code] == model_code)
+        model_indices = np.where(
+            self.sinfo[self.model_code_field] == model_code)
+        # TODO: see if it is possible to use shapely.points to build point
+        # geometries from the array of sites
+        geoms = [Point(*rup[['lon', 'lat']]) for rup in site_array]
         within = self.sindex.query(geoms, 'within')
         return np.isin(within[1], model_indices)
 
@@ -138,7 +139,7 @@ class GlobalModelGetter:
         t0 = time.time()
         geom = wkt.loads(geom_wkt)
         idxs = self.sindex.query(geom, predicate)
-        models = list(np.unique([info[self.model_code]
+        models = list(np.unique([info[self.model_code_field]
                                  for info in self.sinfo[idxs]]))
         logging.info(f'Models retrieved in {time.time() - t0} seconds')
         return models
@@ -150,7 +151,7 @@ class GlobalModelGetter:
         idxs = self.sindex.query(geoms, predicate=predicate, distance=distance)
         if return_indices_only:
             return idxs
-        models = list(np.unique([info[self.model_code]
+        models = list(np.unique([info[self.model_code_field]
                                  for info in self.sinfo[idxs][1]]))
         logging.info(f'Models retrieved in {time.time() - t0} seconds')
         return models
@@ -168,7 +169,7 @@ class GlobalModelGetter:
             exclusive=exclusive, all_matches=all_matches)
         if return_indices_only:
             return idxs
-        models = list(np.unique([info[self.model_code]
+        models = list(np.unique([info[self.model_code_field]
                                  for info in self.sinfo[idxs[1]]]))
         logging.info(f'Models retrieved in {time.time() - t0} seconds')
         return models
@@ -178,7 +179,7 @@ class GlobalModelGetter:
         lat = float(lat)
         point = Point(lon, lat)
         idx = self.sindex.nearest(point)
-        model = self.sinfo[idx][self.model_code]
+        model = self.sinfo[idx][self.model_code_field]
         return model
 
     def get_model_by_lon_lat(
@@ -209,7 +210,7 @@ class GlobalModelGetter:
             if not check_overlaps:
                 for polygon in shp:
                     if point.within(shape(polygon['geometry'])):
-                        model = polygon['properties'][self.model_code]
+                        model = polygon['properties'][self.model_code_field]
                         logging.info(f'Site at lon={lon} lat={lat} is'
                                      f' covered by model {model}')
                         break
@@ -235,7 +236,7 @@ class GlobalModelGetter:
             #       To calculate the distance to the nearest edge, one would do
             #       poly.exterior.distance(point) instead
             model_dist = {
-                polygon['properties'][self.model_code]:
+                polygon['properties'][self.model_code_field]:
                     shape(polygon['geometry']).distance(point)
                 for polygon in shp
             }
