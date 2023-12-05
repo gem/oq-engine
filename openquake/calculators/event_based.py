@@ -61,6 +61,7 @@ TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
 
+
 def rup_weight(rup):
     return math.ceil(rup['nsites'] / 100)
 
@@ -444,7 +445,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
-            nrups = parallel.Starmap( # weighting the heavy sources
+            nrups = parallel.Starmap(  # weighting the heavy sources
                 count_ruptures, [(src,) for src in sources
                                  if src.code in b'AMSC'],
                 h5=self.datastore.hdf5,
@@ -487,11 +488,10 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array = dic['rup_array']
             if len(rup_array) == 0:
                 continue
-            # TODO: for Paolo to add a very fast method is_inside
-            #if oq.mosaic_model:
-            #    ok = gmg.is_inside(
-            #         rup_array['lon'], rup_array['lat'], oq.mosaic_model)
-            #    rup_array = rup_array[ok]
+            if oq.mosaic_model:
+                ok = gmg.is_inside(
+                    rup_array['lon'], rup_array['lat'], oq.mosaic_model)
+                rup_array = rup_array[ok]
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:

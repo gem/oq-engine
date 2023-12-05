@@ -42,11 +42,8 @@ class GlobalModelGetter:
                 shapefile_path = os.path.join(
                     self.dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.shapefile_path = shapefile_path
-        self.sindex = None
-        self.sinfo = None
-        if self.kind == 'global_risk':
-            self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
-            self.sinfo = self.get_spatial_info(sinfo_path, replace_sinfo)
+        self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
+        self.sinfo = self.get_spatial_info(sinfo_path, replace_sinfo)
 
     def read_from_pickle(self, path):
         logging.info(f'Reading from {path}...')
@@ -80,7 +77,9 @@ class GlobalModelGetter:
         t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
             dtype = [(name, 'U50') for name in list(shp[0]['properties'])]
-            sinfo = np.array([tuple(zone['properties'].values()) for zone in shp], dtype=dtype)
+            sinfo = np.array(
+                [tuple(zone['properties'].values()) for zone in shp],
+                dtype=dtype)
         reading_time = time.time() - t0
         logging.info(f'Spatial information read in {reading_time} seconds')
         return sinfo
@@ -125,13 +124,11 @@ class GlobalModelGetter:
                       for polygon in shp]
         return models
 
-    def is_inside(self, site_array, model_code):
+    def is_inside(self, lon_array, lat_array, model_code):
         # NOTE: the index is one for adm0 but it can be more for adm2
         model_indices = np.where(
             self.sinfo[self.model_code_field] == model_code)
-        # TODO: see if it is possible to use shapely.points to build point
-        # geometries from the array of sites
-        geoms = [Point(*rup[['lon', 'lat']]) for rup in site_array]
+        geoms = points(lon_array, lat_array)
         within = self.sindex.query(geoms, 'within')
         return np.isin(within[1], model_indices)
 
@@ -180,6 +177,17 @@ class GlobalModelGetter:
         point = Point(lon, lat)
         idx = self.sindex.nearest(point)
         model = self.sinfo[idx][self.model_code_field]
+        if model:
+            logging.info(f'Site at lon={lon} lat={lat} is'
+                         f' covered by model {model}')
+        elif strict:
+            raise ValueError(
+                f'Site at lon={lon} lat={lat} is not covered'
+                f' by any model!')
+        else:
+            logging.error(
+                f'Site at lon={lon} lat={lat} is not covered'
+                f' by any model!')
         return model
 
     def get_model_by_lon_lat(
@@ -292,6 +300,26 @@ class GlobalModelGetter:
                     lon, lat, strict=False)
         logging.info(Counter(model_by_site.values()))
         return model_by_site
+
+    def get_models_by_sites_csv_sindex(self, csv_path):
+        """
+        Given a csv file with (Longitude, Latitude) of sites, returns the
+        list of models covering each of the sites
+
+        :param csv_path:
+            path of the csv file containing sites coordinates
+        """
+        geoms = []
+        with open(csv_path, 'r') as sites:
+            for site in csv.DictReader(sites):
+                try:
+                    lon = site['Longitude']
+                    lat = site['Latitude']
+                except KeyError:
+                    lon = site['lon']
+                    lat = site['lat']
+                geoms.append(Point(lon, lat))
+        self.get_models_by_geoms_array(geoms)
 
 
 def main(sites_csv_path, models_boundaries_shp_path):

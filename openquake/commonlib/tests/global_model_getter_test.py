@@ -90,5 +90,5 @@ class GlobalModelGetterTestCase(unittest.TestCase):
             dtype=[('lon', float), ('lat', float)])
         model = 'ITA'
         numpy.testing.assert_array_equal(
-            mg.is_inside(rup_array, model),
+            mg.is_inside(rup_array['lon'], rup_array['lat'], model),
             numpy.array([True, False]))
