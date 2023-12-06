@@ -21,21 +21,21 @@ Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 """
 import numpy as np
 import numpy.typing as npt
+import matplotlib.pyplot as plt
 from scipy import stats
-from pyproj import Geod
 from shapely.geometry import Polygon
 
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.line import _resample
-from openquake.hazardlib.geo.utils import plane_fit
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.geodetic import (
     npoints_towards, distance, azimuth)
 from openquake.hazardlib.geo.surface import SimpleFaultSurface
+from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 
 TOL = 0.4
 SMALL = 1e-5
@@ -671,7 +671,7 @@ def _check_distances(coo, sampling_dist):
             msg += '\n   Please, change the sampling distance or the'
             msg += ' points along the profile'
             raise ValueError(msg)
-        
+
 
 def _get_proj_from_profiles(rprof):
     # Compute information needed for the geographic projection
@@ -711,11 +711,11 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     # Check the profiles have the same number of samples
     chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
 
-    # Check profiles have the same top depth. This
-    chk2 = True
+    # Check profiles have the same top depth. Note that this check is currently
+    # not used since it applies only in some cases.
     if not align:
         top_depths = np.array([p[0, 2] for p in rprof])
-        chk2 = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
+        _ = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
 
     # Checks
     if chk1:
@@ -771,22 +771,24 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
 
     # Fix the orientation of the mesh
     msh = _fix_right_hand(msh)
-    
+
     return msh
 
 
 def _fix_right_hand(msh):
-    # Check that the surface complies with the right hand rule. 
+    # This function checks that the array describing the surface complies with
+    # the right hand rule.
+    #
+    # :param msh:
+    #   A :class:`numpy.ndarray` instance
+    #
 
-    from openquake.hazardlib.geo.line import Line
-    from openquake.hazardlib.geo.surface.gridded import GriddedSurface
-
-    # Compute the average azimuth for the top of the surface
+    # Compute the average azimuth for the top edge of the surface
     tmp = msh[0, :, 0]
     idx = np.isfinite(tmp)
     top = Line([Point(c[0], c[1]) for c in msh[0, idx, :]])
     avg_azi = top.average_azimuth()
-    
+
     # Compute the strike of the surface
     coo = msh.reshape(-1, 3)
     coo = coo[np.isfinite(coo[:, 0]), :]
@@ -796,16 +798,17 @@ def _fix_right_hand(msh):
 
     # Check if we need to flip the grid
     if not np.abs(_angles_diff(strike, avg_azi)) < 60:
-        
+
         # Flip the grid to make it compliant with the right hand rule
         nmsh = np.flip(msh, axis=1)
 
-        # Check the average azimuth for the top of the surface
+        # Compute the average azimuth for the top edge of the surface
         tmp = nmsh[0, :, 0]
         idx = np.isfinite(tmp)
         top = Line([Point(c[0], c[1]) for c in nmsh[0, idx, :]])
         avg_azi_new = top.average_azimuth()
 
+        # Check again the average azimuth for the top edge of the surface
         msg = "The mesh still does not comply with the right hand rule"
         assert np.abs(_angles_diff(strike, avg_azi_new)) < 60, msg
         return nmsh
@@ -817,7 +820,7 @@ def _angles_diff(ang_a, ang_b):
     dff = ang_a - ang_b
     return (dff + 180) % 360 - 180
 
-        
+
 def _align_profiles(prfr: list, prfl: list):
 
     # Check that the two sets contain profiles with the same length
@@ -912,14 +915,6 @@ def _fix_profiles(profiles, profile_sd, align, idl):
                 shift[i] = profiles_depth_alignment(rprofiles[idxmin],
                                                     rprofiles[i])
     add = shift
-
-    """
-    # Find the maximum back-shift
-    ccsum = []
-    for i in range(0, len(shift)):
-        ccsum.append(shift[i] + ccsum[i - 1])
-    add = ccsum - min(ccsum)
-    """
 
     # Create resampled profiles. Now the profiles should be all aligned
     # from the top (if align option is True)
@@ -1045,22 +1040,33 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
         edg = np.array(new_edges[key])
         _check_sampling(edg, proj)
 
+    # This is used only for debugging purposes
     # ax = _dbg_plot(new_edges, profs, npr, ref_idx)
 
     return npr
 
 
 def _check_sampling(edg, proj):
+    # This function checks that the sampling along an edge is constant i.e.
+    # this guaratees that the top and bottom edges of each cell have the same
+    # size
+    #
+    # :param edg:
+    #   An instance of :class:`numpy.ndarray` of shape Nx3
+    # :param proj:
+    #   An instance of
+    #   :class:`openquake.hazardlib.geo.geo_utils.OrthographicProjection`
+
     # Check the sampled edges
     xp, yp = proj(edg[:, 0], edg[:, 1])
     dsts = np.diff(xp)**2 + np.diff(yp)**2 + np.diff(edg[:, 2])**2
     np.testing.assert_allclose(dsts, dsts[0], rtol=1e-2)
 
 
-def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None, 
+def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
               num=False, hold=False):
+    # This is a plotting function used for debugging
 
-    import matplotlib.pyplot as plt
     ax = plt.figure().add_subplot(projection='3d')
 
     if new_edges is not None:
@@ -1107,9 +1113,8 @@ def _build_profiles(edges: list) -> list:
                 # Adding a new profile
                 tmp = []
                 if i_edge > 0 and i_r > 0:
-                    tmp = [tc for i in range(len(profs[i_r-1])-1)]
+                    tmp = [tc for i in range(len(profs[i_r - 1]) - 1)]
                 profs.append(tmp + [c])
-                #profs.append([c])
             elif len(profs) == i_r and i_edge == 0:
                 profs.append([c])
             else:
@@ -1223,33 +1228,6 @@ def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
         new_lines_profiles.append([slope, intercept])
 
 
-def _lo_la_de(line, sampling_dist, g):
-    lo = line.coo[:, 0].copy()
-    la = line.coo[:, 1].copy()
-    de = line.coo[:, 2].copy()
-    # Add a tolerance length to the last point of the profile
-    # check that final portion of the profile is not vertical
-    if abs(lo[-2] - lo[-1]) > 1e-5 and abs(la[-2] - la[-1]) > 1e-5:
-        az12, _, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
-        odist /= 1e3
-        slope = np.arctan((de[-1] - de[-2]) / odist)
-        hdist = TOL * sampling_dist * np.cos(slope)
-        vdist = TOL * sampling_dist * np.sin(slope)
-        endlon, endlat, _ = g.fwd(lo[-1], la[-1], az12, hdist * 1e3)
-        lo[-1] = endlon
-        la[-1] = endlat
-        de[-1] = de[-1] + vdist
-        az12, _, odist = g.inv(lo[-2], la[-2], lo[-1], la[-1])
-
-        # Checking
-        odist /= 1e3
-        slopec = np.arctan((de[-1] - de[-2]) / odist)
-        assert abs(slope - slopec) < 1e-3
-    else:
-        de[-1] = de[-1] + TOL * sampling_dist
-    return lo, la, de
-
-
 def _set_indexes(
         forward: bool, ref_idx: int, len_profs: int) -> tuple[int, int, int]:
     # Defines the indexes of the original profiles to be investigated
@@ -1322,7 +1300,7 @@ def profiles_depth_alignment(pro1, pro2):
     minidx = None
     for i1 in range(0, len(coo1) - minwdt):
         lle = np.min([len(coo1[i1:, 2]), len(coo2[:, 2])])
-        dff = np.sum(np.abs(coo1[i1:i1+lle, 2] - coo2[0:lle, 2]))
+        dff = np.sum(np.abs(coo1[i1:i1 + lle, 2] - coo2[0:lle, 2]))
         if mindff > dff:
             minidx = i1
             mindff = dff
