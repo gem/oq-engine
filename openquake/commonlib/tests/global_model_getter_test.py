@@ -70,6 +70,13 @@ class GlobalModelGetterTestCase(unittest.TestCase):
             mg.get_models_by_wkt(mg.lonlat2wkt(6.733, 62.361)), ['NOR'])
         self.assertEqual(
             mg.get_nearest_model_by_lon_lat_sindex(9, 45), 'ITA')
+        self.assertEqual(
+            mg.get_model_by_lon_lat_sindex(9, 45), 'ITA')
+        with self.assertRaises(ValueError) as ve:
+            mg.get_model_by_lon_lat_sindex(0, 0)
+        self.assertEqual(
+            str(ve.exception),
+            'Site at lon=0.0 lat=0.0 is not covered by any model!')
         points = numpy.array([Point(9, 45), Point(6.733, 62.361)])
         self.assertEqual(
             mg.get_nearest_models_by_geoms_array(points),

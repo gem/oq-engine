@@ -190,6 +190,33 @@ class GlobalModelGetter:
                 f' by any model!')
         return model
 
+    def get_model_by_lon_lat_sindex(self, lon, lat, strict=True):
+        lon = float(lon)
+        lat = float(lat)
+        point = Point(lon, lat)
+        idxs = self.sindex.query(
+            point, 'intersects', distance=CLOSE_DIST_THRESHOLD)
+        models = list(np.unique([info[self.model_code_field]
+                                 for info in self.sinfo[idxs]]))
+        if len(models) > 1:
+            raise ValueError(
+                f'Site at lon={lon} lat={lat} is'
+                f' covered by multiple models {models}')
+        if len(models) == 1:
+            model = models[0]
+            logging.info(f'Site at lon={lon} lat={lat} is'
+                         f' covered by model {model}')
+        elif strict:
+            raise ValueError(
+                f'Site at lon={lon} lat={lat} is not covered'
+                f' by any model!')
+        else:
+            logging.error(
+                f'Site at lon={lon} lat={lat} is not covered'
+                f' by any model!')
+            return None
+        return model
+
     def get_model_by_lon_lat(
             self, lon, lat, strict=True, check_overlaps=True,
             measure_time=False):
