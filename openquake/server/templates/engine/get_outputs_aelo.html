@@ -6,13 +6,13 @@
     <div class="container">
       <div class="row">
         <div id="oq-body-wrapper">
-          {% if warnings %}
-          <div id="warning-box" class="alert alert-warning" style=>
-            {{ warnings }}
-          </div>
-          {% endif %}
           <div class="span12">
               <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
+              {% if warnings %}
+              <div id="warning-box" class="alert alert-warning" style=>
+                  WARNING: {{ warnings }}
+              </div>
+              {% endif %}
               <div id="my-outputs" class="well"></div>
               <div id="to-full-outputs">
                 <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs" class="btn btn-sm">
