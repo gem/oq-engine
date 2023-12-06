@@ -137,6 +137,7 @@ _*Note 1*: Make sure to run the script located under /Applications/Python 3.X/In
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine
 $ python3.10 install.py devel
+```
 
 **on Linux:**
 ```
