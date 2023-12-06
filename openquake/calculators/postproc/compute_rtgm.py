@@ -205,6 +205,49 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
 
+def get_low_hazard_asce07():
+    na = 'n.a.'
+    asce07 = {
+             'PGA': 0,
+             'PGA_2_50': 0,
+             'PGA_84th': na,
+             'PGA_det': na,
+
+             'Ss': na,
+             'Ss_RT': na,
+             'CRS': na,
+             'Ss_84th': na,
+             'Ss_det': na,
+             'Ss_seismicity': 'Low',
+
+             'S1': na,
+             'S1_RT': na,
+             'CR1': na,
+             'S1_84th': na,
+             'S1_det': na,
+             'S1_seismicity': 'Low',
+             }
+    return asce07
+
+
+def get_low_hazard_asce41():
+    na = 'n.a.'
+    asce41 = {'BSE2N_Ss': na,
+              'BSE2E_Ss': na,
+              'Ss_5_50': na,
+              'BSE1N_Ss': na,
+              'BSE1E_Ss': na,
+              'Ss_20_50': na,
+              'BSE2N_S1': na,
+              'BSE2E_S1': na,
+              'S1_5_50': na,
+              'BSE1N_S1': na,
+              'BSE1E_S1': na,
+              'S1_20_50': na,
+              }
+    return asce41
+
+
 def get_mce_asce07(prob_mce, det_imt, DLLs, dstore, low_haz=False):
     """
     :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
@@ -360,6 +403,10 @@ def main(dstore, csm):
         else:
             dstore['warnings'] = warning
         logging.warning(warning)
+        asce07 = get_low_hazard_asce07()
+        asce41 = get_low_hazard_asce41()
+        dstore['asce07'] = hdf5.dumps(asce07)
+        dstore['asce41'] = hdf5.dumps(asce41)
         return
     if dstore['mean_rates_ss'][:].max() < MIN_AFE:
         warning = (
@@ -371,6 +418,10 @@ def main(dstore, csm):
         else:
             dstore['warnings'] = warning
         logging.warning(warning)
+        asce07 = get_low_hazard_asce07()
+        asce41 = get_low_hazard_asce41()
+        dstore['asce07'] = hdf5.dumps(asce07)
+        dstore['asce41'] = hdf5.dumps(asce41)
         return
     logging.info('Computing Risk Targeted Ground Motion')
     oq = dstore['oqparam']
