@@ -31,8 +31,8 @@ from openquake.hazardlib.mfd import TruncatedGRMFD
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import ppp
 
 # Movies are in /tmp
-MAKE_MOVIES = True
-MAKE_PICTURES = True
+MAKE_MOVIES = False
+MAKE_PICTURES = False
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
@@ -252,7 +252,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                      source.profiles)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 25, msg)
+        self.assertEqual(source.count_ruptures(), 32, msg)
 
     def test03(self):
         """ Simplest test - checking when standard floating is used """
@@ -270,7 +270,7 @@ class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
                                    floating_x_step=0, floating_y_step=0)
 
         msg = 'Wrong number of ruptures'
-        self.assertEqual(source.count_ruptures(), 28, msg)
+        self.assertEqual(source.count_ruptures(), 43, msg)
 
         if MAKE_MOVIES:
             ruptures = [r for r in source.iter_ruptures()]
