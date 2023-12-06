@@ -27,6 +27,8 @@ from openquake.hazardlib.geo.utils import PolygonPlotter, cross_idl
 from openquake.hazardlib.contexts import Effect, get_effect_by_mag
 from openquake.hazardlib.calc.filters import getdefault, IntegrationDistance
 from openquake.calculators.extract import Extractor, WebExtractor, clusterize
+from openquake.calculators.postproc.aelo_plots import (
+    plot_mean_hcurves_rtgm, plot_disagg_by_src, plot_governing_mce)
 
 
 def import_plt():
@@ -264,7 +266,7 @@ def make_figure_disagg(extractors, what):
     fig = plt.figure()
     oq = extractors[0].oqparam
     disagg = extractors[0].get(what)
-    kind = [k.lower() for k in disagg.kind[0].split('_')]  # ex. ('mag', 'dist')
+    kind = [k.lower() for k in disagg.kind[0].split('_')]  # ex. ('mag','dist')
     [sid] = disagg.site_id
     [imt] = disagg.imt
     [poe_id] = disagg.poe_id
@@ -300,7 +302,7 @@ def make_figure_disagg(extractors, what):
         ax = fig.add_subplot(len(Zs), 1, z or 0 + 1)
         axes.append(ax)
         ax.set_ylabel(kind[1])
-        if ndims == 2: # 2D
+        if ndims == 2:  # 2D
             ax.set_xlabel(kind[0])
         else:  # 3D
             ax.set_xlabel('%s [%s=%s]' % (kind[0], kind[2], zbin[z]))
@@ -708,6 +710,36 @@ def make_figure_tot_curves(extractors, what):
     $ oq plot "tot_curves?loss_type=structural&kind=rlz-000&absolute=1"
     """
     return make_figure_agg_curves(extractors, what)
+
+
+def make_figure_mean_hcurves_rtgm(extractors, what):
+    """
+    $ oq plot "mean_hcurves_rtgm?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_mean_hcurves_rtgm(dstore)
+    return plt
+
+
+def make_figure_governing_mce(extractors, what):
+    """
+    $ oq plot "governing_mce?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_governing_mce(dstore)
+    return plt
+
+
+def make_figure_disagg_by_src(extractors, what):
+    """
+    $ oq plot "disagg_by_src?"
+    """
+    [ex] = extractors
+    dstore = ex.dstore
+    plt = plot_disagg_by_src(dstore)
+    return plt
 
 
 def plot_wkt(wkt_string):

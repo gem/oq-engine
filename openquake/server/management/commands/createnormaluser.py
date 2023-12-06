@@ -32,6 +32,9 @@ class Command(BaseCommand):
             for i in range(8)))
         # by default a user is not superuser and not staff
         User = get_user_model()
+        if User.objects.filter(username=username).exists():
+            logger.error(f'The username "{username}" is already taken!')
+            exit(1)
         logger.info(f'Creating normal user: {username}')
         user = User.objects.create_user(
             username, password=password, email=email)
@@ -42,8 +45,28 @@ class Command(BaseCommand):
         request = HttpRequest()
         request.META['SERVER_NAME'] = settings.SERVER_NAME
         request.META['SERVER_PORT'] = settings.SERVER_PORT
+        if settings.USE_REVERSE_PROXY:
+            if settings.USE_HTTPS:
+                request.META['SERVER_PORT'] = '443'
+            else:
+                request.META['SERVER_PORT'] = '80'
+        else:
+            request.META['SERVER_PORT'] = settings.SERVER_PORT
+        if settings.APPLICATION_MODE.upper() == 'AELO':
+            password_reset_subject = (
+                'registration/normal_user_creation_email_subject_aelo.txt')
+            email_template_name = (
+                'registration/normal_user_creation_email_aelo.txt')
+        else:
+            password_reset_subject = (
+                'registration/normal_user_creation_email_subject.txt')
+            email_template_name = (
+                'registration/normal_user_creation_email.txt')
         form.save(
+            domain_override=(settings.SERVER_NAME
+                             if settings.USE_REVERSE_PROXY else None),
             request=request,
             use_https=settings.USE_HTTPS,
             from_email=settings.EMAIL_HOST_USER,
-            email_template_name='registration/password_reset_email.html')
+            subject_template_name=password_reset_subject,
+            email_template_name=email_template_name)

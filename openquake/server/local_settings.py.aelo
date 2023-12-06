@@ -10,6 +10,7 @@ APPLICATION_MODE = 'aelo'
 
 # turn on USE_X_FORWARDED_HOST to expose the webui via a proxy server
 # USE_X_FORWARDED_HOST = True
+# USE_X_FORWARDED_PORT = True
 
 # enable WEBUI_PATHPREFIX to place webui pages below a specific path
 # WEBUI_PATHPREFIX='/path/prefix'
@@ -27,6 +28,11 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 SERVER_NAME = <localhost>
 SERVER_PORT = <8800>
 USE_HTTPS = <False>
+
+# Set to True if using NGINX or some other reverse proxy
+# Externally visible url and port number is different from Django visible
+# values
+USE_REVERSE_PROXY = <False>
 
 WEBUI_ACCESS_LOG_DIR = '/var/log/oq-engine'
 

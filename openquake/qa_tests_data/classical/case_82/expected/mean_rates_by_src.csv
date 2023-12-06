@@ -1,5 +1,5 @@
 #,,,"generated_by='OpenQuake engine 3.18.0-git50022f991b', start_date='2023-09-13T14:56:09', checksum=2124969217, lon=36.251, lat=-6.49"
-src_id,imt,iml,value
+source_id,imt,iml,afoe
 1500,PGA,5.00000E-03,6.66609E+00
 1500,PGA,7.00146E-03,4.62962E+00
 1500,PGA,9.80408E-03,3.08236E+00

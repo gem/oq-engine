@@ -306,6 +306,13 @@ class PreClassicalCalculator(base.HazardCalculator):
             raise RuntimeError('There are no sources close to the site(s)! '
                                'Use oq plot sources? to debug')
 
+        fname = self.oqparam.inputs.get('delta_rates')
+        if fname:
+            idx_nr = {row[0]: (idx, row[source_reader.NUM_RUPTURES])
+                      for idx, row in enumerate(self.csm.source_info.values())}
+            deltas = readinput.read_delta_rates(fname, idx_nr)
+            self.datastore.hdf5.save_vlen('delta_rates', deltas)
+
     def post_process(self):
         if self.oqparam.calculation_mode == 'preclassical':
             super().post_process()

@@ -163,6 +163,9 @@ agg_id
         self.assertEqual(loss0, loss4)
 
     def test_case_1_deductible_gt_ins_limit(self):
+        if sys.platform == 'win32':
+            raise SkipTest('Skipped to avoid a fake PermissionError')
+
         with self.assertRaises(ValueError) as ctx:
             self.run_calc(case_1.__file__, 'job2.ini',
                           insurance_csv="{'structural': 'policy_ins_ko.csv'}")
@@ -529,12 +532,19 @@ agg_id
         rups = get_ruptures(gettemp(text))
         aac(rups['n_occ'], [1, 1, 1, 1])
 
-        # test extract?threshold
+        # test extract?threshold for ruptures
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
-        losses = self.calc.datastore['risk_by_rupture/loss'][:]
+        losses = self.calc.datastore['loss_by_rupture/loss'][:]
         aac(losses, [1356.6093, 324.64624, 203.63742, 129.69966])
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
+
+        # test extract?threshold for events
+        df = extract(self.calc.datastore, 'relevant_gmfs?threshold=.8')
+        n = len(df)
+        losses = self.calc.datastore['loss_by_event/loss'][:]
+        aac(losses, [1356.6093, 324.64624, 203.63742, 129.69966])
+        self.assertEqual(n, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
         # nontrivial taxonomy mapping
@@ -692,6 +702,9 @@ class ReinsuranceTestCase(CalculatorTestCase):
                           'source_model.xml',
                           'source_model_logic_tree.xml',
                           'structural_vulnerability_model.xml'])
+
+        if sys.platform == 'win32':
+            raise SkipTest('Avoid PermissionError')
 
         # make sure reaggreate works
         self.run_calc(reinsurance_2.__file__, 'job.ini',

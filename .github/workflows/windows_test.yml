@@ -1,4 +1,4 @@
-name: Windows full tests of OpenQuake Engine
+name: Windows amd64 full tests of OpenQuake Engine
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "00 22 * * *"
+    - cron: "00 14 * * *"
   push:
     branches: [ windows-all-tests ]
 
@@ -71,7 +71,7 @@ jobs:
           }
           else
           {
-            Write-Host "Install on scheduled task"
+            Write-Host "Install on user mode on scheduled task"
             Write-Host "python install.py devel "
             python install.py devel
           }

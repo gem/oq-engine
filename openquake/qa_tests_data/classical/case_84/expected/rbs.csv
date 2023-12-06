@@ -1,5 +1,5 @@
 #,,,"lon=-123.4, lat=46.4"
-src_id,imt,iml,value
+source_id,imt,iml,afoe
 pnt_no_reqv,PGA,5.00000E-03,5.25816E-02
 pnt_no_reqv,PGA,7.00146E-03,5.25816E-02
 pnt_no_reqv,PGA,9.80408E-03,5.25816E-02

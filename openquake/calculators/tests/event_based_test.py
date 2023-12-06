@@ -600,6 +600,9 @@ class EventBasedTestCase(CalculatorTestCase):
 
     def test_31(self):
         # HM2018CorrelationModel with filtered site collection
-        self.run_calc(case_31.__file__, 'job.ini', exports='csv')
+        self.run_calc(case_31.__file__, 'job_rup.ini')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_31.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,  exports='csv')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/avg_gmf.csv', f)

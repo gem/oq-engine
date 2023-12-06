@@ -118,8 +118,6 @@ if config.directory.custom_tmp:
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
-if config.dbserver.host == 'local':
-    os.environ['OQ_DATABASE'] = 'local'
 
 # wether the engine was installed as multi_user (linux root) or not
 if sys.platform in 'win32 darwin':

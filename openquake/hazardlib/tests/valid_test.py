@@ -32,7 +32,7 @@ class ValidationTestCase(unittest.TestCase):
             valid.simple_id('a x')
         self.assertEqual(
             str(ctx.exception),
-            "Invalid ID 'a x': the only accepted chars are a-zA-Z0-9_-:")
+            "Invalid ID 'a x': the only accepted chars are ^[\w_\-:]+$")
         with self.assertRaises(ValueError):
             valid.simple_id('0|1')
         with self.assertRaises(ValueError):

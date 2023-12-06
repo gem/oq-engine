@@ -40,6 +40,7 @@ from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import util, logs, readinput, logictree, datastore
+from openquake.commonlib.global_model_getter import GlobalModelGetter
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES)
@@ -476,6 +477,8 @@ class EventBasedCalculator(base.HazardCalculator):
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
+        if oq.mosaic_model:  # 3-letter mosaic model
+            gmg = GlobalModelGetter('mosaic')
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
@@ -484,6 +487,11 @@ class EventBasedCalculator(base.HazardCalculator):
             rup_array = dic['rup_array']
             if len(rup_array) == 0:
                 continue
+            # TODO: for Paolo to add a very fast method is_inside
+            #if oq.mosaic_model:
+            #    ok = gmg.is_inside(
+            #         rup_array['lon'], rup_array['lat'], oq.mosaic_model)
+            #    rup_array = rup_array[ok]
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
@@ -514,7 +522,7 @@ class EventBasedCalculator(base.HazardCalculator):
             raise MemoryError('You ran out of memory!')
         sav_mon = self.monitor('saving gmfs')
         primary = self.oqparam.get_primary_imtls()
-        sec_imts = self.oqparam.get_sec_imts()
+        sec_imts = self.oqparam.sec_imts
         with sav_mon:
             gmfdata = result.pop('gmfdata')
             if len(gmfdata):
@@ -545,7 +553,9 @@ class EventBasedCalculator(base.HazardCalculator):
         G = gsim_lt.get_num_paths()
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
-        if oq.inputs['rupture_model'].endswith('.xml'):
+        rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
+                   oq.inputs['rupture_model'].endswith('.xml'))
+        if rup:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
             if bsets > 1:
@@ -618,7 +628,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if (oq.ground_motion_fields is False and
                     oq.hazard_curves_from_gmfs is False):
                 return {}
-        elif 'rupture_model' not in oq.inputs:
+        elif not oq.rupture_dict and 'rupture_model' not in oq.inputs:
             logging.warning(
                 'There is no rupture_model, the calculator will just '
                 'import data without performing any calculation')
@@ -634,7 +644,7 @@ class EventBasedCalculator(base.HazardCalculator):
 
         if oq.ground_motion_fields:
             imts = oq.get_primary_imtls()
-            base.create_gmf_data(dstore, imts, oq.get_sec_imts())
+            base.create_gmf_data(dstore, imts, oq.sec_imts)
             dstore.create_dset('gmf_data/sigma_epsilon', sig_eps_dt(oq.imtls))
             dstore.create_dset('gmf_data/rup_info', rup_dt)
             if self.N >= SLICE_BY_EVENT_NSITES:
@@ -668,7 +678,7 @@ class EventBasedCalculator(base.HazardCalculator):
         rlzs = self.datastore['events']['rlz_id']
         self.weights = self.datastore['weights'][:][rlzs]
         gmf_df = self.datastore.read_df('gmf_data', 'sid')
-        for sec_imt in self.oqparam.get_sec_imts():  # ignore secondary perils
+        for sec_imt in self.oqparam.sec_imts:  # ignore secondary perils
             del gmf_df[sec_imt]
         rel_events = gmf_df.eid.unique()
         e = len(rel_events)

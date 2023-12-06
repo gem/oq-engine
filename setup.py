@@ -70,12 +70,10 @@ install_requires = [
     'requests >=2.20',
     'toml >=0.10.2',
     'pyproj >=1.9',
+    'alpha_shapes >= 1.1.0'
 ]
 
 extras_require = {
-    'osgeo':  [
-        'GDAL >= 2.4',
-    ],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5',

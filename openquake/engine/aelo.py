@@ -24,7 +24,7 @@ import getpass
 import logging
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, mosaic
+from openquake.commonlib import readinput, global_model_getter
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -43,7 +43,7 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     Build the job.ini parameters for the given lon, lat extracting them
     from the mosaic files.
     """
-    getter = mosaic.MosaicGetter()
+    getter = global_model_getter.GlobalModelGetter()
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
     ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
