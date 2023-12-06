@@ -23,7 +23,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
     _read_profiles, ppp)
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = True
+PLOTTING = False
 aae = np.testing.assert_almost_equal
 
 

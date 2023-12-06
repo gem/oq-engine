@@ -271,11 +271,10 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
 
     def test_get_tor(self):
         tlo, tla = self.srfc.get_tor()
+
         # Expected results extracted manually from the mesh
-        elo = np.array([10.2, 10.1491267, 10.0982533,
-                        10.04738, 10.0110047])
-        ela = np.array([45., 45.0000331, 45.0000436,
-                        45.0000316, 44.9913493])
+        elo = np.array([10.0110047, 10.04738, 10.0982533, 10.1491267, 10.2])
+        ela = np.array([44.9913493, 45.0000316, 45.0000436, 45.0000331, 45.])
 
         if PLOTTING:
             _, ax = plt.subplots(1, 1)

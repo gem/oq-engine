@@ -40,6 +40,7 @@ from openquake.hazardlib.geo.surface.gridded import GriddedSurface
 TOL = 0.4
 SMALL = 1e-5
 VERY_SMALL = 1e-20
+VERY_BIG = 1e20
 ALMOST_RIGHT_ANGLE = 89.9
 
 
@@ -1057,10 +1058,28 @@ def _check_sampling(edg, proj):
     #   An instance of
     #   :class:`openquake.hazardlib.geo.geo_utils.OrthographicProjection`
 
+    # Find continuos parts
+    idxs = []
+    first = None
+    last = None
+
+    for i_e, e in enumerate(edg):
+        if first is None and np.isfinite(e[0]):
+            first = i_e
+        elif first is not None and np.isfinite(e[0]):
+            last = i_e
+        elif first is not None and last is not None and not np.isfinite(e[0]):
+            if last - first > 0:
+                idxs.append([first, last])
+            first = None
+            last = None
+
     # Check the sampled edges
-    xp, yp = proj(edg[:, 0], edg[:, 1])
-    dsts = np.diff(xp)**2 + np.diff(yp)**2 + np.diff(edg[:, 2])**2
-    np.testing.assert_allclose(dsts, dsts[0], rtol=1e-2)
+    for idx in idxs:
+        xp, yp = proj(edg[idx[0]:idx[1], 0], edg[idx[0]:idx[1], 1])
+        dsts = (np.diff(xp)**2 + np.diff(yp)**2 +
+                np.diff(edg[idx[0]:idx[1], 2])**2)
+        np.testing.assert_allclose(dsts, dsts[0], rtol=1e-2)
 
 
 def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
@@ -1101,6 +1120,12 @@ def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
 
 
 def _build_profiles(edges: list) -> list:
+    # From edges builds the profiles
+    #
+    # :param edges:
+    #   A list where each element (a list of 3d coordinates) represents and
+    #   edge
+
     profs = []
     max_len = -1
     tc = [np.nan, np.nan, np.nan]
@@ -1135,7 +1160,12 @@ def _build_profiles(edges: list) -> list:
 
 
 def _build_edges(coos):
-    # `coos` is a list with a triple
+    # This function builds the edges starting from a set of continuos
+    # 'sub-edges'
+    #
+    # :param coos:
+    #   A list with a triple.
+    #
     edges = {}
     for coo in coos:
         if coo[1] not in edges:
@@ -1143,13 +1173,18 @@ def _build_edges(coos):
                 tmp = _fill(coo[0], coo[2])
             else:
                 tmp = np.squeeze(coo[2]).tolist()
-            edges[coo[1]] = tmp
+            # Check that the edge contains more than one point
+            if isinstance(tmp[0], list):
+                edges[coo[1]] = tmp
         else:
             if coo[0] > 0:
                 tmp = _fill(coo[0] - len(edges[coo[1]]), coo[2])
             else:
                 tmp = coo[2].tolist()
-            edges[coo[1]].extend(tmp)
+
+            # Check that the edge contains more than one point
+            if isinstance(tmp[0], list):
+                edges[coo[1]].extend(tmp)
     return edges
 
 
@@ -1172,8 +1207,12 @@ def _get_intersections(edges, lines, proj):
         for i_line, line in enumerate(lines):
 
             # Intersection between edge and profile
-            xi = (intercept - line[1]) / (line[0] - slope)
-            yi = xi * slope + intercept
+            if line[0] >= VERY_BIG:
+                xi = line[1]
+                yi = xi * slope + intercept
+            else:
+                xi = (intercept - line[1]) / (line[0] - slope)
+                yi = xi * slope + intercept
 
             # Check if intercept is along the segment
             if (xi > np.min([xp]) and xi < np.max([xp]) and
@@ -1199,6 +1238,7 @@ def _get_point_depth(pnt1, pnt2, xco):
 
 
 def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
+    # Compute the line equation representing each profile
     #
     # :param coos:
     #   A list of lists. Each element contains two intergers and one array with
@@ -1210,6 +1250,7 @@ def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
     #   An instance of
     #   :class:`openquake.hazardlib.geo.utils.OrthographicProjection`
     # :param new_lines_profiles:
+    #   A list containing the values of the slope and intercept for each line
 
     # Create the profiles
     profs = []
@@ -1224,7 +1265,13 @@ def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
     for prof in profs:
         prof = np.array(prof)
         xp, yp = proj(prof[:, 0], prof[:, 1])
-        slope, intercept, _, _, _ = stats.linregress(xp, yp)
+
+        # Check if the line is vertical
+        if np.all(np.abs(xp[0] - xp) < SMALL):
+            slope = VERY_BIG
+            intercept = xp[0]
+        else:
+            slope, intercept, _, _, _ = stats.linregress(xp, yp)
         new_lines_profiles.append([slope, intercept])
 
 
