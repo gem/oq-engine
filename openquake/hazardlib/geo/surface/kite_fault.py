@@ -29,6 +29,7 @@ from openquake.baselib.node import Node
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.line import _resample
+from openquake.hazardlib.geo.utils import plane_fit
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -670,6 +671,21 @@ def _check_distances(coo, sampling_dist):
             msg += '\n   Please, change the sampling distance or the'
             msg += ' points along the profile'
             raise ValueError(msg)
+        
+
+def _get_proj_from_profiles(rprof):
+    # Compute information needed for the geographic projection
+    west = 1e10
+    south = 1e10
+    east = -1e10
+    north = -1e10
+    for pro in rprof:
+        idx = np.nonzero(np.isfinite(pro[:, 0]))
+        west = np.minimum(west, np.min(pro[idx, 0]))
+        south = np.minimum(south, np.min(pro[idx, 1]))
+        east = np.maximum(east, np.max(pro[idx, 0]))
+        north = np.maximum(north, np.max(pro[idx, 1]))
+    return geo_utils.OrthographicProjection(west, east, north, south)
 
 
 def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
@@ -690,20 +706,8 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     """
 
     # Compute information needed for the geographic projection
-    west = 1e10
-    south = 1e10
-    east = -1e10
-    north = -1e10
-    for pro in rprof:
-        idx = np.nonzero(np.isfinite(pro[:, 0]))
-        west = np.minimum(west, np.min(pro[idx, 0]))
-        south = np.minimum(south, np.min(pro[idx, 1]))
-        east = np.maximum(east, np.max(pro[idx, 0]))
-        north = np.maximum(north, np.max(pro[idx, 1]))
-    proj = geo_utils.OrthographicProjection(west, east, north, south)
+    proj = _get_proj_from_profiles(rprof)
 
-    # TODO
-    # ------------------------------------
     # Check the profiles have the same number of samples
     chk1 = np.all(np.array([len(p) for p in rprof]) == len(rprof[0]))
 
@@ -713,18 +717,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
         top_depths = np.array([p[0, 2] for p in rprof])
         chk2 = np.all(np.abs(top_depths - rprof[0][0, 2]) < 0.1 * edge_sd)
 
-    """
-    if chk1 and chk2:
-        msh = np.array(rprof)
-    else:
-        msg = 'Cannot build the mesh.'
-        if not chk1:
-            msg += ' Profiles do not have the same num. samples.'
-        if not chk2 and not align:
-            msg += ' Profiles do not have the same top depth.'
-        raise ValueError(msg)
-    """
-
+    # Checks
     if chk1:
         msh = np.array(rprof)
     else:
@@ -732,8 +725,6 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
         if not chk1:
             msg += ' Profiles do not have the same num. samples.'
         raise ValueError(msg)
-
-    # ------------------------------------
 
     # Create the mesh in the forward direction
     prfr = []
@@ -767,7 +758,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     msh = msh.swapaxes(0, 1)
     msh = fix_mesh(msh)
 
-    # Resort edges of the mesh
+    # Sort edges of the mesh
     mdep = []
     for irow in range(msh.shape[0]):
         tidx = np.isfinite(msh[irow, :, 2])
@@ -778,9 +769,55 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     msh[:, :, 1] = msh[idx, :, 1]
     msh[:, :, 2] = msh[idx, :, 2]
 
+    # Fix the orientation of the mesh
+    msh = _fix_right_hand(msh)
+    
     return msh
 
 
+def _fix_right_hand(msh):
+    # Check that the surface complies with the right hand rule. 
+
+    from openquake.hazardlib.geo.line import Line
+    from openquake.hazardlib.geo.surface.gridded import GriddedSurface
+
+    # Compute the average azimuth for the top of the surface
+    tmp = msh[0, :, 0]
+    idx = np.isfinite(tmp)
+    top = Line([Point(c[0], c[1]) for c in msh[0, idx, :]])
+    avg_azi = top.average_azimuth()
+    
+    # Compute the strike of the surface
+    coo = msh.reshape(-1, 3)
+    coo = coo[np.isfinite(coo[:, 0]), :]
+    pnts = [Point(c[0], c[1], c[2]) for c in coo]
+    grdd = GriddedSurface.from_points_list(pnts)
+    strike = grdd.get_strike()
+
+    # Check if we need to flip the grid
+    if not np.abs(_angles_diff(strike, avg_azi)) < 60:
+        
+        # Flip the grid to make it compliant with the right hand rule
+        nmsh = np.flip(msh, axis=1)
+
+        # Check the average azimuth for the top of the surface
+        tmp = nmsh[0, :, 0]
+        idx = np.isfinite(tmp)
+        top = Line([Point(c[0], c[1]) for c in nmsh[0, idx, :]])
+        avg_azi_new = top.average_azimuth()
+
+        msg = "The mesh still does not comply with the right hand rule"
+        assert np.abs(_angles_diff(strike, avg_azi_new)) < 60, msg
+        return nmsh
+
+    return msh
+
+
+def _angles_diff(ang_a, ang_b):
+    dff = ang_a - ang_b
+    return (dff + 180) % 360 - 180
+
+        
 def _align_profiles(prfr: list, prfl: list):
 
     # Check that the two sets contain profiles with the same length
@@ -987,11 +1024,6 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
                 tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
                 tmp = tmp[:-1, :]
                 i_prof = 0
-                #_check_sampling(tmp, proj)
-                #ddd = {0: tmp}
-                #_dbg_plot(ddd)
-                #_dbg_plot(ddd, profs, ref_idx=ref_idx)
-                #breakpoint()
             else:
                 edge = parr[cseg[0]:cseg[1], cseg[2]]
                 tmp, i_prof = _get_intersections(edge, new_prof_lines, proj)

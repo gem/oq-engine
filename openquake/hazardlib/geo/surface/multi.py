@@ -180,7 +180,7 @@ class MultiSurface(BaseSurface):
         # the mesh points then the calculation is skipped
         lons = np.empty_like(mesh.lons.flatten())
         lats = np.empty_like(mesh.lats.flatten())
-        
+
         depths = None if mesh.depths is None else \
             np.empty_like(mesh.depths.flatten())
 
