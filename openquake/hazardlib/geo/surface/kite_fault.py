@@ -1275,8 +1275,7 @@ def _compute_lines(coos: list, i_from: int, proj, new_lines_profiles):
         new_lines_profiles.append([slope, intercept])
 
 
-def _set_indexes(
-        forward: bool, ref_idx: int, len_profs: int) -> tuple[int, int, int]:
+def _set_indexes(forward: bool, ref_idx: int, len_profs: int):
     # Defines the indexes of the original profiles to be investigated
     step = 1
     low = ref_idx
