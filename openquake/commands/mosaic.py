@@ -191,12 +191,13 @@ def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
     else:  # rups only
         params['minimum_magnitude'] = '5.0'
         params['ground_motion_fields'] = 'false'
-        del params['inputs']['site_model']
+        params['inputs'].pop('site_model', None)
     for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
               'investigation_time', 'minimum_magnitude', 'truncation_level',
               'minimum_distance', 'extreme_gmv'):
         logging.info('%s = %s' % (p, params[p]))
     logging.root.handlers = []  # avoid breaking the logs
+    params['mosaic_model'] = logs.get_tag(ini)
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
     if slowest:

@@ -115,8 +115,11 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     for m, hcurve in enumerate(mean_hcurve):
         AFE.append(to_rates(hcurve, window, minrate=1E-12))
         # get the AFE of the iml that will be disaggregated for each IMT
-        afe_RTGM.append(_find_afe_target(
-            numpy.array(imls[m]), numpy.array(AFE[m]), rtgm_probmce[m]))
+        if rtgm_probmce[m] < imls[m][0]:
+            afe_RTGM.append(0.0)
+        else:
+            afe_RTGM.append(_find_afe_target(
+                numpy.array(imls[m]), numpy.array(AFE[m]), rtgm_probmce[m]))
 
     plt = import_plt()
     plt.figure(figsize=(12, 9))
@@ -169,9 +172,9 @@ def plot_governing_mce(dstore, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    js = dstore['asce7'][()].decode('utf8')
+    js = dstore['asce07'][()].decode('utf8')
     dic = json.loads(js)
-    MCEr = [dic['PGA'], dic['SS'], dic['S1']]
+    MCEr = [dic['PGA'], dic['Ss'], dic['S1']]
     T = [from_string(imt).period for imt in imtls]
 
     limit_det = [0.5, 1.5, 0.6]
@@ -180,11 +183,11 @@ def plot_governing_mce(dstore, update_dstore=False):
     plt.figure(figsize=(8, 6))
     plt.rcParams.update({'font.size': 15})
     plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
-    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{GM}$',
+    plt.plot(T[0], rtgm_probmce[0], 'bX', markersize=12, label='$PGA_{2/50}$',
              linewidth=3)
     plt.plot(T[1:], rtgm_probmce[1:], 'bs', markersize=12,
              label='$S_{S,RT}$ and $S_{1,RT}$', linewidth=3)
-    MCEr_det = [dic['PGA_84th'], dic['SS_84th'], dic['S1_84th']]
+    MCEr_det = [dic['PGA_84th'], dic['Ss_84th'], dic['S1_84th']]
     if any([val == 'n.a.' for val in MCEr_det]):  # hazard is lower than DLLs
         plt.ylim([0, numpy.max([rtgm_probmce, MCEr, limit_det]) + 0.2])
     else:
@@ -280,7 +283,8 @@ def plot_disagg_by_src(dstore, update_dstore=False):
 
         # identify contribution of largest contributor, make color scale
         largest_contr = max(out_contr_all.values())
-        sample = sum(val > fact*largest_contr for val in out_contr_all.values())
+        sample = sum(val > fact*largest_contr
+                     for val in out_contr_all.values())
         viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
 
         # find and plot the sources, highlighting the ones that contribute more
@@ -303,8 +307,8 @@ def plot_disagg_by_src(dstore, update_dstore=False):
                     ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
             # if it is, plot in color
             else:
-                ax[m].loglog(imls, afes, c=viridis(i), label=str(src))
-                ax1.loglog(imls_o, afes, c=viridis(i), label=str(src))
+                ax[m].loglog(imls, afes, c=viridis(i), label=str(mrs.src_id[ind]))
+                ax1.loglog(imls_o, afes, c=viridis(i), label=str(mrs.src_id[ind]))
                 i += 1
         # populate subplot - maximum component
         ax[m].grid('both')

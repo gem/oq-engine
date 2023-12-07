@@ -24,7 +24,7 @@ import getpass
 import logging
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid
-from openquake.commonlib import readinput, mosaic
+from openquake.commonlib import readinput, global_model_getter
 from openquake.engine import engine
 
 CDIR = os.path.dirname(__file__)  # openquake/engine
@@ -35,6 +35,11 @@ IMTLS = '''\
  "SA(1.0)": logscale(0.005, 3.60, 25)}
 '''
 
+PRELIMINARY_MODELS = ['CEA', 'CHN', 'NEA']
+PRELIMINARY_MODEL_WARNING = (
+    'Results are preliminary. The seismic hazard model used for the site'
+    ' is under review and will be updated' ' during Year 3.')
+
 
 def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     """
@@ -43,10 +48,11 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     Build the job.ini parameters for the given lon, lat extracting them
     from the mosaic files.
     """
-    getter = mosaic.MosaicGetter()
+    getter = global_model_getter.GlobalModelGetter()
     model = getter.get_model_by_lon_lat(inputs['lon'], inputs['lat'])
     ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
+    params['model'] = model
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
@@ -54,7 +60,7 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['intensity_measure_types_and_levels'] = IMTLS
-    params['truncation_level']='3.'
+    params['truncation_level'] = '3.'
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
@@ -78,7 +84,8 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     return params
 
 
-def trivial_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
+def trivial_callback(
+        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if exc:
         sys.exit('There was an error: %s' % exc)
     print('Finished job %d correctly' % job_id)
@@ -108,21 +115,27 @@ def main(lon: valid.longitude,
 
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
+    warnings = []
     try:
         jobctx.params.update(get_params_from(inputs))
+        if jobctx.params['model'] in PRELIMINARY_MODELS:
+            warnings.append(PRELIMINARY_MODEL_WARNING)
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
         # This can happen for instance:
         # - if no model covers the given coordinates.
         # - if no ini file was found
-        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=exc, warnings=warnings)
         raise exc
     try:
         engine.run_jobs([jobctx])
     except Exception as exc:
-        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs, exc)
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=exc, warnings=warnings)
     else:
-        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs)
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=None, warnings=warnings)
 
 
 if __name__ == '__main__':

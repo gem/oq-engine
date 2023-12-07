@@ -8,7 +8,11 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
+              {% if application_mode == 'AELO' %}
+              <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
+              {% else %}
               <h2>Outputs from calculation {{ calc_id }}</h2>
+              {% endif %}
               <div id="my-outputs" class="well"></div>
               {% if application_mode == 'AELO' %}
               <div id="to-simplified-outputs">
@@ -27,6 +31,13 @@
                   Show hazard map</a>
               </div>
               {% endif %}
+              {% if governing_mce %}
+              </br>
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
+                  Show governing MCE</a>
+              </div>
+              {% endif %}
               {% if hcurves %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/hcurves.png" class="btn btn-sm">
@@ -36,15 +47,11 @@
               {% for img in disagg_by_src %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
-                  Show disaggregation by sources - {{ img|get_disagg_by_src_imt }}</a>
+                  {# NOTE: uncomment below to show the IMT #}
+                  {# Show hazard curves per source - {{ img|get_disagg_by_src_imt }}</a> #}
+                  Show hazard curves per source</a>
               </div>
               {% endfor %}
-              {% if governing_mce %}
-              <div class="my-pngs">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
-                  Show governing MCE</a>
-              </div>
-              {% endif %}
           </div>
         </div>
       </div>
@@ -65,6 +72,11 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
+        {% if application_mode == 'AELO' %}
+        <% if (['hmaps', 'realizations', 'rtgm'].indexOf(output.get('type')) >= 0) { %>
+        <%   return; // works like continue in underscore.js %>
+        <% }%>
+        {% endif %}
         {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
         <tr class="">
           <td><%= output.get('id') || 'New' %></td>

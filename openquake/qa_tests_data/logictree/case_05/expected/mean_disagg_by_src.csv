@@ -1,5 +1,5 @@
 #,,,,,"generated_by='OpenQuake engine 3.18.0-git77ef79794f', start_date='2023-08-31T10:43:19', checksum=3350790890, lon=0.5, lat=-0.5"
-source_id,mag,dist,eps,imt,value
+source_id,mag,dist,eps,imt,afoe
 1,5.50000E+00,1.00000E+02,0.00000E+00,PGA,6.99180E-01
 1,6.50000E+00,1.00000E+02,0.00000E+00,PGA,4.54447E-01
 1,7.50000E+00,1.00000E+02,0.00000E+00,PGA,6.01187E-02
