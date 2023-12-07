@@ -18,6 +18,8 @@ https://wheelhouse.openquake.org/macos/arm64/py39/psutil-5.9.6-cp39-abi3-macosx_
 https://wheelhouse.openquake.org/macos/arm64/py39/fiona-1.9.5-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/GDAL-3.7.3-cp39-cp39-macosx_11_0_arm64.whl
 https://wheelhouse.openquake.org/macos/arm64/py39/pyproj-3.6.1-cp39-cp39-macosx_11_0_arm64.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/pyzmq-25.1.1-cp39-cp39-macosx_10_15_universal2.whl
+https://wheelhouse.openquake.org/macos/arm64/py39/setproctitle-1.3.3-cp39-cp39-macosx_10_9_universal2.whl
 #pp
 https://wheelhouse.openquake.org/v3/py/alpha_shapes-1.1.0-py3-none-any.whl
 https://wheelhouse.openquake.org/v3/py/asgiref-3.7.2-py3-none-any.whl
