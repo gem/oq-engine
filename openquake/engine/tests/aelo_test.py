@@ -89,7 +89,6 @@ def test_JPN():
         aac(df.disagg_rate, df.interp_rate, rtol=.01)
 
 
-# not passing yet
 def test_KOR():
     # test with same name sources
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')

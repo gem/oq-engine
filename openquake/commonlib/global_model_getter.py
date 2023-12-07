@@ -195,7 +195,7 @@ class GlobalModelGetter:
         lat = float(lat)
         point = Point(lon, lat)
         idxs = self.sindex.query(
-            point, 'intersects', distance=CLOSE_DIST_THRESHOLD)
+            point, 'dwithin', distance=CLOSE_DIST_THRESHOLD)
         models = list(np.unique([info[self.model_code_field]
                                  for info in self.sinfo[idxs]]))
         if len(models) > 1:
