@@ -55,7 +55,7 @@ class GlobalModelGetterTestCase(unittest.TestCase):
         os.remove(sindex_path)
         os.remove(sinfo_path)
 
-    def test_spatial_index_in_memory(self):
+    def test_global_risk_spatial_index_in_memory(self):
         mg = GlobalModelGetter(kind='global_risk')
         # NOTE: the default predicate is 'intersects'
         self.assertEqual(
@@ -99,3 +99,23 @@ class GlobalModelGetterTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(
             mg.is_inside(rup_array['lon'], rup_array['lat'], model),
             numpy.array([True, False]))
+
+    def test_mosaic_spatial_index_in_memory(self):
+        mg = GlobalModelGetter(kind='mosaic')
+        # check a point on the coast of Korea, slightly outside model border
+        self.assertEqual(
+            mg.get_nearest_model_by_lon_lat_sindex(128.8, 35), 'KOR')
+        # check a point too far from any model border
+        with self.assertRaises(ValueError) as ve:
+            mg.get_nearest_model_by_lon_lat_sindex(0, 0)
+        self.assertEqual(
+            str(ve.exception),
+            'Site at lon=0.0 lat=0.0 is not covered by any model!')
+        # check a site right on the border between two models
+        with self.assertLogs(level='WARNING') as log:
+            mg.get_nearest_model_by_lon_lat_sindex(124.375574, 40.095802)
+            self.assertEqual(len(log.output), 1)
+            expected_warning = (
+                "Site at lon=124.375574 lat=40.095802 is on the border"
+                " between more than one model: ['CHN' 'KOR']. Using KOR")
+            self.assertIn(expected_warning, log.output[0])

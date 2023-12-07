@@ -175,11 +175,26 @@ class GlobalModelGetter:
         lon = float(lon)
         lat = float(lat)
         point = Point(lon, lat)
-        idx = self.sindex.nearest(point)
-        model = self.sinfo[idx][self.model_code_field]
-        if model:
-            logging.info(f'Site at lon={lon} lat={lat} is'
-                         f' covered by model {model}')
+        idxs = self.sindex.query(
+            point, 'dwithin', distance=CLOSE_DIST_THRESHOLD)
+        if len(idxs) > 0:
+            close_models = self.sinfo[idxs][self.model_code_field]
+            if len(close_models) > 1:
+                idxs, dists = self.sindex.query_nearest(
+                    point, max_distance=CLOSE_DIST_THRESHOLD,
+                    return_distance=True)
+                closest_model = self.sinfo[idxs[np.argmin(dists)]][
+                    self.model_code_field]
+                logging.warning(
+                    f'Site at lon={lon} lat={lat} is on the border between'
+                    f' more than one model: {close_models}. Using'
+                    f' {closest_model}')
+                return closest_model
+            else:
+                model = close_models[0]
+                logging.info(f'Site at lon={lon} lat={lat} is'
+                             f' covered by model {model}')
+                return model
         elif strict:
             raise ValueError(
                 f'Site at lon={lon} lat={lat} is not covered'
@@ -188,7 +203,7 @@ class GlobalModelGetter:
             logging.error(
                 f'Site at lon={lon} lat={lat} is not covered'
                 f' by any model!')
-        return model
+        return None
 
     def get_model_by_lon_lat_sindex(self, lon, lat, strict=True):
         lon = float(lon)
