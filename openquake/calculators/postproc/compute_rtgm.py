@@ -215,7 +215,7 @@ def get_low_hazard_asce07():
 
              'Ss': na,
              'Ss_RT': na,
-             'CRS': na,
+             'CRs': na,
              'Ss_84th': na,
              'Ss_det': na,
              'Ss_seismicity': 'Low',
@@ -311,7 +311,7 @@ def get_mce_asce07(prob_mce, det_imt, DLLs, dstore, low_haz=False):
 
              'Ss': mce['SA(0.2)'],
              'Ss_RT': prob_mce_out['SA(0.2)'],
-             'CRS': crs,
+             'CRs': crs,
              'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,

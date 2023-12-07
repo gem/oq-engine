@@ -1023,7 +1023,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
-                elif key in ('CRS', 'CR1'):
+                elif key in ('CRs', 'CR1'):
                     # NOTE: (-) stands for adimensional
                     asce07_with_units[key + ' (-)'] = "%.2f" % round(
                         value, ASCE_VIEW_DECIMALS)
