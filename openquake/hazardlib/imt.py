@@ -24,7 +24,7 @@ import re
 import collections
 import numpy
 
-FREQUENCY_PATTERN = '^(EAS|FAS|DRVT)\\((\\d+\\.*\\d*)\\)'
+FREQUENCY_PATTERN = '^(EAS|FAS|DRVT|AvgSA)\\((\\d+\\.*\\d*)\\)'
 
 
 def positivefloat(val):
@@ -74,6 +74,8 @@ def from_string(imt, _damping=5.0):
             im = FAS(float(m.group(2)))
         elif m.group(1) == 'DRVT':
             im = DRVT(float(m.group(2)))
+        elif m.group(1) == 'AvgSA':
+            im = AvgSA(float(m.group(2)))
         return im
     elif re.match(r'[ \+\d\.]+', imt):  # passed float interpreted as period
         return SA(float(imt))
@@ -164,12 +166,14 @@ def SA(period, damping=5.0):
     return IMT('SA(%s)' % period, period, damping)
 
 
-def AvgSA():
+def AvgSA(period=None, damping=5.0):
     """
     Dummy spectral acceleration to compute average ground motion over
-    several spectral ordinates.
+    several spectral ordinates. Depending on the choice of AvgSA GMPE, this
+    can operate as a scalar value or as a vector quantity.
     """
-    return IMT('AvgSA')
+    return IMT('AvgSA(%s)' % period, period, damping)\
+        if period else IMT('AvgSA')
 
 
 def IA():

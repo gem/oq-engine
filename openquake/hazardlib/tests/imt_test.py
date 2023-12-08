@@ -41,5 +41,9 @@ class ImtOrderingTestCase(unittest.TestCase):
         self.assertEqual(sa, ('SA(0.1)', 0.1, 5.0))
         pga = imt_module.from_string('PGA')
         self.assertEqual(pga, ('PGA', 0, 5.0))
+        avgsa = imt_module.from_string('AvgSA')
+        self.assertEqual(avgsa, ("AvgSA", 0.0, 5.0))
+        avgsa_t = imt_module.from_string('AvgSA(0.5)')
+        self.assertEqual(avgsa_t, ("AvgSA(0.5)", 0.5, 5.0))
         with self.assertRaises(KeyError):
             imt_module.from_string('XXX')

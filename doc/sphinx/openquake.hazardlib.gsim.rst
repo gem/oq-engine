@@ -1208,6 +1208,14 @@ vanhoutte_2018
     :undoc-members:
     :show-inheritance:
 
+weatherill_2024
+-------------------------------------------
+
+.. automodule:: openquake.hazardlib.gsim.weatherill_2024
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 wong2022
 -------------------------------------------
 

@@ -48,7 +48,7 @@ class GenericGmpeAvgSA(GMPE):
     :param string corr_func:
         Handle of the function to compute correlation coefficients between
         different spectral acceleration ordinates. Valid options are:
-        'baker_jayaram', 'akkar', 'none'. Default is none.
+        'baker_jayaram', 'akkar', 'eshm20', 'none'. Default is none.
     """
 
     # Parameters
@@ -81,18 +81,12 @@ class GenericGmpeAvgSA(GMPE):
         self.avg_periods = avg_periods
         self.tnum = len(self.avg_periods)
 
-        correlation_function_handles = {
-            'baker_jayaram': BakerJayaramCorrelationModel,
-            'akkar': AkkarCorrelationModel,
-            "eshm20": ESHM20CorrelationModel,
-            'none': DummyCorrelationModel}
-
         # Check for existing correlation function
-        if corr_func not in correlation_function_handles:
+        if corr_func not in CORRELATION_FUNCTION_HANDLES:
             raise ValueError('Not a valid correlation function')
         else:
             self.corr_func = \
-                correlation_function_handles[corr_func](avg_periods)
+                CORRELATION_FUNCTION_HANDLES[corr_func](avg_periods)
 
         # Check if this GMPE has the necessary requirements
         # TO-DO
@@ -115,8 +109,44 @@ class GenericGmpeAvgSA(GMPE):
         sig[:] = np.sqrt(stddvs_avgsa) / self.tnum
 
 
-class CenteredGmpeAvgSA(GMPE):
-    """
+class GmpeIndirectAvgSA(GMPE):
+    """Implements an alternative form of GMPE for indirect Average SA (AvgSA)
+    that allows for AvgSA to be defined as a vector quantity described by an
+    anchoring period (T0) and a set of n_per spectral accelerations linearly
+    spaced between t_low * T0 and t_high * T0. This corresponds to the more
+    common definition of AvgSA as the mean between, for example, 0.2 * T0 and
+    1.5 * T0, used by (among others) Iacoletti et al. (2023).
+
+    In this form of AvgSA GMPE it is possible to run analysis for multiple
+    values of AvgSA with different T0 values, such as one might need if
+    considering risk for a heterogeneous portfolio of buildings. To do so
+    the set of required periods needed for all of the T0 values are assembled
+    and SA determined for each of the values needed. However, if the total
+    number of SA periods exceeds a user-configurable limit (max_num_per,
+    defaulted to 30) then SA will be calculated for the maximum number of
+    periods and interpolated to the desired values for each AvgSA(T0).
+
+    :param string gmpe_name:
+        The name of a GMPE class used for the calculation.
+
+    :param string corr_func:
+        Handle of the function to compute correlation coefficients between
+        different spectral acceleration ordinates. Valid options are:
+        'baker_jayaram', 'akkar', 'eshm20', 'none'. Default is none.
+
+    :param float t_low:
+        Lower bound of period range for calculation (as t_low * T0)
+
+    :param float t_high:
+        Upper bound of period range for calculation (as t_high * T0)
+
+    :param int n_per:
+        Number of linearly spacee periods beteen t_low * T0 and t_high * T0
+        from which AvgSA(T0) is determined
+
+    :param int max_num_per:
+        Maximum number of periods permissible for direct calculation of
+        AvgSA before switching to an interpolation approach
     """
 
     # Parameters
@@ -124,13 +154,13 @@ class CenteredGmpeAvgSA(GMPE):
     REQUIRES_DISTANCES = set()
     REQUIRES_RUPTURE_PARAMETERS = set()
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = ''
-    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {SA,}
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = {AvgSA, }
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
     DEFINED_FOR_TECTONIC_REGION_TYPE = ''
 
-    def __init__(self, gmpe_name, corr_func, t_low = 0.2, t_high = 1.5,
-                 n_per: int = 10, **kwargs):
-        
+    def __init__(self, gmpe_name, corr_func, t_low: float = 0.2,
+                 t_high: float = 1.5, n_per: int = 10, **kwargs):
+
         self.gmpe = registry[gmpe_name](**kwargs)
         # Combine the parameters of the GMPE provided at the construction
         # level with the ones assigned to the average GMPE.
@@ -145,38 +175,42 @@ class CenteredGmpeAvgSA(GMPE):
         # only for total standard deviation even if the called GMPE is
         # defined for inter- and intra-event standard deviations too
         self.DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+        assert t_high > t_low,\
+            "Upper bound scaling factor for AvgSA must exceed lower bound"
         self.t_low = t_low
         self.t_high = t_high
         self.t_num = n_per
         self.max_num_per = kwargs.get("max_num_per", 30)
 
-        correlation_function_handles = {
-            'baker_jayaram': BakerJayaramCorrelationModel,
-            'akkar': AkkarCorrelationModel,
-            "eshm20": ESHM20CorrelationModel,
-            'none': DummyCorrelationModel}
-
         # Check for existing correlation function
-        if corr_func not in correlation_function_handles:
+        if corr_func not in CORRELATION_FUNCTION_HANDLES:
             raise ValueError('Not a valid correlation function')
         else:
-            self.corr_func = \
-                correlation_function_handles[corr_func]
+            self.corr_func = CORRELATION_FUNCTION_HANDLES[corr_func]
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
         """
+        # Gather together all of the needed periods for the set of imts
         t0s = np.array([imt.period for imt in imts])
-        np.sort(t0s)
-        periods = np.hstack(
-            [np.linspace(self.t_low * period, self.t_high * period, self.t_num)
-             for period in t0s]
-            )
-        periods.sort()
+        periods = []
+        idxs = []
+        for i, period in enumerate(t0s):
+            periods.extend(np.linspace(self.t_low * period,
+                                       self.t_high * period,
+                                       self.t_num))
+            idxs.extend(i * np.ones(self.t_num, dtype=int))
+        periods = np.array(periods)
+        idxs = np.array(idxs)
         if len(periods) > self.max_num_per:
-            periods = np.logspace(np.log10(periods[0]),
-                                  np.log10(periods[-1]),
-                                  self.max_num_per)
+            # Maximum number of periods exceeded, so now define a set of
+            # max_num_per periods linearly spaced between the lower and
+            # upper bound of the total period range considered
+            periods = np.linspace(periods[0], periods[-1], self.max_num_per)
+            apply_interpolation = True
+        else:
+            apply_interpolation = False
+        # Get mean and stddevs for all required periods
         new_imts = [SA(per) for per in periods]
         mean_sa = np.zeros([len(new_imts), len(ctx)])
         sigma_sa = np.zeros_like(mean_sa)
@@ -184,26 +218,40 @@ class CenteredGmpeAvgSA(GMPE):
         phi_sa = np.zeros_like(mean_sa)
         self.gmpe.compute(ctx, new_imts, mean_sa, sigma_sa, tau_sa, phi_sa)
         for m, imt in enumerate(imts):
-            target_periods = np.linspace(self.t_low * imt.period,
-                                         self.t_high * imt.period,
-                                         self.t_num)
-            # Interpolate mean and sigma to the t_num selected periods
-            ipl_mean = interp1d(periods, mean_sa.T, bounds_error=False,
-                                fill_value = (mean_sa[0, :], mean_sa[-1, :]),
-                                assume_sorted=True)
-            mean[m] += ((1.0 / self.t_num) * np.sum(ipl_mean(target_periods),
-                                                    axis=1))
+            if apply_interpolation:
+                # Interpolate mean and sigma to the t_num selected periods
+                target_periods = np.linspace(self.t_low * imt.period,
+                                             self.t_high * imt.period,
+                                             self.t_num)
 
-            ipl_sig = interp1d(periods, sigma_sa.T, bounds_error=False,
-                               fill_value = (sigma_sa[0, :], sigma_sa[-1, :]),
-                               assume_sorted=True)
-            sig_target = ipl_sig(target_periods)
+                ipl_mean = interp1d(
+                    periods, mean_sa.T, bounds_error=False,
+                    fill_value=(mean_sa[0, :], mean_sa[-1, :]),
+                    assume_sorted=True)
+                mean[m] += ((1.0 / self.t_num) * np.sum(
+                    ipl_mean(target_periods).T, axis=0))
 
+                ipl_sig = interp1d(
+                    periods, sigma_sa.T, bounds_error=False,
+                    fill_value=(sigma_sa[0, :], sigma_sa[-1, :]),
+                    assume_sorted=True)
+                sig_target = ipl_sig(target_periods).T
+            else:
+                # For the given IM simply select the mean and sigma for the
+                # corresponding periods
+                idx = idxs == m
+                target_periods = periods[idx]
+                mean[m] += ((1.0 / self.t_num) * np.sum(mean_sa[idx, :],
+                                                        axis=0))
+                sig_target = sigma_sa[idx, :]
+
+            # For the total standard deviation sum the standard deviations
+            # accounting for the cross-correlation
             for j, t_1 in enumerate(target_periods):
                 for k, t_2 in enumerate(target_periods):
                     rho = 1.0 if j == k else self.corr_func.get_correlation(
                         t_1, t_2)
-                    sig[m] += (rho * sig_target[:, j] * sig_target[:, k])
+                    sig[m] += (rho * sig_target[j, :] * sig_target[k, :])
             sig[m] = np.sqrt((1.0 / (self.t_num ** 2.)) * sig[m])
 
 
@@ -220,72 +268,6 @@ class BaseAvgSACorrelationModel(metaclass=abc.ABCMeta):
 
     def __call__(self, i, j):
         return self.rho[i, j]
-
-
-class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
-    """
-    Produce inter-period correlation for any two spectral periods.
-    Subroutine taken from: https://usgs.github.io/shakemap/shakelib
-    Based upon:
-    Baker, J.W. and Jayaram, N., 2007, Correlation of spectral acceleration
-    values from NGA ground motion models, Earthquake Spectra.
-    """
-    def build_correlation_matrix(self):
-        """
-        Constucts the correlation matrix period-by-period from the
-        correlation functions
-        """
-        self.rho = np.eye(len(self.avg_periods))
-        for i, t1 in enumerate(self.avg_periods):
-            for j, t2 in enumerate(self.avg_periods[i:]):
-                self.rho[i, i + j] = self.get_correlation(t1, t2)
-        self.rho += (self.rho.T - np.eye(len(self.avg_periods)))
-
-    @staticmethod
-    def get_correlation(t1, t2):
-        """
-        Computes the correlation coefficient for the specified periods.
-
-        :param float t1:
-            First period of interest.
-
-        :param float t2:
-            Second period of interest.
-
-        :return float rho:
-            The predicted correlation coefficient.
-        """
-
-        t_min = min(t1, t2)
-        t_max = max(t1, t2)
-
-        c1 = 1.0
-        c1 -= np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * 0.366)
-
-        if t_max < 0.2:
-            c2 = 0.105 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
-            c2 = 1.0 - c2 * (t_max - t_min) / (t_max - 0.0099)
-        else:
-            c2 = 0
-
-        if t_max < 0.109:
-            c3 = c2
-        else:
-            c3 = c1
-
-        c4 = c1
-        c4 += 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
-
-        if t_max <= 0.109:
-            rho = c2
-        elif t_min > 0.109:
-            rho = c1
-        elif t_max < 0.2:
-            rho = min(c2, c4)
-        else:
-            rho = c4
-
-        return rho
 
 
 class AkkarCorrelationModel(BaseAvgSACorrelationModel):
@@ -379,27 +361,33 @@ class DummyCorrelationModel(BaseAvgSACorrelationModel):
 
 
 ESHM20_COEFFICIENTS = {
-     "total": (0.18566593, 0.11134301, -0.04588736),
-     "between-event": (0.16269577, 0.05630065, -0.0567915),
-     "between-site": (0.16135806, 0.10495677, -0.07538098),
-     "within-event": (0.26521779, 0.20006642, -0.03859216)
+     "total": (0.18141134, 0.1555742,  -0.10851875, 0.08, 0.2),
+     "between-event": (0.15881576, 0.08439678, -0.13915732, 0.08, 0.2),
+     "between-site": (0.15751022, 0.15934185, -0.17513388, 0.08, 0.2),
+     "within-event": (0.26023904, 0.27590487, -0.0951078, 0.08, 0.2)
 }
 
 
-def baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2):
+def baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5, t1, t2):
     """
     Basic function of the Baker & Jayaram (2007) cross-correlation model
     allowing for flexibility in the coefficients of the model
 
     :param float d1:
         Coefficient d1 (0.366 in original model)
-    
+
     :param float d2:
         Coefficient d2 (0.105 in original model)
-    
+
     :param float d3:
         Coefficient d3 (0.0099 in original model)
-        
+
+    :param float d4:
+        Coefficient d4 (0.109 in the original model)
+
+    :param float d5:
+        Coefficient d5 (0.2 in the original model)
+
     :param float t1:
         First period of interest.
 
@@ -413,32 +401,70 @@ def baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2):
     t_max = max(t1, t2)
 
     c1 = 1.0
-    c1 -= np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, 0.109)) * d1)
+    c1 -= np.cos(np.pi / 2.0 - np.log(t_max / max(t_min, d4)) * d1)
 
-    if t_max < 0.2:
+    if t_max < d5:
         c2 = d2 * (1.0 - 1.0 / (1.0 + np.exp(100.0 * t_max - 5.0)))
         c2 = 1.0 - c2 * (t_max - t_min) / (t_max - d3)
     else:
         c2 = 0
 
-    if t_max < 0.109:
+    if t_max < d4:
         c3 = c2
     else:
         c3 = c1
 
     c4 = c1
-    c4 += 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / 0.109))
+    c4 += 0.5 * (np.sqrt(c3) - c3) * (1.0 + np.cos(np.pi * t_min / d4))
 
-    if t_max <= 0.109:
+    if t_max <= d4:
         rho = c2
-    elif t_min > 0.109:
+    elif t_min > d4:
         rho = c1
-    elif t_max < 0.2:
+    elif t_max < d5:
         rho = min(c2, c4)
     else:
         rho = c4
 
     return rho
+
+
+class BakerJayaramCorrelationModel(BaseAvgSACorrelationModel):
+    """
+    Produce inter-period correlation for any two spectral periods.
+    Subroutine taken from: https://usgs.github.io/shakemap/shakelib
+    Based upon:
+    Baker, J.W. and Jayaram, N., 2007, Correlation of spectral acceleration
+    values from NGA ground motion models, Earthquake Spectra.
+    """
+    def build_correlation_matrix(self):
+        """
+        Constucts the correlation matrix period-by-period from the
+        correlation functions
+        """
+        self.rho = np.eye(len(self.avg_periods))
+        for i, t1 in enumerate(self.avg_periods):
+            for j, t2 in enumerate(self.avg_periods[i:]):
+                self.rho[i, i + j] = self.get_correlation(t1, t2)
+        self.rho += (self.rho.T - np.eye(len(self.avg_periods)))
+
+    @staticmethod
+    def get_correlation(t1, t2):
+        """
+        Computes the correlation coefficient for the specified periods.
+
+        :param float t1:
+            First period of interest.
+
+        :param float t2:
+            Second period of interest.
+
+        :return float rho:
+            The predicted correlation coefficient.
+        """
+        d1, d2, d3, d4, d5 = (0.366, 0.105, 0.0099, 0.109, 0.2)
+        return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
+                                                        t1, t2)
 
 
 class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
@@ -467,29 +493,41 @@ class ESHM20CorrelationModel(BakerJayaramCorrelationModel):
         New
         0.20698079,  0.0888577,  -0.03330
         """
-        d1, d2, d3 = ESHM20_COEFFICIENTS["total"]
-        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
+        d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["total"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
+                                                        t1, t2)
 
     @staticmethod
     def get_between_event_correlation(t1, t2):
         """As per the get_correlation function but for the between-event
         residuals only
         """
-        d1, d2, d3 = ESHM20_COEFFICIENTS["between-event"]
-        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
-    
+        d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["between-event"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
+                                                        t1, t2)
+
     @staticmethod
     def get_between_site_correlation(t1, t2):
         """As per the get_correlation function but for the between-site
         residuals only
         """
-        d1, d2, d3 = ESHM20_COEFFICIENTS["between-site"]
-        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
+        d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["between-site"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
+                                                        t1, t2)
 
     @staticmethod
     def get_within_event_correlation(t1, t2):
         """As per the get_correlation function but for the between-event
         residuals only
         """
-        d1, d2, d3 = ESHM20_COEFFICIENTS["within-event"]
-        return baker_jayaram_correlation_model_function(d1, d2, d3, t1, t2)
+        d1, d2, d3, d4, d5 = ESHM20_COEFFICIENTS["within-event"]
+        return baker_jayaram_correlation_model_function(d1, d2, d3, d4, d5,
+                                                        t1, t2)
+
+
+CORRELATION_FUNCTION_HANDLES = {
+    'baker_jayaram': BakerJayaramCorrelationModel,
+    'akkar': AkkarCorrelationModel,
+    "eshm20": ESHM20CorrelationModel,
+    'none': DummyCorrelationModel
+}
