@@ -23,11 +23,6 @@ Module exports :class:`KothaEtAl2020`,
                :class:`KothaEtAl2020ESHM20`,
                :class:`KothaEtAl2020ESHM20SlopeGeology`
                :class:`KothaEtAl2020regional`
-               :class:`KothaEtAl2020AvgSA`
-               :class:`KothaEtAl2020ESHM20AvgSA`,
-               :class:`KothaEtAl2020ESHM20SlopeGeologyAvgSA`
-               :class:`KothaEtAl2020ESHM20AvgSAHomoskedastic`
-
 """
 import os
 import numpy as np
@@ -1015,54 +1010,6 @@ for stress in list(ICELAND_dL2L)[1:]:
                               [-1.732051, 0.0, 1.732051]):
         alias = "ESHM20Iceland{:s}Stress{:s}Atten".format(stress, c3_key)
         add_alias(alias, KothaEtAl2020ESHM20, dl2l=dl2l, c3_epsilon=c3_eps)
-
-
-#COEFFS_AVGSA_SIGMA = CoeffsTable(sa_damping=5, table="""\
-#    imt           sig1_nonergodic    sig2_nonergodic     sig3_nonergodic    sig4_nonergodic
-#    AvgSA(0.05)        0.65186851         0.63502447          0.58413764         0.51256041
-#    AvgSA(0.10)        0.65391037         0.63753338          0.58534068         0.51077108
-#    AvgSA(0.15)        0.64711095         0.63114068          0.57608737         0.49601824
-#    AvgSA(0.20)        0.63870196         0.62311662          0.56669519         0.48419628
-#    AvgSA(0.25)        0.63168765         0.61601656          0.55943517         0.47682369
-#    AvgSA(0.30)        0.62510362         0.60941771          0.55338781         0.47118716
-#    AvgSA(0.40)        0.61494356         0.59935866          0.54416054         0.46387267
-#    AvgSA(0.50)        0.60648154         0.59075204          0.53721195         0.46007307
-#    AvgSA(0.60)        0.60068997         0.58487147          0.53277796         0.45805654
-#    AvgSA(0.70)        0.59650635         0.58059896          0.52972167         0.45781648
-#    AvgSA(0.80)        0.59263225         0.57656666          0.52723495         0.45854582
-#    AvgSA(0.90)        0.58905227         0.57289965          0.52505753         0.45930144
-#    AvgSA(1.00)        0.58605227         0.56980059          0.52361851         0.46120830
-#    AvgSA(1.25)        0.57951663         0.56294076          0.51973142         0.46347203
-#    AvgSA(1.50)        0.57471779         0.55799391          0.51665516         0.46397407
-#    AvgSA(1.75)        0.57096219         0.55431757          0.51425825         0.46479829
-#    AvgSA(2.00)        0.56809903         0.55156436          0.51258446         0.46547080
-#    AvgSA(2.50)        0.56383356         0.54701187          0.51045970         0.46864530
-#    AvgSA(3.00)        0.56004741         0.54311485          0.50834857         0.47061923
-#    AvgSA(3.50)        0.55731680         0.54022250          0.50722364         0.47259022
-#    AvgSA(4.00)        0.55598689         0.53859154          0.50655623         0.47427746
-#    AvgSA(4.50)        0.55481076         0.53768759          0.50636183         0.47547987
-#    AvgSA(5.00)        0.55414057         0.53700075          0.50612310         0.47618535
-#    """)
-#
-#
-#def get_sigma_avgsa_nonergodic(imt, mag):
-#    """Returns the average SA non-ergodic sigma
-#    """
-#    C = COEFFS_AVGSA_SIGMA[imt]
-#    sig1 = C["sig1_nonergodic"]
-#    sig2 = C["sig2_nonergodic"]
-#    sig3 = C["sig3_nonergodic"]
-#    sig4 = C["sig4_nonergodic"]
-#    sigma = np.full_like(mag, sig1)
-#    idx = mag > 6.5
-#    sigma[idx] = sig4
-#    idx = np.logical_and(mag > 5.5, mag <= 6.5)
-#    sigma[idx] = ITPL(mag[idx], sig4, sig3, 5.5, 1.0)
-#    idx = np.logical_and(mag > 5.0, mag <= 5.5)
-#    sigma[idx] = ITPL(mag[idx], sig3, sig2, 5.0, 0.5)
-#    idx = np.logical_and(mag > 4.5, mag <= 5.0)
-#    sigma[idx] = ITPL(mag[idx], sig2, sig1, 4.5, 0.5)
-#    return sigma
 
 
 C3_REGIONS_AVGSA = CoeffsTable(sa_damping=5, table="""\
