@@ -160,7 +160,8 @@ class GmpeIndirectAvgSA(GMPE):
 
     def __init__(self, gmpe_name, corr_func, t_low: float = 0.2,
                  t_high: float = 1.5, n_per: int = 10, **kwargs):
-
+        super().__init__(gmpe_name=gmpe_name, corr_func=corr_func,
+                         t_low=t_low, t_high=t_high, n_per=n_per, **kwargs)
         self.gmpe = registry[gmpe_name](**kwargs)
         # Combine the parameters of the GMPE provided at the construction
         # level with the ones assigned to the average GMPE.

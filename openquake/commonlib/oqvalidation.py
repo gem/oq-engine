@@ -1407,6 +1407,8 @@ class OqParam(valid.ParamSet):
                 imts.add("FAS")
             elif imt.startswith("DRVT"):
                 imts.add("DRVT")
+            elif imt.startswith("AvgSA"):
+                imts.add("AvgSA")
             else:
                 imts.add(im.string)
         for gsim in gsims:
