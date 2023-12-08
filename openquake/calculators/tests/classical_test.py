@@ -708,13 +708,13 @@ class ClassicalTestCase(CalculatorTestCase):
         # Comparing the revised indirect GMPE and the direct AvgSA GMPE
         # for AvgSA at multiple spectral periods
         self.assert_curves_ok([
-            'hazard_curve-mean-AvgSa(0.1).csv',
-            'hazard_curve-mean-AvgSa(0.75).csv',
-            'hazard_curve-mean-AvgSa(2.0).csv',
-            'hazard_curve-rlz-000-AvgSa(0.1).csv',
-            'hazard_curve-rlz-000-AvgSa(0.75).csv',
-            'hazard_curve-rlz-000-AvgSa(2.0).csv',
-            'hazard_curve-rlz-001-AvgSa(0.1).csv',
-            'hazard_curve-rlz-001-AvgSa(0.75).csv',
-            'hazard_curve-rlz-001-AvgSa(2.0).csv'],
+            'hazard_curve-mean-AvgSA(0.1).csv',
+            'hazard_curve-mean-AvgSA(0.75).csv',
+            'hazard_curve-mean-AvgSA(2.0).csv',
+            'hazard_curve-rlz-000-AvgSA(0.1).csv',
+            'hazard_curve-rlz-000-AvgSA(0.75).csv',
+            'hazard_curve-rlz-000-AvgSA(2.0).csv',
+            'hazard_curve-rlz-001-AvgSA(0.1).csv',
+            'hazard_curve-rlz-001-AvgSA(0.75).csv',
+            'hazard_curve-rlz-001-AvgSA(2.0).csv'],
             case_86.__file__)
