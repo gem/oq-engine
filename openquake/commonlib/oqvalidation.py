@@ -29,7 +29,7 @@ import numpy
 import itertools
 
 from openquake.baselib import __version__, hdf5, python3compat, config
-from openquake.baselib.general import DictArray, AccumDict
+from openquake.baselib.general import DictArray, AccumDict, cached_property
 from openquake.hazardlib.imt import from_string, sort_by_imt
 from openquake.hazardlib import shakemap
 from openquake.hazardlib import correlation, cross_correlation, stats, calc
@@ -60,6 +60,14 @@ aggregate_by:
   calculations. Takes in input one or more exposure tags.
   Example: *aggregate_by = region, taxonomy*.
   Default: empty list
+
+aggregate_loss_curves_types:
+  Used for event-based risk and damage calculations, to estimate the aggregated
+  loss Exceedance Probability (EP) only or to also calculate (if possible) the
+  Occurrence Exceedance Probability (OEP) and/or the Aggregate Exceedance
+  Probability (AEP).
+  Example: *aggregate_loss_curves_types = aep, oep*.
+  Default: ep
 
 reaggregate_by:
   Used to perform additional aggregations in risk calculations. Takes in
@@ -450,10 +458,10 @@ max_aggregations:
 max_data_transfer:
   INTERNAL. Restrict the maximum data transfer in disaggregation calculations.
 
-max_gmvs_per_task:
+max_gmvs_chunk:
   Maximum number of rows of the gmf_data table per task.
-  Example: *max_gmvs_per_task = 100_000*
-  Default: 1_000_0000
+  Example: *max_gmvs_chunk = 200_000*
+  Default: 100_000
 
 max_potential_gmfs:
   Restrict the product *num_sites * num_events*.
@@ -480,6 +488,12 @@ maximum_distance:
   or as dictionary TRT -> [(mag, dist), ...]
   Example: *maximum_distance = 200*.
   Default: no default
+
+maximum_distance_stations:
+  Applies only to scenario calculations with conditioned GMFs to discard
+  stations.
+  Example: *maximum_distance_stations = 100*.
+  Default: None
 
 mean:
   Flag to enable/disable the calculation of mean curves.
@@ -513,6 +527,11 @@ modal_damage_state:
   with the highest probability.
   Example: *modal_damage_state = true*.
   Default: false
+
+mosaic_model:
+  Used to restrict the ruptures to a given model
+  Example: *mosaic_model = ZAF*
+  Default: empty string
 
 num_epsilon_bins:
   Number of epsilon bins in disaggregation calculations.
@@ -654,6 +673,11 @@ rlz_index:
   to start the disaggregation.
   Example: *rlz_index = 0*.
   Default: None
+
+rupture_dict:
+  Dictionary with rupture parameters lon, lat, dep, mag, rake, strike., dip
+  Example: *rupture_dict = {'lon': 10, 'lat': 20, 'dep': 10, 'mag': 6, 'rake': 0}*
+  Default: {}
 
 rupture_mesh_spacing:
   Set the discretization parameter (in km) for rupture geometries.
@@ -869,7 +893,7 @@ class OqParam(valid.ParamSet):
     _input_files = ()  # set in get_oqparam
 
     KNOWN_INPUTS = {
-        'rupture_model', 'exposure', 'site_model',
+        'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
         'source_model_logic_tree', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
@@ -903,6 +927,15 @@ class OqParam(valid.ParamSet):
     hazard_imtls = {}
     override_vs30 = valid.Param(valid.positivefloat, None)
     aggregate_by = valid.Param(valid.namelists, [])
+    aggregate_loss_curves_types = valid.Param(
+        # accepting all comma-separated permutations of 1, 2 or 3 elements
+        # of the list ['ep', 'aep' 'oep']
+        valid.Choice(
+            'ep', 'aep', 'oep',
+            'ep, aep', 'ep, oep', 'aep, ep', 'aep, oep', 'oep, ep', 'oep, aep',
+            'ep, aep, oep', 'ep, oep, aep', 'aep, ep, oep', 'aep, oep, ep',
+            'oep, ep, aep', 'oep, aep, ep'),
+        'ep')
     reaggregate_by = valid.Param(valid.namelist, [])
     amplification_method = valid.Param(
         valid.Choice('convolution', 'kernel'), 'convolution')
@@ -975,15 +1008,17 @@ class OqParam(valid.ParamSet):
     steps_per_interval = valid.Param(valid.positiveint, 1)
     master_seed = valid.Param(valid.positiveint, 123456789)
     maximum_distance = valid.Param(valid.IntegrationDistance.new)  # km
+    maximum_distance_stations = valid.Param(valid.positivefloat, None)  # km
     asset_hazard_distance = valid.Param(valid.floatdict, {'default': 15})  # km
     max = valid.Param(valid.boolean, False)
-    max_aggregations = valid.Param(valid.positivefloat, 100_000)
+    max_aggregations = valid.Param(valid.positivefloat, 1E5)
     max_data_transfer = valid.Param(valid.positivefloat, 2E11)
-    max_gmvs_per_task = valid.Param(valid.positiveint, 1_000_000)
+    max_gmvs_chunk = valid.Param(valid.positiveint, 100_000) # for 2GB limit
     max_potential_gmfs = valid.Param(valid.positiveint, 1E12)
     max_potential_paths = valid.Param(valid.positiveint, 15_000)
     max_sites_disagg = valid.Param(valid.positiveint, 10)
     mean_hazard_curves = mean = valid.Param(valid.boolean, True)
+    mosaic_model = valid.Param(valid.three_letters, '')
     std = valid.Param(valid.boolean, False)
     minimum_distance = valid.Param(valid.positivefloat, 0)
     minimum_intensity = valid.Param(valid.floatdict, {})  # IMT -> minIML
@@ -1020,6 +1055,7 @@ class OqParam(valid.ParamSet):
     risk_investigation_time = valid.Param(valid.positivefloat, None)
     rlz_index = valid.Param(valid.positiveints, None)
     rupture_mesh_spacing = valid.Param(valid.positivefloat, 5.0)
+    rupture_dict = valid.Param(valid.dictionary, {})
     complex_fault_mesh_spacing = valid.Param(
         valid.NoneOr(valid.positivefloat), None)
     return_periods = valid.Param(valid.positiveints, [])
@@ -1463,7 +1499,7 @@ class OqParam(valid.ParamSet):
                     mini[imt] = 0
         if 'default' in mini:
             del mini['default']
-        min_iml = numpy.array([mini.get(imt) or 1E-10 for imt in self.imtls])
+        min_iml = F64([mini.get(imt) or 1E-10 for imt in self.imtls])
         return min_iml
 
     def get_max_iml(self):
@@ -1526,7 +1562,7 @@ class OqParam(valid.ParamSet):
         """
         :returns: IMTs and levels which are not secondary
         """
-        sec_imts = set(self.get_sec_imts())
+        sec_imts = set(self.sec_imts)
         return {imt: imls for imt, imls in self.imtls.items()
                 if imt not in sec_imts}
 
@@ -1622,7 +1658,7 @@ class OqParam(valid.ParamSet):
         lst = [('sid', U32), ('eid', U32)]
         for m, imt in enumerate(self.get_primary_imtls()):
             lst.append((f'gmv_{m}', F32))
-        for out in self.get_sec_imts():
+        for out in self.sec_imts:
             lst.append((out, F32))
         return numpy.dtype(lst)
 
@@ -1633,7 +1669,7 @@ class OqParam(valid.ParamSet):
         lst = []
         for m, imt in enumerate(self.get_primary_imtls()):
             lst.append(f'gmv_{m}')
-        for out in self.get_sec_imts():
+        for out in self.sec_imts:
             lst.append(out)
         return lst
 
@@ -1644,7 +1680,8 @@ class OqParam(valid.ParamSet):
         return SecondaryPeril.instantiate(self.secondary_perils,
                                           self.sec_peril_params)
 
-    def get_sec_imts(self):
+    @cached_property
+    def sec_imts(self):
         """
         :returns: a list of secondary outputs
         """
@@ -1930,8 +1967,7 @@ class OqParam(valid.ParamSet):
 
     def is_valid_collect_rlzs(self):
         """
-        sampling_method must be early_weights and number_of_logic_tree_samples
-        must be greater than 1.
+        sampling_method must be early_weights with collect_rlzs=true
         """
         if self.collect_rlzs is None:
             self.collect_rlzs = self.number_of_logic_tree_samples > 1
@@ -1953,8 +1989,10 @@ class OqParam(valid.ParamSet):
         if hstats and hstats != ['mean']:
             msg = '%s: quantiles are not supported with collect_rlzs=true'
             raise InvalidFile(msg % self.inputs['job_ini'])
-        return self.number_of_logic_tree_samples > 1 and (
-            self.sampling_method == 'early_weights')
+        if self.number_of_logic_tree_samples == 0:
+            raise ValueError('collect_rlzs=true is inconsistent with '
+                             'full enumeration')
+        return self.sampling_method == 'early_weights'
 
     def check_aggregate_by(self):
         tagset = asset.tagset(self.aggregate_by)

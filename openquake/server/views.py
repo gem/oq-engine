@@ -53,7 +53,8 @@ from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo
-from openquake.engine.aelo import get_params_from
+from openquake.engine.aelo import (
+    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -94,7 +95,7 @@ ENGINE = "python -m openquake.engine.engine".split()
 AELO_FORM_PLACEHOLDERS = {
     'lon': 'Longitude',
     'lat': 'Latitude',
-    'vs30': 'Vs30 (default 760 m/s)',
+    'vs30': 'Vs30 (fixed at 760 m/s)',
     'siteid': 'Site name',
 }
 
@@ -345,9 +346,9 @@ def validate_zip(request):
 
 @require_http_methods(['GET'])
 @cross_domain_ajax
-def hmap_png(request, calc_id, imt_id, poe_id):
+def download_png(request, calc_id, what):
     """
-    Get a PNG image with the relevant mean hazard map, if available
+    Get a PNG image with the relevant name, if available
     """
     job = logs.dbcmd('get_job', int(calc_id))
     if job is None:
@@ -358,7 +359,7 @@ def hmap_png(request, calc_id, imt_id, poe_id):
         from PIL import Image
         response = HttpResponse(content_type="image/png")
         with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-            arr = ds['png/hmap_%s_%s' % (imt_id, poe_id)][:]
+            arr = ds['png/%s' % what][:]
         Image.fromarray(arr).save(response, format='png')
         return response
     except Exception as exc:
@@ -571,7 +572,8 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
+def aelo_callback(
+        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
         return
     from_email = 'aelonoreply@openquake.org'
@@ -579,6 +581,9 @@ def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
     reply_to = 'aelosupport@openquake.org'
     body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
+    if warnings is not None:
+        for warning in warnings:
+            body += warning + '\n'
     if exc:
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
@@ -648,7 +653,7 @@ def aelo_run(request):
     job_id = jobctx.calc_id
 
     outputs_uri_web = request.build_absolute_uri(
-        reverse('outputs', args=[job_id]))
+        reverse('outputs_aelo', args=[job_id]))
 
     outputs_uri_api = request.build_absolute_uri(
         reverse('results', args=[job_id]))
@@ -958,12 +963,98 @@ def web_engine(request, **kwargs):
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs(request, calc_id, **kwargs):
+    application_mode = settings.APPLICATION_MODE.upper()
     job = logs.dbcmd('get_job', calc_id)
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
-        hmaps = 'png' in ds
+        if 'png' in ds:
+            # NOTE: only one hmap can be visualized currently
+            hmaps = any([k.startswith('hmap') for k in ds['png']])
+            hcurves = 'hcurves.png' in ds['png']
+            # NOTE: remove "and 'All' in k" to show the individual plots
+            disagg_by_src = [k for k in ds['png']
+                             if k.startswith('disagg_by_src-') and 'All' in k]
+            governing_mce = 'governing_mce.png' in ds['png']
+        else:
+            hmaps = hcurves = governing_mce = False
+            disagg_by_src = []
     size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    lon = lat = vs30 = site_name = None
+    if application_mode == 'AELO':
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
     return render(request, "engine/get_outputs.html",
-                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps))
+                  dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
+                       hcurves=hcurves,
+                       disagg_by_src=disagg_by_src,
+                       governing_mce=governing_mce,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       application_mode=application_mode))
+
+
+def is_model_preliminary(ds):
+    # TODO: it would be better having the model written explicitly into the
+    # datastore
+    model = ds['oqparam'].base_path.split(os.path.sep)[-2]
+    if model in PRELIMINARY_MODELS:
+        return True
+    else:
+        return False
+
+
+@cross_domain_ajax
+@require_http_methods(['GET'])
+def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
+    job = logs.dbcmd('get_job', calc_id)
+    size_mb = '?' if job.size_mb is None else '%.2f' % job.size_mb
+    asce07 = asce41 = None
+    asce07_with_units = {}
+    asce41_with_units = {}
+    ASCE_VIEW_DECIMALS = 2
+    warnings = None
+    with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        if is_model_preliminary(ds):
+            warnings = PRELIMINARY_MODEL_WARNING
+        if 'asce07' in ds:
+            asce07_js = ds['asce07'][()].decode('utf8')
+            asce07 = json.loads(asce07_js)
+            for key, value in asce07.items():
+                if key not in ('PGA', 'Ss', 'S1'):
+                    continue
+                if not isinstance(value, float):
+                    asce07_with_units[key] = value
+                elif key in ('CRs', 'CR1'):
+                    # NOTE: (-) stands for adimensional
+                    asce07_with_units[key + ' (-)'] = "%.2f" % round(
+                        value, ASCE_VIEW_DECIMALS)
+                else:
+                    asce07_with_units[key + ' (g)'] = "%.2f" % round(
+                        value, ASCE_VIEW_DECIMALS)
+        if 'asce41' in ds:
+            asce41_js = ds['asce41'][()].decode('utf8')
+            asce41 = json.loads(asce41_js)
+            for key, value in asce41.items():
+                if not key.startswith('BSE'):
+                    continue
+                if not isinstance(value, float):
+                    asce41_with_units[key] = value
+                else:
+                    asce41_with_units[key + ' (g)'] = "%.2f" % round(
+                        value, ASCE_VIEW_DECIMALS)
+        lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
+        vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
+        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
+        if 'warnings' in ds:
+            ds_warnings = ds['warnings'][()].decode('utf8')
+            if warnings is None:
+                warnings = ds_warnings
+            else:
+                warnings += '\n' + ds_warnings
+    return render(request, "engine/get_outputs_aelo.html",
+                  dict(calc_id=calc_id, size_mb=size_mb,
+                       asce07=asce07_with_units, asce41=asce41_with_units,
+                       lon=lon, lat=lat, vs30=vs30, site_name=site_name,
+                       warnings=warnings))
 
 
 @csrf_exempt

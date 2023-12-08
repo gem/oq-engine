@@ -171,7 +171,7 @@ atkinson_2015
     :members:
     :undoc-members:
     :show-inheritance:
-
+    
 atkinson_boore_1995
 ---------------------------------------------------
 

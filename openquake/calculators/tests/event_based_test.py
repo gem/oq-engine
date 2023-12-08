@@ -40,7 +40,7 @@ from openquake.qa_tests_data.event_based import (
     blocksize, case_1, case_2, case_3, case_4, case_5, case_6, case_7,
     case_8, case_9, case_10, case_12, case_13, case_14, case_15, case_16,
     case_17,  case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_25, case_26, case_27, case_28, case_29, case_30, src_mutex)
+    case_25, case_26, case_27, case_28, case_29, case_30, case_31, src_mutex)
 from openquake.qa_tests_data.event_based.spatial_correlation import (
     case_1 as sc1, case_2 as sc2, case_3 as sc3)
 
@@ -176,12 +176,6 @@ class EventBasedTestCase(CalculatorTestCase):
         self.assertEqualFiles(
             'expected/hazard_curve-smltp_b1-gsimltp_b1.csv', fname)
 
-        export(('hcurves', 'xml'), self.calc.datastore)  # check it works
-
-        [fname] = out['hcurves', 'xml']
-        self.assertEqualFiles(
-            'expected/hazard_curve-smltp_b1-gsimltp_b1-PGA.xml', fname)
-
         # compute hcurves in postprocessing and compare with inprocessing
         # take advantage of the fact that there is a single site
         df = self.calc.datastore.read_df('gmf_data', 'sid')
@@ -298,7 +292,7 @@ class EventBasedTestCase(CalculatorTestCase):
 
         # first check the number of generated ruptures
         num_rups = len(self.calc.datastore['ruptures'])
-        self.assertEqual(num_rups, 1897)
+        self.assertEqual(num_rups, 1929)
 
         fnames = out['hcurves', 'csv']
         expected = ['hazard_curve-mean.csv', 'quantile_curve-0.1.csv']
@@ -603,3 +597,12 @@ class EventBasedTestCase(CalculatorTestCase):
         out = self.run_calc(case_30.__file__, 'job.ini', exports='csv')
         [fname] = out['ruptures', 'csv']
         self.assertEqualFiles('expected/ruptures.csv', fname, delta=1E-6)
+
+    def test_31(self):
+        # HM2018CorrelationModel with filtered site collection
+        self.run_calc(case_31.__file__, 'job_rup.ini')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_31.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id,  exports='csv')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f)

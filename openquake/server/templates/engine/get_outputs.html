@@ -1,4 +1,5 @@
 {% extends "engine/base.html" %}
+{% load servertags %}
   <title>{% block title %}OpenQuake engine: outputs from calculation {{ calc_id }}{% endblock %}</title>
 
   {% block main %}
@@ -7,19 +8,50 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
+              {% if application_mode == 'AELO' %}
+              <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
+              {% else %}
               <h2>Outputs from calculation {{ calc_id }}</h2>
+              {% endif %}
               <div id="my-outputs" class="well"></div>
+              {% if application_mode == 'AELO' %}
+              <div id="to-simplified-outputs">
+                <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs_aelo" class="btn btn-sm">
+                  View simplified outputs page</a>
+              </div>
+              {% endif %}
               <div id="my-datastore">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
                    title="Size: {{ size_mb }} MB" class="btn btn-sm">
                   Download hdf5 datastore</a>
               </div>
               {% if hmaps %}
-              <div id="my-hmaps">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/hmap_0_0" class="btn btn-sm">
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/hmap_0_0" class="btn btn-sm">
                   Show hazard map</a>
               </div>
               {% endif %}
+              {% if governing_mce %}
+              </br>
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
+                  Show governing MCE</a>
+              </div>
+              {% endif %}
+              {% if hcurves %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/hcurves.png" class="btn btn-sm">
+                  Show hazard curves</a>
+              </div>
+              {% endif %}
+              {% for img in disagg_by_src %}
+              <div class="my-pngs">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/{{img}}" class="btn btn-sm">
+                  {# NOTE: uncomment below to show the IMT #}
+                  {# Show hazard curves per source - {{ img|get_disagg_by_src_imt }}</a> #}
+                  Show hazard curves per source</a>
+              </div>
+              {% endfor %}
           </div>
         </div>
       </div>
@@ -40,7 +72,13 @@
       </thead>
       <tbody>
         <% _.each(outputs, function(output) { %>
-        <tr class="success">
+        {% if application_mode == 'AELO' %}
+        <% if (['hmaps', 'realizations', 'rtgm'].indexOf(output.get('type')) >= 0) { %>
+        <%   return; // works like continue in underscore.js %>
+        <% }%>
+        {% endif %}
+        {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
+        <tr class="">
           <td><%= output.get('id') || 'New' %></td>
           <td><%= output.get('name') %></td>
           <td <% if (output.get('size_mb')) { %>title="Size: <%= Math.max((Math.round(output.get('size_mb') * 100) / 100), 0.01).toFixed(2) %>MB"<% } %>><%= output.get('type') %></td>

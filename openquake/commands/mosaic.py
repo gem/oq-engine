@@ -25,7 +25,6 @@ import cProfile
 from openquake.baselib import config, performance
 from openquake.commonlib import readinput, logs
 from openquake.calculators import views
-from openquake.server import dbserver
 from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
 
@@ -135,8 +134,6 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     Run a PSHA analysis on the given lon and lat or given a CSV file
     formatted as described in the 'from_file' function
     """
-    dbserver.ensure_on()
-    print(f'Concurrent jobs: {concurrent_jobs}')
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
 
@@ -169,7 +166,6 @@ MIN_DIST = 0.
 
 
 def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
-    dbserver.ensure_on()
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
 
@@ -195,12 +191,13 @@ def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
     else:  # rups only
         params['minimum_magnitude'] = '5.0'
         params['ground_motion_fields'] = 'false'
-        del params['inputs']['site_model']
+        params['inputs'].pop('site_model', None)
     for p in ('number_of_logic_tree_samples', 'ses_per_logic_tree_path',
               'investigation_time', 'minimum_magnitude', 'truncation_level',
               'minimum_distance', 'extreme_gmv'):
         logging.info('%s = %s' % (p, params[p]))
     logging.root.handlers = []  # avoid breaking the logs
+    params['mosaic_model'] = logs.get_tag(ini)
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
     if slowest:

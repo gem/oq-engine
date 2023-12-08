@@ -23,8 +23,10 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.contexts import get_cmakers
 
+CUTOFF = 1E-12
 
-def to_rates(probs, itime=1):
+
+def to_rates(probs, itime=1, minrate=0.):
     """
     Convert an array of probabilities into an array of rates
 
@@ -34,7 +36,10 @@ def to_rates(probs, itime=1):
     pnes = 1. - probs
     pnes[pnes == 0] = 1E-45  # mininum 32 bit float
     # NB: the test most sensitive to 1E-45 and 1E-12 is case_78
-    return numpy.clip(- numpy.log(pnes) / itime, 1E-12, 100)
+    rates = - numpy.log(pnes) / itime
+    rates[rates < CUTOFF] = minrate
+    rates[rates > 100.] = 100.
+    return rates
 
 
 def to_probs(rates, itime=1):
@@ -114,6 +119,7 @@ def main(job_ini):
         mrates[imt] = rates[:, m]
     print('Mean hazard rates for the first site')
     print(text_table(mrates[0], ext='org'))
+
 
 main.job_ini = 'path to a job.ini file'
 

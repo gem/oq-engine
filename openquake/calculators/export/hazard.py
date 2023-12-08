@@ -19,6 +19,7 @@
 import re
 import os
 import sys
+import json
 import itertools
 import collections
 import numpy
@@ -252,7 +253,6 @@ def get_metadata(rlzs, kind):
     return metadata
 
 
-@export.add(('uhs', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
@@ -280,7 +280,7 @@ def export_uhs_xml(ekey, dstore):
 
 class Location(object):
     def __init__(self, xyz):
-        self.x, self.y = tuple(xyz)[:2]
+        self.x, self.y = xyz['lon'], xyz['lat']
         self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
 
@@ -288,7 +288,6 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@export.add(('hcurves', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -327,7 +326,6 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hmaps', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -432,7 +430,7 @@ def export_gmf_data_csv(ekey, dstore):
         ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
         ren[f'gmv_{m}'] = 'gmv_' + imt
-    for imt in oq.get_sec_imts():
+    for imt in oq.sec_imts:
         ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
@@ -464,16 +462,39 @@ def export_gmf_data_hdf5(ekey, dstore):
     return [fname]
 
 
+@export.add(('relevant_gmfs', 'hdf5'))
+def export_relevant_gmfs(ekey, dstore):
+    oq = dstore['oqparam']
+    if oq.number_of_logic_tree_samples == 0:
+        raise NotImplementedError('Full enumeration')
+    attrs = dstore['gmf_data'].attrs
+    fname = dstore.build_fname('gmf', 'data', 'hdf5')
+    thr = os.environ.get('OQ_THRESHOLD', '1.')
+    with hdf5.File(fname, 'w') as f:
+        if dstore.parent:
+            f['sitecol'] = dstore.parent['sitecol']
+        else:
+            f['sitecol'] = dstore['sitecol']
+        df = extract(dstore, 'relevant_gmfs?threshold=' + thr)
+        f.create_df('gmf_data', df, effective_time=attrs['effective_time'],
+                    investigation_time=attrs['investigation_time'],
+                    num_events=len(df.eid.unique()),
+                    imts=' '.join(oq.imtls))
+    return [fname]
+
+
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol'].complete
+    sitecol = dstore['sitecol']
+    if 'complete' in dstore.parent:
+        sitecol.complete = dstore.parent['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
-        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
+        dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
     else:
-        dic = dict(site_id=sitecol.sids)
-    dic['lon'] = sitecol.lons
-    dic['lat'] = sitecol.lats
+        dic = dict(site_id=sitecol.complete.sids)
+    dic['lon'] = sitecol.complete.lons
+    dic['lat'] = sitecol.complete.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
     for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
@@ -536,13 +557,17 @@ def export_mean_rates_by_src(ekey, dstore):
     rates_df = _add_iml(dstore['mean_rates_by_src'].to_dframe(), oq.imtls)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    header = ['src_id', 'imt', 'iml', 'value']
+    header = ['source_id', 'imt', 'iml', 'afoe']
     for site in sitecol:
         df = rates_df[rates_df.site_id == site.id]
         del df['site_id']
+        df = df[df.value > 0]  # don't export zeros
+        df.rename(columns={'src_id': 'source_id',
+                           'value': 'afoe'}, inplace=True)
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
+        com['vs30'] = site.vs30
         fname = dstore.export_path('mean_rates_by_src-%d.csv' % site.id)
         writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
@@ -554,6 +579,8 @@ def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
     aw = dstore['mean_disagg_by_src']
     df = aw.to_dframe()
+    df = df[df.value > 0]  # don't export zeros
+    df.rename(columns={'value': 'afoe'}, inplace=True)
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
@@ -623,7 +650,6 @@ def export_disagg_csv(ekey, dstore):
             imt_idx = [imt2idx[imt] for imt in df.imt]
             poe_idx = [poe2idx[poe] for poe in df.poe]
             df['iml'] = iml2[imt_idx, poe_idx]
-
             df = pandas.DataFrame(
                 {col: df[col] for col in cols}).sort_values(['imt', 'poe'])
             if len(df):
@@ -687,4 +713,36 @@ def export_rtgm(ekey, dstore):
     fname = dstore.export_path('rtgm.csv')
     comment = dstore.metadata.copy()
     writer.save(df, fname, comment=comment)
+    return [fname]
+
+
+@export.add(('asce07', 'csv'), ('asce41', 'csv'))
+def export_asce(ekey, dstore):
+    js = dstore[ekey[0]][()].decode('utf8')
+    sitecol = dstore['sitecol']
+    dic = json.loads(js)
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    comment['lon'] = sitecol.lons[0]
+    comment['lat'] = sitecol.lats[0]
+    comment['vs30'] = sitecol.vs30[0]
+    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
+    writer.save(dic.items(), fname, header=['parameter', 'value'],
+                comment=comment)
+    return [fname]
+
+
+@export.add(('mag_dst_eps_sig', 'csv'))
+def export_mag_dst_eps_sig(ekey, dstore):
+    data = dstore[ekey[0]][:]
+    sitecol = dstore['sitecol']
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    comment['lon'] = sitecol.lons[0]
+    comment['lat'] = sitecol.lats[0]
+    comment['vs30'] = sitecol.vs30[0]
+    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
+    writer.save(data, fname, comment=comment)
     return [fname]

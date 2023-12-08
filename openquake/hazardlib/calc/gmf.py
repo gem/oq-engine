@@ -24,14 +24,15 @@ import numpy
 import pandas
 
 from openquake.baselib.general import AccumDict
+from openquake.baselib.performance import Monitor, compile
 from openquake.hazardlib.const import StdDev
+from openquake.hazardlib.source.rupture import EBRupture, get_eid_rlz
 from openquake.hazardlib.cross_correlation import NoCrossCorrelation
 from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
 from openquake.hazardlib.imt import from_string
 
 U32 = numpy.uint32
 F32 = numpy.float32
-
 
 class CorrelationButNoInterIntraStdDevs(Exception):
     def __init__(self, corr, gsim):
@@ -47,23 +48,62 @@ intra event standard deviations.''' % (
             self.corr.__class__.__name__, self.gsim.__class__.__name__)
 
 
-def exp(vals, imt):
+@compile(["float64[:,:](float64[:,:], boolean)",
+          "float64[:](float64[:], boolean)",
+          "float64(float64, boolean)"])
+def exp(vals, notMMI):
     """
     Exponentiate the values unless the IMT is MMI
     """
-    if str(imt) == 'MMI':
-        return vals
-    return numpy.exp(vals)
+    if notMMI:
+        return numpy.exp(vals)
+    return vals
+
+
+@compile("(float32[:,:,:],float64[:,:],float64[:],float64[:],int64)")
+def set_max_min(array, mean, max_iml, min_iml, mmi_index):
+    N, M, E = array.shape
+
+    # manage max_iml
+    for m in range(M):
+        iml = max_iml[m]
+        for n in range(N):
+            maxval = exp(mean[m, n], m!=mmi_index)
+            for e in range(E):
+                val = array[n, m, e]
+                if val > iml:
+                    array[n, m, e] = maxval
+
+    # manage min_iml
+    for n in range(N):
+        for e in range(E):
+            # set to zero only if all IMTs are below the thresholds
+            if (array[n, :, e] < min_iml).all():
+                array[n, :, e] = 0
+
+
+@compile("(uint32[:],uint32[:],uint32[:],uint32[:])")
+def build_eid_sid_rlz(allrlzs, sids, eids, rlzs):
+    eid_sid_rlz = numpy.zeros((3, len(sids) * len(eids)), U32)
+    idx = 0
+    for rlz in allrlzs:
+        for eid in eids[rlzs == rlz]:
+            for sid in sids:
+                eid_sid_rlz[0, idx] = eid
+                eid_sid_rlz[1, idx] = sid
+                eid_sid_rlz[2, idx] = rlz
+                idx += 1
+    return eid_sid_rlz
 
 
 class GmfComputer(object):
     """
-    Given an earthquake rupture, the ground motion field computer computes
+    Given an earthquake rupture, the GmfComputer computes
     ground shaking over a set of sites, by randomly sampling a ground
     shaking intensity model.
 
     :param rupture:
-        Rupture to calculate ground motion fields radiated from.
+        EBRupture to calculate ground motion fields radiated from.
 
     :param :class:`openquake.hazardlib.site.SiteCollection` sitecol:
         a complete SiteCollection
@@ -91,10 +131,10 @@ class GmfComputer(object):
         case no secondary perils need to be evaluated.
     """
     # The GmfComputer is called from the OpenQuake Engine. In that case
-    # the rupture is an higher level containing a
+    # the rupture is an EBRupture instance containing a
     # :class:`openquake.hazardlib.source.rupture.Rupture` instance as an
     # attribute. Then the `.compute(gsim, num_events, ms)` method is called and
-    # a matrix of size (I, N, E) is returned, where I is the number of
+    # a matrix of size (M, N, E) is returned, where M is the number of
     # IMTs, N the number of affected sites and E the number of events. The
     # seed is extracted from the underlying rupture.
     def __init__(self, rupture, sitecol, cmaker, correlation_model=None,
@@ -112,141 +152,164 @@ class GmfComputer(object):
         self.correlation_model = correlation_model
         self.amplifier = amplifier
         self.sec_perils = sec_perils
-        # `rupture` is an EBRupture instance in the engine
-        if hasattr(rupture, 'source_id'):
-            self.ebrupture = rupture
-            self.source_id = rupture.source_id  # the underlying source
-            self.seed = rupture.seed
-            rupture = rupture.rupture  # the underlying rupture
-        else:  # in the hazardlib tests
-            self.source_id = '?'
-            self.seed = rupture.seed
+        self.ebrupture = rupture
+        self.seed = rupture.seed
+        rupture = rupture.rupture  # the underlying rupture
         ctxs = list(cmaker.get_ctx_iter([rupture], sitecol))
         if not ctxs:
             raise FarAwayRupture
         [self.ctx] = ctxs
+        self.N = len(self.ctx)
         if correlation_model:  # store the filtered sitecol
             self.sites = sitecol.complete.filtered(self.ctx.sids)
         self.cross_correl = cross_correl or NoCrossCorrelation(
             cmaker.truncation_level)
+        self.gmv_fields = [f'gmv_{m}' for m in range(len(cmaker.imts))]
 
-    def compute_all(self, scenario, sig_eps=None, max_iml=None):
+    def init_eid_rlz_sig_eps(self):
+        """
+        Initialize the attributes eid, rlz, sig, eps with shapes E, E, EM, EM
+        """
+        self.rlzs = numpy.concatenate(list(self.cmaker.gsims.values()))
+        self.eid, self.rlz = get_eid_rlz(
+            vars(self.ebrupture), self.rlzs, self.cmaker.scenario)
+        self.E = E = len(self.eid)
+        self.M = M = len(self.gmv_fields)
+        self.sig = numpy.zeros((E, M), F32)  # same for all events
+        self.eps = numpy.zeros((E, M), F32)  # not the same
+
+    def build_sig_eps(self, se_dt):
+        """
+        :returns: a structured array of size E with fields
+                  (eid, rlz_id, sig_inter_IMT, eps_inter_IMT)
+        """
+        sig_eps = numpy.zeros(self.E, se_dt)
+        sig_eps['eid'] = self.eid
+        sig_eps['rlz_id'] = self.rlz
+        for m, imt in enumerate(self.cmaker.imtls):
+            sig_eps[f'sig_inter_{imt}'] = self.sig[:, m]
+            sig_eps[f'eps_inter_{imt}'] = self.eps[:, m]
+        return sig_eps
+
+    def update(self, data, array, rlzs, mean_stds, max_iml=None):
+        """
+        Updates the data dictionary with the values coming from the array
+        of GMVs. Also indirectly updates the arrays .sig and .eps.
+        """
+        min_iml = self.cmaker.min_iml
+        mag = self.ebrupture.rupture.mag
+        mean = mean_stds[0]
+        if len(mean.shape) == 3:  # shape (M, N, 1) for conditioned gmfs
+            mean = mean[:, :, 0]
+        mmi_index = -1
+        for m, imt in enumerate(self.cmaker.imtls):
+            if imt == 'MMI':
+                mmi_index = m
+        if max_iml is None:
+            M = len(self.cmaker.imts)
+            max_iml = numpy.full(M, numpy.inf, float)
+
+        set_max_min(array, mean, max_iml, min_iml, mmi_index)
+        data['gmv'].append(array)
+
+        if self.sec_perils:
+            n = 0
+            for rlz in rlzs:
+                eids = self.eid[self.rlz == rlz]
+                E = len(eids)
+                for e, eid in enumerate(eids):
+                    gmfa = array[:, :, n + e].T  # shape (M, N)
+                    for sp in self.sec_perils:
+                        o = sp.compute(mag, zip(self.imts, gmfa), self.ctx)
+                        for outkey, outarr in zip(sp.outputs, o):
+                            data[outkey].append(outarr)
+                n += E
+
+    def strip_zeros(self, data):
+        """
+        :returns: a DataFrame with the nonzero GMVs
+        """
+        # building an array of shape (3, NE)
+        eid_sid_rlz = build_eid_sid_rlz(
+            self.rlzs, self.ctx.sids, self.eid, self.rlz)
+
+        for key, val in sorted(data.items()):
+            data[key] = numpy.concatenate(data[key], axis=-1, dtype=F32)
+        gmv = data.pop('gmv')  # shape (N, M, E)
+        ok = gmv.sum(axis=1).T.reshape(-1) > 0
+        for m, gmv_field in enumerate(self.gmv_fields):
+            data[gmv_field] = gmv[:, m].T.reshape(-1)
+
+        # build dataframe
+        df = pandas.DataFrame(data)
+        df['eid'] = eid_sid_rlz[0]
+        df['sid'] = eid_sid_rlz[1]
+        df['rlz'] = eid_sid_rlz[2]
+
+        # remove the rows with all zero values
+        return df[ok]
+
+    def compute_all(self, mean_stds, max_iml=None,
+                    cmon=Monitor(), umon=Monitor()):
         """
         :returns: DataFrame with fields eid, rlz, sid, gmv_X, ...
         """
-        min_iml = self.cmaker.min_iml
-        rlzs_by_gsim = self.cmaker.gsims
-        sids = self.ctx.sids
-        eid_rlz = self.ebrupture.get_eid_rlz(rlzs_by_gsim, scenario)
-        mag = self.ebrupture.rupture.mag
+        self.init_eid_rlz_sig_eps()
+        rng = numpy.random.default_rng(self.seed)
         data = AccumDict(accum=[])
-        mean_stds = self.cmaker.get_mean_stds([self.ctx])  # (4, G, M, N)
-        for g, (gs, rlzs) in enumerate(rlzs_by_gsim.items()):
-            num_events = numpy.isin(eid_rlz['rlz'], rlzs).sum()
-            if num_events == 0:  # it may happen
+        for g, (gs, rlzs) in enumerate(self.cmaker.gsims.items()):
+            idxs, = numpy.where(numpy.isin(self.rlz, rlzs))
+            E = len(idxs)
+            if E == 0:  # crucial for performance
                 continue
-            # NB: the trick for performance is to keep the call to
-            # .compute outside of the loop over the realizations;
-            # it is better to have few calls producing big arrays
-            array, sig, eps = self.compute(gs, num_events, mean_stds[:, g])
-            M, N, E = array.shape  # sig and eps have shapes (M, E) instead
+            with cmon:
+                array = self.compute(gs, idxs, mean_stds[:, g], rng)  # NME
+            with umon:
+                self.update(data, array, rlzs, mean_stds[:, g], max_iml)
+        with umon:
+            return self.strip_zeros(data)
 
-            # manage max_iml
-            if max_iml is not None:
-                for m, im in enumerate(self.cmaker.imtls):
-                    if (array[m] > max_iml[m]).any():
-                        for n in range(N):
-                            bad = array[m, n] > max_iml[m]  # shape E
-                            array[m, n, bad] = exp(mean_stds[0, g, m, n], im)
-
-            # manage min_iml
-            for n in range(N):
-                for e in range(E):
-                    if (array[:, n, e] < min_iml).all():
-                        array[:, n, e] = 0
-    
-            array = array.transpose(1, 0, 2)  # from M, N, E to N, M, E
-            n = 0
-            for rlz in rlzs:
-                eids = eid_rlz[eid_rlz['rlz'] == rlz]['eid']
-                for ei, eid in enumerate(eids):
-                    gmfa = array[:, :, n + ei]  # shape (N, M)
-                    if sig_eps is not None:
-                        tup = tuple([eid, rlz] + list(sig[:, n + ei]) +
-                                    list(eps[:, n + ei]))
-                        sig_eps.append(tup)
-                    items = []
-                    for sp in self.sec_perils:
-                        o = sp.compute(mag, zip(self.imts, gmfa.T), self.ctx)
-                        for outkey, outarr in zip(sp.outputs, o):
-                            items.append((outkey, outarr))
-                    for i, gmv in enumerate(gmfa):
-                        if gmv.sum() == 0:
-                            continue
-                        data['sid'].append(sids[i])
-                        data['eid'].append(eid)
-                        data['rlz'].append(rlz)  # used in compute_gmfs_curves
-                        for m in range(M):
-                            data[f'gmv_{m}'].append(gmv[m])
-                        for outkey, outarr in items:
-                            data[outkey].append(outarr[i])
-                        # gmv can be zero due to the minimum_intensity, coming
-                        # from the job.ini or from the vulnerability functions
-                n += len(eids)
-        for key, val in sorted(data.items()):
-            if key in 'eid sid rlz':
-                data[key] = U32(data[key])
-            else:
-                data[key] = F32(data[key])
-        return pandas.DataFrame(data)
-
-    def compute(self, gsim, num_events, mean_stds):
+    def compute(self, gsim, idxs, mean_stds, rng):
         """
         :param gsim: GSIM used to compute mean_stds
-        :param num_events: the number of seismic events
+        :param idxs: affected indices
         :param mean_stds: array of shape (4, M, N)
-        :returns:
-            a 32 bit array of shape (num_imts, num_sites, num_events) and
-            two arrays with shape (num_imts, num_events): sig for tau
-            and eps for the random part
+        :param rng: random number generator for the rupture
+        :returns: a 32 bit array of shape (N, M, E)
         """
+        # sets self.eps
         M = len(self.imts)
+        E = len(idxs)
         result = numpy.zeros(
-            (len(self.imts), len(self.ctx.sids), num_events), F32)
-        sig = numpy.zeros((M, num_events), F32)  # same for all events
-        eps = numpy.zeros((M, num_events), F32)  # not the same
-        rng = numpy.random.default_rng(self.seed)
-        num_sids = len(self.ctx.sids)
+            (len(self.imts), len(self.ctx.sids), E), F32)
         ccdist = self.cross_correl.distribution
         # build arrays of random numbers of shape (M, N, E) and (M, E)
-        intra_eps = [
-            ccdist.rvs((num_sids, num_events), rng) for _ in range(M)]
-        inter_eps = self.cross_correl.get_inter_eps(self.imts, num_events, rng)
+        intra_eps = [ccdist.rvs((self.N, E), rng) for _ in range(M)]
+        self.eps[idxs] = self.cross_correl.get_inter_eps(self.imts, E, rng).T
         for m, imt in enumerate(self.imts):
             try:
-                result[m], sig[m], eps[m] = self._compute(
-                    mean_stds[:, m], imt, gsim, intra_eps[m], inter_eps[m])
+                result[m] = self._compute(
+                    mean_stds[:, m], m, imt, gsim, intra_eps[m], idxs)
             except Exception as exc:
                 raise RuntimeError(
-                    '(%s, %s, source_id=%r) %s: %s' %
-                    (gsim, imt, self.source_id,
-                     exc.__class__.__name__, exc)
+                    '(%s, %s, %s): %s' %
+                    (gsim, imt, exc.__class__.__name__, exc)
                 ).with_traceback(exc.__traceback__)
         if self.amplifier:
             self.amplifier.amplify_gmfs(
                 self.ctx.ampcode, result, self.imts, self.seed)
-        return result, sig, eps
+        return result.transpose(1, 0, 2)
 
-    def _compute(self, mean_stds, imt, gsim, intra_eps, inter_eps):
+    def _compute(self, mean_stds, m, imt, gsim, intra_eps, idxs):
+        # sets self.sig, returns gmf
+        im = imt.string
+        mean, sig, tau, phi = mean_stds
         if self.cmaker.truncation_level <= 1E-9:
             # for truncation_level = 0 there is only mean, no stds
             if self.correlation_model:
                 raise ValueError('truncation_level=0 requires '
                                  'no correlation model')
-            mean, _, _, _ = mean_stds
-            gmf = exp(mean, imt)[:, None]
-            gmf = gmf.repeat(len(inter_eps), axis=1)
-            inter_sig = 0
+            gmf = exp(mean, im!='MMI')[:, None].repeat(len(idxs), axis=1)
         elif gsim.DEFINED_FOR_STANDARD_DEVIATION_TYPES == {StdDev.TOTAL}:
             # If the GSIM provides only total standard deviation, we need
             # to compute mean and total standard deviation at the sites
@@ -255,28 +318,25 @@ class GmfComputer(object):
             if self.correlation_model:
                 raise CorrelationButNoInterIntraStdDevs(
                     self.correlation_model, gsim)
-
-            mean, sig, _, _ = mean_stds
-            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, imt)
-            inter_sig = numpy.nan
+            gmf = exp(mean[:, None] + sig[:, None] * intra_eps, im!='MMI')
+            self.sig[idxs, m] = numpy.nan
         else:
-            mean, sig, tau, phi = mean_stds
             # the [:, None] is used to implement multiplication by row;
             # for instance if  a = [1 2], b = [[1 2] [3 4]] then
             # a[:, None] * b = [[1 2] [6 8]] which is the expected result;
             # otherwise one would get multiplication by column [[1 4] [3 8]]
             intra_res = phi[:, None] * intra_eps  # shape (N, E)
-
             if self.correlation_model is not None:
                 intra_res = self.correlation_model.apply_correlation(
                     self.sites, imt, intra_res, phi)
                 if len(intra_res.shape) == 1:  # a vector
                     intra_res = intra_res[:, None]
 
-            inter_res = tau[:, None] * inter_eps  # shape (N, 1) * E => (N, E)
-            gmf = exp(mean[:, None] + intra_res + inter_res, imt)  # (N, E)
-            inter_sig = tau.max()  # from shape (N, 1) => scalar
-        return gmf, inter_sig, inter_eps  # shapes (N, E), 1, E
+            inter_res = tau[:, None] * self.eps[idxs, m]
+            # shape (N, 1) * E => (N, E)
+            gmf = exp(mean[:, None] + intra_res + inter_res, im!='MMI')
+            self.sig[idxs, m] = tau.max()  # from shape (N, 1) => scalar
+        return gmf  # shapes (N, E)
 
 
 # this is not used in the engine; it is still useful for usage in IPython
@@ -310,7 +370,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         Float, number of standard deviations for truncation of the intensity
         distribution
     :param realizations:
-        Integer number of GMF realizations to compute.
+        Integer number of GMF simulations to compute.
     :param correlation_model:
         Instance of correlation model object. See
         :mod:`openquake.hazardlib.correlation`. Can be ``None``, in which case
@@ -321,15 +381,21 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     :returns:
         Dictionary mapping intensity measure type objects (same
         as in parameter ``imts``) to 2d numpy arrays of floats,
-        representing different realizations of ground shaking intensity
+        representing different simulations of ground shaking intensity
         for all sites in the collection. First dimension represents
-        sites and second one is for realizations.
+        sites and second one is for simulations.
     """
-    cmaker = ContextMaker(rupture.tectonic_region_type, [gsim],
+    cmaker = ContextMaker(rupture.tectonic_region_type, {gsim: U32([0])},
                           dict(truncation_level=truncation_level,
-                               imtls={str(imt): [1] for imt in imts}))
-    rupture.seed = seed
-    gc = GmfComputer(rupture, sites, cmaker, correlation_model)
-    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]
-    res, _sig, _eps = gc.compute(gsim, realizations, mean_stds)
-    return {imt: res[m] for m, imt in enumerate(gc.imts)}
+                               imtls={str(imt): numpy.array([0.])
+                                      for imt in imts}))
+    cmaker.scenario = True
+    ebr = EBRupture(
+        rupture, source_id=0, trt_smr=0, n_occ=realizations, id=0, e0=0)
+    ebr.seed = seed
+    gc = GmfComputer(ebr, sites, cmaker, correlation_model)
+    mean_stds = cmaker.get_mean_stds([gc.ctx])[:, 0]  # shape (4, M, N)
+    gc.init_eid_rlz_sig_eps()
+    res = gc.compute(gsim, U32([0]), mean_stds,
+                     numpy.random.default_rng(seed))
+    return {imt: res[:, m] for m, imt in enumerate(gc.imts)}

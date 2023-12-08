@@ -1,4 +1,4 @@
-name: Windows full tests of OpenQuake Engine
+name: Windows amd64 full tests of OpenQuake Engine
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         default: master
         required: true
   schedule:
-    - cron: "00 22 * * *"
+    - cron: "00 14 * * *"
   push:
     branches: [ windows-all-tests ]
 
@@ -71,17 +71,80 @@ jobs:
           }
           else
           {
-            Write-Host "Install on scheduled task"
+            Write-Host "Install on user mode on scheduled task"
             Write-Host "python install.py devel "
             python install.py devel
           }
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
           python -m pip install pytest pyshp flake8
 
+      - name: Run tests for calculators
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          cd D:\a\oq-engine\oq-engine
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
+      - name: Run tests for advanced manual
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          cd D:\a\oq-engine\oq-engine\doc\adv-manual
+          pytest @(get-childitem -name *.rst)
+
+      - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine\openquake
+          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
+
+      - name: Run tests for the engine server in public mode to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine
+          $Env:OQ_APPLICATION_MODE='public'
+          # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_public_mode
+
+      - name: Run tests for the engine server in read-only mode to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine
+          $Env:OQ_APPLICATION_MODE='read_only'
+          # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_read_only_mode
+
+      - name: Run tests for the engine server in aelo mode to test installation
+        if: always()
+        run: |
+          C:\Users\runneradmin\openquake\Scripts\activate.ps1
+          oq --version
+          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
+          sleep 10
+          cd D:\a\oq-engine\oq-engine
+          $Env:OQ_APPLICATION_MODE='aelo'
+          $Env:OQ_CONFIG_FILE='openquake\server\tests\data\openquake.cfg'
+          # -v 2 also logs the test names
+          python .\openquake\server\manage.py test -v 2 tests.test_aelo_mode
+
       - name: Run all demos
         run: |
           C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          # FIXME: why those different exports? (using the same as in run-demos.sh)
           oq --version
           Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
           Write-Host "Run all demos having only job.ini"
@@ -103,57 +166,3 @@ jobs:
             }
           }
 
-      - name: Run tests for calculators and advanced manual
-        if: always()
-        run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          cd D:\a\oq-engine\oq-engine
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 openquake/calculators
-          cd doc/adv-manual
-          pytest @(get-childitem -name *.rst)
-
-      - name: Run tests for hazardlib, sep, commands, engine, hmtk, risklib, commonlib and baselib to test installation
-        if: always()
-        run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          sleep 10
-          cd D:\a\oq-engine\oq-engine\openquake
-          pytest --doctest-modules --disable-warnings --color=yes --durations=10 hazardlib sep commands engine hmtk risklib commonlib baselib
-
-      - name: Run tests for the engine server in public mode to test installation
-        if: always()
-        run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          sleep 10
-          cd D:\a\oq-engine\oq-engine
-          set OQ_APPLICATION_MODE=public
-          .\openquake\server\manage.py test tests.test_public_mode
-
-      - name: Run tests for the engine server in read-only mode to test installation
-        if: always()
-        run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          sleep 10
-          cd D:\a\oq-engine\oq-engine
-          set OQ_APPLICATION_MODE=read_only
-          .\openquake\server\manage.py test tests.test_read_only_mode
-
-      - name: Run tests for the engine server in aelo mode to test installation
-        if: always()
-        run: |
-          C:\Users\runneradmin\openquake\Scripts\activate.ps1
-          oq --version
-          Start-Job -ScriptBlock{& 'C:\Users\runneradmin\openquake\Scripts\oq.exe' dbserver start}
-          sleep 10
-          cd D:\a\oq-engine\oq-engine
-          set OQ_APPLICATION_MODE=aelo
-          set OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg
-          .\openquake\server\manage.py test tests.test_aelo_mode

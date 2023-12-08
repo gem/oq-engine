@@ -230,6 +230,18 @@ def collect_info(smltpath, branchID=''):
     return Info(sorted(smpaths), sorted(h5paths), applytosources)
 
 
+def reduce_fnames(fnames, source_id):
+    """
+    If the source ID is ambiguous (i.e. there is "!") only returns
+    the filenames containing the source, otherwise return all the filenames
+    """
+    try:
+        srcid, fname = source_id.split('!')
+    except ValueError:
+        return fnames
+    return [f for f in fnames if fname in f]
+
+
 def read_source_groups(fname):
     """
     :param fname: a path to a source model XML file
@@ -586,7 +598,7 @@ class SourceModelLogicTree(object):
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
                 if self.source_id:  # only the files containing source_id
-                    value = ' '.join(vals)
+                    value = ' '.join(reduce_fnames(vals, self.source_id))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
                 raise LogicTreeError(
@@ -815,7 +827,7 @@ class SourceModelLogicTree(object):
         :returns: the number of sources in the source model portion
         """
         with self._get_source_model(fname) as sm:
-            trt_by_src = get_trt_by_src(sm, self.source_id)
+            trt_by_src = get_trt_by_src(sm, self.source_id.split('!')[0])
         if self.basepath:
             path = sm.name[len(self.basepath) + 1:]
         else:
@@ -1090,9 +1102,7 @@ class FullLogicTree(object):
         """
         :returns: a list of Gt weights
         """
-        out = []
-        for g, trs in enumerate(trt_rlzs):
-            out.append(sum(self.weights[r] for r in trs % TWO24))
+        out = [sum(self.weights[r] for r in trs % TWO24) for trs in trt_rlzs]
         return out
 
     def get_smr_by_ltp(self):
@@ -1157,6 +1167,8 @@ class FullLogicTree(object):
                      for sm_rlz in self.sm_rlzs
                      if set(sm_rlz.lt_path) & brids)
 
+    # NB: called by the source_reader with smr and by
+    # .reduce_groups with source_id
     def set_trt_smr(self, srcs, source_id=None, smr=None):
         """
         :param srcs: source objects
@@ -1166,9 +1178,10 @@ class FullLogicTree(object):
         """
         if not self.trti: # empty gsim_lt
             return srcs
+        sd = group_array(self.source_model_lt.source_data, 'source')
         out = []
         for src in srcs:
-            srcid = re.split('[:;!.]', src.source_id)[0]
+            srcid = re.split('[:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
@@ -1178,11 +1191,17 @@ class FullLogicTree(object):
             if smr is None and ';' in src.source_id:
                 # assume <base_id>;<smr>
                 smr = _get_smr(src.source_id)
-            if smr is None:
-                if not hasattr(self, 'sd'):  # cache source_data by source
-                    self.sd = group_array(
-                        self.source_model_lt.source_data, 'source')
-                brids = set(self.sd[srcid]['branch'])
+            if smr is None:  # called by .reduce_groups 
+                try:
+                    # check if ambiguous source ID
+                    srcid, fname = srcid.rsplit('!')
+                except ValueError:
+                    # non-ambiguous source ID
+                    fname = ''
+                    ok = slice(None)
+                else:
+                    ok = [fname in string for string in sd[srcid]['fname']]
+                brids = set(sd[srcid]['branch'][ok])
                 tup = tuple(trti * TWO24 + sm_rlz.ordinal
                             for sm_rlz in self.sm_rlzs
                             if set(sm_rlz.lt_path) & brids)
@@ -1193,12 +1212,12 @@ class FullLogicTree(object):
             out.append(src)
         return out
 
-    def reduce_groups(self, src_groups, source_id=''):
+    def reduce_groups(self, src_groups):
         """
         Filter the sources and set the tuple .trt_smr
         """
         groups = []
-        source_id = source_id or self.source_model_lt.source_id
+        source_id = self.source_model_lt.source_id
         for sg in src_groups:
             ok = self.set_trt_smr(sg, source_id)
             if ok:

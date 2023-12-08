@@ -31,14 +31,14 @@ try:
 except ImportError:
     Image = None
 from openquake.baselib import (
-    performance, parallel, hdf5, config, python3compat, workerpool as w)
+    performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
-from openquake.hazardlib.probability_map import ProbabilityMap, poes_dt
+from openquake.hazardlib.probability_map import ProbabilityMap, rates_dt
 from openquake.commonlib import calc
 from openquake.calculators import base, getters
 
@@ -118,17 +118,22 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
             arr = dstore.getitem('_csm')[cmaker.grp_id]
             srcs = pickle.loads(gzip.decompress(arr.tobytes()))
     # maximum size of the pmap array in GB
-    size_mb = len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2
+    size_mb = (
+        len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2)
     itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
 
     # NB: disagg_by_src is disabled in case of tiling
     assert not (itiles > 1 and cmaker.disagg_by_src)
+    N = len(sitecol)
     for sites in sitecol.split_in_tiles(itiles):
         pmap = ProbabilityMap(
             sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
         result = hazclassical(srcs, sites, cmaker, pmap)
-        result['pnemap'] = ~pmap.remove_zeros()
+        if N > cmaker.max_sites_disagg:  # save data transfer
+            result['pnemap'] = ~pmap.remove_zeros()
+        else:  # keep the shape of the underlying array in store_mean_rates
+            result['pnemap'] = ~pmap
         result['pnemap'].trt_smrs = cmaker.trt_smrs
         yield result
 
@@ -178,10 +183,10 @@ def postclassical(pgetter, N, hstats, individual_rlzs,
     for sid in sids:
         idx = sidx[sid]
         with combine_mon:
-            pc = pgetter.get_pcurve(sid)  # shape (L, R)
+            pc = pgetter.get_hcurve(sid)  # shape (L, R)
             if amplifier:
                 pc = amplifier.amplify(ampcode[sid], pc)
-                # NB: the pcurve have soil levels != IMT levels
+                # NB: the hcurve have soil levels != IMT levels
         if pc.array.sum() == 0:  # no data
             continue
         with compute_mon:
@@ -233,20 +238,18 @@ class Hazard:
     """
     Helper class for storing the PoEs
     """
-    def __init__(self, dstore, full_lt, srcidx):
+    def __init__(self, dstore, srcidx, gids):
         self.datastore = dstore
         oq = dstore['oqparam']
-        self.full_lt = full_lt
-        self.weights = full_lt.rlzs['weight']
+        self.weig = dstore['_rates/weig'][:]
         self.imtls = oq.imtls
-        self.level_weights = oq.imtls.array.flatten() / oq.imtls.array.sum()
         self.sids = dstore['sitecol/sids'][:]
         self.srcidx = srcidx
+        self.gids = gids
         self.N = len(dstore['sitecol/sids'])
         self.M = len(oq.imtls)
         self.L = oq.imtls.size
         self.L1 = self.L // self.M
-        self.R = full_lt.get_num_paths()
         self.acc = AccumDict(accum={})
         self.offset = 0
 
@@ -256,63 +259,55 @@ class Hazard:
         :param pmap: a ProbabilityMap
         :returns: an array of rates of shape (N, M, L1)
         """
-        out = numpy.zeros((self.N, self.L))
-        rates = disagg.to_rates(pmap.array)  # shape (N, L, G)
-        for trt_smr in pmap.trt_smrs:
-            allrlzs = self.full_lt.get_rlzs_by_gsim(trt_smr).values()
-            for i, rlzs in enumerate(allrlzs):
-                out[:, :] += rates[:, :, i] * self.weights[rlzs].sum()
-        return out.reshape((self.N, self.M, self.L1))
+        gids = self.gids[pmap.grp_id]
+        rates = disagg.to_rates(pmap.array) @ self.weig[gids]  # shape (N, L)
+        return rates.reshape((self.N, self.M, self.L1))
 
-    def store_poes(self, pnes, the_sids, gid=0):
+    def store_rates(self, pnemap, the_sids, gid=0):
         """
-        Store 1-pnes inside the _poes dataset
+        Store pnes inside the _rates dataset
         """
-        avg_poe = 0
+        if self.N == 1:  # single site, store mean_rates_ss
+            mean_rates_ss = numpy.zeros((self.M, self.L1))
         # store by IMT to save memory
-        for imt in self.imtls:
+        for m, imt in enumerate(self.imtls):
             slc = self.imtls(imt)
-            poes = 1. - pnes[:, slc]
-            # Physically, an extremely small intensity measure level can have an
-            # extremely large probability of exceedence,however that probability
-            # cannot be exactly 1 unless the level is exactly 0. Numerically,
-            # the PoE can be 1 and this give issues when calculating the damage:
-            # there is a log(0) in scientific.annual_frequency_of_exceedence.
-            # Here we solve the issue by replacing the unphysical probabilities
-            # 1 with .9999999999999999 (the float64 closest to 1).
-            poes[poes == 1.] = .9999999999999999
-            # the nonzero below uses a lot of memory, however it is useful
-            # to reduce the storage a lot (~3 times for EUR)
-            idxs, lids, gids = poes.nonzero()
+            rates = pnemap.to_rates(slc)  # shape (N, L1, G)
+            idxs, lids, gids = rates.nonzero()
             if len(idxs) == 0:  # happens in case_60
                 return 0
             sids = the_sids[idxs]
-            hdf5.extend(self.datastore['_poes/sid'], sids)
-            hdf5.extend(self.datastore['_poes/gid'], gids + gid)
-            hdf5.extend(self.datastore['_poes/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_poes/poe'], poes[idxs, lids, gids])
+            rate = rates[idxs, lids, gids]
+            hdf5.extend(self.datastore['_rates/sid'], sids)
+            hdf5.extend(self.datastore['_rates/gid'], gids + gid)
+            hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
+            hdf5.extend(self.datastore['_rates/rate'], rate)
 
             # slice_by_sid contains 3x6=18 slices in classical/case_22
             # which has 6 IMTs each one with 20 levels
             sbs = build_slice_by_sid(sids, self.offset)
-            hdf5.extend(self.datastore['_poes/slice_by_sid'], sbs)
+            hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
             self.offset += len(sids)
-            avg_poe += poes.mean(axis=(0, 2)) @ self.level_weights[slc]
-        self.acc['avg_poe'] = avg_poe
+            if self.N == 1:  # single site, store mean_rates_ss
+                mean_rates_ss[m] += rates[0] @ self.weig
+
+        if self.N == 1:  # single site
+            self.datastore['mean_rates_ss'] = mean_rates_ss
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
     def store_mean_rates_by_src(self, pmaps):
         """
-        Store data inside mean_rates_by_src
+        Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
         """
         mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
-                idx = self.srcidx[basename(key, '!;:')]
+                idx = self.srcidx[basename(key, ';:')]
                 mean_rates_by_src[..., idx] += self.get_rates(pmap)
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
+        return mean_rates_by_src
 
 
 @base.calculators.add('classical', 'ucerf_classical')
@@ -322,7 +317,7 @@ class ClassicalCalculator(base.HazardCalculator):
     """
     core_task = classical
     precalc = 'preclassical'
-    accept_precalc = ['preclassical', 'classical', 'aftershock']
+    accept_precalc = ['preclassical', 'classical']
     SLOW_TASK_ERROR = False
 
     def agg_dicts(self, acc, dic):
@@ -353,10 +348,10 @@ class ClassicalCalculator(base.HazardCalculator):
                 store_ctxs(self.datastore, dic['rup_data'], grp_id)
 
         pnemap = dic['pnemap']  # probabilities of no exceedence
-        pmap_by_src = dic.pop('pmap_by_src', {})  # non-empty for disagg_by_src
-        # len(pmap_by_src) > 1 only for mutex sources, see contexts.py
-        for source_id, pm in pmap_by_src.items():
+        source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
+        if source_id:
             # store the poes for the given source
+            pm = ~pnemap
             acc[source_id] = pm
             pm.grp_id = grp_id
             pm.trt_smrs = pnemap.trt_smrs
@@ -396,8 +391,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.cmakers = read_cmakers(self.datastore, self.csm)
         self.cfactor = numpy.zeros(3)
         self.rel_ruptures = AccumDict(accum=0)  # grp_id -> rel_ruptures
-        self.datastore.create_df('_poes', poes_dt.items())
-        self.datastore.create_dset('_poes/slice_by_sid', slice_dt)
+        self.datastore.create_df('_rates', rates_dt.items())
+        self.datastore.create_dset('_rates/slice_by_sid', slice_dt)
         # NB: compressing the dataset causes a big slowdown in writing :-(
 
         oq = self.oqparam
@@ -445,15 +440,19 @@ class ClassicalCalculator(base.HazardCalculator):
             oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-            if '_poes' in parent:
+            if '_rates' in parent:
                 self.build_curves_maps()  # repeat post-processing
                 return {}
         else:
             maxw = self.max_weight
         self.init_poes()
+        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
+        weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
+            self.trt_rlzs)])
+        self.datastore['_rates/weig'] = weig
         srcidx = {name: i for i, name in enumerate(self.csm.get_basenames())}
-        self.haz = Hazard(self.datastore, self.full_lt, srcidx)
-        rlzs = self.haz.R == 1 or oq.individual_rlzs
+        self.haz = Hazard(self.datastore, srcidx, self.gids)
+        rlzs = self.R == 1 or oq.individual_rlzs
         if not rlzs and not oq.hazard_stats():
             raise InvalidFile('%(job_ini)s: you disabled all statistics',
                               oq.inputs)
@@ -462,7 +461,6 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.warning('numba is not installed: using the slow algorithm')
 
         t0 = time.time()
-        req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         max_gb = float(config.memory.pmap_max_gb)
         if oq.disagg_by_src or self.N < oq.max_sites_disagg or req_gb < max_gb:
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
@@ -472,11 +470,17 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
-            raise RuntimeError('There are no ruptures close to the site(s)')
-        logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
-            int(self.cfactor[1]), int(self.cfactor[0]),
-            self.cfactor[1] / self.cfactor[0]))
-        if '_poes' in self.datastore:
+            if self.N == 1:
+                logging.error('The site is far from all seismic sources'
+                              ' included in the hazard model')
+            else:
+                raise RuntimeError('The sites are far from all seismic sources'
+                                   ' included in the hazard model')
+        else:
+            logging.info('cfactor = {:_d}/{:_d} = {:.1f}'.format(
+                int(self.cfactor[1]), int(self.cfactor[0]),
+                self.cfactor[1] / self.cfactor[0]))
+        if '_rates' in self.datastore:
             self.build_curves_maps()
         if not oq.hazard_calculation_id:
             self.classical_time = time.time() - t0
@@ -519,11 +523,26 @@ class ClassicalCalculator(base.HazardCalculator):
         smap = parallel.Starmap(classical, allargs, h5=self.datastore.hdf5)
         acc = smap.reduce(self.agg_dicts, acc)
         with self.monitor('storing PoEs', measuremem=True):
-            nbytes = self.haz.store_poes(self.pmap.array, self.pmap.sids)
+            nbytes = self.haz.store_rates(self.pmap, self.pmap.sids)
         logging.info('Stored %s of PoEs', humansize(nbytes))
         del self.pmap
-        if self.oqparam.disagg_by_src:
-            self.haz.store_mean_rates_by_src(acc)
+        if oq.disagg_by_src:
+            mrs = self.haz.store_mean_rates_by_src(acc)
+            if oq.use_rates and self.N == 1:  # sanity check
+                self.check_mean_rates(mrs)
+
+    def check_mean_rates(self, mean_rates_by_src):
+        """
+        The sum of the mean_rates_by_src must correspond to the mean_rates_ss
+        """
+        try:
+            exp = self.datastore['mean_rates_ss'][:]
+        except KeyError:  # if there are no ruptures close to the site
+            return
+        got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
+        # skipping the first value which can be wrong due to the cutoff
+        # (happens in logictree/case_05)
+        numpy.testing.assert_allclose(got[1:], exp[1:], atol=1E-5)
 
     def execute_big(self, maxw):
         """
@@ -550,12 +569,13 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
-        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
+        for dic in parallel.Starmap(
+                classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
-            nbytes = self.haz.store_poes(pnemap.array, pnemap.sids, gid)
-        logging.info('Stored %s of PoEs', humansize(nbytes))
+            nbytes = self.haz.store_rates(pnemap, pnemap.sids, gid)
+        logging.info('Stored %s of rates', humansize(nbytes))
         return {}
 
     def store_info(self):
@@ -664,21 +684,19 @@ class ClassicalCalculator(base.HazardCalculator):
         if not oq.hazard_curves:  # do nothing
             return
         N, S, M, P, L1, individual = self._create_hcurves_maps()
-        poes_gb = self.datastore.getsize('_poes') / 1024**3
-        if poes_gb < .1:
-            ct = 1
-        elif poes_gb < 2:
-            ct = int(poes_gb * 10)
+        poes_gb = self.datastore.getsize('_rates') / 1024**3
+        if poes_gb < 1:
+            ct = int(poes_gb * 32) or 1
         else:
-            ct = int(poes_gb) + 18  # number of tasks > number of GB
+            ct = int(poes_gb) + 32  # number of tasks > number of GB
         if ct > 1:
             logging.info('Producing %d postclassical tasks', ct)
-        if '_poes' in set(self.datastore):
+        if '_rates' in set(self.datastore):
             dstore = self.datastore
         else:
             dstore = self.datastore.parent
         sites_per_task = int(numpy.ceil(self.N / ct))
-        sbs = dstore['_poes/slice_by_sid'][:]
+        sbs = dstore['_rates/slice_by_sid'][:]
         sbs['sid'] //= sites_per_task
         # NB: there is a genious idea here, to split in tasks by using
         # the formula ``taskno = sites_ids // sites_per_task`` and then
@@ -715,8 +733,8 @@ class ClassicalCalculator(base.HazardCalculator):
             logging.info('Producing %s of hazard maps', humansize(hmbytes))
         if not performance.numba:
             logging.warning('numba is not installed: using the slow algorithm')
-        if 'delta_rates' in self.datastore.parent:
-            pass  # do nothing for the aftershock calculator, avoids an error
+        if 'delta_rates' in oq.inputs:
+            pass  # avoid an HDF5 error
         else:  # in all the other cases
             self.datastore.swmr_on()
         parallel.Starmap(

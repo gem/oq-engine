@@ -32,6 +32,7 @@ import itertools
 
 import numpy
 import pandas
+from scipy.spatial import cKDTree
 import requests
 from shapely import wkt
 
@@ -48,7 +49,9 @@ from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
     pmf, logictree, gsim_lt, get_smlt)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.utils import BBoxError, cross_idl
+from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.utils import (
+    BBoxError, cross_idl, spherical_to_cartesian)
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -437,21 +440,39 @@ def get_poor_site_model(fname):
     return numpy.array(coords, dt)
 
 
+def get_site_model_around(site_model_hdf5, rup, dist):
+    """
+    :returns: site model close to the rupture
+    """
+    with hdf5.File(site_model_hdf5) as f:
+        sm = f['site_model'][:]
+    xyz_all = spherical_to_cartesian(sm['lon'], sm['lat'], 0)
+    xyz = spherical_to_cartesian(rup['lon'], rup['lat'], rup['dep'])
+    kdt = cKDTree(xyz_all)
+    idxs = kdt.query_ball_point(xyz, dist, eps=.001)
+    return sm[idxs]
+
+    
 def get_site_model(oqparam):
     """
-    Convert the NRML file into an array of site parameters.
-
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     :returns:
         an array with fields lon, lat, vs30, ...
     """
+    fnames = oqparam.inputs['site_model']
+    if len(fnames) == 1 and fnames[0].endswith('.hdf5'):
+        rup = oqparam.rupture_dict
+        # global site model close to the rupture
+        dist = oqparam.maximum_distance('*')(rup['mag'])
+        return get_site_model_around(fnames[0], rup, dist)
+
     req_site_params = get_gsim_lt(oqparam).req_site_params
     if 'amplification' in oqparam.inputs:
         req_site_params.add('ampcode')
     arrays = []
     sm_fieldsets = {}
-    for fname in oqparam.inputs['site_model']:
+    for fname in fnames:
         if isinstance(fname, str) and not fname.endswith('.xml'):
 
             # check if the file is a list of lon,lat without header
@@ -545,7 +566,7 @@ def get_site_model(oqparam):
                     f'Fields {fieldsets_diff} present in'
                     f' {this_sm_fname} were not found in {other_sm_fname}')
 
-    return numpy.concatenate(arrays)
+    return numpy.concatenate(arrays, dtype=arrays[0].dtype)
 
 
 def get_no_vect(gsim_lt):
@@ -569,10 +590,7 @@ def get_site_collection(oqparam, h5=None):
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
     """
-    if oqparam.calculation_mode == 'aftershock':
-        return
-    ss = oqparam.sites_slice  # can be None or (start, stop)
-    if h5 and 'sitecol' in h5 and not ss:
+    if h5 and 'sitecol' in h5 and not oqparam.sites_slice:
         return h5['sitecol']
     mesh = get_mesh(oqparam, h5)
     if mesh is None and oqparam.ground_motion_fields:
@@ -605,6 +623,7 @@ def get_site_collection(oqparam, h5=None):
             df = pandas.read_csv(oqparam.inputs['station_data'])
             sitecol = sitecol.extend(df.LONGITUDE.to_numpy(),
                                      df.LATITUDE.to_numpy())
+    ss = oqparam.sites_slice
     if ss:
         if 'custom_site_id' not in sitecol.array.dtype.names:
             gh = sitecol.geohash(6)
@@ -696,10 +715,17 @@ def get_rupture(oqparam):
     :returns:
         an hazardlib rupture
     """
-    [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
-    conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
-    rup = conv.convert_node(rup_node)
-    rup.tectonic_region_type = '*'  # there is not TRT for scenario ruptures
+    if oqparam.rupture_dict:
+        r = oqparam.rupture_dict
+        hypo = Point(r['lon'], r['lat'], r['dep'])
+        rup = source.rupture.build_planar(
+            hypo, r['mag'], r.get('rake'),
+            r.get('strike', 0), r.get('dip', 90), r.get('trt', '*'))
+    else:
+        [rup_node] = nrml.read(oqparam.inputs['rupture_model'])
+        conv = sourceconverter.RuptureConverter(oqparam.rupture_mesh_spacing)
+        rup = conv.convert_node(rup_node)
+        rup.tectonic_region_type = '*'  # there is no TRT for scenario ruptures
     return rup
 
 
@@ -959,7 +985,6 @@ def get_exposure(oqparam, h5=None):
         exposure = Global.exposure = asset.Exposure.read_all(
             oqparam.inputs['exposure'], oqparam.calculation_mode,
             oqparam.ignore_missing_costs,
-            by_country='country' in asset.tagset(oqparam.aggregate_by),
             errors='ignore' if oqparam.ignore_encoding_errors else None,
             infr_conn_analysis=oqparam.infrastructure_connectivity_analysis,
             aggregate_by=oqparam.aggregate_by)
@@ -978,13 +1003,13 @@ def get_station_data(oqparam, sitecol):
         the hazard site collection
     :returns: station_data, observed_imts
     """
+    complete = sitecol.complete
     # Read the station data and associate the site ID from longitude, latitude
     df = pandas.read_csv(oqparam.inputs['station_data'])
     lons = numpy.round(df['LONGITUDE'].to_numpy(), 5)
     lats = numpy.round(df['LATITUDE'].to_numpy(), 5)
-    sid = {(lon, lat): sid
-           for lon, lat, sid in sitecol.complete[['lon', 'lat', 'sids']]}
-    sids = U32([sid[lon, lat] for lon, lat in zip(lons, lats)])
+    dic = {(lo, la): sid for lo, la, sid in complete[['lon', 'lat', 'sids']]}
+    sids = U32([dic[lon, lat] for lon, lat in zip(lons, lats)])
 
     # Identify the columns with IM values
     # Replace replace() with removesuffix() for pandas ≥ 1.4
@@ -1265,6 +1290,30 @@ def reduce_source_model(smlt_file, source_ids, remove=True):
             os.remove(path)
     parallel.Starmap.shutdown()
     return good, total
+
+
+def read_delta_rates(fname, idx_nr):
+    """
+    :param fname:
+        path to a CSV file with fields (source_id, rup_id, delta)
+    :param idx_nr:
+        dictionary source_id -> (src_id, num_ruptures) with Ns sources
+    :returns:
+        list of Ns floating point arrays of different lenghts
+    """
+    delta_df = pandas.read_csv(fname, converters=dict(
+        source_id=str, rup_id=int, delta=float), index_col=0)
+    assert list(delta_df.columns) == ['rup_id', 'delta']
+    delta = [numpy.zeros(0) for _ in idx_nr]
+    for src, df in delta_df.groupby(delta_df.index):
+        idx, nr = idx_nr[src]
+        rupids = df.rup_id.to_numpy()
+        if len(numpy.unique(rupids)) < len(rupids):
+            raise InvalidFile('%s: duplicated rup_id for %s' % (fname, src))
+        drates = numpy.zeros(nr)
+        drates[rupids] = df.delta.to_numpy()
+        delta[idx] = drates
+    return delta
 
 
 def get_shapefiles(dirname):

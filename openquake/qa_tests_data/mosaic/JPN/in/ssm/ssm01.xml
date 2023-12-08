@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    investigation_time="50."
+    name="JSHIS2021"
+    >
+        <sourceGroup
+        rup_interdep="indep"
+        src_interdep="indep"
+        tectonicRegion="Active Shallow Crust"
+        >
+            <pointSource
+            id="gs_LND_CURA_0_95"
+            name="LND_CURA"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            142.304 42.698
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        34.995
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        35.004999999999995
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <arbitraryMFD>
+                    <magnitudes>
+                        5.0 5.1 5.199999999999999 5.299999999999999 5.399999999999999 5.499999999999998 5.599999999999998 5.6999999999999975 5.799999999999997 5.899999999999997 5.9999999999999964 6.099999999999996 6.199999999999996 6.299999999999995 6.399999999999995 6.499999999999995 6.599999999999994 6.699999999999994 6.799999999999994 6.899999999999993 6.999999999999993 7.0999999999999925 7.199999999999992 7.299999999999992 7.3999999999999915 7.499999999999991
+                    </magnitudes>
+                    <occurRates>
+                        3.0103809659673805e-05 2.4469295144178475e-05 1.9889389802214292e-05 1.6166702979122824e-05 1.3140789527192098e-05 1.068123473419135e-05 8.682033542262666e-06 7.057021805511392e-06 5.736162676755132e-06 4.662528069348118e-06 3.789845097237835e-06 3.0805017465698124e-06 2.503925824708751e-06 2.035267320534634e-06 1.654327386682091e-06 1.3446877836212106e-06 1.0930032652403882e-06 8.884264082543909e-07 7.221400959952339e-07 5.869775069705986e-07 4.771132299676282e-07 3.878121929833082e-07 3.152255849973538e-07 2.562249749615294e-07 2.0826747865211344e-07 1.6928616217299312e-07
+                    </occurRates>
+                </arbitraryMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="45.0" probability="1.0" rake="0.0" strike="315.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="35.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="gs_LND_CURA_0_96"
+            name="LND_CURA"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            142.404 42.697
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        34.995
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        35.004999999999995
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <arbitraryMFD>
+                    <magnitudes>
+                        5.0 5.1 5.199999999999999 5.299999999999999 5.399999999999999 5.499999999999998 5.599999999999998 5.6999999999999975 5.799999999999997 5.899999999999997 5.9999999999999964 6.099999999999996 6.199999999999996 6.299999999999995 6.399999999999995 6.499999999999995 6.599999999999994 6.699999999999994 6.799999999999994 6.899999999999993 6.999999999999993 7.0999999999999925 7.199999999999992 7.299999999999992 7.3999999999999915 7.499999999999991
+                    </magnitudes>
+                    <occurRates>
+                        3.716298022626969e-05 3.0207204399515028e-05 2.455333754393227e-05 1.9957702029385835e-05 1.6222229241994993e-05 1.3185922968103143e-05 1.0717920572263336e-05 8.711852910958633e-06 7.081259898360222e-06 5.755864138276279e-06 4.67854201848554e-06 3.8028617237810307e-06 3.091082057841633e-06 2.512525824581003e-06 2.0422576628698074e-06 1.660009350250554e-06 1.34930625700139e-06 1.096757301341889e-06 8.914778033564728e-07 7.246203630510798e-07 5.889935437218266e-07 4.787519261607347e-07 3.891441752557869e-07 3.163082608354142e-07 2.571050069218184e-07 2.0898279548463618e-07
+                    </occurRates>
+                </arbitraryMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="45.0" probability="1.0" rake="0.0" strike="315.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="35.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="gs_LND_CURA_0_97"
+            name="LND_CURA"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            142.504 42.697
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        34.995
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        35.004999999999995
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <arbitraryMFD>
+                    <magnitudes>
+                        5.0 5.1 5.199999999999999 5.299999999999999 5.399999999999999 5.499999999999998 5.599999999999998 5.6999999999999975 5.799999999999997 5.899999999999997 5.9999999999999964 6.099999999999996 6.199999999999996 6.299999999999995 6.399999999999995 6.499999999999995 6.599999999999994 6.699999999999994 6.799999999999994 6.899999999999993 6.999999999999993 7.0999999999999925 7.199999999999992 7.299999999999992 7.3999999999999915 7.499999999999991
+                    </magnitudes>
+                    <occurRates>
+                        4.605562100555173e-05 3.743541419420077e-05 3.0428647042289083e-05 2.4733332881559044e-05 2.010400773257614e-05 1.6341150982236917e-05 1.328258618760712e-05 1.0796491386866841e-05 8.775717666748233e-06 7.133171120773374e-06 5.798059163985074e-06 4.712839423011976e-06 3.830739700805342e-06 3.113742128295916e-06 2.5309446213446727e-06 2.0572290229503426e-06 1.6721785285924941e-06 1.3591977365143613e-06 1.1047973977400446e-06 8.980130390617948e-07 7.299324020626906e-07 5.933113311335182e-07 4.822615555312666e-07 3.9199690910858113e-07 3.186270499654596e-07 2.5898978948726914e-07
+                    </occurRates>
+                </arbitraryMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="45.0" probability="1.0" rake="0.0" strike="315.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="35.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="gs_LND_CURA_0_98"
+            name="LND_CURA"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            142.604 42.697
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        34.995
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        35.004999999999995
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <arbitraryMFD>
+                    <magnitudes>
+                        5.0 5.1 5.199999999999999 5.299999999999999 5.399999999999999 5.499999999999998 5.599999999999998 5.6999999999999975 5.799999999999997 5.899999999999997 5.9999999999999964 6.099999999999996 6.199999999999996 6.299999999999995 6.399999999999995 6.499999999999995 6.599999999999994 6.699999999999994 6.799999999999994 6.899999999999993 6.999999999999993 7.0999999999999925 7.199999999999992 7.299999999999992 7.3999999999999915 7.499999999999991
+                    </magnitudes>
+                    <occurRates>
+                        5.370351018930691e-05 4.3651851906998334e-05 3.54815573170843e-05 2.8840492548351723e-05 2.3442432444503607e-05 1.9054724464007906e-05 1.548826152144425e-05 1.2589331606960094e-05 1.0232992908246392e-05 8.317688907513485e-06 6.760871367986595e-06 5.495442563759627e-06 4.466863415650901e-06 3.6308028957780566e-06 2.9512273918653866e-06 2.3988476842475725e-06 1.9498566013860105e-06 1.5849029477505676e-06 1.2882574810900972e-06 1.0471349933067268e-06 8.511432771029981e-07 6.918352292572335e-07 5.623447864976653e-07 4.570910030710878e-07 3.7153751596023836e-07 3.019970308722882e-07
+                    </occurRates>
+                </arbitraryMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="45.0" probability="1.0" rake="0.0" strike="315.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="35.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+            <pointSource
+            id="gs_LND_CURA_0_99"
+            name="LND_CURA"
+            >
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>
+                            142.704 42.697
+                        </gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>
+                        34.995
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        35.004999999999995
+                    </lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>
+                    PointMSR
+                </magScaleRel>
+                <ruptAspectRatio>
+                    1
+                </ruptAspectRatio>
+                <arbitraryMFD>
+                    <magnitudes>
+                        5.0 5.1 5.199999999999999 5.299999999999999 5.399999999999999 5.499999999999998 5.599999999999998 5.6999999999999975 5.799999999999997 5.899999999999997 5.9999999999999964 6.099999999999996 6.199999999999996 6.299999999999995 6.399999999999995 6.499999999999995 6.599999999999994 6.699999999999994 6.799999999999994 6.899999999999993 6.999999999999993 7.0999999999999925 7.199999999999992 7.299999999999992 7.3999999999999915 7.499999999999991
+                    </magnitudes>
+                    <occurRates>
+                        5.694569323487633e-05 4.6287197225427016e-05 3.762364641253333e-05 3.0581647933475045e-05 2.4857696674915303e-05 2.0205094418922032e-05 1.6423317325676767e-05 1.3349373498956652e-05 1.0850778151624292e-05 8.819843605766909e-06 7.1690380305621525e-06 5.827212882781896e-06 4.7365364553097e-06 3.85000137179946e-06 3.1293986022722477e-06 2.5436706811681637e-06 2.0675731527254066e-06 1.6805865529368267e-06 1.366032035282086e-06 1.1103525243350339e-06 9.02528415479357e-07 7.33602637806853e-07 5.962946107478893e-07 4.846864562400778e-07 3.9396794240337077e-07 3.202291659758404e-07
+                    </occurRates>
+                </arbitraryMFD>
+                <nodalPlaneDist>
+                    <nodalPlane dip="45.0" probability="1.0" rake="0.0" strike="315.0"/>
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth depth="35.0" probability="1.0"/>
+                </hypoDepthDist>
+            </pointSource>
+        </sourceGroup>
+        <sourceGroup
+        name="Nankai"
+        rup_interdep="indep"
+        src_interdep="mutex"
+        srcs_weights="0.0125 0.0125 0.0125 0.0125 0.1625 0.1625 0.0125 0.0125 0.025 0.025 0.05 0.05 0.325 0.025 0.1"
+        tectonicRegion="Subduction Interface"
+        >
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:01" name="Nankai Trough - CASE 1"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:02" name="Nankai Trough - CASE 2"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:03" name="Nankai Trough - CASE 3"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:04" name="Nankai Trough - CASE 4"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:05" name="Nankai Trough - CASE 5"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:06" name="Nankai Trough - CASE 6"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:07" name="Nankai Trough - CASE 7"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:08" name="Nankai Trough - CASE 8"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:09" name="Nankai Trough - CASE 9"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:10" name="Nankai Trough - CASE 10"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:11" name="Nankai Trough - CASE 11"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:12" name="Nankai Trough - CASE 12"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:13" name="Nankai Trough - CASE 13"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:14" name="Nankai Trough - CASE 14"/>
+            <nonParametricSeismicSource id="IF-NPSS-Nankai_Trough:15" name="Nankai Trough - CASE 15"/>
+        </sourceGroup>
+    </sourceModel>
+</nrml>

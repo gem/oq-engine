@@ -24,8 +24,8 @@ from scipy.spatial import distance
 from shapely import geometry
 from openquake.baselib.general import not_equal, get_duplicates
 from openquake.hazardlib.geo.utils import (
-    fix_lon, cross_idl, _GeographicObjects, geohash, spherical_to_cartesian,
-    get_middle_point)
+    fix_lon, cross_idl, _GeographicObjects, geohash, CODE32,
+    spherical_to_cartesian, get_middle_point)
 from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
@@ -179,6 +179,12 @@ site_param_dt = {
     'h800': numpy.float64,
     'geology': (numpy.string_, 20),
     'amplfactor': numpy.float64,
+    'ch_ampl03': numpy.float64,
+    'ch_ampl06': numpy.float64,
+    'ch_phis2s03': numpy.float64,
+    'ch_phis2s06': numpy.float64,
+    'ch_phiss03': numpy.float64,
+    'ch_phiss06': numpy.float64,
     'fpeak': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
     'THV': numpy.float64,
@@ -196,11 +202,14 @@ site_param_dt = {
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
+    'relief': numpy.float64,
     'gwd': numpy.float64,
     'cti': numpy.float64,
     'dc': numpy.float64,
     'dr': numpy.float64,
     'dwb': numpy.float64,
+    'zwb': numpy.float64,
+    'tri': numpy.float64,
     'hwater': numpy.float64,
     'precip': numpy.float64,
 
@@ -391,7 +400,7 @@ class SiteCollection(object):
             self._set('z2pt5', oq.reference_depth_to_2pt5km_per_sec)
         if 'backarc' in req_site_params:
             self._set('backarc', oq.reference_backarc)
-        
+
     def filtered(self, indices):
         """
         :param indices:
@@ -631,8 +640,8 @@ class SiteCollection(object):
                 continue
             dt = site_param_dt[param]
             if dt is numpy.float64 and (self.array[param] == 0.).all():
-                raise ValueError('The site parameter %s is always zero: please '
-                                 'check the site model' % param)
+                raise ValueError('The site parameter %s is always zero: please'
+                                 ' check the site model' % param)
         return site_model
 
     def extend(self, lons, lats):
@@ -690,7 +699,7 @@ class SiteCollection(object):
         :returns: an array of N geohashes, one per site
         """
         l = numpy.uint8(length)
-        arr = geohash(self['lon'], self['lat'], l)
+        arr = CODE32[geohash(self['lon'], self['lat'], l)]
         return [row.tobytes() for row in arr]
 
     def num_geohashes(self, length):

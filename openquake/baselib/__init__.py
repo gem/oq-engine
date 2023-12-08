@@ -118,8 +118,6 @@ if config.directory.custom_tmp:
 
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
-if config.dbserver.host == 'local':
-    os.environ['OQ_DATABASE'] = 'local'
 
 # wether the engine was installed as multi_user (linux root) or not
 if sys.platform in 'win32 darwin':
@@ -130,4 +128,4 @@ else:  # linux
     config.multi_user = install_user in ('root', 'openquake')
 
 # the version is managed by packager.sh with a sed
-__version__ = '3.18.0'
+__version__ = '3.19.0'

@@ -1,25 +1,28 @@
-from typing import Optional, Union
-
-import osgeo
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# 
+# Copyright (C) 2020-2023, GEM Foundation
+# 
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from typing import Union
 import numpy as np
-import pandas as pd
-
 try:
     import xarray as xr
 except ImportError:
     pass
-
-
-from .landslide.common import (
-    static_factor_of_safety,
-    rock_slope_static_factor_of_safety,
-)
-from .landslide.newmark import (
-    newmark_critical_accel,
-    newmark_displ_from_pga_M,
-    prob_failure_given_displacement,
-)
-from .landslide.rotational import rotational_critical_accel
+from .landslide.common import static_factor_of_safety
+from .landslide.newmark import newmark_critical_accel, newmark_displ_from_pga_M
 
 
 def calc_newmark_soil_slide_single_event(
@@ -34,9 +37,6 @@ def calc_newmark_soil_slide_single_event(
     water_density: float = 1000.0,
     out_name=None,
 ) -> Union[float, np.ndarray]:
-    """
-    """
-
     fs = static_factor_of_safety(
         slope,
         cohesion,
@@ -68,8 +68,6 @@ def calc_newmark_soil_slide_event_set(
     soil_dry_density: Union[float, np.ndarray] = 1500.0,
     water_density=1000.0,
 ) -> Union[float, np.ndarray]:
-    """
-    """
     fs = static_factor_of_safety(
         slope,
         cohesion,
@@ -89,9 +87,6 @@ def calc_newmark_soil_slide_event_set(
                 for k, da in pga.data_vars.items()
             }
         )
-
-    # elif isinstance(pga, )
-
     return Dn
 
 

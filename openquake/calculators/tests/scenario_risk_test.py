@@ -21,14 +21,14 @@ import unittest
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.gsim_lt import InvalidLogicTree
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 from openquake.calculators.views import view
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
 from openquake.qa_tests_data.scenario_risk import (
     case_1, case_2, case_2d, case_1g, case_1h, case_3, case_4, case_5,
     case_6a, case_7, case_8, case_10, case_11, occupants, case_master,
-    case_shakemap, case_shapefile, reinsurance)
+    case_shakemap, case_shapefile, reinsurance, conditioned)
 
 
 aac = numpy.testing.assert_allclose
@@ -109,7 +109,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
         out = self.run_calc(case_5.__file__, 'job.ini', exports='csv')
         [fname] = out['avg_losses-rlzs', 'csv']
         self.assertEqualFiles('expected/losses_by_asset.csv', fname,
-                              delta=1E-5)  # make macos happy
+                              delta=2E-5)
 
         # TODO: check pandas
         # df = self.calc.datastore.read_df('avg_losses-rlzs', 'asset_id')
@@ -172,7 +172,7 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                       'state=*&cresta=0.11')
         self.assertEqual(obj.selected, [b'state=*', b'cresta=0.11'])
         self.assertEqual(obj.tags, [b'state=01'])
-        aac(obj.array, [[2421.5598]], atol=.02)  # from avg_losses-stats
+        aac(obj.array, [[2368.613]], atol=.02)  # from avg_losses-stats
 
         # check portfolio_loss
         fname = gettemp(view('portfolio_loss', self.calc.datastore))
@@ -277,3 +277,13 @@ class ScenarioRiskTestCase(CalculatorTestCase):
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
                               fname, delta=1E-5)
+
+    def test_conditioned_stations(self):
+        self.run_calc(conditioned.__file__, 'job.ini',
+                      calculation_mode='scenario')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(conditioned.__file__, 'job.ini',
+                      hazard_calculation_id=hc_id)
+        [fname] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', fname,
+                              ignore_gsd_fields, delta=1E-5)

@@ -26,8 +26,8 @@ import collections
 
 import numpy
 from scipy.spatial import cKDTree
+from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry
-
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
@@ -46,6 +46,19 @@ SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
+
+
+def get_dist(array, point):
+    """
+    :param array: an array of shape (3,) or (N, 3)
+    :param point: an array of shape (3)
+    :returns: distances(s) from the reference point
+    """
+    assert len(point.shape) == 1, 'Expected a vector'
+    if len(array.shape) == 1:
+        return euclidean(array, point)
+    return cdist(array, numpy.array([point]))[:, 0]  # shape N
+
 
 class BBoxError(ValueError):
     """Bounding box too large"""
@@ -112,7 +125,6 @@ class _GeographicObjects(object):
     It is possible to extract the closest object to a given location by
     calling the method .get_closest(lon, lat).
     """
-
     def __init__(self, objects):
         self.objects = objects
         if hasattr(objects, 'lons'):
@@ -205,8 +217,10 @@ class _GeographicObjects(object):
                     raise RuntimeError(
                         'Could not find any asset within the region!')
                 mesh = geo.Mesh(mesh.lons[ok], mesh.lats[ok], mesh.depths[ok])
-                assets_by_site = numpy.array(assets_by_site)[ok]
-                logging.info('Discarded %d assets outside the region', len(out))
+                assets_by_site = [
+                    assets for yes, assets in zip(ok, assets_by_site) if yes]
+                logging.info('Discarded %d assets outside the region',
+                             len(out))
         asset_dt = numpy.dtype(
             [('asset_ref', vstr), ('lon', F32), ('lat', F32)])
         assets_by_sid = collections.defaultdict(list)
@@ -279,7 +293,8 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
     for sid, lon, lat in zip(sitecol.sids, sitecol.lons, sitecol.lats):
         point = geometry.Point(lon, lat)
         result = next((index_by_id[id(o)]
-                       for o in tree.query(point) if o.contains(point)), None)
+                       for o in tree.geometries[tree.query(point)]
+                       if o.contains(point)), None)
         if result is not None:
             # associate inside
             sites[sid] = data[result].copy()
@@ -307,16 +322,24 @@ def assoc_to_polygons(polygons, data, sitecol, mode):
 
 def clean_points(points):
     """
-    Given a list of :class:`~openquake.hazardlib.geo.point.Point` objects,
-    return a new list with adjacent duplicate points removed.
+    Given a list of points, return a new list with adjacent duplicate points
+    removed.
+
+    :param points: a list of Point instances or a list of 3D arrays
     """
+    msg = 'At least two distinct points are needed for a line!'
     if not points:
-        return points
+        raise ValueError(msg)
 
     result = [points[0]]
-    for point in points:
-        if point != result[-1]:
+    isarray = isinstance(points[0], numpy.ndarray)
+    for point in points[1:]:
+        ok = isarray and (point != result[-1]).any() or point != result[-1]
+        if ok:  # different from the previous point
             result.append(point)
+
+    if len(result) < 2:
+        raise ValueError(msg)
     return result
 
 
@@ -771,12 +794,13 @@ def bbox2poly(bbox):
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
 # used in SiteCollection.geohash
-@compile(['(f8[:],f8[:],u1)', '(f4[:],f4[:],u1)'])
+@compile(['(f8[:],f8[:],u1)',
+          '(f4[:],f4[:],u1)'])
 def geohash(lons, lats, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght
 
-    >>> arr = geohash(F64([10., 10.]), F64([45., 46.]), length=5)
+    >>> arr = CODE32[geohash(F64([10., 10.]), F64([45., 46.]), length=5)]
     >>> [row.tobytes() for row in arr]
     [b'spzpg', b'u0pje']
     """
@@ -814,9 +838,19 @@ def geohash(lons, lats, length):
             if bit < 4:
                 bit += 1
             else:
-                chars[p, i] = CODE32[ch]
+                chars[p, i] = ch
                 bit = 0
                 ch = 0
                 i += 1
     return chars
 
+
+def geohash3(lons, lats):
+    """
+    :returns: a geohash of length 3 as a 16 bit integer
+
+    >>> geohash3(F64([10., 10.]), F64([45., 46.]))
+    array([24767, 26645], dtype=uint16)
+    """
+    arr = geohash(lons, lats, 3)
+    return arr[:, 0] * 1024 + arr[:, 1] * 32 + arr[:, 2]

@@ -1,0 +1,92 @@
+{% extends "engine/base.html" %}
+  <title>{% block title %}OpenQuake engine: outputs from calculation {{ calc_id }}{% endblock %}</title>
+
+  {% block main %}
+  <div class="content-wrap">
+    <div class="container">
+      <div class="row">
+        <div id="oq-body-wrapper">
+          <div class="span12">
+              <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
+              {% if warnings %}
+              <div id="warning-box" class="alert alert-warning" style=>
+                  WARNING: {{ warnings }}
+              </div>
+              {% endif %}
+              <div id="my-outputs" class="well"></div>
+              <div id="to-full-outputs">
+                <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs" class="btn btn-sm">
+                  View advanced outputs page</a>
+              </div>
+          </div>
+        </div>
+      </div>
+    </div> <!-- /.container -->
+  </div>
+  {% endblock main %}
+
+  {% block templates %}
+  <script type="text/template" id="output-table-template">
+    <table id="output_table" class="table table-hover">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th style="width: 500px;">Name</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% _.each(outputs, function(output) { %>
+        <% if (['hmaps', 'hcurves', 'uhs', 'realizations', 'fullreport', 'rtgm', 'mean_rates_by_src', 'mag_dst_eps_sig', 'mean_disagg_by_src'].indexOf(output.get('type')) >= 0) { %>
+        <%   return; // works like continue in underscore.js %>
+        <% }%>
+        {# In the general case we were using the "success" class, coloring the line in green, but the color adds no information in the list of outputs #}
+        <tr class= <%= ['asce07', 'asce41'].indexOf(output.get('type')) >= 0 ? "asce_output" : "" %> >
+          <td><%= output.get('id') || 'New' %></td>
+          <td>
+            <%= output.get('name') %>
+            <p style="clear:both;"></p>
+            {# NOTE: I couldn't easily factorize the two asce cases because of the mixed javascript and django templating syntaxes #}
+            <% if (output.get('type') == 'asce07') { %>
+              {% for key, value in asce07.items %}
+                {# NOTE: it's not trivial to format values, that might be either floats or strings #}
+                <div class="asce-key">{{ key }}</div>
+                <div class="asce-value">{{ value }}</div><br/>
+              {% endfor %}
+            <% }%>
+            <% if (output.get('type') == 'asce41') { %>
+              {% for key, value in asce41.items %}
+                {# NOTE: it's not trivial to format values, that might be either floats or strings #}
+                <div class="asce-key">{{ key }}</div>
+                <div class="asce-value">{{ value }}</div><br/>
+              {% endfor %}
+            <% }%>
+          </td>
+          <td>
+            <table class="table table-disable-hover table-condensed">
+            <% _.each(output.get('outtypes'), function(outtype) { %>
+              <% if (['npz'].indexOf(outtype) >= 0) { %>
+              <%   return; // works like continue in underscore.js %>
+              <% }%>
+              <tr>
+                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm">Download <%= outtype %></a></td>
+              </tr>
+            <% }); %>
+            </table>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </script>
+
+  {% endblock templates %}
+
+  {% block extra_script %}
+  {{ block.super }}
+  <script type="text/javascript"><!--
+    var gem_calc_id = '{{ calc_id }}';
+    //-->
+    </script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/engine_get_outputs.js"></script>
+  {% endblock extra_script %}

@@ -22,14 +22,13 @@ import socket
 import cProfile
 import warnings
 import getpass
-from pandas.core.common import SettingWithCopyWarning
+from pandas.errors import SettingWithCopyWarning
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
-from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -84,8 +83,6 @@ def main(job_ini,
     """
     # os.environ['OQ_DISTRIBUTE'] = 'processpool'
     warnings.filterwarnings("error", category=SettingWithCopyWarning)
-    if not os.environ.get('OQ_DATABASE'):
-        dbserver.ensure_on()
     user_name = getpass.getuser()
     try:
         host = socket.gethostname()
@@ -117,6 +114,7 @@ def main(job_ini,
         job.params.update(params)
         job.params['exports'] = ','.join(exports)
     run_jobs(jobs)
+
 
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')

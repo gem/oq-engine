@@ -22,12 +22,15 @@ from openquake.baselib.writers import write_csv
 
 
 DISPLAY_NAME = {
+    'asce07': 'ASCE 7-16 Parameters',
+    'asce41': 'ASCE 41-17 Parameters',
+    'mag_dst_eps_sig': "Deterministic Earthquake Scenarios",
     'asset_risk': 'Exposure + Risk',
     'gmf_data': 'Ground Motion Fields',
     'damages-rlzs': 'Asset Risk Distributions',
     'damages-stats': 'Asset Risk Statistics',
-    'mean_rates_by_src': 'Mean Hazard Rates by Source',
-    'mean_disagg_by_src': 'Mean Disaggregation Rates By Source',
+    'mean_rates_by_src': 'Hazard Curves per Source',
+    'mean_disagg_by_src': 'Mag-Dist-Eps Disaggregation per Source',
     'risk_by_event': 'Aggregated Risk By Event',
     'events': 'Events',
     'event_based_mfd': 'Annual Frequency of Events',

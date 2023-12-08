@@ -16,21 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import platform
-import unittest
 import numpy
 from numpy.testing import assert_almost_equal as aae
 from openquake.qa_tests_data.scenario import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8,
     case_9, case_10, case_11, case_12, case_13, case_14, case_15, case_16,
     case_17, case_18, case_19, case_20, case_21, case_22, case_23, case_24,
-    case_26)
+    case_26, case_27, case_28)
 from openquake.baselib.general import gettemp
 from openquake.hazardlib import InvalidFile, nrml
 from openquake.calculators.export import export
 from openquake.calculators.views import text_table, view
-from openquake.calculators.tests import CalculatorTestCase
+from openquake.calculators.tests import CalculatorTestCase, ignore_gsd_fields
 
 
 def count_close(gmf_value, gmvs_site_one, gmvs_site_two, delta=0.1):
@@ -166,8 +163,8 @@ class ScenarioTestCase(CalculatorTestCase):
         # choosing invalid GMPE
         with self.assertRaises(RuntimeError) as ctx:
             self.run_calc(case_15.__file__, 'job.ini')
-        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, source_id=0)"
-                      " CorrelationButNoInterIntraStdDevs", str(ctx.exception))
+        self.assertIn("([AtkinsonBoore2006Modified2011], PGA, "
+                      "CorrelationButNoInterIntraStdDevs)", str(ctx.exception))
 
     def test_case_16(self):
         # check exposures with exposureFields
@@ -176,11 +173,10 @@ class ScenarioTestCase(CalculatorTestCase):
         self.assertEqual(len(assetcol), 2372)
         self.assertEqual(
             sorted(assetcol.array.dtype.names),
-            sorted(['id', 'ordinal', 'lon', 'lat', 'site_id', 'value-area',
-                    'value-contents', 'value-nonstructural', 'value-number',
-                    'occupants_avg', 'occupants_night', 'value-structural',
-                    'ideductible', 'taxonomy', 'NAME_2', 'ID_2', 'ID_1',
-                    'OCCUPANCY', 'NAME_1']))
+            ['ID_1', 'ID_2', 'NAME_1', 'NAME_2', 'OCCUPANCY', 'id',
+             'ideductible', 'lat', 'lon', 'occupants_avg', 'occupants_night',
+             'ordinal', 'site_id', 'taxonomy', 'value-area', 'value-contents',
+             'value-nonstructural', 'value-number', 'value-structural'])
 
     def test_case_17(self):
         # CSV exposure in latin1
@@ -214,13 +210,13 @@ class ScenarioTestCase(CalculatorTestCase):
         aae(new.sig_inter_PGA.unique(), 0)
         aae(new.eps_inter_PGA.mean(), 0.027470892)
 
-    def test_case_21(self):
+    def test_case_21_stations(self):
         # conditioned gmfs
         self.run_calc(case_21.__file__, 'job.ini', concurrent_tasks='0')
         fname, _, _ = export(('gmf_data', 'csv'), self.calc.datastore)
         self.assertEqualFiles('gmf-data.csv', fname)
 
-    def test_case_21_different_columns(self):
+    def test_case_21_different_columns_stations(self):
         # conditioned gmfs
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_21.__file__, 'job_different_columns.ini',
@@ -273,16 +269,14 @@ class ScenarioTestCase(CalculatorTestCase):
         with self.assertRaises(nrml.DuplicatedID):
             self.run_calc(case_23.__file__, 'job.ini')
 
-    @unittest.skipIf(
-        sys.platform == 'darwin' and platform.processor() == 'arm',
-        reason='Skipped on MacOS M1 (it would need delta=1E-4)')
-    def test_case_24(self):
+    def test_case_24_stations(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         self.run_calc(case_24.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f)
+        self.assertEqualFiles('expected/avg_gmf.csv', f,
+                              ignore_gsd_fields, delta=1E-5)
 
-    def test_case_24_station_with_zero_im_value(self):
+    def test_case_24_station_with_zero_im_value_stations(self):
         # conditioned GMFs with AbrahamsonEtAl2014 (ry0)
         with self.assertRaises(InvalidFile) as ctx:
             self.run_calc(case_24.__file__,
@@ -294,11 +288,20 @@ class ScenarioTestCase(CalculatorTestCase):
             'stationlist_seismic_zero_im_value.csv',
             str(ctx.exception))
 
-    @unittest.skipIf(
-        sys.platform == 'darwin' and platform.processor() == 'arm',
-        reason='Skipped on MacOS M1 (it would need delta=1E-5)')
-    def test_case_26(self):
+    def test_case_26_stations(self):
         # conditioned GMFs with extreme_gmv
         self.run_calc(case_26.__file__, 'job.ini')
         [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/avg_gmf.csv', f)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+
+    def test_case_27(self):
+        # TodorovicSilva2022NonParametric
+        self.run_calc(case_27.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)
+
+    def test_case_28(self):
+        # rupture_dict
+        self.run_calc(case_28.__file__, 'job.ini')
+        [f] = export(('avg_gmf', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/avg_gmf.csv', f, delta=1E-5)

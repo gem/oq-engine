@@ -600,6 +600,7 @@ class IterResult(object):
 
     def _iter(self):
         first_time = True
+        self.counts = 0
         for result in self.iresults:
             msg = check_mem_usage()
             # log a warning if too much memory is used
@@ -607,6 +608,7 @@ class IterResult(object):
                 logging.warning(msg)
                 first_time = False  # warn only once
             self.nbytes += result.nbytes
+            self.counts += 1
             yield result.get()
 
     def __iter__(self):
@@ -619,10 +621,12 @@ class IterResult(object):
         finally:
             items = sorted(self.nbytes.items(), key=operator.itemgetter(1))
             nb = {k: humansize(v) for k, v in reversed(items)}
-            msg = nb if len(nb) < 10 else {
-                'tot': humansize(sum(self.nbytes.values()))}
-            logging.info('Received %s in %d seconds from %s',
-                         msg, time.time() - t0, self.name)
+            recv = sum(self.nbytes.values())
+            msg = nb if len(nb) < 10 else {'tot': humansize(recv)}
+            mean = recv / (self.counts or 1)
+            logging.info('Received %d * %s %s in %d seconds from %s',
+                         self.counts, humansize(mean), msg,
+                         time.time() - t0, self.name)
 
     def reduce(self, agg=operator.add, acc=None):
         if acc is None:
@@ -764,6 +768,7 @@ class Starmap(object):
             match = re.search(r'(\d+)', os.path.basename(h5.filename))
             self.calc_id = int(match.group(1))
         else:
+            # TODO: see if we can forbid this case
             self.calc_id = None
             h5 = hdf5.File(gettemp(suffix='.hdf5'), 'w')
             init_performance(h5)

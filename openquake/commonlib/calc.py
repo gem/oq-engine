@@ -24,7 +24,7 @@ import numpy
 from openquake.baselib import performance, parallel, hdf5, general
 from openquake.hazardlib.source import rupture
 from openquake.hazardlib import probability_map
-from openquake.hazardlib.source.rupture import events_dt, get_eid_rlz
+from openquake.hazardlib.source.rupture import get_events
 from openquake.commonlib import util
 
 TWO16 = 2 ** 16
@@ -67,12 +67,12 @@ def convert_to_array(pmap, nsites, imtls, inner_idx=0):
         for iml in imls:
             lst.append(('%s-%.3f' % (imt, iml), F32))
     curves = numpy.zeros(nsites, numpy.dtype(lst))
-    for sid, pcurve in pmap.items():
+    for sid, hcurve in pmap.items():
         curve = curves[sid]
         idx = 0
         for imt, imls in imtls.items():
             for iml in imls:
-                curve['%s-%.3f' % (imt, iml)] = pcurve.array[idx, inner_idx]
+                curve['%s-%.3f' % (imt, iml)] = hcurve.array[idx, inner_idx]
                 idx += 1
     return curves
 
@@ -185,8 +185,7 @@ class RuptureImporter(object):
         :returns: a composite array with the associations eid->rlz
         """
         rlzs = numpy.concatenate(list(rlzs_by_gsim.values()))
-        eid_rlz = get_eid_rlz(proxies, rlzs, self.scenario)
-        return {ordinal: numpy.array(eid_rlz, events_dt)}
+        return {ordinal: get_events(proxies, rlzs, self.scenario)}
 
     def import_rups_events(self, rup_array, get_rupture_getters):
         """
@@ -220,6 +219,7 @@ class RuptureImporter(object):
                              ne, nr, int(eff_time), mag))
 
     def _save_events(self, rup_array, rgetters):
+        oq  = self.oqparam
         # this is very fast compared to saving the ruptures
         E = rup_array['n_occ'].sum()
         events = numpy.zeros(E, rupture.events_dt)
@@ -240,7 +240,10 @@ class RuptureImporter(object):
         else:
             self.datastore.swmr_on()  # before the Starmap
             acc = parallel.Starmap(
-                self.get_eid_rlz, iterargs, progress=logging.debug).reduce()
+                self.get_eid_rlz, iterargs,
+                h5=self.datastore,
+                progress=logging.debug
+            ).reduce()
         i = 0
         for ordinal, eid_rlz in sorted(acc.items()):
             for er in eid_rlz:
@@ -253,13 +256,16 @@ class RuptureImporter(object):
         numpy.testing.assert_equal(events['id'], numpy.arange(E))
 
         # set event year and event ses starting from 1
-        nses = self.oqparam.ses_per_logic_tree_path
+        nses = oq.ses_per_logic_tree_path
         extra = numpy.zeros(len(events), [('year', U32), ('ses_id', U32)])
 
-        rng = numpy.random.default_rng(self.oqparam.ses_seed)
-        if self.oqparam.investigation_time:
-            itime = int(self.oqparam.investigation_time)
-            extra['year'] = rng.choice(itime, len(events)) + 1
+        rng = numpy.random.default_rng(oq.ses_seed)
+        if oq.investigation_time:
+            R = len(self.datastore['weights'])
+            etime = int(oq.investigation_time * oq.ses_per_logic_tree_path)
+            for r in range(R):
+                ok, = numpy.where(events['rlz_id'] == r)
+                extra['year'][ok] = rng.choice(etime, len(ok)) + r * etime + 1
         extra['ses_id'] = rng.choice(nses, len(events)) + 1
         self.datastore['events'] = util.compose_arrays(events, extra)
 
@@ -404,15 +410,21 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
         logging.info('There are %.1f GB of GMFs', gb)
     else:
         ds = dstore
-    N = ds['sitecol'].sids.max() + 1
-    if 'site_model' in ds:
-        N = max(N, len(ds['site_model']))
+    try:
+        N = len(ds['complete'])
+    except KeyError:
+        sitecol = ds['sitecol']
+        # in ScenarioDamageTestCase.test_case_3 it is important to
+        # consider sitecol.sids.max() + 1
+        N = max(len(sitecol), sitecol.sids.max() + 1)
     with mon('computing event impact', measuremem=True):
         num_assets = get_counts(dstore['assetcol/array']['site_id'], N)
         try:
             sbe = data['slice_by_event'][:]
         except KeyError:
-            sbe = build_slice_by_event(data['eid'][:])
+            eids = data['eid'][:]
+            sbe = build_slice_by_event(eids)
+            assert len(sbe) == len(numpy.unique(eids))  # sanity check
         slices = []
         logging.info('Reading event weights')
         for slc in general.gen_slices(0, len(sbe), 100_000):
@@ -423,7 +435,7 @@ def starmap_from_gmfs(task_func, oq, dstore, mon):
     logging.info('maxw = {:_d}'.format(int(maxw)))
     smap = parallel.Starmap.apply(
         task_func, (slices, oq, ds),
-        # maxweight=200M is the limit to run Canada with 2 GB per core
+        # maxweight=200M is the limit to run Chile with 2 GB per core
         maxweight=min(maxw, 200_000_000),
         weight=operator.itemgetter('weight'),
         h5=dstore.hdf5)

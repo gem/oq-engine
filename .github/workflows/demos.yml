@@ -27,7 +27,7 @@ jobs:
       GITHUB_REF:  ${{ github.ref }}
       GITHUB_HD_REF:  ${{ github.head_ref }}
       GITHUB_BS_REF:  ${{ github.base_ref }}
-
+      GITHUB_INPUT_REF: ${{ github.event.inputs.git-ref }}
     steps:
       - name: Check out the codebase (Master)
         if: github.event.inputs.git-ref == ''
@@ -37,19 +37,29 @@ jobs:
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.inputs.git-ref }}
-      - name: Set up Python 3.8
+      - name: Set up Python 3.10
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: "3.10"
       - name: Upgrade pip and install requirements
         run: |
-          pip install -U pip
-          pip install -r ./requirements-py38-linux64.txt
+          export PIP_DEFAULT_TIMEOUT=100
+          pip install --default-timeout=100 -U pip
           pip install pydata-sphinx-theme
-      - name: Install oq engine
+      - name: Install OpenQuake engine
+        #    env:
+        #      GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
+        #      GITHUB_REF:  ${{ github.ref }}
         run: |
-          pip install -e .[dev]
-          python3 -c "import openquake.baselib as m; print(m.__version__.rpartition('.')[0])"
+          if [ -z "$GITHUB_INPUT_REF" ]
+          then
+              echo " Is not a workflow_dispatch RUN, use: $GITHUB_DEF_BR "
+              python install.py devel --version ${GITHUB_DEF_BR}
+          else
+              echo " Is a workflow_dispatch RUN, use: $GITHUB_INPUT_REF "
+              GITHUB_BR=`echo ${{ github.head_ref }}`
+              python install.py devel --version ${GITHUB_INPUT_REF}
+          fi
       - name: Run demos and upload to ci.openquake.org if not workflow_dispatch
         if: github.event.inputs.git-ref == ''
         shell: bash
@@ -61,6 +71,7 @@ jobs:
           GITHUB_HD_REF:  ${{ github.head_ref }}
           GITHUB_BS_REF:  ${{ github.base_ref }}
         run: |
+          source ~/openquake/bin/activate
           zip -q -r /tmp/demos.zip demos/
           OQ_DISTRIBUTE=zmq bin/run-demos.sh demos/
           oq dump /tmp/oqdata.zip

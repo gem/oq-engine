@@ -56,7 +56,8 @@ TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point'
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point\
+        clon clat'
     .split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
@@ -93,8 +94,10 @@ def split_by_occur(ctx):
         out.append(ctx[~nan])
         nonpoisson = ctx[nan]
         for shp in set(np.probs_occur.shape[1] for np in nonpoisson):
+            # ctxs with the same shape of prob_occur are concatenated
             p_array = [p for p in nonpoisson if p.probs_occur.shape[1] == shp]
-            out.append(numpy.concatenate(p_array).view(numpy.recarray))
+            arr = numpy.concatenate(p_array, p_array[0].dtype)
+            out.append(arr.view(numpy.recarray))
     else:
         out.append(ctx)
     return out
@@ -267,9 +270,14 @@ class FarAwayRupture(Exception):
 def basename(src, splitchars='.:'):
     """
     :returns: the base name of a split source
+
+    >>> basename('SC:10;0')
+    'SC;0'
     """
     src_id = src if isinstance(src, str) else src.source_id
-    return re.split('[%s]' % splitchars, src_id)[0]
+    for char in splitchars:
+        src_id = re.sub(r'\%s\d+' % char, '', src_id)
+    return src_id
 
 
 def get_num_distances(gsims):
@@ -299,6 +307,15 @@ def _interp(param, name, trt):
     return mdd
 
 
+def simple_cmaker(gsims, imts, **params):
+    """
+    :returns: a simplified ContextMaker for use in the tests
+    """
+    dic = dict(imtls={imt: [0] for imt in imts})
+    dic.update(**params)
+    return ContextMaker('*', gsims, dic)
+
+
 class ContextMaker(object):
     """
     A class to manage the creation of contexts and to compute mean/stddevs
@@ -321,10 +338,12 @@ class ContextMaker(object):
     tom = None
 
     def __init__(self, trt, gsims, oq, monitor=Monitor(), extraparams=()):
+        self.trt = trt
+        self.gsims = gsims
         if isinstance(oq, dict):
             param = oq
             oq = Oq(**param)
-            self.mags = param.get('mags', ())
+            self.mags = param.get('mags', ())  # list of strings %.2f
             self.cross_correl = param.get('cross_correl')  # cond_spectra_test
         else:  # OqParam
             param = vars(oq)
@@ -340,6 +359,15 @@ class ContextMaker(object):
                 self.mags = ()
             except KeyError:  # missing TRT but there is only one
                 [(_, self.mags)] = oq.mags_by_trt.items()
+
+        self.oq = oq
+        self.monitor = monitor
+        self._init1(param)
+        self._init2(param, extraparams)
+        self.set_imts_conv()
+        self.init_monitoring(self.monitor)
+
+    def _init1(self, param):
         if 'poes' in param:
             self.poes = param['poes']
         if 'imtls' in param:
@@ -351,7 +379,6 @@ class ContextMaker(object):
             self.imtls = DictArray(param['hazard_imtls'])
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
-
         self.cache_distances = param.get('cache_distances', False)
         if self.cache_distances:
             # use a cache (surface ID, dist_type) for MultiFaultSources
@@ -363,24 +390,14 @@ class ContextMaker(object):
         self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
         self.disagg_by_src = param.get('disagg_by_src', False)
-        self.trt = trt
-        self.gsims = gsims
-        self.oq = oq
-        for gsim in gsims:
-            if hasattr(gsim, 'set_tables'):
-                if len(self.mags) == 0 and not is_modifiable(gsim):
-                    raise ValueError(
-                        'You must supply a list of magnitudes as 2-digit '
-                        'strings, like mags=["6.00", "6.10", "6.20"]')
-                gsim.set_tables(self.mags, self.imtls)
         self.horiz_comp = param.get('horiz_comp_to_geom_mean', False)
-        self.maximum_distance = _interp(param, 'maximum_distance', trt)
+        self.maximum_distance = _interp(param, 'maximum_distance', self.trt)
         if 'pointsource_distance' not in param:
             self.pointsource_distance = float(
                 config.performance.pointsource_distance)
         else:
             self.pointsource_distance = getdefault(
-                param['pointsource_distance'], trt)
+                param['pointsource_distance'], self.trt)
         self.minimum_distance = param.get('minimum_distance', 0)
         self.investigation_time = param.get('investigation_time')
         self.ses_seed = param.get('ses_seed', 42)
@@ -391,10 +408,19 @@ class ContextMaker(object):
         self.disagg_bin_edges = param.get('disagg_bin_edges', {})
         self.ps_grid_spacing = param.get('ps_grid_spacing')
         self.split_sources = param.get('split_sources')
+
+    def _init2(self, param, extraparams):
+        for gsim in self.gsims:
+            if hasattr(gsim, 'set_tables'):
+                if len(self.mags) == 0 and not is_modifiable(gsim):
+                    raise ValueError(
+                        'You must supply a list of magnitudes as 2-digit '
+                        'strings, like mags=["6.00", "6.10", "6.20"]')
+                gsim.set_tables(self.mags, self.imtls)
         self.effect = param.get('effect')
         for req in self.REQUIRES:
             reqset = set()
-            for gsim in gsims:
+            for gsim in self.gsims:
                 reqset.update(getattr(gsim, 'REQUIRES_' + req))
                 if getattr(self.oq, 'af', None) and req == 'SITES_PARAMETERS':
                     reqset.add('ampcode')
@@ -403,11 +429,18 @@ class ContextMaker(object):
                     reqset.update(gsim.gmpe.REQUIRES_SITES_PARAMETERS)
                     if 'apply_swiss_amplification' in gsim.params:
                         reqset.add('amplfactor')
+                    if ('apply_swiss_amplification_sa' in gsim.params):
+                        reqset.add('ch_ampl03')
+                        reqset.add('ch_ampl06')
+                        reqset.add('ch_phis2s03')
+                        reqset.add('ch_phis2s06')
+                        reqset.add('ch_phiss03')
+                        reqset.add('ch_phiss06')
             setattr(self, 'REQUIRES_' + req, reqset)
         try:
             self.min_iml = param['min_iml']
         except KeyError:
-            self.min_iml = [0. for imt in self.imtls]
+            self.min_iml = numpy.array([0. for imt in self.imtls])
         self.reqv = param.get('reqv')
         if self.reqv is not None:
             self.REQUIRES_DISTANCES.add('repi')
@@ -433,8 +466,6 @@ class ContextMaker(object):
         dic['occurrence_rate'] = numpy.float64(0)
         self.defaultdict = dic
         self.shift_hypo = param.get('shift_hypo')
-        self.set_imts_conv()
-        self.init_monitoring(monitor)
 
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
@@ -563,7 +594,11 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 else:
                     val = getattr(ctx, par, numpy.nan)
-                getattr(ra, par)[slc] = val
+                if par == 'closest_point':
+                    ra['clon'][slc] = val[:, 0]
+                    ra['clat'][slc] = val[:, 1]
+                elif par not in ['clon', 'clat'] or 'closest_point' not in dd:
+                    getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
         return ra
@@ -695,8 +730,8 @@ class ContextMaker(object):
     def _get_ctx_planar(self, mag, planar, sites, src_id, start_stop, tom):
         # computing distances
         rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-        if self.fewsites:
-            # get the closest points on the surface
+        # get the closest points on the surface
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
             closest = project_back(planar, xx, yy)  # (3, U, N)
         dists = {'rrup': rrup}
         for par in self.REQUIRES_DISTANCES - {'rrup'}:
@@ -780,7 +815,7 @@ class ContextMaker(object):
         else:
             dd['probs_occur'] = numpy.zeros(0)
 
-        if self.fewsites:
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
             dd['clon'] = numpy.float64(0.)
             dd['clat'] = numpy.float64(0.)
 
@@ -1312,9 +1347,13 @@ class PmapMaker(object):
         return pmap
 
     def _make_src_mutex(self, pmap):
-        # used in the Japan model, test case_27
-        pmap_by_src = {}
+        # used in Japan (case_27) and in New Madrid (case_80)
         cm = self.cmaker
+        t0 = time.time()
+        weight = 0.
+        nsites = 0
+        esites = 0
+        nctxs = 0
         for src in self.sources:
             tom = getattr(src, 'temporal_occurrence_model',
                           PoissonTOM(self.cmaker.investigation_time))
@@ -1322,34 +1361,28 @@ class PmapMaker(object):
             pm = ProbabilityMap(pmap.sids, cm.imtls.size, len(cm.gsims))
             pm.fill(self.rup_indep)
             ctxs = list(self.gen_ctxs(src))
-            nctxs = len(ctxs)
-            nsites = sum(len(ctx) for ctx in ctxs)
-            if nsites:
-                cm.update(pm, ctxs, tom, self.rup_mutex)
+            n = sum(len(ctx) for ctx in ctxs)
+            if n == 0:
+                continue
+            nctxs += len(ctxs)
+            nsites += n
+            esites += src.esites
+            cm.update(pm, ctxs, tom, self.rup_mutex)
             if hasattr(src, 'mutex_weight'):
                 arr = 1. - pm.array if self.rup_indep else pm.array
-                p = pm.new(arr * src.mutex_weight)
+                pmap.array += arr * src.mutex_weight
             else:
-                p = pm
-            if ':' in src.source_id:
-                srcid = basename(src)
-                if srcid in pmap_by_src:
-                    pmap_by_src[srcid].array += p.array
-                else:
-                    pmap_by_src[srcid] = p
-            else:
-                pmap_by_src[src.source_id] = p
-            dt = time.time() - t0
-            self.source_data['src_id'].append(src.source_id)
-            self.source_data['grp_id'].append(src.grp_id)
-            self.source_data['nsites'].append(nsites)
-            self.source_data['esites'].append(src.esites)
-            self.source_data['nrupts'].append(nctxs)
-            self.source_data['weight'].append(src.weight)
-            self.source_data['ctimes'].append(dt)
-            self.source_data['taskno'].append(cm.task_no)
-
-        return pmap_by_src
+                pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+            weight += src.weight
+        dt = time.time() - t0
+        self.source_data['src_id'].append(basename(src))
+        self.source_data['grp_id'].append(src.grp_id)
+        self.source_data['nsites'].append(nsites)
+        self.source_data['esites'].append(esites)
+        self.source_data['nrupts'].append(nctxs)
+        self.source_data['weight'].append(weight)
+        self.source_data['ctimes'].append(dt)
+        self.source_data['taskno'].append(cm.task_no)
 
     def make(self, pmap):
         dic = {}
@@ -1358,12 +1391,7 @@ class PmapMaker(object):
         grp_id = self.sources[0].grp_id
         if self.src_mutex or not self.rup_indep:
             pmap.fill(0)
-            pmap_by_src = self._make_src_mutex(pmap)
-            for source_id, pm in pmap_by_src.items():
-                if self.src_mutex:
-                    pmap.array += pm.array
-                else:
-                    pmap.array = 1. - (1-pmap.array) * (1-pm.array)
+            self._make_src_mutex(pmap)
             if self.src_mutex:
                 pmap.array = self.grp_probability * pmap.array
         else:
@@ -1373,14 +1401,12 @@ class PmapMaker(object):
         dic['source_data'] = self.source_data
         dic['task_no'] = self.task_no
         dic['grp_id'] = grp_id
-        if self.disagg_by_src and self.src_mutex:
-            dic['pmap_by_src'] = pmap_by_src
-        elif self.disagg_by_src:
+        if self.disagg_by_src:
             # all the sources in the group have the same source_id because
             # of the groupby(group, basename) in classical.py
             srcids = set(map(basename, self.sources))
             assert len(srcids) == 1, srcids
-            dic['pmap_by_src'] = {srcids.pop(): pmap}
+            dic['basename'] = srcids.pop()
         return dic
 
 
@@ -1725,18 +1751,6 @@ def read_cmaker(dstore, trt_smr):
     trt = trts[trt_smr // len(full_lt.sm_rlzs)]
     rlzs_by_gsim = full_lt._rlzs_by_gsim(trt_smr)
     return ContextMaker(trt, rlzs_by_gsim, oq)
-
-
-def read_src_mutex(dstore):
-    """
-    :param dstore: a DataStore-like object
-    :returns: a dictionary grp_id -> {'src_id': [...], 'weight': [...]}
-    """
-    info = dstore.read_df('source_info')
-    mutex_df = info[info.mutex_weight > 0][['grp_id', 'mutex_weight']]
-    return {grp_id: {'src_id': df.index.to_numpy(),
-                     'weight': df.mutex_weight.to_numpy()}
-            for grp_id, df in mutex_df.groupby('grp_id')}
 
 
 def get_src_mutex(srcs):

@@ -25,8 +25,7 @@ import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel
-from openquake.hazardlib import valid
-from openquake.commonlib import readinput, dbapi, mosaic
+from openquake.commonlib import readinput, dbapi, global_model_getter
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -34,7 +33,6 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 CALC_REGEX = r'(calc|cache)_(\d+)\.hdf5'
-DATABASE = '%s:%d' % valid.host_port()
 MODELS = []  # to be populated in get_tag
 
 
@@ -43,7 +41,7 @@ def get_tag(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     if not MODELS:  # first time
-        MODELS.extend(mosaic.MosaicGetter().get_models_list())
+        MODELS.extend(global_model_getter.GlobalModelGetter().get_models_list())
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
     if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR
@@ -57,7 +55,8 @@ def dbcmd(action, *args):
     :param string action: database action to perform
     :param tuple args: arguments
     """
-    if os.environ.get('OQ_DATABASE') == 'local':
+    dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
+    if dbhost == 'local':
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
@@ -65,7 +64,8 @@ def dbcmd(action, *args):
             return dbapi.db(action, *args)
         else:
             return func(dbapi.db, *args)
-    sock = zeromq.Socket('tcp://' + DATABASE, zeromq.zmq.REQ, 'connect',
+    tcp = 'tcp://%s:%s' % (dbhost, config.dbserver.port)
+    sock = zeromq.Socket(tcp, zeromq.zmq.REQ, 'connect',
                          timeout=600)  # when the system is loaded
     with sock:
         res = sock.send((action,) + args)
@@ -80,8 +80,8 @@ def dblog(level: str, job_id: int, task_no: int, msg: str):
     """
     task = 'task #%d' % task_no
     return dbcmd('log', job_id, datetime.utcnow(), level, task, msg)
-                 
-    
+
+
 def get_datadir():
     """
     Extracts the path of the directory where the openquake data are stored
@@ -204,14 +204,15 @@ class LogContext:
         if hc_id:
             self.params['hazard_calculation_id'] = hc_id
         if calc_id == 0:
+            datadir = get_datadir()
             self.calc_id = dbcmd(
-                'create_job',
-                get_datadir(),
+                'create_job', datadir,
                 self.params['calculation_mode'],
                 self.params.get('description', 'test'),
-                user_name,
-                hc_id,
-                host)
+                user_name, hc_id, host)
+            path = os.path.join(datadir, 'calc_%d.hdf5' % self.calc_id)
+            if os.path.exists(path):  # sanity check on the calculation ID
+                raise RuntimeError('There is a pre-existing file %s' % path)
             self.usedb = True
         elif calc_id == -1:
             # only works in single-user situations
@@ -274,17 +275,18 @@ class LogContext:
                                       self.calc_id, hc_id)
 
 
-def init(job_or_calc, job_ini, log_level='info', log_file=None,
+def init(dummy, job_ini, log_level='info', log_file=None,
          user_name=None, hc_id=None, host=None, tag=''):
     """
-    :param job_or_calc: the string "job" or "calcXXX"
+    :param dummy: ignored parameter, exists for backward compatibility
     :param job_ini: path to the job.ini file or dictionary of parameters
     :param log_level: the log level as a string or number
     :param log_file: path to the log file (if any)
     :param user_name: user running the job (None means current user)
     :param hc_id: parent calculation ID (default None)
     :param host: machine where the calculation is running (default None)
-    :param tag: tag (for instance the model name) to show before the log message
+    :param tag: tag (for instance the model name) to show before the log
+        message
     :returns: a LogContext instance
 
     1. initialize the root logger (if not already initialized)
@@ -292,13 +294,5 @@ def init(job_or_calc, job_ini, log_level='info', log_file=None,
     3. create a job in the database if job_or_calc == "job"
     4. return a LogContext instance associated to a calculation ID
     """
-    if job_or_calc == "job":
-        calc_id = 0
-    elif job_or_calc == "calc":
-        calc_id = -1
-    elif job_or_calc.startswith("calc"):
-        calc_id = int(job_or_calc[4:])
-    else:
-        raise ValueError(job_or_calc)
-    return LogContext(job_ini, calc_id, log_level, log_file,
+    return LogContext(job_ini, 0, log_level, log_file,
                       user_name, hc_id, host, tag)
