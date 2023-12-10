@@ -277,8 +277,8 @@ class test_liquefaction_cali_small(unittest.TestCase):
             precip=self.sites["precip"], model=model_instance.model)
 
         clq = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        zlp = np.array([0.039711, 0.121829, 0.24995, 0.2426, 0.174412, 0.211459,
-                        0.177373, 0, 0.338881, 0.182026])
+        zlp = np.array([0.080673, 0.115729, 0.233392, 0.210385, 0.190088, 0.177516,
+                        0.169508, 0, 0.32868, 0.188844])
 
         np.testing.assert_array_almost_equal(out_class, clq)
         np.testing.assert_array_almost_equal(out_prob, zlp)
