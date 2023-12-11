@@ -315,10 +315,16 @@ def filter_stations(station_df, complete, rup, maxdist):
     ok = (get_distances(rup, complete, 'rrup') <= maxdist) & numpy.isin(
         complete.sids, station_df.index)
     station_sites = complete.filter(ok)
-    station_data = station_df[numpy.isin(station_df.index, station_sites.sids)]
-    if len(station_data) < ns:
-        logging.info('Discarded %d/%d stations more distant than %d km',
-                     ns - len(station_data), ns, maxdist)
+    if station_sites is None:
+        station_data = None
+        logging.warning('Discarded %d/%d stations more distant than %d km, '
+                        'switching to the unconditioned GMF computer',
+                        ns, ns, maxdist)
+    else:
+        station_data = station_df[numpy.isin(station_df.index, station_sites.sids)]
+        if len(station_data) < ns:
+            logging.info('Discarded %d/%d stations more distant than %d km',
+                        ns - len(station_data), ns, maxdist)
     return station_data, station_sites
 
 
@@ -350,7 +356,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
-    if "station_data" in oq.inputs:
+    if station_data is not None:
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.scenario = True
