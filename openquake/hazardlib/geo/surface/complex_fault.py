@@ -283,7 +283,9 @@ class ComplexFaultSurface(BaseSurface):
         #breakpoint()
 
         lengths = [sum(edge.get_lengths()) for edge in edges]
-        redges = [_resample(edge.coo, tlen/num_hor_points, False) for edge, tlen in zip(edges, lengths)]
+        redges = [_resample(edge.coo, tlen/num_hor_points, True) for edge, tlen in zip(edges, lengths)]
+        #redges = [_resample(edge.coo, mean_length/(num_hor_points), True) for edge in edges]
+        #redges = [_resample(edge.coo, mesh_spacing, True) for edge in edges]
 
         edges = [[Point(c[0], c[1], c[2]) for c in coo] for coo in redges]
 
@@ -300,12 +302,25 @@ class ComplexFaultSurface(BaseSurface):
                 (mesh_spacing, mean_width)
             )
 
-        points = zip(*[v_edge.resample_to_num_points(num_vert_points).points
-                       for v_edge in vert_edges])
+        #points = zip(*[_resample(v_edge.coo, num_vert_points, False).points
+        #               for v_edge in vert_edges])
+        vlengths = [sum(vert_edge.get_lengths()) for vert_edge in vert_edges]
+        vedges = [_resample(v_edge.coo, tlen/num_vert_points, True) for v_edge, tlen in zip(vert_edges, vlengths)]
+        #vedges = [_resample(v_edge.coo, mean_width/(num_vert_points), True) for v_edge in vert_edges]
+        #vedges = [_resample(v_edge.coo, mesh_spacing, True) for v_edge in vert_edges]
+
+        #pts = [_resample(v_edge.coo, tlen/num_vert_points, False) for v_edge in vert_edges]
+        points = [[Point(c[0], c[1], c[2]) for c in coo] for coo in vedges]
+
+        #points = [v_edge.resample_to_num_points(num_vert_points).points for v_edge in vert_edges]
+        #points = zip(*[v_edge.resample_to_num_points(num_vert_points).points for v_edge in vert_edges])
+        #points = zip(*points)
         mesh = RectangularMesh.from_points_list(list(points))
+        breakpoint()
         assert 1 not in mesh.shape
         self = cls(mesh)
         self.surface_nodes = surface_nodes
+        print(self)
         return self
 
     @classmethod
