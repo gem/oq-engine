@@ -205,6 +205,49 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
 
+def get_low_hazard_asce07():
+    na = 'n.a.'
+    asce07 = {
+             'PGA': 0,
+             'PGA_2_50': 0,
+             'PGA_84th': na,
+             'PGA_det': na,
+
+             'Ss': na,
+             'Ss_RT': na,
+             'CRs': na,
+             'Ss_84th': na,
+             'Ss_det': na,
+             'Ss_seismicity': 'Low',
+
+             'S1': na,
+             'S1_RT': na,
+             'CR1': na,
+             'S1_84th': na,
+             'S1_det': na,
+             'S1_seismicity': 'Low',
+             }
+    return asce07
+
+
+def get_low_hazard_asce41():
+    na = 'n.a.'
+    asce41 = {'BSE2N_Ss': na,
+              'BSE2E_Ss': na,
+              'Ss_5_50': na,
+              'BSE1N_Ss': na,
+              'BSE1E_Ss': na,
+              'Ss_20_50': na,
+              'BSE2N_S1': na,
+              'BSE2E_S1': na,
+              'S1_5_50': na,
+              'BSE1N_S1': na,
+              'BSE1E_S1': na,
+              'S1_20_50': na,
+              }
+    return asce41
+
+
 def get_mce_asce07(prob_mce, det_imt, DLLs, dstore, low_haz=False):
     """
     :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
@@ -268,7 +311,7 @@ def get_mce_asce07(prob_mce, det_imt, DLLs, dstore, low_haz=False):
 
              'Ss': mce['SA(0.2)'],
              'Ss_RT': prob_mce_out['SA(0.2)'],
-             'CRS': crs,
+             'CRs': crs,
              'Ss_84th': det_imt['SA(0.2)'],
              'Ss_det': det_mce['SA(0.2)'],
              'Ss_seismicity': Ss_seismicity,
@@ -350,10 +393,35 @@ def main(dstore, csm):
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
     if len(dstore['rup/mag']) == 0:
-        logging.warning('Zero hazard: skipping AELO calculation')
+        warning = (
+            'The seismic hazard at the site is 0: there are no ruptures'
+            ' close to the site. ASCE 7-16 and ASCE 41-17 parameters'
+            ' cannot be computed.')
+        if 'warnings' in dstore:
+            warnings = dstore['warnings'][()].decode('utf8')
+            dstore['warnings'] = warnings + '\n' + warning
+        else:
+            dstore['warnings'] = warning
+        logging.warning(warning)
+        asce07 = get_low_hazard_asce07()
+        asce41 = get_low_hazard_asce41()
+        dstore['asce07'] = hdf5.dumps(asce07)
+        dstore['asce41'] = hdf5.dumps(asce41)
         return
     if dstore['mean_rates_ss'][:].max() < MIN_AFE:
-        logging.warning('Ultra-low hazard: skipping AELO calculation')
+        warning = (
+            'The seismic hazard at the site is very low. ASCE 7-16 and'
+            ' ASCE 41-17 parameters cannot be computed.')
+        if 'warnings' in dstore:
+            warnings = dstore['warnings'][()].decode('utf8')
+            dstore['warnings'] = warnings + '\n' + warning
+        else:
+            dstore['warnings'] = warning
+        logging.warning(warning)
+        asce07 = get_low_hazard_asce07()
+        asce41 = get_low_hazard_asce41()
+        dstore['asce07'] = hdf5.dumps(asce07)
+        dstore['asce41'] = hdf5.dumps(asce41)
         return
     logging.info('Computing Risk Targeted Ground Motion')
     oq = dstore['oqparam']
