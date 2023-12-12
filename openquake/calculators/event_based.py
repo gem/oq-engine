@@ -496,8 +496,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 # 'minlon' and 'minlat'. We have to decide if we want to build
                 # a polygon for each rupture or to get the average lon and lat,
                 # or we may use the hypocenter instead
-                import pdb; pdb.set_trace()
-                ok = gmg.is_inside(
+                ok = gmg.is_hypocenter_inside(
                     rup_array['hypo'], oq.mosaic_model)
                 rup_array = rup_array[ok]
             if dic['source_data']:
