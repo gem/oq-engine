@@ -665,12 +665,12 @@ filesystem and to configure the `shared_dir` parameter in the file
 `openquake.cfg`. Without that, classical calculations will fail during
 the calculation of statistics and event based calculations will fail
 during the computations of GMFs, with some kind of "File not found"
-error. The documentation is [here](installing/cluster.md).
+error. The documentation is [here](cluster).
 
 5. Docker support has been improved and now works properly on a
 multi-node, multi-host deployment. We now also have a mechanism to
 emulate a cluster on a single machine by using docker containers.
-The relevant documentation is [here](installing/docker.md).
+The relevant documentation is [here](docker).
 
 6. We removed the tests from the Python package because users were trying
 to run them. The engine tests are not meant to be run from a production
@@ -694,8 +694,8 @@ code.
 
 The was a lot of work on documentation. We have revamped the old docs,
 added a description of CSV exposures in the manual and added two new FAQ
-pages, one for [hazard](faq-hazard.md) and one
-for [risk](faq-risk.md).
+pages, one for [hazard](faq-hazard) and one
+for [risk](faq-risk).
 
 Exposures with insuranceLimit/deductible fields are deprecated and may
 be removed in the future, in the sense that we may change the format

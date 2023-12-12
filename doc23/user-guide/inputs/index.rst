@@ -16,12 +16,18 @@ calculators.
 
 .. toctree::
    :maxdepth: 1
+   :caption: Hazard Inputs:
 
    seismic-source-model
    rupture-model
    ground-motion-models
    logic-trees
    site-model
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Risk Inputs:
+
    exposure-models
    taxonomy-mapping
    fragility-models
@@ -29,4 +35,9 @@ calculators.
    vulnerability-models
    reinsurance
    infrastructure
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Secondary Peril Inputs:
+
    liquefaction

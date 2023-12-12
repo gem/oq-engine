@@ -1,3 +1,5 @@
+(universal)=
+
 # Binary installer for Windows
 
 Windows users can use a traditional .exe installer which can be downloaded from
@@ -14,7 +16,6 @@ The script allows the user to select between different kinds of installation:
 2. [`devel` installation](#devel-installation) (Windows, macOS, and Linux)
 3. [`server` installation](#server-installation) (only available for Linux)
 4. [`devel_server` installation](#devel_server-installation) (only available for Linux)
-
 
 >**NOTES:**
 
@@ -58,7 +59,7 @@ C:\>python.exe install.py user
 
 **on macOS:**
 
-_*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS)._
+_*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](certificate-verification-on-macOS)._
 ```
 $ curl -O https://raw.githubusercontent.com/gem/oq-engine/master/install.py
 $ python3.10 install.py user
@@ -132,7 +133,8 @@ $ git --version
 ```
 If you don’t have `git` installed already, macOS will prompt you to install it through the Xcode Command Line Tools; simply follow the instructions.
 
-_*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](../faq.md#certificate-verification-on-macOS)._
+_*Note 1*: Make sure to run the script located under /Applications/Python 3.X/Install Certificates.command, after Python has been installed, to update the SSL certificates bundle see [see FAQ](certificate-verification-on-macOS)._
+
 ```
 $ git clone https://github.com/gem/oq-engine.git
 $ cd oq-engine

@@ -90,9 +90,8 @@ License
 *******
 
 This material is distributed under the Creative Common License
-Attribution-NonCommercial- ShareAlike 3.0 Unported (CC BY-NC-SA 3.0 -
-`http://creativecommons.org/licenses/by-nc- <http://creativecommons.org/licenses/by-nc-sa/3.0/>`__
-`sa/3.0/). <http://creativecommons.org/licenses/by-nc-sa/3.0/>`__ You
+Attribution-NonCommercial- ShareAlike 3.0 Unported (`CC BY-NC-SA 3.0
+<http://creativecommons.org/licenses/by-nc-sa/3.0/>`__). You
 can share it with others as long as you provide proper credit, 
 but you cannot change it in any way or use it commercially.
 

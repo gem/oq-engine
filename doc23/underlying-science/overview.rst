@@ -101,7 +101,7 @@ et al., 2010a*].
 The current version of the OpenQuake engine is Python code developed
 following the most common requirements of Open Source software
 development, such as a public repository, IRC channel and open
-mailing lists. The source code, released under an open source
+mailing lists [1]_. The source code, released under an open source
 software license, is freely and openly accessible on a web based
 repository (see `github.com/gem <http://github.com/gem>`__) while the
 development process is managed so that the community can participate

@@ -1,3 +1,5 @@
+.. _openquake-hazardlib-gsim:
+
 openquake.hazardlib.gsim package
 ================================
 
