@@ -368,7 +368,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         del proxy.geom  # to reduce data transfer
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if save_tmp:	
+    if save_tmp:
         save_tmp(smap.monitor)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
@@ -479,6 +479,9 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         if oq.mosaic_model:  # 3-letter mosaic model
+            # TODO: the spatial index might be initialized in advance and kept
+            # in memory or stored as a pickle object. Anyway building the
+            # spatial index using the current simplified geometries is quick.
             gmg = GlobalModelGetter('mosaic')
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
@@ -554,7 +557,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
         rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
-                   oq.inputs['rupture_model'].endswith('.xml'))
+               oq.inputs['rupture_model'].endswith('.xml'))
         if rup:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
