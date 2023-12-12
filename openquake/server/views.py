@@ -1025,11 +1025,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce07_with_units[key] = value
                 elif key in ('CRs', 'CR1'):
                     # NOTE: (-) stands for adimensional
-                    asce07_with_units[key + ' (-)'] = "%.2f" % round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce07_with_units[key + ' (-)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
                 else:
-                    asce07_with_units[key + ' (g)'] = "%.2f" % round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce07_with_units[key + ' (g)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
         if 'asce41' in ds:
             asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
@@ -1039,8 +1039,8 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                 if not isinstance(value, float):
                     asce41_with_units[key] = value
                 else:
-                    asce41_with_units[key + ' (g)'] = "%.2f" % round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce41_with_units[key + ' (g)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
