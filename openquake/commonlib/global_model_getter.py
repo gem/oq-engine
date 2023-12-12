@@ -130,6 +130,18 @@ class GlobalModelGetter:
             self.sinfo[self.model_code_field] == model_code)
         geoms = points(lon_array, lat_array)
         within = self.sindex.query(geoms, 'within')
+        # NOTE: within[0] are the indices of the input geometries
+        #       within[1] are the indices of the indexed geometries
+        return np.isin(within[1], model_indices)
+
+    def is_hypocenter_inside(self, hypocenters, model_code):
+        # NOTE: the index is one for adm0 but it can be more for adm2
+        model_indices = np.where(
+            self.sinfo[self.model_code_field] == model_code)
+        geoms = points(hypocenters)
+        within = self.sindex.query(geoms, 'within')
+        # NOTE: within[0] are the indices of the input geometries
+        #       within[1] are the indices of the indexed geometries
         return np.isin(within[1], model_indices)
 
     def get_models_by_wkt(self, geom_wkt, predicate='intersects'):

@@ -494,10 +494,11 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.mosaic_model:
                 # FIXME: rup_array does not contain 'lon' and 'lat' but
                 # 'minlon' and 'minlat'. We have to decide if we want to build
-                # a polygon for each rupture or to get the average lon and lat
-                # and pass it to gmg.is_inside
+                # a polygon for each rupture or to get the average lon and lat,
+                # or we may use the hypocenter instead
+                import pdb; pdb.set_trace()
                 ok = gmg.is_inside(
-                    rup_array['minlon'], rup_array['minlat'], oq.mosaic_model)
+                    rup_array['hypo'], oq.mosaic_model)
                 rup_array = rup_array[ok]
             if dic['source_data']:
                 source_data += dic['source_data']
@@ -507,6 +508,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.nruptures += len(rup_array)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
+                # FIXME: rup_array has no 'geom'
                 hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '

@@ -94,7 +94,7 @@ class GlobalModelGetterTestCase(unittest.TestCase):
             numpy.array([[0,  1], [99, 24]]))
         rup_array = numpy.array(
             [(9, 45), (6.733, 62.361)],
-            dtype=[('lon', float), ('lat', float)])
+            dtype=[('lon', numpy.float32), ('lat', numpy.float32)])
         model = 'ITA'
         numpy.testing.assert_array_equal(
             mg.is_inside(rup_array['lon'], rup_array['lat'], model),
@@ -119,3 +119,11 @@ class GlobalModelGetterTestCase(unittest.TestCase):
                 "Site at lon=124.375574 lat=40.095802 is on the border"
                 " between more than one model: ['CHN' 'KOR']. Using KOR")
             self.assertIn(expected_warning, log.output[0])
+        hypocenters = numpy.array(
+            [[-10.26211, 21.73157, 25.],
+             [9.0, 9.0, 25.],
+             [-10.75146, 21.82014, 35.]], dtype=numpy.float32)
+        mosaic_model = 'NAF'
+        numpy.testing.assert_array_equal(
+            mg.is_hypocenter_inside(hypocenters, mosaic_model),
+            numpy.array([True, False, True]))
