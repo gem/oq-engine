@@ -119,6 +119,9 @@ if config.directory.custom_tmp:
 if 'OQ_DISTRIBUTE' not in os.environ:
     os.environ['OQ_DISTRIBUTE'] = config.distribution.oq_distribute
 
+if 'OQ_PRECISION' not in os.environ:                                                                
+    os.environ['OQ_PRECISION'] = config.performance.precision                                                                                                                                             
+
 # wether the engine was installed as multi_user (linux root) or not
 if sys.platform in 'win32 darwin':
     config.multi_user = False

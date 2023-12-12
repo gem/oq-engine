@@ -17,9 +17,11 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 import math
 import copy
+import os
 import warnings
 import numpy
 import pandas
+from openquake.baselib import config
 from openquake.baselib.general import cached_property
 from openquake.baselib.performance import numba, compile
 from openquake.hazardlib.tom import get_pnes
@@ -30,7 +32,21 @@ F32 = numpy.float32
 F64 = numpy.float64
 BYTES_PER_FLOAT = 8
 TWO24 = 2 ** 24
-rates_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'rate': F32}
+
+def oq_precision():
+    """
+    :returns: the value of OQ_PRECISION or config.performance.precision
+    """
+    dist = os.environ.get('OQ_PRECISION', config.performance.precision)
+    if dist not in ('low', 'high'):
+        raise ValueError('Invalid precision=%s' % dist)
+    return dist
+
+if oq_precision() == 'high':
+    rates_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'rate': F64}
+else:
+    rates_dt = {'gid': U16, 'sid': U32, 'lid': U16, 'rate': F32}
+
 
 
 if numba:
