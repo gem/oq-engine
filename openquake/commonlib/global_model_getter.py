@@ -128,6 +128,7 @@ class GlobalModelGetter:
         return models
 
     def is_inside(self, geoms, model_code):
+        t0 = time.time()
         # NOTE: the index is one for adm0 but it can be more for adm2
         model_indices = np.where(
             self.sinfo[self.model_code_field] == model_code)
@@ -136,6 +137,9 @@ class GlobalModelGetter:
         #       within[1] are the indices of the indexed geometries
         matched_idxs = np.isin(within[1], model_indices)
         geoms_idxs = np.arange(0, len(geoms))
+        logging.info(
+            f'Indices of items within model boundaries retrieved'
+            f' in {time.time() - t0} seconds')
         return np.isin(geoms_idxs, within[0][matched_idxs])
 
     def is_lon_lat_array_inside(self, lon_array, lat_array, model_code):
