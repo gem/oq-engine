@@ -278,49 +278,34 @@ class ComplexFaultSurface(BaseSurface):
                 'mesh spacing %.1f km is too big for mean length %.1f km' %
                 (mesh_spacing, mean_length)
             )
-        
+
         from openquake.hazardlib.geo.line import _resample
-        #breakpoint()
 
         lengths = [sum(edge.get_lengths()) for edge in edges]
-        redges = [_resample(edge.coo, tlen/num_hor_points, True) for edge, tlen in zip(edges, lengths)]
-        #redges = [_resample(edge.coo, mean_length/(num_hor_points), True) for edge in edges]
-        #redges = [_resample(edge.coo, mesh_spacing, True) for edge in edges]
+        redges = [_resample(edge.coo, tlen / (num_hor_points - 1), True)
+                  for edge, tlen in zip(edges, lengths)]
+        new_edges = [[Point(c[0], c[1], c[2]) for c in coo] for coo in redges]
 
-        edges = [[Point(c[0], c[1], c[2]) for c in coo] for coo in redges]
-
-        #edges = [edge.resample_to_num_points(num_hor_points)
-        #         for i, edge in enumerate(edges)]
-        #breakpoint()
-
-        vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
-        mean_width = numpy.mean([v_edge.get_length() for v_edge in vert_edges])
+        vert_edges = [Line(v_edge) for v_edge in zip(*new_edges)]
+        vert_edges_lenghts = [v_edge.get_length() for v_edge in vert_edges]
+        mean_width = numpy.mean(vert_edges_lenghts)
         num_vert_points = int(round(mean_width / mesh_spacing)) + 1
+
         if num_vert_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean width %.1f km' %
                 (mesh_spacing, mean_width)
             )
 
-        #points = zip(*[_resample(v_edge.coo, num_vert_points, False).points
-        #               for v_edge in vert_edges])
-        vlengths = [sum(vert_edge.get_lengths()) for vert_edge in vert_edges]
-        vedges = [_resample(v_edge.coo, tlen/num_vert_points, True) for v_edge, tlen in zip(vert_edges, vlengths)]
-        #vedges = [_resample(v_edge.coo, mean_width/(num_vert_points), True) for v_edge in vert_edges]
-        #vedges = [_resample(v_edge.coo, mesh_spacing, True) for v_edge in vert_edges]
-
-        #pts = [_resample(v_edge.coo, tlen/num_vert_points, False) for v_edge in vert_edges]
+        vlengths = [lng / (num_vert_points - 1) for lng in vert_edges_lenghts]
+        aaa = zip(vert_edges, vlengths)
+        vedges = [_resample(v_edge.coo, lng, False) for v_edge, lng in aaa]
         points = [[Point(c[0], c[1], c[2]) for c in coo] for coo in vedges]
 
-        #points = [v_edge.resample_to_num_points(num_vert_points).points for v_edge in vert_edges]
-        #points = zip(*[v_edge.resample_to_num_points(num_vert_points).points for v_edge in vert_edges])
-        #points = zip(*points)
         mesh = RectangularMesh.from_points_list(list(points))
-        breakpoint()
         assert 1 not in mesh.shape
         self = cls(mesh)
         self.surface_nodes = surface_nodes
-        print(self)
         return self
 
     @classmethod

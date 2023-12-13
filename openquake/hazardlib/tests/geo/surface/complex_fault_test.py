@@ -141,12 +141,20 @@ class ComplexFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
             str(cm.exception)
         )
 
-def plot(edges):
+
+def plot(edges, mesh=None):
     import matplotlib.pyplot as plt
     ax = plt.figure().add_subplot(projection='3d')
     for edge in edges:
         coo = edge.coo
-        plt.plot(coo[:, 0], coo[:, 1], coo[:, 2], '-r') 
+        plt.plot(coo[:, 0], coo[:, 1], coo[:, 2], '-r')
+
+    if mesh is not None:
+        coo = mesh.array
+        breakpoint()
+        plt.plot(coo[0].flatten(), coo[1].flatten(), coo[2].flatten(), '.b')
+
+    ax.set_box_aspect([1,1,1])
     plt.show()
 
 
@@ -165,6 +173,9 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
             [(0, 0, 2.224), (0.01, 0, 2.224),
              (0.02, 0, 2.224), (0.03, 0, 2.224)],
         ])
+        plot([edge1, edge2], mesh=surface.mesh)
+
+
 
     def test_2(self):
         # this is a regression test. Reference values have been obtained
@@ -175,7 +186,7 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
         #breakpoint()
         #plot([edge1, edge2, edge3])
 
-        
+
         surface = ComplexFaultSurface.from_fault_data([edge1, edge2, edge3],
                                                       mesh_spacing=1)
         #breakpoint()
@@ -204,7 +215,7 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
              (0.0, 0.01, 2.0),
              (0.0, 0.02, 2.0)],
         ])
-        
+
 
 
     def test_mesh_spacing_more_than_two_lengths(self):
