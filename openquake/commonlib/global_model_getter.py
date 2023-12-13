@@ -144,11 +144,12 @@ class GlobalModelGetter:
 
     def is_hypocenter_array_inside(self, hypocenters, model_code):
         t0 = time.time()
+        logging.info(f'Checking {len(hypocenters)} hypocenters')
         geoms = points(hypocenters)
         ok = self.is_inside(geoms, model_code)
+        t1 = time.time()
         logging.info(
-            f'Indices of hypocenters within model boundaries retrieved'
-            f' in {time.time() - t0} seconds')
+            f'Indices within model boundaries retrieved in {t1 - t0} seconds')
         return ok
 
     def get_models_by_wkt(self, geom_wkt, predicate='intersects'):
