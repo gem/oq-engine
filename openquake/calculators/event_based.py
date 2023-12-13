@@ -483,22 +483,29 @@ class EventBasedCalculator(base.HazardCalculator):
             # in memory or stored as a pickle object. Anyway building the
             # spatial index using the current simplified geometries is quick.
             gmg = GlobalModelGetter('mosaic')
+        t0 = time.time()
+        tot_ruptures = 0
+        filtered_ruptures = 0
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
             if dic is None:
                 raise MemoryError('You ran out of memory!')
             rup_array = dic['rup_array']
+            tot_ruptures += len(rup_array)
             if len(rup_array) == 0:
                 continue
             if oq.mosaic_model:
                 # FIXME: rup_array does not contain 'lon' and 'lat' but
                 # 'minlon' and 'minlat'. We have to decide if we want to build
                 # a polygon for each rupture or to get the average lon and lat,
-                # or we may use the hypocenter instead
+                # or we may use the hypocenter instead. Furthermore, we might
+                # collect all ruptures together and filter them all at once,
+                # instead of filtering chunks of ~150-650 ruptures
                 ok = gmg.is_hypocenter_array_inside(
                     rup_array['hypo'], oq.mosaic_model)
                 rup_array = rup_array[ok]
+                filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
@@ -509,6 +516,9 @@ class EventBasedCalculator(base.HazardCalculator):
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 # FIXME: rup_array has no 'geom'
                 # hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+        t1 = time.time()
+        logging.info(f'{tot_ruptures} ruptures filtered to {filtered_ruptures}'
+                     f' and stored in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')
