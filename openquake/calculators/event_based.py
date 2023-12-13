@@ -515,7 +515,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 # FIXME: rup_array has no 'geom'
-                # hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+                hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         t1 = time.time()
         logging.info(f'{tot_ruptures} ruptures filtered to {filtered_ruptures}'
                      f' and stored in {t1 - t0} seconds')
