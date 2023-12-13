@@ -508,7 +508,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
                 # FIXME: rup_array has no 'geom'
-                hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+                # hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')
