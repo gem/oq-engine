@@ -24,15 +24,17 @@ class GlobalModelGetter:
     """
     Class with methods to associate coordinates to models
     """
-    def __init__(self, kind='mosaic', shapefile_path=None, sindex_path=None,
-                 sinfo_path=None, replace_sindex=False, replace_sinfo=False):
+    def __init__(self, kind='mosaic', model_code_field=None,
+                 shapefile_path=None, sindex_path=None, sinfo_path=None,
+                 replace_sindex=False, replace_sinfo=False):
         if kind not in ('mosaic', 'global_risk'):
             raise ValueError(f'Model getter for {kind} is not implemented')
         self.kind = kind
-        if self.kind == 'mosaic':
-            self.model_code_field = 'code'
-        elif self.kind == 'global_risk':
-            self.model_code_field = 'shapeGroup'
+        if model_code_field is None:
+            if self.kind == 'mosaic':
+                model_code_field = 'code'
+            elif self.kind == 'global_risk':
+                model_code_field = 'shapeGroup'
         if shapefile_path is None:  # read from openquake.cfg
             if kind == 'mosaic':
                 self.dir = os.path.dirname(mosaic.__file__)
@@ -41,6 +43,7 @@ class GlobalModelGetter:
                 self.dir = os.path.dirname(global_risk.__file__)
                 shapefile_path = os.path.join(
                     self.dir, 'geoBoundariesCGAZ_ADM0.shp')
+        self.model_code_field = model_code_field
         self.shapefile_path = shapefile_path
         self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
         self.sinfo = self.get_spatial_info(sinfo_path, replace_sinfo)
@@ -124,25 +127,24 @@ class GlobalModelGetter:
                       for polygon in shp]
         return models
 
-    def is_inside(self, lon_array, lat_array, model_code):
+    def is_inside(self, geoms, model_code):
         # NOTE: the index is one for adm0 but it can be more for adm2
         model_indices = np.where(
             self.sinfo[self.model_code_field] == model_code)
-        geoms = points(lon_array, lat_array)
         within = self.sindex.query(geoms, 'within')
         # NOTE: within[0] are the indices of the input geometries
         #       within[1] are the indices of the indexed geometries
-        return np.isin(within[1], model_indices)
+        matched_idxs = np.isin(within[1], model_indices)
+        geoms_idxs = np.arange(0, len(geoms))
+        return np.isin(geoms_idxs, within[0][matched_idxs])
 
-    def is_hypocenter_inside(self, hypocenters, model_code):
-        # NOTE: the index is one for adm0 but it can be more for adm2
-        model_indices = np.where(
-            self.sinfo[self.model_code_field] == model_code)
+    def is_lon_lat_array_inside(self, lon_array, lat_array, model_code):
+        geoms = points(lon_array, lat_array)
+        return self.is_inside(geoms, model_code)
+
+    def is_hypocenter_array_inside(self, hypocenters, model_code):
         geoms = points(hypocenters)
-        within = self.sindex.query(geoms, 'within')
-        # NOTE: within[0] are the indices of the input geometries
-        #       within[1] are the indices of the indexed geometries
-        return np.isin(within[1], model_indices)
+        return self.is_inside(geoms, model_code)
 
     def get_models_by_wkt(self, geom_wkt, predicate='intersects'):
         t0 = time.time()

@@ -97,7 +97,8 @@ class GlobalModelGetterTestCase(unittest.TestCase):
             dtype=[('lon', numpy.float32), ('lat', numpy.float32)])
         model = 'ITA'
         numpy.testing.assert_array_equal(
-            mg.is_inside(rup_array['lon'], rup_array['lat'], model),
+            mg.is_lon_lat_array_inside(
+                rup_array['lon'], rup_array['lat'], model),
             numpy.array([True, False]))
 
     def test_mosaic_spatial_index_in_memory(self):
@@ -122,8 +123,9 @@ class GlobalModelGetterTestCase(unittest.TestCase):
         hypocenters = numpy.array(
             [[-10.26211, 21.73157, 25.],
              [9.0, 9.0, 25.],
+             [0.0, 0.0, 30.],
              [-10.75146, 21.82014, 35.]], dtype=numpy.float32)
         mosaic_model = 'NAF'
         numpy.testing.assert_array_equal(
-            mg.is_hypocenter_inside(hypocenters, mosaic_model),
-            numpy.array([True, False, True]))
+            mg.is_hypocenter_array_inside(hypocenters, mosaic_model),
+            numpy.array([True, False, False, True]))
