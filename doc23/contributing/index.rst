@@ -14,6 +14,8 @@ we provide information on how to update the changelog.
    :caption: Contributing to the OpenQuake engine:
 
    architecture
+   development-guidelines
    developing-with-the-engine
    implementing-new-gsim
+   testing
    updating-the-changelog

@@ -1,5 +1,5 @@
-FAQ
-===
+Frequently Asked Questions (FAQ)
+================================
 
 FAQ for IT issues
 -----------------
