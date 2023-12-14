@@ -1136,9 +1136,9 @@ type of calculations::
 
 - ``total_losses``: (or total exposed value) needs to be specified when the reinsurance needs to be applied over the sum of two or more loss types (e.g. ``structural+contents``). The definition of total losses is also reflected in the risk outputs of the calculation. NB: if there is a single loss type (e.g. ``structural``) there is no need to specify this parameter, just write ``reinsurance_file = {'structural': 'reinsurance.xml'}``
 
-
+***************************************************
 Using ``collect_rlzs=true`` in the risk calculation
----------------------------------------------------
+***************************************************
 
 Since version 3.12 the engine recognizes a flag ``collect_rlzs`` in the risk configuration file. When the flag is set 
 to true, then the hazard realizations are collected together when computing the risk results and considered as one.
@@ -1163,9 +1163,9 @@ statistics (mean and quantile results) in the datastore.
 Note 3: ``collect_rlzs`` is completely ignored in the hazard part of the calculation, i.e. it does not affect at all 
 the computation of the GMFs, only the computation of the risk metrics.
 
-
+****************************
 Aggregating by multiple tags
-----------------------------
+****************************
 
 The engine also supports aggregation by multiple tags. Multiple tags can be indicated as multi-tag and/or various 
 single-tag aggregations:
@@ -1259,8 +1259,9 @@ It is also possible to perform the aggregation by various single-tag aggregation
 would produce first the aggregation by geographic region (``NAME_1``), then by ``taxonomy``. In this case, instead of 
 producing 5 x 5 combinations, only 5 + 5 outputs would be obtained.
 
+*********************************
 ignore_covs vs ignore_master_seed
----------------------------------
+*********************************
 
 The vulnerability functions using continuous distributions (lognormal/beta) to characterize the uncertainty in the loss 
 ratio, specify the mean loss ratios and the corresponding coefficients of variation for a set of intensity levels.

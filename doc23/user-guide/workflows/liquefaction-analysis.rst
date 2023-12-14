@@ -1,6 +1,16 @@
 Liquefaction and Landslide Models
 =================================
 
+Landslides and liquefaction are well-known perils that accompany earthquakes. Basic models to describe their occurrence 
+have been around for decades and are constantly improving. However, these models have rarely been incorporated into PSHA.
+
+The tools presented here are implementations of some of the more common and appropriate secondary perils models. The 
+intention is seamless incorporation of these models into PSH(R)A calculations done through the OpenQuake Engine, though 
+the incorporation is a work in progress.
+
+Tools for preparing the data for these models are also presented. This can be a non-trivial challenge, and consistent and 
+correct data preparation is necessary for accurate secondary peril hazard and risk calculations.
+
 Liquefaction models
 -------------------
 
@@ -20,9 +30,11 @@ geotechnical characteristics of the site, such as the sedimentological type and 
 addition to the LSC and the local ground acceleration at each site, the depth to groundwater at the site and the 
 magnitude of the causative earthquake will affect the probability that a given site will experience liquefaction.
 
-The equation that describes this probability is::
+The equation that describes this probability is:
 
-	P(L) = \frac{P(L | PGA=a) \cdot P_{ml}}{K_m K_w}\ \(1)
+.. math::
+
+	P(L) = \frac{P(L | PGA=a) \cdot P_{ml}}{K_m K_w}\ (1)
 
 ``P(L|PGA=a)`` is the conditional probability that a site will fail based on the PGA and the LSC. ``P_{ml}`` is the 
 fraction of the total mapped area that will experience liquefaction if ``P(L|PGA=a)`` reaches 1. These terms both have 
@@ -65,18 +77,24 @@ The model by Zhu et al. (2015) is a logistic regression model requiring specific
 Compound Topographic Index (CTI), a proxy for soil wetness or groundwater depth ``gwd [m]``, the ``PGA_{M,SM} [g]`` 
 experienced at a site, and the magnitude of the causative earthquake.
 
-The model is quite simple. An explanatory variable ``X`` is calculated as::
+The model is quite simple. An explanatory variable ``X`` is calculated as:
 
-	X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, Vs30\ \(2)
+.. math::
 
-and the final probability is the logistic function::
+	X = 24.1 + 2.067\, ln\, PGA_{M,SM} + 0.355\,CTI - 4.784\, ln\, Vs30\ (2)
 
-	P(L) = \frac{1}{1+e^X}\ \(3)
+and the final probability is the logistic function:
+
+.. math::
+
+	P(L) = \frac{1}{1+e^X}\ (3)
 
 The term ``PGA_{M,SM}`` is the PGA corrected by magnitude scaling factor (MSF) that serves as proxy for earthquake 
-duration. The ``MSF`` is calculated as per Idriss et al. (1991)::
+duration. The ``MSF`` is calculated as per Idriss et al. (1991):
 
-	MSF = \{10^2.24}{M^2.56}\ \(4)
+.. math::
+
+	MSF = \frac{10^2.24}{M^2.56}\ (4)
 
 Both the ``CTI`` and the ``Vs30`` may be derived from digital elevation data. The ``Vs30`` may be estimated from the 
 topographic slope through the equations of Wald and Allen (2007), which uses a very low resolution DEM compared to 
@@ -86,9 +104,11 @@ that is the current standard. This results in a more accurate ``Vs30`` for a giv
 that in an urban setting, sub-km-scale variations in slope are not accounted for.
 
 The CTI (Moore et al., 1991) is a proxy for soil wetness that relates the topographic slope of a point to the upstream 
-drainage area of that point, through the relation::
+drainage area of that point, through the relation:
 
-	CTI = \ln (d_a / \tan \delta)\ \(4)
+.. math::
+
+	CTI = \ln (d_a / \tan \delta)\ (5)
 
 where ``d_a`` is the upstream drainage area per unit width through the flow direction (i.e. relating to the DEM 
 resolution). It was developed for hillslopes, and is not meaningful in certain very flat areas such as the valley 
@@ -105,9 +125,11 @@ Bozzoni et al. (2021)
 The parametric model developed by Bozzoni et al. (2021), keeps the same input variables (i.e., ``PGA_{M,SM}``, ``CTI``, 
 ``Vs30``) and functional form as in Zhu et al. (2015). Regression parameters are calibrated based on the liquefaction 
 case histories observed during seismic events in Europe. The implemented model is associated with the ADASYN sampling 
-algorithm. The explanatory variable :math:`X` is computed as::
+algorithm. The explanatory variable :math:`X` is computed as:
 
-	X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, Vs30\ \(5)
+.. math::
+
+	X = -11.489 + 3.864\, ln\, PGA_{M} + 2.328\,CTI - 0.091\, ln\, Vs30\ (6)
 
 and the probability of liquefaction in calculated using equation (3).
 
@@ -132,9 +154,25 @@ by Fan et al (2013).Distance to the nearest coastline data was computed from htt
 
 The explanatory varibale :math:`X` is calculated as:
 
-Model 1: .. math:: X = 12.435 + 0.301, ln, PGV - 2.615, ln, Vs30 + 0.0005556, precip .. math:: -0.0287, sqrt{d_{c}} + 0.0666,d_{r} - 0.0369, sqrt{d_{c}} cdot d_{r}(6)
+Model 1:
 
-Model 2: .. math:: X = 8.801 + 0.334, ln, PGV - 1.918, ln, Vs30 + 0.0005408, precip .. math:: -0.2054, d_{w} -0.0333, wtd(7)
+.. math:: 
+
+   X = 12.435 + 0.301, ln, PGV - 2.615, ln, Vs30 + 0.0005556, precip\ (7)
+
+.. math:: 
+
+   -0.0287, \sqrt{d_{c}} + 0.0666,d_{r} - 0.0369, \sqrt{d_{c}} cdot d_{r}\ (8)
+
+Model 2: 
+
+.. math:: 
+
+   X = 8.801 + 0.334, ln, PGV - 1.918, ln, Vs30 + 0.0005408, precip\ (9)
+
+.. math:: 
+
+   -0.2054, d_{w} -0.0333, wtd\ (10)
 
 and the probability of liquefaction is calculated using equation (3). Zero probability is heuristically assigned if ``PGV < 3 cm/s``.
 
@@ -143,9 +181,11 @@ The proposed probability threshold to convert to class outcome is 0.4.
 Another model's outcome is liquefaction spatial extent (LSE). After an earthquake LSE is the spatial area covered by 
 surface manifestations of liquefaction reported as a percentage of liquefied material within that pixel. Logistic 
 regression with the same form was fit for the two models, with only difference in squaring the denominator to improve 
-the fit. The regression coefficients are given in Table 2.::
+the fit. The regression coefficients are given in Table 2.:
 
-	L(P) = \frac{a}{1+b\,e^(-c\,P)}^2\ \(8)
+.. math::
+
+	L(P) = \frac{a}{1+b\,e^(-c\,P)}^2\ (11)
 
 +------------+---------+----------+
 | Parameters | Model 1 | Model 2  |
@@ -186,9 +226,25 @@ elevation from the closest water body ``Z_{wb} [m]``. Soil density is characteri
 topographic roughness index ``TRI`` which is defined as the mean difference between a central pixel and its eight 
 surrounding cells. The explanatory variables of two candidate models are:
 
-Model 1: .. math:: X = 4.925 + 0.694, ln, PGV - 0.459, sqrt{TRI} - 0.403, ln, d_{c}+1 .. math:: -0.309, ln, d_{r}+1 - 0.164, sqrt{Z_{wb}}(10)
+Model 1: 
 
-Model 2: .. math:: X = 9.504 + 0.706, ln, PGV - 0.994, ln, Vs30 - 0.389, ln, d_{c}+1 .. math:: -0.291, ln, d_{r}+1 - 0.205, sqrt{Z_{wb}}(11)
+.. math:: 
+
+   X = 4.925 + 0.694, ln, PGV - 0.459, \sqrt{TRI} - 0.403, ln, d_{c}+1\ (12)
+
+.. math:: 
+
+   -0.309, ln(d_{r}+1) - 0.164, \sqrt{Z_{wb}}\ (13)
+
+Model 2: 
+
+.. math:: 
+
+   X = 9.504 + 0.706, ln, PGV - 0.994, ln, Vs30 - 0.389, ln, d_{c}+1\ (14)
+
+.. math:: 
+
+   -0.291, ln(d_{r}+1) - 0.205\sqrt{Z_{wb}}\ (15)
 
 and the probability of liquefaction is calculated using equation (3). Zero probability is heuristically assigned if 
 ``PGV < 3 cm`` or ``Vs30 > 620 m/s``.
@@ -230,12 +286,26 @@ Lateral spreading (Hazus)
 The expected permanent displacement due to lateral spreading given the susceptibility category can be determined as:
 
 Where: ``E[PGD|(PGA/PL_{SC})=a]`` is the expected ground displacement given the susceptibility category under a 
-specified level of normalised shaking, and is calculated as: .. :math:: 12, x - 12 text{for} 1 < PGA/PGA(t) < 2 .. :math:: 18, x - 24 text{for} 2 < PGA/PGA(t) < 3 .. :math:: 70, x - 180 text{for} 3 < PGA/PGA(t) < 4
+specified level of normalised shaking, and is calculated as: 
+
+.. math:: 
+
+   12,\ x - 12\ for\ 1 < PGA/PGA(t) < 2\ (16) 
+
+.. math:: 
+
+   18\, x - 24\ for\ 2 < PGA/PGA(t) < 3\ (17)
+
+.. math:: 
+
+   70\, x - 180\ for\ 3 < PGA/PGA(t) < 4\ (18)
 
 ``(PGA/PGA(t))`` ``PGA(t)`` is theminimum shaking level to induce liquefaction (see Table 1) ``K_{\Delta}`` is the 
 displacement correction factor given thhat modify the displacement term for magnitudes other than ``M7.5``: 
 
-.. :math:: K_{Delta} = 0.0086, M^3 - 0.0914, M^2 + 0.4698, M - 0.9835(13)
+.. math:: 
+
+   K_{Delta} = 0.0086M^3\ - 0.0914M^2\ + 0.4698M\ - 0.9835\ (19)
 
 ############################
 Vertical settlements (Hazus)
@@ -288,7 +358,7 @@ with the default value of 2.5 meters. ``m`` is the proportion of slab thickness 
 0.1. ``\gamma_{w} [kg/m^3]`` is the unit weight of water which equals to ``1000 kg/m^3``.
 
 Note that the units of the input parameters reported in this document corresponds to the format required by the Engine 
-to produce correct results. The first and second term of the the equation (15) corresponds to the cohesive and 
+to produce correct results. The first and second term of the the equation corresponds to the cohesive and 
 frictional components of the strength, while the third component accounts for the strength reduction due to pore 
 pressure.
 
@@ -311,10 +381,14 @@ root cohesion. ``\alpha [\degrees]`` is the slope angle. ``\gamma [kg/m^3]`` is 
 ranges from ``~1500 kg/m^3`` for soils to ``~ 2500 - 3200 kg/m^3``. ``h [m]`` is the vertical height of the failure mass 
 and it corresponds to 1/4 of the local relief H calculated based on the moving window analysis. ``\phi' [\degrees]`` is 
 the effective friction angle with typical values ranging from 30 to 40 degrees. ``\beta`` is the slope's critical angle 
-calculated as: .. :math:: beta = frac{alpha + phi}{0.5}(19)
+calculated as: 
 
-The critical acceleration is computed similarly to equation (14). For rock- slope failures, the ``\alpha`` term is 
-replaced with ``\beta``.
+.. math:: 
+
+   \beta = \frac{\alpha + \phi}{0.5}\ (20)
+
+The critical acceleration is computed similarly to equation (14). For rock- slope failures, the :math:`\alpha` term is 
+replaced with :math:`\beta`.
 
 Finally, the coseismic displacements are estimated using Jibson’s (2007) sliding block displacement regression equation:
 

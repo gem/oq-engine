@@ -1,3 +1,5 @@
+(ubuntu)=
+
 # Installing the OpenQuake Engine on Ubuntu Linux
 
 The OpenQuake Engine stable tree is available in the form of *deb* binary packages for the following Ubuntu releases:
@@ -10,7 +12,7 @@ The software and its libraries will be installed under `/opt/openquake`. Data wi
 
 ## Install packages from the OpenQuake repository
 
-If you want to upgrade an existing installation see **upgrading**.
+If you want to upgrade an existing installation see **[upgrading](../upgrading/ubuntu.md)**.
 
 The following commands add the **official stable builds** package repository:
 ```
@@ -18,15 +20,14 @@ sudo add-apt-repository -y ppa:openquake/ppa
 sudo apt update
 ```
 
-If you want to install a **nightly build** please read the guide about installing the **{ref}`nightly build packages on Ubuntu <ubuntu-nightly>`**.
+If you want to install a **nightly build** please read the guide about installing the **[nightly build packages on Ubuntu](ubuntu-nightly.md)**.
 
 Then to install the OpenQuake Engine and its libraries run
 ```bash
 sudo apt install python3-oq-engine
 ```
-(configure-the-system-services)=
 
-## Configure the system services
+## Configure the system services {#configure-system-services}
 
 The package installs three system service managed through [systemd](https://www.freedesktop.org/software/systemd/man/systemctl.html):
 - `openquake-dbserver`: provides the database for the OpenQuake Engine and must be started before running any `oq engine` command

@@ -32,9 +32,7 @@ The material presented herein is based on `The OpenQuake engine Book: Hazard`
    logic-trees
    calculations
 
-
 .. _underlying-hazard-science:
-
 
 .. toctree::
    :maxdepth: 1
@@ -46,7 +44,6 @@ The material presented herein is based on `The OpenQuake engine Book: Hazard`
    event-based-risk-calculator
    classical-psha-risk-calculator
    retrofitting-benefit-cost-ratio
-
 
 .. _underlying-risk-science:
 

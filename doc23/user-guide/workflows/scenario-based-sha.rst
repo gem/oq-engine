@@ -356,6 +356,8 @@ produces 100 times less GMFs and still produces a good estimate for the total lo
 In short, risk calculations for the mean field UCERF model are routines now, in 
 spite of what the naive expectations could be.
 
+.. _scenarios-from-shakemaps:
+
 Scenarios from ShakeMaps
 ------------------------
 
