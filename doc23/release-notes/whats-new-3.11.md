@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.11
-====================================================
+Release notes v3.11
+===================
 
 This is a major release featuring several optimizations, new features,
 and bug fixes. Nearly 400 pull requests were merged.

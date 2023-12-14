@@ -1,5 +1,5 @@
-What's new in engine-1.6
-========================
+Release notes v1.6
+==================
 
 OpenQuake 1.6 is a major release and a big improvement with respect
 to OpenQuake 1.5.

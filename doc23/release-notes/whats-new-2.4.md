@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.4
-===================================================
+Release notes v2.4
+==================
 
 This release introduces several changes and improvements to the engine
 calculators, most notably in the postprocessing of hazard curves and

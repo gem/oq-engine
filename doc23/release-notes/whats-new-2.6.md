@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.6
-===================================================
+Release notes v2.6
+==================
 
 This release introduced several improvements and new features in the
 hazard and risk calculators. Several bugs were fixed, some outputs

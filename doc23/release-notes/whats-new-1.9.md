@@ -1,5 +1,5 @@
-New features of the OpenQuake Engine, version 1.9
-=================================================
+Release notes v1.9
+==================
 
 1. We have worked on several CSV exporters. The CSV exporters are
 still experimental and this is why they are are not yet documented in the

@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.2
-===================================================
+Release notes v3.2
+==================
 
 This release features several improvements to the engine calculators, some
 new features and many bug fixes. Over 190 issues were closed. For the complete

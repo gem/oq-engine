@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.0
-===================================================
+Release notes v3.0
+==================
 
 This release drops support for Python 2.7. From now on, the engine
 requires Python 3.5+ to run. Apart from this change, several new

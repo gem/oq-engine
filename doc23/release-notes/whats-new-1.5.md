@@ -1,5 +1,5 @@
-What's new in engine-1.5
-========================
+Release notes v1.5
+==================
 
 OpenQuake 1.5 is a major release and a big improvement with respect
 to OpenQuake 1.4. More than 115 bugs/feature

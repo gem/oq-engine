@@ -1,5 +1,5 @@
-What's new in engine-1.2
-========================
+Release notes v1.2
+==================
 
 The difference in OpenQuake 1.2 is mostly in the performance of the hazard calculators.
 They are *much* faster, sometimes several order of magnitudes faster. 

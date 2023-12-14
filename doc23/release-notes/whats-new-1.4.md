@@ -1,5 +1,5 @@
-What's new in engine-1.4
-========================
+Release notes v1.4
+==================
 
 Here are the new features of the OpenQuake Engine, version 1.4.
 
