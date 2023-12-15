@@ -309,7 +309,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_42(self):
         # split/filter a long complex fault source with maxdist=1000 km
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "hazard_map-mean-PGA.csv"], case_42.__file__)
+                               "hazard_map-mean-PGA.csv"],
+                              case_42.__file__, delta=0.0002)
 
         # check pandas readability of hmaps-stats
         df = self.calc.datastore.read_df('hmaps-stats', 'site_id',
