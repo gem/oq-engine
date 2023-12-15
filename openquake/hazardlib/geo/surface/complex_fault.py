@@ -27,6 +27,7 @@ from openquake.baselib.python3compat import round
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo.line import _resample
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.surface.planar import PlanarSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
@@ -272,24 +273,24 @@ class ComplexFaultSurface(BaseSurface):
         cls.check_fault_data(edges, mesh_spacing)
         surface_nodes = [complex_fault_node(edges)]
         mean_length = numpy.mean([edge.get_length() for edge in edges])
-        num_hor_points = int(round(mean_length / mesh_spacing)) + 1
+        num_hor_points = int(numpy.round(mean_length / mesh_spacing)) + 1
+
         if num_hor_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is too big for mean length %.1f km' %
                 (mesh_spacing, mean_length)
             )
 
-        from openquake.hazardlib.geo.line import _resample
-
         lengths = [sum(edge.get_lengths()) for edge in edges]
-        redges = [_resample(edge.coo, tlen / (num_hor_points - 1), True)
+        redges = [_resample(edge.coo, tlen / (num_hor_points - 1) * 0.99,
+                            False)
                   for edge, tlen in zip(edges, lengths)]
         new_edges = [[Point(c[0], c[1], c[2]) for c in coo] for coo in redges]
-
         vert_edges = [Line(v_edge) for v_edge in zip(*new_edges)]
+
         vert_edges_lenghts = [v_edge.get_length() for v_edge in vert_edges]
         mean_width = numpy.mean(vert_edges_lenghts)
-        num_vert_points = int(round(mean_width / mesh_spacing)) + 1
+        num_vert_points = int(numpy.round(mean_width / mesh_spacing)) + 1
 
         if num_vert_points <= 1:
             raise ValueError(
@@ -298,11 +299,21 @@ class ComplexFaultSurface(BaseSurface):
             )
 
         vlengths = [lng / (num_vert_points - 1) for lng in vert_edges_lenghts]
-        aaa = zip(vert_edges, vlengths)
-        vedges = [_resample(v_edge.coo, lng, False) for v_edge, lng in aaa]
-        points = [[Point(c[0], c[1], c[2]) for c in coo] for coo in vedges]
+        fun = zip(vert_edges, vlengths)
+        vedges = []
+        for v_edge, lng in fun:
+            vedges.append(_resample(v_edge.coo, lng, False))
 
-        mesh = RectangularMesh.from_points_list(list(points))
+        profiles = []
+        for i_row in range(len(vedges[0])):
+            tmp_profile = []
+            for edge in vedges:
+                tmp_profile.append(Point(edge[i_row][0], edge[i_row][1],
+                                         edge[i_row][2]))
+            profiles.append(tmp_profile)
+
+        mesh = RectangularMesh.from_points_list(profiles)
+
         assert 1 not in mesh.shape
         self = cls(mesh)
         self.surface_nodes = surface_nodes

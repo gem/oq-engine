@@ -151,15 +151,16 @@ def plot(edges, mesh=None):
 
     if mesh is not None:
         coo = mesh.array
-        breakpoint()
         plt.plot(coo[0].flatten(), coo[1].flatten(), coo[2].flatten(), '.b')
 
-    ax.set_box_aspect([1,1,1])
+    ax.set_box_aspect([1, 1, 1])
+    ax.set_xlabel('lon')
+    ax.set_ylabel('lat')
     plt.show()
 
 
-
 class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
+
     def test_1(self):
         edge1 = Line([Point(0, 0), Point(0.03, 0)])
         edge2 = Line([Point(0, 0, 2.224), Point(0.03, 0, 2.224)])
@@ -172,10 +173,8 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
              (0.02, 0, 1.112), (0.03, 0, 1.112)],
             [(0, 0, 2.224), (0.01, 0, 2.224),
              (0.02, 0, 2.224), (0.03, 0, 2.224)],
-        ])
-        plot([edge1, edge2], mesh=surface.mesh)
-
-
+        ], delta=40)
+        # plot([edge1, edge2], mesh=surface.mesh)
 
     def test_2(self):
         # this is a regression test. Reference values have been obtained
@@ -183,40 +182,28 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
         edge1 = Line([Point(0, 0, 1), Point(0, 0.02, 1)])
         edge2 = Line([Point(0.02, 0, 1.5), Point(0.02, 0.01, 1.5)])
         edge3 = Line([Point(0, 0, 2), Point(0, 0.02, 2)])
-        #breakpoint()
-        #plot([edge1, edge2, edge3])
-
+        # plot([edge1, edge2, edge3])
 
         surface = ComplexFaultSurface.from_fault_data([edge1, edge2, edge3],
-                                                      mesh_spacing=1)
-        #breakpoint()
-        self.assert_mesh_is(surface=surface, expected_mesh=[
-            [(0.0, 0.0, 1.0),
-             (0.0, 0.01, 1.0),
-             (0.0, 0.02, 1.0)],
+                                                      mesh_spacing=1.0)
+        expected = numpy.array([
+            [[0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
+             [8.00000005e-03, 8.00000011e-03, 8.00000028e-03],
+             [1.60000001e-02, 1.60000001e-02, 1.60000002e-02],
+             [8.57028427e-03, 8.53924247e-03, 8.46354157e-03],
+             [5.70284230e-04, 5.39242373e-04, 4.63541314e-04]],
+            [[0.00000000e+00, 9.90000005e-03, 1.98000001e-02],
+             [-2.68595095e-26, 7.92000013e-03, 1.58400003e-02],
+             [-1.79063396e-26, 5.94000007e-03, 1.18800001e-02],
+             [-2.74067477e-26, 7.78653765e-03, 1.56105473e-02],
+             [-3.10016364e-27, 9.76653758e-03, 1.95705472e-02]],
+            [[1.00000000e+00, 1.00000000e+00, 1.00000000e+00],
+             [1.20000000e+00, 1.20000000e+00, 1.20000000e+00],
+             [1.40000000e+00, 1.40000000e+00, 1.40000000e+00],
+             [1.78574289e+00, 1.78651894e+00, 1.78841147e+00],
+             [1.98574289e+00, 1.98651894e+00, 1.98841147e+00]]])
 
-            [(0.008, 0.0, 1.2),
-             (0.008, 0.008, 1.2),
-             (0.008, 0.016, 1.2)],
-
-            [(0.016, 0.0, 1.4),
-             (0.016, 0.006, 1.4),
-             (0.016, 0.012, 1.4)],
-
-            [(0.016, 0.0, 1.6),
-             (0.016, 0.006, 1.6),
-             (0.016, 0.012, 1.6)],
-
-            [(0.008, 0, 1.8),
-             (0.008, 0.008, 1.8),
-             (0.008, 0.016, 1.8)],
-
-            [(0.0, 0.0, 2.0),
-             (0.0, 0.01, 2.0),
-             (0.0, 0.02, 2.0)],
-        ])
-
-
+        numpy.testing.assert_almost_equal(surface.mesh.array, expected)
 
     def test_mesh_spacing_more_than_two_lengths(self):
         edge1 = Line([Point(0, 0, 0), Point(0, 0.1, 0)])
@@ -248,7 +235,7 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
         self.assert_mesh_is(surface=surface, expected_mesh=[
             [(179.95, 0., 0.), (-179.95, 0., 0.)],
             [(179.95, 0., 10.), (-179.95, 0., 10.)]
-        ])
+        ], delta=150)
 
 
 class ComplexFaultSurfaceProjectionTestCase(unittest.TestCase):

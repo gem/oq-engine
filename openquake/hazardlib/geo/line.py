@@ -25,16 +25,26 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
 
 TOLERANCE = 0.1
+LARGE = 1e10
 
 
 def _update(rtra, rtra_prj, proj, pnt):
+    # Updates the arrays `rtra` and `rtra_prj` with the resampled trace (in
+    # projected and geographic coodinates). `proj` is the function for
+    # converting geographic and projected coordinates and `pnt` is the point to
+    # add
     xg, yg = proj(np.array([pnt[0]]), np.array([pnt[1]]), reverse=True)
     rtra.append(np.array([xg[0], yg[0], pnt[2]]))
     rtra_prj.append(pnt)
 
 
 def _resample(coo, sect_len, orig_extremes):
-    # returns array of resampled trace coordinates
+    # returns array of resampled trace coordinates where 'coo' is an array with
+    # N lines and 3 colums. `sect_len` is the length in km to be used for
+    # resampling and `orig_extremes` is a boolean controlling the inclusion or
+    # exclusion of the last original point
+
+    # Number of coordinates in the original polyline
     N = len(coo)
 
     # Project the coordinates of the trace
@@ -44,10 +54,11 @@ def _resample(coo, sect_len, orig_extremes):
     txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
 
     # Compute the total length of the original trace
-    tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
+    tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
     inc_len = 0.
 
-    # Initialize the lists with the coordinates of the resampled trace
+    # Initialize the lists with the coordinates of the resampled trace in
+    # projected and geographic coordinates
     rtra_prj = [txy[0]]
     rtra = [coo[0]]
 
@@ -55,19 +66,38 @@ def _resample(coo, sect_len, orig_extremes):
     idx_vtx = -1
     while True:
 
-        # Computing distances from the reference point
-        dis = utils.get_dist(txy, rtra_prj[-1])
+        # Computing distances between the reference point and the points
+        # forming the original trace
+        tmp = [(np.sum((coo - rtra_prj[-1])**2)**0.5) for coo in txy]
+        dis = np.array(tmp).squeeze()
+
+        # Fixing distances for points before the reference index
         if idx_vtx > 0:
-            # Fixing distances for points before the index
-            dis[0:idx_vtx] = 100000
+            dis[0:idx_vtx] = LARGE
 
-        # Index of the point on the trace with a distance just below the
-        # sampling distance
-        idx = np.where(dis <= sect_len, dis, -np.inf).argmax()
+        # Find the index of the point on the trace with a distance just below
+        # the sampling distance. This logic is required to cope with the test
+        # on the complex fault where the profiles have a sort of convex shape
+        max_dist = -1.0
+        idx = idx_vtx if idx_vtx >= 0 else 0
+        idx_pre = idx
+        while 1:
+            if dis[idx] <= sect_len and dis[idx] > max_dist:
+                idx_pre = copy.copy(idx)
+                max_dist = dis[idx]
+                if idx == len(dis) - 1:
+                    break
+                idx += 1
+            else:
+                idx = idx_pre
+                break
 
-        # If the pick a point that is not the last one on the trace we
-        # compute the new sample by interpolation
+        # If we pick a point that is not the last one on the trace we compute
+        # the new sample by interpolation
         if idx < len(dis) - 1:
+            # Find the point between two consecutive points on the original
+            # (projected) trace `txy` at a distance `sect_len` from the first
+            # one `txy[idx, :]`
             pnt = find_t(
                 txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
             if pnt is None:
@@ -75,25 +105,36 @@ def _resample(coo, sect_len, orig_extremes):
             _update(rtra, rtra_prj, proj, pnt)
             inc_len += sect_len
 
-            # Adding more points still on the same segment
+            # Adding more points still on the same segment. `delta` is the
+            # total increment along the x, y and z axes required to move from
+            # the last point on the resampled trace and the end of the current
+            # segment `txy[idx + 1]`
             delta = txy[idx + 1] - rtra_prj[-1]
-            chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+            chk_dst = (np.sum((txy[idx + 1] - rtra_prj[-1])**2))**0.5
             rat = delta / chk_dst
             while chk_dst > sect_len * 0.9999:
+                # Adding one more point
                 _update(rtra, rtra_prj, proj, rtra_prj[-1] + sect_len * rat)
                 inc_len += sect_len
                 # This is the distance between the last resampled point
                 # and the second vertex of the segment
-                chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
+                chk_dst = (np.sum((txy[idx + 1] - rtra_prj[-1])**2))**0.5
         else:
-            # Adding one point
-            if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
-                # Adding more points still on the same segment
-                delta = txy[-1] - txy[-2]
-                chk_dst = utils.get_dist(txy[-1], txy[-2])
-                _update(rtra, rtra_prj, proj, rtra_prj[-1] +
-                       sect_len * delta / chk_dst)
-                inc_len += sect_len
+
+            # Adding more points still on the same segment, if needed
+            delta = txy[-1] - txy[-2]
+
+            chk_dst = (np.sum((txy[-1] - txy[-2])**2))**0.5
+
+            # New point
+            new_point = rtra_prj[-1] + sect_len * delta / chk_dst
+
+            # Distance between this point and the last one on the original
+            # section
+            dst = (np.sum((new_point - txy[-1])**2))**0.5
+
+            if dst < sect_len * 0.5:
+                _update(rtra, rtra_prj, proj, new_point)
             elif orig_extremes:
                 # Adding last point
                 rtra.append(coo[-1])
@@ -611,20 +652,22 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
         A 1D :class:`numpy.ndarray` instance of length 3
     """
 
-    # First points on the line
+    # First point on the line
     x1 = pnt0[0]
     y1 = pnt0[1]
     z1 = pnt0[2]
 
-    #
+    # Second point on the line
     x2 = pnt1[0]
     y2 = pnt1[1]
     z2 = pnt1[2]
 
+    # Reference point
     x3 = ref_pnt[0]
     y3 = ref_pnt[1]
     z3 = ref_pnt[2]
 
+    # The sampling distance
     r = distance
 
     pa = (x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2
