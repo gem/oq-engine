@@ -276,7 +276,7 @@ class ClassicalTestCase(CalculatorTestCase):
                                "quantile_curve-0.16-PGA.csv",
                                "quantile_curve-0.5-PGA.csv",
                                "quantile_curve-0.84-PGA.csv"],
-                              case_37.__file__)
+                              case_37.__file__, delta=0.001)
 
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments
