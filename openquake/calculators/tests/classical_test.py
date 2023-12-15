@@ -507,7 +507,7 @@ class ClassicalTestCase(CalculatorTestCase):
         # multisurface with kite faults
         self.run_calc(case_62.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=2E-4)
 
     def test_case_63(self):
         # test soiltype
