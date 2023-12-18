@@ -1,5 +1,5 @@
-Infrastructure Results
-======================
+Infrastructure Risk Outputs
+===========================
 
 - For the classic generic case where "demand" and "supply" are explicity mentioned in the column **demand_or_supply**, all four metrics are computed for overall network. Also, at nodal level, all the four metrics are calculated.
 - If some nodes behave as both supply and demand, and are assigned as "both" or "TAZ" (traffic analysis zone) in the column **demand_or_supply**, PCL, WCL and EL are computed for both nodal level and overall network.

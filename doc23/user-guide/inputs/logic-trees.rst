@@ -185,7 +185,7 @@ Depending on the ``uncertaintyType`` the content of the ``<uncertaintyModel>`` e
 - if ``uncertaintyType="characteristicFaultGeometryAbsolute"`` then the uncertainty model must contain a *valid* instance 
   of the ``characteristicFaultGeometry`` source node, as described in section :ref:`Characteristic faults <characteristic-faults>`
 
-There are no restrictions on the number of logicTreeBranch elements that can be defined in a logicTreeBranchSet, as long as the uncertainty weights sum to 1.0.
+The maximum number of logicTreeBranch elements per branchset is 182 and the uncertainty weights should sum to 1.0.
 
 The ``logicTreeBranchSet`` element offers also a number of optional attributes allowing for complex tree definitions:
 

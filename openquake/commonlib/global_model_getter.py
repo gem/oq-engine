@@ -22,7 +22,7 @@ class GlobalModelGetter:
     """
     def __init__(self, kind='mosaic', shapefile_path=None):
         if kind not in ('mosaic', 'global_risk'):
-            raise ValueError('Model getter for {kind} is not implemented')
+            raise ValueError(f'Model getter for {kind} is not implemented')
         self.kind = kind
         if self.kind == 'mosaic':
             self.model_code = 'code'
@@ -30,13 +30,12 @@ class GlobalModelGetter:
             self.model_code = 'shapeGroup'
         if shapefile_path is None:  # read from openquake.cfg
             if kind == 'mosaic':
-                mosaic_dir = os.path.dirname(mosaic.__file__)
-                shapefile_path = os.path.join(
-                    mosaic_dir, 'ModelBoundaries.shp')
+                self.dir = os.path.dirname(mosaic.__file__)
+                shapefile_path = os.path.join(self.dir, 'ModelBoundaries.shp')
             elif kind == 'global_risk':
-                global_risk_dir = os.path.dirname(global_risk.__file__)
+                self.dir = os.path.dirname(global_risk.__file__)
                 shapefile_path = os.path.join(
-                    global_risk_dir, 'geoBoundariesCGAZ_ADM0.shp')
+                    self.dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.shapefile_path = shapefile_path
 
     def get_models_list(self):

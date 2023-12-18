@@ -797,6 +797,8 @@ which should produce the following output::
 	  id | name
 	9087 | Benefit Cost Ratios
 
+.. _github-tutorials:
+
 GitHub Tutorials
 ----------------
 

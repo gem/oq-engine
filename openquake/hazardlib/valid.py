@@ -332,16 +332,16 @@ class SimpleId(object):
             raise ValueError('Invalid ID: can not be empty')
         if max(map(ord, value)) > 127:
             raise ValueError(
-                'Invalid ID %r: the only accepted chars are a-zA-Z0-9_-:'
-                % value)
+                'Invalid ID %r: the only accepted chars are %s' % (
+                    value, self.regex))
         elif len(value) > self.length:
             raise ValueError("The ID '%s' is longer than %d character" %
                              (value, self.length))
         elif re.match(self.regex, value):
             return value
         raise ValueError(
-            "Invalid ID '%s': the only accepted chars are a-zA-Z0-9_-:"
-            % value)
+            "Invalid ID '%s': the only accepted chars are %s" % (
+                value, self.regex))
 
 
 MAX_ID_LENGTH = 75  # length required for some sources in US14 collapsed model
@@ -351,6 +351,7 @@ simple_id = SimpleId(MAX_ID_LENGTH)
 branch_id = SimpleId(MAX_ID_LENGTH, r'^[\w\:\#_\-\.]+$')
 asset_id = SimpleId(ASSET_ID_LENGTH)
 source_id = SimpleId(MAX_ID_LENGTH, r'^[\w\-_:]+$')
+three_letters = SimpleId(3, r'^[A-Z]+$')
 nice_string = SimpleId(  # nice for Windows, Linux, HDF5 and XML
     ASSET_ID_LENGTH, r'[a-zA-Z0-9\.`!#$%\(\)\+/,;@\[\]\^_{|}~-]+')
 mod_func = SimpleId(MAX_ID_LENGTH, r'[\w_]+\.[\w_]+')

@@ -1,3 +1,5 @@
+(installing-windows)=
+
 # Installing the OpenQuake Engine on Windows
 
 The OpenQuake Engine can be installed on Windows with the [universal

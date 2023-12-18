@@ -17,4 +17,4 @@ In :ref:`the figure below <retrofit-benefit-cost-calc>`, the input/output struct
    Retrofitting Benefit/Cost Ratio Calculator input/output structure.
 
 For further information regarding the theoretical background of the methodologies used for each calculator, users are 
-referred to the OpenQuake engine Book (Risk).
+referred to the :ref:`underlying science <underlying-science>` section of the documentation.
