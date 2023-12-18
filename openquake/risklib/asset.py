@@ -1037,7 +1037,7 @@ class Exposure(object):
                     raise RuntimeError(msg)
                 for inp in other_fields:
                     if inp not in fields:
-                        raise InvalidFile('%s: expecting field %s, declared in '
+                        raise InvalidFile('%s: missing field %s, declared in '
                                           'the XML file' % (fname, inp))
                 header = set()
                 for f in fields:
