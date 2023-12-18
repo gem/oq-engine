@@ -29,7 +29,6 @@ from openquake.baselib import hdf5, general
 from openquake.baselib.node import Node, context
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import valid, nrml, geo, InvalidFile
-from openquake.risklib import countries
 
 U8 = numpy.uint8
 U32 = numpy.uint32
@@ -588,6 +587,25 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('type', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
+# The fields in the exposure are complicated. For the global
+# risk model you will have things like the following:
+# fields = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
+#           'COST_NONSTRUCTURAL_USD', 'COST_STRUCTURAL_USD', 'LATITUDE',
+#           'LONGITUDE', 'OCCUPANTS_PER_ASSET', 'TAXONOMY', 'TOTAL_AREA_SQM',
+#           'area', 'business_interruption', 'contents', 'day', 'night',
+#           'nonstructural', 'number', 'residents', 'structural', 'transit'}
+# ANR_FIELDS = {'area', 'number', 'residents'}
+# OCC_FIELDS = {'day', 'night', 'transit'}
+# VAL_FIELDS = {'structural', 'business_interruption', 'nonstructural',
+#               'contents'}
+# others = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
+#           'COST_NONSTRUCTURAL_USD', 'COST_STRUCTURAL_USD', 'LATITUDE',
+#           'LONGITUDE', 'OCCUPANTS_PER_ASSET', 'TAXONOMY', 'TOTAL_AREA_SQM'}
+def get_other_fields(fields):
+    others = (set(fields) - set(ANR_FIELDS) - set(OCC_FIELDS) - set(VAL_FIELDS)
+              - {'deduc'})
+    return others
+
 
 def _get_exposure(fname, stop=None):
     """
@@ -1008,7 +1026,7 @@ class Exposure(object):
         if wrong:
             raise InvalidFile('Found case-duplicated fields %s in %s' %
                               (wrong, self.datafiles))
-        return sorted('value-' + f if f in ANR_FIELDS|VAL_FIELDS else f
+        return sorted('value-' + f if f in ANR_FIELDS | VAL_FIELDS else f
                       for f in set(fields))
 
     def _read_csv(self, errors=None):
@@ -1021,6 +1039,7 @@ class Exposure(object):
         oqfields = general.AccumDict(accum=set())
         for csvfield, oqfield in self.pairs:
             oqfields[csvfield].add(oqfield)
+        other_fields = get_other_fields(self.fieldmap)
         for fname in self.datafiles:
             with open(fname, encoding='utf-8-sig', errors=errors) as f:
                 try:
@@ -1030,6 +1049,10 @@ class Exposure(object):
                            "and then o.fix_latin1('%s')\nor set "
                            "ignore_encoding_errors=true" % (fname, fname))
                     raise RuntimeError(msg)
+                for inp in other_fields:
+                    if inp not in fields:
+                        raise InvalidFile('%s: missing field %s, declared in '
+                                          'the XML file' % (fname, inp))
                 header = set()
                 for f in fields:
                     header.update(oqfields.get(f, [f]))
