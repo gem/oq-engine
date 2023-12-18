@@ -49,6 +49,14 @@ engine used to generate the file, the start date of the calculation, a
 checksum, the kind of hazard curves generated (in the example they are
 mean curves), the investigation time and the IMT used (in the example PGA).
 
+The header line indicates the contents of each column, beginning with the 
+site coordinates (*lon, lat,* and *depth*) and then one column corresponding
+to each intensity measure level (IML) specified in the job file for the
+given IMT. These columns are named using the format *poe-<IML>* to be
+interpretted as ``the probability that the IMT will exceed the given IML
+during the investigation time.`` Each row then gives - for one site - the
+probabilities of exceedance associated with each of the IMLs.
+
 If the hazard calculation is configured to produce results including seismic hazard maps and uniform hazard spectra, 
 then the list of outputs would display the following::
 
@@ -64,7 +72,12 @@ then the list of outputs would display the following::
 shows a sample of the CSV file used to describe a hazard map, and and
 :ref:`the second listing <lst:output_uhs>` below shows a sample of the
 CSV used to describe a uniform hazard spectrum.
-
+In both cases, the files contain a commented line as in the 	
+:ref:`hazard curve lst:output_hazard_curves_csv`. The following	
+row has the column headers: the site coordinates (*lon, lat*), and then a 	
+set of two-part column names that indicate the IMT and probability	
+of exceedance corresponding to the investigation time; the remaining rows	
+give the values for each site. 
 .. container:: listing
 
    .. code:: xml
