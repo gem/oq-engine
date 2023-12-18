@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.7
-===================================================
+Release notes v3.7
+==================
 
 This is a major release featuring several important fixes and
 improvements, especially to the event based and disaggregation

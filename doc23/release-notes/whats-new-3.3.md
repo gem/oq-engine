@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.3
-===================================================
+Release notes v3.3
+==================
 
 This is a major release featuring substantial improvements, especially
 to the event based calculators. Over 300 pull requests were merged,

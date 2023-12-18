@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.16
-====================================================
+Release notes v3.16
+===================
 
 Version 3.16 is the second Long Term Support (LTS) release of the engine,
 replacing version 3.11 after a gap of two years. It is the result of five

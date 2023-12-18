@@ -1,5 +1,5 @@
-What's new in engine-1.3
-========================
+Release notes v1.3
+==================
 
 Here are the novelties of the new release of the OpenQuake Engine, as compared to the latest stable release, 1.2.
 

@@ -42,5 +42,7 @@ oq commands.
    outputs/index
    special-features
    advanced-calculations
+   working-with-the-dstore
    useful-oq-commands
+   faq
    extras/index

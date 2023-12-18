@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.12
-====================================================
+Release notes v3.12
+===================
 
 The 3.12 release is the result of 6 months of work involving around
 550 pull requests and touching all aspects of the engine.

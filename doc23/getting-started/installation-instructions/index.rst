@@ -97,6 +97,7 @@ https://groups.google.com/g/openquake-users
 
 .. toctree::
    :maxdepth: 1
+   :caption: Installation:
 
    universal
    windows

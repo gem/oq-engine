@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.8
-===================================================
+Release notes v3.8
+==================
 
 This is a major release featuring several optimizations, new features and bug
 fixes: around 285 pull requests were merged.
