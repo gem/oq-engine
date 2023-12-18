@@ -282,7 +282,7 @@ def plot_disagg_by_src(dstore, update_dstore=False):
         largest_contr = max(out_contr_all.values())
         sample = sum(val > fact*largest_contr
                      for val in out_contr_all.values())
-        viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
+        viridis = mpl.colormaps['viridis'].reversed().resampled(sample)
 
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
