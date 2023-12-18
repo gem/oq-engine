@@ -20,7 +20,7 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.mesh import Mesh
 
 
-def assert_mesh_is(testcase, surface, expected_mesh):
+def assert_mesh_is(testcase, surface, expected_mesh, delta):
     expected_mesh = list(itertools.chain(*expected_mesh))
     testcase.assertEqual(len(surface.mesh), len(expected_mesh))
     testcase.assertIsInstance(surface.mesh, Mesh)
@@ -29,11 +29,11 @@ def assert_mesh_is(testcase, surface, expected_mesh):
         expected_point = Point(*expected_mesh[i])
         distance = expected_point.distance(point) * 1e3
         testcase.assertAlmostEqual(
-            0, distance, delta=2,  # allow discrepancy of 2 meters
+            0, distance, delta=delta,  # allow discrepancy of `delta` meters
             msg="point %d is off: %s != %s (distance is %.3fm)"
                 % (i, point, expected_point, distance))
 
 
 class SurfaceTestCase(unittest.TestCase):
-    def assert_mesh_is(self, surface, expected_mesh):
-        return assert_mesh_is(self, surface, expected_mesh)
+    def assert_mesh_is(self, surface, expected_mesh, delta=2):
+        return assert_mesh_is(self, surface, expected_mesh, delta)

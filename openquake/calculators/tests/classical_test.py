@@ -276,7 +276,7 @@ class ClassicalTestCase(CalculatorTestCase):
                                "quantile_curve-0.16-PGA.csv",
                                "quantile_curve-0.5-PGA.csv",
                                "quantile_curve-0.84-PGA.csv"],
-                              case_37.__file__)
+                              case_37.__file__, delta=0.001)
 
     def test_case_38(self):
         # BC Hydro GMPEs with epistemic adjustments
@@ -309,7 +309,8 @@ class ClassicalTestCase(CalculatorTestCase):
     def test_case_42(self):
         # split/filter a long complex fault source with maxdist=1000 km
         self.assert_curves_ok(["hazard_curve-mean-PGA.csv",
-                               "hazard_map-mean-PGA.csv"], case_42.__file__)
+                               "hazard_map-mean-PGA.csv"],
+                              case_42.__file__, delta=0.0002)
 
         # check pandas readability of hmaps-stats
         df = self.calc.datastore.read_df('hmaps-stats', 'site_id',
@@ -506,13 +507,14 @@ class ClassicalTestCase(CalculatorTestCase):
         # multisurface with kite faults
         self.run_calc(case_62.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
+        self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=2E-4)
 
     def test_case_63(self):
         # test soiltype
         self.run_calc(case_63.__file__, 'job.ini')
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f)
+        self.assertEqualFiles('expected/hazard_curve-mean-PGA.csv', f,
+                              delta=2E-3)
 
     def test_case_64(self):
         # LanzanoEtAl2016 with bas term

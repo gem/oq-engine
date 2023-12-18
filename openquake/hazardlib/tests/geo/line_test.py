@@ -18,20 +18,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
 
-PLOTTING = False
+PLOTTING = True
 
 
-def _plott(rtra_prj, txy):
+def _plott(rtra_prj, txy, scl=1.0):
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 1)
+    ax = plt.figure().add_subplot(projection='3d')
     tt = np.array(rtra_prj)
-    plt.plot(txy[:, 0], txy[:, 1], '-')
-    plt.plot(txy[:, 0], txy[:, 1], 'x', ms=2.0)
-    plt.plot(tt[:, 0], tt[:, 1], 'o')
+    ax.plot(txy[:, 0], txy[:, 1], txy[:, 2] * scl, '-', color='cyan')
+    ax.plot(tt[:, 0], tt[:, 1], tt[:, 2] * scl, 'or')
     for i, t in enumerate(tt):
-        plt.text(t[0], t[1], f'{i}')
-    ax.axis('equal')
+        ax.text(t[0], t[1], t[2] * scl, f'{i}')
+    ax.plot(txy[:, 0], txy[:, 1], txy[:, 2] * scl, 'xb', ms=2.0)
+    ax.set_aspect('equal')
+    ax.invert_zaxis()
     plt.show()
+
 
 class LineResampleTestCase(unittest.TestCase):
 
@@ -64,7 +66,7 @@ class LineResampleTestCase(unittest.TestCase):
                                     computed.coo[1:, 1], zro)
         np.testing.assert_allclose(dst, 2.0, atol=0.02)
         if PLOTTING:
-            _plott(computed.coo, line.coo)
+            _plott(computed.coo, line.coo, scl=0.01)
 
     def test_resample_2(self):
         """
@@ -89,6 +91,30 @@ class LineResampleTestCase(unittest.TestCase):
         p3 = geo.Point(0.0, 0.1798644058789465)
         with self.assertRaises(ValueError):
             geo.Line([p1, p2, p3]).resample(50.0)
+
+    def test_resample_complex_fault(self):
+        # This is a profile resampled while building a complex fault surface
+        coo = np.array([[0.00, 0.0198, 1.0],
+                        [0.02, 0.0099, 1.5],
+                        [0.00, 0.0198, 2.0]])
+
+        # Prepare the function for resampling
+        resampler = geo.line._resample
+        sampl = resampler(coo, 1.0, False)
+
+        # Expected array
+        expected = np.array([
+            [0.00000000e+00, 1.98000000e-02, 1.00000000e+00],
+            [7.90103510e-03, 1.58889880e-02, 1.19752587e+00],
+            [1.58020699e-02, 1.19779756e-02, 1.39505174e+00],
+            [8.39767622e-03, 1.56431506e-02, 1.79005810e+00],
+            [4.96641154e-04, 1.95541627e-02, 1.98758397e+00]])
+
+        if PLOTTING:
+            _plott(coo, sampl, scl=0.01)
+
+        # Test
+        np.testing.assert_almost_equal(sampl, expected)
 
 
 class LineCreationTestCase(unittest.TestCase):
@@ -579,6 +605,3 @@ def plot_pattern(lons, lats, z, plons, plats, label, num=5, show=True):
     if show:
         plt.show()
     return ax
-
-
-
