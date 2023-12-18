@@ -97,7 +97,7 @@ class DuplicatedPoint(Exception):
     """
 
 
-# used in extract_from_zip
+# used in extract_fom_zip
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -130,7 +130,8 @@ def extract_from_zip(path, ext='.ini', targetdir=None):
     with zipfile.ZipFile(path) as archive:
         archive.extractall(targetdir)
     return [f for f in collect_files(targetdir)
-            if os.path.basename(f).endswith(ext)]
+            if os.path.basename(f).endswith(ext)
+            and '__MACOSX' not in f]
 
 
 def unzip_rename(zpath, name):
