@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed `extract_from_zip` when managing zip files coming from MACOSX;
+  * Fixed `extract_from_zip` when managing zip files coming from MACOSX
 
   [Paolo Tormene]
   * Internal: extended the MosaicGetter to a GlobalModelGetter class with
