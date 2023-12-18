@@ -151,42 +151,42 @@ def get_adjustments (T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     MEAN_ADJUSTMENT_TERMS_IF = {
     "Lower": {
         'delta_c1':(-1.28155 * epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag)
-                     if adjust_c1==True
+                     if adjust_c1 is True
                      else 0.0),
         'delta_c1hm':(-1.28155 * epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup)
-                       if adjust_chm==True
+                       if adjust_chm is True
                        else 0.0),
         'delta_c7':(-0.02578
-                    if adjust_c7==True
+                    if adjust_c7 is True
                     else 0.0),
         'delta_c7b':(_sigmoid1d(np.log(T), -0.05737, 0.05733, -1.0324, 0.04875)
-                     if adjust_c7==True
+                     if adjust_c7 is True
                      else 0.0),
         'delta_cg1':(_anelastic_correction(T) - 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
-                     if adjust_cg1==True
+                     if adjust_cg1 is True
                      else 0.0),
     },
     "Central":{'delta_c1': 0.0,
                'delta_c1hm' : 0.0,
                'delta_c7':0.0,
                'delta_c7b':(_sigmoid1d(np.log(T), -0.0865, 0.0, -1.5364, 0.3266)
-                            if adjust_c7==True
+                            if adjust_c7 is True
                             else 0.0),
                'delta_cg1':(_anelastic_correction(T)
-                            if adjust_cg1==True
+                            if adjust_cg1 is True
                             else 0.0),
                },
     "Upper":{
         'delta_c1':(1.28155 * epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag)
-                    if adjust_c1==True
+                    if adjust_c1 is True
                     else 0.0),
         'delta_c1hm':(1.28155 * epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup)
-                      if adjust_chm==True
+                      if adjust_chm is True
                       else 0.0),
         'delta_c7': 0.0,
         'delta_c7b':0.0,
         'delta_cg1':(_anelastic_correction(T) + 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
-                     if adjust_cg1==True
+                     if adjust_cg1 is True
                      else 0.0),
         }
     }
