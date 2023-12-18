@@ -587,6 +587,20 @@ cost_type_dt = numpy.dtype([('name', hdf5.vstr),
                             ('type', hdf5.vstr),
                             ('unit', hdf5.vstr)])
 
+# The fields in the exposure are complicated. For the global
+# risk model you will have things like the following:
+# fields = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
+#           'COST_NONSTRUCTURAL_USD', 'COST_STRUCTURAL_USD', 'LATITUDE',
+#           'LONGITUDE', 'OCCUPANTS_PER_ASSET', 'TAXONOMY', 'TOTAL_AREA_SQM',
+#           'area', 'business_interruption', 'contents', 'day', 'night',
+#           'nonstructural', 'number', 'residents', 'structural', 'transit'}
+# ANR_FIELDS = {'area', 'number', 'residents'}
+# OCC_FIELDS = {'day', 'night', 'transit'}
+# VAL_FIELDS = {'structural', 'business_interruption', 'nonstructural',
+#               'contents'}
+# others = {'ASSET_ID', 'BUILDINGS', 'COST_CONTENTS_USD',
+#           'COST_NONSTRUCTURAL_USD', 'COST_STRUCTURAL_USD', 'LATITUDE',
+#           'LONGITUDE', 'OCCUPANTS_PER_ASSET', 'TAXONOMY', 'TOTAL_AREA_SQM'}
 def get_other_fields(fields):
     others = (set(fields) - set(ANR_FIELDS) - set(OCC_FIELDS) - set(VAL_FIELDS)
               - {'deduc'})
