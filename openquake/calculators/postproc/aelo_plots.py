@@ -121,7 +121,7 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     plt = import_plt()
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
-    colors = mpl.colormaps['viridis'].reversed()._resample(3)
+    colors = mpl.colormaps['viridis'].reversed().resampled(3)
     patterns = ['-', '--', ':']
     for i, imt in enumerate(imts):
         lab = _get_label(imt)
