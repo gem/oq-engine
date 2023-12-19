@@ -966,6 +966,9 @@ class Exposure(object):
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
     def init(self, assets_df, tagcol, cost_calculator, vfields, ofields):
+        """
+        Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
+        """
         t0 = time.time()
         assets_df.sort_values(['lon', 'lat'], inplace=True)
         ll = numpy.zeros((len(assets_df), 2))
@@ -997,6 +1000,7 @@ class Exposure(object):
         cost_calculator.update(array)
         self.mesh = mesh
         self.assets = array
+        self.loss_types = vfields
         self.occupancy_periods = ' '.join(ofields)
 
     def _csv_header(self, value='value-', occupants='occupants_'):
