@@ -45,24 +45,24 @@
 #         OpenQuake Manual <branch>.pdf -> ../oq-engine/<branch>/PDF/OpenQuake Manual <branch>.pdf
 #
 ---
-name: Docs
-on:
-  workflow_dispatch:
-    inputs:
-      oq-release:
-        description: 'OQ Release'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-          - dev
-          - master
-          - release
-          - LTS
-  push:
-    branches: [master, 'engine-*', moster, 'ongine-*']
+name: Docs_old
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       oq-release:
+#         description: 'OQ Release'
+#         required: true
+#         default: 'dev'
+#         type: choice
+#         options:
+#           - dev
+#           - master
+#           - release
+#           - LTS
+#   push:
+#     branches: [master, 'engine-*', moster, 'ongine-*']
 
-  pull_request:
+#   pull_request:
 
 jobs:
   docs:
