@@ -833,7 +833,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             for taglist in aggregate_by:
                 for tag in taglist:
                     if tag == 'site_id':
-                        # 'site_id' is added later in _get_mesh_assets
+                        # 'site_id' is added later in _set_mesh_assets
                         continue
                     if (tag not in df.columns
                             and f'value-{tag}' not in df.columns):
@@ -856,7 +856,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
+def _set_mesh_assets(exp, assets_df, tagcol, cost_calculator, vfields, ofields):
     t0 = time.time()
     assets_df.sort_values(['lon', 'lat'], inplace=True)
     ll = numpy.zeros((len(assets_df), 2))
@@ -868,11 +868,11 @@ def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
     logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
 
     names = set(assets_df.columns)
-    # loss_types can be ['value-business_interruption', 'value-contents',
+    # vfields can be ['value-business_interruption', 'value-contents',
     # 'value-nonstructural', 'occupants_avg', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
     retro = ['retrofitted'] if 'retrofitted' in names else []
-    float_fields = loss_types + ['ideductible'] + retro
+    float_fields = vfields + ['ideductible'] + retro
     int_fields = [(str(name), U32) for name in tagcol.tagnames
                   if name not in ('id', 'site_id')]
     asset_dt = numpy.dtype(
@@ -886,7 +886,9 @@ def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
     for field in fields & names:
         array[field] = assets_df[field]
     cost_calculator.update(array)
-    return mesh, array
+    exp.mesh = mesh
+    exp.assets = array
+    exp.occupancy_periods = ' '.join(ofields)
 
 
 class Exposure(object):
@@ -980,9 +982,8 @@ class Exposure(object):
             elif name in exp.tagcol.tagnames:
                 assets_df[name] = tagcol.get_tagi(name, assets_df)
 
-        exp.occupancy_periods = ' '.join(occupancy_periods)
-        exp.mesh, exp.assets = _get_mesh_assets(
-            assets_df, exp.tagcol, exp.cost_calculator, vfields)
+        _set_mesh_assets(exp, assets_df, exp.tagcol, exp.cost_calculator,
+                         vfields, occupancy_periods)
         return exp
 
     @staticmethod
