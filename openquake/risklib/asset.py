@@ -825,12 +825,10 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
         exposure.tagcol = tagcol
-    if calculation_mode == 'classical_bcr':
-        exposure.retrofitted = True
     if assetnodes:
         df = assets2df(
             assetnodes, exposure._csv_header(),
-            exposure.retrofitted, ignore_missing_costs)
+            calculation_mode=='classical_bcr', ignore_missing_costs)
         fname_dfs = [(fname, df)]
     else:
         fname_dfs = exposure._read_csv(errors)
@@ -846,7 +844,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         occupants = any(n.startswith('occupants_') for n in names)
         if occupants and 'occupants_avg' not in names:
             df['occupants_avg'] = calc_occupants_avg(df)
-        if exposure.retrofitted:
+        if calculation_mode == 'classical_bcr':
             df['retrofitted'] = exposure.cost_calculator(
                 'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
@@ -962,7 +960,6 @@ class Exposure(object):
             else:
                 ae(exposure.cost_types, exp.cost_types)
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
-                ae(exposure.retrofitted, exp.retrofitted)
                 ae(exposure.area, exp.area)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
