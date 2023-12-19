@@ -614,7 +614,6 @@ def _get_exposure(fname, stop=None):
     if not exposure.tag.endswith('exposureModel'):
         raise InvalidFile('%s: expected exposureModel, got %s' %
                           (fname, exposure.tag))
-    description = exposure.description
     try:
         conversions = exposure.conversions
     except AttributeError:
@@ -657,7 +656,6 @@ def _get_exposure(fname, stop=None):
 
     # read the cost types and make some check
     cost_types = []
-    retrofitted = False
     for ct in conversions.costTypes:
         with context(fname, ct):
             ctname = ct['name']
@@ -670,7 +668,6 @@ def _get_exposure(fname, stop=None):
                     raise ValueError(
                         'The retrofittedUnit %s is different from the unit'
                         '%s' % (ct['retrofittedUnit'], ct['unit']))
-                retrofitted = True
             cost_types.append(
                 (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     try:
@@ -700,8 +697,8 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    exp = Exposure(occupancy_periods, retrofitted,
-                   area.attrib, [], cc, TagCollection(tagnames), pairs)
+    exp = Exposure(occupancy_periods, area.attrib, [], cc,
+                   TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -917,8 +914,8 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['occupancy_periods', 'retrofitted',
-              'area', 'assets', 'cost_calculator', 'tagcol', 'pairs']
+    fields = ['occupancy_periods', 'area', 'assets', 'cost_calculator',
+              'tagcol', 'pairs']
 
     @staticmethod
     def check(fname):
