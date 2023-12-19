@@ -24,6 +24,8 @@ import operator
 import numpy
 import pandas
 
+import shapely
+
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
@@ -484,6 +486,7 @@ class EventBasedCalculator(base.HazardCalculator):
             # spatial index using the current simplified geometries is quick.
             gmg = GlobalModelGetter('mosaic',
                                     model_codes=[oq.mosaic_model])
+            mosaic_model_shape = gmg.get_shapes([oq.mosaic_model])[0]
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0
@@ -498,10 +501,11 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             geom = rup_array.geom
             if oq.mosaic_model:
-                ok = gmg.is_hypocenter_array_inside(
-                    rup_array['hypo'], oq.mosaic_model)
-                rup_array = rup_array[ok]
-                geom = geom[ok]
+                idxs = [
+                    idx for idx, rup in enumerate(rup_array)
+                    if shapely.Point(rup['hypo']).within(mosaic_model_shape)]
+                rup_array = rup_array[idxs]
+                geom = geom[idxs]
                 filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']

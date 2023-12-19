@@ -62,6 +62,14 @@ class GlobalModelGetter:
             sinfo_path, replace_sinfo, model_codes)
         self.model_codes = model_codes
 
+    def get_shapes(self, model_codes):
+        with fiona.open(self.shapefile_path, 'r') as shp:
+            shapes = [
+                shape(polygon['geometry']) for polygon in shp
+                if polygon['properties'][
+                    self.model_code_field] in model_codes]
+        return shapes
+
     def read_from_pickle(self, path):
         logging.info(f'Reading from {path}...')
         t0 = time.time()
