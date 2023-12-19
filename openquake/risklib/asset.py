@@ -884,8 +884,8 @@ def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
     array = numpy.zeros(num_assets, asset_dt)
     fields = set(asset_dt.fields) - {'ordinal'}
     for field in fields:
-        if field in tagcol.tagnames:
-            array[field] = tagcol.get_tagi(field, assets_df)
+        if field == 'taxonomy':
+            array['taxonomy'] = tagcol.get_tagi('taxonomy', assets_df)
         elif field in names:
             array[field] = assets_df[field]
     cost_calculator.update(array)
@@ -980,6 +980,9 @@ class Exposure(object):
                 field = name[6:]
                 if field not in missing:
                     vfields.append(name)
+            elif name in exp.tagcol.tagnames and name != 'taxonomy':
+                assets_df[name] = tagcol.get_tagi(name, assets_df)
+
         exp.occupancy_periods = ' '.join(occupancy_periods)
         exp.mesh, exp.assets = _get_mesh_assets(
             assets_df, exp.tagcol, exp.cost_calculator, vfields)
