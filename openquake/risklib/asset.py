@@ -935,24 +935,7 @@ class Exposure(object):
                          for f in fnames]
         assets_df = pandas.concat(dfs)
         del dfs  # save memory
-        vfields = []
-        ofields = []
-        missing = VAL_FIELDS - set(exp.cost_calculator.cost_types)
-        for name in assets_df.columns:
-            if name.startswith('occupants_'):
-                period = name.split('_', 1)[1]
-                # see scenario_risk test_case_2d
-                if period != 'avg':
-                    ofields.append(period)
-                vfields.append(name)
-            elif name.startswith('value-'):
-                field = name[6:]
-                if field not in missing:
-                    vfields.append(name)
-            elif name in exp.tagcol.tagnames:
-                assets_df[name] = tagcol.get_tagi(name, assets_df)
-
-        exp.init(assets_df, vfields, ofields)
+        exp.init(assets_df)
         return exp
 
     @staticmethod
@@ -969,11 +952,28 @@ class Exposure(object):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
-    def init(self, assets_df, vfields, ofields):
+    def init(self, assets_df):
         """
         Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
         """
         t0 = time.time()
+        vfields = []
+        ofields = []
+        missing = VAL_FIELDS - set(self.cost_calculator.cost_types)
+        for name in assets_df.columns:
+            if name.startswith('occupants_'):
+                period = name.split('_', 1)[1]
+                # see scenario_risk test_case_2d
+                if period != 'avg':
+                    ofields.append(period)
+                vfields.append(name)
+            elif name.startswith('value-'):
+                field = name[6:]
+                if field not in missing:
+                    vfields.append(name)
+            elif name in self.tagcol.tagnames:
+                assets_df[name] = self.tagcol.get_tagi(name, assets_df)
+
         assets_df.sort_values(['lon', 'lat'], inplace=True)
         ll = numpy.zeros((len(assets_df), 2))
         ll[:, 0] = assets_df['lon']
