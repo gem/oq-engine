@@ -193,12 +193,6 @@ class CostCalculator(object):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
 
 
-costcalculator = CostCalculator(
-    cost_types=dict(structural='per_area'),
-    area_types=dict(structural='per_asset'),
-    units=dict(structural='EUR'))
-
-
 class TagCollection(object):
     """
     An iterable collection of tags in the form "tagname=tagvalue".
