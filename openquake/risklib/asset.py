@@ -1009,9 +1009,10 @@ class Exposure(object):
         Extract the expected CSV header from the exposure metadata
         """
         fields = ['id', value + 'number', 'taxonomy', 'lon', 'lat']
-        for name in self.cost_types['name']:
+        cc = self.cost_calculator
+        for name in cc.cost_types:
             fields.append(value + name)
-        if 'per_area' in self.cost_types['type']:
+        if 'per_area' in cc.cost_types.values():
             fields.append(value + 'area')
         for op in self.occupancy_periods.split():
             fields.append(occupants + op)
