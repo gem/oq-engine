@@ -700,10 +700,8 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    exp = Exposure(
-        exposure['id'], exposure['category'],
-        description.text, occupancy_periods, retrofitted,
-        area.attrib, [], cc, TagCollection(tagnames), pairs)
+    exp = Exposure(occupancy_periods, retrofitted,
+                   area.attrib, [], cc, TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -921,8 +919,7 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['id', 'category', 'description',
-              'occupancy_periods', 'retrofitted',
+    fields = ['occupancy_periods', 'retrofitted',
               'area', 'assets', 'cost_calculator', 'tagcol', 'pairs']
 
     @staticmethod
