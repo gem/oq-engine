@@ -860,6 +860,18 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
+def read_assets(hdf5file, start, stop):
+    """
+    Builds a DataFrame of assets by reading the global exposure file
+    """
+    group = hdf5file['assets']
+    dic = {}
+    for field in group:
+        if field == field.upper():
+            dic[field] = group[field][start:stop]
+    return pandas.DataFrame(dic)
+
+
 class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
@@ -899,6 +911,21 @@ class Exposure(object):
                 err.append('Asset %s has number %s > 65535' %
                            (asset['id'].decode('utf8'), asset['value-number']))
         return '\n'.join(err)
+
+    @staticmethod
+    def read_around(exposure_hdf5, gh3s):
+        """
+        Read the global exposure in HDF5 format and returns the subset
+        specified by the given geohashes.
+        """
+        with hdf5.File(exposure_hdf5) as f:
+            exp = f['exposure']
+            sbg = f['assets/slice_by_gh3'][:]
+            slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
+            assets_df = pandas.concat(read_assets(f, start, stop)
+                                      for gh3, start, stop in slices)
+        exp.init(assets_df)
+        return exp
 
     @staticmethod
     def read_all(fnames, calculation_mode='', ignore_missing_costs=(),
