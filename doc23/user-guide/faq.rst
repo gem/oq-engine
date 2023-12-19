@@ -1,5 +1,5 @@
-FAQ
-===
+Frequently Asked Questions (FAQ)
+================================
 
 FAQ for IT issues
 -----------------
@@ -18,8 +18,8 @@ setup see the :ref:`hardware suggestions <hardware-requirements>` and :ref:`clus
 Help! I have a multi-node cluster and I'm in trouble
 ****************************************************
 
-If you are running the OpenQuake engine on a multi-node cluster you should also have a look at FAQ related to cluster 
-deployments.
+If you are running the OpenQuake engine on a multi-node cluster you should also have a look at :ref:`FAQ related to cluster 
+deployments <faq-cluster>`.
 
 **************************************
 Help! Should I disable hyperthreading?
@@ -35,7 +35,7 @@ have 5 GB of available RAM.
 **Note**: on a linux machine you can try disable hyperthreading temporarily with the command ``sudo echo off > 
 /sys/devices/system/cpu/smt/control``: however, this setting will not survive a reboot. Also, on some systems this 
 command will not work. If you cannot disable hyperthreading just make sure that if you have enough memory: we 
-recommend 4 GB per real core or 2 GB per thread.
+recommend at least 2 GB per thread.
 
 *******************************************************
 Help! My windows server with 32/64 or more cores hangs!
@@ -65,11 +65,7 @@ Help! I am running out of memory!
 If you are on a laptop, the first thing to do is close all memory consuming applications. Remember that running the 
 engine from the command-line is the most memory-efficient way to run calculations (browesers can use significant memory 
 from your laptop). You can also limit the number of parallel threads as explained before (i.e. disable hyperthreading, 
-reduce num_cores) or disable parallelism altogether by giving the command::
-
-	$ oq engine --run job.ini --no-distribute
-
-or by setting ``concurrent_tasks = 0`` in the job.ini file. If you still run out of memory, then you must reduce your 
+reduce num_cores) or disable parallelism altogether. If you still run out of memory, then you must reduce your 
 calculation or upgrade your system.
 
 *****************************************************************************************************************
@@ -122,6 +118,9 @@ The OpenQuake engine has several installation methods. To choose the one that be
 ###########################
 Supported operating systems
 ###########################
+
+Binary packages are `provided for Windows <https://downloads.openquake.org/pkgs/windows/oq-engine>`__.  For all other 
+systems use the :ref:`universal installer <universal>`. We also provide :ref:`Docker containers <docker>`.
 
 Binary packages are provided for the following 64bit operating systems::
 
@@ -329,6 +328,8 @@ following command::
 
 	sudo /Applications/Python\ 3.8/install_certificates.command  # NB: use the appropriate Python version!
 
+.. _faq-hazard:
+
 FAQ about running hazard calculations
 -------------------------------------
 
@@ -437,6 +438,8 @@ The official way to plot the result of a calculation is to use the `QGIS plugin 
 However you may want a kind of plot which is not available in the plugin, or you may want to batch-produce hundreds of 
 plots, or you may want to plot the results of a postprocessing operation. In such cases you need to use the 
 `extract API <https://github.com/gem/oq-engine/blob/master/doc/extract-api>`_ and to write your own plotting/postprocessing code.
+
+.. _faq-risk:
 
 FAQ about running risk calculations
 -----------------------------------
@@ -600,6 +603,8 @@ The PML for a given return period is built from the losses in the event loss tab
 detail in the advanced manual at the end of the section about risk calculations. The section also explains why sometimes 
 the PML or the loss curves contain NaN values (the effective investigation time is too short compared to the return 
 period). Finally, it also explains why the PML is not additive.
+
+.. _faq-cluster:
 
 FAQ related to cluster deployments
 ----------------------------------

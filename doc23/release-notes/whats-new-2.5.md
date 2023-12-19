@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.5
-===================================================
+Release notes v2.5
+==================
 
 This release introduces a tiling mechanism for classical PSHA
 calculations. The tiling reduces the memory consumption and increases

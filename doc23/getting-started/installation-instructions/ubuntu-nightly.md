@@ -25,7 +25,7 @@ sudo apt remove --purge python-oq-.* python3-oq-.*
 sudo apt install python3-oq-engine
 ```
 
-Now you can follow the [standard installing procedures](configure-the-system-services)
+Now you can follow the [standard installing procedures](ubuntu.md)
 
 ***
 

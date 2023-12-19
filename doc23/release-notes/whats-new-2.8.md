@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.8
-===================================================
+Release notes v2.8
+==================
 
 Several improvements entered in this release, most notably about
 the disaggregation calculator and the classical calculator with sampling.

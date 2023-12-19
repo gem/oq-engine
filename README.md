@@ -2,7 +2,8 @@
 
 ![OpenQuake Logo](https://raw.githubusercontent.com/gem/oq-infrastructure/master/logos/oq-logo.png)
 
-The **OpenQuake Engine** is an open source application that allows users to compute **seismic hazard** and **seismic risk** of earthquakes on a global scale. DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
+The **OpenQuake Engine** is an open source software that provides calculation and assessment of seismic hazard, risk and decision-making tools via the data, methods and standards that are being developed by the **[GEM](http://www.globalquakemodel.org)** (Global Earthquake Model) Foundation and its collaborators.
+DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 <!-- GEM BEGIN: apply the following patch with the proper values for the next release
 -[![Build Status](https://travis-ci.org/gem/oq-engine.svg?branch=master)](https://travis-ci.org/gem/oq-engine)
@@ -19,7 +20,6 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 +* [What's new](../engine-2.6/doc/whats-new.md)
 + 
 +## Documentation
--## Documentation (master tree)
 -->
 
 [![AGPLv3](https://www.gnu.org/graphics/agplv3-88x31.png)](https://www.gnu.org/licenses/agpl.html)
@@ -30,57 +30,29 @@ The **OpenQuake Engine** is an open source application that allows users to comp
 
 Current LTS version is the **OpenQuake Engine 3.16** 'Angela':
 
-The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela).
-* [What's new](../engine-3.16/doc/whats-new.md)
-* [Documentation 3.16](https://github.com/gem/oq-engine/tree/engine-3.16#openquake-engine)
-* [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
-
+The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela). [What's new](https://docs.openquake.org/oq-engine-new/master/manual/release-notes/whats-new-3.16.html)
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.18**.
+Latest stable version is the **OpenQuake Engine 3.18**.* [What's new](https://docs.openquake.org/oq-engine-new/master/manual/release-notes/whats-new-3.18.html)
 
 <!-- GEM END -->
 
-## General overview
+## Documentation
 
-The OpenQuake Engine software provides calculation and assessment of seismic hazard, risk and decision-making tools via the data, methods and standards that are being developed by **[GEM](http://www.globalquakemodel.org)** (Global Earthquake Model) and its collaborators.
+Since version 3.19 the OpenQuake Engine documentation has been consolidated into a single site: 
+https://docs.openquake.org/oq-engine-new/master/manual/
 
-* [Installation](doc/installing/README.md)
-* [User's manual](https://docs.openquake.org/oq-engine/manual/latest/)
-* [Advanced user manual](https://docs.openquake.org/oq-engine/advanced/master/). _Disclaimer: It includes experimental features and is only recommended for users that are already familiar with the user's manual._
-* [FAQ](doc/faq.md)
-* [Glossary of Terms](doc/glossary.md)
-
-
-## Running the OpenQuake Engine
-
-* Using the command line [on Windows](doc/running/windows.md)
-* Using the command line [on macOS and Linux](doc/running/unix.md)
-* [Using the WebUI](doc/running/server.md)
-
-## Visualizing outputs via QGIS
-
-<img src="https://github.com/gem/oq-infrastructure/raw/master/icons/irmt_icon.png" alt="IRMT Logo" width="50" >
-
-A [QGIS plug-in](https://plugins.qgis.org/plugins/svir/) is available for users that would like to visually explore the outputs from the engine. 
-Check the documentation for instructions on how to [drive the engine](https://docs.openquake.org/oq-irmt-qgis/latest/14_driving_the_oqengine.html) and [visualize outputs](https://docs.openquake.org/oq-irmt-qgis/latest/15_viewer_dock.html). [Source code](https://github.com/gem/oq-irmt-qgis) also available.
-
-## For developers and contributors
-
-* [Architecture](doc/adv-manual/architecture.rst)
-* [Calculation Workflow](doc/calculation-workflow.md)
-* [Continuous integration and testing](doc/testing.md)
-
-#### For contributors
-
-* [Development Philosophy and Coding Guidelines](doc/development-guidelines.md)
-* [Source Code/API Documentation](http://docs.openquake.org/oq-engine/)
-* [HTTP REST API](doc/web-api.md)
-* [Implementing a new GSIM](doc/implementing-new-gsim.md)
+* [Getting Started](https://docs.openquake.org/oq-engine-new/master/manual/getting-started/)
+* [User Guide](https://docs.openquake.org/oq-engine-new/master/manual/user-guide/)
+* [API Reference](https://docs.openquake.org/oq-engine-new/master/manual/api-reference/)
+* [Underlying Science](https://docs.openquake.org/oq-engine-new/master/manual/underlying-science/)
+* [Release Notes](https://docs.openquake.org/oq-engine-new/master/manual/release-notes/)
+* [Contributing](https://docs.openquake.org/oq-engine-new/master/manual/contributing/)
+* [FAQ](https://docs.openquake.org/oq-engine-new/master/manual/user-guide/extras/faq)
 
 
-#### Mirrors
+## Mirrors
 
 A mirror of this repository, hosted in Pavia (Italy), is available at [https://mirror.openquake.org/git/GEM/oq-engine.git](https://mirror.openquake.org/git/GEM/oq-engine.git).
 
@@ -95,8 +67,6 @@ The OpenQuake Engine is released under the **[GNU Affero Public License 3](LICEN
 
 * Support forum: https://groups.google.com/forum/#!forum/openquake-users
 * Twitter: [@gem_devs](https://twitter.com/gem_devs)
-* Email: info@openquake.org
-
 
 ## Thanks
 

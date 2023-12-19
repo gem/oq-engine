@@ -9,9 +9,9 @@ Hazard Calculators
 The hazard component of the OpenQuake engine can compute seismic hazard using various approaches. Three types of 
 analysis are currently supported:
 
-- Classical Probabilistic Seismic Hazard Analysis (PSHA), allowing calculation of hazard curves and hazard maps following the classical integration procedure ((Cornell 1968), McGuire (1976)) as formulated by (Field, Jordan, and Cornell 2003).
-- Event-Based Probabilistic Seismic Hazard Analysis, allowing calculation of ground-motion fields from stochastic event sets. Traditional results - such as hazard curves - can be obtained by post- processing the set of computed ground-motion fields.
-- Scenario Based Seismic Hazard Analysis, allowing the calculation of ground motion fields from a single earthquake rupture scenario taking into account ground motion aleatory variability. The ground motion fields can be conditioned to observed data, when available.
+- **Classical Probabilistic Seismic Hazard Analysis (PSHA)**, allowing calculation of hazard curves and hazard maps following the classical integration procedure ((Cornell 1968), McGuire (1976)) as formulated by (Field, Jordan, and Cornell 2003).
+- **Event-Based Probabilistic Seismic Hazard Analysis**, allowing calculation of ground-motion fields from stochastic event sets. Traditional results - such as hazard curves - can be obtained by post- processing the set of computed ground-motion fields.
+- **Scenario Based Seismic Hazard Analysis**, allowing the calculation of ground motion fields from a single earthquake rupture scenario taking into account ground motion aleatory variability. The ground motion fields can be conditioned to observed data, when available.
 
 Each workflow has a modular structure, so that intermediate results can be exported and analyzed. Each calculator can be 
 extended independently of the others so that additional calculation options and methodologies can be easily introduced, 
@@ -40,17 +40,32 @@ each calculator can be extended independently of the others so that additional c
 be easily introduced, without affecting the overall calculation workflow. Each workflow is described in more detail in 
 the following sections.
 
+List of OpenQuake engine commands
+---------------------------------
+
+The list of available commands for OpenQuake engine can be found `here <https://docs.openquake.org/oq-engine/master/reference/openquake.commands.html>`_
+
 .. toctree::
    :maxdepth: 1
-   :hidden:
+   :caption: Seismic Hazard:
 
    classical-psha
    stochastic-event-based-psha
    scenario-based-sha
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Seismic Risk:
+
    scenario-risk
    classical-risk
    stochastic-event-based-risk
    refrofit-benefit-cost
    infrastructure-risk
    reinsurance-loss
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Secondary Perils:
+
    liquefaction-analysis

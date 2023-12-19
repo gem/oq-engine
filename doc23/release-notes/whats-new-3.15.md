@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.15
-====================================================
+Release notes v3.15
+===================
 
 The release 3.15 is the result of 5 months of work involving nearly
 320 pull requests, featuring many significant optimizations and new features.

@@ -1,5 +1,5 @@
-What's new in engine-1.8
-========================
+Release notes v1.8
+==================
 
 We are pleased to announce the release of OpenQuake 1.8.
 This is a major release and contains numerous improvements with respect

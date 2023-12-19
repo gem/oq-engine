@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.5
-===================================================
+Release notes v3.5
+==================
 
 This is a major release featuring a new `multi_risk` calculator,
 several improvements to the hazard and risk calculators as well as a

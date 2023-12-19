@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.2
-===================================================
+Release notes v2.2
+==================
 
 This release has focused on memory and performance optimizations, especially
 in the event based and scenario calculators. Moreover we have significantly

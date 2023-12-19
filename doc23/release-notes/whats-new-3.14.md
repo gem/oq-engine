@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.14
-====================================================
+Release notes v3.14
+===================
 
 The release 3.14 is the result of 3 months of work involving nearly
 200 pull requests. The major highlight is the complete vectorization of

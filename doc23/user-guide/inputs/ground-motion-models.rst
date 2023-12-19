@@ -1,7 +1,7 @@
 Ground Motion Models
 ====================
 
-The list of GMPEs available in the OpenQuake engine can be found `here <https://docs.openquake.org/oq-engine/reference/master/openquake.hazardlib.gsim.html>`_.
+The list of GMPEs available in the OpenQuake engine can be found :ref:`here <openquake-hazardlib-gsim>`.
 
 Parametric GMPEs
 ----------------
