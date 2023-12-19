@@ -171,32 +171,8 @@ class CostCalculator(object):
             lst.append(unit)
         return ' '.join(lst)
 
-    def __toh5__(self):
-        loss_types = sorted(self.cost_types)
-        dt = numpy.dtype([('cost_type', hdf5.vstr),
-                          ('area_type', hdf5.vstr),
-                          ('unit', hdf5.vstr)])
-        array = numpy.zeros(len(loss_types), dt)
-        array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
-        array['area_type'] = [self.area_types[lt] for lt in loss_types]
-        array['unit'] = [self.units[lt] for lt in loss_types]
-        attrs = dict(loss_types=hdf5.array_of_vstr(loss_types))
-        return array, attrs
-
-    def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.cost_types = dict(zip(self.loss_types, array['cost_type']))
-        self.area_types = dict(zip(self.loss_types, array['area_type']))
-        self.units = dict(zip(self.loss_types, decode(array['unit'])))
-
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
-
-
-costcalculator = CostCalculator(
-    cost_types=dict(structural='per_area'),
-    area_types=dict(structural='per_asset'),
-    units=dict(structural='EUR'))
 
 
 class TagCollection(object):
@@ -620,7 +596,6 @@ def _get_exposure(fname, stop=None):
     if not exposure.tag.endswith('exposureModel'):
         raise InvalidFile('%s: expected exposureModel, got %s' %
                           (fname, exposure.tag))
-    description = exposure.description
     try:
         conversions = exposure.conversions
     except AttributeError:
@@ -663,7 +638,6 @@ def _get_exposure(fname, stop=None):
 
     # read the cost types and make some check
     cost_types = []
-    retrofitted = False
     for ct in conversions.costTypes:
         with context(fname, ct):
             ctname = ct['name']
@@ -676,7 +650,6 @@ def _get_exposure(fname, stop=None):
                     raise ValueError(
                         'The retrofittedUnit %s is different from the unit'
                         '%s' % (ct['retrofittedUnit'], ct['unit']))
-                retrofitted = True
             cost_types.append(
                 (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     try:
@@ -706,10 +679,8 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    exp = Exposure(
-        exposure['id'], exposure['category'],
-        description.text, cost_types, occupancy_periods, retrofitted,
-        area.attrib, [], cc, TagCollection(tagnames), pairs)
+    exp = Exposure(occupancy_periods, area.attrib, [], cc,
+                   TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
@@ -833,12 +804,10 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
         exposure.tagcol = tagcol
-    if calculation_mode == 'classical_bcr':
-        exposure.retrofitted = True
     if assetnodes:
         df = assets2df(
             assetnodes, exposure._csv_header(),
-            exposure.retrofitted, ignore_missing_costs)
+            calculation_mode=='classical_bcr', ignore_missing_costs)
         fname_dfs = [(fname, df)]
     else:
         fname_dfs = exposure._read_csv(errors)
@@ -854,7 +823,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         occupants = any(n.startswith('occupants_') for n in names)
         if occupants and 'occupants_avg' not in names:
             df['occupants_avg'] = calc_occupants_avg(df)
-        if exposure.retrofitted:
+        if calculation_mode == 'classical_bcr':
             df['retrofitted'] = exposure.cost_calculator(
                 'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
@@ -927,9 +896,30 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['id', 'category', 'description', 'cost_types',
-              'occupancy_periods', 'retrofitted',
-              'area', 'assets', 'cost_calculator', 'tagcol', 'pairs']
+    fields = ['occupancy_periods', 'area', 'assets', 'cost_calculator',
+              'tagcol', 'pairs']
+
+    def __toh5__(self):
+        cc = self.cost_calculator
+        loss_types = sorted(cc.cost_types)
+        dt = numpy.dtype([('cost_type', hdf5.vstr),
+                          ('area_type', hdf5.vstr),
+                          ('unit', hdf5.vstr)])
+        array = numpy.zeros(len(loss_types), dt)
+        array['cost_type'] = [cc.cost_types[lt] for lt in loss_types]
+        array['area_type'] = [cc.area_types[lt] for lt in loss_types]
+        array['unit'] = [cc.units[lt] for lt in loss_types]
+        attrs = dict(loss_types=hdf5.array_of_vstr(loss_types),
+                     occupancy_periods=self.occupancy_periods,
+                     pairs=self.pairs)
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        cc = self.cost_calculator = object.__new__(CostCalculator)
+        cc.cost_types = dict(zip(self.loss_types, array['cost_type']))
+        cc.area_types = dict(zip(self.loss_types, array['area_type']))
+        cc.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     @staticmethod
     def check(fname):
@@ -971,7 +961,6 @@ class Exposure(object):
             else:
                 ae(exposure.cost_types, exp.cost_types)
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
-                ae(exposure.retrofitted, exp.retrofitted)
                 ae(exposure.area, exp.area)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
                          for f in fnames]
@@ -1015,9 +1004,10 @@ class Exposure(object):
         Extract the expected CSV header from the exposure metadata
         """
         fields = ['id', value + 'number', 'taxonomy', 'lon', 'lat']
-        for name in self.cost_types['name']:
+        cc = self.cost_calculator
+        for name in cc.cost_types:
             fields.append(value + name)
-        if 'per_area' in self.cost_types['type']:
+        if 'per_area' in cc.cost_types.values():
             fields.append(value + 'area')
         for op in self.occupancy_periods.split():
             fields.append(occupants + op)
