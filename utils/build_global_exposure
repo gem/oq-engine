@@ -71,7 +71,7 @@ def collect_exposures(grm_dir):
     """
     Collect the files of kind Exposure_<Country>.xml.
 
-    :returns: xmlfiles, csvfiles
+    :returns: exposure, xmlfiles, csvfiles
     """
     out = []
     csvfiles = []
@@ -85,7 +85,7 @@ def collect_exposures(grm_dir):
                 out.append(fullname)
                 exposure, _ = _get_exposure(fullname)
                 csvfiles.extend(exposure.datafiles)
-    return out, csvfiles
+    return exposure, out, csvfiles
 
 
 def exposure_by_geohash(array, monitor):
@@ -127,16 +127,17 @@ def read_world_exposure(grm_dir, dstore):
 
     :param grm_dir: directory containing the global risk model
     """
-    fnames, csvfiles = collect_exposures(grm_dir)
+    exposure, fnames, csvfiles = collect_exposures(grm_dir)
+    dstore['exposure'] = exposure
     files = hdf5.sniff(csvfiles, ',', IGNORE)
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', h5py.string_dtype('ascii', 25))]
-    dstore.create_df('exposure', dtlist, 'gzip')
+    dstore.create_df('assets', dtlist)  # DO NOT USE gzip to save disk space!
     for tagname in TAGS:
         dstore.create_dset('tagcol/' + tagname, U32)
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
-    dstore.create_dset('exposure/slice_by_gh3', slc_dt, fillvalue=None)
+    dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
     dstore.swmr_on()
     smap = Starmap.apply(gen_tasks, (files,),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
@@ -146,10 +147,10 @@ def read_world_exposure(grm_dir, dstore):
             if name in TAGS:
                 TAGS[name].append(arr[name])
             else:
-                hdf5.extend(dstore['exposure/' + name], arr[name])
+                hdf5.extend(dstore['assets/' + name], arr[name])
         n = len(arr)
         slc = numpy.array([(gh3, s, s + n)], slc_dt)
-        hdf5.extend(dstore['exposure/slice_by_gh3'], slc)
+        hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         s += n
     Starmap.shutdown()
 
@@ -157,7 +158,7 @@ def read_world_exposure(grm_dir, dstore):
         tagvalues = numpy.concatenate(TAGS[tagname])
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
         logging.info('Storing %s[%d/%d]', tagname, len(uvals), len(inv))
-        hdf5.extend(dstore[f'exposure/{tagname}'], inv)
+        hdf5.extend(dstore[f'assets/{tagname}'], inv)
         dstore['tagcol/' + tagname] = uvals
 
 
