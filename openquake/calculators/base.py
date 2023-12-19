@@ -814,7 +814,7 @@ class HazardCalculator(BaseCalculator):
         if 'exposure' in oq.inputs and 'assetcol' not in self.datastore.parent:
             exposure = self.read_exposure(haz_sitecol)
             self.datastore['assetcol'] = self.assetcol
-            self.datastore['cost_calculator'] = exposure.cost_calculator
+            self.datastore['exposure'] = exposure
             if hasattr(readinput.Global.exposure, 'exposures'):
                 self.datastore.getitem('assetcol')['exposures'] = numpy.array(
                     exposure.exposures, hdf5.vstr)

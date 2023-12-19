@@ -171,24 +171,6 @@ class CostCalculator(object):
             lst.append(unit)
         return ' '.join(lst)
 
-    def __toh5__(self):
-        loss_types = sorted(self.cost_types)
-        dt = numpy.dtype([('cost_type', hdf5.vstr),
-                          ('area_type', hdf5.vstr),
-                          ('unit', hdf5.vstr)])
-        array = numpy.zeros(len(loss_types), dt)
-        array['cost_type'] = [self.cost_types[lt] for lt in loss_types]
-        array['area_type'] = [self.area_types[lt] for lt in loss_types]
-        array['unit'] = [self.units[lt] for lt in loss_types]
-        attrs = dict(loss_types=hdf5.array_of_vstr(loss_types))
-        return array, attrs
-
-    def __fromh5__(self, array, attrs):
-        vars(self).update(attrs)
-        self.cost_types = dict(zip(self.loss_types, array['cost_type']))
-        self.area_types = dict(zip(self.loss_types, array['area_type']))
-        self.units = dict(zip(self.loss_types, decode(array['unit'])))
-
     def __repr__(self):
         return '<%s %s>' % (self.__class__.__name__, vars(self))
 
@@ -916,6 +898,28 @@ class Exposure(object):
     """
     fields = ['occupancy_periods', 'area', 'assets', 'cost_calculator',
               'tagcol', 'pairs']
+
+    def __toh5__(self):
+        cc = self.cost_calculator
+        loss_types = sorted(cc.cost_types)
+        dt = numpy.dtype([('cost_type', hdf5.vstr),
+                          ('area_type', hdf5.vstr),
+                          ('unit', hdf5.vstr)])
+        array = numpy.zeros(len(loss_types), dt)
+        array['cost_type'] = [cc.cost_types[lt] for lt in loss_types]
+        array['area_type'] = [cc.area_types[lt] for lt in loss_types]
+        array['unit'] = [cc.units[lt] for lt in loss_types]
+        attrs = dict(loss_types=hdf5.array_of_vstr(loss_types),
+                     occupancy_periods=self.occupancy_periods,
+                     pairs=self.pairs)
+        return array, attrs
+
+    def __fromh5__(self, array, attrs):
+        vars(self).update(attrs)
+        cc = self.cost_calculator = object.__new__(CostCalculator)
+        cc.cost_types = dict(zip(self.loss_types, array['cost_type']))
+        cc.area_types = dict(zip(self.loss_types, array['area_type']))
+        cc.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     @staticmethod
     def check(fname):
