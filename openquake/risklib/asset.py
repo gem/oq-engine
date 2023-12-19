@@ -638,6 +638,7 @@ def _get_exposure(fname, stop=None):
 
     # read the cost types and make some check
     cost_types = []
+    retrofitted = False
     for ct in conversions.costTypes:
         with context(fname, ct):
             ctname = ct['name']
@@ -650,6 +651,7 @@ def _get_exposure(fname, stop=None):
                     raise ValueError(
                         'The retrofittedUnit %s is different from the unit'
                         '%s' % (ct['retrofittedUnit'], ct['unit']))
+                retrofitted = True  # tested in the ClassicalBCR demo
             cost_types.append(
                 (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     try:
@@ -679,7 +681,7 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    exp = Exposure(occupancy_periods, area.attrib, [], cc,
+    exp = Exposure(occupancy_periods, retrofitted, area.attrib, [], cc,
                    TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
@@ -804,10 +806,12 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
         exposure.tagcol = tagcol
+    if calculation_mode == 'classical_bcr':  # classical_bcr tests
+        exposure.retrofitted = True
     if assetnodes:
         df = assets2df(
             assetnodes, exposure._csv_header(),
-            calculation_mode=='classical_bcr', ignore_missing_costs)
+            exposure.retrofitted, ignore_missing_costs)
         fname_dfs = [(fname, df)]
     else:
         fname_dfs = exposure._read_csv(errors)
@@ -823,7 +827,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         occupants = any(n.startswith('occupants_') for n in names)
         if occupants and 'occupants_avg' not in names:
             df['occupants_avg'] = calc_occupants_avg(df)
-        if calculation_mode == 'classical_bcr':
+        if exposure.retrofitted:
             df['retrofitted'] = exposure.cost_calculator(
                 'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
@@ -860,8 +864,8 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['occupancy_periods', 'area', 'assets', 'cost_calculator',
-              'tagcol', 'pairs']
+    fields = ['occupancy_periods', 'retrofitted', 'area', 'assets',
+              'cost_calculator', 'tagcol', 'pairs']
 
     def __toh5__(self):
         cc = self.cost_calculator
@@ -875,6 +879,7 @@ class Exposure(object):
         array['unit'] = [cc.units[lt] for lt in loss_types]
         attrs = dict(loss_types=hdf5.array_of_vstr(loss_types),
                      occupancy_periods=self.occupancy_periods,
+                     retrofitted=self.retrofitted,
                      pairs=self.pairs)
         return array, attrs
 
