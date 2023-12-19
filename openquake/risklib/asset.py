@@ -309,7 +309,7 @@ class AssetCollection(object):
     Wrapper over an array of assets
     """
     def __init__(self, exposure, sitecol, time_event, aggregate_by):
-        self.occupancy_periods = exposure.occupancy_periods
+        self.occupancy_periods = ' '.join(exposure.occupancy_periods)
         self.array = exposure.assets
         self.tagcol = exposure.tagcol
         self.time_event = time_event
@@ -319,7 +319,7 @@ class AssetCollection(object):
         if self.occupancy_periods and not exp_periods:
             logging.warning('Missing <occupancyPeriods>%s</occupancyPeriods> '
                             'in the exposure', self.occupancy_periods)
-        elif self.occupancy_periods.strip() != exp_periods.strip():
+        elif self.occupancy_periods.split() != exp_periods:
             raise ValueError('Expected %s, got %s' %
                              (exp_periods, self.occupancy_periods))
         self.fields = [f[6:] for f in self.array.dtype.names
@@ -623,9 +623,9 @@ def _get_exposure(fname, stop=None):
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
     try:
-        occupancy_periods = exposure.occupancyPeriods.text or ''
+        occupancy_periods = exposure.occupancyPeriods.text.split()
     except AttributeError:
-        occupancy_periods = ''
+        occupancy_periods = []
     try:
         tagNames = exposure.tagNames
     except AttributeError:
@@ -1005,7 +1005,7 @@ class Exposure(object):
         self.mesh = mesh
         self.assets = array
         self.loss_types = vfields
-        self.occupancy_periods = ' '.join(ofields)
+        self.occupancy_periods = ofields
 
     def _csv_header(self, value='value-', occupants='occupants_'):
         """
@@ -1017,7 +1017,7 @@ class Exposure(object):
             fields.append(value + name)
         if 'per_area' in cc.cost_types.values():
             fields.append(value + 'area')
-        for op in self.occupancy_periods.split():
+        for op in self.occupancy_periods:
             fields.append(occupants + op)
         fields.extend(self.tagcol.tagnames)
         wrong = get_case_similar(set(fields))
