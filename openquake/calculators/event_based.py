@@ -479,7 +479,7 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         if oq.mosaic_model:  # 3-letter mosaic model
-            # TODO: the spatial index might be initialized in advance and kept
+            # NOTE: the spatial index might be initialized in advance and kept
             # in memory or stored as a pickle object. Anyway building the
             # spatial index using the current simplified geometries is quick.
             gmg = GlobalModelGetter('mosaic',

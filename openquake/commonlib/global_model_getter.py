@@ -23,6 +23,16 @@ CLOSE_DIST_THRESHOLD = 0.1  # degrees
 class GlobalModelGetter:
     """
     Class with methods to associate coordinates to models
+
+    :param kind: 'mosaic' or 'global_risk'
+    :param model_code_field: shapefile fieldname containing the model code
+    :param shapefile_path: path of the shapefile containing geometries and data
+    :param sindex_path: path to retrieve/store the spatial index
+    :param sinfo_path: path to retrieve/store the spatial information
+    :param replace_sindex: set to True to replace the currently stored index
+    :param replace_sinfo: set to True to replace the currently stored info
+    :param model_codes: if not None, only that subset of model codes will be
+        taken into account when building the spatial index
     """
     def __init__(self, kind='mosaic', model_code_field=None,
                  shapefile_path=None, sindex_path=None, sinfo_path=None,
@@ -94,8 +104,8 @@ class GlobalModelGetter:
             if model_codes is not None:
                 sinfo = np.array(
                     [tuple(zone['properties'].values()) for zone in shp
-                    if zone['properties'][
-                        self.model_code_field] in model_codes],
+                     if zone['properties'][
+                         self.model_code_field] in model_codes],
                     dtype=dtype)
             else:
                 sinfo = np.array(
