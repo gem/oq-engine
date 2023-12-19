@@ -936,14 +936,14 @@ class Exposure(object):
         assets_df = pandas.concat(dfs)
         del dfs  # save memory
         vfields = []
-        occupancy_periods = []
+        ofields = []
         missing = VAL_FIELDS - set(exp.cost_calculator.cost_types)
         for name in assets_df.columns:
             if name.startswith('occupants_'):
                 period = name.split('_', 1)[1]
                 # see scenario_risk test_case_2d
                 if period != 'avg':
-                    occupancy_periods.append(period)
+                    ofields.append(period)
                 vfields.append(name)
             elif name.startswith('value-'):
                 field = name[6:]
@@ -952,8 +952,7 @@ class Exposure(object):
             elif name in exp.tagcol.tagnames:
                 assets_df[name] = tagcol.get_tagi(name, assets_df)
 
-        exp.init(assets_df, exp.tagcol, exp.cost_calculator,
-                 vfields, occupancy_periods)
+        exp.init(assets_df, vfields, ofields)
         return exp
 
     @staticmethod
@@ -970,7 +969,7 @@ class Exposure(object):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
-    def init(self, assets_df, tagcol, cost_calculator, vfields, ofields):
+    def init(self, assets_df, vfields, ofields):
         """
         Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
         """
@@ -990,7 +989,7 @@ class Exposure(object):
         # 'occupants_night', 'occupants_transit']
         retro = ['retrofitted'] if 'retrofitted' in names else []
         float_fields = vfields + ['ideductible'] + retro
-        int_fields = [(str(name), U32) for name in tagcol.tagnames
+        int_fields = [(str(name), U32) for name in self.tagcol.tagnames
                       if name not in ('id', 'site_id')]
         asset_dt = numpy.dtype(
             [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
@@ -1002,7 +1001,7 @@ class Exposure(object):
         fields = set(asset_dt.fields) - {'ordinal'}
         for field in fields & names:
             array[field] = assets_df[field]
-        cost_calculator.update(array)
+        self.cost_calculator.update(array)
         self.mesh = mesh
         self.assets = array
         self.loss_types = vfields
