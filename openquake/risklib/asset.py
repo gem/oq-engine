@@ -889,17 +889,17 @@ class Exposure(object):
         array['cost_type'] = [cc.cost_types[lt] for lt in loss_types]
         array['area_type'] = [cc.area_types[lt] for lt in loss_types]
         array['unit'] = [cc.units[lt] for lt in loss_types]
-        attrs = dict(loss_types=hdf5.array_of_vstr(loss_types),
-                     occupancy_periods=self.occupancy_periods,
-                     retrofitted=self.retrofitted,
-                     pairs=self.pairs)
+        attrs = dict(
+            loss_types=hdf5.array_of_vstr(loss_types),
+            occupancy_periods=hdf5.array_of_vstr(self.occupancy_periods),
+            retrofitted=self.retrofitted, pairs=self.pairs)
         return array, attrs
 
     def __fromh5__(self, array, attrs):
         vars(self).update(attrs)
         cc = self.cost_calculator = object.__new__(CostCalculator)
-        cc.cost_types = dict(zip(self.loss_types, array['cost_type']))
-        cc.area_types = dict(zip(self.loss_types, array['area_type']))
+        cc.cost_types = dict(zip(self.loss_types, decode(array['cost_type'])))
+        cc.area_types = dict(zip(self.loss_types, decode(array['area_type'])))
         cc.units = dict(zip(self.loss_types, decode(array['unit'])))
 
     @staticmethod
