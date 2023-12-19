@@ -638,6 +638,7 @@ def _get_exposure(fname, stop=None):
 
     # read the cost types and make some check
     cost_types = []
+    retrofitted = False
     for ct in conversions.costTypes:
         with context(fname, ct):
             ctname = ct['name']
@@ -650,6 +651,7 @@ def _get_exposure(fname, stop=None):
                     raise ValueError(
                         'The retrofittedUnit %s is different from the unit'
                         '%s' % (ct['retrofittedUnit'], ct['unit']))
+                retrofitted = True  # tested in the ClassicalBCR demo
             cost_types.append(
                 (ctname, valid.cost_type_type(ct['type']), ct['unit']))
     try:
@@ -679,7 +681,7 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    exp = Exposure(occupancy_periods, area.attrib, [], cc,
+    exp = Exposure(occupancy_periods, retrofitted, area.attrib, [], cc,
                    TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
@@ -804,10 +806,12 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
         exposure.tagcol = tagcol
+    if calculation_mode == 'classical_bcr':  # classical_bcr tests
+        exposure.retrofitted = True
     if assetnodes:
         df = assets2df(
             assetnodes, exposure._csv_header(),
-            calculation_mode=='classical_bcr', ignore_missing_costs)
+            exposure.retrofitted, ignore_missing_costs)
         fname_dfs = [(fname, df)]
     else:
         fname_dfs = exposure._read_csv(errors)
@@ -823,7 +827,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         occupants = any(n.startswith('occupants_') for n in names)
         if occupants and 'occupants_avg' not in names:
             df['occupants_avg'] = calc_occupants_avg(df)
-        if calculation_mode == 'classical_bcr':
+        if exposure.retrofitted:
             df['retrofitted'] = exposure.cost_calculator(
                 'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
@@ -833,7 +837,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             for taglist in aggregate_by:
                 for tag in taglist:
                     if tag == 'site_id':
-                        # 'site_id' is added later in _get_mesh_assets
+                        # 'site_id' is added later in Exposure.init
                         continue
                     if (tag not in df.columns
                             and f'value-{tag}' not in df.columns):
@@ -856,48 +860,12 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     return exposure, assets_df
 
 
-def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
-    t0 = time.time()
-    assets_df.sort_values(['lon', 'lat'], inplace=True)
-    ll = numpy.zeros((len(assets_df), 2))
-    ll[:, 0] = assets_df['lon']
-    ll[:, 1] = assets_df['lat']
-    ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
-    assets_df['site_id'] = sids
-    mesh = geo.Mesh(ll[:, 0], ll[:, 1])
-    logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
-
-    names = assets_df.columns
-    # loss_types can be ['value-business_interruption', 'value-contents',
-    # 'value-nonstructural', 'occupants_avg', 'occupants_day',
-    # 'occupants_night', 'occupants_transit']
-    retro = ['retrofitted'] if 'retrofitted' in names else []
-    float_fields = loss_types + ['ideductible'] + retro
-    int_fields = [(str(name), U32) for name in tagcol.tagnames
-                  if name not in ('id', 'site_id')]
-    asset_dt = numpy.dtype(
-        [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
-         ('ordinal', U32), ('lon', F32), ('lat', F32),
-         ('site_id', U32)] + [
-             (str(name), F32) for name in float_fields] + int_fields)
-    num_assets = len(assets_df)
-    array = numpy.zeros(num_assets, asset_dt)
-    fields = set(asset_dt.fields) - {'ordinal'}
-    for field in fields:
-        if field in tagcol.tagnames:
-            array[field] = tagcol.get_tagi(field, assets_df)
-        elif field in names:
-            array[field] = assets_df[field]
-    cost_calculator.update(array)
-    return mesh, array
-
-
 class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['occupancy_periods', 'area', 'assets', 'cost_calculator',
-              'tagcol', 'pairs']
+    fields = ['occupancy_periods', 'retrofitted', 'area', 'assets',
+              'cost_calculator', 'tagcol', 'pairs']
 
     def __toh5__(self):
         cc = self.cost_calculator
@@ -911,6 +879,7 @@ class Exposure(object):
         array['unit'] = [cc.units[lt] for lt in loss_types]
         attrs = dict(loss_types=hdf5.array_of_vstr(loss_types),
                      occupancy_periods=self.occupancy_periods,
+                     retrofitted=self.retrofitted,
                      pairs=self.pairs)
         return array, attrs
 
@@ -967,22 +936,23 @@ class Exposure(object):
         assets_df = pandas.concat(dfs)
         del dfs  # save memory
         vfields = []
-        occupancy_periods = []
+        ofields = []
         missing = VAL_FIELDS - set(exp.cost_calculator.cost_types)
         for name in assets_df.columns:
             if name.startswith('occupants_'):
                 period = name.split('_', 1)[1]
                 # see scenario_risk test_case_2d
                 if period != 'avg':
-                    occupancy_periods.append(period)
+                    ofields.append(period)
                 vfields.append(name)
             elif name.startswith('value-'):
                 field = name[6:]
                 if field not in missing:
                     vfields.append(name)
-        exp.occupancy_periods = ' '.join(occupancy_periods)
-        exp.mesh, exp.assets = _get_mesh_assets(
-            assets_df, exp.tagcol, exp.cost_calculator, vfields)
+            elif name in exp.tagcol.tagnames:
+                assets_df[name] = tagcol.get_tagi(name, assets_df)
+
+        exp.init(assets_df, vfields, ofields)
         return exp
 
     @staticmethod
@@ -998,6 +968,44 @@ class Exposure(object):
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
+
+    def init(self, assets_df, vfields, ofields):
+        """
+        Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
+        """
+        t0 = time.time()
+        assets_df.sort_values(['lon', 'lat'], inplace=True)
+        ll = numpy.zeros((len(assets_df), 2))
+        ll[:, 0] = assets_df['lon']
+        ll[:, 1] = assets_df['lat']
+        ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
+        assets_df['site_id'] = sids
+        mesh = geo.Mesh(ll[:, 0], ll[:, 1])
+        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
+
+        names = set(assets_df.columns)
+        # vfields can be ['value-business_interruption', 'value-contents',
+        # 'value-nonstructural', 'occupants_avg', 'occupants_day',
+        # 'occupants_night', 'occupants_transit']
+        retro = ['retrofitted'] if 'retrofitted' in names else []
+        float_fields = vfields + ['ideductible'] + retro
+        int_fields = [(str(name), U32) for name in self.tagcol.tagnames
+                      if name not in ('id', 'site_id')]
+        asset_dt = numpy.dtype(
+            [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
+             ('ordinal', U32), ('lon', F32), ('lat', F32),
+             ('site_id', U32)] + [
+                 (str(name), F32) for name in float_fields] + int_fields)
+        num_assets = len(assets_df)
+        array = numpy.zeros(num_assets, asset_dt)
+        fields = set(asset_dt.fields) - {'ordinal'}
+        for field in fields & names:
+            array[field] = assets_df[field]
+        self.cost_calculator.update(array)
+        self.mesh = mesh
+        self.assets = array
+        self.loss_types = vfields
+        self.occupancy_periods = ' '.join(ofields)
 
     def _csv_header(self, value='value-', occupants='occupants_'):
         """
