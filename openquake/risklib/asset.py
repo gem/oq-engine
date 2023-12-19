@@ -702,7 +702,7 @@ def _get_exposure(fname, stop=None):
         cc.units[name] = ct['unit']
     exp = Exposure(
         exposure['id'], exposure['category'],
-        description.text, cost_types, occupancy_periods, retrofitted,
+        description.text, occupancy_periods, retrofitted,
         area.attrib, [], cc, TagCollection(tagnames), pairs)
     assets_text = exposure.assets.text.strip()
     if assets_text:
@@ -921,7 +921,7 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['id', 'category', 'description', 'cost_types',
+    fields = ['id', 'category', 'description',
               'occupancy_periods', 'retrofitted',
               'area', 'assets', 'cost_calculator', 'tagcol', 'pairs']
 
