@@ -833,7 +833,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             for taglist in aggregate_by:
                 for tag in taglist:
                     if tag == 'site_id':
-                        # 'site_id' is added later in _set_mesh_assets
+                        # 'site_id' is added later in Exposure.init
                         continue
                     if (tag not in df.columns
                             and f'value-{tag}' not in df.columns):
@@ -854,41 +854,6 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
             raise nrml.DuplicatedID(dupl)
 
     return exposure, assets_df
-
-
-def _set_mesh_assets(exp, assets_df, tagcol, cost_calculator, vfields, ofields):
-    t0 = time.time()
-    assets_df.sort_values(['lon', 'lat'], inplace=True)
-    ll = numpy.zeros((len(assets_df), 2))
-    ll[:, 0] = assets_df['lon']
-    ll[:, 1] = assets_df['lat']
-    ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
-    assets_df['site_id'] = sids
-    mesh = geo.Mesh(ll[:, 0], ll[:, 1])
-    logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
-
-    names = set(assets_df.columns)
-    # vfields can be ['value-business_interruption', 'value-contents',
-    # 'value-nonstructural', 'occupants_avg', 'occupants_day',
-    # 'occupants_night', 'occupants_transit']
-    retro = ['retrofitted'] if 'retrofitted' in names else []
-    float_fields = vfields + ['ideductible'] + retro
-    int_fields = [(str(name), U32) for name in tagcol.tagnames
-                  if name not in ('id', 'site_id')]
-    asset_dt = numpy.dtype(
-        [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
-         ('ordinal', U32), ('lon', F32), ('lat', F32),
-         ('site_id', U32)] + [
-             (str(name), F32) for name in float_fields] + int_fields)
-    num_assets = len(assets_df)
-    array = numpy.zeros(num_assets, asset_dt)
-    fields = set(asset_dt.fields) - {'ordinal'}
-    for field in fields & names:
-        array[field] = assets_df[field]
-    cost_calculator.update(array)
-    exp.mesh = mesh
-    exp.assets = array
-    exp.occupancy_periods = ' '.join(ofields)
 
 
 class Exposure(object):
@@ -982,8 +947,8 @@ class Exposure(object):
             elif name in exp.tagcol.tagnames:
                 assets_df[name] = tagcol.get_tagi(name, assets_df)
 
-        _set_mesh_assets(exp, assets_df, exp.tagcol, exp.cost_calculator,
-                         vfields, occupancy_periods)
+        exp.init(assets_df, exp.tagcol, exp.cost_calculator,
+                 vfields, occupancy_periods)
         return exp
 
     @staticmethod
@@ -999,6 +964,40 @@ class Exposure(object):
         for field, value in zip(self.fields, values):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
+
+    def init(self, assets_df, tagcol, cost_calculator, vfields, ofields):
+        t0 = time.time()
+        assets_df.sort_values(['lon', 'lat'], inplace=True)
+        ll = numpy.zeros((len(assets_df), 2))
+        ll[:, 0] = assets_df['lon']
+        ll[:, 1] = assets_df['lat']
+        ll, sids = numpy.unique(ll, return_inverse=1, axis=0)
+        assets_df['site_id'] = sids
+        mesh = geo.Mesh(ll[:, 0], ll[:, 1])
+        logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
+
+        names = set(assets_df.columns)
+        # vfields can be ['value-business_interruption', 'value-contents',
+        # 'value-nonstructural', 'occupants_avg', 'occupants_day',
+        # 'occupants_night', 'occupants_transit']
+        retro = ['retrofitted'] if 'retrofitted' in names else []
+        float_fields = vfields + ['ideductible'] + retro
+        int_fields = [(str(name), U32) for name in tagcol.tagnames
+                      if name not in ('id', 'site_id')]
+        asset_dt = numpy.dtype(
+            [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
+             ('ordinal', U32), ('lon', F32), ('lat', F32),
+             ('site_id', U32)] + [
+                 (str(name), F32) for name in float_fields] + int_fields)
+        num_assets = len(assets_df)
+        array = numpy.zeros(num_assets, asset_dt)
+        fields = set(asset_dt.fields) - {'ordinal'}
+        for field in fields & names:
+            array[field] = assets_df[field]
+        cost_calculator.update(array)
+        self.mesh = mesh
+        self.assets = array
+        self.occupancy_periods = ' '.join(ofields)
 
     def _csv_header(self, value='value-', occupants='occupants_'):
         """
