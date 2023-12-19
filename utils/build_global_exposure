@@ -154,12 +154,19 @@ def read_world_exposure(grm_dir, dstore):
         s += n
     Starmap.shutdown()
 
+    tagsizes = []
     for tagname in TAGS:
         tagvalues = numpy.concatenate(TAGS[tagname])
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
+        tagsizes.append(len(uvals))
         logging.info('Storing %s[%d/%d]', tagname, len(uvals), len(inv))
         hdf5.extend(dstore[f'assets/{tagname}'], inv)
         dstore['tagcol/' + tagname] = uvals
+
+    dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
+               tagnames=numpy.array(list(TAGS), hdf5.vstr),
+               tagsizes=tagsizes)
+    dstore.getitem('tagcol').attrs.update(dic)
 
 
 def main(grm_dir):

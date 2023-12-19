@@ -147,7 +147,7 @@ class CostCalculator(object):
             elif area_type == "per_asset":
                 return cost * area * number
         # this should never happen
-        raise RuntimeError('Unable to compute cost')
+        raise RuntimeError('Unable to compute cost for %r' % loss_type)
 
     def get_units(self, loss_types):
         """
@@ -700,7 +700,7 @@ def _minimal_tagcol(fnames):
             tagnames = set(exp.tagcol.tagnames)
         else:
             tagnames &= set(exp.tagcol.tagnames)
-    tagnames -= set(['taxonomy'])
+    tagnames -= {'taxonomy'}
     if len(fnames) > 1:
         alltags = ['taxonomy'] + list(tagnames) + ['exposure']
     else:
@@ -924,7 +924,14 @@ class Exposure(object):
             slices = sbg[numpy.isin(sbg['gh3'], gh3s)]
             assets_df = pandas.concat(read_assets(f, start, stop)
                                       for gh3, start, stop in slices)
-        exp.init(assets_df)
+            exp.tagcol = f['tagcol']
+        rename = dict(exp.pairs)
+        for f in ANR_FIELDS:
+            rename[f] = 'value-' + f
+        for f in OCC_FIELDS:
+            rename[f] = 'occupants_' + f
+        adf = assets_df.rename(columns=rename)
+        exp.init(adf)
         return exp
 
     @staticmethod
