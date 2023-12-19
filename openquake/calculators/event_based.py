@@ -23,9 +23,7 @@ import logging
 import operator
 import numpy
 import pandas
-
 import shapely
-
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
@@ -501,11 +499,12 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             geom = rup_array.geom
             if oq.mosaic_model:
-                idxs = [
-                    idx for idx, rup in enumerate(rup_array)
-                    if shapely.Point(rup['hypo']).within(mosaic_model_shape)]
-                rup_array = rup_array[idxs]
-                geom = geom[idxs]
+                ok = shapely.contains_xy(
+                    mosaic_model_shape,
+                    rup_array['hypo'][:,0],
+                    rup_array['hypo'][:,1])
+                rup_array = rup_array[ok]
+                geom = geom[ok]
                 filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
