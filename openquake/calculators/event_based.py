@@ -485,6 +485,7 @@ class EventBasedCalculator(base.HazardCalculator):
             gmg = GlobalModelGetter('mosaic',
                                     model_codes=[oq.mosaic_model])
             mosaic_model_shape = gmg.get_shapes([oq.mosaic_model])[0]
+            shapely.prepare(mosaic_model_shape)
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0
@@ -501,8 +502,8 @@ class EventBasedCalculator(base.HazardCalculator):
             if oq.mosaic_model:
                 ok = shapely.contains_xy(
                     mosaic_model_shape,
-                    rup_array['hypo'][:,0],
-                    rup_array['hypo'][:,1])
+                    rup_array['hypo'][:, 0],
+                    rup_array['hypo'][:, 1])
                 rup_array = rup_array[ok]
                 geom = geom[ok]
                 filtered_ruptures += len(rup_array)
