@@ -26,7 +26,8 @@ class GlobalModelGetter:
     """
     def __init__(self, kind='mosaic', model_code_field=None,
                  shapefile_path=None, sindex_path=None, sinfo_path=None,
-                 replace_sindex=False, replace_sinfo=False):
+                 replace_sindex=False, replace_sinfo=False,
+                 model_codes=None):
         if kind not in ('mosaic', 'global_risk'):
             raise ValueError(f'Model getter for {kind} is not implemented')
         self.kind = kind
@@ -45,8 +46,11 @@ class GlobalModelGetter:
                     self.dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.model_code_field = model_code_field
         self.shapefile_path = shapefile_path
-        self.sindex = self.get_spatial_index(sindex_path, replace_sindex)
-        self.sinfo = self.get_spatial_info(sinfo_path, replace_sinfo)
+        self.sindex = self.get_spatial_index(
+            sindex_path, replace_sindex, model_codes)
+        self.sinfo = self.get_spatial_info(
+            sinfo_path, replace_sinfo, model_codes)
+        self.model_codes = model_codes
 
     def read_from_pickle(self, path):
         logging.info(f'Reading from {path}...')
@@ -65,48 +69,62 @@ class GlobalModelGetter:
         storing_time = time.time() - t0
         logging.info(f'Stored to {path} in {storing_time} seconds')
 
-    def build_spatial_index(self):
+    def build_spatial_index(self, model_codes):
         logging.info('Building spatial index')
         t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
-            shapes = [shape(polygon['geometry']) for polygon in shp]
+            if model_codes is not None:
+                shapes = [
+                    shape(polygon['geometry']) for polygon in shp
+                    if polygon['properties'][
+                        self.model_code_field] in model_codes]
+            else:
+                shapes = [shape(polygon['geometry']) for polygon in shp]
             sindex = STRtree(shapes)
         sindex_building_time = time.time() - t0
         logging.info(f'Spatial index built in {sindex_building_time} seconds')
         return sindex
 
-    def build_spatial_info(self):
+    def build_spatial_info(self, model_codes=None):
+        # if model_codes is not None, build the index only for those
         logging.info('Reading spatial information')
         t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
             dtype = [(name, 'U50') for name in list(shp[0]['properties'])]
-            sinfo = np.array(
-                [tuple(zone['properties'].values()) for zone in shp],
-                dtype=dtype)
+            if model_codes is not None:
+                sinfo = np.array(
+                    [tuple(zone['properties'].values()) for zone in shp
+                    if zone['properties'][
+                        self.model_code_field] in model_codes],
+                    dtype=dtype)
+            else:
+                sinfo = np.array(
+                    [tuple(zone['properties'].values()) for zone in shp],
+                    dtype=dtype)
         reading_time = time.time() - t0
         logging.info(f'Spatial information read in {reading_time} seconds')
         return sinfo
 
-    def get_spatial_index(self, sindex_path, replace_sindex):
+    def get_spatial_index(self, sindex_path, replace_sindex, model_codes):
         # read it from pickle only if we don't want to replace it
         if not replace_sindex:
             # retrieve it if available
             if sindex_path is not None and os.path.isfile(sindex_path):
                 sindex = self.read_from_pickle(sindex_path)
                 return sindex
-        sindex = self.build_spatial_index()
+        sindex = self.build_spatial_index(model_codes)
         if replace_sindex:
             self.save_to_pickle(sindex, sindex_path)
         return sindex
 
-    def get_spatial_info(self, sinfo_path, replace_sinfo):
+    def get_spatial_info(self, sinfo_path, replace_sinfo, model_codes):
         # read it from pickle only if we don't want to replace it
         if not replace_sinfo:
             # retrieve it if available
             if sinfo_path is not None and os.path.isfile(sinfo_path):
                 sinfo = self.read_from_pickle(sinfo_path)
                 return sinfo
-        sinfo = self.build_spatial_info()
+        sinfo = self.build_spatial_info(model_codes)
         if replace_sinfo:
             self.save_to_pickle(sinfo, sinfo_path)
         return sinfo
@@ -131,7 +149,11 @@ class GlobalModelGetter:
         # NOTE: the index is one for adm0 but it can be more for adm2
         model_indices = np.where(
             self.sinfo[self.model_code_field] == model_code)
+        t0 = time.time()
         within = self.sindex.query(geoms, 'within')
+        t1 = time.time()
+        logging.debug(
+            f'Geospatial query done in {t1 - t0} seconds')
         # NOTE: within[0] are the indices of the input geometries
         #       within[1] are the indices of the indexed geometries
         matched_idxs = np.isin(within[1], model_indices)
@@ -144,11 +166,11 @@ class GlobalModelGetter:
 
     def is_hypocenter_array_inside(self, hypocenters, model_code):
         t0 = time.time()
-        logging.info(f'Checking {len(hypocenters)} hypocenters')
+        logging.debug(f'Checking {len(hypocenters)} hypocenters')
         geoms = points(hypocenters)
         ok = self.is_inside(geoms, model_code)
         t1 = time.time()
-        logging.info(
+        logging.debug(
             f'Indices within model boundaries retrieved in {t1 - t0} seconds')
         return ok
 

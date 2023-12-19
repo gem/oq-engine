@@ -482,7 +482,8 @@ class EventBasedCalculator(base.HazardCalculator):
             # TODO: the spatial index might be initialized in advance and kept
             # in memory or stored as a pickle object. Anyway building the
             # spatial index using the current simplified geometries is quick.
-            gmg = GlobalModelGetter('mosaic')
+            gmg = GlobalModelGetter('mosaic',
+                                    model_codes=[oq.mosaic_model])
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0
@@ -495,16 +496,12 @@ class EventBasedCalculator(base.HazardCalculator):
             tot_ruptures += len(rup_array)
             if len(rup_array) == 0:
                 continue
+            geom = rup_array.geom
             if oq.mosaic_model:
-                # FIXME: rup_array does not contain 'lon' and 'lat' but
-                # 'minlon' and 'minlat'. We have to decide if we want to build
-                # a polygon for each rupture or to get the average lon and lat,
-                # or we may use the hypocenter instead. Furthermore, we might
-                # collect all ruptures together and filter them all at once,
-                # instead of filtering chunks of ~150-650 ruptures
                 ok = gmg.is_hypocenter_array_inside(
                     rup_array['hypo'], oq.mosaic_model)
                 rup_array = rup_array[ok]
+                geom = geom[ok]
                 filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
@@ -514,8 +511,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.nruptures += len(rup_array)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
-                # FIXME: rup_array has no 'geom'
-                hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+                hdf5.extend(self.datastore['rupgeoms'], geom)
         t1 = time.time()
         logging.info(f'{tot_ruptures} ruptures filtered to {filtered_ruptures}'
                      f' and stored in {t1 - t0} seconds')

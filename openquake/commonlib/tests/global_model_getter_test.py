@@ -129,3 +129,16 @@ class GlobalModelGetterTestCase(unittest.TestCase):
         numpy.testing.assert_array_equal(
             mg.is_hypocenter_array_inside(hypocenters, mosaic_model),
             numpy.array([True, False, False, True]))
+
+    def test_mosaic_spatial_index_single_model_in_memory(self):
+        model_codes = ['NAF']
+        mg = GlobalModelGetter(kind='mosaic', model_codes=model_codes)
+        hypocenters = numpy.array(
+            [[-10.26211, 21.73157, 25.],
+             [9.0, 9.0, 25.],
+             [0.0, 0.0, 30.],
+             [-10.75146, 21.82014, 35.]], dtype=numpy.float32)
+        mosaic_model = model_codes[0]
+        numpy.testing.assert_array_equal(
+            mg.is_hypocenter_array_inside(hypocenters, mosaic_model),
+            numpy.array([True, False, False, True]))
