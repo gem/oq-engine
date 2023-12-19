@@ -867,7 +867,7 @@ def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
     mesh = geo.Mesh(ll[:, 0], ll[:, 1])
     logging.info('Inferred exposure mesh in %.2f seconds', time.time() - t0)
 
-    names = assets_df.columns
+    names = set(assets_df.columns)
     # loss_types can be ['value-business_interruption', 'value-contents',
     # 'value-nonstructural', 'occupants_avg', 'occupants_day',
     # 'occupants_night', 'occupants_transit']
@@ -883,11 +883,8 @@ def _get_mesh_assets(assets_df, tagcol, cost_calculator, loss_types):
     num_assets = len(assets_df)
     array = numpy.zeros(num_assets, asset_dt)
     fields = set(asset_dt.fields) - {'ordinal'}
-    for field in fields:
-        if field == 'taxonomy':
-            array['taxonomy'] = tagcol.get_tagi('taxonomy', assets_df)
-        elif field in names:
-            array[field] = assets_df[field]
+    for field in fields & names:
+        array[field] = assets_df[field]
     cost_calculator.update(array)
     return mesh, array
 
@@ -980,7 +977,7 @@ class Exposure(object):
                 field = name[6:]
                 if field not in missing:
                     vfields.append(name)
-            elif name in exp.tagcol.tagnames and name != 'taxonomy':
+            elif name in exp.tagcol.tagnames:
                 assets_df[name] = tagcol.get_tagi(name, assets_df)
 
         exp.occupancy_periods = ' '.join(occupancy_periods)
