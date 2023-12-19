@@ -955,7 +955,8 @@ class Exposure(object):
                 exp = exposure
                 exp.description = 'Composite exposure[%d]' % len(fnames)
             else:
-                ae(exposure.cost_types, exp.cost_types)
+                cc = exposure.cost_calculator
+                ae(cc.cost_types, exp.cost_calculator.cost_types)
                 ae(exposure.occupancy_periods, exp.occupancy_periods)
                 ae(exposure.area, exp.area)
         exp.exposures = [os.path.splitext(os.path.basename(f))[0]
