@@ -322,9 +322,8 @@ class ExposureTestCase(unittest.TestCase):
 
     def test_get_metadata(self):
         [exp] = asset.Exposure.read_headers([self.exposure])
-        self.assertEqual(exp.description, 'Exposure model for buildings')
-        self.assertEqual([tuple(ct) for ct in exp.cost_types],
-                         [('structural', 'per_asset', 'USD')])
+        self.assertEqual(exp.cost_calculator.cost_types,
+                         {'structural': 'per_asset'})
 
     def test_missing_number(self):
         raise unittest.SkipTest
