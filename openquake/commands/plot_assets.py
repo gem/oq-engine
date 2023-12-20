@@ -20,6 +20,7 @@ import os
 import numpy
 import fiona
 import shapely
+import logging
 from shapely.geometry import MultiPolygon, shape
 from openquake.commonlib import datastore
 from openquake.hazardlib.geo.utils import cross_idl
@@ -95,7 +96,9 @@ def main(calc_id: int = -1, site_model=False):
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
     ax.legend()
-    p.savefig('assets.png', alpha=True, dpi=300)
+    filename = 'assets.png'
+    p.savefig(filename, alpha=True, dpi=300)
+    logging.info(f'Plot saved to {filename}')
     p.show()
 
 
