@@ -94,9 +94,7 @@ def main(calc_id: int = -1, site_model=False):
     w, h = maxx - minx, maxy - miny
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
-    # ax.set_aspect(1)
     ax.legend()
-    # p.title("Assets and sites")
     p.savefig('assets.png', alpha=True, dpi=300)
     p.show()
 
