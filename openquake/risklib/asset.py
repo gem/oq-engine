@@ -933,7 +933,7 @@ class Exposure(object):
         for f in OCC_FIELDS:
             rename[f] = 'occupants_' + f
         adf = assets_df.rename(columns=rename)
-        exp.init(adf)
+        exp.build_mesh(adf)
         return exp
 
     @staticmethod
@@ -972,7 +972,7 @@ class Exposure(object):
                          for f in fnames]
         assets_df = pandas.concat(dfs)
         del dfs  # save memory
-        exp.init(assets_df)
+        exp.build_mesh(assets_df)
         return exp
 
     @staticmethod
@@ -989,7 +989,7 @@ class Exposure(object):
             setattr(self, field, value)
         self.fieldmap = dict(self.pairs)  # inp -> oq
 
-    def init(self, assets_df):
+    def build_mesh(self, assets_df):
         """
         Set the attributes .mesh, .assets, .loss_types, .occupancy_periods
         """
