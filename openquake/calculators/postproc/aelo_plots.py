@@ -124,7 +124,7 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     plt = import_plt()
     plt.figure(figsize=(12, 9))
     plt.rcParams.update({'font.size': 16})
-    colors = mpl.colormaps['viridis'].reversed()._resample(3)
+    colors = mpl.colormaps['viridis'].reversed().resampled(3)
     patterns = ['-', '--', ':']
     for i, imt in enumerate(imts):
         lab = _get_label(imt)
@@ -285,7 +285,7 @@ def plot_disagg_by_src(dstore, update_dstore=False):
         largest_contr = max(out_contr_all.values())
         sample = sum(val > fact*largest_contr
                      for val in out_contr_all.values())
-        viridis = mpl.colormaps['viridis'].reversed()._resample(sample)
+        viridis = mpl.colormaps['viridis'].reversed().resampled(sample)
 
         # find and plot the sources, highlighting the ones that contribute more
         # than 10% of largest contributor
