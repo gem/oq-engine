@@ -106,7 +106,7 @@ def _get_poes(mean_std, loglevels, phi_b):
 
 
 OK_METHODS = ('compute', 'get_mean_and_stddevs', 'set_poes', 'requires',
-              'set_parameters', 'set_tables')
+              'set_parameters', 'set_tables', 'get_conditioning_ground_motions')
 
 
 def bad_methods(clsdict):
