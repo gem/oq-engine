@@ -27,17 +27,11 @@ class GlobalModelGetter:
     :param kind: 'mosaic' or 'global_risk'
     :param model_code_field: shapefile fieldname containing the model code
     :param shapefile_path: path of the shapefile containing geometries and data
-    :param sindex_path: path to retrieve/store the spatial index
-    :param sinfo_path: path to retrieve/store the spatial information
-    :param replace_sindex: set to True to replace the currently stored index
-    :param replace_sinfo: set to True to replace the currently stored info
     :param model_codes: if not None, only that subset of model codes will be
         taken into account when building the spatial index
     """
     def __init__(self, kind='mosaic', model_code_field=None,
-                 shapefile_path=None, sindex_path=None, sinfo_path=None,
-                 replace_sindex=False, replace_sinfo=False,
-                 model_codes=None):
+                 shapefile_path=None, model_codes=None):
         if kind not in ('mosaic', 'global_risk'):
             raise ValueError(f'Model getter for {kind} is not implemented')
         self.kind = kind
@@ -56,10 +50,8 @@ class GlobalModelGetter:
                     self.dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.model_code_field = model_code_field
         self.shapefile_path = shapefile_path
-        self.sindex = self.get_spatial_index(
-            sindex_path, replace_sindex, model_codes)
-        self.sinfo = self.get_spatial_info(
-            sinfo_path, replace_sinfo, model_codes)
+        self.sindex = self.build_spatial_index(model_codes)
+        self.sinfo = self.build_spatial_info(model_codes)
         self.model_codes = model_codes
 
     def get_shapes(self, model_codes):
@@ -69,23 +61,6 @@ class GlobalModelGetter:
                 if polygon['properties'][
                     self.model_code_field] in model_codes]
         return shapes
-
-    def read_from_pickle(self, path):
-        logging.info(f'Reading from {path}...')
-        t0 = time.time()
-        with open(path, 'rb') as f:
-            obj = pickle.load(f)
-        time_spent = time.time() - t0
-        logging.info(f'Read from {path} in {time_spent} seconds')
-        return obj
-
-    def save_to_pickle(self, obj, path):
-        logging.info(f'Storing to {path}...')
-        t0 = time.time()
-        with open(path, 'wb+') as f:
-            pickle.dump(obj, f)
-        storing_time = time.time() - t0
-        logging.info(f'Stored to {path} in {storing_time} seconds')
 
     def build_spatial_index(self, model_codes):
         logging.info('Building spatial index')
@@ -121,30 +96,6 @@ class GlobalModelGetter:
                     dtype=dtype)
         reading_time = time.time() - t0
         logging.info(f'Spatial information read in {reading_time} seconds')
-        return sinfo
-
-    def get_spatial_index(self, sindex_path, replace_sindex, model_codes):
-        # read it from pickle only if we don't want to replace it
-        if not replace_sindex:
-            # retrieve it if available
-            if sindex_path is not None and os.path.isfile(sindex_path):
-                sindex = self.read_from_pickle(sindex_path)
-                return sindex
-        sindex = self.build_spatial_index(model_codes)
-        if replace_sindex:
-            self.save_to_pickle(sindex, sindex_path)
-        return sindex
-
-    def get_spatial_info(self, sinfo_path, replace_sinfo, model_codes):
-        # read it from pickle only if we don't want to replace it
-        if not replace_sinfo:
-            # retrieve it if available
-            if sinfo_path is not None and os.path.isfile(sinfo_path):
-                sinfo = self.read_from_pickle(sinfo_path)
-                return sinfo
-        sinfo = self.build_spatial_info(model_codes)
-        if replace_sinfo:
-            self.save_to_pickle(sinfo, sinfo_path)
         return sinfo
 
     def get_models_list(self):

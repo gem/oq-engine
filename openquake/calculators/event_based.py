@@ -500,10 +500,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             geom = rup_array.geom
             if oq.mosaic_model:
-                ok = shapely.contains_xy(
-                    mosaic_model_shape,
-                    rup_array['hypo'][:, 0],
-                    rup_array['hypo'][:, 1])
+                ok = shapely.contains_xy(mosaic_model_shape, rup_array['hypo'])
                 rup_array = rup_array[ok]
                 geom = geom[ok]
                 filtered_ruptures += len(rup_array)

@@ -16,10 +16,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import unittest
-import os
 import numpy
 from shapely import Point
-from tempfile import mkstemp
 
 from openquake.commonlib.global_model_getter import GlobalModelGetter
 
@@ -34,28 +32,7 @@ POLYGON_EXAMPLE = (
 
 class GlobalModelGetterTestCase(unittest.TestCase):
 
-    def test_spatial_index_storage_and_retrieval(self):
-        sindex_path = mkstemp(prefix='sindex', suffix='.pickle')[1]
-        sinfo_path = mkstemp(prefix='sinfo', suffix='.pickle')[1]
-        # build and store index and data
-        GlobalModelGetter(
-            kind='global_risk',
-            sindex_path=sindex_path,
-            sinfo_path=sinfo_path,
-            replace_sindex=True,
-            replace_sinfo=True)
-        # make sure that retrieveing index and data does not fail
-        GlobalModelGetter(
-            kind='global_risk',
-            sindex_path=sindex_path,
-            sinfo_path=sinfo_path,
-            replace_sindex=False,
-            replace_sinfo=False)
-        # delete index and data
-        os.remove(sindex_path)
-        os.remove(sinfo_path)
-
-    def test_global_risk_spatial_index_in_memory(self):
+    def test_global_risk_spatial_index(self):
         mg = GlobalModelGetter(kind='global_risk')
         # NOTE: the default predicate is 'intersects'
         self.assertEqual(
@@ -101,7 +78,7 @@ class GlobalModelGetterTestCase(unittest.TestCase):
                 rup_array['lon'], rup_array['lat'], model),
             numpy.array([True, False]))
 
-    def test_mosaic_spatial_index_in_memory(self):
+    def test_mosaic_spatial_index(self):
         mg = GlobalModelGetter(kind='mosaic')
         # check a point on the coast of Korea, slightly outside model border
         self.assertEqual(
@@ -130,7 +107,7 @@ class GlobalModelGetterTestCase(unittest.TestCase):
             mg.is_hypocenter_array_inside(hypocenters, mosaic_model),
             numpy.array([True, False, False, True]))
 
-    def test_mosaic_spatial_index_single_model_in_memory(self):
+    def test_mosaic_spatial_index_single_model(self):
         model_codes = ['NAF']
         mg = GlobalModelGetter(kind='mosaic', model_codes=model_codes)
         hypocenters = numpy.array(
