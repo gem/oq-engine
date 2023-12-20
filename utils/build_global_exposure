@@ -165,7 +165,7 @@ def read_world_exposure(grm_dir, dstore):
     dstore.swmr_on()
     smap = Starmap.apply(gen_tasks, (files,),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
-    s = 0
+    num_assets = 0
     # NB: we need to keep everything in memory to make gzip efficient
     acc = general.AccumDict(accum=[])
     for gh3, arr in smap:
@@ -175,16 +175,18 @@ def read_world_exposure(grm_dir, dstore):
             else:
                 acc[name].append(arr[name])
         n = len(arr)
-        slc = numpy.array([(gh3, s, s + n)], slc_dt)
+        slc = numpy.array([(gh3, num_assets, num_assets + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
-        s += n
+        num_assets += n
     Starmap.shutdown()
     for name in sorted(acc):
         lst = acc.pop(name)
         arr = numpy.concatenate(lst, dtype=lst[0].dtype)
         logging.info(f'Storing assets/{name}')
         hdf5.extend(dstore['assets/' + name], arr)
+
     store_tagcol(dstore)
+    return num_assets
 
 
 def main(grm_dir):
@@ -195,8 +197,10 @@ def main(grm_dir):
     dstore, log = build_dstore_log()
     with dstore, log:
         with mon:
-            read_world_exposure(grm_dir, dstore)
+            n = read_world_exposure(grm_dir, dstore)
         logging.info(mon)
+        logging.info('Created {} with {:_d} assets'.format(dstore.filename, n))
+
 main.grm_dir = 'global risk model directory'
 
 
