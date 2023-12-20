@@ -57,8 +57,8 @@ on:
         options:
           - dev
           - master
-#          - release
-#          - LTS
+          - release
+          - LTS
   push:
     branches: [master, 'engine-*', moster, 'ongine-*']
 
