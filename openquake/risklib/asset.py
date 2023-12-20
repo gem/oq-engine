@@ -279,6 +279,7 @@ class TagCollection(object):
         sizes = []
         for tagname in dic:
             setattr(self, tagname, decode(dic[tagname][()]))
+            setattr(self, tagname + '_idx', {'?': 0})
             sizes.append(len(dic[tagname]))
         # sanity check to protect against /home/michele/oqdata/calc_10826.hdf5
         numpy.testing.assert_equal(sorted(sizes), sorted(attrs['tagsizes']))
@@ -926,6 +927,7 @@ class Exposure(object):
                                       for gh3, start, stop in slices)
             exp.tagcol = f['tagcol']
         rename = dict(exp.pairs)
+        rename['TAXONOMY'] = 'taxonomy'
         for f in ANR_FIELDS:
             rename[f] = 'value-' + f
         for f in OCC_FIELDS:

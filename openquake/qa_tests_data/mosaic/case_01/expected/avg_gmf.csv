@@ -1,6 +1,3 @@
-#,,,,"generated_by='OpenQuake engine 3.19.0-gite2783ef7cf', start_date='2023-12-19T11:20:53', checksum=3609036911"
-site_id,lon,lat,gmv_PGA,gsd_PGA
-0,1.41850E+02,4.00196E+01,5.86946E-01,1.62129E+00
-1,1.37549E+02,3.51405E+01,4.77389E-03,1.62281E+00
-2,1.41133E+02,3.99536E+01,2.26818E-01,1.73454E+00
-3,1.39316E+02,4.12356E+01,3.64006E-02,1.58749E+00
+#,,,,"generated_by='OpenQuake engine 3.19.0-git1fb7f719d8', start_date='2023-12-20T07:25:20', checksum=691167327"
+custom_site_id,lon,lat,gmv_PGA,gsd_PGA
+xn1zcvpu,1.37549E+02,3.51405E+01,5.21338E-03,1.53088E+00

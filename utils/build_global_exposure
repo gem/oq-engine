@@ -107,15 +107,15 @@ def store_tagcol(dstore):
     tagsizes = []
     tagnames = []
     for tagname in TAGS:
-        dstore.create_dset('tagcol/' + tagname, U32)
+        name = 'taxonomy' if tagname == 'TAXONOMY' else tagname
+        tagnames.append(name)
         tagvalues = numpy.concatenate(TAGS[tagname])
         uvals, inv = numpy.unique(tagvalues, return_inverse=1)
         size = len(uvals) + 1
         tagsizes.append(size)
-        tagnames.append(tagname)
         logging.info('Storing %s[%d/%d]', tagname,size, len(inv))
         hdf5.extend(dstore[f'assets/{tagname}'], inv)
-        dstore['tagcol/' + tagname] = numpy.concatenate([['?'], uvals])
+        dstore['tagcol/' + name] = numpy.concatenate([['?'], uvals])
 
     dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
                tagnames=numpy.array(tagnames, hdf5.vstr),
