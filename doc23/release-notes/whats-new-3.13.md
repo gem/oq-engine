@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.13
-====================================================
+Release notes v3.13
+===================
 
 The release 3.13 is the result of 4 months of work involving over
 350 pull requests and touching all aspects of the engine. In particular,

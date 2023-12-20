@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.6
-===================================================
+Release notes v3.6
+==================
 
 This release features several major new features (including completely
 revised disaggregation, automatic optimization of duplicated sources,

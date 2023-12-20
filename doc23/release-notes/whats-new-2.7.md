@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.7
-===================================================
+Release notes v2.7
+==================
 
 This release introduced several improvements and new features. A few
 bugs were fixed, some outputs were changed and there were

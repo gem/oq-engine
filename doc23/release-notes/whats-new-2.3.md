@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.3
-===================================================
+Release notes v2.3
+==================
 
 This release introduces several new features and improvements of the
 engine calculators. Moreover, our packaging strategy has been

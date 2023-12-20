@@ -1,3 +1,8 @@
+  [Michele Simionato]
+  * Improved error message for missing fields in the exposure CSV files
+  * Internal: removed dbserver.user in openquake.cfg
+  * Fixed `extract_from_zip` when managing zip files coming from MACOSX
+
   [Paolo Tormene]
   * Internal: extended the MosaicGetter to a GlobalModelGetter class with
     the ability to associate points to countries

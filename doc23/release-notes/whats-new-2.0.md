@@ -1,5 +1,5 @@
-New features of the OpenQuake Engine, version 2.0
-=================================================
+Release notes v2.0
+==================
 
 There are several major improvements in OpenQuake 2.0.
 

@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.1
-===================================================
+Release notes v2.1
+==================
 
 This release has focused on memory optimizations, with the goal of
 making the engine able to tackle extremely large calculations.

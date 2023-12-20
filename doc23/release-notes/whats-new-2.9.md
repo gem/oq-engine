@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 2.9
-===================================================
+Release notes v2.9
+==================
 
 Several improvements entered in this release, most notably about the
 event based calculator. Over 150 issues were closed. For the complete

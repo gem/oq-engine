@@ -1,5 +1,5 @@
-Outputs from Event Based PSHA
-=============================
+Event-Based PSHA Outputs
+========================
 
 The Event Based PSHA calculator computes and stores stochastic event sets and the corresponding ground motion fields. 
 This calculator can also produce hazard curves and hazard maps, similar to the Classical PSHA calculator. The inset 

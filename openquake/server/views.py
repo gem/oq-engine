@@ -53,7 +53,8 @@ from openquake.calculators.extract import extract as _extract
 from openquake.engine import __version__ as oqversion
 from openquake.engine.export import core
 from openquake.engine import engine, aelo
-from openquake.engine.aelo import get_params_from
+from openquake.engine.aelo import (
+    get_params_from, PRELIMINARY_MODELS, PRELIMINARY_MODEL_WARNING)
 from openquake.engine.export.core import DataStoreExportError
 from openquake.server import utils
 
@@ -571,7 +572,8 @@ def calc_run(request):
                         status=status)
 
 
-def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
+def aelo_callback(
+        job_id, job_owner_email, outputs_uri, inputs, exc=None, warnings=None):
     if not job_owner_email:
         return
     from_email = 'aelonoreply@openquake.org'
@@ -579,6 +581,9 @@ def aelo_callback(job_id, job_owner_email, outputs_uri, inputs, exc=None):
     reply_to = 'aelosupport@openquake.org'
     body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
+    if warnings is not None:
+        for warning in warnings:
+            body += warning + '\n'
     if exc:
         subject = f'Job {job_id} failed'
         body += f'There was an error running job {job_id}:\n{exc}'
@@ -987,6 +992,16 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
                        application_mode=application_mode))
 
 
+def is_model_preliminary(ds):
+    # TODO: it would be better having the model written explicitly into the
+    # datastore
+    model = ds['oqparam'].base_path.split(os.path.sep)[-2]
+    if model in PRELIMINARY_MODELS:
+        return True
+    else:
+        return False
+
+
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
@@ -996,7 +1011,10 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
     asce07_with_units = {}
     asce41_with_units = {}
     ASCE_VIEW_DECIMALS = 2
+    warnings = None
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
+        if is_model_preliminary(ds):
+            warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
             asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
@@ -1005,30 +1023,38 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     continue
                 if not isinstance(value, float):
                     asce07_with_units[key] = value
-                elif key in ('CRS', 'CR1'):
+                elif key in ('CRs', 'CR1'):
                     # NOTE: (-) stands for adimensional
-                    asce07_with_units[key + ' (-)'] = round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce07_with_units[key + ' (-)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
                 else:
-                    asce07_with_units[key + ' (g)'] = round(
-                        value, ASCE_VIEW_DECIMALS)
+                    asce07_with_units[key + ' (g)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
         if 'asce41' in ds:
             asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
                 if not key.startswith('BSE'):
                     continue
-                asce41_with_units[key + ' (g)'] = round(
-                    value, ASCE_VIEW_DECIMALS)
+                if not isinstance(value, float):
+                    asce41_with_units[key] = value
+                else:
+                    asce41_with_units[key + ' (g)'] = (
+                        f'{value:.{ASCE_VIEW_DECIMALS}}')
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
-    low_hazard = asce07 is None or asce41 is None
+        if 'warnings' in ds:
+            ds_warnings = ds['warnings'][()].decode('utf8')
+            if warnings is None:
+                warnings = ds_warnings
+            else:
+                warnings += '\n' + ds_warnings
     return render(request, "engine/get_outputs_aelo.html",
                   dict(calc_id=calc_id, size_mb=size_mb,
                        asce07=asce07_with_units, asce41=asce41_with_units,
                        lon=lon, lat=lat, vs30=vs30, site_name=site_name,
-                       low_hazard=low_hazard))
+                       warnings=warnings))
 
 
 @csrf_exempt

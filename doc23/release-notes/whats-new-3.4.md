@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.4
-===================================================
+Release notes v3.4
+==================
 
 This is a major release featuring a new calculator for event based risk and
 several improvements and bug fixes. Over 190 pull requests were merged. For the complete list of changes, see the changelog: https://github.com/gem/oq-engine/blob/engine-3.4/debian/changelog

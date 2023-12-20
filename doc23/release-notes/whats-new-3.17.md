@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.17
-====================================================
+Release notes v3.17
+===================
 
 Version 3.17 is the culmination of 5 months of work involving around 470
 pull requests. It is aimed to users wanting the latest features

@@ -1,5 +1,5 @@
-Release notes for the OpenQuake Engine, version 3.10
-====================================================
+Release notes v3.10
+===================
 
 This is a major release featuring several optimizations, new features,
 and a bug fixes. Over 300 pull requests were merged.
