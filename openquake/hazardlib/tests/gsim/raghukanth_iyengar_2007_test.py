@@ -71,12 +71,13 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
 
         with warnings.catch_warnings(record=True) as warning_stream:
             warnings.simplefilter('always')
-            contexts.get_mean_stds(gmpe, ctx, imts)
+            mean, _, _, _ = contexts.get_mean_stds(gmpe, ctx, imts)
 
             # confirm type and content of warning
             assert len(warning_stream) == 1
             assert issubclass(warning_stream[-1].category, UserWarning)
             assert 'not supported' in str(warning_stream[-1].message).lower()
+            assert np.all(np.isnan(mean))		
 
 
 class RaghukanthIyengar2007KoynaWarnaTestCase(RaghukanthIyengar2007TestCase):
