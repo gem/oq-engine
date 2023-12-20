@@ -30,26 +30,26 @@ DOI: [10.13117/openquake.engine](https://doi.org/10.13117/openquake.engine)
 
 Current LTS version is the **OpenQuake Engine 3.16** 'Angela':
 
-The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela). [What's new](https://docs.openquake.org/oq-engine-new/master/manual/release-notes/whats-new-3.16.html)
+The code name for version 3.16 is **Angela**, in memory of the Italian science journalist [Piero Angela](https://en.wikipedia.org/wiki/Piero_Angela). [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.16.html)
 
 ### Latest release - for users needing the latest features
 
-Latest stable version is the **OpenQuake Engine 3.18**.* [What's new](https://docs.openquake.org/oq-engine-new/master/manual/release-notes/whats-new-3.18.html)
+Latest stable version is the **OpenQuake Engine 3.18**.* [What's new](https://docs.openquake.org/oq-engine/master/manual/release-notes/whats-new-3.18.html)
 
 <!-- GEM END -->
 
 ## Documentation
 
 Since version 3.19 the OpenQuake Engine documentation has been consolidated into a single site: 
-https://docs.openquake.org/oq-engine-new/master/manual/
+https://docs.openquake.org/oq-engine/master/manual/
 
-* [Getting Started](https://docs.openquake.org/oq-engine-new/master/manual/getting-started/)
-* [User Guide](https://docs.openquake.org/oq-engine-new/master/manual/user-guide/)
-* [API Reference](https://docs.openquake.org/oq-engine-new/master/manual/api-reference/)
-* [Underlying Science](https://docs.openquake.org/oq-engine-new/master/manual/underlying-science/)
-* [Release Notes](https://docs.openquake.org/oq-engine-new/master/manual/release-notes/)
-* [Contributing](https://docs.openquake.org/oq-engine-new/master/manual/contributing/)
-* [FAQ](https://docs.openquake.org/oq-engine-new/master/manual/user-guide/extras/faq)
+* [Getting Started](https://docs.openquake.org/oq-engine/master/manual/getting-started/)
+* [User Guide](https://docs.openquake.org/oq-engine/master/manual/user-guide/)
+* [API Reference](https://docs.openquake.org/oq-engine/master/manual/api-reference/)
+* [Underlying Science](https://docs.openquake.org/oq-engine/master/manual/underlying-science/)
+* [Release Notes](https://docs.openquake.org/oq-engine/master/manual/release-notes/)
+* [Contributing](https://docs.openquake.org/oq-engine/master/manual/contributing/)
+* [FAQ](https://docs.openquake.org/oq-engine/master/manual/user-guide/extras/faq)
 
 
 ## Mirrors
