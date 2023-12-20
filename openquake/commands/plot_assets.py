@@ -54,7 +54,8 @@ def main(calc_id: int = -1, site_model=False):
     fig = p.figure()
     ax = fig.add_subplot(111)
     if region:
-        pp = PolygonPatch(shapely.wkt.loads(region), alpha=0.1)
+        region_geom = shapely.wkt.loads(region)
+        pp = PolygonPatch(region_geom, alpha=0.1)
         ax.add_patch(pp)
     ax.grid(True)
     if site_model and 'site_model' in dstore:
@@ -83,10 +84,13 @@ def main(calc_id: int = -1, site_model=False):
         else:
             ax.add_patch(PolygonPatch(poly, fc=colour, alpha=0.1))
 
-    minx = assetcol['lon'].min()
-    maxx = assetcol['lon'].max()
-    miny = assetcol['lat'].min()
-    maxy = assetcol['lat'].max()
+    if region:
+        minx, miny, maxx, maxy = region_geom.bounds
+    else:
+        minx = assetcol['lon'].min()
+        maxx = assetcol['lon'].max()
+        miny = assetcol['lat'].min()
+        maxy = assetcol['lat'].max()
     w, h = maxx - minx, maxy - miny
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
