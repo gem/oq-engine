@@ -44,8 +44,6 @@ class GlobalModelGetterTestCase(unittest.TestCase):
         self.assertEqual(
             mg.get_models_by_wkt('Point(6.733 62.361)'), ['NOR'])
         self.assertEqual(
-            mg.get_models_by_wkt(mg.lonlat2wkt(6.733, 62.361)), ['NOR'])
-        self.assertEqual(
             mg.get_nearest_model_by_lon_lat_sindex(9, 45), 'ITA')
         self.assertEqual(
             mg.get_model_by_lon_lat_sindex(9, 45), 'ITA')

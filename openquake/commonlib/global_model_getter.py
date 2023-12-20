@@ -7,7 +7,6 @@ import time
 import csv
 import sys
 import os
-import pickle
 import numpy as np
 from shapely.geometry import Point, shape
 from shapely.strtree import STRtree
@@ -54,26 +53,26 @@ class GlobalModelGetter:
         self.sinfo = self.build_spatial_info(model_codes)
         self.model_codes = model_codes
 
-    def get_shapes(self, model_codes):
+    def get_geoms(self, model_codes):
         with fiona.open(self.shapefile_path, 'r') as shp:
-            shapes = [
+            geoms = [
                 shape(polygon['geometry']) for polygon in shp
                 if polygon['properties'][
                     self.model_code_field] in model_codes]
-        return shapes
+        return geoms
 
     def build_spatial_index(self, model_codes):
         logging.info('Building spatial index')
         t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
             if model_codes is not None:
-                shapes = [
+                geoms = [
                     shape(polygon['geometry']) for polygon in shp
                     if polygon['properties'][
                         self.model_code_field] in model_codes]
             else:
-                shapes = [shape(polygon['geometry']) for polygon in shp]
-            sindex = STRtree(shapes)
+                geoms = [shape(polygon['geometry']) for polygon in shp]
+            sindex = STRtree(geoms)
         sindex_building_time = time.time() - t0
         logging.info(f'Spatial index built in {sindex_building_time} seconds')
         return sindex
@@ -163,9 +162,6 @@ class GlobalModelGetter:
                                  for info in self.sinfo[idxs][1]]))
         logging.info(f'Models retrieved in {time.time() - t0} seconds')
         return models
-
-    def lonlat2wkt(self, lon, lat):
-        return wkt.dumps(Point(lon, lat))
 
     def get_nearest_models_by_geoms_array(
             self, geoms, max_distance=CLOSE_DIST_THRESHOLD,

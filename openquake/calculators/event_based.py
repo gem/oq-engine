@@ -484,8 +484,8 @@ class EventBasedCalculator(base.HazardCalculator):
             # spatial index using the current simplified geometries is quick.
             gmg = GlobalModelGetter('mosaic',
                                     model_codes=[oq.mosaic_model])
-            mosaic_model_shape = gmg.get_shapes([oq.mosaic_model])[0]
-            shapely.prepare(mosaic_model_shape)
+            mosaic_model_geom = gmg.get_geoms([oq.mosaic_model])[0]
+            shapely.prepare(mosaic_model_geom)
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0
@@ -500,7 +500,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             geom = rup_array.geom
             if oq.mosaic_model:
-                ok = shapely.contains_xy(mosaic_model_shape, rup_array['hypo'])
+                ok = shapely.contains_xy(mosaic_model_geom, rup_array['hypo'])
                 rup_array = rup_array[ok]
                 geom = geom[ok]
                 filtered_ruptures += len(rup_array)
