@@ -80,6 +80,13 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
+
+        # checking the avg_losses
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                              fname, delta=1E-5)
+
+        # checking the loss maps
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames  # sanity check
         for fname in fnames:
