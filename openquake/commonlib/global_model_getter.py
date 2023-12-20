@@ -82,6 +82,7 @@ class GlobalModelGetter:
         logging.info('Reading spatial information')
         t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
+            # NOTE: the dtype is hardcoded and it might not be optimal
             dtype = [(name, 'U50') for name in list(shp[0]['properties'])]
             if model_codes is not None:
                 sinfo = np.array(
@@ -114,6 +115,13 @@ class GlobalModelGetter:
         return models
 
     def is_inside(self, geoms, model_code):
+        """
+        :param geoms: array of items we want to classify if they are within the
+            boundaries of a model
+        :param model_code: code of the model
+        :returns: an array of booleans indicating if each item is within the
+            model boundaries
+        """
         # NOTE: the index is one for adm0 but it can be more for adm2
         model_indices = np.where(
             self.sinfo[self.model_code_field] == model_code)
