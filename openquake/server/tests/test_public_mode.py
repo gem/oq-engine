@@ -169,7 +169,7 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         # check rupture_info
         extract_url = '/v1/calc/%s/extract/rupture_info' % job_id
         got = loadnpz(self.c.get(extract_url))
-        boundaries = gzip.decompress(got['boundaries']).split(b'\n')
+        boundaries = gzip.decompress(bytes(got['boundaries'])).split(b'\n')
         self.assertEqual(len(boundaries), 31)
         for b in boundaries:
             self.assertEqual(b[:12], b'POLYGON((-77')
