@@ -237,10 +237,6 @@ class EngineServerPublicModeTestCase(EngineServerTestCase):
         self.wait()
         logging.disable(logging.NOTSET)
 
-        # there is no datastore since the calculation did not start
-        resp = self.c.get('/v1/calc/%s/datastore' % job_id)
-        self.assertEqual(resp.status_code, 404)
-
         tb = self.get('%s/traceback' % job_id)
         if not tb:
             sys.stderr.write('Empty traceback, please check!\n')

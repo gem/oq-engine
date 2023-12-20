@@ -23,7 +23,7 @@ import operator
 import pandas
 import numpy
 import h5py
-from openquake.baselib import hdf5, sap, performance
+from openquake.baselib import hdf5, sap, performance, general
 from openquake.baselib.parallel import Starmap
 from openquake.hazardlib.geo.utils import geohash3
 from openquake.commonlib.datastore import build_dstore_log
@@ -159,24 +159,31 @@ def read_world_exposure(grm_dir, dstore):
     dtlist = [(t, U32) for t in TAGS] + \
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', h5py.string_dtype('ascii', 25))]
-    dstore.create_df('assets', dtlist)  # DO NOT USE gzip to save disk space!
+    dstore.create_df('assets', dtlist, 'gzip')
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
     dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
     dstore.swmr_on()
     smap = Starmap.apply(gen_tasks, (files,),
                          weight=operator.attrgetter('size'), h5=dstore.hdf5)
     s = 0
+    # NB: we need to keep everything in memory to make gzip efficient
+    acc = general.AccumDict(accum=[])
     for gh3, arr in smap:
         for name in files[0].fields:
             if name in TAGS:
                 TAGS[name].append(arr[name])
             else:
-                hdf5.extend(dstore['assets/' + name], arr[name])
+                acc[name].append(arr[name])
         n = len(arr)
         slc = numpy.array([(gh3, s, s + n)], slc_dt)
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         s += n
     Starmap.shutdown()
+    for name in sorted(acc):
+        lst = acc.pop(name)
+        arr = numpy.concatenate(lst, dtype=lst[0].dtype)
+        logging.info(f'Storing assets/{name}')
+        hdf5.extend(dstore['assets/' + name], arr)
     store_tagcol(dstore)
 
 
