@@ -98,6 +98,31 @@ def exposure_by_geohash(array, monitor):
         yield gh, array[array['geohash3']==gh]
 
 
+def store_tagcol(dstore):
+    """
+    A TagCollection is stored as arrays like taxonomy = [
+    "?", "Adobe", "Concrete", "Stone-Masonry", "Unreinforced-Brick-Masonry",
+    "Wood"] with attributes __pyclass__, tagnames, tagsize
+    """
+    tagsizes = []
+    tagnames = []
+    for tagname in TAGS:
+        dstore.create_dset('tagcol/' + tagname, U32)
+        tagvalues = numpy.concatenate(TAGS[tagname])
+        uvals, inv = numpy.unique(tagvalues, return_inverse=1)
+        size = len(uvals) + 1
+        tagsizes.append(size)
+        tagnames.append(tagname)
+        logging.info('Storing %s[%d/%d]', tagname,size, len(inv))
+        hdf5.extend(dstore[f'assets/{tagname}'], inv)
+        dstore['tagcol/' + tagname] = numpy.concatenate([['?'], uvals])
+
+    dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
+               tagnames=numpy.array(tagnames, hdf5.vstr),
+               tagsizes=tagsizes)
+    dstore.getitem('tagcol').attrs.update(dic)
+
+
 def gen_tasks(files, monitor):
     """
     Generate tasks of kind exposure_by_geohash for large files
@@ -134,8 +159,6 @@ def read_world_exposure(grm_dir, dstore):
         [(f, F32) for f in set(CONV)-set(TAGS)-{'ASSET_ID', None}] + \
         [('ASSET_ID', h5py.string_dtype('ascii', 25))]
     dstore.create_df('assets', dtlist)  # DO NOT USE gzip to save disk space!
-    for tagname in TAGS:
-        dstore.create_dset('tagcol/' + tagname, U32)
     slc_dt = numpy.dtype([('gh3', U16), ('start', U32), ('stop', U32)])
     dstore.create_dset('assets/slice_by_gh3', slc_dt, fillvalue=None)
     dstore.swmr_on()
@@ -153,20 +176,7 @@ def read_world_exposure(grm_dir, dstore):
         hdf5.extend(dstore['assets/slice_by_gh3'], slc)
         s += n
     Starmap.shutdown()
-
-    tagsizes = []
-    for tagname in TAGS:
-        tagvalues = numpy.concatenate(TAGS[tagname])
-        uvals, inv = numpy.unique(tagvalues, return_inverse=1)
-        tagsizes.append(len(uvals))
-        logging.info('Storing %s[%d/%d]', tagname, len(uvals), len(inv))
-        hdf5.extend(dstore[f'assets/{tagname}'], inv)
-        dstore['tagcol/' + tagname] = uvals
-
-    dic = dict(__pyclass__='openquake.risklib.asset.TagCollection',
-               tagnames=numpy.array(list(TAGS), hdf5.vstr),
-               tagsizes=tagsizes)
-    dstore.getitem('tagcol').attrs.update(dic)
+    store_tagcol(dstore)
 
 
 def main(grm_dir):
