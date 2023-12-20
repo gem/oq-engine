@@ -27,7 +27,8 @@ from openquake.hazardlib.geo.utils import cross_idl
 from openquake.qa_tests_data import global_risk
 
 
-def main(calc_id: int = -1, site_model=False):
+def main(calc_id: int = -1, site_model=False, shapefile_path=None,
+         save_to=None):
     """
     Plot the sites and the assets
     """
@@ -36,8 +37,10 @@ def main(calc_id: int = -1, site_model=False):
     import matplotlib.pyplot as p
     from openquake.hmtk.plotting.patch import PolygonPatch
 
-    shapefile_dir = os.path.dirname(global_risk.__file__)
-    shapefile_path = os.path.join(shapefile_dir, 'geoBoundariesCGAZ_ADM0.shp')
+    if shapefile_path is None:
+        shapefile_dir = os.path.dirname(global_risk.__file__)
+        shapefile_path = os.path.join(
+            shapefile_dir, 'geoBoundariesCGAZ_ADM0.shp')
     polys = [shape(pol['geometry']) for pol in fiona.open(shapefile_path)]
     cm = p.get_cmap('RdBu')
     num_colours = len(polys)
@@ -96,11 +99,13 @@ def main(calc_id: int = -1, site_model=False):
     ax.set_xlim(minx - 0.2 * w, maxx + 0.2 * w)
     ax.set_ylim(miny - 0.2 * h, maxy + 0.2 * h)
     ax.legend()
-    filename = 'assets.png'
-    p.savefig(filename, alpha=True, dpi=300)
-    logging.info(f'Plot saved to {filename}')
+    if save_to:
+        p.savefig(save_to, alpha=True, dpi=300)
+        logging.info(f'Plot saved to {save_to}')
     p.show()
 
 
 main.calc_id = 'a computation id'
 main.site_model = 'plot the site model too'
+main.shapefile_path = 'a shapefile with country/region borders'
+main.save_to = 'save the plot to this filename'
