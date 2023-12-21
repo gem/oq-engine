@@ -76,7 +76,7 @@ html_static_path = ["_static"]
 html_favicon = "_static/OQ-Logo circle_shade.png"
 
 
-json_url_path = ".ddown_man.json"
+json_url_path = ".ddown_doc.json"
 if not os.path.exists(json_url_path):
     shutil.copyfile("samples/dot_ddown_man.json.sample",
                     json_url_path)

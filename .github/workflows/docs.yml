@@ -11,23 +11,18 @@
 #     <x.y>|master
 #         PDF
 #             <pdf_docs>
-#         reference
 #         manual
-#         advanced
 #     latest -> <latest x.y>
 #     LTS    -> <LTS x.y>
 #     reference
-#         latest -> ../latest/reference
 #         LTS    -> ../LTS/reference
-#         master -> ../master/reference
+#         master -> ../master/manual
 #     manual
-#         latest -> ../latest/manual
 #         LTS    -> ../LTS/manual
 #         master -> ../master/manual
 #     advanced
-#         latest -> ../latest/advanced
 #         LTS    -> ../LTS/advanced
-#         master -> ../master/advanced
+#         master -> ../master/manual
 # manuals
 #     OpenQuake Manual <x.y>.pdf -> ../oq-engine/<x.y>/PDF/OpenQuake Manual <x.y>.pdf
 #     OpenQuake Manual latest.pdf -> OpenQuake Manual <latest_(x.y)>.pdf
@@ -212,6 +207,8 @@ jobs:
           set -x
           if [ "$MULTI_DOCS_FOR_DEVEL" == "true" -o  "$BUILD" == "master" ]; then
               ddown_man="["
+              ddown_adv="["
+              ddown_doc="["
               for v in $ALL_VERS; do
                   ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
                   ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
@@ -267,12 +264,45 @@ jobs:
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
                       fi
-                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/advanced/"
+                      if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 19 )) ) || (( "$ver_maj" > 3 )); then
+                          adv_name="manual"
+                      else
+                          adv_name="advanced"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/${adv_name}/"
+                      if [ "$ddown_adv" != "[" ]; then
+                         ddown_adv="${ddown_adv}, "
+                      fi
+                      ddown_adv="${ddown_adv}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
                   fi
+
+                  # policies for the new documentation 2023 version switcher menu
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 19 )) ) || (( "$ver_maj" > 3 )); then
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/manual/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+                  fi
+
 
               done
               ddown_man="${ddown_man}]"
               echo "$ddown_man" > dot_ddown_man.json
+
+              ddown_adv="${ddown_adv}]"
+              echo "$ddown_adv" > dot_ddown_adv.json
+
+              ddown_doc="${ddown_doc}, { \"name\": \"old docs\", \"version\": \"old\", \"url\": \"https://docs.openquake.org/oq-engine/\"}]"
+              echo "$ddown_doc" > dot_ddown_doc.json
+
           fi
           set +x
 
@@ -290,6 +320,12 @@ jobs:
 
               if [ -f "dot_ddown_man.json" ]; then
                   rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_man.json"
+              fi
+              if [ -f "dot_ddown_adv.json" ]; then
+                  rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_adv.json"
+              fi
+              if [ -f "dot_ddown_doc.json" ]; then
+                  rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_doc.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_doc.json"
               fi
           else
               echo "SKIP: publish dropdown version descriptions"
