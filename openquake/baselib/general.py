@@ -437,10 +437,10 @@ def engine_version():
     gh = ''
     if os.path.isdir(git_path):
         try:
-            gh = subprocess.check_output(
-                ['git', 'rev-parse', '--short', 'HEAD'],
-                stderr=open(os.devnull, 'w'),
-                cwd=os.path.dirname(git_path)).strip()
+            with open(os.devnull, 'w') as devnull:
+                gh = subprocess.check_output(
+                    ['git', 'rev-parse', '--short', 'HEAD'],
+                    stderr=devnull, cwd=os.path.dirname(git_path)).strip()
             gh = "-git" + decode(gh) if gh else ''
         except Exception:
             pass

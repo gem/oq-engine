@@ -210,11 +210,13 @@ class CalculatorTestCase(unittest.TestCase):
             open8(expected, 'w').write('')
         actual = os.path.abspath(
             os.path.join(self.calc.oqparam.export_dir, fname2))
-        expected_lines = [line for line in open8(expected)
-                          if not line.startswith('#,')]
+        with open8(expected) as f:
+            expected_lines = [line for line in f if not line.startswith('#,')]
         comments = []
         actual_lines = []
-        for line in open8(actual).readlines()[:lastline]:
+        with open8(actual) as f:
+            lines = f.readlines()[:lastline]
+        for line in lines:
             if line.startswith('#'):
                 comments.append(line)
             else:

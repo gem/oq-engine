@@ -47,6 +47,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
+I32 = numpy.int32
 U32 = numpy.uint32
 F16 = numpy.float16
 F64 = numpy.float64
@@ -459,7 +460,7 @@ class ContextMaker(object):
                     dic[req] = dt(0)
             else:
                 dic[req] = 0.
-        dic['src_id'] = U32(0)
+        dic['src_id'] = I32(0)
         dic['rup_id'] = U32(0)
         dic['sids'] = U32(0)
         dic['rrup'] = numpy.float64(0)
