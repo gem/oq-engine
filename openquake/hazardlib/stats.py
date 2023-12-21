@@ -208,8 +208,6 @@ def quantile_curve(quantile, curves, weights=None):
         cum_weights = numpy.cumsum(ws)
         # get the quantile from the interpolated CDF
         result[idx] = numpy.interp(quantile, cum_weights, data)
-    if quantile == .15 and len(result) == 13:
-        print('****', result[0])
     return result
 
 
