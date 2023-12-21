@@ -289,7 +289,7 @@ jobs:
                       if [ "$ddown_doc" != "[" ]; then
                          ddown_doc="${ddown_doc}, "
                       fi
-                      ddown_doc="${ddown_doc}{ \"name\": \"Integrated ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+                      ddown_doc="${ddown_doc}{ \"name\": \"Unified ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
                   elif ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
                       if [ "$master_rename" == "true" ]; then
                           ver_name="${pfx}"
