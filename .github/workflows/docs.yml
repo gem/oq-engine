@@ -148,7 +148,7 @@ jobs:
 
           REL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
           LATEST_VER="$(echo "$REL_VERS" | tail -n 1)"
-          ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq)"
+          ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq | tac)"
           PDFDOCS="manuals/"
           TARGET_LINK=""
           PDF_VER_LINK=""
