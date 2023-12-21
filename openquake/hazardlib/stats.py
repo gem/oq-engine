@@ -204,10 +204,10 @@ def quantile_curve(quantile, curves, weights=None):
     result = numpy.zeros(curves.shape[1:])
     for idx, _ in numpy.ndenumerate(result):
         data = curves[(slice(None), ) + idx]
-        data, ws = zip(*sorted(zip(data, weights)))
-        cum_weights = numpy.cumsum(ws)
+        sorted_idxs = numpy.argsort(data)
+        cum_weights = numpy.cumsum(weights[sorted_idxs])
         # get the quantile from the interpolated CDF
-        result[idx] = numpy.interp(quantile, cum_weights, data)
+        result[idx] = numpy.interp(quantile, cum_weights, data[sorted_idxs])
     return result
 
 
