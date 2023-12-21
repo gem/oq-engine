@@ -43,6 +43,7 @@
   * Added commands `oq plot mean_hcurves_rtgm,governing_mce,disagg_by_src`
 
   [Michele Simionato]
+  * Fixed mesh creation in surface/kite_fault.py
   * Raised the limit on the product `num_assets * num_rlzs` when using
     full enumeration by a factor of 10
   * Fixed exporting-reimporting GMFs in hdf5 format

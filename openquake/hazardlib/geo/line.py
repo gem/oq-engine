@@ -44,7 +44,7 @@ def _resample(coo, sect_len, orig_extremes):
     txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
 
     # Compute the total length of the original trace
-    tot_len = sum(utils.get_dist(txy[i], txy[i-1]) for i in range(1, N))
+    tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
     inc_len = 0.
 
     # Initialize the lists with the coordinates of the resampled trace
@@ -92,7 +92,7 @@ def _resample(coo, sect_len, orig_extremes):
                 delta = txy[-1] - txy[-2]
                 chk_dst = utils.get_dist(txy[-1], txy[-2])
                 _update(rtra, rtra_prj, proj, rtra_prj[-1] +
-                       sect_len * delta / chk_dst)
+                        sect_len * delta / chk_dst)
                 inc_len += sect_len
             elif orig_extremes:
                 # Adding last point
@@ -611,12 +611,10 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
         A 1D :class:`numpy.ndarray` instance of length 3
     """
 
-    # First points on the line
     x1 = pnt0[0]
     y1 = pnt0[1]
     z1 = pnt0[2]
 
-    #
     x2 = pnt1[0]
     y2 = pnt1[1]
     z2 = pnt1[2]
