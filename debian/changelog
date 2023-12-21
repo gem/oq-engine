@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Changed the weighted quantile algorithm to not depend on numpy.argsort
   * Improved error message for missing fields in the exposure CSV files
   * Internal: removed dbserver.user in openquake.cfg
   * Fixed `extract_from_zip` when managing zip files coming from MACOSX

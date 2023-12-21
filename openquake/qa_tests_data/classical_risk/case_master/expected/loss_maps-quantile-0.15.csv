@@ -1,3 +1,3 @@
-#,,,,,,,,"generated_by='OpenQuake engine 3.19.0-gitc093471329', start_date='2023-12-21T06:41:15', checksum=2065913176, kind='quantile-0.15', risk_investigation_time=50.0"
+#,,,,,,,,"generated_by='OpenQuake engine 3.19.0-git3784624a21', start_date='2023-12-21T07:33:35', checksum=2065913176, kind='quantile-0.15', risk_investigation_time=50.0"
 asset_id,taxonomy,lon,lat,business_interruption~poe-0.02,contents~poe-0.02,nonstructural~poe-0.02,occupants~poe-0.02,structural~poe-0.02
-a3,tax1,-122.57000,38.11300,1.13949E+02,8.25346E+02,1.04705E+03,2.27898E-03,3.51518E+02
+a3,tax1,-122.57000,38.11300,1.25676E+02,9.37727E+02,1.14966E+03,2.51352E-03,3.59451E+02
