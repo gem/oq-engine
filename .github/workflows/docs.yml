@@ -289,10 +289,47 @@ jobs:
                       if [ "$ddown_doc" != "[" ]; then
                          ddown_doc="${ddown_doc}, "
                       fi
-                      ddown_doc="${ddown_doc}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+                      ddown_doc="${ddown_doc}{ \"name\": \"Integrated ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+                  elif ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/manual/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"Manual ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/advanced/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"Advanced ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/reference/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"Reference ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
                   fi
-
-
               done
               ddown_man="${ddown_man}]"
               echo "$ddown_man" > dot_ddown_man.json
@@ -300,7 +337,7 @@ jobs:
               ddown_adv="${ddown_adv}]"
               echo "$ddown_adv" > dot_ddown_adv.json
 
-              ddown_doc="${ddown_doc}, { \"name\": \"old docs\", \"version\": \"old\", \"url\": \"https://docs.openquake.org/oq-engine/\"}]"
+              ddown_doc="${ddown_doc}]"
               echo "$ddown_doc" > dot_ddown_doc.json
 
           fi
