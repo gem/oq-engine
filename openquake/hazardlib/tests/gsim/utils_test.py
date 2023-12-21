@@ -25,7 +25,7 @@ from openquake.hazardlib import gsim, InvalidFile
 GSIM_PATH = gsim.__path__[0]
 SUMMARY = os.path.normpath(
     os.path.join(
-        GSIM_PATH, '../../../doc/sphinx/openquake.hazardlib.gsim.rst'))
+        GSIM_PATH, '../../../doc/api-reference/openquake.hazardlib.gsim.rst'))
 
 
 class MblgToMwTestCase(unittest.TestCase):
