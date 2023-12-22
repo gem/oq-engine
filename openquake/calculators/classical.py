@@ -471,8 +471,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
-                logging.error('The site is far from all seismic sources'
-                              ' included in the hazard model')
+                logging.warning('The site is far from all seismic sources'
+                                ' included in the hazard model')
             else:
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
