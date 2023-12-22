@@ -1,3 +1,6 @@
+  [Marco Pagani]
+  * Fixed the algorithm used to generate kite surfaces
+
   [Michele Simionato]
   * Changed the weighted quantile algorithm to not depend on numpy.argsort
     (since numpy 1.25 argsort produces a different sorting on machines with
@@ -43,7 +46,6 @@
   * Added commands `oq plot mean_hcurves_rtgm,governing_mce,disagg_by_src`
 
   [Michele Simionato]
-  * Fixed mesh creation in surface/kite_fault.py
   * Raised the limit on the product `num_assets * num_rlzs` when using
     full enumeration by a factor of 10
   * Fixed exporting-reimporting GMFs in hdf5 format
