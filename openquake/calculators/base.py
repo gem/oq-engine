@@ -247,6 +247,8 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     except RuntimeError as exc:
                         if (len(self.oqparam.sites) == 1 and
                                 'no sources close to the site' in str(exc)):
+                            # NOTE: for AELO we want to complete the job
+                            #       successfully anyway
                             pass
                         else:
                             raise
