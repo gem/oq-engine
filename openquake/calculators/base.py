@@ -242,7 +242,14 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                     self.pre_execute()
                 self.result = self.execute()
                 if self.result is not None:
-                    self.post_execute(self.result)
+                    try:
+                        self.post_execute(self.result)
+                    except RuntimeError as exc:
+                        if (len(self.oqparam.sites) == 1 and
+                                'no sources close to the site' in str(exc)):
+                            pass
+                        else:
+                            raise
                 self.post_process()
                 self.export(kw.get('exports', ''))
             except Exception as exc:
