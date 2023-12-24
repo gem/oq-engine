@@ -76,6 +76,7 @@ def _find_fact_maxC(T, code):
 
 def _find_afe_target(imls, afe, sa_target):
     # find the target afe (or poe) for a given acceleration
+    afe = numpy.clip(afe, 1E-45, numpy.inf)  # remove zeros
     f = interpolate.interp1d(numpy.log(imls), numpy.log(afe))
     afe_target = numpy.exp(f(numpy.log(sa_target)))
     return afe_target
@@ -113,13 +114,13 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     # get hazard curves, put into rates
     mean_hcurve = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
     for m, hcurve in enumerate(mean_hcurve):
-        AFE.append(to_rates(hcurve, window, minrate=1E-12))
+        AFE.append(to_rates(hcurve, window))
         # get the AFE of the iml that will be disaggregated for each IMT
         if rtgm_probmce[m] < imls[m][0]:
             afe_RTGM.append(0.0)
         else:
             afe_RTGM.append(_find_afe_target(
-                numpy.array(imls[m]), numpy.array(AFE[m]), rtgm_probmce[m]))
+                numpy.array(imls[m]), AFE[m], rtgm_probmce[m]))
 
     plt = import_plt()
     plt.figure(figsize=(12, 9))
