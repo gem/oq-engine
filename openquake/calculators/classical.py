@@ -539,10 +539,13 @@ class ClassicalCalculator(base.HazardCalculator):
             exp = self.datastore['mean_rates_ss'][:]
         except KeyError:  # if there are no ruptures close to the site
             return
+        # mean_rates_by_src[0], exp have shape (M, L1, Ns)
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
-        # skipping the first value which can be wrong due to the cutoff
-        # (happens in logictree/case_05)
-        numpy.testing.assert_allclose(got[1:], exp[1:], atol=1E-5)
+        for m in range(len(got)):
+            # skipping the first values which can be wrong due to the cutoff
+            # in to_rates (happens in logictree/case_05)
+            ok = got[m] < 10.  # not too large
+            numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
     def execute_big(self, maxw):
         """

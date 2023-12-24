@@ -22,9 +22,19 @@ Build the site model for the world and store it into an HDF5 file.
 import os
 import numpy
 from openquake.baselib import performance, hdf5, sap
+from openquake.hazardlib.gsim_lt import GsimLogicTree
 from openquake.commonlib import readinput
 
 
+def get_gsim_lt(cwd):
+    fname = os.path.join(cwd, 'gmmLTrisk.xml')
+    if os.path.exists(fname):
+        gsim_lt = GsimLogicTree(fname)
+    else:
+        gsim_lt = GsimLogicTree(os.path.join(cwd, 'gmmLT.xml'))
+    return gsim_lt
+
+                        
 def main(mosaic_dir):
     """
     Build global site_model.hdf5
@@ -32,15 +42,22 @@ def main(mosaic_dir):
     dic = {}
     fields = {}
     tot = 0
+    trt_list = []
     for cwd, dirs, files in os.walk(mosaic_dir):
         for f in files:
             if f == 'job_vs30.ini':
+                model = cwd.split('/')[-2]  # EUR, SAM, etc
                 oq = readinput.get_oqparam(os.path.join(cwd, f))
                 sm = readinput.get_site_model(oq)
                 for row in sm:
                     dic[row['lon'], row['lat']] = row
                 fields.update(sm.dtype.descr)
                 tot += len(sm)
+                gsim_lt = get_gsim_lt(cwd)
+                for trt in gsim_lt.values:
+                    trt_list.append((model, trt))
+    for model, trt in trt_list:
+        print('%s,%s' % (model, trt))
     fields['lon'] = numpy.float32
     fields['lat'] = numpy.float32
     smodel = numpy.zeros(len(dic), list(fields.items()))
