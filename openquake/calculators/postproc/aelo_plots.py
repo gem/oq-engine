@@ -76,6 +76,7 @@ def _find_fact_maxC(T, code):
 
 def _find_afe_target(imls, afe, sa_target):
     # find the target afe (or poe) for a given acceleration
+    afe = numpy.clip(afe, 1E-45, numpy.inf)  # remove zeros
     f = interpolate.interp1d(numpy.log(imls), numpy.log(afe))
     afe_target = numpy.exp(f(numpy.log(sa_target)))
     return afe_target
