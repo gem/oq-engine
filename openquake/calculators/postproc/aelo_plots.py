@@ -119,8 +119,7 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
         if rtgm_probmce[m] < imls[m][0]:
             afe_RTGM.append(0.0)
         else:
-            afe_RTGM.append(_find_afe_target(
-                numpy.array(imls[m]), AFE[m], rtgm_probmce[m]))
+            afe_RTGM.append(_find_afe_target(imls[m], AFE[m], rtgm_probmce[m]))
 
     plt = import_plt()
     plt.figure(figsize=(12, 9))
