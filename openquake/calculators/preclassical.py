@@ -303,8 +303,12 @@ class PreClassicalCalculator(base.HazardCalculator):
         totsites = sum(row[source_reader.NUM_SITES]
                        for row in self.csm.source_info.values())
         if totsites == 0:
-            raise RuntimeError('There are no sources close to the site(s)! '
-                               'Use oq plot sources? to debug')
+            if self.N == 1:
+                logging.warning('There are no sources close to the site!')
+            else:
+                raise RuntimeError(
+                    'There are no sources close to the site(s)! '
+                    'Use oq plot sources? to debug')
 
         fname = self.oqparam.inputs.get('delta_rates')
         if fname:

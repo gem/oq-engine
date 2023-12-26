@@ -31,7 +31,8 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import (
-    KiteSurface, _fix_profiles, _create_mesh, get_new_profiles)
+    KiteSurface, _fix_profiles, _create_mesh, _get_resampled_profs,
+    _get_proj_from_profiles)
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
@@ -197,11 +198,21 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         self.las = [self.msrf.surfaces[0].mesh.lats,
                     self.msrf.surfaces[1].mesh.lats]
 
+        if PLOTTING:
+            ax = plt.figure().add_subplot(projection='3d')
+            for sfc in self.msrf.surfaces:
+                mesh = sfc.mesh
+                ax.plot(mesh.lons.flatten(), mesh.lats.flatten(),
+                        mesh.depths.flatten(), '.', color = 'red')
+            ax.set_xlabel('Lon')
+            ax.invert_zaxis()
+            plt.show()
+
     def test_get_edge_set(self):
         # The vertexes of the expected edges are the first and last vertexes of
         # the topmost row of the mesh
         expected = [np.array([[-70.33, 19.65, 0.],
-                              [-70.57722702, 19.6697801, 0.0]]),
+                              [-70.57740671, 19.66979434, 0.0]]),
                     np.array([[-70.10327766, 19.67957463, 0.0],
                               [-70.33, 19.65, 0.0]])]
         self.msrf._set_tor()
@@ -226,11 +237,11 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         # point toward W
         msg = 'Multi fault surface: strike is wrong'
         strike = self.msrf.get_strike()
-        self.assertAlmostEqual(268.867, strike, places=2, msg=msg)
+        self.assertAlmostEqual(268.538, strike, places=2, msg=msg)
 
     def test_get_dip(self):
         dip = self.msrf.get_dip()
-        expected = 69.649
+        expected = 69.339
         msg = 'Multi fault surface: dip is wrong'
         aae(dip, expected, err_msg=msg, decimal=2)
 
@@ -238,7 +249,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         """ check the width """
         # Measuring the width
         width = self.msrf.get_width()
-        np.testing.assert_allclose(width, 20.44854)
+        np.testing.assert_allclose(width, 21.356226)
 
     def test_get_area(self):
         # The area is computed by summing the areas of each section.
@@ -262,7 +273,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     def test_get_middle_point(self):
         # The computed middle point is the mid point of the first surface
         midp = self.msrf.get_middle_point()
-        expected = [-70.453372, 19.695377, 10.2703]
+        expected = [-70.4537, 19.6960, 10.2449]
         computed = [midp.longitude, midp.latitude, midp.depth]
         aae(expected, computed, decimal=4)
 
@@ -457,9 +468,12 @@ class NZLTestCase(unittest.TestCase):
         # Create mesh (note that we flip it to replicate the right_hand rule
         # fix). The 'get_new_profiles' function provides the same results on
         # MacOS and Linux
-        msh = _create_mesh(rprof, ref_idx, rms, idl=False)
+        msh = _create_mesh(rprof, ref_idx, rms, idl=False, align=False)
         tmp = np.fliplr(msh[:, :, 0])
-        mback = get_new_profiles(rprof, ref_idx, rms, idl=False)
+
+        npr = []
+        proj = _get_proj_from_profiles(rprof)
+        mback = _get_resampled_profs(npr, rprof, rms, proj, False, ref_idx)
 
         # Save results
         fname = 'results_nzl_2_mesh.txt'

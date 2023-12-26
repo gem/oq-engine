@@ -562,10 +562,8 @@ class RuptureConverter(object):
             surface = geo.GriddedSurface.from_points_list(points)
         elif surface_node.tag.endswith('kiteSurface'):
             # single or multiple kite surfaces
-            profs = []
-            for surface_node in surface_nodes:
-                profs.append(self.geo_lines(surface_node))
-            if len(profs) < 2:
+            profs = [self.geo_lines(node) for node in surface_nodes]
+            if len(profs) == 1:  # there is a single surface_node
                 surface = geo.KiteSurface.from_profiles(
                     profs[0], self.rupture_mesh_spacing,
                     self.rupture_mesh_spacing, sec_id=sec_id)

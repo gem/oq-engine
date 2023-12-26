@@ -474,8 +474,9 @@ class HazardCalculator(BaseCalculator):
                 sys.platform != 'darwin'):
             # macos tells that there is no memory when there is, so we
             # must not enter in SLOW MODE there
-            msg = ('Entering SLOW MODE. You have %.1f GB available, but the '
-                   'engine would like at least 0.25 GB per core, i.e. %.1f GB: '
+            msg = ('Entering SLOW MODE. You have %.1f GB available, '
+                   'but the engine would like at least 0.25 GB per core, '
+                   'i.e. %.1f GB: '
                    'https://github.com/gem/oq-engine/blob/master/doc/faq.md'
                    ) % (avail, required)
             if oq.concurrent_tasks:
@@ -575,7 +576,8 @@ class HazardCalculator(BaseCalculator):
         elif 'hazard_curves' in oq.inputs:  # read hazard from file
             assert not oq.hazard_calculation_id, (
                 'You cannot use --hc together with hazard_curves')
-            haz_sitecol = readinput.get_site_collection(oq, self.datastore.hdf5)
+            haz_sitecol = readinput.get_site_collection(
+                oq, self.datastore.hdf5)
             self.load_crmodel()  # must be after get_site_collection
             self.read_exposure(haz_sitecol)  # define .assets_by_site
             df = readinput.Global.pmap.to_dframe()

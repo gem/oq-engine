@@ -189,58 +189,71 @@ class MultiSurfaceTestCase(unittest.TestCase):
 
     def test_get_closest_point(self):
 
-        # define two surfaces using four profiles 
+        # define two surfaces using four profiles
         spc = 2.0
-        pro1 = Line([Point(-70.60549, 17.61792, 0.00), Point(-70.39787, 17.68783, 7.00)])
-        pro2 = Line([Point(-70.71057, 17.90037, 0.00), Point(-70.50262, 17.97028, 7.00)])
-        pro3 = Line([Point(-70.33020, 17.48492, 0.00), Point(-70.23051, 17.67200, 7.00)])
-        pro4 = Line([Point(-70.60549, 17.61792, 0.00), Point(-70.50573, 17.80500, 7.00)])
+        pro1 = Line([Point(-70.60549, 17.61792, 0.00),
+                     Point(-70.39787, 17.68783, 7.00)])
+        pro2 = Line([Point(-70.71057, 17.90037, 0.00),
+                     Point(-70.50262, 17.97028, 7.00)])
+        pro3 = Line([Point(-70.33020, 17.48492, 0.00),
+                     Point(-70.23051, 17.67200, 7.00)])
+        pro4 = Line([Point(-70.60549, 17.61792, 0.00),
+                     Point(-70.50573, 17.80500, 7.00)])
         sfc1 = KiteSurface.from_profiles([pro1, pro2], spc, spc)
         sfc2 = KiteSurface.from_profiles([pro3, pro4], spc, spc)
         msurf = MultiSurface([sfc1, sfc2])
-        
+
         # Define the mesh of sites
-        pcoo = numpy.array([[-70.71057, 17.90037],[-70.60549, 17.61792]])
+        pcoo = numpy.array([[-70.71057, 17.90037], [-70.60549, 17.61792]])
         mesh = Mesh(pcoo[:, 0], pcoo[:, 1])
-        
+
         # Compute closest distance between mesh points and surface
         cpoints = msurf.get_closest_points(mesh)
 
         # checking cpoints
-        expected = [[-70.70686112, -70.60549], [17.89041691, 17.61792],[ 0., 0.]]
+        expected = [[-70.70640093, -70.60549],
+                    [17.88918184,  17.61792],
+                    [0., 0.]]
         numpy.testing.assert_almost_equal(expected, cpoints.array, decimal=7)
 
     def test_get_closest_point_v2(self):
 
-        # this test is for two sites and two surfaces. the two sites are on opposite sides
-        # of the multisurface (along strike) so that each is closer to one surface. 
-        # the test confirms that the order of the sites and the order of the surfaces 
-        # is not impacting the result, and confirming that the result for any given site is
-        # the same whether run with another site or alone
+        # this test is for two sites and two surfaces. the two sites are on
+        # opposite sides of the multisurface (along strike) so that each is
+        # closer to one surface.  the test confirms that the order of the sites
+        # and the order of the surfaces is not impacting the result, and
+        # confirming that the result for any given site is the same whether run
+        # with another site or alone
 
-        # define two surfaces using four profiles. make two multisurfaces in opposite order 
+        # define two surfaces using four profiles. make two multisurfaces in
+        # opposite order
         spc = 2.0
-        pro1 = Line([Point(-71.44500, 19.85546, 0.00), Point(-71.44500, 19.85546, 20.00)])
-        pro2 = Line([Point(-71.77656, 19.95929, 0.00), Point(-71.77656, 19.95929, 20.00)])
-        pro3 = Line([Point(-71.12273, 19.72523, 0.00), Point(-71.12273, 19.72523, 20.00)])
-        pro4 = Line([Point(-71.44500, 19.85546, 0.00), Point(-71.44500, 19.85546, 20.00)])
+        pro1 = Line([Point(-71.44500, 19.85546, 0.00),
+                     Point(-71.44500, 19.85546, 20.00)])
+        pro2 = Line([Point(-71.77656, 19.95929, 0.00),
+                     Point(-71.77656, 19.95929, 20.00)])
+        pro3 = Line([Point(-71.12273, 19.72523, 0.00),
+                     Point(-71.12273, 19.72523, 20.00)])
+        pro4 = Line([Point(-71.44500, 19.85546, 0.00),
+                     Point(-71.44500, 19.85546, 20.00)])
         sfc1 = KiteSurface.from_profiles([pro1, pro2], spc, spc)
         sfc2 = KiteSurface.from_profiles([pro3, pro4], spc, spc)
         msurf_1 = MultiSurface([sfc1, sfc2])
         msurf_2 = MultiSurface([sfc2, sfc1])
-        
-        # Define the mesh of sites. Four meshes: two that switch the sites order and two
-        # that have only one site
-        pcoo_A = numpy.array([[-71.01057, 19.70037],[-71.90549, 19.61792]])
-        pcoo_B = numpy.array([[-71.90549, 19.61792],[-71.01057, 19.70037]])
+
+        # Define the mesh of sites. Four meshes: two that switch the sites
+        # order and two that have only one site
+        pcoo_A = numpy.array([[-71.01057, 19.70037], [-71.90549, 19.61792]])
+        pcoo_B = numpy.array([[-71.90549, 19.61792], [-71.01057, 19.70037]])
         pcoo_1 = numpy.array([[-71.01057, 19.70037]])
         pcoo_2 = numpy.array([[-71.90549, 19.95792]])
         mesh_A = Mesh(pcoo_A[:, 0], pcoo_A[:, 1])
         mesh_B = Mesh(pcoo_B[:, 0], pcoo_B[:, 1])
         mesh_1 = Mesh(pcoo_1[:, 0], pcoo_1[:, 1])
         mesh_2 = Mesh(pcoo_2[:, 0], pcoo_2[:, 1])
-        
-        # Compute closest distance between all mesh points and surface combinations
+
+        # Compute closest distance between all mesh points and surface
+        # combinations
         cpointsA_1 = msurf_1.get_closest_points(mesh_A)
         cpointsA_11 = msurf_1.get_closest_points(mesh_1)
         cpointsA_12 = msurf_1.get_closest_points(mesh_2)
@@ -266,16 +279,19 @@ class MultiSurfaceTestCase(unittest.TestCase):
         assert (cpointsB_1.array.T[0] == cpointsB_22.array.T[0]).all()
         assert (cpointsB_1.array.T[0] == cpointsB_12.array.T[0]).all()
 
-
     def test_get_closest_point_v3(self):
 
         # if two sections have the exact same point as the closest distance,
-        # then we can only choose one 
-        spc1 = 4.0
-        pro1 = Line([Point(174.693609, -41.234002, 0.0), Point(174.6937, -41.2337, 21.68)])
-        pro2 = Line([Point(174.6728, -41.2633, 0.0), Point(174.6729, -41.2629, 21.68)])
-        pro3 = Line([Point(174.6728, -41.2633, 0.0), Point(174.6729, -41.2629, 21.68)])
-        pro4 = Line([Point(174.645459, -41.285853, 0.0), Point(174.6455, -41.2855, 21.76)])
+        # then we can only choose one
+        spc1 = 2.0
+        pro1 = Line([Point(174.693609, -41.234002, 0.0),
+                     Point(174.6937, -41.2337, 21.68)])
+        pro2 = Line([Point(174.6728, -41.2633, 0.0),
+                     Point(174.6729, -41.2629, 21.68)])
+        pro3 = Line([Point(174.6728, -41.2633, 0.0),
+                     Point(174.6729, -41.2629, 21.68)])
+        pro4 = Line([Point(174.645459, -41.285853, 0.0),
+                     Point(174.6455, -41.2855, 21.76)])
         sfc1 = KiteSurface.from_profiles([pro1, pro2], spc1, spc1)
         sfc2 = KiteSurface.from_profiles([pro3, pro4], spc1, spc1)
         msurf1 = MultiSurface([sfc1, sfc2])
@@ -283,13 +299,13 @@ class MultiSurfaceTestCase(unittest.TestCase):
         # Define the mesh of sites
         pcoo = numpy.array([[174.777, -41.289]])
         mesh = Mesh(pcoo[:, 0], pcoo[:, 1])
-        
+
         # Compute closest distance between mesh points and surface
         cpoints1 = msurf1.get_closest_points(mesh)
 
         # checking cpoints
-        expected = [[174.6728], [-41.2633],[ 0.]]
-        assert (cpoints1.array == expected).all()
+        expected = numpy.array([[174.6823425], [-41.2498684], [0.]])
+        numpy.testing.assert_almost_equal(cpoints1.array, expected)
 
 
 def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):

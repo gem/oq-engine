@@ -11,23 +11,18 @@
 #     <x.y>|master
 #         PDF
 #             <pdf_docs>
-#         reference
 #         manual
-#         advanced
 #     latest -> <latest x.y>
 #     LTS    -> <LTS x.y>
 #     reference
-#         latest -> ../latest/reference
 #         LTS    -> ../LTS/reference
-#         master -> ../master/reference
+#         master -> ../master/manual
 #     manual
-#         latest -> ../latest/manual
 #         LTS    -> ../LTS/manual
 #         master -> ../master/manual
 #     advanced
-#         latest -> ../latest/advanced
 #         LTS    -> ../LTS/advanced
-#         master -> ../master/advanced
+#         master -> ../master/manual
 # manuals
 #     OpenQuake Manual <x.y>.pdf -> ../oq-engine/<x.y>/PDF/OpenQuake Manual <x.y>.pdf
 #     OpenQuake Manual latest.pdf -> OpenQuake Manual <latest_(x.y)>.pdf
@@ -101,8 +96,7 @@ jobs:
         run: |
           pip install -U pip
           pip install -r ./requirements-py38-linux64.txt
-          pip install sphinx==6.2 pydata-sphinx-theme
-          pip install --upgrade myst-parser pygments-csv-lexer
+          pip install -r ./doc/requirements.txt
       - name: Install oq engine
         run: |
           pip install -e .[dev]
@@ -154,7 +148,7 @@ jobs:
 
           REL_VERS="$(git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n)"
           LATEST_VER="$(echo "$REL_VERS" | tail -n 1)"
-          ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq)"
+          ALL_VERS="$((git ls-remote --heads | grep -v '^From' | grep '/engine-' | sed 's/^.*ngine-//g' ; echo "$ENG_VER") | sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n | uniq | tac)"
           PDFDOCS="manuals/"
           TARGET_LINK=""
           PDF_VER_LINK=""
@@ -212,8 +206,9 @@ jobs:
           # is the only one known the master version (from sources)
           set -x
           if [ "$MULTI_DOCS_FOR_DEVEL" == "true" -o  "$BUILD" == "master" ]; then
-              ddown_adv="["
               ddown_man="["
+              ddown_adv="["
+              ddown_doc="["
               for v in $ALL_VERS; do
                   ver_maj="$(echo "$v" | sed 's/\([0-9]\+\)\..*/\1/g')"
                   ver_min="$(echo "$v" | sed 's/[0-9]\+\.\(.*\)$/\1/g')"
@@ -269,19 +264,82 @@ jobs:
                           ver_name="${ver_maj}.${ver_min}${sfx}"
                           ver_val="${ver_maj}.${ver_min}"
                       fi
-                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/advanced/"
+                      if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 19 )) ) || (( "$ver_maj" > 3 )); then
+                          adv_name="manual"
+                      else
+                          adv_name="advanced"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/${adv_name}/"
                       if [ "$ddown_adv" != "[" ]; then
                          ddown_adv="${ddown_adv}, "
                       fi
                       ddown_adv="${ddown_adv}{ \"name\": \"${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
                   fi
 
+                  # policies for the new documentation 2023 version switcher menu
+                  if ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 19 )) ) || (( "$ver_maj" > 3 )); then
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/manual/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"Unified ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+                  elif ( (( "$ver_maj" == 3  )) && (( "$ver_min" >= 16 )) ) || (( "$ver_maj" > 3 )); then
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/manual/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"Manual ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/advanced/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"Advanced ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+
+                      if [ "$master_rename" == "true" ]; then
+                          ver_name="${pfx}"
+                          ver_val="master"
+                      else
+                          ver_name="${ver_maj}.${ver_min}${sfx}"
+                          ver_val="${ver_maj}.${ver_min}"
+                      fi
+                      ver_url="https://docs.openquake.org/${DOCS_BASE}oq-engine/${ver_val}/reference/"
+                      if [ "$ddown_doc" != "[" ]; then
+                         ddown_doc="${ddown_doc}, "
+                      fi
+                      ddown_doc="${ddown_doc}{ \"name\": \"Reference ${ver_name}\", \"version\": \"$ver_val\", \"url\": \"${ver_url}\" }"
+                  fi
               done
               ddown_man="${ddown_man}]"
               echo "$ddown_man" > dot_ddown_man.json
 
               ddown_adv="${ddown_adv}]"
               echo "$ddown_adv" > dot_ddown_adv.json
+
+              ddown_doc="${ddown_doc}]"
+              echo "$ddown_doc" > dot_ddown_doc.json
+
           fi
           set +x
 
@@ -296,11 +354,15 @@ jobs:
 
           if [ "$DOCS_SSH" ]; then
               echo "publish dropdown version descriptions if exists"
+
               if [ -f "dot_ddown_man.json" ]; then
                   rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_man.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_man.json"
               fi
               if [ -f "dot_ddown_adv.json" ]; then
                   rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_adv.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_adv.json"
+              fi
+              if [ -f "dot_ddown_doc.json" ]; then
+                  rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' --rsync-path="mkdir -p \"${DOCS_BASE}oq-engine\" && rsync" dot_ddown_doc.json "docs@docs.openquake.org:${DOCS_BASE}oq-engine/.ddown_doc.json"
               fi
           else
               echo "SKIP: publish dropdown version descriptions"
@@ -309,68 +371,41 @@ jobs:
           sudo apt update; sudo apt-get install -y texlive-fonts-recommended texlive-latex-extra latexmk gpg
 
           echo "Make OpenQuake Manual (HTML and PDF)"
-          cd doc/manual && make html && make latexpdf
+
+          # PAY ATTENTION: engine folder is 'doc', not 'docs'
+          # cd doc && make html && make latexpdf
+          cd doc && make html 2>&1 | tee full.log
+          grep WARNING < full.log > warnings.log
+          echo
+          echo "=== WARNINGS ==="
+          echo
+          cat warnings.log
+          echo
+          echo
+          echo "=== WARNINGS SUMMARY ==="
+          cat warnings.log |  sed 's/.*WARNING/WARNING/g' | sed "s/WARNING: 'myst' cross-reference target not found.*/WARNING: 'myst' cross-reference target not found/g" | sed 's/WARNING: undefined label.*/WARNING: undefined label/g' | sed 's/WARNING: duplicate label.*/WARNING: duplicate label/g' | sed 's/WARNING: Duplicate explicit target name.*/WARNING: Duplicate explicit target name/g' | sort | uniq -c
+
+
+
+          # if [ "$DOCS_SSH" ]; then
+          #     echo "Uploading OpenQuake Manual (PDF)"
+          #     rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}PDF\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf"
+          #     ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf\" .'"
+          #     if [ "$PDF_VER_LINK" ]; then
+          #         echo "Found PDF_VER_LINK set [$PDF_VER_LINK]"
+          #         ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}manuals/\"; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual (${PDF_VER_LINK}).pdf\"'"
+          #     fi
+          # else
+          #     echo "SKIP Uploading OpenQuake Manual (PDF)"
+          # fi
 
 
           if [ "$DOCS_SSH" ]; then
-              echo "Uploading OpenQuake Manual (PDF)"
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}PDF\" && rsync" build/latex/OpenQuakeEngineManual.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf"
-              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuake Manual ${PDF_VER}.pdf\" .'"
-              if [ "$PDF_VER_LINK" ]; then
-                  echo "Found PDF_VER_LINK set [$PDF_VER_LINK]"
-                  ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}manuals/\"; ln -sf \"OpenQuake Manual ${PDF_VER}.pdf\" \"OpenQuake Manual (${PDF_VER_LINK}).pdf\"'"
-              fi
+              echo "Uploading New OpenQuake Documentation (HTML)"
+              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --rsync-path="mkdir -p \"${DOCS_BASE}${TARGET}manual/\" && rsync" -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete _build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
+              echo "------"
           else
-              echo "SKIP Uploading OpenQuake Manual (PDF)"
-          fi
-
-
-          if [ "$DOCS_SSH" ]; then
-              echo "Uploading OpenQuake Manual (HTML)"
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:/var/www/docs.openquake.org/${DOCS_BASE}${TARGET}manual/"
-          else
-              echo "SKIP Uploading OpenQuake Manual (HTML)"
-          fi
-          echo "------"
-
-
-          echo "Make Reference Manual (HTML)"
-          cd ../sphinx && make html
-
-
-          if [ "$DOCS_SSH" ]; then
-              echo "Upload Reference Manual (HTML)"
-              rsync -s -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}reference/"
-          else
-              echo "SKIP Upload Reference Manual (HTML)"
-          fi
-          echo "------"
-
-
-          echo "Make Advanced Manual (PDF)"
-          cd ../adv-manual
-          sed -i "s@#PDF_VER#@${PDF_VER}@g;s@#TARGET#@${DOCS_BASE}${TARGET}@g" index.rst
-          make clean && make latexpdf
-
-
-          if [ "$DOCS_SSH" ]; then
-              echo "Upload OpenQuakeforAdvancedUsers (PDF)"
-              rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/latex/OpenQuakeforAdvancedUsers.pdf "docs@docs.openquake.org:${DOCS_BASE}${TARGET}PDF/"
-
-              ssh -v -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null docs@docs.openquake.org "bash -cx 'cd \"${DOCS_BASE}${PDFDOCS}\"; ln -sf \"../${TARGET}PDF/OpenQuakeforAdvancedUsers.pdf\" \"OpenQuake for Advanced Users ${PDF_VER}.pdf\"'"
-          else
-              echo "SKIP Upload OpenQuakeforAdvancedUsers (PDF)"
-          fi
-
-          echo "Make Advanced Manual (HTML)"
-          cd ../adv-manual && make clean && make html
-
-
-          if [ "$DOCS_SSH" ]; then
-              echo "Upload OpenQuakeforAdvancedUsers (HTML)"
-              rsync -e 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' -ax --delete build/html/ "docs@docs.openquake.org:${DOCS_BASE}${TARGET}advanced/"
-          else
-              echo "SKIP Upload OpenQuakeforAdvancedUsers (HTML)"
+              echo "SKIP Uploading New OpenQuake Documentation (HTML)"
           fi
 
           if [ "$BUILD" == "LTS" ]; then
