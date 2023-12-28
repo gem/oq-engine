@@ -61,7 +61,7 @@ def get_dmg_csq(crm, assets_by_site, gmf, time_event):
                     dmg = asset['value-number'] * frac  # shape (1, D)
                     csq = crm.compute_csq(asset, frac, loss_type, time_event)
                     out[asset['ordinal'], li, 0, :D] = dmg
-                    out[asset['ordinal'], li, 0, D] = csq['losses']
+                    out[asset['ordinal'], li, 0, [D]] = csq['losses']
     return out
 
 

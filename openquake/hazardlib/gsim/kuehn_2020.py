@@ -754,7 +754,8 @@ class KuehnEtAl2020SInter(GMPE):
             sig[m] = np.sqrt(C["tau"] ** 2.0 + C["phi"] ** 2.0)
 
     # Coefficients in external file - supplied directly by the author
-    COEFFS = CoeffsTable(sa_damping=5, table=open(KUEHN_COEFFS).read())
+    with open(KUEHN_COEFFS) as f:
+        COEFFS = CoeffsTable(sa_damping=5, table=f.read())
 
 
 class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
@@ -772,10 +773,8 @@ class KuehnEtAl2020SSlab(KuehnEtAl2020SInter):
     - different depth centering and break point
     - different default magnitude break point
     """
-
     #: Supported tectonic region type is subduction in-slab
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.SUBDUCTION_INTRASLAB
-
 
 # For the aliases use the verbose form of the region name
 REGION_ALIASES = {
