@@ -37,25 +37,26 @@ def expo2csv(job_ini):
     area = exposure.area['type'] != '?'
     if area:
         header.append('area')
-    for costname in exposure.cost_types['name']:
-        if costname != 'occupants':
-            header.append(costname)
+    for vfield in exposure.loss_types:
+        if vfield != 'occupants':
+            header.append(vfield)
     if exposure.retrofitted:
         header.append('retrofitted')
-    occupancy_periods = exposure.occupancy_periods.split()
+    occupancy_periods = exposure.occupancy_periods
     header.extend(occupancy_periods)
     header.extend(exposure.tagcol.tagnames)
     for asset in exposure.assets:
-        row = [asset.asset_id, asset.lon, asset.lat, asset.number]
+        row = [asset['id'], asset['lon'], asset['lat']]
         if area:
-            row.append(asset.area)
-        for costname in exposure.cost_types['name']:
-            if costname != 'occupants':
-                row.append(asset.values[costname])
+            row.append(asset['value-area'])
+        breakpoint()
+        for vfield in exposure.loss_types:
+            if vfield != 'occupants':
+                row.append(asset[vfield])
         if exposure.retrofitted:
-            row.append(asset.retrofitted)
+            row.append(asset['retrofitted'])
         for time_event in occupancy_periods:
-            row.append(asset.values['occupants_' + time_event])
+            row.append(asset['occupants_' + time_event])
         for tagname, tagidx in zip(exposure.tagcol.tagnames, asset.tagidxs):
             tags = getattr(exposure.tagcol, tagname)
             row.append(tags[tagidx])
