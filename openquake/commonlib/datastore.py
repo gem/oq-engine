@@ -414,7 +414,8 @@ class DataStore(collections.abc.MutableMapping):
         """
         prefix = len(os.path.commonprefix(fnames))
         for fname in fnames:
-            data = gzip.compress(open(fname, 'rb').read())
+            with open(fname, 'rb') as f:
+                data = gzip.compress(f.read())
             self[where + fname[prefix:]] = numpy.void(data)
 
     def retrieve_files(self, prefix='input'):

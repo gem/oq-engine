@@ -434,7 +434,8 @@ def get_poor_site_model(fname):
     """
     :returns: a poor site model with only lon, lat fields
     """
-    data = [ln.replace(',', ' ') for ln in open(fname, encoding='utf-8-sig')]
+    with open(fname, encoding='utf-8-sig') as f:
+        data = [ln.replace(',', ' ') for ln in f]
     coords = sorted(valid.coordinates(','.join(data)))
     # sorting the coordinates so that event_based do not depend on the order
     dt = [('lon', float), ('lat', float), ('depth', float)]
