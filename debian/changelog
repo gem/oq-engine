@@ -1,3 +1,7 @@
+  [Anirudh Rao]
+  * Fixed the conditioned GMFs calculator in the case all the stations are filtered
+    away
+
   [Marco Pagani]
   * Fixed the algorithm used to generate kite surfaces
 
