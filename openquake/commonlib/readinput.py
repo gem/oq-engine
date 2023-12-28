@@ -51,7 +51,7 @@ from openquake.hazardlib import (
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
-    BBoxError, cross_idl, spherical_to_cartesian)
+    BBoxError, cross_idl, spherical_to_cartesian, geohash3)
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -97,7 +97,7 @@ class DuplicatedPoint(Exception):
     """
 
 
-# used in extract_from_zip
+# used in extract_fom_zip
 def collect_files(dirpath, cond=lambda fullname: True):
     """
     Recursively collect the files contained inside dirpath.
@@ -130,7 +130,8 @@ def extract_from_zip(path, ext='.ini', targetdir=None):
     with zipfile.ZipFile(path) as archive:
         archive.extractall(targetdir)
     return [f for f in collect_files(targetdir)
-            if os.path.basename(f).endswith(ext)]
+            if os.path.basename(f).endswith(ext)
+            and '__MACOSX' not in f]
 
 
 def unzip_rename(zpath, name):
@@ -433,7 +434,8 @@ def get_poor_site_model(fname):
     """
     :returns: a poor site model with only lon, lat fields
     """
-    data = [ln.replace(',', ' ') for ln in open(fname, encoding='utf-8-sig')]
+    with open(fname, encoding='utf-8-sig') as f:
+        data = [ln.replace(',', ' ') for ln in f]
     coords = sorted(valid.coordinates(','.join(data)))
     # sorting the coordinates so that event_based do not depend on the order
     dt = [('lon', float), ('lat', float), ('depth', float)]
@@ -981,13 +983,21 @@ def get_exposure(oqparam, h5=None):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
+    fnames = oqparam.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
-        exposure = Global.exposure = asset.Exposure.read_all(
-            oqparam.inputs['exposure'], oqparam.calculation_mode,
-            oqparam.ignore_missing_costs,
-            errors='ignore' if oqparam.ignore_encoding_errors else None,
-            infr_conn_analysis=oqparam.infrastructure_connectivity_analysis,
-            aggregate_by=oqparam.aggregate_by)
+        fname = fnames[0]
+        if fname.endswith('.hdf5') and oqparam.rupture_dict:
+            # reading the assets around a rupture
+            sm = get_site_model(oqparam)
+            gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
+            exposure = Global.exposure = asset.Exposure.read_around(fname, gh3)
+        else:
+            exposure = Global.exposure = asset.Exposure.read_all(
+                oqparam.inputs['exposure'], oqparam.calculation_mode,
+                oqparam.ignore_missing_costs,
+                errors='ignore' if oqparam.ignore_encoding_errors else None,
+                infr_conn_analysis=oqparam.infrastructure_connectivity_analysis,
+                aggregate_by=oqparam.aggregate_by)
     return exposure
 
 
@@ -1385,8 +1395,9 @@ def get_input_files(oqparam):
         elif key == 'source_model':
             fnames.add(oqparam.inputs['source_model'])
         elif key == 'exposure':  # fname is a list
-            for exp in asset.Exposure.read_headers(fname):
-                fnames.update(exp.datafiles)
+            if any(f.endswith(('.xml', '.nrml')) for f in fnames):
+                for exp in asset.Exposure.read_headers(fname):
+                    fnames.update(exp.datafiles)
             fnames.update(fname)
         elif key == 'reinsurance':
             [xml] = fname.values()

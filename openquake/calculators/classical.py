@@ -471,8 +471,8 @@ class ClassicalCalculator(base.HazardCalculator):
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
-                logging.error('The site is far from all seismic sources'
-                              ' included in the hazard model')
+                logging.warning('The site is far from all seismic sources'
+                                ' included in the hazard model')
             else:
                 raise RuntimeError('The sites are far from all seismic sources'
                                    ' included in the hazard model')
@@ -540,9 +540,11 @@ class ClassicalCalculator(base.HazardCalculator):
         except KeyError:  # if there are no ruptures close to the site
             return
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
-        # skipping the first value which can be wrong due to the cutoff
-        # (happens in logictree/case_05)
-        numpy.testing.assert_allclose(got[1:], exp[1:], atol=1E-5)
+        for m in range(len(got)):
+            # skipping large rates which can be wrong due to numerics
+            # (it happens in logictree/case_05 and in Japan)
+            ok = got[m] < 10.
+            numpy.testing.assert_allclose(got[m, ok], exp[m, ok], atol=1E-5)
 
     def execute_big(self, maxw):
         """

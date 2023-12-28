@@ -108,7 +108,7 @@ def create_source_info(csm, h5):
         src = srcs[0]
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
-        trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+        trti = csm.full_lt.trti.get(src.tectonic_region_type, 0)
         if src.code == b'p':
             code = b'p'
         else:
