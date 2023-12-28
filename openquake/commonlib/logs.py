@@ -24,7 +24,7 @@ import getpass
 import logging
 import traceback
 from datetime import datetime
-from openquake.baselib import config, zeromq, parallel
+from openquake.baselib import config, zeromq, parallel, workerpool as w
 from openquake.commonlib import readinput, dbapi, global_model_getter
 
 LEVELS = {'debug': logging.DEBUG,
@@ -57,6 +57,9 @@ def dbcmd(action, *args):
     """
     dbhost = os.environ.get('OQ_DATABASE', config.dbserver.host)
     if dbhost == 'local':
+        if action.startswith('workers_'):
+            master = w.WorkerMaster()  # zworkers
+            return getattr(master, action[8:])()
         from openquake.server.db import actions
         try:
             func = getattr(actions, action)
