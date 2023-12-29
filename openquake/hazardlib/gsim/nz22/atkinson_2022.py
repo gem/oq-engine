@@ -30,7 +30,12 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
 from openquake.hazardlib.gsim.nz22.const import (
-    periods_AG20, rho_Ws, rho_Bs, periods, theta7s,  theta8s,
+    periods_AG20,
+    rho_Ws,
+    rho_Bs,
+    periods,
+    theta7s,
+    theta8s,
 )
 from openquake.hazardlib.imt import PGA, SA
 
@@ -49,12 +54,10 @@ def _fmag(suffix, C, mag):
         res = (
             C["c0_" + suffix]
             + C["c1_" + suffix] * mag
-            + C["c2_" + suffix] * mag ** 2
+            + C["c2_" + suffix] * mag**2
         )
     else:
-        res = (
-            C["c0_crust"] + C["c1_crust"] * mag + C["c2_crust"] * mag ** 2
-        )
+        res = C["c0_crust"] + C["c1_crust"] * mag + C["c2_crust"] * mag**2
     return res
 
 
@@ -276,6 +279,7 @@ class Atkinson2022Crust(GMPE):
     more info please refere to Gail Atkinson's NSHM report and linked
     revisions.
     """
+
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,

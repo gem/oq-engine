@@ -35,7 +35,12 @@ from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
 from openquake.hazardlib.gsim.nz22.const import (
-    periods_AG20, rho_Ws, rho_Bs, periods, theta7s,  theta8s,
+    periods_AG20,
+    rho_Ws,
+    rho_Bs,
+    periods,
+    theta7s,
+    theta8s,
 )
 from openquake.hazardlib.gsim.parker_2020 import (
     ParkerEtAl2020SInter,
@@ -58,13 +63,17 @@ def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
     # fd for slab only
     pgar = np.exp(fp + fm + c0 + fd)
 
-    fnl = C["f4"] * (
-        np.exp(
-            C["f5"]
-            * (np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"])
+    fnl = (
+        C["f4"]
+        * (
+            np.exp(
+                C["f5"]
+                * (np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"])
+            )
+            - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"]))
         )
-        - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"]))
-    ) * np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
+        * np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
+    )
 
     return fnl
 
@@ -276,6 +285,7 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     Implements NZ NSHM 2022 Soil nonlinearity sigma model modification
     of ParkerEtAl2020SInter for NZ NSHM 2022.
     """
+
     def __init__(
         self,
         region=None,

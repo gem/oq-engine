@@ -39,7 +39,7 @@ from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     get_tau_phi,
     SUPPORTED_REGIONS,
 )
-from openquake.hazardlib.gsim.nz22.const import periods, theta7s,  theta8s
+from openquake.hazardlib.gsim.nz22.const import periods, theta7s, theta8s
 
 
 def get_backarc_term(trt, imt, ctx):

@@ -49,8 +49,14 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     Z_MODEL,
 )
 from openquake.hazardlib.gsim.nz22.const import (
-    periods_AG20, rho_Ws, rho_Bs, periods, theta7s,  theta8s,
+    periods_AG20,
+    rho_Ws,
+    rho_Bs,
+    periods,
+    theta7s,
+    theta8s,
 )
+
 
 def get_basin_response_term(C, region, vs30, z_value):
     """
