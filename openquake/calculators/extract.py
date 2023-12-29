@@ -742,7 +742,7 @@ def extract_agg_curves(dstore, what):
         tagnames = []
     k = qdic['k']  # rlz or stat index
     lts = qdic['lt']
-    [l] = qdic['loss_type']  # loss type index
+    [li] = qdic['loss_type']  # loss type index
     tagdict = {tag: qdic[tag] for tag in tagnames}
     if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
@@ -834,7 +834,6 @@ def extract_agg_damages(dstore, what):
     if 'damages-rlzs' in dstore:
         oq = dstore['oqparam']
         lti = oq.lti[loss_type]
-        D = len(oq.limit_states) + 1
         damages = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)

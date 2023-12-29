@@ -19,4 +19,4 @@
 # this module is here to make pickle happy, i.e. to make it possible
 # to read .hdf5 files produced by engine versions <= 3.16
 from openquake.hazardlib.logictree import (
-    SourceModelLogicTree, GsimLogicTree, FullLogicTree, collect_info)
+    SourceModelLogicTree, GsimLogicTree, FullLogicTree, collect_info)   # noqa

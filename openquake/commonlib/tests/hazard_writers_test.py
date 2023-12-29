@@ -17,12 +17,10 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-import numpy
 import os
 import io
 import tempfile
 import unittest
-
 from collections import namedtuple
 
 from openquake.commonlib import hazard_writers as writers

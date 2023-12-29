@@ -265,11 +265,11 @@ def run_calc(log):
                      hostname,
                      calc.oqparam.inputs['job_ini'],
                      calc.oqparam.hazard_calculation_id)
-        msg = check_obsolete_version(oqparam.calculation_mode)
+        check_obsolete_version(oqparam.calculation_mode)
         # NB: disabling the warning should be done only for users with
         # an updated LTS version, but we are doing it for all users
-        # if msg:
-        #    logging.warning(msg)
+        # if obsolete_msg:
+        #    logging.warning(obsolete_msg)
         calc.from_engine = True
         if OQ_DISTRIBUTE == 'zmq':
             set_concurrent_tasks_default(calc)
