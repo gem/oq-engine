@@ -66,7 +66,7 @@ jobs:
         pip install pyshp pytest flake8 ruff https://wheelhouse.openquake.org/v3/py/rtgmpy-1.0.0-py3-none-any.whl
         oq dbserver upgrade
         cd openquake
-        ruff check openquake/calculators
+        ruff check openquake/baselib openquake/calculators openquake/engine
         pytest calculators -k 'risk or damage' -x --doctest-modules --disable-warnings --color=yes --durations=5
         pytest -x --doctest-modules --disable-warnings --color=yes --durations=8 sep commands engine hmtk risklib commonlib baselib hazardlib
 
