@@ -698,10 +698,10 @@ def _minimal_tagcol(fnames):
 
 
 def get_retrofitted(asset):
-        for cost in getattr(asset, 'costs', []):
-            asset.attrib[cost['type']] = cost['value']
-            if 'retrofitted' in cost.attrib:
-                return float(cost['retrofitted'])
+    for cost in getattr(asset, 'costs', []):
+        asset.attrib[cost['type']] = cost['value']
+        if 'retrofitted' in cost.attrib:
+            return float(cost['retrofitted'])
 
 
 def assets2df(asset_nodes, fields, ignore_missing_costs):
