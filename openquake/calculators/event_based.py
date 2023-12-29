@@ -23,7 +23,7 @@ import logging
 import operator
 import numpy
 import pandas
-
+import shapely
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
@@ -60,6 +60,7 @@ TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+
 
 def rup_weight(rup):
     return math.ceil(rup['nsites'] / 100)
@@ -373,7 +374,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         del proxy.geom  # to reduce data transfer
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if save_tmp:	
+    if save_tmp:
         save_tmp(smap.monitor)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
@@ -450,7 +451,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
-            nrups = parallel.Starmap( # weighting the heavy sources
+            nrups = parallel.Starmap(  # weighting the heavy sources
                 count_ruptures, [(src,) for src in sources
                                  if src.code in b'AMSC'],
                 h5=self.datastore.hdf5,
@@ -484,20 +485,31 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         if oq.mosaic_model:  # 3-letter mosaic model
-            gmg = GlobalModelGetter('mosaic')
+            # NOTE: the spatial index might be initialized in advance and kept
+            # in memory or stored as a pickle object. Anyway building the
+            # spatial index using the current simplified geometries is quick.
+            gmg = GlobalModelGetter('mosaic',
+                                    model_codes=[oq.mosaic_model])
+            mosaic_model_geom = gmg.get_geoms([oq.mosaic_model])[0]
+            shapely.prepare(mosaic_model_geom)
+        t0 = time.time()
+        tot_ruptures = 0
+        filtered_ruptures = 0
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
             if dic is None:
                 raise MemoryError('You ran out of memory!')
             rup_array = dic['rup_array']
+            tot_ruptures += len(rup_array)
             if len(rup_array) == 0:
                 continue
-            # TODO: for Paolo to add a very fast method is_inside
-            #if oq.mosaic_model:
-            #    ok = gmg.is_inside(
-            #         rup_array['lon'], rup_array['lat'], oq.mosaic_model)
-            #    rup_array = rup_array[ok]
+            geom = rup_array.geom
+            if oq.mosaic_model:
+                ok = shapely.contains_xy(mosaic_model_geom, rup_array['hypo'])
+                rup_array = rup_array[ok]
+                geom = geom[ok]
+                filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
@@ -506,7 +518,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.nruptures += len(rup_array)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
-                hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+                hdf5.extend(self.datastore['rupgeoms'], geom)
+        t1 = time.time()
+        logging.info(f'{tot_ruptures} ruptures filtered to {filtered_ruptures}'
+                     f' and stored in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')
@@ -560,7 +575,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
         rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
-                   oq.inputs['rupture_model'].endswith('.xml'))
+               oq.inputs['rupture_model'].endswith('.xml'))
         if rup:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)
