@@ -46,7 +46,7 @@ import platform
 import subprocess
 from urllib.request import urlopen
 try:
-    import ensurepip
+    import ensurepip  # noqa
 except ImportError:
     sys.exit("ensurepip is missing; on Ubuntu the solution is to install "
              "python3-venv with apt")
