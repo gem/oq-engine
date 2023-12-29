@@ -93,7 +93,7 @@ def main(what, force=False):
     calc_id = int(what)
     if calc_id < 0:
         try:
-            calc_id = datastore.get_calc_ids(datadir)[calc_id]
+            calc_id = logs.get_calc_ids(datadir)[calc_id]
         except IndexError:
             print('Calculation %d not found' % calc_id)
             return

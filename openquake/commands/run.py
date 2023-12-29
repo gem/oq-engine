@@ -40,7 +40,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     if 'hazard_calculation_id' in params:
         hc_id = int(params['hazard_calculation_id'])
         if hc_id < 0:  # interpret negative calculation ids
-            calc_ids = datastore.get_calc_ids()
+            calc_ids = logs.get_calc_ids()
             try:
                 params['hazard_calculation_id'] = calc_ids[hc_id]
             except IndexError:
