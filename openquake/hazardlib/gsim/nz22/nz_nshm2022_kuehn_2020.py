@@ -48,7 +48,9 @@ from openquake.hazardlib.gsim.kuehn_2020 import (
     SUPPORTED_REGIONS,
     Z_MODEL,
 )
-
+from openquake.hazardlib.gsim.nz22.const import (
+    periods_AG20, rho_Ws, rho_Bs, periods, theta7s,  theta8s,
+)
 
 def get_basin_response_term(C, region, vs30, z_value):
     """
@@ -73,7 +75,8 @@ def get_basin_response_term(C, region, vs30, z_value):
         return 0.0
     if (
         region == "NZL"
-    ):  # Personal communication with Nico. We need to use the NZ specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
+    ):  # Personal communication with Nico. We need to use the NZ
+        # specific Z1.0-Vs30 correlation (Sanjay Bora 20.06.2022).
         brt[mask] = c11 + c12 * (
             _get_ln_z_ref(CZ, vs30[mask]) - _get_ln_z_ref(CZ, vs30[mask])
         )
@@ -86,9 +89,11 @@ def get_basin_response_term(C, region, vs30, z_value):
 
 def get_partial_derivative_site_pga(C, vs30, pga1100):
     """
-    Defines the partial derivative of the site term with respect to the PGA on reference rock. Note that this is taken
-    from AG20. The only difference is Vsref which is 1000 m/s in AG20. This function is added to get the nonlinear
-    correction in aleatory sigma given below.
+    Defines the partial derivative of the site term with respect to
+    the PGA on reference rock. Note that this is taken from AG20. The
+    only difference is Vsref which is 1000 m/s in AG20. This function
+    is added to get the nonlinear correction in aleatory sigma given
+    below.
     """
     dfsite_dlnpga = np.zeros(vs30.shape)
     idx = vs30 <= C["k1"]
@@ -106,91 +111,11 @@ def get_partial_derivative_site_pga(C, vs30, pga1100):
 
 def get_nonlinear_stddevs(C, C_PGA, imt, vs30, pga1100):
     """
-    Get the heteroskedastic within-event and between-event standard deviation. This routine gives the aleatory sigma
-    values corrected for nonlinearity in the soil response.
+    Get the heteroskedastic within-event and between-event standard
+    deviation. This routine gives the aleatory sigma values corrected
+    for nonlinearity in the soil response.
     """
     period = imt.period
-
-    # Correlation coefficients from AG20
-    periods_AG20 = [
-        0.01,
-        0.02,
-        0.03,
-        0.05,
-        0.075,
-        0.10,
-        0.15,
-        0.2,
-        0.25,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.75,
-        1.0,
-        1.5,
-        2.0,
-        2.5,
-        3.0,
-        4.0,
-        5.0,
-        6.0,
-        7.5,
-        10.0,
-    ]
-    rho_Ws = [
-        1.0,
-        0.99,
-        0.99,
-        0.97,
-        0.95,
-        0.92,
-        0.9,
-        0.87,
-        0.84,
-        0.82,
-        0.74,
-        0.66,
-        0.59,
-        0.5,
-        0.41,
-        0.33,
-        0.3,
-        0.27,
-        0.25,
-        0.22,
-        0.19,
-        0.17,
-        0.14,
-        0.1,
-    ]
-    rho_Bs = [
-        1.0,
-        0.99,
-        0.99,
-        0.985,
-        0.98,
-        0.97,
-        0.96,
-        0.94,
-        0.93,
-        0.91,
-        0.86,
-        0.8,
-        0.78,
-        0.73,
-        0.69,
-        0.62,
-        0.56,
-        0.52,
-        0.495,
-        0.43,
-        0.4,
-        0.37,
-        0.32,
-        0.28,
-    ]
-
     rho_W_itp = interp1d(np.log(periods_AG20), rho_Ws)
     rho_B_itp = interp1d(np.log(periods_AG20), rho_Bs)
     if period < 0.01:
@@ -283,82 +208,6 @@ def get_backarc_term(trt, imt, ctx):
     """The backarc correction factors to be applied with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab events.
     It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016) Earthquake Spectra.
     The correction is applied only for backarc sites as function of distance."""
-
-    periods = [
-        0.0,
-        0.02,
-        0.05,
-        0.075,
-        0.1,
-        0.15,
-        0.2,
-        0.25,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.75,
-        1.0,
-        1.5,
-        2.0,
-        2.5,
-        3.0,
-        4.0,
-        5.0,
-        6.0,
-        7.5,
-        10.0,
-    ]
-    theta7s = [
-        1.0988,
-        1.0988,
-        1.2536,
-        1.4175,
-        1.3997,
-        1.3582,
-        1.1648,
-        0.994,
-        0.8821,
-        0.7046,
-        0.5799,
-        0.5021,
-        0.3687,
-        0.1746,
-        -0.082,
-        -0.2821,
-        -0.4108,
-        -0.4466,
-        -0.4344,
-        -0.4368,
-        -0.4586,
-        -0.4433,
-        -0.4828,
-    ]
-    theta8s = [
-        -1.42,
-        -1.42,
-        -1.65,
-        -1.8,
-        -1.8,
-        -1.69,
-        -1.49,
-        -1.3,
-        -1.18,
-        -0.98,
-        -0.82,
-        -0.7,
-        -0.54,
-        -0.34,
-        -0.05,
-        0.12,
-        0.25,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-    ]
     period = imt.period
 
     w_epi_factor = 1.008

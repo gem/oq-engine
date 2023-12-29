@@ -29,6 +29,9 @@ from scipy.interpolate import interp1d
 
 from openquake.hazardlib import const
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable
+from openquake.hazardlib.gsim.nz22.const import (
+    periods_AG20, rho_Ws, rho_Bs, periods, theta7s,  theta8s,
+)
 from openquake.hazardlib.imt import PGA, SA
 
 Atk22_COEFFS = Path(
@@ -38,7 +41,7 @@ Atk22_COEFFS = Path(
 
 def _fmag(suffix, C, mag):
     """
-    ctx.magnitude factor.
+    ctx.magnitude factor
     """
     if suffix == "slab":
         # res = C['c0_' + suffix] + C['c1_' + suffix] * (mag - 6.0) + C['c2_' + suffix] * (mag - 6.0) ** 2
@@ -61,10 +64,11 @@ def _fz_ha18(C, ctx):
     """
     # pseudo-depth
 
-    # h = 10 ** (-0.1 + 0.2 * ctx.mag)
-    # The h term is modified after receiving the modifications from Gail on Slack on 12.06.2022.
-    # h = 10 ** (0.3 + 0.11 * ctx.mag)
-    # Modified as in RevisionsToBackbonev8 from Gail received on 21.06.2022. However, there is a typo.
+    # h = 10 ** (-0.1 + 0.2 * ctx.mag) The h term is modified after
+    # receiving the modifications from Gail on Slack on 12.06.2022.  h
+    # = 10 ** (0.3 + 0.11 * ctx.mag) Modified as in
+    # RevisionsToBackbonev8 from Gail received on 21.06.2022. However,
+    # there is a typo.
     h = 10 ** (-0.405 + 0.235 * ctx.mag)
     R = np.sqrt(ctx.rrup**2 + h**2)
     Rref = np.sqrt(1 + h**2)
@@ -95,19 +99,23 @@ def _fgamma(suffix, C, ctx):
 
     gamma = np.zeros(ctx.rrup.shape)
 
-    # gamma = -g1 * ctx.rrup + g2*(270.0 - np.clip(ctx.rrup, 270, None))
-    # Gail mentioned in personal communication (email 13.06.2022) that now the modified F_gamma (see eq. 20-22 in
-    # modifications posted on Salck 12.06.2022) does not include gamma_2 term.
+    # gamma = -g1 * ctx.rrup + g2*(270.0 - np.clip(ctx.rrup, 270,
+    # None)) Gail mentioned in personal communication (email
+    # 13.06.2022) that now the modified F_gamma (see eq. 20-22 in
+    # modifications posted on Salck 12.06.2022) does not include
+    # gamma_2 term.
     gamma = -g1 * ctx.rrup
     return gamma
 
 
 def _epistemic_adjustment_lower(C, ctx):
-    # These are revised adjustments after Gail's post on slack 11th May 2022 and in her revised report.
-    # The lower branch adjustment remains the same.
-    # a = np.fmax(np.clip(0.5 - 0.1 * np.log(ctx.rrup), 0.2, None), - 0.25 + 0.1 * np.log(ctx.rrup))
-    # The following variable is after Gail's modifications received on Slack 12.06.2022
-    # The additional epistemic uncertainty for M>7 events was added in Gail's V8 modifications shared on 27.06.2022
+    # These are revised adjustments after Gail's post on slack 11th
+    # May 2022 and in her revised report.  The lower branch adjustment
+    # remains the same.  a = np.fmax(np.clip(0.5 - 0.1 *
+    # np.log(ctx.rrup), 0.2, None), - 0.25 + 0.1 * np.log(ctx.rrup))
+    # The following variable is after Gail's modifications received on
+    # Slack 12.06.2022 The additional epistemic uncertainty for M>7
+    # events was added in Gail's V8 modifications shared on 27.06.2022
     a = np.fmax(
         np.clip(0.6 - 0.13 * np.log(ctx.rrup), 0.3, None),
         -0.25 + 0.12 * np.log(ctx.rrup),
@@ -116,11 +124,13 @@ def _epistemic_adjustment_lower(C, ctx):
 
 
 def _epistemic_adjustment_upper(C, ctx):
-    # These are revised adjustments after Gail's post on slack 11th May 2022 and in her revised report.
-    # Only the upper brach is modified.
-    # a = np.fmax(np.clip(1.0 - 0.27 * np.log(ctx.rrup), 0.2, None), - 0.25 + 0.1 * np.log(ctx.rrup))
-    # The following variable is after Modification from Gail recieved on Slack 12.06.2022
-    # The additional epistemic uncertainty for M>7 events was added in Gail's V8 modifications shared on 27.06.2022
+    # These are revised adjustments after Gail's post on slack 11th
+    # May 2022 and in her revised report.  Only the upper brach is
+    # modified.  a = np.fmax(np.clip(1.0 - 0.27 * np.log(ctx.rrup),
+    # 0.2, None), - 0.25 + 0.1 * np.log(ctx.rrup)) The following
+    # variable is after Modification from Gail recieved on Slack
+    # 12.06.2022 The additional epistemic uncertainty for M>7 events
+    # was added in Gail's V8 modifications shared on 27.06.2022
     a = np.fmax(
         np.clip(1.0 - 0.3 * np.log(ctx.rrup), 0.3, None),
         -0.25 + 0.12 * np.log(ctx.rrup),
@@ -165,9 +175,10 @@ def get_stddevs(suffix, C):
 
 def get_nonlinear_stddevs(suffix, C, C_PGA, imt, pga_rock, vs30):
     """
-    Get the nonlinear tau and phi terms for Gail's model. For this implementation, I using the between-event and
-    within-event correlation from AG20. Note that the Gail's nonlinear soil response term is identical to Seyhan
-    and Stewart (2014) model.
+    Get the nonlinear tau and phi terms for Gail's model. For this
+    implementation, I using the between-event and within-event
+    correlation from AG20. Note that the Gail's nonlinear soil
+    response term is identical to Seyhan and Stewart (2014) model.
     """
     period = imt.period
     pgar = pga_rock / 981.0
@@ -187,87 +198,6 @@ def get_nonlinear_stddevs(suffix, C, C_PGA, imt, pga_rock, vs30):
     phi_amp = 0.3
     phi_B = np.sqrt(phi_lin**2 - phi_amp**2)
     phi_B_pga = np.sqrt(phi_lin_pga**2 - phi_amp**2)
-
-    # correlation coefficients from AG20
-    periods_AG20 = [
-        0.01,
-        0.02,
-        0.03,
-        0.05,
-        0.075,
-        0.10,
-        0.15,
-        0.2,
-        0.25,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.75,
-        1.0,
-        1.5,
-        2.0,
-        2.5,
-        3.0,
-        4.0,
-        5.0,
-        6.0,
-        7.5,
-        10.0,
-    ]
-    rho_Ws = [
-        1.0,
-        0.99,
-        0.99,
-        0.97,
-        0.95,
-        0.92,
-        0.9,
-        0.87,
-        0.84,
-        0.82,
-        0.74,
-        0.66,
-        0.59,
-        0.5,
-        0.41,
-        0.33,
-        0.3,
-        0.27,
-        0.25,
-        0.22,
-        0.19,
-        0.17,
-        0.14,
-        0.1,
-    ]
-    rho_Bs = [
-        1.0,
-        0.99,
-        0.99,
-        0.985,
-        0.98,
-        0.97,
-        0.96,
-        0.94,
-        0.93,
-        0.91,
-        0.86,
-        0.8,
-        0.78,
-        0.73,
-        0.69,
-        0.62,
-        0.56,
-        0.52,
-        0.495,
-        0.43,
-        0.4,
-        0.37,
-        0.32,
-        0.28,
-    ]
-
     rho_W_itp = interp1d(np.log(periods_AG20), rho_Ws)
     rho_B_itp = interp1d(np.log(periods_AG20), rho_Bs)
     if period < 0.01:
@@ -309,84 +239,7 @@ def get_backarc_term(trt, imt, ctx):
     2016. Abrahamson et al. (2016) Earthquake Spectra. The correction is applied only for backarc sites as
     function of distance.
     """
-
-    periods = [
-        0.0,
-        0.02,
-        0.05,
-        0.075,
-        0.1,
-        0.15,
-        0.2,
-        0.25,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.75,
-        1.0,
-        1.5,
-        2.0,
-        2.5,
-        3.0,
-        4.0,
-        5.0,
-        6.0,
-        7.5,
-        10.0,
-    ]
-    theta7s = [
-        1.0988,
-        1.0988,
-        1.2536,
-        1.4175,
-        1.3997,
-        1.3582,
-        1.1648,
-        0.994,
-        0.8821,
-        0.7046,
-        0.5799,
-        0.5021,
-        0.3687,
-        0.1746,
-        -0.082,
-        -0.2821,
-        -0.4108,
-        -0.4466,
-        -0.4344,
-        -0.4368,
-        -0.4586,
-        -0.4433,
-        -0.4828,
-    ]
-    theta8s = [
-        -1.42,
-        -1.42,
-        -1.65,
-        -1.8,
-        -1.8,
-        -1.69,
-        -1.49,
-        -1.3,
-        -1.18,
-        -0.98,
-        -0.82,
-        -0.7,
-        -0.54,
-        -0.34,
-        -0.05,
-        0.12,
-        0.25,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-    ]
     period = imt.period
-
     w_epi_factor = 1.008
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
@@ -419,10 +272,10 @@ def get_backarc_term(trt, imt, ctx):
 
 class Atkinson2022Crust(GMPE):
     """
-    Implements Atkinson (2022) backbone model for New Zealand. For more info please refere to Gail Atkinson's
-    NSHM report and linked revisions.
+    Implements Atkinson (2022) backbone model for New Zealand. For
+    more info please refere to Gail Atkinson's NSHM report and linked
+    revisions.
     """
-
     DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
@@ -468,7 +321,8 @@ class Atkinson2022Crust(GMPE):
         pga_rock = _get_pga_on_rock(self.suffix, C_PGA, ctx) * np.exp(
             get_backarc_term(trt, PGA(), ctx)
         )
-        # Here the backarc term is applied as multiplication because the pga_rock is in linear space not in log space.
+        # Here the backarc term is applied as multiplication because the
+        # pga_rock is in linear space not in log space
 
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
@@ -484,11 +338,14 @@ class Atkinson2022Crust(GMPE):
 
             mean[m] = mean[m] - np.log(981.0)  # Convert the cm/s^2 to g.
 
-            # In her email and slack post Gail mentioned that her upper and lower branches are as 1.28 times of the delta.
+            # In her email and slack post Gail mentioned that her
+            # upper and lower branches are as 1.28 times of the delta.
             # So as to represent 10th and 90th percentile.
-            # Consequently, the weights have also changed to 0.3, 0.4, 0.3.
-            # The scale factor of 0.9 is applied based upon the discussion that it accounts for the reduction in epistemic
-            # uncertainty when no perfect correlation is assumed between rupture scenarios. See the note of Peter
+            # Consequently, the weights have also changed to 0.3, 0.4,
+            # 0.3.  The scale factor of 0.9 is applied based upon the
+            # discussion that it accounts for the reduction in
+            # epistemic uncertainty when no perfect correlation is
+            # assumed between rupture scenarios. See the note of Peter
             # and Brendon on slack.
             epistemic_scale_factor = 0.893
             if self.epistemic.lower() == "lower":

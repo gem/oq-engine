@@ -34,7 +34,9 @@ from scipy.interpolate import interp1d
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.gsim.base import CoeffsTable, add_alias
-
+from openquake.hazardlib.gsim.nz22.const import (
+    periods_AG20, rho_Ws, rho_Bs, periods, theta7s,  theta8s,
+)
 from openquake.hazardlib.gsim.parker_2020 import (
     ParkerEtAl2020SInter,
     _c0,
@@ -49,8 +51,9 @@ from openquake.hazardlib.gsim.parker_2020 import (
 
 def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
     """
-    Non-linear site term. The hard coded fnl = 0 for T >=3 is removed in the NZ version of the model (personal
-    communication with Grace).
+    Non-linear site term. The hard coded fnl = 0 for T >=3 is removed
+    in the NZ version of the model (personal communication with
+    Grace).
     """
     # fd for slab only
     pgar = np.exp(fp + fm + c0 + fd)
@@ -61,9 +64,7 @@ def _non_linear_term(C, imt, vs30, fp, fm, c0, fd=0):
             * (np.minimum(vs30, CONSTANTS["vref_fnl"]) - CONSTANTS["Vb"])
         )
         - math.exp(C["f5"] * (CONSTANTS["vref_fnl"] - CONSTANTS["Vb"]))
-    )
-
-    fnl *= np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
+    ) * np.log((pgar + CONSTANTS["f3"]) / CONSTANTS["f3"])
 
     return fnl
 
@@ -113,9 +114,10 @@ def get_stddevs(C, rrup, vs30):
 
 def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
     """
-    This NZ specific modification. Get the nonlinear tau and phi terms for Parker's model.
-    This routine is based upon Peter Stafford suggested implementation shared on slack,
-    which is based on AG20 implementation.
+    This NZ specific modification. Get the nonlinear tau and phi terms
+    for Parker's model.  This routine is based upon Peter Stafford
+    suggested implementation shared on slack, which is based on AG20
+    implementation.
     """
     period = imt.period
     # Linear Tau
@@ -151,86 +153,6 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
     phi_amp = 0.3
     phi_B = np.sqrt(phi_lin**2 - phi_amp**2)
     phi_B_pga = np.sqrt(phi_lin_pga**2 - phi_amp**2)
-
-    # correlation coefficients from AG20
-    periods_AG20 = [
-        0.01,
-        0.02,
-        0.03,
-        0.05,
-        0.075,
-        0.10,
-        0.15,
-        0.2,
-        0.25,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.75,
-        1.0,
-        1.5,
-        2.0,
-        2.5,
-        3.0,
-        4.0,
-        5.0,
-        6.0,
-        7.5,
-        10.0,
-    ]
-    rho_Ws = [
-        1.0,
-        0.99,
-        0.99,
-        0.97,
-        0.95,
-        0.92,
-        0.9,
-        0.87,
-        0.84,
-        0.82,
-        0.74,
-        0.66,
-        0.59,
-        0.5,
-        0.41,
-        0.33,
-        0.3,
-        0.27,
-        0.25,
-        0.22,
-        0.19,
-        0.17,
-        0.14,
-        0.1,
-    ]
-    rho_Bs = [
-        1.0,
-        0.99,
-        0.99,
-        0.985,
-        0.98,
-        0.97,
-        0.96,
-        0.94,
-        0.93,
-        0.91,
-        0.86,
-        0.8,
-        0.78,
-        0.73,
-        0.69,
-        0.62,
-        0.56,
-        0.52,
-        0.495,
-        0.43,
-        0.4,
-        0.37,
-        0.32,
-        0.28,
-    ]
 
     rho_W_itp = interp1d(np.log(periods_AG20), rho_Ws)
     rho_B_itp = interp1d(np.log(periods_AG20), rho_Bs)
@@ -270,9 +192,10 @@ def get_nonlinear_stddevs(C, C_PGA, imt, pgar, rrup, vs30):
 
 def get_sigma_epistemic(trt, region, imt):
     """
-    This is a NZ-NSHM-2022 specific modification. Currently the epistemic sigma model is
-    applied to Global model only. As for NZ we are using only the global model.
-    Henec below the coefficients are just for the global model.
+    This is a NZ-NSHM-2022 specific modification. Currently the
+    epistemic sigma model is applied to Global model only. As for NZ
+    we are using only the global model.  Henec below the coefficients
+    are just for the global model.
     """
 
     if region is None:
@@ -308,94 +231,21 @@ def get_sigma_epistemic(trt, region, imt):
 
 def get_backarc_term(trt, imt, ctx):
     """
-    This is a NZ NSHM-2022 specific modification. The backarc correction factors to be applied
-    with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab
-    events. It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016)
-    Earthquake Spectra. The correction is applied only for sites in the backarc region as function of distance.
+    This is a NZ NSHM-2022 specific modification. The backarc
+    correction factors to be applied with the ground motion
+    prediction. In the NZ context, it is applied to only subduction
+    intraslab events. It is essentially the correction factor taken
+    from BC Hydro 2016. Abrahamson et al. (2016) Earthquake
+    Spectra. The correction is applied only for sites in the backarc
+    region as function of distance.
     """
-
-    periods = [
-        0.0,
-        0.02,
-        0.05,
-        0.075,
-        0.1,
-        0.15,
-        0.2,
-        0.25,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.75,
-        1.0,
-        1.5,
-        2.0,
-        2.5,
-        3.0,
-        4.0,
-        5.0,
-        6.0,
-        7.5,
-        10.0,
-    ]
-    theta7s = [
-        1.0988,
-        1.0988,
-        1.2536,
-        1.4175,
-        1.3997,
-        1.3582,
-        1.1648,
-        0.994,
-        0.8821,
-        0.7046,
-        0.5799,
-        0.5021,
-        0.3687,
-        0.1746,
-        -0.082,
-        -0.2821,
-        -0.4108,
-        -0.4466,
-        -0.4344,
-        -0.4368,
-        -0.4586,
-        -0.4433,
-        -0.4828,
-    ]
-    theta8s = [
-        -1.42,
-        -1.42,
-        -1.65,
-        -1.8,
-        -1.8,
-        -1.69,
-        -1.49,
-        -1.3,
-        -1.18,
-        -0.98,
-        -0.82,
-        -0.7,
-        -0.54,
-        -0.34,
-        -0.05,
-        0.12,
-        0.25,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-    ]
     period = imt.period
-
     w_epi_factor = 1.008
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
     theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
-    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0 for periods < 0.
+    # Note that there is no correction for PGV.
+    # Hence, I make theta7 and theta8 as 0 for periods < 0.
     if period < 0:
         theta7 = 0.0
         theta8 = 0.0
@@ -423,9 +273,9 @@ def get_backarc_term(trt, imt, ctx):
 
 class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
     """
-    Implements NZ NSHM 2022 Soil nonlinearity sigma model modification of ParkerEtAl2020SInter for NZ NSHM 2022.
+    Implements NZ NSHM 2022 Soil nonlinearity sigma model modification
+    of ParkerEtAl2020SInter for NZ NSHM 2022.
     """
-
     def __init__(
         self,
         region=None,
@@ -501,7 +351,8 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             # Take the exponential to get PGA, PSA in g or the PGV in cm/s
             mean[m] = fp + fnl + fb + flin + fm + c0 + fd + fba
             if self.sigma_mu_epsilon:
-                # Apply an epistmic adjustment factor. Currently, its applied to only global model.
+                # Apply an epistmic adjustment factor.
+                # Currently, its applied to only global model.
                 mean[m] += self.sigma_mu_epsilon * get_sigma_epistemic(
                     trt, self.region, imt
                 )
@@ -516,7 +367,10 @@ class NZNSHM2022_ParkerEtAl2020SInter(ParkerEtAl2020SInter):
             else:
                 sig[m], tau[m], phi[m] = get_stddevs(C, ctx.rrup, ctx.vs30)
 
-    # Note that in these set of coefficients (EQS paper) c6 for interface and f4 and f5 have changed. Also as mentioned by Grace in her email the f4 coefficients are idenyical for interface and slab models.
+    # Note that in these set of coefficients (EQS paper) c6 for
+    # interface and f4 and f5 have changed. Also as mentioned by Grace
+    # in her email the f4 coefficients are idenyical for interface and
+    # slab models.
     COEFFS = CoeffsTable(
         sa_damping=5,
         table="""\

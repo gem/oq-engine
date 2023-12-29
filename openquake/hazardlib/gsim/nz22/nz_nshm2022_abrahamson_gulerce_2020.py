@@ -39,95 +39,25 @@ from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     get_tau_phi,
     SUPPORTED_REGIONS,
 )
+from openquake.hazardlib.gsim.nz22.const import periods, theta7s,  theta8s
 
 
 def get_backarc_term(trt, imt, ctx):
-    """The backarc correction factors to be applied with the ground motion prediction. In the NZ context, it is applied to only subduction intraslab events.
-    It is essentially the correction factor taken from BC Hydro 2016. Abrahamson et al. (2016) Earthquake Spectra.
-    The correction is applied only for backarc sites as function of distance."""
-
-    periods = [
-        0.0,
-        0.02,
-        0.05,
-        0.075,
-        0.1,
-        0.15,
-        0.2,
-        0.25,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.75,
-        1.0,
-        1.5,
-        2.0,
-        2.5,
-        3.0,
-        4.0,
-        5.0,
-        6.0,
-        7.5,
-        10.0,
-    ]
-    theta7s = [
-        1.0988,
-        1.0988,
-        1.2536,
-        1.4175,
-        1.3997,
-        1.3582,
-        1.1648,
-        0.994,
-        0.8821,
-        0.7046,
-        0.5799,
-        0.5021,
-        0.3687,
-        0.1746,
-        -0.082,
-        -0.2821,
-        -0.4108,
-        -0.4466,
-        -0.4344,
-        -0.4368,
-        -0.4586,
-        -0.4433,
-        -0.4828,
-    ]
-    theta8s = [
-        -1.42,
-        -1.42,
-        -1.65,
-        -1.8,
-        -1.8,
-        -1.69,
-        -1.49,
-        -1.3,
-        -1.18,
-        -0.98,
-        -0.82,
-        -0.7,
-        -0.54,
-        -0.34,
-        -0.05,
-        0.12,
-        0.25,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-    ]
+    """
+    The backarc correction factors to be applied with the ground motion
+    prediction. In the NZ context, it is applied to only subduction
+    intraslab events.  It is essentially the correction factor taken
+    from BC Hydro 2016. Abrahamson et al. (2016) Earthquake Spectra.
+    The correction is applied only for backarc sites as function of
+    distance.
+    """
     period = imt.period
-
     w_epi_factor = 1.008
 
     theta7_itp = interp1d(np.log(periods[1:]), theta7s[1:])
     theta8_itp = interp1d(np.log(periods[1:]), theta8s[1:])
-    # Note that there is no correction for PGV. Hence, I make theta7 and theta8 as 0 for periods < 0.
+    # Note that there is no correction for PGV. Hence, I make theta7
+    # and theta8 as 0 for periods < 0.
     if period < 0:
         theta7 = 0.0
         theta8 = 0.0
