@@ -24,6 +24,7 @@ import sys
 import zlib
 import copy
 import math
+import time
 import pickle
 import socket
 import random
@@ -78,12 +79,17 @@ def cached_property(method):
         try:
             val = self.__dict__[name]
         except KeyError:
+            t0 = time.time()
             val = method(self)
+            cached_property.dt[name] = time.time() - t0
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
     newmethod.__doc__ = method.__doc__
     return property(newmethod)
+
+
+cached_property.dt = {}  # dictionary of times
 
 
 def nokey(item):
