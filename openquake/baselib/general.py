@@ -24,6 +24,7 @@ import sys
 import zlib
 import copy
 import math
+import time
 import pickle
 import socket
 import random
@@ -67,6 +68,9 @@ def duplicated(items):
     return [key for key, counts in counter.items() if counts > 1]
 
 
+dt = {}  # dictionary of times
+
+
 def cached_property(method):
     """
     :param method: a method without arguments except self
@@ -78,7 +82,9 @@ def cached_property(method):
         try:
             val = self.__dict__[name]
         except KeyError:
+            t0 = time.time()
             val = method(self)
+            dt[name] = time.time() - t0
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
