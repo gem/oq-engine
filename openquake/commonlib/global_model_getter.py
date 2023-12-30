@@ -94,16 +94,11 @@ class GlobalModelGetter:
         """
         Returns a list of all models in the shapefile
         """
-        if self.sinfo is not None:
-            models = list(np.unique([info[self.model_code_field]
-                                     for info in self.sinfo]))
-            return models
         if fiona is None:
             print('fiona/GDAL is not installed properly!', sys.stderr)
             return []
-        with fiona.open(self.shapefile_path, 'r') as shp:
-            models = [polygon['properties'][self.model_code_field]
-                      for polygon in shp]
+        models = list(np.unique([info[self.model_code_field]
+                                 for info in self.sinfo]))
         return models
 
     def is_inside(self, geoms, model_code):
