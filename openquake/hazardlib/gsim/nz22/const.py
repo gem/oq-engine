@@ -15,9 +15,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+from numpy import array
 
 # correlation coefficients from AG20
-periods_AG20 = [
+periods_AG20 = array([
     0.01,
     0.02,
     0.03,
@@ -42,8 +43,9 @@ periods_AG20 = [
     6.0,
     7.5,
     10.0,
-]
-rho_Ws = [
+])
+
+rho_Ws = array([
     1.0,
     0.99,
     0.99,
@@ -68,8 +70,9 @@ rho_Ws = [
     0.17,
     0.14,
     0.1,
-]
-rho_Bs = [
+])
+
+rho_Bs = array([
     1.0,
     0.99,
     0.99,
@@ -94,8 +97,9 @@ rho_Bs = [
     0.37,
     0.32,
     0.28,
-]
-periods = [
+])
+
+periods = array([
     0.0,
     0.02,
     0.05,
@@ -119,8 +123,9 @@ periods = [
     6.0,
     7.5,
     10.0,
-]
-theta7s = [
+])
+
+theta7s = array([
     1.0988,
     1.0988,
     1.2536,
@@ -144,8 +149,9 @@ theta7s = [
     -0.4586,
     -0.4433,
     -0.4828,
-]
-theta8s = [
+])
+
+theta8s = array([
     -1.42,
     -1.42,
     -1.65,
@@ -169,4 +175,4 @@ theta8s = [
     0.3,
     0.3,
     0.3,
-]
+])
