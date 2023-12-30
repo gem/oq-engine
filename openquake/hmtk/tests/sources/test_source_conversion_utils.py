@@ -44,9 +44,9 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Tests the methods of the module openquake.hmtk.sources.source_conversion_utils
-'''
+"""
 
 import unittest
 from openquake.hazardlib.pmf import PMF
@@ -58,38 +58,38 @@ from openquake.hmtk.sources import source_conversion_utils as conv
 
 
 class TestRenderAspectRatio(unittest.TestCase):
-    '''
+    """
     Tests the function to render the aspect ratio
-    '''
+    """
 
     def setUp(self):
-        '''
-        '''
+        """ """
 
     def test_good_aspect_ratio(self):
-        '''
+        """
         Test the simple case when a valid aspect ratio is input
-        '''
+        """
         self.assertAlmostEqual(conv.render_aspect_ratio(1.5), 1.5)
 
     def test_missing_value_with_default(self):
-        '''
+        """
         Tests the case when the attibute is missing but the use_defaults
         option is selected
-        '''
+        """
         self.assertAlmostEqual(
-            conv.render_aspect_ratio(None, use_default=True),
-            1.0)
+            conv.render_aspect_ratio(None, use_default=True), 1.0
+        )
 
     def test_missing_value_no_default(self):
-        '''
+        """
         Tests the case when the attribute is missing and the use_defaults
         option is not selected. Should raise ValueError
-        '''
+        """
         with self.assertRaises(ValueError) as ae:
             conv.render_aspect_ratio(None)
-        self.assertEqual(str(ae.exception),
-                         'Rupture aspect ratio not defined!')
+        self.assertEqual(
+            str(ae.exception), "Rupture aspect ratio not defined!"
+        )
 
 
 class TestRenderMSRToHazardlib(unittest.TestCase):
@@ -98,38 +98,41 @@ class TestRenderMSRToHazardlib(unittest.TestCase):
     """
 
     def setUp(self):
-        """
-        """
+        """ """
         self.msr = WC1994()
 
     def test_valid_msr_in_hazlib_format(self):
         """
         Tests the case when the input is already in hazardlib format
         """
-        self.assertIsInstance(conv.mag_scale_rel_to_hazardlib(self.msr),
-                              WC1994)
+        self.assertIsInstance(
+            conv.mag_scale_rel_to_hazardlib(self.msr), WC1994
+        )
 
     def test_valid_msr_in_str_format(self):
         """
         Tests the case when the input is already in hazardlib format
         """
-        self.assertIsInstance(conv.mag_scale_rel_to_hazardlib('WC1994'),
-                              WC1994)
+        self.assertIsInstance(
+            conv.mag_scale_rel_to_hazardlib("WC1994"), WC1994
+        )
 
     def test_missing_value_with_default(self):
         # Tests the case when the attibute is missing but the use_defaults
         # option is selected
         self.assertIsInstance(
-            conv.mag_scale_rel_to_hazardlib(None, use_default=True),
-            WC1994)
+            conv.mag_scale_rel_to_hazardlib(None, use_default=True), WC1994
+        )
 
     def test_missing_value_no_default(self):
         # Tests the case when the attribute is missing and the use_defaults
         # option is not selected. Should raise ValueError
         with self.assertRaises(ValueError) as ae:
-            conv.mag_scale_rel_to_hazardlib('rubbish')
-        self.assertEqual(str(ae.exception),
-                         'Magnitude scaling relation rubbish not supported!')
+            conv.mag_scale_rel_to_hazardlib("rubbish")
+        self.assertEqual(
+            str(ae.exception),
+            "Magnitude scaling relation rubbish not supported!",
+        )
 
 
 class TestNPDtoPMF(unittest.TestCase):
@@ -139,33 +142,38 @@ class TestNPDtoPMF(unittest.TestCase):
     """
 
     def setUp(self):
-        self.npd_as_pmf = PMF([(0.5, NodalPlane(0., 90., 0.)),
-                               (0.5, NodalPlane(90., 90., 180.))])
+        self.npd_as_pmf = PMF(
+            [
+                (0.5, NodalPlane(0.0, 90.0, 0.0)),
+                (0.5, NodalPlane(90.0, 90.0, 180.0)),
+            ]
+        )
 
-        self.npd_as_pmf_bad = PMF([(0.5, None),
-                                   (0.5, NodalPlane(90., 90., 180.))])
+        self.npd_as_pmf_bad = PMF(
+            [(0.5, None), (0.5, NodalPlane(90.0, 90.0, 180.0))]
+        )
 
     def test_class_as_pmf(self):
         # Tests the case when a PMF is already input
 
         output = conv.npd_to_pmf(self.npd_as_pmf)
         self.assertAlmostEqual(output.data[0][0], 0.5)
-        self.assertAlmostEqual(output.data[0][1].strike, 0.)
-        self.assertAlmostEqual(output.data[0][1].dip, 90.)
-        self.assertAlmostEqual(output.data[0][1].rake, 0.)
+        self.assertAlmostEqual(output.data[0][1].strike, 0.0)
+        self.assertAlmostEqual(output.data[0][1].dip, 90.0)
+        self.assertAlmostEqual(output.data[0][1].rake, 0.0)
         self.assertAlmostEqual(output.data[1][0], 0.5)
-        self.assertAlmostEqual(output.data[1][1].strike, 90.)
-        self.assertAlmostEqual(output.data[1][1].dip, 90.)
-        self.assertAlmostEqual(output.data[1][1].rake, 180.)
+        self.assertAlmostEqual(output.data[1][1].strike, 90.0)
+        self.assertAlmostEqual(output.data[1][1].dip, 90.0)
+        self.assertAlmostEqual(output.data[1][1].rake, 180.0)
 
     def test_default(self):
         # Tests the case when the default class is raised
 
         output = conv.npd_to_pmf(None, True)
         self.assertAlmostEqual(output.data[0][0], 1.0)
-        self.assertAlmostEqual(output.data[0][1].strike, 0.)
-        self.assertAlmostEqual(output.data[0][1].dip, 90.)
-        self.assertAlmostEqual(output.data[0][1].rake, 0.)
+        self.assertAlmostEqual(output.data[0][1].strike, 0.0)
+        self.assertAlmostEqual(output.data[0][1].dip, 90.0)
+        self.assertAlmostEqual(output.data[0][1].rake, 0.0)
 
     def test_render_nodal_planes_null(self):
         # Tests the rendering of the nodal planes when no input is specified
@@ -173,8 +181,9 @@ class TestNPDtoPMF(unittest.TestCase):
 
         with self.assertRaises(ValueError) as ae:
             conv.npd_to_pmf(None)
-        self.assertEqual(str(ae.exception),
-                         'Nodal Plane distribution not defined')
+        self.assertEqual(
+            str(ae.exception), "Nodal Plane distribution not defined"
+        )
 
 
 class TestHDDtoHazardlib(unittest.TestCase):
@@ -184,7 +193,7 @@ class TestHDDtoHazardlib(unittest.TestCase):
     """
 
     def setUp(self):
-        self.depth_as_pmf = PMF([(0.5, 5.), (0.5, 10.)])
+        self.depth_as_pmf = PMF([(0.5, 5.0), (0.5, 10.0)])
 
     def test_input_as_pmf(self):
         # Tests the function when a valid PMF is input
@@ -192,9 +201,9 @@ class TestHDDtoHazardlib(unittest.TestCase):
         output = conv.hdd_to_pmf(self.depth_as_pmf)
         self.assertIsInstance(output, PMF)
         self.assertAlmostEqual(output.data[0][0], 0.5)
-        self.assertAlmostEqual(output.data[0][1], 5.)
+        self.assertAlmostEqual(output.data[0][1], 5.0)
         self.assertAlmostEqual(output.data[1][0], 0.5)
-        self.assertAlmostEqual(output.data[1][1], 10.)
+        self.assertAlmostEqual(output.data[1][1], 10.0)
 
     def test_default_input(self):
         # Tests the case when a default value is selected
@@ -209,20 +218,22 @@ class TestHDDtoHazardlib(unittest.TestCase):
 
         with self.assertRaises(ValueError) as ae:
             conv.hdd_to_pmf(None)
-        self.assertEqual(str(ae.exception),
-                         'Hypocentral depth distribution not defined!')
+        self.assertEqual(
+            str(ae.exception), "Hypocentral depth distribution not defined!"
+        )
 
 
 class TestConvertSourceGeometries(unittest.TestCase):
-    '''
+    """
     Class to test the functions simple_trace_to_wkt_linestring and
     complex_trace_to_wkt_linestring, which convert a simple edge or
     set of edges to linestrings
-    '''
+    """
 
     def setUp(self):
-        self.simple_edge = Line([Point(10.5, 10.5, 1.0),
-                                 Point(11.35, 11.45, 2.0)])
+        self.simple_edge = Line(
+            [Point(10.5, 10.5, 1.0), Point(11.35, 11.45, 2.0)]
+        )
 
         top_edge = Line([Point(10.5, 10.5, 1.0), Point(11.35, 11.45, 2.0)])
         int_edge = Line([Point(10.5, 10.5, 20.0), Point(11.35, 11.45, 21.0)])
@@ -232,14 +243,14 @@ class TestConvertSourceGeometries(unittest.TestCase):
 
     def test_simple_trace_to_wkt(self):
         # Tests the conversion of a simple trace to a 2-D linestring
-        expected = 'LINESTRING (10.5 10.5, 11.35 11.45)'
+        expected = "LINESTRING (10.5 10.5, 11.35 11.45)"
         self.assertEqual(
-            conv.simple_trace_to_wkt_linestring(self.simple_edge),
-            expected)
+            conv.simple_trace_to_wkt_linestring(self.simple_edge), expected
+        )
 
     def test_simple_edge_to_wkt(self):
         # Tests the conversion of a simple trace to a 3-D linestring
-        expected = 'LINESTRING (10.5 10.5 1.0, 11.35 11.45 2.0)'
+        expected = "LINESTRING (10.5 10.5 1.0, 11.35 11.45 2.0)"
         self.assertEqual(
-            conv.simple_edge_to_wkt_linestring(self.simple_edge),
-            expected)
+            conv.simple_edge_to_wkt_linestring(self.simple_edge), expected
+        )

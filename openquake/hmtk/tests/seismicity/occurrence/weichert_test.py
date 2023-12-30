@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -70,7 +70,7 @@ from openquake.hmtk.seismicity.occurrence.weichert import Weichert
 #        self.bval = 1.0
 #        numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval*mext+7.0))))
 #        # Compute the number of observations in the different magnitude
-#        # intervals (according to completeness) 
+#        # intervals (according to completeness)
 #        numobs[0:6] *= 10
 #        numobs[6:13] *= 20
 #        numobs[13:22] *= 50
@@ -133,30 +133,36 @@ class WeichertTestCase(unittest.TestCase):
         """
         cat_file = os.path.join(BASE_DATA_PATH, "synthetic_test_cat1.csv")
         raw_data = np.genfromtxt(cat_file, delimiter=",")
-        neq = raw_data.shape[0]
-        self.catalogue = Catalogue.make_from_dict({
-            "eventID": raw_data[:, 0].astype(int),
-            "year": raw_data[:, 1].astype(int),
-            "dtime": raw_data[:, 2],
-            "longitude": raw_data[:, 3],
-            "latitude": raw_data[:, 4],
-            "magnitude": raw_data[:, 5],
-            "depth": raw_data[:, 6]})
+        self.catalogue = Catalogue.make_from_dict(
+            {
+                "eventID": raw_data[:, 0].astype(int),
+                "year": raw_data[:, 1].astype(int),
+                "dtime": raw_data[:, 2],
+                "longitude": raw_data[:, 3],
+                "latitude": raw_data[:, 4],
+                "magnitude": raw_data[:, 5],
+                "depth": raw_data[:, 6],
+            }
+        )
         self.config = {"reference_magnitude": 3.0}
-        self.completeness = np.array([[1990., 3.0],
-                                      [1975., 4.0],
-                                      [1960., 5.0],
-                                      [1930., 6.0],
-                                      [1910., 7.0]])
+        self.completeness = np.array(
+            [
+                [1990.0, 3.0],
+                [1975.0, 4.0],
+                [1960.0, 5.0],
+                [1930.0, 6.0],
+                [1910.0, 7.0],
+            ]
+        )
 
     def test_weichert_calc(self):
         """
         Tests the Weichert function for the synthetic catalogue
         """
         wchrt = Weichert()
-        bval, sigmab, aval, sigmaa = wchrt.calc(self.catalogue,
-                                                self.config,
-                                                self.completeness)
+        bval, sigmab, aval, sigmaa = wchrt.calc(
+            self.catalogue, self.config, self.completeness
+        )
         self.assertAlmostEqual(bval, 0.890, 3)
         self.assertAlmostEqual(sigmab, 0.015, 3)
         self.assertAlmostEqual(aval, 4.6708, 4)
@@ -167,9 +173,12 @@ class WeichertTestCase(unittest.TestCase):
         Tests the Weichert function for the synthetic catalogue
         """
         wchrt = Weichert()
-        bval, sigmab, rate, sigma_rate, = wchrt.calculate(self.catalogue,
-                                                          self.config,
-                                                          self.completeness)
+        (
+            bval,
+            sigmab,
+            rate,
+            sigma_rate,
+        ) = wchrt.calculate(self.catalogue, self.config, self.completeness)
         self.assertAlmostEqual(bval, 0.890, 3)
         self.assertAlmostEqual(sigmab, 0.015, 3)
         self.assertAlmostEqual(rate, 100.1078, 4)
@@ -181,7 +190,8 @@ class WeichertTestCase(unittest.TestCase):
         """
         wchrt = Weichert()
         bval, sigmab, rate, sigma_rate, aval, sigmaa = wchrt._calculate(
-            self.catalogue, self.config, self.completeness)
+            self.catalogue, self.config, self.completeness
+        )
         self.assertAlmostEqual(bval, 0.890, 3)
         self.assertAlmostEqual(sigmab, 0.015, 3)
         self.assertAlmostEqual(rate, 100.1078, 4)

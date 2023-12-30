@@ -20,4 +20,3 @@
 Package :mod:`openquake.hmtk.parsers.source_model` contains base classes and
 implementations of source model parsers.
 """
-

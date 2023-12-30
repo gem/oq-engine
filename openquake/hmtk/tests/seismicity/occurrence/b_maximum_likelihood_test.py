@@ -54,11 +54,12 @@ import unittest
 import numpy as np
 
 from openquake.hmtk.seismicity.catalogue import Catalogue
-from openquake.hmtk.seismicity.occurrence.b_maximum_likelihood import BMaxLikelihood
+from openquake.hmtk.seismicity.occurrence.b_maximum_likelihood import (
+    BMaxLikelihood,
+)
 
 
 class BMaxLikelihoodTestCase(unittest.TestCase):
-
     def setUp(self):
         """
         This generates a catalogue to be used for the regression.
@@ -68,7 +69,9 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         mext = np.arange(4.0, 7.01, 0.1)
         self.mval = mext[0:-1] + self.dmag / 2.0
         self.bval = 1.0
-        numobs = np.flipud(np.diff(np.flipud(10.0**(-self.bval * mext + 7.0))))
+        numobs = np.flipud(
+            np.diff(np.flipud(10.0 ** (-self.bval * mext + 7.0)))
+        )
 
         # Define completeness window
         numobs[0:6] *= 10
@@ -79,7 +82,7 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         compl = np.array([[1900, 1950, 1980, 1990], [6.34, 5.44, 4.74, 3.0]])
         print(compl)
         self.compl = compl.transpose()
-        print('completeness')
+        print("completeness")
         print(self.compl)
         print(self.compl.shape)
 
@@ -94,16 +97,20 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
             uidx = int(lidx + nobs)
             magnitude[lidx:uidx] = mag + 0.01
             year_low = compl[0, np.min(np.nonzero(compl[1, :] < mag)[0])]
-            year[lidx:uidx] = (year_low + np.random.rand(uidx - lidx) *
-                               (2000 - year_low))
-            print('%.2f %.0f %.0f' % (mag, np.min(year[lidx:uidx]),
-                                      np.max(year[lidx:uidx])))
+            year[lidx:uidx] = year_low + np.random.rand(uidx - lidx) * (
+                2000 - year_low
+            )
+            print(
+                "%.2f %.0f %.0f"
+                % (mag, np.min(year[lidx:uidx]), np.max(year[lidx:uidx]))
+            )
             lidx = uidx
 
         self.catalogue = Catalogue.make_from_dict(
-            {'magnitude': magnitude, 'year': year})
+            {"magnitude": magnitude, "year": year}
+        )
         self.b_ml = BMaxLikelihood()
-        self.config = {'Average Type': 'Weighted'}
+        self.config = {"Average Type": "Weighted"}
 
     def test_b_maximum_likelihood(self):
         """
@@ -111,39 +118,48 @@ class BMaxLikelihoodTestCase(unittest.TestCase):
         used to generate the test data set
         """
         bval, sigma_b, aval, sigma_a = self.b_ml.calculate(
-            self.catalogue, self.config, self.compl)
+            self.catalogue, self.config, self.compl
+        )
         self.assertAlmostEqual(self.bval, bval, 1)
 
     def test_b_maximum_likelihood_raise_error(self):
         completeness_table = np.zeros((10, 2))
-        catalogue = {'year': [1900]}
-        config = {'Average Type': ['fake']}
-        self.assertRaises(ValueError, self.b_ml.calculate, catalogue,
-                          config, completeness_table)
+        catalogue = {"year": [1900]}
+        config = {"Average Type": ["fake"]}
+        self.assertRaises(
+            ValueError,
+            self.b_ml.calculate,
+            catalogue,
+            config,
+            completeness_table,
+        )
 
     def test_b_maximum_likelihood_average_parameters_raise_error(self):
         num = 4
         gr_pars = np.zeros((10, num))
         neq = np.zeros((num))
-        self.assertRaises(ValueError, self.b_ml._average_parameters,
-                          gr_pars, neq)
+        self.assertRaises(
+            ValueError, self.b_ml._average_parameters, gr_pars, neq
+        )
 
     def test_b_maximum_likelihood_average_parameters_use_harmonic(self):
         num = 4
         gr_pars = np.ones((num, 10))
         neq = np.ones((num))
-        self.b_ml._average_parameters(gr_pars, neq, average_type='Harmonic')
+        self.b_ml._average_parameters(gr_pars, neq, average_type="Harmonic")
 
     def test_b_maximum_likelihood_weighted_mean_raise_error(self):
         num = 4
         parameters = np.ones((num))
         neq = np.ones((num + 1))
-        self.assertRaises(ValueError, self.b_ml._weighted_mean,
-                          parameters, neq)
+        self.assertRaises(
+            ValueError, self.b_ml._weighted_mean, parameters, neq
+        )
 
     def test_b_maximum_likelihood_harmonic_mean_raise_error(self):
         num = 4
         parameters = np.ones((num))
         neq = np.ones((num + 1))
-        self.assertRaises(ValueError, self.b_ml._harmonic_mean,
-                          parameters, neq)
+        self.assertRaises(
+            ValueError, self.b_ml._harmonic_mean, parameters, neq
+        )

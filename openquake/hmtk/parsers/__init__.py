@@ -17,4 +17,4 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 
-#__all__ = [catalogue]
+# __all__ = [catalogue]

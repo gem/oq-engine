@@ -54,11 +54,13 @@ class SeismicSource(object):
         """
         General XML element attributes for a seismic source, as a dict.
         """
-        return dict([
-            ('id', str(self.id)),
-            ('name', str(self.name)),
-            ('tectonicRegion', str(self.trt)),
-        ])
+        return dict(
+            [
+                ("id", str(self.id)),
+                ("name", str(self.name)),
+                ("tectonicRegion", str(self.trt)),
+            ]
+        )
 
 
 class PointSource(SeismicSource):
@@ -87,9 +89,18 @@ class PointSource(SeismicSource):
         Hypocentral Depth Distribution.
     """
 
-    def __init__(self, id=None, name=None, trt=None, geometry=None,
-                 mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
-                 nodal_plane_dist=None, hypo_depth_dist=None):
+    def __init__(
+        self,
+        id=None,
+        name=None,
+        trt=None,
+        geometry=None,
+        mag_scale_rel=None,
+        rupt_aspect_ratio=None,
+        mfd=None,
+        nodal_plane_dist=None,
+        hypo_depth_dist=None,
+    ):
         super(PointSource, self).__init__(id=id, name=name, trt=trt)
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
@@ -110,8 +121,9 @@ class PointGeometry(object):
         Lower siesmogenic depth.
     """
 
-    def __init__(self, wkt=None, upper_seismo_depth=None,
-                 lower_seismo_depth=None):
+    def __init__(
+        self, wkt=None, upper_seismo_depth=None, lower_seismo_depth=None
+    ):
         self.wkt = wkt
         self.upper_seismo_depth = upper_seismo_depth
         self.lower_seismo_depth = lower_seismo_depth
@@ -178,9 +190,17 @@ class SimpleFaultSource(SeismicSource):
         Rake angle.
     """
 
-    def __init__(self, id=None, name=None, trt=None, geometry=None,
-                 mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
-                 rake=None):
+    def __init__(
+        self,
+        id=None,
+        name=None,
+        trt=None,
+        geometry=None,
+        mag_scale_rel=None,
+        rupt_aspect_ratio=None,
+        mfd=None,
+        rake=None,
+    ):
         super(SimpleFaultSource, self).__init__(id=id, name=name, trt=trt)
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
@@ -201,8 +221,15 @@ class SimpleFaultGeometry(object):
         Lower siesmogenic depth.
     """
 
-    def __init__(self, id=None, name=None, wkt=None, dip=None,
-                 upper_seismo_depth=None, lower_seismo_depth=None):
+    def __init__(
+        self,
+        id=None,
+        name=None,
+        wkt=None,
+        dip=None,
+        upper_seismo_depth=None,
+        lower_seismo_depth=None,
+    ):
         self.wkt = wkt
         self.dip = dip
         self.upper_seismo_depth = upper_seismo_depth
@@ -210,12 +237,12 @@ class SimpleFaultGeometry(object):
 
     # a string representation useful for tests and debugging
     def __str__(self):
-        return '''SimpleFaultGeometry(
+        return """SimpleFaultGeometry(
 wkt=%(wkt)s,
 dip=%(dip)s,
 upper_seismo_depth=%(upper_seismo_depth)s,
 lower_seismo_depth=%(lower_seismo_depth)s)
-''' % vars(self)
+""" % vars(self)
 
 
 class ComplexFaultSource(SimpleFaultSource):
@@ -257,19 +284,20 @@ class ComplexFaultGeometry(object):
         This parameter is optional.
     """
 
-    def __init__(self, top_edge_wkt=None, bottom_edge_wkt=None,
-                 int_edges=None):
+    def __init__(
+        self, top_edge_wkt=None, bottom_edge_wkt=None, int_edges=None
+    ):
         self.top_edge_wkt = top_edge_wkt
         self.bottom_edge_wkt = bottom_edge_wkt
         self.int_edges = int_edges if int_edges is not None else []
 
     # a string representation useful for tests and debugging
     def __str__(self):
-        return '''ComplexFaultGeometry(
+        return """ComplexFaultGeometry(
 top_edge_wkt=%(top_edge_wkt)s,
 bottom_edge_wkt=%(bottom_edge_wkt)s,
 int_edges=%(int_edges)s
-''' % vars(self)
+""" % vars(self)
 
 
 class IncrementalMFD(object):
@@ -294,10 +322,12 @@ class IncrementalMFD(object):
         """
         A dict of XML element attributes for this MFD.
         """
-        return dict([
-            ('minMag', str(self.min_mag)),
-            ('binWidth', str(self.bin_width)),
-        ])
+        return dict(
+            [
+                ("minMag", str(self.min_mag)),
+                ("binWidth", str(self.bin_width)),
+            ]
+        )
 
 
 class TGRMFD(object):
@@ -326,12 +356,14 @@ class TGRMFD(object):
         """
         An dict of XML element attributes for this MFD.
         """
-        return dict([
-            ('aValue', str(self.a_val)),
-            ('bValue', str(self.b_val)),
-            ('minMag', str(self.min_mag)),
-            ('maxMag', str(self.max_mag)),
-        ])
+        return dict(
+            [
+                ("aValue", str(self.a_val)),
+                ("bValue", str(self.b_val)),
+                ("minMag", str(self.min_mag)),
+                ("maxMag", str(self.max_mag)),
+            ]
+        )
 
 
 class NodalPlane(object):
@@ -360,12 +392,14 @@ class NodalPlane(object):
         """
         A dict of XML element attributes for this NodalPlane.
         """
-        return dict([
-            ('probability', str(self.probability)),
-            ('strike', str(self.strike)),
-            ('dip', str(self.dip)),
-            ('rake', str(self.rake)),
-        ])
+        return dict(
+            [
+                ("probability", str(self.probability)),
+                ("strike", str(self.strike)),
+                ("dip", str(self.dip)),
+                ("rake", str(self.rake)),
+            ]
+        )
 
 
 class HypocentralDepth(object):
@@ -388,10 +422,12 @@ class HypocentralDepth(object):
         """
         An dict of XML element attribute for this HypocentralDepth.
         """
-        return dict([
-            ('probability', str(self.probability)),
-            ('depth', str(self.depth)),
-        ])
+        return dict(
+            [
+                ("probability", str(self.probability)),
+                ("depth", str(self.depth)),
+            ]
+        )
 
 
 class SiteModel(object):
@@ -411,8 +447,9 @@ class SiteModel(object):
         Well-known text (POINT) represeting the location of these parameters.
     """
 
-    def __init__(self, vs30=None, vs30_type=None, z1pt0=None, z2pt5=None,
-                 wkt=None):
+    def __init__(
+        self, vs30=None, vs30_type=None, z1pt0=None, z2pt5=None, wkt=None
+    ):
         self.vs30 = vs30
         self.vs30_type = vs30_type
         self.z1pt0 = z1pt0
@@ -435,8 +472,14 @@ class SimpleFaultRuptureModel(object):
         :class:`SimpleFaultGeometry` object.
     """
 
-    def __init__(self, id=None, magnitude=None, rake=None, hypocenter=None,
-                 geometry=None):
+    def __init__(
+        self,
+        id=None,
+        magnitude=None,
+        rake=None,
+        hypocenter=None,
+        geometry=None,
+    ):
         self.id = id
         self.magnitude = magnitude
         self.rake = rake
@@ -447,16 +490,16 @@ class SimpleFaultRuptureModel(object):
 class ComplexFaultRuptureModel(SimpleFaultRuptureModel):
     """Basic object representation of a Complex Fault Rupture.
 
-     :param str id:
-         Rupture identifier, unique within a given model.
-     :param float magnitude:
-         Magnitude.
-     :param float rake:
-         Rake angle.
-     :param list hypocenter:
-         Floats representing lon, lat and depth.
-     :param geometry:
-         :class:`ComplexFaultGeometry` object.
+    :param str id:
+        Rupture identifier, unique within a given model.
+    :param float magnitude:
+        Magnitude.
+    :param float rake:
+        Rake angle.
+    :param list hypocenter:
+        Floats representing lon, lat and depth.
+    :param geometry:
+        :class:`ComplexFaultGeometry` object.
     """
 
 
@@ -480,8 +523,9 @@ class CharacteristicSource(SeismicSource):
         list of :class:`PlanarSurface` objects.
     """
 
-    def __init__(self, id=None, name=None, trt=None, mfd=None, rake=None,
-                 surface=None):
+    def __init__(
+        self, id=None, name=None, trt=None, mfd=None, rake=None, surface=None
+    ):
         super(CharacteristicSource, self).__init__(id=id, name=name, trt=trt)
         self.mfd = mfd
         self.rake = rake
@@ -499,8 +543,15 @@ class PlanarSurface(object):
         objects.
     """
 
-    def __init__(self, strike=None, dip=None, top_left=None, top_right=None,
-                 bottom_left=None, bottom_right=None):
+    def __init__(
+        self,
+        strike=None,
+        dip=None,
+        top_left=None,
+        top_right=None,
+        bottom_left=None,
+        bottom_right=None,
+    ):
         self.strike = strike
         self.dip = dip
         self.top_left = top_left
@@ -544,7 +595,7 @@ class HazardCurveModel(object):
     """
 
     def __init__(self, **metadata):
-        self._data_iter = metadata.pop('data_iter', ())
+        self._data_iter = metadata.pop("data_iter", ())
         self.metadata = metadata
         vars(self).update(metadata)
 
@@ -552,5 +603,5 @@ class HazardCurveModel(object):
         return self._data_iter
 
 
-HazardCurveData = namedtuple('HazardCurveData', 'location poes')
-Location = namedtuple('Location', 'x y')
+HazardCurveData = namedtuple("HazardCurveData", "location poes")
+Location = namedtuple("Location", "x y")

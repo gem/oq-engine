@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -57,13 +57,14 @@ class BaseCatalogueParser(object):
     """
     A base class for a Catalogue Parser
     """
+
     def __init__(self, input_file):
         """
         Initialise the object and check input file existance
         """
         self.input_file = input_file
         if not os.path.exists(self.input_file):
-            raise IOError('File not found: %s' % input_file)
+            raise IOError("File not found: %s" % input_file)
 
     @abc.abstractmethod
     def read_file(self):
@@ -76,6 +77,7 @@ class BaseCatalogueWriter(object):
     """
     A base class for a Catalogue writer
     """
+
     def __init__(self, output_file):
         """
         Initialise the object and check output file existance. If file already
@@ -83,8 +85,9 @@ class BaseCatalogueWriter(object):
         """
         self.output_file = output_file
         if os.path.exists(self.output_file):
-            raise IOError('Catalogue output file %s already exists!' %
-                          self.output_file)
+            raise IOError(
+                "Catalogue output file %s already exists!" % self.output_file
+            )
 
     @abc.abstractmethod
     def write_file(self):

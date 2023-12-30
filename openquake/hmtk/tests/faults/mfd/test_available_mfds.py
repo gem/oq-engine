@@ -50,35 +50,45 @@ from openquake.hmtk.faults import mfd
 
 
 class TestAvailableMFDs(unittest.TestCase):
-    '''
+    """
     Simple test of the module openquake.hmtk.faults.get_available_mfds(), which should
     return a dict containing instances of all the available mfd classes
-    '''
+    """
 
     def setUp(self):
-        '''
-        '''
+        """ """
         self.mfds = None
 
     def test_available_mfds(self):
-        '''
+        """
         As of May 2013 the following MFDs should be available:
         AndersonLucoArbitrary
         AndersonLucoAreaMmax
         YoungsCoppersmithExponential
         YoungsCoppersmithCharacteristic
         Characteristic
-        '''
+        """
         self.mfds = mfd.get_available_mfds()
         expected_dict = dict(
-            [('AndersonLucoArbitrary',
-              mfd.anderson_luco_arbitrary.AndersonLucoArbitrary),
-             ('AndersonLucoAreaMmax',
-              mfd.anderson_luco_area_mmax.AndersonLucoAreaMmax),
-             ('BaseMFDfromSlip', mfd.base.BaseMFDfromSlip),
-             ('Characteristic', mfd.characteristic.Characteristic),
-             ('YoungsCoppersmithCharacteristic',
-              mfd.youngs_coppersmith.YoungsCoppersmithCharacteristic),
-             ('YoungsCoppersmithExponential',
-              mfd.youngs_coppersmith.YoungsCoppersmithExponential)])
+            [
+                (
+                    "AndersonLucoArbitrary",
+                    mfd.anderson_luco_arbitrary.AndersonLucoArbitrary,
+                ),
+                (
+                    "AndersonLucoAreaMmax",
+                    mfd.anderson_luco_area_mmax.AndersonLucoAreaMmax,
+                ),
+                ("BaseMFDfromSlip", mfd.base.BaseMFDfromSlip),
+                ("Characteristic", mfd.characteristic.Characteristic),
+                (
+                    "YoungsCoppersmithCharacteristic",
+                    mfd.youngs_coppersmith.YoungsCoppersmithCharacteristic,
+                ),
+                (
+                    "YoungsCoppersmithExponential",
+                    mfd.youngs_coppersmith.YoungsCoppersmithExponential,
+                ),
+            ]
+        )
         self.assertDictEqual(self.mfds, expected_dict)

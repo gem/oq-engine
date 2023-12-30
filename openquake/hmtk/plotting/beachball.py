@@ -36,9 +36,20 @@ R2D = 180 / np.pi
 EPSILON = 0.00001
 
 
-def Beach(fm, linewidth=2, facecolor='b', bgcolor='w', edgecolor='k',
-          alpha=1.0, xy=(0, 0), width=200, size=100, nofill=False,
-          zorder=100, axes=None):
+def Beach(
+    fm,
+    linewidth=2,
+    facecolor="b",
+    bgcolor="w",
+    edgecolor="k",
+    alpha=1.0,
+    xy=(0, 0),
+    width=200,
+    size=100,
+    nofill=False,
+    zorder=100,
+    axes=None,
+):
     """
     Return a beach ball as a collection which can be connected to an
     current matplotlib axes instance (ax.add_collection).
@@ -81,7 +92,7 @@ def Beach(fm, linewidth=2, facecolor='b', bgcolor='w', edgecolor='k',
     """
     # check if one or two widths are specified (Circle or Ellipse)
     try:
-        assert(len(width) == 2)
+        assert len(width) == 2
     except TypeError:
         width = (width, width)
     mt = None
@@ -109,19 +120,20 @@ def Beach(fm, linewidth=2, facecolor='b', bgcolor='w', edgecolor='k',
         if np.fabs(N.val) < EPSILON and np.fabs(T.val + P.val) < EPSILON:
             colors, p = plotDC(np1, size, xy=xy, width=width)
         else:
-            colors, p = plotMT(T, N, P, size,
-                               plot_zerotrace=True, xy=xy, width=width)
+            colors, p = plotMT(
+                T, N, P, size, plot_zerotrace=True, xy=xy, width=width
+            )
     else:
         colors, p = plotDC(np1, size=size, xy=xy, width=width)
 
     if nofill:
         # XXX: not tested with plotMT
         col = collections.PatchCollection([p[1]], match_original=False)
-        col.set_facecolor('none')
+        col.set_facecolor("none")
     else:
         col = collections.PatchCollection(p, match_original=False)
         # Replace color dummies 'b' and 'w' by face and bgcolor
-        fc = [facecolor if c == 'b' else bgcolor for c in colors]
+        fc = [facecolor if c == "b" else bgcolor for c in colors]
         col.set_facecolors(fc)
 
     # Use the given axes to maintain the aspect ratio of beachballs on figure
@@ -145,9 +157,22 @@ def Beach(fm, linewidth=2, facecolor='b', bgcolor='w', edgecolor='k',
     return col
 
 
-def Beachball(fm, linewidth=2, facecolor='b', bgcolor='w', edgecolor='k',
-              alpha=1.0, xy=(0, 0), width=200, size=100, nofill=False,
-              zorder=100, outfile=None, format=None, fig=None):
+def Beachball(
+    fm,
+    linewidth=2,
+    facecolor="b",
+    bgcolor="w",
+    edgecolor="k",
+    alpha=1.0,
+    xy=(0, 0),
+    width=200,
+    size=100,
+    nofill=False,
+    zorder=100,
+    outfile=None,
+    format=None,
+    fig=None,
+):
     """
     Draws a beach ball diagram of an earthquake focal mechanism.
 
@@ -202,16 +227,25 @@ def Beachball(fm, linewidth=2, facecolor='b', bgcolor='w', edgecolor='k',
         fig.subplots_adjust(left=0, bottom=0, right=1, top=1)
         fig.set_figheight(width // 100)
         fig.set_figwidth(width // 100)
-    ax = fig.add_subplot(111, aspect='equal')
+    ax = fig.add_subplot(111, aspect="equal")
 
     # hide axes + ticks
     ax.axison = False
 
     # plot the collection
-    collection = Beach(fm, linewidth=linewidth, facecolor=facecolor,
-                       edgecolor=edgecolor, bgcolor=bgcolor,
-                       alpha=alpha, nofill=nofill, xy=xy,
-                       width=plot_width, size=size, zorder=zorder)
+    collection = Beach(
+        fm,
+        linewidth=linewidth,
+        facecolor=facecolor,
+        edgecolor=edgecolor,
+        bgcolor=bgcolor,
+        alpha=alpha,
+        nofill=nofill,
+        xy=xy,
+        width=plot_width,
+        size=size,
+        zorder=zorder,
+    )
     ax.add_collection(collection)
 
     ax.autoscale_view(tight=False, scalex=True, scaley=True)
@@ -231,8 +265,9 @@ def Beachball(fm, linewidth=2, facecolor='b', bgcolor='w', edgecolor='k',
         return fig
 
 
-def plotMT(T, N, P, size=200, plot_zerotrace=True,
-           x0=0, y0=0, xy=(0, 0), width=200):
+def plotMT(
+    T, N, P, size=200, plot_zerotrace=True, x0=0, y0=0, xy=(0, 0), width=200
+):
     """
     Uses a principal axis T, N and P to draw a beach ball plot.
 
@@ -247,7 +282,7 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
     """
     # check if one or two widths are specified (Circle or Ellipse)
     try:
-        assert(len(width) == 2)
+        assert len(width) == 2
     except TypeError:
         width = (width, width)
     collect = []
@@ -284,7 +319,7 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
     v[1] = N.val
     v[2] = P.val
 
-    vi = (v[0] + v[1] + v[2]) / 3.
+    vi = (v[0] + v[1] + v[2]) / 3.0
     for i in range(0, 3):
         v[i] = v[i] - vi
 
@@ -292,14 +327,14 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
 
     if np.fabs(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) < EPSILON:
         # pure implosion-explosion
-        if vi > 0.:
+        if vi > 0.0:
             cir = patches.Ellipse(xy, width=width[0], height=width[1])
             collect.append(cir)
-            colors.append('b')
-        if vi < 0.:
+            colors.append("b")
+        if vi < 0.0:
             cir = patches.Ellipse(xy, width=width[0], height=width[1])
             collect.append(cir)
-            colors.append('w')
+            colors.append("w")
         return colors, collect
 
     if np.fabs(v[0]) >= np.fabs(v[2]):
@@ -309,8 +344,8 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
         d = 2
         m = 0
 
-    if (plot_zerotrace):
-        vi = 0.
+    if plot_zerotrace:
+        vi = 0.0
 
     f = -v[1] / float(v[d])
     iso = vi / float(v[d])
@@ -323,12 +358,12 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
     if iso < -1:
         cir = patches.Ellipse(xy, width=width[0], height=width[1])
         collect.append(cir)
-        colors.append('w')
+        colors.append("w")
         return colors, collect
     elif iso > 1 - f:
         cir = patches.Ellipse(xy, width=width[0], height=width[1])
         collect.append(cir)
-        colors.append('b')
+        colors.append("b")
         return colors, collect
 
     spd = np.sin(p[d] * D2R)
@@ -346,9 +381,10 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
 
     for i in range(0, 360):
         fir = i * D2R
-        s2alphan = (2. + 2. * iso) / \
-            float(3. + (1. - 2. * f) * np.cos(2. * fir))
-        if s2alphan > 1.:
+        s2alphan = (2.0 + 2.0 * iso) / float(
+            3.0 + (1.0 - 2.0 * f) * np.cos(2.0 * fir)
+        )
+        if s2alphan > 1.0:
             big_iso += 1
         else:
             alphan = np.arcsin(np.sqrt(s2alphan))
@@ -358,26 +394,29 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
             can = np.cos(alphan)
 
             xz = can * spd + san * sfi * spb + san * cfi * spm
-            xn = can * cpd * cad + san * sfi * cpb * cab + \
-                san * cfi * cpm * cam
-            xe = can * cpd * sad + san * sfi * cpb * sab + \
-                san * cfi * cpm * sam
+            xn = (
+                can * cpd * cad + san * sfi * cpb * cab + san * cfi * cpm * cam
+            )
+            xe = (
+                can * cpd * sad + san * sfi * cpb * sab + san * cfi * cpm * sam
+            )
 
             if np.fabs(xn) < EPSILON and np.fabs(xe) < EPSILON:
-                takeoff = 0.
-                az = 0.
+                takeoff = 0.0
+                az = 0.0
             else:
                 az = np.arctan2(xe, xn)
-                if az < 0.:
-                    az += np.pi * 2.
-                takeoff = np.arccos(xz / float(np.sqrt(xz * xz + xn * xn +
-                                                       xe * xe)))
-            if takeoff > np.pi / 2.:
+                if az < 0.0:
+                    az += np.pi * 2.0
+                takeoff = np.arccos(
+                    xz / float(np.sqrt(xz * xz + xn * xn + xe * xe))
+                )
+            if takeoff > np.pi / 2.0:
                 takeoff = np.pi - takeoff
                 az += np.pi
-                if az > np.pi * 2.:
-                    az -= np.pi * 2.
-            r = np.sqrt(2) * np.sin(takeoff / 2.)
+                if az > np.pi * 2.0:
+                    az -= np.pi * 2.0
+            r = np.sqrt(2) * np.sin(takeoff / 2.0)
             si = np.sin(az)
             co = np.cos(az)
             if i == 0:
@@ -386,15 +425,15 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
                 y[i] = y0 + radius_size * r * co
                 azp = az
             else:
-                if np.fabs(np.fabs(az - azp) - np.pi) < D2R * 10.:
+                if np.fabs(np.fabs(az - azp) - np.pi) < D2R * 10.0:
                     azi[n][1] = azp
                     n += 1
                     azi[n][0] = az
-                if np.fabs(np.fabs(az - azp) - np.pi * 2.) < D2R * 2.:
+                if np.fabs(np.fabs(az - azp) - np.pi * 2.0) < D2R * 2.0:
                     if azp < az:
-                        azi[n][0] += np.pi * 2.
+                        azi[n][0] += np.pi * 2.0
                     else:
-                        azi[n][0] -= np.pi * 2.
+                        azi[n][0] -= np.pi * 2.0
                 if n == 0:
                     x[j] = x0 + radius_size * r * si
                     y[j] = y0 + radius_size * r * co
@@ -410,12 +449,12 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
                 azp = az
     azi[n][1] = az
 
-    if v[1] < 0.:
-        rgb1 = 'b'
-        rgb2 = 'w'
+    if v[1] < 0.0:
+        rgb1 = "b"
+        rgb2 = "w"
     else:
-        rgb1 = 'w'
-        rgb2 = 'b'
+        rgb1 = "w"
+        rgb2 = "b"
 
     cir = patches.Ellipse(xy, width=width[0], height=width[1])
     collect.append(cir)
@@ -429,9 +468,9 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
             xp1[i] = x[i]
             yp1[i] = y[i]
         if azi[0][0] - azi[0][1] > np.pi:
-            azi[0][0] -= np.pi * 2.
+            azi[0][0] -= np.pi * 2.0
         elif azi[0][1] - azi[0][0] > np.pi:
-            azi[0][0] += np.pi * 2.
+            azi[0][0] += np.pi * 2.0
         if azi[0][0] < azi[0][1]:
             az = azi[0][1] - D2R
             while az > azi[0][0]:
@@ -456,9 +495,9 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
             xp2[i] = x2[i]
             yp2[i] = y2[i]
         if azi[1][0] - azi[1][1] > np.pi:
-            azi[1][0] -= np.pi * 2.
+            azi[1][0] -= np.pi * 2.0
         elif azi[1][1] - azi[1][0] > np.pi:
-            azi[1][0] += np.pi * 2.
+            azi[1][0] += np.pi * 2.0
         if azi[1][0] < azi[1][1]:
             az = azi[1][1] - D2R
             while az > azi[1][0]:
@@ -500,9 +539,9 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
             return colors, collect
 
         if azi[2][0] - azi[0][1] > np.pi:
-            azi[2][0] -= np.pi * 2.
+            azi[2][0] -= np.pi * 2.0
         elif azi[0][1] - azi[2][0] > np.pi:
-            azi[2][0] += np.pi * 2.
+            azi[2][0] += np.pi * 2.0
         if azi[2][0] < azi[0][1]:
             az = azi[0][1] - D2R
             while az > azi[2][0]:
@@ -528,9 +567,9 @@ def plotMT(T, N, P, size=200, plot_zerotrace=True,
             xp2[i] = x2[i]
             yp2[i] = y2[i]
         if azi[1][0] - azi[1][1] > np.pi:
-            azi[1][0] -= np.pi * 2.
+            azi[1][0] -= np.pi * 2.0
         elif azi[1][1] - azi[1][0] > np.pi:
-            azi[1][0] += np.pi * 2.
+            azi[1][0] += np.pi * 2.0
         if azi[1][0] < azi[1][1]:
             az = azi[1][1] - D2R
             while az > azi[1][0]:
@@ -567,7 +606,7 @@ def plotDC(np1, size=200, xy=(0, 0), width=200):
     """
     # check if one or two widths are specified (Circle or Ellipse)
     try:
-        assert(len(width) == 2)
+        assert len(width) == 2
     except TypeError:
         width = (width, width)
     S1 = np1.strike
@@ -593,15 +632,21 @@ def plotDC(np1, size=200, xy=(0, 0), width=200):
         D2 = 89.9999
 
     # arange checked for numerical stablility, np.pi is not multiple of 0.1
-    phi = np.arange(0, np.pi, .01)
+    phi = np.arange(0, np.pi, 0.01)
     l1 = np.sqrt(
-        np.power(90 - D1, 2) / (
-            np.power(np.sin(phi), 2) +
-            np.power(np.cos(phi), 2) * np.power(90 - D1, 2) / np.power(90, 2)))
+        np.power(90 - D1, 2)
+        / (
+            np.power(np.sin(phi), 2)
+            + np.power(np.cos(phi), 2) * np.power(90 - D1, 2) / np.power(90, 2)
+        )
+    )
     l2 = np.sqrt(
-        np.power(90 - D2, 2) / (
-            np.power(np.sin(phi), 2) + np.power(np.cos(phi), 2) *
-            np.power(90 - D2, 2) / np.power(90, 2)))
+        np.power(90 - D2, 2)
+        / (
+            np.power(np.sin(phi), 2)
+            + np.power(np.cos(phi), 2) * np.power(90 - D2, 2) / np.power(90, 2)
+        )
+    )
 
     inc = 1
     (X1, Y1) = Pol2Cart(phi + S1 * D2R, l1)
@@ -639,13 +684,13 @@ def plotDC(np1, size=200, xy=(0, 0), width=200):
     # construct the patches
     collect = [patches.Ellipse(xy, width=width[0], height=width[1])]
     collect.append(xy2patch(Y, X, res, xy))
-    return ['b', 'w'], collect
+    return ["b", "w"], collect
 
 
 def xy2patch(x, y, res, xy):
     # check if one or two resolutions are specified (Circle or Ellipse)
     try:
-        assert(len(res) == 2)
+        assert len(res) == 2
     except TypeError:
         res = (res, res)
     # transform into the Path coordinate system
@@ -660,8 +705,7 @@ def xy2patch(x, y, res, xy):
 
 
 def Pol2Cart(th, r):
-    """
-    """
+    """ """
     x = r * np.cos(th)
     y = r * np.sin(th)
     return (x, y)
@@ -743,9 +787,13 @@ def MT2Plane(mt):
     """
     (d, v) = np.linalg.eig(mt.mt)
     D = np.array([d[1], d[0], d[2]])
-    V = np.array([[v[1, 1], -v[1, 0], -v[1, 2]],
-                  [v[2, 1], -v[2, 0], -v[2, 2]],
-                  [-v[0, 1], v[0, 0], v[0, 2]]])
+    V = np.array(
+        [
+            [v[1, 1], -v[1, 0], -v[1, 2]],
+            [v[2, 1], -v[2, 0], -v[2, 2]],
+            [-v[0, 1], v[0, 0], v[0, 2]],
+        ]
+    )
     IMAX = D.argmax()
     IMIN = D.argmin()
     AE = (V[:, IMAX] + V[:, IMIN]) / np.sqrt(2.0)
@@ -757,7 +805,7 @@ def MT2Plane(mt):
         AN = np.array([np.nan, np.nan, np.nan])
     else:
         AN = AN / ANR
-    if AN[2] <= 0.:
+    if AN[2] <= 0.0:
         AN1 = AN
         AE1 = AE
     else:
@@ -784,33 +832,33 @@ def TDL(AN, BN):
     AAA = 1.0 / (1000000)
     CON = 57.2957795
     if np.fabs(ZN) < AAA:
-        FD = 90.
+        FD = 90.0
         AXN = np.fabs(XN)
         if AXN > 1.0:
             AXN = 1.0
         FT = np.arcsin(AXN) * CON
         ST = -XN
         CT = YN
-        if ST >= 0. and CT < 0:
-            FT = 180. - FT
-        if ST < 0. and CT <= 0:
-            FT = 180. + FT
-        if ST < 0. and CT > 0:
-            FT = 360. - FT
+        if ST >= 0.0 and CT < 0:
+            FT = 180.0 - FT
+        if ST < 0.0 and CT <= 0:
+            FT = 180.0 + FT
+        if ST < 0.0 and CT > 0:
+            FT = 360.0 - FT
         FL = np.arcsin(abs(ZE)) * CON
         SL = -ZE
         if np.fabs(XN) < AAA:
             CL = XE / YN
         else:
             CL = -YE / XN
-        if SL >= 0. and CL < 0:
-            FL = 180. - FL
-        if SL < 0. and CL <= 0:
-            FL = FL - 180.
-        if SL < 0. and CL > 0:
+        if SL >= 0.0 and CL < 0:
+            FL = 180.0 - FL
+        if SL < 0.0 and CL <= 0:
+            FL = FL - 180.0
+        if SL < 0.0 and CL > 0:
             FL = -FL
     else:
-        if - ZN > 1.0:
+        if -ZN > 1.0:
             ZN = -1.0
         FDH = np.arccos(-ZN)
         FD = FDH * CON
@@ -823,12 +871,12 @@ def TDL(AN, BN):
         if SX > 1.0:
             SX = 1.0
         FT = np.arcsin(SX) * CON
-        if ST >= 0. and CT < 0:
-            FT = 180. - FT
-        if ST < 0. and CT <= 0:
-            FT = 180. + FT
-        if ST < 0. and CT > 0:
-            FT = 360. - FT
+        if ST >= 0.0 and CT < 0:
+            FT = 180.0 - FT
+        if ST < 0.0 and CT <= 0:
+            FT = 180.0 + FT
+        if ST < 0.0 and CT > 0:
+            FT = 360.0 - FT
         SL = -ZE / SD
         SX = np.fabs(SL)
         if SX > 1.0:
@@ -841,11 +889,11 @@ def TDL(AN, BN):
             CL = -SD * XXX / XN
             if CT == 0:
                 CL = YE / ST
-        if SL >= 0. and CL < 0:
-            FL = 180. - FL
-        if SL < 0. and CL <= 0:
-            FL = FL - 180.
-        if SL < 0. and CL > 0:
+        if SL >= 0.0 and CL < 0:
+            FL = 180.0 - FL
+        if SL < 0.0 and CL <= 0:
+            FL = FL - 180.0
+        if SL < 0.0 and CL > 0:
             FL = -FL
     return (FT, FD, FL)
 
@@ -945,9 +993,13 @@ class MomentTensor(object):
             self.expo = args[1]
             if len(A) == 6:
                 # six independent components
-                self.mt = np.array([[A[0], A[3], A[4]],
-                                    [A[3], A[1], A[5]],
-                                    [A[4], A[5], A[2]]])
+                self.mt = np.array(
+                    [
+                        [A[0], A[3], A[4]],
+                        [A[3], A[1], A[5]],
+                        [A[4], A[5], A[2]],
+                    ]
+                )
             elif isinstance(A, np.ndarray) and A.shape == (3, 3):
                 # full matrix
                 self.mt = A
@@ -955,9 +1007,13 @@ class MomentTensor(object):
                 raise TypeError("Wrong size of input parameter.")
         elif len(args) == 7:
             # six independent components
-            self.mt = np.array([[args[0], args[3], args[4]],
-                                [args[3], args[1], args[5]],
-                                [args[4], args[5], args[2]]])
+            self.mt = np.array(
+                [
+                    [args[0], args[3], args[4]],
+                    [args[3], args[1], args[5]],
+                    [args[4], args[5], args[2]],
+                ]
+            )
             self.expo = args[6]
         else:
             raise TypeError("Wrong size of input parameter.")
@@ -987,6 +1043,7 @@ class MomentTensor(object):
         return self.mt[2][2]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
