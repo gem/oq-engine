@@ -5,7 +5,6 @@ import pprint
 import logging
 import time
 import csv
-import sys
 import os
 import numpy as np
 from shapely.geometry import Point, shape
@@ -94,9 +93,6 @@ class GlobalModelGetter:
         """
         Returns a list of all models in the shapefile
         """
-        if fiona is None:
-            print('fiona/GDAL is not installed properly!', sys.stderr)
-            return []
         models = list(np.unique([info[self.model_code_field]
                                  for info in self.sinfo]))
         return models
