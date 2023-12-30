@@ -54,7 +54,6 @@ from openquake.baselib.general import deprecated
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
-from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib import mfd, valid
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane

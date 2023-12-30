@@ -20,6 +20,4 @@
 Package :mod:`openquake.hmtk.parsers.source_model` contains base classes and
 implementations of source model parsers.
 """
-from openquake.hmtk.parsers.source_model.nrml04_parser import nrmlSourceModelParser
 
-#__all__ = [nrmlSourceModelParser]

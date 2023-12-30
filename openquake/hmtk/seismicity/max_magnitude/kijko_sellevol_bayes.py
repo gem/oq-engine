@@ -66,7 +66,7 @@ def check_config(config, data):
     '''
     essential_keys = ['input_mmin', 'b-value', 'sigma-b']
     for key in essential_keys:
-        if not key in config.keys():
+        if key not in config:
             raise ValueError('For KijkoSellevolBayes the key %s needs to '
                              'be set in the configuation' % key)
     if 'tolerance' not in config.keys() or not config['tolerance']:

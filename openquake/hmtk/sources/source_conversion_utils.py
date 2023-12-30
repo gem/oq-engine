@@ -84,7 +84,7 @@ def mag_scale_rel_to_hazardlib(mag_scale_rel, use_default=False):
     if isinstance(mag_scale_rel, BaseMSR):
         return mag_scale_rel
     elif isinstance(mag_scale_rel, str):
-        if not mag_scale_rel in SCALE_RELS.keys():
+        if mag_scale_rel not in SCALE_RELS:
             raise ValueError('Magnitude scaling relation %s not supported!'
                              % mag_scale_rel)
         else:

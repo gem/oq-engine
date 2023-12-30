@@ -86,7 +86,7 @@ class BMaxLikelihood(SeismicityOccurrence):
                                                           completeness)
 
         # Check the configuration
-        if not config['Average Type'] in ['Weighted', 'Harmonic']:
+        if config['Average Type'] not in ['Weighted', 'Harmonic']:
             raise ValueError('Average type not recognised in bMaxLiklihood!')
         return self._b_ml(catalogue, config, cmag, ctime, ref_mag, dmag)
 

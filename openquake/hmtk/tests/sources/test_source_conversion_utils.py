@@ -49,9 +49,7 @@ Tests the methods of the module openquake.hmtk.sources.source_conversion_utils
 '''
 
 import unittest
-import numpy as np
 from openquake.hazardlib.pmf import PMF
-from openquake.hazardlib import mfd
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.point import Point

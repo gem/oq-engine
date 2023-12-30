@@ -52,7 +52,7 @@ function openquake.hmtk.faults.mfd.base._scale_moment
 
 import unittest
 from math import log10
-from openquake.hmtk.faults.mfd.base import BaseMFDfromSlip, _scale_moment
+from openquake.hmtk.faults.mfd.base import _scale_moment
 
 
 class TestScaleMoment(unittest.TestCase):
