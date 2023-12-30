@@ -54,8 +54,11 @@ import numpy as np
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import spherical_to_cartesian
-from openquake.hmtk.seismicity.utils import (decimal_time, bootstrap_histogram_1D,
-                                             bootstrap_histogram_2D)
+from openquake.hmtk.seismicity.utils import (
+    decimal_time,
+    bootstrap_histogram_1D,
+    bootstrap_histogram_2D,
+)
 
 
 class Catalogue(object):
@@ -64,26 +67,50 @@ class Catalogue(object):
     """
 
     FLOAT_ATTRIBUTE_LIST = [
-        'second', 'timeError', 'longitude', 'latitude',
-        'SemiMajor90', 'SemiMinor90', 'ErrorStrike', 'depth',
-        'depthError', 'magnitude', 'sigmaMagnitude']
+        "second",
+        "timeError",
+        "longitude",
+        "latitude",
+        "SemiMajor90",
+        "SemiMinor90",
+        "ErrorStrike",
+        "depth",
+        "depthError",
+        "magnitude",
+        "sigmaMagnitude",
+    ]
 
-    INT_ATTRIBUTE_LIST = ['year', 'month', 'day', 'hour', 'minute',
-                          'flag']
+    INT_ATTRIBUTE_LIST = ["year", "month", "day", "hour", "minute", "flag"]
 
-    STRING_ATTRIBUTE_LIST = ['eventID', 'Agency', 'magnitudeType', 'comment']
+    STRING_ATTRIBUTE_LIST = ["eventID", "Agency", "magnitudeType", "comment"]
 
     TOTAL_ATTRIBUTE_LIST = list(
-        (set(FLOAT_ATTRIBUTE_LIST).union(
-            set(INT_ATTRIBUTE_LIST))).union(
-                set(STRING_ATTRIBUTE_LIST)))
+        (set(FLOAT_ATTRIBUTE_LIST).union(set(INT_ATTRIBUTE_LIST))).union(
+            set(STRING_ATTRIBUTE_LIST)
+        )
+    )
 
     SORTED_ATTRIBUTE_LIST = [
-        'eventID', 'Agency', 'year', 'month', 'day', 'hour',
-        'minute', 'second', 'timeError', 'longitude', 'latitude',
-        'SemiMajor90', 'SemiMinor90', 'ErrorStrike',
-        'depth', 'depthError', 'magnitude', 'sigmaMagnitude',
-        'magnitudeType']
+        "eventID",
+        "Agency",
+        "year",
+        "month",
+        "day",
+        "hour",
+        "minute",
+        "second",
+        "timeError",
+        "longitude",
+        "latitude",
+        "SemiMajor90",
+        "SemiMinor90",
+        "ErrorStrike",
+        "depth",
+        "depthError",
+        "magnitude",
+        "sigmaMagnitude",
+        "magnitudeType",
+    ]
 
     def __init__(self):
         """
@@ -93,10 +120,12 @@ class Catalogue(object):
         self.end_year = None
         self.start_year = None
 
-        self.processes = {'declustering': None,
-                          'completeness': None,
-                          'recurrence': None,
-                          'Poisson Tests': None}
+        self.processes = {
+            "declustering": None,
+            "completeness": None,
+            "recurrence": None,
+            "Poisson Tests": None,
+        }
 
         for attribute in self.TOTAL_ATTRIBUTE_LIST:
             if attribute in self.FLOAT_ATTRIBUTE_LIST:
@@ -108,11 +137,11 @@ class Catalogue(object):
         self.number_earthquakes = 0
 
     def get_number_events(self):
-        return len(self.data['eventID'])
+        return len(self.data["eventID"])
 
     def __len__(self):
         return self.get_number_events()
-    
+
     def __str__(self):
         """
         Returns a shortened print of the catalogue
@@ -139,17 +168,19 @@ class Catalogue(object):
         """
         Returns a string representation of the key information in a row
         """
-        row_data = ["{:s}".format(self.data['eventID'][i]),
-                    "{:g}".format(self.data['year'][i]),
-                    "{:g}".format(self.data['month'][i]),
-                    "{:g}".format(self.data['day'][i]),
-                    "{:g}".format(self.data['hour'][i]),
-                    "{:g}".format(self.data['minute'][i]),
-                    "{:.1f}".format(self.data['second'][i]),
-                    "{:.3f}".format(self.data['longitude'][i]),
-                    "{:.3f}".format(self.data['latitude'][i]),
-                    "{:.1f}".format(self.data['depth'][i]),
-                    "{:.1f}".format(self.data['magnitude'][i])]
+        row_data = [
+            "{:s}".format(self.data["eventID"][i]),
+            "{:g}".format(self.data["year"][i]),
+            "{:g}".format(self.data["month"][i]),
+            "{:g}".format(self.data["day"][i]),
+            "{:g}".format(self.data["hour"][i]),
+            "{:g}".format(self.data["minute"][i]),
+            "{:.1f}".format(self.data["second"][i]),
+            "{:.3f}".format(self.data["longitude"][i]),
+            "{:.3f}".format(self.data["latitude"][i]),
+            "{:.1f}".format(self.data["depth"][i]),
+            "{:.1f}".format(self.data["magnitude"][i]),
+        ]
         return " ".join(row_data)
 
     def __getitem__(self, key):
@@ -159,7 +190,7 @@ class Catalogue(object):
         """
         if isinstance(key, int):
             # Gets the row specied
-            row =[]
+            row = []
             for attr in self.SORTED_ATTRIBUTE_LIST:
                 if len(self.data[attr]):
                     row.append(self.data[attr][key])
@@ -177,7 +208,7 @@ class Catalogue(object):
         Iteration yields for each event a list of data
         """
         for i in range(len(self)):
-            row =[]
+            row = []
             for key in self.SORTED_ATTRIBUTE_LIST:
                 if len(self.data[key]):
                     row.append(self.data[key][i])
@@ -199,7 +230,7 @@ class Catalogue(object):
             Optional list of attribute keys to be exported
         """
 
-        with open(output_file, 'w') as of:
+        with open(output_file, "w") as of:
             writer = csv.DictWriter(of, fieldnames=key_list)
             writer.writeheader()
             for i in range(self.get_number_events()):
@@ -209,12 +240,12 @@ class Catalogue(object):
                         data = self.data[key][i]
                         if key in self.INT_ATTRIBUTE_LIST:
                             if np.isnan(data):
-                                data = ''
+                                data = ""
                             else:
                                 data = int(data)
                         if key in self.FLOAT_ATTRIBUTE_LIST:
                             if np.isnan(data):
-                                data = ''
+                                data = ""
                             else:
                                 data = float(data)
                     row_dict[key] = data
@@ -246,7 +277,7 @@ class Catalogue(object):
         """
 
         if len(keys) != np.shape(data_array)[1]:
-            raise ValueError('Key list does not match shape of array!')
+            raise ValueError("Key list does not match shape of array!")
 
         for i, key in enumerate(keys):
             if key in self.INT_ATTRIBUTE_LIST:
@@ -254,7 +285,7 @@ class Catalogue(object):
             else:
                 self.data[key] = data_array[:, i]
             if key not in self.TOTAL_ATTRIBUTE_LIST:
-                print('Key %s not a recognised catalogue attribute' % key)
+                print("Key %s not a recognised catalogue attribute" % key)
 
         self.update_end_year()
 
@@ -270,14 +301,14 @@ class Catalogue(object):
         NOTE: To be called only when the catalogue is loaded (not when
         it is modified by declustering or completeness-based filtering)
         """
-        self.end_year = np.max(self.data['year'])
+        self.end_year = np.max(self.data["year"])
 
     def update_start_year(self):
         """
         NOTE: To be called only when the catalogue is loaded (not when
         it is modified by declustering or completeness-based filtering)
         """
-        self.start_year = np.min(self.data['year'])
+        self.start_year = np.min(self.data["year"])
 
     def catalogue_mt_filter(self, mt_table, flag=None):
         """
@@ -294,8 +325,10 @@ class Catalogue(object):
             flag = np.ones(self.get_number_events(), dtype=bool)
 
         for comp_val in mt_table:
-            id0 = np.logical_and(self.data['year'].astype(float) < comp_val[0],
-                                 self.data['magnitude'] < comp_val[1])
+            id0 = np.logical_and(
+                self.data["year"].astype(float) < comp_val[0],
+                self.data["magnitude"] < comp_val[1],
+            )
             print(id0)
             flag[id0] = False
         if not np.all(flag):
@@ -307,94 +340,101 @@ class Catalogue(object):
 
         :returns: (West, East, South, North)
         """
-        return (np.min(self.data["longitude"]),
-                np.max(self.data["longitude"]),
-                np.min(self.data["latitude"]),
-                np.max(self.data["latitude"]))
+        return (
+            np.min(self.data["longitude"]),
+            np.max(self.data["longitude"]),
+            np.min(self.data["latitude"]),
+            np.max(self.data["latitude"]),
+        )
 
     def get_observed_mmax_sigma(self, default=None):
         """
         :returns: the sigma for the maximum observed magnitude
         """
-        if not isinstance(self.data['sigmaMagnitude'], np.ndarray):
+        if not isinstance(self.data["sigmaMagnitude"], np.ndarray):
             obsmaxsig = default
         else:
-            obsmaxsig = self.data['sigmaMagnitude'][
-                np.argmax(self.data['magnitude'])]
+            obsmaxsig = self.data["sigmaMagnitude"][
+                np.argmax(self.data["magnitude"])
+            ]
         return obsmaxsig
 
     def get_decimal_time(self):
-        '''
+        """
         Returns the time of the catalogue as a decimal
-        '''
-        return decimal_time(self.data['year'],
-                            self.data['month'],
-                            self.data['day'],
-                            self.data['hour'],
-                            self.data['minute'],
-                            self.data['second'])
+        """
+        return decimal_time(
+            self.data["year"],
+            self.data["month"],
+            self.data["day"],
+            self.data["hour"],
+            self.data["minute"],
+            self.data["second"],
+        )
 
     def hypocentres_as_mesh(self):
-        '''
+        """
         Render the hypocentres to a nhlib.geo.mesh.Mesh object
-        '''
-        return Mesh(self.data['longitude'],
-                    self.data['latitude'],
-                    self.data['depth'])
+        """
+        return Mesh(
+            self.data["longitude"], self.data["latitude"], self.data["depth"]
+        )
 
     def hypocentres_to_cartesian(self):
-        '''
+        """
         Render the hypocentres to a cartesian array
-        '''
-        return spherical_to_cartesian(self.data['longitude'],
-                                      self.data['latitude'],
-                                      self.data['depth'])
+        """
+        return spherical_to_cartesian(
+            self.data["longitude"], self.data["latitude"], self.data["depth"]
+        )
 
     def sort_catalogue_chronologically(self):
-        '''
+        """
         Sorts the catalogue into chronological order
-        '''
+        """
         dec_time = self.get_decimal_time()
         idx = np.argsort(dec_time)
-        if np.all((idx[1:] - idx[:-1]) > 0.):
+        if np.all((idx[1:] - idx[:-1]) > 0.0):
             # Catalogue was already in chronological order
             return
         self.select_catalogue_events(idx)
 
     def purge_catalogue(self, flag_vector):
-        '''
+        """
         Purges present catalogue with invalid events defined by flag_vector
 
         :param numpy.ndarray flag_vector:
             Boolean vector showing if events are selected (True) or not (False)
 
-        '''
+        """
         id0 = np.where(flag_vector)[0]
         self.select_catalogue_events(id0)
         self.get_number_events()
 
     def select_catalogue_events(self, id0):
-        '''
+        """
         Orders the events in the catalogue according to an indexing vector.
 
         :param np.ndarray id0:
             Pointer array indicating the locations of selected events
-        '''
+        """
         for key in self.data:
-            if isinstance(
-                    self.data[key], np.ndarray) and len(self.data[key]) > 0:
+            if (
+                isinstance(self.data[key], np.ndarray)
+                and len(self.data[key]) > 0
+            ):
                 # Dictionary element is numpy array - use logical indexing
                 self.data[key] = self.data[key][id0]
-            elif isinstance(
-                    self.data[key], list) and len(self.data[key]) > 0:
+            elif isinstance(self.data[key], list) and len(self.data[key]) > 0:
                 # Dictionary element is list
                 self.data[key] = [self.data[key][iloc] for iloc in id0]
             else:
                 continue
 
-    def get_depth_distribution(self, depth_bins, normalisation=False,
-                               bootstrap=None):
-        '''
+    def get_depth_distribution(
+        self, depth_bins, normalisation=False, bootstrap=None
+    ):
+        """
         Gets the depth distribution of the earthquake catalogue to return a
         single histogram. Depths may be normalised. If uncertainties are found
         in the catalogue the distrbution may be bootstrap sampled
@@ -412,34 +452,37 @@ class Catalogue(object):
         :returns:
             Histogram of depth values
 
-        '''
-        if len(self.data['depth']) == 0:
+        """
+        if len(self.data["depth"]) == 0:
             # If depth information is missing
-            raise ValueError('Depths missing in catalogue')
+            raise ValueError("Depths missing in catalogue")
 
-        if len(self.data['depthError']) == 0:
-            self.data['depthError'] = np.zeros(self.get_number_events(),
-                                               dtype=float)
+        if len(self.data["depthError"]) == 0:
+            self.data["depthError"] = np.zeros(
+                self.get_number_events(), dtype=float
+            )
 
-        return bootstrap_histogram_1D(self.data['depth'],
-                                      depth_bins,
-                                      self.data['depthError'],
-                                      normalisation=normalisation,
-                                      number_bootstraps=bootstrap,
-                                      boundaries=(0., None))
+        return bootstrap_histogram_1D(
+            self.data["depth"],
+            depth_bins,
+            self.data["depthError"],
+            normalisation=normalisation,
+            number_bootstraps=bootstrap,
+            boundaries=(0.0, None),
+        )
 
     def get_depth_pmf(self, depth_bins, default_depth=5.0, bootstrap=None):
         """
         Returns the depth distribution of the catalogue as a probability mass
         function
         """
-        if len(self.data['depth']) == 0:
+        if len(self.data["depth"]) == 0:
             # If depth information is missing
             return PMF([(1.0, default_depth)])
         # Get the depth distribution
-        depth_hist = self.get_depth_distribution(depth_bins,
-                                                 normalisation=True,
-                                                 bootstrap=bootstrap)
+        depth_hist = self.get_depth_distribution(
+            depth_bins, normalisation=True, bootstrap=bootstrap
+        )
         # If the histogram does not sum to 1.0 then remove the difference
         # from the lowest bin
         depth_hist = np.around(depth_hist, 3)
@@ -449,13 +492,15 @@ class Catalogue(object):
 
         pmf_list = []
         for iloc, prob in enumerate(depth_hist):
-            pmf_list.append((prob,
-                             (depth_bins[iloc] + depth_bins[iloc + 1]) / 2.0))
+            pmf_list.append(
+                (prob, (depth_bins[iloc] + depth_bins[iloc + 1]) / 2.0)
+            )
         return PMF(pmf_list)
 
-    def get_magnitude_depth_distribution(self, magnitude_bins, depth_bins,
-                                         normalisation=False, bootstrap=None):
-        '''
+    def get_magnitude_depth_distribution(
+        self, magnitude_bins, depth_bins, normalisation=False, bootstrap=None
+    ):
+        """
         Returns a 2-D magnitude-depth histogram for the catalogue
 
         :param numpy.ndarray magnitude_bins:
@@ -473,32 +518,37 @@ class Catalogue(object):
 
         :returns:
             2D histogram of events in magnitude-depth bins
-        '''
-        if len(self.data['depth']) == 0:
+        """
+        if len(self.data["depth"]) == 0:
             # If depth information is missing
-            raise ValueError('Depths missing in catalogue')
+            raise ValueError("Depths missing in catalogue")
 
-        if len(self.data['depthError']) == 0:
-            self.data['depthError'] = np.zeros(self.get_number_events(),
-                                               dtype=float)
+        if len(self.data["depthError"]) == 0:
+            self.data["depthError"] = np.zeros(
+                self.get_number_events(), dtype=float
+            )
 
-        if len(self.data['sigmaMagnitude']) == 0:
-            self.data['sigmaMagnitude'] = np.zeros(self.get_number_events(),
-                                                   dtype=float)
+        if len(self.data["sigmaMagnitude"]) == 0:
+            self.data["sigmaMagnitude"] = np.zeros(
+                self.get_number_events(), dtype=float
+            )
 
-        return bootstrap_histogram_2D(self.data['magnitude'],
-                                      self.data['depth'],
-                                      magnitude_bins,
-                                      depth_bins,
-                                      boundaries=[(0., None), (None, None)],
-                                      xsigma=self.data['sigmaMagnitude'],
-                                      ysigma=self.data['depthError'],
-                                      normalisation=normalisation,
-                                      number_bootstraps=bootstrap)
+        return bootstrap_histogram_2D(
+            self.data["magnitude"],
+            self.data["depth"],
+            magnitude_bins,
+            depth_bins,
+            boundaries=[(0.0, None), (None, None)],
+            xsigma=self.data["sigmaMagnitude"],
+            ysigma=self.data["depthError"],
+            normalisation=normalisation,
+            number_bootstraps=bootstrap,
+        )
 
-    def get_magnitude_time_distribution(self, magnitude_bins, time_bins,
-                                        normalisation=False, bootstrap=None):
-        '''
+    def get_magnitude_time_distribution(
+        self, magnitude_bins, time_bins, normalisation=False, bootstrap=None
+    ):
+        """
         Returns a 2-D histogram indicating the number of earthquakes in a
         set of time-magnitude bins. Time is in decimal years!
 
@@ -517,16 +567,17 @@ class Catalogue(object):
 
         :returns:
             2D histogram of events in magnitude-year bins
-        '''
+        """
         return bootstrap_histogram_2D(
             self.get_decimal_time(),
-            self.data['magnitude'],
+            self.data["magnitude"],
             time_bins,
             magnitude_bins,
             xsigma=np.zeros(self.get_number_events()),
-            ysigma=self.data['sigmaMagnitude'],
+            ysigma=self.data["sigmaMagnitude"],
             normalisation=normalisation,
-            number_bootstraps=bootstrap)
+            number_bootstraps=bootstrap,
+        )
 
     def concatenate(self, catalogue):
         """
@@ -536,30 +587,32 @@ class Catalogue(object):
             An instance of :class:`htmk.seismicity.catalogue.Catalogue`
         """
 
-        atts = getattr(self, 'data')
-        attn = getattr(catalogue, 'data')
+        atts = getattr(self, "data")
+        attn = getattr(catalogue, "data")
         data = _merge_data(atts, attn)
 
         if data is not None:
-            setattr(self, 'data', data)
+            setattr(self, "data", data)
             for attrib in vars(self):
                 atts = getattr(self, attrib)
                 attn = getattr(catalogue, attrib)
-                if attrib == 'end_year':
+                if attrib == "end_year":
                     setattr(self, attrib, max(atts, attn))
-                elif attrib == 'start_year':
+                elif attrib == "start_year":
                     setattr(self, attrib, min(atts, attn))
-                elif attrib == 'data':
+                elif attrib == "data":
                     pass
-                elif attrib == 'number_earthquakes':
+                elif attrib == "number_earthquakes":
                     setattr(self, attrib, atts + attn)
-                elif attrib == 'processes':
+                elif attrib == "processes":
                     if atts != attn:
-                        raise ValueError('The catalogues cannot be merged' +
-                                         ' since the they have' +
-                                         ' a different processing history')
+                        raise ValueError(
+                            "The catalogues cannot be merged"
+                            + " since the they have"
+                            + " a different processing history"
+                        )
                 else:
-                    raise ValueError('unknown attribute: %s' % attrib)
+                    raise ValueError("unknown attribute: %s" % attrib)
         self.sort_catalogue_chronologically()
 
 
@@ -586,8 +639,7 @@ def _merge_data(dat1, dat2):
             cnt += 1
 
     if cnt:
-        raise Warning('Cannot merge catalogues with different' +
-                      ' attributes')
+        raise Warning("Cannot merge catalogues with different" + " attributes")
         return None
     else:
         for key in dat1:
@@ -596,5 +648,5 @@ def _merge_data(dat1, dat2):
             elif isinstance(dat1[key], list):
                 dat1[key] += dat2[key]
             else:
-                raise ValueError('Unknown type')
+                raise ValueError("Unknown type")
         return dat1

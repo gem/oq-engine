@@ -54,7 +54,6 @@ from openquake.baselib.general import deprecated
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.polygon import Polygon
-from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hazardlib import mfd, valid
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.geo.nodalplane import NodalPlane
@@ -101,8 +100,9 @@ def get_taglist(node):
     Return a list of tags (with NRML namespace removed) representing the
     order of the nodes within a node
     """
-    return [re.sub(r'\{[^}]*\}', "", copy(subnode.tag))
-            for subnode in node.nodes]
+    return [
+        re.sub(r"\{[^}]*\}", "", copy(subnode.tag)) for subnode in node.nodes
+    ]
 
 
 def linestring_node_to_line(node, with_depth=False):
@@ -113,11 +113,19 @@ def linestring_node_to_line(node, with_depth=False):
     assert "LineString" in node.tag
     crds = [float(x) for x in node.nodes[0].text.split()]
     if with_depth:
-        return Line([Point(crds[iloc], crds[iloc + 1], crds[iloc + 2])
-                     for iloc in range(0, len(crds), 3)])
+        return Line(
+            [
+                Point(crds[iloc], crds[iloc + 1], crds[iloc + 2])
+                for iloc in range(0, len(crds), 3)
+            ]
+        )
     else:
-        return Line([Point(crds[iloc], crds[iloc + 1])
-                     for iloc in range(0, len(crds), 2)])
+        return Line(
+            [
+                Point(crds[iloc], crds[iloc + 1])
+                for iloc in range(0, len(crds), 2)
+            ]
+        )
 
 
 def node_to_point_geometry(node):
@@ -149,10 +157,16 @@ def node_to_area_geometry(node):
     assert "areaGeometry" in node.tag
     for subnode in node.nodes:
         if "Polygon" in subnode.tag:
-            crds = [float(x)
-                    for x in subnode.nodes[0].nodes[0].nodes[0].text.split()]
-            polygon = Polygon([Point(crds[iloc], crds[iloc + 1])
-                               for iloc in range(0, len(crds), 2)])
+            crds = [
+                float(x)
+                for x in subnode.nodes[0].nodes[0].nodes[0].text.split()
+            ]
+            polygon = Polygon(
+                [
+                    Point(crds[iloc], crds[iloc + 1])
+                    for iloc in range(0, len(crds), 2)
+                ]
+            )
         elif "upperSeismoDepth" in subnode.tag:
             upper_depth = float_(subnode.text)
         elif "lowerSeismoDepth" in subnode.tag:
@@ -196,15 +210,18 @@ def node_to_complex_fault_geometry(node):
     intermediate_edges = []
     for subnode in node.nodes:
         if "faultTopEdge" in subnode.tag:
-            top_edge = linestring_node_to_line(subnode.nodes[0],
-                                               with_depth=True)
+            top_edge = linestring_node_to_line(
+                subnode.nodes[0], with_depth=True
+            )
         elif "intermediateEdge" in subnode.tag:
-            int_edge = linestring_node_to_line(subnode.nodes[0],
-                                               with_depth=True)
+            int_edge = linestring_node_to_line(
+                subnode.nodes[0], with_depth=True
+            )
             intermediate_edges.append(int_edge)
         elif "faultBottomEdge" in subnode.tag:
-            bottom_edge = linestring_node_to_line(subnode.nodes[0],
-                                                  with_depth=True)
+            bottom_edge = linestring_node_to_line(
+                subnode.nodes[0], with_depth=True
+            )
         else:
             # Redundent
             pass
@@ -226,15 +243,18 @@ def node_to_truncated_gr(node, bin_width=0.1):
     :class: openquake.hazardlib.mfd.truncated_gr.TruncatedGRMFD
     """
     # Parse to float dictionary
-    if not all([node.attrib[key]
-                for key in ["minMag", "maxMag", "aValue", "bValue"]]):
+    if not all(
+        [node.attrib[key] for key in ["minMag", "maxMag", "aValue", "bValue"]]
+    ):
         return None
     tgr = dict((key, float_(node.attrib[key])) for key in node.attrib)
-    return mfd.truncated_gr.TruncatedGRMFD(min_mag=tgr["minMag"],
-                                           max_mag=tgr["maxMag"],
-                                           bin_width=bin_width,
-                                           a_val=tgr["aValue"],
-                                           b_val=tgr["bValue"])
+    return mfd.truncated_gr.TruncatedGRMFD(
+        min_mag=tgr["minMag"],
+        max_mag=tgr["maxMag"],
+        bin_width=bin_width,
+        a_val=tgr["aValue"],
+        b_val=tgr["bValue"],
+    )
 
 
 def node_to_evenly_discretized(node):
@@ -243,15 +263,15 @@ def node_to_evenly_discretized(node):
     :class: openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretizedMFD,
     or to None if not all parameters are available
     """
-    if not all([node.attrib["minMag"], node.attrib["binWidth"],
-                node.nodes[0].text]):
+    if not all(
+        [node.attrib["minMag"], node.attrib["binWidth"], node.nodes[0].text]
+    ):
         return None
     # Text to float
     rates = [float(x) for x in node.nodes[0].text.split()]
     return mfd.evenly_discretized.EvenlyDiscretizedMFD(
-        float(node.attrib["minMag"]),
-        float(node.attrib["binWidth"]),
-        rates)
+        float(node.attrib["minMag"]), float(node.attrib["binWidth"]), rates
+    )
 
 
 def node_to_mfd(node, taglist):
@@ -260,10 +280,12 @@ def node_to_mfd(node, taglist):
     """
     if "incrementalMFD" in taglist:
         mfd = node_to_evenly_discretized(
-            node.nodes[taglist.index("incrementalMFD")])
+            node.nodes[taglist.index("incrementalMFD")]
+        )
     elif "truncGutenbergRichterMFD" in taglist:
         mfd = node_to_truncated_gr(
-            node.nodes[taglist.index("truncGutenbergRichterMFD")])
+            node.nodes[taglist.index("truncGutenbergRichterMFD")]
+        )
     else:
         mfd = None
     return mfd
@@ -280,9 +302,11 @@ def node_to_nodal_planes(node):
         if not all(plane.attrib[key] for key in plane.attrib):
             # One plane fails - return None
             return None
-        npd = NodalPlane(float(plane.attrib["strike"]),
-                         float(plane.attrib["dip"]),
-                         float(plane.attrib["rake"]))
+        npd = NodalPlane(
+            float(plane.attrib["strike"]),
+            float(plane.attrib["dip"]),
+            float(plane.attrib["rake"]),
+        )
         npd_pmf.append((float(plane.attrib["probability"]), npd))
     return PMF(npd_pmf)
 
@@ -297,8 +321,12 @@ def node_to_hdd(node):
     for subnode in node.nodes:
         if not all([subnode.attrib[key] for key in ["depth", "probability"]]):
             return None
-        hdds.append((float(subnode.attrib["probability"]),
-                     float(subnode.attrib["depth"])))
+        hdds.append(
+            (
+                float(subnode.attrib["probability"]),
+                float(subnode.attrib["depth"]),
+            )
+        )
     return PMF(hdds)
 
 
@@ -310,13 +338,16 @@ def parse_point_source_node(node, mfd_spacing=0.1):
     assert "pointSource" in node.tag
     pnt_taglist = get_taglist(node)
     # Get metadata
-    point_id, name, trt = (node.attrib["id"],
-                           node.attrib["name"],
-                           node.attrib["tectonicRegion"])
+    point_id, name, trt = (
+        node.attrib["id"],
+        node.attrib["name"],
+        node.attrib["tectonicRegion"],
+    )
     assert point_id  # Defensive validation!
     # Process geometry
     location, upper_depth, lower_depth = node_to_point_geometry(
-        node.nodes[pnt_taglist.index("pointGeometry")])
+        node.nodes[pnt_taglist.index("pointGeometry")]
+    )
     # Process scaling relation
     msr = node_to_scalerel(node.nodes[pnt_taglist.index("magScaleRel")])
     # Process aspect ratio
@@ -325,18 +356,23 @@ def parse_point_source_node(node, mfd_spacing=0.1):
     mfd = node_to_mfd(node, pnt_taglist)
     # Process nodal planes
     npds = node_to_nodal_planes(
-        node.nodes[pnt_taglist.index("nodalPlaneDist")])
+        node.nodes[pnt_taglist.index("nodalPlaneDist")]
+    )
     # Process hypocentral depths
     hdds = node_to_hdd(node.nodes[pnt_taglist.index("hypoDepthDist")])
-    return mtkPointSource(point_id, name, trt,
-                          geometry=location,
-                          upper_depth=upper_depth,
-                          lower_depth=lower_depth,
-                          mag_scale_rel=msr,
-                          rupt_aspect_ratio=aspect,
-                          mfd=mfd,
-                          nodal_plane_dist=npds,
-                          hypo_depth_dist=hdds)
+    return mtkPointSource(
+        point_id,
+        name,
+        trt,
+        geometry=location,
+        upper_depth=upper_depth,
+        lower_depth=lower_depth,
+        mag_scale_rel=msr,
+        rupt_aspect_ratio=aspect,
+        mfd=mfd,
+        nodal_plane_dist=npds,
+        hypo_depth_dist=hdds,
+    )
 
 
 def parse_area_source_node(node, mfd_spacing=0.1):
@@ -347,13 +383,16 @@ def parse_area_source_node(node, mfd_spacing=0.1):
     assert "areaSource" in node.tag
     area_taglist = get_taglist(node)
     # Get metadata
-    area_id, name, trt = (node.attrib["id"],
-                          node.attrib["name"],
-                          node.attrib["tectonicRegion"])
+    area_id, name, trt = (
+        node.attrib["id"],
+        node.attrib["name"],
+        node.attrib["tectonicRegion"],
+    )
     assert area_id  # Defensive validation!
     # Process geometry
     polygon, upper_depth, lower_depth = node_to_area_geometry(
-        node.nodes[area_taglist.index("areaGeometry")])
+        node.nodes[area_taglist.index("areaGeometry")]
+    )
     # Process scaling relation
     msr = node_to_scalerel(node.nodes[area_taglist.index("magScaleRel")])
     # Process aspect ratio
@@ -362,18 +401,23 @@ def parse_area_source_node(node, mfd_spacing=0.1):
     mfd = node_to_mfd(node, area_taglist)
     # Process nodal planes
     npds = node_to_nodal_planes(
-        node.nodes[area_taglist.index("nodalPlaneDist")])
+        node.nodes[area_taglist.index("nodalPlaneDist")]
+    )
     # Process hypocentral depths
     hdds = node_to_hdd(node.nodes[area_taglist.index("hypoDepthDist")])
-    return mtkAreaSource(area_id, name, trt,
-                         geometry=polygon,
-                         upper_depth=upper_depth,
-                         lower_depth=lower_depth,
-                         mag_scale_rel=msr,
-                         rupt_aspect_ratio=aspect,
-                         mfd=mfd,
-                         nodal_plane_dist=npds,
-                         hypo_depth_dist=hdds)
+    return mtkAreaSource(
+        area_id,
+        name,
+        trt,
+        geometry=polygon,
+        upper_depth=upper_depth,
+        lower_depth=lower_depth,
+        mag_scale_rel=msr,
+        rupt_aspect_ratio=aspect,
+        mfd=mfd,
+        nodal_plane_dist=npds,
+        hypo_depth_dist=hdds,
+    )
 
 
 def parse_simple_fault_node(node, mfd_spacing=0.1, mesh_spacing=1.0):
@@ -384,12 +428,15 @@ def parse_simple_fault_node(node, mfd_spacing=0.1, mesh_spacing=1.0):
     assert "simpleFaultSource" in node.tag
     sf_taglist = get_taglist(node)
     # Get metadata
-    sf_id, name, trt = (node.attrib["id"],
-                        node.attrib["name"],
-                        node.attrib["tectonicRegion"])
+    sf_id, name, trt = (
+        node.attrib["id"],
+        node.attrib["name"],
+        node.attrib["tectonicRegion"],
+    )
     # Process geometry
     trace, dip, upper_depth, lower_depth = node_to_simple_fault_geometry(
-        node.nodes[sf_taglist.index("simpleFaultGeometry")])
+        node.nodes[sf_taglist.index("simpleFaultGeometry")]
+    )
     # Process scaling relation
     msr = node_to_scalerel(node.nodes[sf_taglist.index("magScaleRel")])
     # Process aspect ratio
@@ -398,17 +445,22 @@ def parse_simple_fault_node(node, mfd_spacing=0.1, mesh_spacing=1.0):
     mfd = node_to_mfd(node, sf_taglist)
     # Process rake
     rake = float_(node.nodes[sf_taglist.index("rake")].text)
-    simple_fault = mtkSimpleFaultSource(sf_id, name, trt,
-                                        geometry=None,
-                                        dip=dip,
-                                        upper_depth=upper_depth,
-                                        lower_depth=lower_depth,
-                                        mag_scale_rel=msr,
-                                        rupt_aspect_ratio=aspect,
-                                        mfd=mfd,
-                                        rake=rake)
-    simple_fault.create_geometry(trace, dip, upper_depth, lower_depth,
-                                 mesh_spacing)
+    simple_fault = mtkSimpleFaultSource(
+        sf_id,
+        name,
+        trt,
+        geometry=None,
+        dip=dip,
+        upper_depth=upper_depth,
+        lower_depth=lower_depth,
+        mag_scale_rel=msr,
+        rupt_aspect_ratio=aspect,
+        mfd=mfd,
+        rake=rake,
+    )
+    simple_fault.create_geometry(
+        trace, dip, upper_depth, lower_depth, mesh_spacing
+    )
     return simple_fault
 
 
@@ -420,12 +472,15 @@ def parse_complex_fault_node(node, mfd_spacing=0.1, mesh_spacing=4.0):
     assert "complexFaultSource" in node.tag
     sf_taglist = get_taglist(node)
     # Get metadata
-    sf_id, name, trt = (node.attrib["id"],
-                        node.attrib["name"],
-                        node.attrib["tectonicRegion"])
+    sf_id, name, trt = (
+        node.attrib["id"],
+        node.attrib["name"],
+        node.attrib["tectonicRegion"],
+    )
     # Process geometry
     edges = node_to_complex_fault_geometry(
-        node.nodes[sf_taglist.index("complexFaultGeometry")])
+        node.nodes[sf_taglist.index("complexFaultGeometry")]
+    )
     # Process scaling relation
     msr = node_to_scalerel(node.nodes[sf_taglist.index("magScaleRel")])
     # Process aspect ratio
@@ -434,12 +489,16 @@ def parse_complex_fault_node(node, mfd_spacing=0.1, mesh_spacing=4.0):
     mfd = node_to_mfd(node, sf_taglist)
     # Process rake
     rake = float_(node.nodes[sf_taglist.index("rake")].text)
-    complex_fault = mtkComplexFaultSource(sf_id, name, trt,
-                                          geometry=None,
-                                          mag_scale_rel=msr,
-                                          rupt_aspect_ratio=aspect,
-                                          mfd=mfd,
-                                          rake=rake)
+    complex_fault = mtkComplexFaultSource(
+        sf_id,
+        name,
+        trt,
+        geometry=None,
+        mag_scale_rel=msr,
+        rupt_aspect_ratio=aspect,
+        mfd=mfd,
+        rake=rake,
+    )
     complex_fault.create_geometry(edges, mesh_spacing)
     return complex_fault
 
@@ -449,15 +508,22 @@ class nrmlSourceModelParser(BaseSourceModelParser):
     Parser for a source model in NRML format, permitting partial validation
     such that not all fields need to be specified for the file to be parsed
     """
-    @deprecated(msg='Use openquake.hazardlib.nrml.to_python instead')
-    def read_file(self, identifier, mfd_spacing=0.1, simple_mesh_spacing=1.0,
-                  complex_mesh_spacing=4.0, area_discretization=10.):
+
+    @deprecated(msg="Use openquake.hazardlib.nrml.to_python instead")
+    def read_file(
+        self,
+        identifier,
+        mfd_spacing=0.1,
+        simple_mesh_spacing=1.0,
+        complex_mesh_spacing=4.0,
+        area_discretization=10.0,
+    ):
         """
         Reads in the source model in returns an instance of the :class:
         openquake.hmtk.sourcs.source_model.mtkSourceModel
         """
         sm_node = node_from_xml(self.input_file)[0]
-        nrml04 = 'xmlns/nrml/0.4' in sm_node[0].tag
+        nrml04 = "xmlns/nrml/0.4" in sm_node[0].tag
         if nrml04:
             node_sets = [sm_node]
             sm_name = sm_node.get("name", "")
@@ -468,23 +534,31 @@ class nrmlSourceModelParser(BaseSourceModelParser):
         for node_set in node_sets:
             for node in node_set:
                 if not nrml04:  # get the TRT from the sourceGroup
-                    node.attrib['tectonicRegion'] = node_set['tectonicRegion']
+                    node.attrib["tectonicRegion"] = node_set["tectonicRegion"]
                 if "pointSource" in node.tag:
                     source_model.sources.append(
-                        parse_point_source_node(node, mfd_spacing))
+                        parse_point_source_node(node, mfd_spacing)
+                    )
                 elif "areaSource" in node.tag:
                     source_model.sources.append(
-                        parse_area_source_node(node, mfd_spacing))
+                        parse_area_source_node(node, mfd_spacing)
+                    )
                 elif "simpleFaultSource" in node.tag:
                     source_model.sources.append(
-                        parse_simple_fault_node(node, mfd_spacing,
-                                                simple_mesh_spacing))
+                        parse_simple_fault_node(
+                            node, mfd_spacing, simple_mesh_spacing
+                        )
+                    )
                 elif "complexFaultSource" in node.tag:
                     source_model.sources.append(
-                        parse_complex_fault_node(node, mfd_spacing,
-                                                 complex_mesh_spacing))
+                        parse_complex_fault_node(
+                            node, mfd_spacing, complex_mesh_spacing
+                        )
+                    )
                 # TODO: multiPointSource are not supported
                 else:
-                    print("Source typology %s not recognised - skipping!"
-                          % node.tag)
+                    print(
+                        "Source typology %s not recognised - skipping!"
+                        % node.tag
+                    )
         return source_model

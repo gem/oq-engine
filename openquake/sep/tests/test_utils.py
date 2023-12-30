@@ -3,6 +3,7 @@ import unittest
 import tempfile
 
 import numpy as np
+
 try:
     from osgeo import gdal
 except ImportError:
@@ -11,15 +12,9 @@ except ImportError:
 from openquake.sep.utils import (
     make_2d_array_strides,
     rolling_array_operation,
-    rolling_raster_operation,
     relief,
     make_local_relief_raster,
-    sample_raster_at_points,
     slope_angle_to_gradient,
-    vs30_from_slope,
-    vs30_from_slope_wald_allen_2007,
-    vs30_from_slope_wald_allen_2007_active,
-    vs30_from_slope_wald_allen_2007_stable,
 )
 
 
@@ -41,24 +36,13 @@ class testUtils(unittest.TestCase):
         )
 
     def test_slope_angle_to_gradient_4(self):
-        slopes = np.array([0.0, 0.52359878, 0.78539816, 1.04719755, 1.53588974])
+        slopes = np.array(
+            [0.0, 0.52359878, 0.78539816, 1.04719755, 1.53588974]
+        )
         grads = np.array([0.0, 0.57735027, 1.0, 1.73205081, 28.63625328])
         np.testing.assert_array_almost_equal(
             grads, slope_angle_to_gradient(slopes, unit="rad")
         )
-
-
-class testWaldAllenVs30(unittest.TestCase):
-    def test_wald_allen_vs30_1(self):
-        pass
-
-
-class testVs30(unittest.TestCase):
-    def test_Vs30_WaldAllen_deg_vec(self):
-        slopes = np.array(
-            [0.01, 0.1, 0.2, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 10.0]
-        )
-        pass
 
 
 class test_array_funcs_super_simple(unittest.TestCase):
@@ -252,13 +236,12 @@ class test_array_funcs_super_simple(unittest.TestCase):
 class test_make_local_relief_raster(unittest.TestCase):
     def setUp(self):
         self.test_relief_raster = gdal.Open(test_relief)
-        outfile_handler, outfile = tempfile.mkstemp(suffix='.tiff')
+        outfile_handler, outfile = tempfile.mkstemp(suffix=".tiff")
         self.lrr = make_local_relief_raster(
             test_dem, 5, outfile=outfile, write=False, trim=False
         )
 
     def test_make_local_relief_raster_geo_transform(self):
-
         np.testing.assert_allclose(
             self.lrr.GetGeoTransform(),
             self.test_relief_raster.GetGeoTransform(),

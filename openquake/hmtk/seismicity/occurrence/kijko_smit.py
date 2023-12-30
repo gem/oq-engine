@@ -48,16 +48,24 @@
 
 import numpy as np
 from openquake.hmtk.seismicity.occurrence.base import (
-    SeismicityOccurrence, OCCURRENCE_METHODS)
-from openquake.hmtk.seismicity.occurrence.utils import input_checks, recurrence_table
-from openquake.hmtk.seismicity.occurrence.aki_maximum_likelihood import AkiMaxLikelihood
+    SeismicityOccurrence,
+    OCCURRENCE_METHODS,
+)
+from openquake.hmtk.seismicity.occurrence.utils import (
+    input_checks,
+    recurrence_table,
+)
+from openquake.hmtk.seismicity.occurrence.aki_maximum_likelihood import (
+    AkiMaxLikelihood,
+)
 
 
 @OCCURRENCE_METHODS.add(
-    'calculate',
+    "calculate",
     completeness=True,
     reference_magnitude=0.0,
-    magnitude_interval=0.1)
+    magnitude_interval=0.1,
+)
 class KijkoSmit(SeismicityOccurrence):
     """
     Class to Implement the Kijko & Smit (2012) algorithm for estimation
@@ -69,11 +77,11 @@ class KijkoSmit(SeismicityOccurrence):
         Main function to calculate the a- and b-value
         """
         # Input checks
-        cmag, ctime, ref_mag, dmag, config = input_checks(catalogue,
-                                                          config,
-                                                          completeness)
+        cmag, ctime, ref_mag, dmag, config = input_checks(
+            catalogue, config, completeness
+        )
         ival = 0
-        tolerance = 1E-7
+        tolerance = 1e-7
         number_intervals = np.shape(ctime)[0]
         b_est = np.zeros(number_intervals, dtype=float)
         neq = np.zeros(number_intervals, dtype=float)
@@ -84,40 +92,47 @@ class KijkoSmit(SeismicityOccurrence):
             m_c = np.min(cmag[id0])
             if ival == 0:
                 id1 = np.logical_and(
-                    catalogue.data['year'] >= (ctime[ival] - tolerance),
-                    catalogue.data['magnitude'] >= (m_c - tolerance))
-                nyr[ival] = float(catalogue.end_year) - ctime[ival] + 1.
+                    catalogue.data["year"] >= (ctime[ival] - tolerance),
+                    catalogue.data["magnitude"] >= (m_c - tolerance),
+                )
+                nyr[ival] = float(catalogue.end_year) - ctime[ival] + 1.0
             elif ival == number_intervals - 1:
                 id1 = np.logical_and(
-                    catalogue.data['year'] < (ctime[ival - 1] - tolerance),
-                    catalogue.data['magnitude'] >= (m_c - tolerance))
+                    catalogue.data["year"] < (ctime[ival - 1] - tolerance),
+                    catalogue.data["magnitude"] >= (m_c - tolerance),
+                )
                 nyr[ival] = ctime[ival - 1] - ctime[ival]
             else:
                 id1 = np.logical_and(
-                    catalogue.data['year'] >= (ctime[ival] - tolerance),
-                    catalogue.data['year'] < (ctime[ival - 1] - tolerance))
+                    catalogue.data["year"] >= (ctime[ival] - tolerance),
+                    catalogue.data["year"] < (ctime[ival - 1] - tolerance),
+                )
                 id1 = np.logical_and(
-                    id1, catalogue.data['magnitude'] > (m_c - tolerance))
+                    id1, catalogue.data["magnitude"] > (m_c - tolerance)
+                )
                 nyr[ival] = ctime[ival - 1] - ctime[ival]
             neq[ival] = np.sum(id1)
             # Get a- and b- value for the selected events
-            temp_rec_table = recurrence_table(catalogue.data['magnitude'][id1],
-                                              dmag,
-                                              catalogue.data['year'][id1])
+            temp_rec_table = recurrence_table(
+                catalogue.data["magnitude"][id1],
+                dmag,
+                catalogue.data["year"][id1],
+            )
 
             aki_ml = AkiMaxLikelihood()
-            b_est[ival] = aki_ml._aki_ml(temp_rec_table[:, 0],
-                                         temp_rec_table[:, 1],
-                                         dmag, m_c)[0]
+            b_est[ival] = aki_ml._aki_ml(
+                temp_rec_table[:, 0], temp_rec_table[:, 1], dmag, m_c
+            )[0]
             ival += 1
         total_neq = float(np.sum(neq))
         bval = self._harmonic_mean(b_est, neq)
         sigma_b = bval / np.sqrt(total_neq)
         aval = self._calculate_a_value(bval, total_neq, nyr, cmag, ref_mag)
-        sigma_a = self._calculate_a_value(bval + sigma_b, total_neq, nyr,
-                                          cmag, ref_mag)
+        sigma_a = self._calculate_a_value(
+            bval + sigma_b, total_neq, nyr, cmag, ref_mag
+        )
 
-        if not config['reference_magnitude']:
+        if not config["reference_magnitude"]:
             aval = np.log10(aval)
             sigma_a = np.log10(sigma_a) - aval
         else:
@@ -130,11 +145,11 @@ class KijkoSmit(SeismicityOccurrence):
         """
         weight = neq.astype(float) / np.sum(neq)
         if np.shape(parameters)[0] != np.shape(weight)[0]:
-            raise ValueError('Parameter vector not same shape as weights')
+            raise ValueError("Parameter vector not same shape as weights")
         else:
             average_value = np.zeros(np.shape(parameters)[0], dtype=float)
             id0 = np.logical_not(np.isnan(parameters))
-            average_value = 1. / np.sum(weight[id0] / parameters[id0])
+            average_value = 1.0 / np.sum(weight[id0] / parameters[id0])
         return average_value
 
     def _calculate_a_value(self, bval, nvalue, nyr, cmag, ref_mag):

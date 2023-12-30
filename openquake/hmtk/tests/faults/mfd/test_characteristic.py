@@ -45,9 +45,9 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module to test :openquake.hmtk.faults.mfd.characterisric.Characteristic class
-'''
+"""
 
 import unittest
 import numpy as np
@@ -58,98 +58,113 @@ aaae = np.testing.assert_array_almost_equal
 
 
 class TestSimpleCharacteristic(unittest.TestCase):
-    '''
+    """
     Implements the basic set of tests for the simple estimator of the
     characteristic earthquake for a fault
     :class openquake.hmtk.faults.mfd.characteristic.Characteristic
-    '''
+    """
 
     def setUp(self):
-        '''
-        '''
+        """ """
         self.model = Characteristic()
-        self.config = {'MFD_spacing': 0.1,
-                       'Model_Weight': 1.0,
-                       'Maximum_Magnitude': None,
-                       'Maximum_Uncertainty': None,
-                       'Lower_Bound': -2.,
-                       'Upper_Bound': 2.,
-                       'Sigma': None}
+        self.config = {
+            "MFD_spacing": 0.1,
+            "Model_Weight": 1.0,
+            "Maximum_Magnitude": None,
+            "Maximum_Uncertainty": None,
+            "Lower_Bound": -2.0,
+            "Upper_Bound": 2.0,
+            "Sigma": None,
+        }
         self.msr = WC1994()
 
     def test_model_setup(self):
-        '''
+        """
         Simple test to ensure model sets up correctly
-        '''
+        """
         self.model.setUp(self.config)
-        expected_dict = {'bin_width': 0.1,
-                         'lower_bound': -2.0,
-                         'mfd_model': 'Characteristic',
-                         'mfd_weight': 1.0,
-                         'mmax': None,
-                         'mmax_sigma': None,
-                         'mmin': None,
-                         'occurrence_rate': None,
-                         'sigma': None,
-                         'upper_bound': 2.0}
+        expected_dict = {
+            "bin_width": 0.1,
+            "lower_bound": -2.0,
+            "mfd_model": "Characteristic",
+            "mfd_weight": 1.0,
+            "mmax": None,
+            "mmax_sigma": None,
+            "mmin": None,
+            "occurrence_rate": None,
+            "sigma": None,
+            "upper_bound": 2.0,
+        }
         self.assertDictEqual(self.model.__dict__, expected_dict)
 
     def test_get_mmax(self):
-        '''
+        """
         Tests the function to get Mmax
         Values come from WC1994 (tested in openquake.hazardlib) - only
         functionality is tested for here!
-        '''
+        """
         # Case 1 MMmax and uncertainty specified in config
-        self.config['Maximum_Magnitude'] = 8.0
-        self.config['Maximum_Magnitude_Uncertainty'] = 0.2
+        self.config["Maximum_Magnitude"] = 8.0
+        self.config["Maximum_Magnitude_Uncertainty"] = 0.2
 
         self.model = Characteristic()
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
         self.assertAlmostEqual(self.model.mmax, 8.0)
         self.assertAlmostEqual(self.model.mmax_sigma, 0.2)
 
         # Case 2: Mmax and uncertainty not specified in config
-        self.config['Maximum_Magnitude'] = None
-        self.config['Maximum_Magnitude_Uncertainty'] = None
+        self.config["Maximum_Magnitude"] = None
+        self.config["Maximum_Magnitude_Uncertainty"] = None
 
         self.model = Characteristic()
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
         self.assertAlmostEqual(self.model.mmax, 7.9880073)
         self.assertAlmostEqual(self.model.mmax_sigma, 0.23)
 
     def test_get_mfd(self):
-        '''
+        """
         Tests the calculation of activity rates for the simple
         characteristic earthquake distribution.
 
-        '''
+        """
 
         # Test case 1: Ordinatry fault with Area 8500 km ** 2 (Mmax ~ 8.0),
         # and a slip rate of 5 mm/yr. Double truncated Gaussian between [-2, 2]
         # standard deviations with sigma = 0.12
-        self.config = {'MFD_spacing': 0.1,
-                       'Model_Weight': 1.0,
-                       'Maximum_Magnitude': None,
-                       'Maximum_Uncertainty': None,
-                       'Lower_Bound': -2.,
-                       'Upper_Bound': 2.,
-                       'Sigma': 0.12}
+        self.config = {
+            "MFD_spacing": 0.1,
+            "Model_Weight": 1.0,
+            "Maximum_Magnitude": None,
+            "Maximum_Uncertainty": None,
+            "Lower_Bound": -2.0,
+            "Upper_Bound": 2.0,
+            "Sigma": 0.12,
+        }
         self.model = Characteristic()
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
-        _, _, _ = self.model.get_mfd(5.0, 8500.)
-        aaae(self.model.occurrence_rate,
-             np.array([4.20932867e-05, 2.10890168e-04, 3.80422666e-04,
-                       3.56294331e-04, 1.73223702e-04, 2.14781079e-05]))
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
+        _, _, _ = self.model.get_mfd(5.0, 8500.0)
+        aaae(
+            self.model.occurrence_rate,
+            np.array(
+                [
+                    4.20932867e-05,
+                    2.10890168e-04,
+                    3.80422666e-04,
+                    3.56294331e-04,
+                    1.73223702e-04,
+                    2.14781079e-05,
+                ]
+            ),
+        )
         expected_rate = np.sum(self.model.occurrence_rate)
         # Test case 2: Same fault with no standard deviation
-        self.config['Sigma'] = None
+        self.config["Sigma"] = None
         self.model.setUp(self.config)
-        self.model.get_mmax(self.config, self.msr, 0., 8500.)
-        _, _, _ = self.model.get_mfd(5.0, 8500.)
+        self.model.get_mmax(self.config, self.msr, 0.0, 8500.0)
+        _, _, _ = self.model.get_mfd(5.0, 8500.0)
         aaae(0.0011844, self.model.occurrence_rate)
         # As a final check - ensure that the sum of the activity rates from the
         # truncated Gaussian model is equal to the rate from the model with no

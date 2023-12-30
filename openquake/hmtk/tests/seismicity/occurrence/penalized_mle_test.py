@@ -67,13 +67,17 @@ def build_catalogue_from_file(filename):
     Creates a "minimal" catalogue from a raw csv file
     """
     raw_data = np.genfromtxt(filename, delimiter=",")
-    return Catalogue.make_from_dict({"eventID": raw_data[:, 0].astype(int),
-                                     "year": raw_data[:, 1].astype(int),
-                                     "dtime": raw_data[:, 2],
-                                     "longitude": raw_data[:, 3],
-                                     "latitude": raw_data[:, 4],
-                                     "magnitude": raw_data[:, 5],
-                                     "depth": raw_data[:, 6]})
+    return Catalogue.make_from_dict(
+        {
+            "eventID": raw_data[:, 0].astype(int),
+            "year": raw_data[:, 1].astype(int),
+            "dtime": raw_data[:, 2],
+            "longitude": raw_data[:, 3],
+            "latitude": raw_data[:, 4],
+            "magnitude": raw_data[:, 5],
+            "depth": raw_data[:, 6],
+        }
+    )
 
 
 class PenalizedMLETestCase(unittest.TestCase):
@@ -86,11 +90,15 @@ class PenalizedMLETestCase(unittest.TestCase):
         cat_file = os.path.join(BASE_DATA_PATH, "synthetic_test_cat1.csv")
         self.catalogue = build_catalogue_from_file(cat_file)
         self.config = {"reference_magnitude": 3.0}
-        self.completeness = np.array([[1990., 3.0],
-                                      [1975., 4.0],
-                                      [1960., 5.0],
-                                      [1930., 6.0],
-                                      [1910., 7.0]])
+        self.completeness = np.array(
+            [
+                [1990.0, 3.0],
+                [1975.0, 4.0],
+                [1960.0, 5.0],
+                [1930.0, 6.0],
+                [1910.0, 7.0],
+            ]
+        )
 
     def test_rate_counting(self):
         """
@@ -100,39 +108,52 @@ class PenalizedMLETestCase(unittest.TestCase):
         pen_mle = PenalizedMLE()
         self.config["mmax"] = 8.0
         # Run counting algorithm
-        delta, kval, tval, lamda, cum_rate, cum_count, nmx, nmt = \
-            pen_mle._get_rate_counts(self.catalogue,
-                                     self.config,
-                                     self.completeness)
+        (
+            delta,
+            kval,
+            tval,
+            lamda,
+            cum_rate,
+            cum_count,
+            nmx,
+            nmt,
+        ) = pen_mle._get_rate_counts(
+            self.catalogue, self.config, self.completeness
+        )
         # Delta is the difference in magnitude from the minimum magnitude
         # of completeness
         np.testing.assert_array_almost_equal(
-            delta,
-            np.array([0., -1., -2., -3., -4., -5.]))
+            delta, np.array([0.0, -1.0, -2.0, -3.0, -4.0, -5.0])
+        )
         # K-value is the count of earthquakes in the completeness bin
         np.testing.assert_array_almost_equal(
-            kval,
-            np.array([1749., 391., 72., 13., 1.]))
+            kval, np.array([1749.0, 391.0, 72.0, 13.0, 1.0])
+        )
         # T-val is the number of years for which each count applies
         np.testing.assert_array_almost_equal(
-            tval,
-            np.array([20., 35., 50., 80., 100.]))
+            tval, np.array([20.0, 35.0, 50.0, 80.0, 100.0])
+        )
         # lamda is the rate of events (count / number of years)
         np.testing.assert_array_almost_equal(
             lamda,
-            np.array([1749. / 20.,
-                      391. / 35.,
-                      72. / 50.,
-                      13. / 80,
-                      1. / 100.]))
+            np.array(
+                [
+                    1749.0 / 20.0,
+                    391.0 / 35.0,
+                    72.0 / 50.0,
+                    13.0 / 80,
+                    1.0 / 100.0,
+                ]
+            ),
+        )
         # Cumulative rate
         np.testing.assert_array_almost_equal(
-            cum_rate,
-            np.array([np.sum(lamda[i:]) for i in range(len(lamda))]))
+            cum_rate, np.array([np.sum(lamda[i:]) for i in range(len(lamda))])
+        )
         # Cumulative count
         np.testing.assert_array_almost_equal(
-            cum_count,
-            np.array([np.sum(kval[i:]) for i in range(len(kval))]))
+            cum_count, np.array([np.sum(kval[i:]) for i in range(len(kval))])
+        )
         # Numbers of magnitude and time bins
         self.assertEqual(nmx, 5)
         self.assertEqual(nmt, 5)
@@ -152,21 +173,31 @@ class PenalizedMLETestCase(unittest.TestCase):
         pen_mle = PenalizedMLE()
         # Magnitudes from 4.0 to 8.0 in 0.5 increments
         m_data = 4.0 - np.array([4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0])
-        count_data = np.array([7., 7., 2., 1., 1., 0., 0., 0.])
-        cum_count = np.array([np.sum(count_data[i:])
-                              for i in range(len(count_data))])
-        yr_data = np.array([203., 209., 256., 303., 338., 363., 363., 363.])
+        count_data = np.array([7.0, 7.0, 2.0, 1.0, 1.0, 0.0, 0.0, 0.0])
+        cum_count = np.array(
+            [np.sum(count_data[i:]) for i in range(len(count_data))]
+        )
+        yr_data = np.array(
+            [203.0, 209.0, 256.0, 303.0, 338.0, 363.0, 363.0, 363.0]
+        )
         test_config = {"area": 32101.0}
         # Prior beta
-        betap = 0.85 * np.log(10.)
+        betap = 0.85 * np.log(10.0)
         # Penalty weight
-        wbu = 16.0 / np.log(10.)
+        wbu = 16.0 / np.log(10.0)
         # a-prior and weight
         wau = 0.0
-        apu = 1.0
         bval, sigmab, rate, sigma_rate, rho = pen_mle._run_penalized_mle(
-            test_config, m_data, count_data, yr_data, cum_count, betap, betap,
-            wbu, wau)
+            test_config,
+            m_data,
+            count_data,
+            yr_data,
+            cum_count,
+            betap,
+            betap,
+            wbu,
+            wau,
+        )
         self.assertAlmostEqual(bval, 0.7664, 4)
         self.assertAlmostEqual(sigmab, 0.1178, 4)
         self.assertAlmostEqual(rate, 0.0825, 4)
@@ -188,21 +219,31 @@ class PenalizedMLETestCase(unittest.TestCase):
         pen_mle = PenalizedMLE()
         # Magnitudes from 4.0 to 8.0 in 0.5 increments
         m_data = 4.0 - np.array([4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0])
-        count_data = np.array([11., 3., 1., 0., 0., 0., 0., 0.])
-        cum_count = np.array([np.sum(count_data[i:])
-                              for i in range(len(count_data))])
-        yr_data = np.array([105., 129., 159., 199., 236., 262., 304., 346.])
+        count_data = np.array([11.0, 3.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        cum_count = np.array(
+            [np.sum(count_data[i:]) for i in range(len(count_data))]
+        )
+        yr_data = np.array(
+            [105.0, 129.0, 159.0, 199.0, 236.0, 262.0, 304.0, 346.0]
+        )
         test_config = {"area": 185657.0}
         # Prior beta
-        betap = 0.85 * np.log(10.)
+        betap = 0.85 * np.log(10.0)
         # Penalty weight
-        wbu = 16.0 / np.log(10.)
+        wbu = 16.0 / np.log(10.0)
         # a-prior and weight
         wau = 0.0
-        apu = 1.0
         bval, sigmab, rate, sigma_rate, rho = pen_mle._run_penalized_mle(
-            test_config, m_data, count_data, yr_data, cum_count, betap, betap,
-            wbu, wau)
+            test_config,
+            m_data,
+            count_data,
+            yr_data,
+            cum_count,
+            betap,
+            betap,
+            wbu,
+            wau,
+        )
         self.assertAlmostEqual(bval, 0.9921, 4)
         self.assertAlmostEqual(sigmab, 0.1335, 4)
         self.assertAlmostEqual(rate, 0.1276, 4)
@@ -215,19 +256,30 @@ class PenalizedMLETestCase(unittest.TestCase):
         and asserts that the known b-value and (approx) rate
         are within a narrow range (0.4 - 0.6 quantiles)
         """
-        poly1 = Polygon([Point(20.0, 30.0), Point(20.0, 40.0),
-                         Point(30.0, 40.0), Point(30.0, 30.0)])
-        self.config = {"b_prior": 0.9, "reference_magnitude": 3.0,
-                       "b_prior_weight": 25.0, "a_prior": 0.0,
-                       "a_prior_weight": 0.0,
-                       "area": area_of_polygon(poly1), "mmax": 8.0}
+        poly1 = Polygon(
+            [
+                Point(20.0, 30.0),
+                Point(20.0, 40.0),
+                Point(30.0, 40.0),
+                Point(30.0, 30.0),
+            ]
+        )
+        self.config = {
+            "b_prior": 0.9,
+            "reference_magnitude": 3.0,
+            "b_prior_weight": 25.0,
+            "a_prior": 0.0,
+            "a_prior_weight": 0.0,
+            "area": area_of_polygon(poly1),
+            "mmax": 8.0,
+        }
 
         sample_size = [5, 10, 20, 50, 100, 200, 500, 1000]
-        expected_b = 0.9
         for sample in sample_size:
             outputs = []
-            expected_rate = (float(sample) /
-                             float(self.catalogue.get_number_events())) * 100.
+            expected_rate = (
+                float(sample) / float(self.catalogue.get_number_events())
+            ) * 100.0
             for i in range(1000):
                 idx = np.arange(self.catalogue.get_number_events())
                 np.random.shuffle(idx)
@@ -236,9 +288,8 @@ class PenalizedMLETestCase(unittest.TestCase):
                 new_cat.select_catalogue_events(np.sort(idx))
                 mle = PenalizedMLE()
                 bval, sigmab, rate, sigma_rate = mle.calculate(
-                    new_cat,
-                    self.config,
-                    self.completeness)
+                    new_cat, self.config, self.completeness
+                )
                 outputs.append([bval, sigmab, rate, sigma_rate])
             outputs = np.array(outputs)
             mean_b = np.mean(outputs[:, 0])
@@ -246,10 +297,14 @@ class PenalizedMLETestCase(unittest.TestCase):
             mean_rate = np.mean(outputs[:, 2])
             mean_sigma_rate = np.mean(outputs[:, 3])
             # Assert that b-value is in the expected range
-            l_b, u_b = (norm.ppf(0.4, loc=mean_b, scale=mean_sigmab),
-                        norm.ppf(0.6, loc=mean_b, scale=mean_sigmab))
+            l_b, u_b = (
+                norm.ppf(0.4, loc=mean_b, scale=mean_sigmab),
+                norm.ppf(0.6, loc=mean_b, scale=mean_sigmab),
+            )
             self.assertTrue((0.9 >= l_b) and (0.9 <= u_b))
             # Assert that rate is in the expected range
-            l_b, u_b = (norm.ppf(0.4, loc=mean_rate, scale=mean_sigma_rate),
-                        norm.ppf(0.6, loc=mean_rate, scale=mean_sigma_rate))
+            l_b, u_b = (
+                norm.ppf(0.4, loc=mean_rate, scale=mean_sigma_rate),
+                norm.ppf(0.6, loc=mean_rate, scale=mean_sigma_rate),
+            )
             self.assertTrue((expected_rate >= l_b) and (expected_rate <= u_b))

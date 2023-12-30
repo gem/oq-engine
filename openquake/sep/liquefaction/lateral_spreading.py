@@ -1,11 +1,11 @@
 from typing import Union, List
 
-import gzip, os
 import numpy as np
-import pandas as pd
-import pickle
 
-from openquake.sep.liquefaction import HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE, FT_PER_M
+from openquake.sep.liquefaction import (
+    HAZUS_LIQUEFACTION_PGA_THRESHOLD_TABLE,
+    FT_PER_M,
+)
 
 INCH_PER_M = FT_PER_M * 12.0
 
@@ -31,7 +31,9 @@ def _hazus_displacement_correction_factor(
     :returns:
         Correction factor to be applied to lateral spreading displacements.
     """
-    return m3_coeff * (mag ** 3) + m2_coeff * (mag ** 2) + m1_coeff * mag + intercept
+    return (
+        m3_coeff * (mag**3) + m2_coeff * (mag**2) + m1_coeff * mag + intercept
+    )
 
 
 def hazus_lateral_spreading_displacement(
@@ -71,7 +73,9 @@ def hazus_lateral_spreading_displacement(
         pga_threshold = np.array(
             [pga_threshold_table[susc_cat] for susc_cat in liq_susc_cat]
         )
-    disp_inch = hazus_lateral_spreading_displacement_fn(mag, pga, pga_threshold)
+    disp_inch = hazus_lateral_spreading_displacement_fn(
+        mag, pga, pga_threshold
+    )
     if return_unit == "m":
         disp_m = disp_inch / (INCH_PER_M)
         return disp_m
@@ -82,7 +86,8 @@ def hazus_lateral_spreading_displacement(
         return disp_inch
     else:
         raise ValueError(
-            "Please choose 'm' or 'cm' or 'in' for return_unit, got %s" % return_unit
+            "Please choose 'm' or 'cm' or 'in' for return_unit, got %s"
+            % return_unit
         )
 
 
