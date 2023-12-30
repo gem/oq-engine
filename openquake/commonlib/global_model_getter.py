@@ -5,14 +5,13 @@ import pprint
 import logging
 import time
 import csv
-import sys
 import os
 import numpy as np
 from shapely.geometry import Point, shape
 from shapely.strtree import STRtree
 from shapely import wkt, points
 from collections import Counter
-from openquake.baselib import sap
+from openquake.baselib import sap, general
 from openquake.hazardlib.geo.packager import fiona
 from openquake.qa_tests_data import mosaic, global_risk
 
@@ -49,8 +48,6 @@ class GlobalModelGetter:
                     self.dir, 'geoBoundariesCGAZ_ADM0.shp')
         self.model_code_field = model_code_field
         self.shapefile_path = shapefile_path
-        self.sindex = self.build_spatial_index(model_codes)
-        self.sinfo = self.build_spatial_info(model_codes)
         self.model_codes = model_codes
 
     def get_geoms(self, model_codes):
@@ -61,57 +58,43 @@ class GlobalModelGetter:
                     self.model_code_field] in model_codes]
         return geoms
 
-    def build_spatial_index(self, model_codes):
-        logging.info('Building spatial index')
-        t0 = time.time()
+    @general.cached_property
+    def sindex(self):
         with fiona.open(self.shapefile_path, 'r') as shp:
-            if model_codes is not None:
+            if self.model_codes is not None:
                 geoms = [
                     shape(polygon['geometry']) for polygon in shp
                     if polygon['properties'][
-                        self.model_code_field] in model_codes]
+                        self.model_code_field] in self.model_codes]
             else:
                 geoms = [shape(polygon['geometry']) for polygon in shp]
             sindex = STRtree(geoms)
-        sindex_building_time = time.time() - t0
-        logging.info(f'Spatial index built in {sindex_building_time} seconds')
         return sindex
 
-    def build_spatial_info(self, model_codes=None):
+    @general.cached_property
+    def sinfo(self):
         # if model_codes is not None, build the index only for those
-        logging.info('Reading spatial information')
-        t0 = time.time()
         with fiona.open(self.shapefile_path, 'r') as shp:
             # NOTE: the dtype is hardcoded and it might not be optimal
             dtype = [(name, 'U50') for name in list(shp[0]['properties'])]
-            if model_codes is not None:
+            if self.model_codes is not None:
                 sinfo = np.array(
                     [tuple(zone['properties'].values()) for zone in shp
                      if zone['properties'][
-                         self.model_code_field] in model_codes],
+                         self.model_code_field] in self.model_codes],
                     dtype=dtype)
             else:
                 sinfo = np.array(
                     [tuple(zone['properties'].values()) for zone in shp],
                     dtype=dtype)
-        reading_time = time.time() - t0
-        logging.info(f'Spatial information read in {reading_time} seconds')
         return sinfo
 
     def get_models_list(self):
         """
         Returns a list of all models in the shapefile
         """
-        if self.sinfo is not None:
-            models = list(np.unique([info[self.model_code_field]
-                                     for info in self.sinfo]))
-            return models
-        if fiona is None:
-            print('fiona/GDAL is not installed properly!', sys.stderr)
-            return []
-        with fiona.open(self.shapefile_path, 'r') as shp:
-            models = [polygon['properties'][self.model_code_field]
-                      for polygon in shp]
+        models = list(np.unique([info[self.model_code_field]
+                                 for info in self.sinfo]))
         return models
 
     def is_inside(self, geoms, model_code):
