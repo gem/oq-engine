@@ -4,8 +4,10 @@ import numpy as np
 
 g: float = 9.81
 
+
 def critical_accel_rock_slope(
-    factor_of_safety: Union[float, np.ndarray], slope: Union[float, np.ndarray],
+    factor_of_safety: Union[float, np.ndarray],
+    slope: Union[float, np.ndarray],
     friction_angle: Union[float, np.ndarray],
 ) -> Union[float, np.ndarray]:
     """
@@ -29,9 +31,9 @@ def critical_accel_rock_slope(
     beta = 0.5 * (slope + friction_angle)
     crit_accel = (factor_of_safety - 1) * np.sin(np.radians(beta)) * g
     if np.isscalar(crit_accel):
-        return max([0., crit_accel])
+        return max([0.0, crit_accel])
     else:
-        return np.array([max([0., ca]) for ca in crit_accel])
+        return np.array([max([0.0, ca]) for ca in crit_accel])
 
 
 def newmark_displ_from_pga(
@@ -40,7 +42,7 @@ def newmark_displ_from_pga(
     c1: float = 0.215,
     c2: float = 2.341,
     c3: float = -1.438,
-    crit_accel_threshold: float = 0.05
+    crit_accel_threshold: float = 0.05,
 ) -> Union[float, np.ndarray]:
     """
     Landslide displacement calculated from PGA, and critical acceleration,
@@ -50,7 +52,7 @@ def newmark_displ_from_pga(
         Peak Ground Acceleration, measured in g.
 
     :param critical_accel:
-        Critical Acceleration, measured in g; this is the acceleration at 
+        Critical Acceleration, measured in g; this is the acceleration at
         which the rock-slope failures occur.
 
     :param c1:
@@ -58,10 +60,10 @@ def newmark_displ_from_pga(
 
     :param c2:
         Empirical constant
-    
+
     :param c3:
         Empirical constant
-    
+
     :param crit_accel_threshold:
         Lower bound for critical acceleration. Values close to or below zero
         may reflect an incorrect factor of safety calculation or site
@@ -69,7 +71,7 @@ def newmark_displ_from_pga(
         Defaults to 0.05
 
     :returns:
-        Predicted earthquake displacement in meters. 
+        Predicted earthquake displacement in meters.
     """
 
     # Corrections of invalid values
@@ -91,9 +93,8 @@ def newmark_displ_from_pga(
         accel_ratio[accel_ratio > 1.0] = 1.0
         accel_ratio[accel_ratio <= crit_accel_threshold] = crit_accel_threshold
 
-
     pow_1 = (1 - accel_ratio) ** c2
-    pow_2 = accel_ratio ** c3
+    pow_2 = accel_ratio**c3
 
     pow_prod = pow_1 * pow_2
 
@@ -104,7 +105,7 @@ def newmark_displ_from_pga(
     else:
         pow_prod[pow_prod == 0.0] = 1e-100
 
-    log_d = c1 + np.log10(pow_prod) 
+    log_d = c1 + np.log10(pow_prod)
 
     d_cm = 10.0 ** (log_d)
 
@@ -119,4 +120,3 @@ def newmark_displ_from_pga(
     d_m = d_cm / 100.0
 
     return d_m
-
