@@ -21,6 +21,5 @@
 Package :mod:`openquake.hmtk.parsers.catalogue` contains base classes and
 implementations of catalogue parsers.
 """
-from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import (
-    CsvCatalogueParser,
-)  # noqa
+from openquake.hmtk.parsers.catalogue.csv_catalogue_parser import \
+    CsvCatalogueParser  # noqa
