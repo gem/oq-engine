@@ -712,8 +712,8 @@ class SourceModelLogicTree(object):
                 "only one filter is allowed per branchset")
 
         if 'applyToTectonicRegionType' in f:
-            if not f['applyToTectonicRegionType'] \
-                    in self.tectonic_region_types:
+            if f['applyToTectonicRegionType'] \
+                    not in self.tectonic_region_types:
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     "source models don't define sources of tectonic region "

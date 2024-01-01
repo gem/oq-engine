@@ -1107,10 +1107,8 @@ def _dbg_plot(new_edges=None, profs=None, npr=None, ref_idx=None,
             edg = np.array(pro)
             idx = np.nonzero(np.isfinite(edg[:, 0]))
             edg = np.squeeze(edg[idx, :])
-            try:
-                plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'b')
-            except:
-                pass
+            plt.plot(edg[:, 0], edg[:, 1], edg[:, 2], 'b')
+
     ax.invert_zaxis()
 
     if not hold:

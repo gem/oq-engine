@@ -50,8 +50,7 @@ def _compute_f4(C, mag, rrup):
     idx = (rrup > 18) & (rrup <= 24)
     fhw_r[idx] = C['ca9'] * (1 - (rrup[idx] - 18.) / 7.)
 
-    f4 = fhw_m * fhw_r
-
+    # f4 = fhw_m * fhw_r
     # Not used in current implementation of McVerry 2006, but keep here
     # for future use (return f4)
 

@@ -698,8 +698,8 @@ class SiteCollection(object):
         :param length: length of the geohash in the range 1..8
         :returns: an array of N geohashes, one per site
         """
-        l = numpy.uint8(length)
-        arr = CODE32[geohash(self['lon'], self['lat'], l)]
+        ln = numpy.uint8(length)
+        arr = CODE32[geohash(self['lon'], self['lat'], ln)]
         return [row.tobytes() for row in arr]
 
     def num_geohashes(self, length):
