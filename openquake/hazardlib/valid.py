@@ -35,7 +35,7 @@ from openquake.baselib import config, hdf5
 from openquake.hazardlib import imt, scalerel, gsim, pmf, site, tom
 from openquake.hazardlib.gsim.base import registry, gsim_aliases
 from openquake.hazardlib.calc.filters import (
-    IntegrationDistance, floatdict)  # needed
+    IntegrationDistance, floatdict)  # noqa
 
 PRECISION = pmf.PRECISION
 

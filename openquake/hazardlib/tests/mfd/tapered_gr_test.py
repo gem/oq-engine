@@ -16,8 +16,6 @@
 
 # pylint: disable=missing-docstring,protected-access
 
-import unittest
-import numpy as np
 from openquake.hazardlib.mfd import TaperedGRMFD
 
 from openquake.hazardlib.tests.mfd.base_test import BaseMFDTestCase
