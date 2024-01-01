@@ -157,7 +157,6 @@ class MultiLineTestCase(unittest.TestCase):
         ml = MultiLine(self.lines)
         ml.set_tu(mesh)
         uupp = ml.uut
-        tupp = ml.tut
         np.testing.assert_almost_equal([0.0011659], uupp)
 
     def test_tu_figure09(self):
