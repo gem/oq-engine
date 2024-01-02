@@ -51,7 +51,6 @@ def print_feature(fiona_file):
     rows = []
     for feature in fiona_file:
         dic = dict(feature['properties'])
-        dic['id'] = feature['id']
         dic['geom'] = shape(feature['geometry']).__class__.__name__
         header = list(dic)
         rows.append(dic.values())
