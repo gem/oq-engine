@@ -382,7 +382,6 @@ def reduce_sources(sources_with_same_id, full_lt):
     :returns: a list of truly unique sources, ordered by trt_smr
     """
     out = []
-    srcid = sources_with_same_id[0].source_id
     add_checksums(sources_with_same_id)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
@@ -391,8 +390,6 @@ def reduce_sources(sources_with_same_id, full_lt):
             src.trt_smr = tuple(s.trt_smr for s in srcs)
         else:
             src.trt_smr = src.trt_smr,
-        # tup = full_lt.get_trt_smrs(srcid)
-        # assert src.trt_smr == tup, (src.trt_smr, tup)
         out.append(src)
     out.sort(key=operator.attrgetter('trt_smr'))
     return out

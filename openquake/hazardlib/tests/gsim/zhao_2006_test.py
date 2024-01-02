@@ -23,7 +23,7 @@ from openquake.hazardlib.gsim.zhao_2006 import (ZhaoEtAl2006Asc,
                                                 ZhaoEtAl2006SSlabNSHMP2014,
                                                 ZhaoEtAl2006SInterCascadia,
                                                 ZhaoEtAl2006SSlabCascadia)
-from openquake.hazardlib.gsim.base import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.const import StdDev
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase

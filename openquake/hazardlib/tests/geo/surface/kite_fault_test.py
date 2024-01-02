@@ -811,7 +811,7 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         if PLOTTING:
             title = 'Simple case: Top alignment'
             title += '(IdealisedAsimmetricMeshTest)'
-            ax = ppp(self.profiles, srfc, title)
+            ppp(self.profiles, srfc, title)
 
         # Test
         self.assertTrue(np.any(np.isnan(srfc.mesh.lons[0, :])))
@@ -896,7 +896,7 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
                                          sampling, idl, alg)
-        idx = np.isfinite(smsh.mesh.lons[:, :])
+        np.isfinite(smsh.mesh.lons[:, :])
         #self.assertEqual(np.sum(np.sum(idx)), 207)
 
         if PLOTTING:

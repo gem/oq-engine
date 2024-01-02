@@ -21,7 +21,7 @@ import numpy as np
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib import contexts
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.cauzzi_2014 import CauzziEtAl2014RhypoGermany
 from openquake.hazardlib.gsim.derras_2014 import DerrasEtAl2014RhypoGermany
 from openquake.hazardlib.gsim.akkar_2014 import AkkarEtAlRhyp2014

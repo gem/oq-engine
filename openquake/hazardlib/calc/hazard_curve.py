@@ -47,8 +47,10 @@ import numpy
 from openquake.baselib.performance import Monitor
 from openquake.baselib.parallel import sequential_apply
 from openquake.baselib.general import DictArray, groupby
-from openquake.hazardlib.probability_map import ProbabilityMap, ProbabilityCurve
-from openquake.hazardlib.gsim.base import ContextMaker, PmapMaker
+from openquake.hazardlib.probability_map import (
+    ProbabilityMap, ProbabilityCurve
+)
+from openquake.hazardlib.contexts import ContextMaker, PmapMaker
 from openquake.hazardlib.calc.filters import SourceFilter
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.tom import PoissonTOM, FatedTOM

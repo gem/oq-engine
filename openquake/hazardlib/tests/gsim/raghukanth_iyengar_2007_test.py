@@ -30,7 +30,7 @@ and subclasses of same.
 import warnings
 import numpy as np
 
-from openquake.hazardlib import gsim, contexts, imt
+from openquake.hazardlib import contexts, imt
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
 
 from openquake.hazardlib.gsim.raghukanth_iyengar_2007 import (
@@ -58,7 +58,7 @@ class RaghukanthIyengar2007TestCase(BaseGSIMTestCase):
 
     def test_warning(self):
         # Warning should be thrown for any vs30 below limit for NEHRP class D
-        ctx = gsim.base.RuptureContext()
+        ctx = contexts.RuptureContext()
         ctx.sids = np.uint32([0])
 
         # set reasonable default values
