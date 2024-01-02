@@ -24,8 +24,12 @@ import unittest.mock as mock
 import logging
 import operator
 import collections
+
+import fiona
+from shapely.geometry import shape
 import numpy
 from decorator import FunctionMaker
+
 from openquake.baselib import config
 from openquake.baselib.general import groupby, gen_subclasses, humansize
 from openquake.baselib.performance import Monitor
@@ -41,6 +45,17 @@ from openquake.calculators.extract import extract
 from openquake.calculators import base, reportwriter
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import DISPLAY_NAME
+
+
+def print_feature(fiona_file):
+    rows = []
+    for feature in fiona_file:
+        dic = dict(feature['properties'])
+        dic['id'] = feature['id']
+        dic['geom'] = shape(feature['geometry']).__class__.__name__
+        header = list(dic)
+        rows.append(dic.values())
+    print(text_table(rows, header, ext='org'))
 
 
 def source_model_info(sm_nodes):
@@ -204,6 +219,9 @@ def main(what, report=False):
                 print(logictree.GsimLogicTree(what))
         else:
             print(node.to_str())
+    elif what.endswith('.shp'):
+        with fiona.open(what) as f:
+            print_feature(f)
     elif what.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:
