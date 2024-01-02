@@ -550,7 +550,7 @@ def distance_to_semi_arc(alon, alat, aazimuth, plons, plats):
     Parameters are the same as for :func:`distance_to_arc`.
     """
 
-    if type(plons) is float:
+    if isinstance(plons, float):
         plons = np.array([plons])
         plats = np.array([plats])
 

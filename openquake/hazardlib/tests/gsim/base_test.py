@@ -23,13 +23,14 @@ import numpy
 
 from openquake.hazardlib import const, valid
 from openquake.hazardlib.gsim.base import (
-    GMPE, gsim_aliases, SitesContext, RuptureContext,
-    NotVerifiedWarning, DeprecationWarning)
+    GMPE, gsim_aliases, NotVerifiedWarning, DeprecationWarning)
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.imt import PGA
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source.rupture import BaseRupture
-from openquake.hazardlib.gsim.base import ContextMaker
+from openquake.hazardlib.contexts import (
+    ContextMaker, SitesContext, RuptureContext
+)
 from openquake.hazardlib.gsim.abrahamson_gulerce_2020 import (
     AbrahamsonGulerce2020SInter)
 aac = numpy.testing.assert_allclose

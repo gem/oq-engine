@@ -20,7 +20,7 @@ import numpy as np
 from openquake.hazardlib.imt import SA, PGA
 from openquake.hazardlib import const
 from openquake.hazardlib.tests.gsim.utils import BaseGSIMTestCase
-from openquake.hazardlib.gsim.base import RuptureContext
+from openquake.hazardlib.contexts import RuptureContext
 from openquake.hazardlib.gsim.tromans_2019 import (
     TromansEtAl2019, TromansEtAl2019SigmaMu, HOMOSKEDASTIC_PHI,
     HOMOSKEDASTIC_TAU, HETEROSKEDASTIC_PHI, HETEROSKEDASTIC_TAU,
