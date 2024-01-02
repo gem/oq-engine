@@ -38,8 +38,7 @@ class KiteSurfaceBenchmark(unittest.TestCase):
         self.prf, _ = _read_profiles(path)
 
         if PLOTTING:
-            pass
-            #ppp(self.prf, title=title, ax_equal=True)
+            ppp(self.prf, title='Profiles', ax_equal=True)
 
     def test_mesh(self):
 
