@@ -47,7 +47,7 @@ from openquake.calculators.views import view, text_table
 from openquake.calculators.export import DISPLAY_NAME
 
 
-def print_feature(fiona_file):
+def print_features(fiona_file):
     rows = []
     for feature in fiona_file:
         dic = dict(feature['properties'])
@@ -220,7 +220,7 @@ def main(what, report=False):
             print(node.to_str())
     elif what.endswith('.shp'):
         with fiona.open(what) as f:
-            print_feature(f)
+            print_features(f)
     elif what.endswith(('.ini', '.zip')):
         with Monitor('info', measuremem=True) as mon:
             if report:
