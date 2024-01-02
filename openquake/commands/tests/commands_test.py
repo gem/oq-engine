@@ -313,11 +313,11 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_extract_ruptures(self):
         job_ini = os.path.join(
             os.path.dirname(eb_case_1.__file__), 'job_ruptures.ini')
-        with Print.patch() as p:
+        with Print.patch():
             calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
         calc_id = calc.datastore.calc_id
         tempdir = tempfile.mkdtemp()
-        with Print.patch() as p:
+        with Print.patch():
             sap.runline("openquake.commands extract ruptures "
                         f"{calc_id} --extract-dir={tempdir}")
         fnames = os.listdir(tempdir)
