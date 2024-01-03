@@ -240,20 +240,52 @@ the vs30 file with a nearest neighbour algorithm::
 	                        output file
 
 The command works in two modes: with non-gridded exposures (the default) and with gridded exposures. In the first case 
-the assets are aggregated in unique locations and for each location the vs30 coming from the closest vs30 record is taken. 
+the unique locations of the assets are identified, and for each location the vs30 coming from the closest vs30 record is taken. 
 In the second case, when a *grid_spacing* parameter is passed, a grid containing all of the exposure is built and the 
 points with assets are associated to the vs30 records. In both cases if the closest vs30 record is over the 
 *site_param_distance* - which by default is 5 km - a warning is printed.
 
 In large risk calculations, it is quite preferable to use the gridded mode because with a well spaced grid,
 
-1. the results are the nearly the same than without the grid and
+1. the results are nearly the same than without the grid and
 2. the calculation is a lot faster and uses a lot less memory.
 
 Gridding of the exposure makes large calculations more manageable. The command is able to manage multiple Vs30 files at 
 once. Here is an example of usage::
 
 	$ oq prepare_site_model Vs30/Ecuador.csv Vs30/Bolivia.csv -e Exposure/Exposure_Res_Ecuador.csv Exposure/Exposure_Res_Bolivia.csv --grid-spacing=10
+
+
+**Example of a site model using a reduced exposure model**
+
+The image below presents an example for Colombia using the USGS vs30 database and a simplified exposure model with 10.
+
+.. figure:: _images/prepare_site_model.png
+
+   USGS Vs30 data and exposure locations
+
+*Site model with non-gridded exposure (at the asset locations):*
+The prepare_site_model command helps users to create a tailored site model file by associating the closest vs30 values at the locations of the exposure model. 
+
+Using the command ::
+
+	$ oq prepare_site_model -e Exposure.xml Vs30_values.csv
+
+the resulting site model file contain the vs30 values closest to the exposure sites. The blue dots represent the generated site model file.
+
+.. figure:: _images/prepare_site_model_opt1.png
+
+*Site model with gridded exposure:*
+When dealing with large exposure files (thousands of sites), it is possible to create an uniformly spaced grid. In this case the vs30 values will be the closest to the gridded points. This is possible by passing the flag -g distance_in_km.
+
+Using the command ::
+
+	$ oq prepare_site_model -e Exposure.xml -g 20 Vs30_values.csv
+
+the site model id generated with gridded points close to exposure sites (red dots), and the it considers the closest vs30 values to the gridded points. In this case a 20km grid was used.
+
+.. figure:: _images/prepare_site_model_opt2.png
+
 
 oq show_attrs 
 --------------
