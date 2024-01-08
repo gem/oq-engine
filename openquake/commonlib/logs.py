@@ -25,7 +25,7 @@ import logging
 import traceback
 from datetime import datetime
 from openquake.baselib import config, zeromq, parallel, workerpool as w
-from openquake.commonlib import readinput, dbapi, global_model_getter
+from openquake.commonlib import readinput, dbapi
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
@@ -41,8 +41,7 @@ def get_tag(job_ini):
     :returns: the name of the model if job_ini belongs to the mosaic_dir
     """
     if not MODELS:  # first time
-        MODELS.extend(
-            global_model_getter.GlobalModelGetter().get_models_list())
+        MODELS.extend(readinput.read_mosaic_df().code)
     splits = job_ini.split('/')  # es. /home/michele/mosaic/EUR/in/job.ini
     if len(splits) > 3 and splits[-3] in MODELS:
         return splits[-3]  # EUR

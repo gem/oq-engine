@@ -56,6 +56,7 @@ from openquake.hazardlib.geo.utils import (
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.qa_tests_data import mosaic, global_risk
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -1469,6 +1470,7 @@ def get_checksum32(oqparam, h5=None):
     return checksum
 
 
+@functools.cache
 def read_geometries(fname, code, buffer=0):
     """
     :param fname: path of the file containing the geometries
@@ -1485,3 +1487,15 @@ def read_geometries(fname, code, buffer=0):
             geom = geometry.shape(feature['geometry'])
             geoms.append(geom.buffer(buffer))
     return pandas.DataFrame(dict(code=codes, geom=geoms))
+
+
+def read_mosaic_df(buffer=0.1):
+    fname = os.path.join(os.path.dirname(mosaic.__file__),
+                         'ModelBoundaries.shp')
+    return read_geometries(fname, 'code', buffer)
+
+
+def read_global_risk_df(buffer=0.1):
+    fname = os.path.join(os.path.dirname(global_risk.__file__),
+                         'geoBoundariesCGAZ_ADM0.shp')
+    return read_geometries(fname, 'shapeGroup', buffer)
