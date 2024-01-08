@@ -629,7 +629,7 @@ hazard_uhs-std.csv
         csm = readinput.get_composite_source_model(oq)
         assert len(csm.src_groups) == 1
         assert len(self.calc.csm.src_groups) == 4
-        
+
     def test_case_68_bis(self):
         # extendModel with sampling and reduction to single source
         self.run_calc(case_68.__file__, 'job1.ini')
