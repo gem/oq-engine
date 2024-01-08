@@ -27,7 +27,7 @@ import collections
 import numpy
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
-from shapely import geometry
+from shapely import geometry, contains_xy
 from shapely.strtree import STRtree
 
 from openquake.baselib.hdf5 import vstr
@@ -854,3 +854,17 @@ def geohash3(lons, lats):
     """
     arr = geohash(lons, lats, 3)
     return arr[:, 0] * 1024 + arr[:, 1] * 32 + arr[:, 2]
+
+
+def geolocate(lonlats, geom_df, exclude=('USA', 'UCF')):
+    """
+    :param lonlats: array of shape (N, 2) of (lon, lat)
+    :param geom_df: DataFrame of geometries keyed by a "code" field
+    :returns: codes associated to the points
+    """
+    codes = numpy.array(['???'] * len(lonlats))
+    for code, geom in zip(geom_df.code, geom_df.geom):
+        if code in exclude:
+            continue
+        codes[contains_xy(geom, lonlats)] = code
+    return codes

@@ -20,13 +20,12 @@ import os
 import tempfile
 import unittest.mock as mock
 import unittest
-import numpy
-import shapely
 import pandas
 from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
@@ -561,43 +560,17 @@ class LogicTreeTestCase(unittest.TestCase):
         self.assertEqual(paths, expected)
 
 
-def get_codes(geom_df, lonlats):
-    codes = numpy.array(['???'] * len(lonlats))
-    for code, geom in zip(geom_df.code, geom_df.geom):
-        if code in ['USA', 'UCF']:
-            continue
-        codes[shapely.contains_xy(geom, lonlats)] = code
-        print(code)
-    return codes
-
-
 class ReadGeometryTestCase(unittest.TestCase):
     def test_mosaic(self):
-        from openquake.commonlib.global_model_getter import GlobalModelGetter
-        getter = GlobalModelGetter()
         dir = os.path.dirname(mosaic.__file__)
         path = os.path.join(dir, 'ModelBoundaries.shp')
         geom_df = readinput.read_geometries(path, 'code', buffer=.1)
         self.assertEqual(len(geom_df), 31)
         sites_df = pandas.read_csv(os.path.join(dir, 'scenarios.csv'),
                                    usecols=['lat', 'lon'])
-        # sites_df = pandas.read_csv('/home/ptormene/merged_sites.csv',
-        #                            usecols=['lat', 'lon'])
         lonlats = sites_df[['lon', 'lat']].to_numpy()
-        sites_df['code'] = get_codes(geom_df, lonlats)
-        lons = []
-        lats = []
-        codes = []
-        for lon, lat in lonlats:
-            try:
-                code = getter.get_nearest_model_by_lon_lat_sindex(lon, lat)
-            except ValueError:
-                code = '???'
-            lons.append(lon)
-            lats.append(lat)
-            codes.append(code)
-        old_df = pandas.DataFrame(dict(lat=lats, lon=lons, code=codes))
-        print(old_df.compare(sites_df))
+        sites_df['code'] = geolocate(lonlats, geom_df)
+        self.assertEqual(len(sites_df), 108)
 
     def test_risk(self):
         mosaic_dir = os.path.dirname(mosaic.__file__)
@@ -607,5 +580,5 @@ class ReadGeometryTestCase(unittest.TestCase):
         self.assertEqual(len(geom_df), 218)
         sites_df = pandas.read_csv(os.path.join(mosaic_dir, 'scenarios.csv'))
         lonlats = sites_df[['lon', 'lat']].to_numpy()
-        sites_df['code'] = get_codes(geom_df, lonlats)
+        sites_df['code'] = geolocate(lonlats, geom_df)
         print(sites_df)
