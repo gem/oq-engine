@@ -999,13 +999,19 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
             # and last profile and the index of the edge
             csegs.append(tmp)
 
+    # Each element of the `csegs` list contains the start and end index of the
+    # continuous part of an edge and the index of the edge (i.e. third element)
     csegs = np.array(csegs)
+    # Sort the `csegs` array by increasing edge index, decreasing profile
+    # index and starting profile index
     idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
     csegs = csegs[idxs]
 
     # Coordinates of the resampled edges
     coos = []
     new_prof_lines = []
+
+    # This contains the unique indexes of the starting profile
     unique = np.unique(csegs[:, 0])
     cnt = 0
 
@@ -1018,7 +1024,12 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
             # If the edge starts with the first index
             if i_from == unique[0]:
                 tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
-                tmp = tmp[:-1, :]
+
+                if len(tmp) < 3:
+                    tmp = tmp[:, :]
+                else:
+                    tmp = tmp[:-1, :]
+
                 i_prof = 0
             else:
                 edge = parr[cseg[0]:cseg[1], cseg[2]]
@@ -1147,7 +1158,10 @@ def _build_profiles(edges: list) -> list:
             for i_r in range(len(edge), max_len):
                 profs[i_r].append(tc)
 
-    max_len = max([len(p) for p in profs])
+    try:
+        max_len = max([len(p) for p in profs])
+    except:
+        breakpoint()
 
     # Set the same length for all the profiles
     for i_prof, prof in enumerate(profs):
@@ -1162,7 +1176,7 @@ def _build_edges(coos):
     # 'sub-edges'
     #
     # :param coos:
-    #   A list with a triple.
+    #   A list with a triple. The first element in the triple is the
     #
     edges = {}
     for coo in coos:

@@ -34,10 +34,19 @@ def _update(rtra, rtra_prj, proj, pnt):
 
 
 def _resample(coo, sect_len, orig_extremes):
-    # returns array of resampled trace coordinates
+    # Returns array of resampled trace coordinates
+    #
+    # :param coo:
+    #   A :class:`numpy.ndarray` instance with three columns and n-lines
+    #   containing the coordinates of the polyline to be resampled.
+    # :param sect_len:
+    #   The resampling distance [km]
+    # :param orig_extremes:
+    #   A boolean. When true the last point in coo is also added.
+
     N = len(coo)
 
-    # Project the coordinates of the trace
+    # Project the coordinates of the trace and save them in `txy`
     sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
     proj = utils.OrthographicProjection(*sbb)
     txy = coo.copy()
@@ -68,6 +77,7 @@ def _resample(coo, sect_len, orig_extremes):
         # If the pick a point that is not the last one on the trace we
         # compute the new sample by interpolation
         if idx < len(dis) - 1:
+
             pnt = find_t(
                 txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
             if pnt is None:
@@ -86,7 +96,29 @@ def _resample(coo, sect_len, orig_extremes):
                 # and the second vertex of the segment
                 chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
         else:
-            # Adding one point
+
+            if len(rtra) > 1:
+
+                # Azimuth of the resampled edge
+                azim_rsmp_edge = geodetic.azimuth(rtra[-2][0], rtra[-2][1],
+                                                  rtra[-1][0], rtra[-1][1])
+                # Azimuth from the last resampled edge and the last point on
+                # the original edge
+                azim_orig_edge = geodetic.azimuth(rtra[-1][0], rtra[-1][1],
+                                                  coo[-1, 0], coo[-1, 1])
+                # Check
+                # FIXME
+                # assert np.abs(azim_rsmp_edge - azim_orig_edge) < 30
+                try:
+                    np.abs(azim_rsmp_edge - azim_orig_edge) < 30
+                except:
+                    breakpoint()
+
+            # This is the distance between the last sampled point and the last
+            # point on the original edge
+            dist_from_last = utils.get_dist(rtra_prj[-1], txy[-1])
+
+            # We are processing the last point
             if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
                 # Adding more points still on the same segment
                 delta = txy[-1] - txy[-2]
