@@ -1158,10 +1158,7 @@ def _build_profiles(edges: list) -> list:
             for i_r in range(len(edge), max_len):
                 profs[i_r].append(tc)
 
-    try:
-        max_len = max([len(p) for p in profs])
-    except:
-        breakpoint()
+    max_len = max([len(p) for p in profs])
 
     # Set the same length for all the profiles
     for i_prof, prof in enumerate(profs):
