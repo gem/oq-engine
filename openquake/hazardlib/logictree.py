@@ -573,8 +573,6 @@ class SourceModelLogicTree(object):
             value = parse_uncertainty(branchset.uncertainty_type,
                                       value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
-                if self.branchID and branchnode['branchID'] != self.branchID:
-                    continue
                 vals = []  # filenames with sources in it
                 try:
                     for fname in value_node.text.split():
@@ -587,7 +585,9 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if self.source_id:  # only the files containing source_id
+                if self.branchID and branchnode['branchID'] != self.branchID:
+                    value = ''  # reduce all branches except branchID
+                elif self.source_id:  # only the files containing source_id
                     value = ' '.join(reduce_fnames(vals, self.source_id))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:

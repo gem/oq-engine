@@ -148,7 +148,7 @@ def read_hparams(job_ini):
     return params
 
 
-def get_smlt(hparams, branchID='', sourceID=''):
+def get_smlt(hparams, sourceID=''):
     """
     :param hparams:
         dictionary of hazard parameters
@@ -160,7 +160,7 @@ def get_smlt(hparams, branchID='', sourceID=''):
             hparams.get('number_of_logic_tree_samples', 0),
             hparams.get('sampling_method', 'early_weights'),
             False,
-            branchID,
+            hparams.get('smlt_branch', ''),
             sourceID)
     smlt = logictree.SourceModelLogicTree(*args)
     if 'discard_trts' in hparams:
