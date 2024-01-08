@@ -53,7 +53,7 @@ def _resample(coo, sect_len, orig_extremes):
     txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
 
     # Compute the total length of the original trace
-    tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
+    # tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
     inc_len = 0.
 
     # Initialize the lists with the coordinates of the resampled trace
