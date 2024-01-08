@@ -17,6 +17,7 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import time
 import tempfile
 import unittest.mock as mock
 import unittest
@@ -33,7 +34,7 @@ from openquake.qa_tests_data.logictree import case_02, case_15, case_21
 from openquake.qa_tests_data.classical import case_34
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
-from openquake.qa_tests_data import mosaic, global_risk
+from openquake.qa_tests_data import mosaic
 
 
 TMP = tempfile.gettempdir()
@@ -561,24 +562,23 @@ class LogicTreeTestCase(unittest.TestCase):
 
 
 class ReadGeometryTestCase(unittest.TestCase):
-    def test_mosaic(self):
-        dir = os.path.dirname(mosaic.__file__)
-        path = os.path.join(dir, 'ModelBoundaries.shp')
-        geom_df = readinput.read_geometries(path, 'code', buffer=.1)
+    def test(self):
+        t0 = time.time()
+        mosaic_dir = os.path.dirname(mosaic.__file__)
+        geom_df = readinput.read_mosaic_df()
         self.assertEqual(len(geom_df), 31)
-        sites_df = pandas.read_csv(os.path.join(dir, 'scenarios.csv'),
+        sites_df = pandas.read_csv(os.path.join(mosaic_dir, 'scenarios.csv'),
                                    usecols=['lat', 'lon'])
         lonlats = sites_df[['lon', 'lat']].to_numpy()
         sites_df['code'] = geolocate(lonlats, geom_df)
+        t1 = time.time()
         self.assertEqual(len(sites_df), 108)
+        print('Associated in %.1f seconds' % (t1-t0), sites_df)
 
-    def test_risk(self):
-        mosaic_dir = os.path.dirname(mosaic.__file__)
-        risk_dir = os.path.dirname(global_risk.__file__)
-        path = os.path.join(risk_dir, 'geoBoundariesCGAZ_ADM0.shp')
-        geom_df = readinput.read_geometries(path, 'shapeGroup')
-        self.assertEqual(len(geom_df), 218)
-        sites_df = pandas.read_csv(os.path.join(mosaic_dir, 'scenarios.csv'))
-        lonlats = sites_df[['lon', 'lat']].to_numpy()
-        sites_df['code'] = geolocate(lonlats, geom_df)
-        print(sites_df)
+        t0 = time.time()
+        risk_df = readinput.read_global_risk_df()  # this is slow
+        self.assertEqual(len(risk_df), 218)
+        sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
+        t1 = time.time()
+        self.assertEqual(len(sites_df), 108)
+        print('Associated in %.1f seconds' % (t1-t0), sites_df)
