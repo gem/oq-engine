@@ -50,8 +50,13 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     from the mosaic files.
     """
     mosaic_df = readinput.read_mosaic_df()
-    lonlats = numpy.array([(float(inputs['lon']), float(inputs['lat']))])
+    lon = float(inputs['lon'])
+    lat = float(inputs['lat'])
+    lonlats = numpy.array([(lon, lat)])
     [model] = geo.utils.geolocate(lonlats, mosaic_df)
+    if model == '???':
+        raise ValueError(
+            f'Site at lon={lon} lat={lat} is not covered by any model!')
     ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     params['model'] = model
