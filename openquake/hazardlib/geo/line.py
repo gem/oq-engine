@@ -44,7 +44,7 @@ def _resample(coo, sect_len, orig_extremes):
     # :param orig_extremes:
     #   A boolean. When true the last point in coo is also added.
 
-    N = len(coo)
+    # N = len(coo)
 
     # Project the coordinates of the trace and save them in `txy`
     sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
