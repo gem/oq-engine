@@ -24,6 +24,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import contexts, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates)
+from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
@@ -621,6 +622,13 @@ hazard_uhs-std.csv
         self.run_calc(case_68.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
+
+        # checking reducing the logic tree to a single branch
+        oq = self.calc.oqparam
+        oq.smlt_branch = 'b01'
+        csm = readinput.get_composite_source_model(oq)
+        assert len(csm.src_groups) == 1
+        assert len(self.calc.csm.src_groups) == 4
 
     def test_case_68_bis(self):
         # extendModel with sampling and reduction to single source

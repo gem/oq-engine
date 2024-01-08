@@ -731,7 +731,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, branchID=''):
+def get_source_model_lt(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -739,7 +739,7 @@ def get_source_model_lt(oqparam, branchID=''):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    smlt = get_smlt(vars(oqparam), branchID)
+    smlt = get_smlt(vars(oqparam))
     srcids = set(smlt.source_data['source'])
     for src in oqparam.reqv_ignore_sources:
         if src not in srcids:
@@ -750,17 +750,15 @@ def get_source_model_lt(oqparam, branchID=''):
     return smlt
 
 
-def get_full_lt(oqparam, branchID=''):
+def get_full_lt(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param branchID:
-        used to read a single sourceModel branch (if given)
     :returns:
         a :class:`openquake.hazardlib.logictree.FullLogicTree`
         instance
     """
-    source_model_lt = get_source_model_lt(oqparam, branchID)
+    source_model_lt = get_source_model_lt(oqparam)
     trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
@@ -883,7 +881,7 @@ def get_cache_path(oqparam, h5=None):
     return ''
 
 
-def get_composite_source_model(oqparam, dstore=None, branchID=''):
+def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -893,7 +891,7 @@ def get_composite_source_model(oqparam, dstore=None, branchID=''):
          an open datastore where to save the source info
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
-    full_lt = get_full_lt(oqparam, branchID)
+    full_lt = get_full_lt(oqparam)
     path = get_cache_path(oqparam, dstore.hdf5 if dstore else None)
     if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import

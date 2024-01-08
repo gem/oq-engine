@@ -747,6 +747,11 @@ sites:
 sites_slice:
   INTERNAL
 
+smlt_branch:
+   Used to restrict the source model logic tree to a specific branch
+   Example: *smlt_branch=b1*
+   Default: empty string, meaning all branches
+
 soil_intensities:
   Used in classical calculations with amplification_method = convolution
 
@@ -1076,6 +1081,7 @@ class OqParam(valid.ParamSet):
         valid.Choice('no', 'shakemap', 'sitemodel'), 'no')  # shakemap amplif.
     sites = valid.Param(valid.NoneOr(valid.coordinates), None)
     sites_slice = valid.Param(valid.simple_slice, None)
+    smlt_branch = valid.Param(valid.simple_id, '')
     soil_intensities = valid.Param(valid.positivefloats, None)
     source_id = valid.Param(valid.namelist, [])
     source_nodes = valid.Param(valid.namelist, [])

@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added a job.ini parameter `smlt_branch` to reduce the logic tree to
+    a specific branch
   * Internal: extended `oq info` to shapefiles
 
   [Anirudh Rao]
