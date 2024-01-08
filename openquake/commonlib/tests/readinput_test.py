@@ -17,13 +17,16 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import time
 import tempfile
 import unittest.mock as mock
 import unittest
+import pandas
 from io import BytesIO
 
 from openquake.baselib import general
 from openquake.hazardlib import InvalidFile, site_amplification, gsim_lt
+from openquake.hazardlib.geo.utils import geolocate
 from openquake.hazardlib.calc.filters import MINMAG, MAXMAG
 from openquake.risklib import asset
 from openquake.commonlib import readinput, datastore
@@ -31,6 +34,7 @@ from openquake.qa_tests_data.logictree import case_02, case_15, case_21
 from openquake.qa_tests_data.classical import case_34
 from openquake.qa_tests_data.event_based import case_16
 from openquake.qa_tests_data.event_based_risk import case_2, case_caracas
+from openquake.qa_tests_data import mosaic
 
 
 TMP = tempfile.gettempdir()
@@ -374,8 +378,8 @@ POLYGON((78.0 31.5, 89.5 31.5, 89.5 25.5, 78.0 25.5, 78.0 31.5))'''
         oqparam.aggregate_by = []
         with self.assertRaises(ValueError) as ctx:
             readinput.get_exposure(oqparam)
-        self.assertIn("Invalid ID 'a 1': the only accepted chars are "
-                      "^[\w_\-:]+$, line 11", str(ctx.exception))
+        self.assertIn(r"Invalid ID 'a 1': the only accepted chars are "
+                      r"^[\w_\-:]+$, line 11", str(ctx.exception))
 
     def test_wrong_cost_type(self):
         oqparam = mock.Mock()
@@ -555,3 +559,26 @@ class LogicTreeTestCase(unittest.TestCase):
         expected = ['A.CA', 'A.CB', 'A.DA', 'A.DB', 'BACA', 'BACB',
                     'BADA', 'BADB', 'BBCA', 'BBCB', 'BBDA', 'BBDB']
         self.assertEqual(paths, expected)
+
+
+class ReadGeometryTestCase(unittest.TestCase):
+    def test(self):
+        t0 = time.time()
+        mosaic_dir = os.path.dirname(mosaic.__file__)
+        geom_df = readinput.read_mosaic_df()
+        self.assertEqual(len(geom_df), 31)
+        sites_df = pandas.read_csv(os.path.join(mosaic_dir, 'scenarios.csv'),
+                                   usecols=['lat', 'lon'])
+        lonlats = sites_df[['lon', 'lat']].to_numpy()
+        sites_df['code'] = geolocate(lonlats, geom_df)
+        t1 = time.time()
+        self.assertEqual(len(sites_df), 108)
+        print('Associated in %.1f seconds' % (t1-t0), sites_df)
+
+        t0 = time.time()
+        risk_df = readinput.read_global_risk_df()  # this is slow
+        self.assertEqual(len(risk_df), 218)
+        sites_df['code'] = geolocate(lonlats, risk_df)  # this is fast
+        t1 = time.time()
+        self.assertEqual(len(sites_df), 108)
+        print('Associated in %.1f seconds' % (t1-t0), sites_df)

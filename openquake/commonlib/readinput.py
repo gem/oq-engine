@@ -34,7 +34,8 @@ import numpy
 import pandas
 from scipy.spatial import cKDTree
 import requests
-from shapely import wkt
+from shapely import wkt, geometry
+import fiona
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -55,6 +56,7 @@ from openquake.hazardlib.geo.utils import (
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.qa_tests_data import mosaic, global_risk
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -454,7 +456,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     idxs = kdt.query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
-    
+
 def get_site_model(oqparam):
     """
     :param oqparam:
@@ -981,21 +983,22 @@ def get_exposure(oqparam, h5=None):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    fnames = oqparam.inputs['exposure']
+    oq = oqparam
+    fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         fname = fnames[0]
-        if fname.endswith('.hdf5') and oqparam.rupture_dict:
+        if fname.endswith('.hdf5') and oq.rupture_dict:
             # reading the assets around a rupture
-            sm = get_site_model(oqparam)
+            sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = Global.exposure = asset.Exposure.read_around(fname, gh3)
         else:
             exposure = Global.exposure = asset.Exposure.read_all(
-                oqparam.inputs['exposure'], oqparam.calculation_mode,
-                oqparam.ignore_missing_costs,
-                errors='ignore' if oqparam.ignore_encoding_errors else None,
-                infr_conn_analysis=oqparam.infrastructure_connectivity_analysis,
-                aggregate_by=oqparam.aggregate_by)
+                oq.inputs['exposure'], oq.calculation_mode,
+                oq.ignore_missing_costs,
+                errors='ignore' if oq.ignore_encoding_errors else None,
+                infr_conn_analysis=oq.infrastructure_connectivity_analysis,
+                aggregate_by=oq.aggregate_by)
     return exposure
 
 
@@ -1465,3 +1468,34 @@ def get_checksum32(oqparam, h5=None):
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
+
+
+@functools.cache
+def read_geometries(fname, code, buffer=0):
+    """
+    :param fname: path of the file containing the geometries
+    :param code: name of the primary key field
+    :param buffer: shapely buffer in degrees
+    :returns: data frame with codes and geometries
+    """
+    with fiona.open(fname) as f:
+        codes = []
+        geoms = []
+        for feature in f:
+            props = feature['properties']
+            codes.append(props[code])
+            geom = geometry.shape(feature['geometry'])
+            geoms.append(geom.buffer(buffer))
+    return pandas.DataFrame(dict(code=codes, geom=geoms))
+
+
+def read_mosaic_df(buffer=0.1):
+    fname = os.path.join(os.path.dirname(mosaic.__file__),
+                         'ModelBoundaries.shp')
+    return read_geometries(fname, 'code', buffer)
+
+
+def read_global_risk_df(buffer=0.1):
+    fname = os.path.join(os.path.dirname(global_risk.__file__),
+                         'geoBoundariesCGAZ_ADM0.shp')
+    return read_geometries(fname, 'shapeGroup', buffer)

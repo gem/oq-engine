@@ -40,7 +40,6 @@ from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import util, logs, readinput, logictree, datastore
-from openquake.commonlib.global_model_getter import GlobalModelGetter
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES)
@@ -485,13 +484,8 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         if oq.mosaic_model:  # 3-letter mosaic model
-            # NOTE: the spatial index might be initialized in advance and kept
-            # in memory or stored as a pickle object. Anyway building the
-            # spatial index using the current simplified geometries is quick.
-            gmg = GlobalModelGetter('mosaic',
-                                    model_codes=[oq.mosaic_model])
-            mosaic_model_geom = gmg.get_geoms([oq.mosaic_model])[0]
-            shapely.prepare(mosaic_model_geom)
+            df = readinput.read_mosaic_df().set_index('code')
+            mosaic_model_geom = df.loc[oq.mosaic_model].geom
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0

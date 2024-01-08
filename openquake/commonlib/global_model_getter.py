@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
+# TODO: remove this module and the tests
 
 import pprint
 import logging
