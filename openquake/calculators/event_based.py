@@ -484,9 +484,8 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         if oq.mosaic_model:  # 3-letter mosaic model
-            df = readinput.get_mosaic_df().set_index('code')
+            df = readinput.read_mosaic_df().set_index('code')
             mosaic_model_geom = df.loc[oq.mosaic_model].geom
-            import pdb; pdb.set_trace()
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0
