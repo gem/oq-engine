@@ -114,7 +114,8 @@ def _resample(coo, sect_len, orig_extremes):
             dist_from_last = utils.get_dist(rtra_prj[-1], txy[-1])
 
             # We are processing the last point
-            if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
+            # if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
+            if dist_from_last > sect_len / 2 and not orig_extremes:
                 # Adding more points still on the same segment
                 delta = txy[-1] - txy[-2]
                 chk_dst = utils.get_dist(txy[-1], txy[-2])
