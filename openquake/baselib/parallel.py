@@ -1031,21 +1031,22 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
-    allargs = allargs[::-1]  # so that the first argument is submitted first
-    procs = {}  # sentinel -> process
-    while allargs:
-        args = allargs.pop()
-        proc = mp_context.Process(target=func, args=args)
-        proc.start()
-        procs[proc.sentinel] = proc
-        while len(procs) >= chunksize:  # wait for something to finish
+    with mock.patch.dict(os.environ, OQ_DISTRIBUTE='zmq'):
+        allargs = allargs[::-1]  # so that the first argument is submitted first
+        procs = {}  # sentinel -> process
+        while allargs:
+            args = allargs.pop()
+            proc = mp_context.Process(target=func, args=args)
+            proc.start()
+            procs[proc.sentinel] = proc
+            while len(procs) >= chunksize:  # wait for something to finish
+                for finished in wait(procs):
+                    procs[finished].join()
+                    del procs[finished]
+        while procs:
             for finished in wait(procs):
                 procs[finished].join()
                 del procs[finished]
-    while procs:
-        for finished in wait(procs):
-            procs[finished].join()
-            del procs[finished]
 
 
 def slurm_task(calc_dir: str, task_id: str):
