@@ -107,12 +107,7 @@ def _resample(coo, sect_len, orig_extremes):
                 azim_orig_edge = geodetic.azimuth(rtra[-1][0], rtra[-1][1],
                                                   coo[-1, 0], coo[-1, 1])
                 # Check
-                # FIXME
-                # assert np.abs(azim_rsmp_edge - azim_orig_edge) < 30
-                try:
-                    np.abs(azim_rsmp_edge - azim_orig_edge) < 30
-                except:
-                    breakpoint()
+                assert np.abs(azim_rsmp_edge - azim_orig_edge) < 30
 
             # This is the distance between the last sampled point and the last
             # point on the original edge
