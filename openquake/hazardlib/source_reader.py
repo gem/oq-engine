@@ -175,15 +175,12 @@ def get_csm(oq, full_lt, dstore=None):
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 
-    # NB: the source models file are often NOT in the shared directory
-    # (for instance in oq-engine/demos) so the processpool must be used
-    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-            else 'processpool')
+    # NB: the source models file must be in the shared directory
     # NB: dstore is None in logictree_test.py
     allargs = []
     for fname in full_lt.source_model_lt.info.smpaths:
         allargs.append((fname, converter))
-    smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
+    smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory

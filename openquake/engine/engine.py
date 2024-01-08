@@ -53,7 +53,6 @@ from openquake.calculators import base, export
 
 USER = getpass.getuser()
 OQ_API = 'https://api.openquake.org'
-OQ_DISTRIBUTE = parallel.oq_distribute()
 
 MB = 1024 ** 2
 _PID = os.getpid()  # the PID
@@ -91,7 +90,8 @@ def set_concurrent_tasks_default(calc):
 
     parallel.Starmap.CT = num_workers * 2
     OqParam.concurrent_tasks.default = num_workers * 2
-    logging.warning('Using %d %s workers', num_workers, OQ_DISTRIBUTE)
+    logging.warning('Using %d %s workers', num_workers,
+                    parallel.oq_distribute())
 
 
 def expose_outputs(dstore, owner=USER, status='complete'):
@@ -245,6 +245,7 @@ def run_calc(log):
     """
     register_signals()
     setproctitle('oq-job-%d' % log.calc_id)
+    dist = parallel.oq_distribute()
     with log:
         # check the available memory before starting
         while True:
@@ -271,11 +272,11 @@ def run_calc(log):
         # if obsolete_msg:
         #    logging.warning(obsolete_msg)
         calc.from_engine = True
-        if OQ_DISTRIBUTE == 'zmq':
+        if dist == 'zmq':
             set_concurrent_tasks_default(calc)
         else:
             logging.warning('Using %d %s workers',
-                            parallel.Starmap.CT // 2, OQ_DISTRIBUTE)
+                            parallel.Starmap.CT // 2, dist)
         t0 = time.time()
         calc.run(shutdown=True)
         logging.info('Exposing the outputs to the database')
@@ -344,11 +345,9 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
 
 def cleanup(kind):
     """
-    Stop or kill the zmq workers if serialize_jobs == 1.
+    Stop or kill the zmq workers
     """
     assert kind in ("stop", "kill"), kind
-    if OQ_DISTRIBUTE != 'zmq' or config.distribution.serialize_jobs > 1:
-        return  # do nothing
     if kind == 'stop':
         # called in the regular case, does not require ssh access
         print('Stopping the workers')
@@ -368,6 +367,7 @@ def run_jobs(jobctxs, concurrent_jobs=3):
     :param concurrent_jobs:
         How many jobs to run concurrently (default 3)
     """
+    dist = parallel.oq_distribute()
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
@@ -395,25 +395,27 @@ def run_jobs(jobctxs, concurrent_jobs=3):
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if OQ_DISTRIBUTE == 'zmq' and w.WorkerMaster(
+        if dist == 'zmq' and w.WorkerMaster(
                 config.zworkers).status() == []:
             print('Asking the DbServer to start the workers %s' %
                   config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
-        if jobarray and OQ_DISTRIBUTE != 'no':
+        if jobarray and parallel.oq_distribute() != 'no':
             parallel.multispawn(run_calc, allargs, concurrent_jobs)
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
-        cleanup('stop')
+        if dist == 'zmq':
+            cleanup('stop')
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]
         rows = logs.dbcmd("SELECT id FROM job WHERE id IN (?X) "
                           "AND status IN ('created', 'executing')", ids)
         for job_id, in rows:
             logs.dbcmd("set_status", job_id, 'failed')
-        cleanup('kill')
+        if dist == 'zmq':
+            cleanup('kill')
         raise
     return jobctxs
 
