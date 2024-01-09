@@ -39,8 +39,8 @@ def _compute_magnitude(ctx, C):
 
 
 def _coeff(self, no, imt):
-    #if 'Deep' in self.__class__.__name__:
-    #    return getattr(self, 'COEFFS_Vs30_deep_%d' % no)[imt]
+    if 'Deep' in self.__class__.__name__:
+        return getattr(self, 'COEFFS_deep_Vs30_%d' % no)[imt]
     return getattr(self, 'COEFFS_Vs30_%d' % no)[imt]
 
 
@@ -399,6 +399,11 @@ pga	-1 	15.39305	1.10031	3.8	0	-5.50442	0.4544	0	-0.13677	0.7055	0.4774	0.8518
 pgv	-2 	10.5337	-0.37189	3.5	0	-4.23064	0.42027	0	-0.20041	0.4729
     """)
 
+
+class WongEtAl2022Deep(WongEtAl2022Shallow):
+    """
+    For deep events (depth > 20km)
+    """
     COEFFS_deep_Vs30_150 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	4.37553	0.77975	5.8	0	-4.59986	0.30767	0	-0.14658	0.2813	1.2756	1.30625
@@ -430,45 +435,6 @@ imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 pga	-1 	101.4428	-9.5506	6.2	0	-17.31475	1.66075	0	-0.16232	0.5788	0.4774	0.75028
 pgv	-2 	52.29073	-3.78249	5.7	0	-10.07493	0.90801	0	-0.1844	0.445
     """)
-
-
-class WongEtAl2022Deep(WongEtAl2022Shallow):
-    """
-    For deep events (depth >20km)
-    """
-
-    def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-
-        for m, imt in enumerate(imts):
-
-            for vs in ctx.vs30:
-                if (vs >= 1E-10) & (vs < 185.0):
-                    C = self.COEFFS_deep_Vs30_150[imt]
-                elif (vs == 185.0):
-                    C = self.COEFFS_deep_Vs30_185[imt]
-                elif (vs > 185.0) & (vs < 365.0):
-                    C = self.COEFFS_deep_Vs30_260[imt]
-                elif vs == 365.0:
-                    C = self.COEFFS_deep_Vs30_365[imt]
-                elif vs == 428.0:
-                    C = self.COEFFS_deep_Vs30_428[imt]
-                elif (vs > 365.0) & (vs < 760.0):
-                    C = self.COEFFS_deep_Vs30_530[imt]
-                elif vs == 760.0:
-                    C = self.COEFFS_deep_Vs30_760[imt]
-                elif (vs > 760.0) & (vs < 1500.0):
-                    C = self.COEFFS_deep_Vs30_1080[imt]
-                elif (vs >= 1500.0):
-                    C = self.COEFFS_deep_Vs30_1500[imt]
-
-            mean[m] = (C['C1'] +
-                       _compute_magnitude(ctx, C) +
-                       _compute_distance(ctx, C))
-
-            if imt.string.startswith(('PGV')):
-                sig[m] = 0
-            else:
-                sig[m] = C['SigmaTot']
 
     COEFFS_deep_Vs30_185 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
