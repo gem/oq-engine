@@ -593,19 +593,19 @@ def _get_exposure(fname, stop=None):
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
-    [exposure] = nrml.read(fname, stop=stop)
-    if not exposure.tag.endswith('exposureModel'):
+    [xml] = nrml.read(fname, stop=stop)
+    if not xml.tag.endswith('exposureModel'):
         raise InvalidFile('%s: expected exposureModel, got %s' %
-                          (fname, exposure.tag))
+                          (fname, xml.tag))
     try:
-        conversions = exposure.conversions
+        conversions = xml.conversions
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     # input_field -> oq_field
     pairs = [(f, 'value-' + f) for f in ANR_FIELDS | VAL_FIELDS] + [
         (f, 'occupants_' + f) for f in OCC_FIELDS]
     try:
-        for node in exposure.exposureFields:
+        for node in xml.exposureFields:
             noq = node['oq']
             if noq in ANR_FIELDS | VAL_FIELDS:
                 pairs.append((node['input'], 'value-' + noq))
@@ -624,11 +624,11 @@ def _get_exposure(fname, stop=None):
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
     try:
-        occupancy_periods = exposure.occupancyPeriods.text.split()
+        occupancy_periods = xml.occupancyPeriods.text.split()
     except AttributeError:
         occupancy_periods = []
     try:
-        tagNames = exposure.tagNames
+        tagNames = xml.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
     tagnames = ~tagNames or []
@@ -672,14 +672,14 @@ def _get_exposure(fname, stop=None):
         cc.units[name] = ct['unit']
     exp = Exposure(occupancy_periods, area.attrib, [], cc,
                    TagCollection(tagnames), pairs)
-    assets_text = exposure.assets.text.strip()
+    assets_text = xml.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
         dirname = os.path.dirname(fname)
         exp.datafiles = [os.path.join(dirname, f) for f in assets_text.split()]
     else:
         exp.datafiles = []
-    return exp, exposure.assets
+    return exp, xml.assets
 
 
 def _minimal_tagcol(fnames):
@@ -697,11 +697,13 @@ def _minimal_tagcol(fnames):
     return TagCollection(alltags)
 
 
-def get_retrofitted(asset):
+def set_attrib(asset):
+    retrofitted = False
     for cost in getattr(asset, 'costs', []):
         asset.attrib[cost['type']] = cost['value']
         if 'retrofitted' in cost.attrib:
-            return float(cost['retrofitted'])
+            retrofitted = float(cost['retrofitted'])
+    return retrofitted
 
 
 def assets2df(asset_nodes, fields, ignore_missing_costs):
@@ -716,7 +718,7 @@ def assets2df(asset_nodes, fields, ignore_missing_costs):
     dtlist = [(f, object) for f in fields]
     nodes = list(asset_nodes)
     for i, asset in enumerate(nodes):
-        retrofitted = get_retrofitted(asset)
+        retrofitted = set_attrib(asset)
         if i == 0:   # first asset
             if retrofitted:
                 dtlist.append(('retrofitted', object))
