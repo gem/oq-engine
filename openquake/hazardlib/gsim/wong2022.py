@@ -29,20 +29,30 @@ from openquake.hazardlib.imt import PGA, PGV, SA
 
 
 def _compute_distance(ctx, C):
-    """
-    Compute the second term of the equation 7 described in Results:
-
-    """
-
+    # Compute the second term of the equation 7 described in Results:
     return (C['C6'] + C['C7'] * ctx.mag) * np.log(ctx.rjb + np.exp(C['C4']))
 
 
 def _compute_magnitude(ctx, C):
-    """
-    Compute the third term of the equation 1:
-
-    """
+    # Compute the third term of the equation 1:
     return C['C2'] * ctx.mag + C['C10'] * (ctx.mag - 6)**2
+
+
+def _gen_cond_C(self, vs, imt):
+    # yield the coefficients for each condition
+    cond_coeff = [
+        (vs < 185.0, self.COEFFS_shallow_Vs30_150[imt]),
+        (vs == 185.0, self.COEFFS_shallow_Vs30_185[imt]),
+        ((vs > 185.0) & (vs < 365.0),  self.COEFFS_shallow_Vs30_260[imt]),
+        (vs == 365.0, self.COEFFS_shallow_Vs30_365[imt]),
+        (vs == 428.0, self.COEFFS_shallow_Vs30_428[imt]),
+        ((vs > 365.0) & (vs < 760.0),  self.COEFFS_shallow_Vs30_530[imt]),
+        (vs == 760.0, self.COEFFS_shallow_Vs30_760[imt]),
+        ((vs > 760.0) & (vs < 1500.0), self.COEFFS_shallow_Vs30_1080[imt]),
+        ((vs >= 1500.0), self.COEFFS_shallow_Vs30_1500[imt]),
+    ]
+    for cond, coeff in cond_coeff:
+        yield cond, coeff
 
 
 class WongEtAl2022Shallow(GMPE):
@@ -75,8 +85,7 @@ class WongEtAl2022Shallow(GMPE):
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, page 1904
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL}
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
     REQUIRES_RUPTURE_PARAMETERS = {'mag'}
@@ -88,37 +97,15 @@ class WongEtAl2022Shallow(GMPE):
     REQUIRES_SITES_PARAMETERS = {'vs30'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-
         for m, imt in enumerate(imts):
-
-            for vs in ctx.vs30:
-                if (vs >= 1E-10) & (vs < 185.0):
-                    C = self.COEFFS_shallow_Vs30_150[imt]
-                elif (vs == 185.0):
-                    C = self.COEFFS_shallow_Vs30_185[imt]
-                elif (vs > 185.0) & (vs < 365.0):
-                    C = self.COEFFS_shallow_Vs30_260[imt]
-                elif vs == 365.0:
-                    C = self.COEFFS_shallow_Vs30_365[imt]
-                elif vs == 428.0:
-                    C = self.COEFFS_shallow_Vs30_428[imt]
-                elif (vs > 365.0) & (vs < 760.0):
-                    C = self.COEFFS_shallow_Vs30_530[imt]
-                elif vs == 760.0:
-                    C = self.COEFFS_shallow_Vs30_760[imt]
-                elif (vs > 760.0) & (vs < 1500.0):
-                    C = self.COEFFS_shallow_Vs30_1080[imt]
-                elif (vs >= 1500.0):
-                    C = self.COEFFS_shallow_Vs30_1500[imt]
-
-            mean[m] = (C['C1'] +
-                       _compute_magnitude(ctx, C) +
-                       _compute_distance(ctx, C))
-
-            if imt.string.startswith(('PGV')):
-                sig[m] = 0
-            else:
-                sig[m] = C['SigmaTot']
+            for cond, C in _gen_cond_C(self, ctx.vs30, imt):
+                mean[m, cond] = (C['C1'] +
+                           _compute_magnitude(ctx[cond], C) +
+                           _compute_distance(ctx[cond], C))
+                if imt.string.startswith(('PGV')):
+                    sig[m, cond] = 0
+                else:
+                    sig[m, cond] = C['SigmaTot']
 
     #: Coefficients from SA from Tables from Appendic C in Wong et al. 2022
     COEFFS_shallow_Vs30_150 = CoeffsTable(sa_damping=5, table="""
