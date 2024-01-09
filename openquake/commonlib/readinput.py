@@ -1470,7 +1470,7 @@ def get_checksum32(oqparam, h5=None):
     return checksum
 
 
-@functools.cache
+@functools.lru_cache
 def read_geometries(fname, code, buffer=0):
     """
     :param fname: path of the file containing the geometries
