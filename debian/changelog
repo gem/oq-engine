@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Backported fix to the Wong2022 GMPEs, see
+    https://github.com/gem/oq-engine/issues/9313
   * Backported fix on the insured losses, see
     https://github.com/gem/oq-engine/issues/9178
 
