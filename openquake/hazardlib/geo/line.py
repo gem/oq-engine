@@ -44,8 +44,6 @@ def _resample(coo, sect_len, orig_extremes):
     # :param orig_extremes:
     #   A boolean. When true the last point in coo is also added.
 
-    # N = len(coo)
-
     # Project the coordinates of the trace and save them in `txy`
     sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
     proj = utils.OrthographicProjection(*sbb)
@@ -99,16 +97,7 @@ def _resample(coo, sect_len, orig_extremes):
 
             same_dir = True
             if len(rtra) > 1:
-
-                # Azimuth of the resampled edge
-                azim_rsmp_edge = geodetic.azimuth(rtra[-2][0], rtra[-2][1],
-                                                  rtra[-1][0], rtra[-1][1])
-                # Azimuth from the last resampled edge and the last point on
-                # the original edge
-                azim_orig_edge = geodetic.azimuth(rtra[-1][0], rtra[-1][1],
-                                                  coo[-1, 0], coo[-1, 1])
-                # Check
-                same_dir = np.abs(azim_rsmp_edge - azim_orig_edge) < 30
+                same_dir = _get_same_dir(rtra, coo)
 
             # This is the distance between the last sampled point and the last
             # point on the original edge
@@ -137,6 +126,21 @@ def _resample(coo, sect_len, orig_extremes):
         idx_vtx = idx + 1
 
     return np.array(utils.clean_points(rtra))
+
+
+def _get_same_dir(rtra, coo):
+
+    # Azimuth of the resampled edge
+    azim_rsmp_edge = geodetic.azimuth(rtra[-2][0], rtra[-2][1],
+                                      rtra[-1][0], rtra[-1][1])
+    # Azimuth from the last resampled edge and the last point on
+    # the original edge
+    azim_orig_edge = geodetic.azimuth(rtra[-1][0], rtra[-1][1],
+                                      coo[-1, 0], coo[-1, 1])
+    # Check
+    same_dir = np.abs(azim_rsmp_edge - azim_orig_edge) < 30
+
+    return same_dir
 
 
 class Line(object):
