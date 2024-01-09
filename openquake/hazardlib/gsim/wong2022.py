@@ -44,15 +44,15 @@ def _coeff(self, no, imt):
 
 def _gen_cond_C(self, vs, imt):
     # yield the coefficients for each condition
-    yield vs < 185.0, _coeff(self, 150, imt)
-    yield vs == 185.0, _coeff(self, 185, imt)
-    yield (vs > 185.0) & (vs < 365.0), _coeff(self, 260, imt)
-    yield vs == 365.0, _coeff(self, 365, imt)
-    yield vs == 428.0, _coeff(self, 428, imt)
-    yield (vs > 365.0) & (vs < 760.0), _coeff(self, 530, imt)
-    yield vs == 760.0, _coeff(self, 760, imt)
-    yield (vs > 760.0) & (vs < 1500.0), _coeff(self, 1080, imt)
-    yield (vs >= 1500.0), _coeff(self, 1500, imt)
+    yield vs < 185.0, self.COEFFS_Vs30_150[imt]
+    yield vs == 185.0, self.COEFFS_Vs30_185[imt]
+    yield (vs > 185.0) & (vs < 365.0), self.COEFFS_Vs30_260[imt]
+    yield vs == 365.0, self.COEFFS_Vs30_365[imt]
+    yield vs == 428.0, self.COEFFS_Vs30_428[imt]
+    yield (vs > 365.0) & (vs < 760.0), self.COEFFS_Vs30_530[imt]
+    yield vs == 760.0, self.COEFFS_Vs30_760[imt]
+    yield (vs > 760.0) & (vs < 1500.0), self.COEFFS_Vs30_1080[imt]
+    yield (vs >= 1500.0), self.COEFFS_Vs30_1500[imt]
 
 
 class WongEtAl2022Shallow(GMPE):
