@@ -38,11 +38,7 @@ def _compute_magnitude(ctx, C):
     return C['C2'] * ctx.mag + C['C10'] * (ctx.mag - 6)**2
 
 
-def _coeff(self, no, imt):
-    return getattr(self, 'COEFFS_Vs30_%d' % no)[imt]
-
-
-def _gen_cond_C(self, vs, imt):
+def _gen_mask_C(self, vs, imt):
     # yield the coefficients for each condition
     yield vs < 185.0, self.COEFFS_Vs30_150[imt]
     yield vs == 185.0, self.COEFFS_Vs30_185[imt]
@@ -98,14 +94,14 @@ class WongEtAl2022Shallow(GMPE):
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
-            for cond, C in _gen_cond_C(self, ctx.vs30, imt):
-                mean[m, cond] = (C['C1'] +
-                           _compute_magnitude(ctx[cond], C) +
-                           _compute_distance(ctx[cond], C))
+            for mask, C in _gen_mask_C(self, ctx.vs30, imt):
+                mean[m, mask] = (C['C1'] +
+                           _compute_magnitude(ctx[mask], C) +
+                           _compute_distance(ctx[mask], C))
                 if imt.string.startswith(('PGV')):
-                    sig[m, cond] = 0
+                    sig[m, mask] = 0
                 else:
-                    sig[m, cond] = C['SigmaTot']
+                    sig[m, mask] = C['SigmaTot']
 
     #: Coefficients from SA from Tables from Appendic C in Wong et al. 2022
     COEFFS_Vs30_150 = CoeffsTable(sa_damping=5, table="""
