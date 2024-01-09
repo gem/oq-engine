@@ -1470,7 +1470,8 @@ def get_checksum32(oqparam, h5=None):
     return checksum
 
 
-@functools.lru_cache
+# NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
+@functools.lru_cache(maxsize=4)
 def read_geometries(fname, code, buffer=0):
     """
     :param fname: path of the file containing the geometries
