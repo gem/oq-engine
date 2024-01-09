@@ -23,7 +23,6 @@ import logging
 import operator
 import numpy
 import pandas
-import shapely
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
@@ -321,7 +320,8 @@ def filter_stations(station_df, complete, rup, maxdist):
                         'switching to the unconditioned GMF computer',
                         ns, ns, maxdist)
     else:
-        station_data = station_df[numpy.isin(station_df.index, station_sites.sids)]
+        station_data = station_df[
+            numpy.isin(station_df.index, station_sites.sids)]
         if len(station_data) < ns:
             logging.info('Discarded %d/%d stations more distant than %d km',
                         ns - len(station_data), ns, maxdist)
@@ -470,12 +470,17 @@ class EventBasedCalculator(base.HazardCalculator):
         source_data = AccumDict(accum=[])
         allargs = []
         srcfilter = self.srcfilter
+        if oq.mosaic_model:  # 3-letter mosaic model
+            mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
+            model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
             if not sg.sources:
                 continue
             rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
             cmaker = ContextMaker(sg.trt, rgb, oq)
+            if oq.mosaic_model:
+                cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
         self.datastore.swmr_on()
@@ -483,9 +488,6 @@ class EventBasedCalculator(base.HazardCalculator):
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
-        if oq.mosaic_model:  # 3-letter mosaic model
-            df = readinput.read_mosaic_df().set_index('code')
-            mosaic_model_geom = df.loc[oq.mosaic_model].geom
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0
@@ -499,11 +501,7 @@ class EventBasedCalculator(base.HazardCalculator):
             if len(rup_array) == 0:
                 continue
             geom = rup_array.geom
-            if oq.mosaic_model:
-                ok = shapely.contains_xy(mosaic_model_geom, rup_array['hypo'])
-                rup_array = rup_array[ok]
-                geom = geom[ok]
-                filtered_ruptures += len(rup_array)
+            filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
