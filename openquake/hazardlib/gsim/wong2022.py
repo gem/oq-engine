@@ -38,24 +38,23 @@ def _compute_magnitude(ctx, C):
     return C['C2'] * ctx.mag + C['C10'] * (ctx.mag - 6)**2
 
 
+def _coeff(self, no, imt):
+    #if 'Deep' in self.__class__.__name__:
+    #    return getattr(self, 'COEFFS_Vs30_deep_%d' % no)[imt]
+    return getattr(self, 'COEFFS_Vs30_%d' % no)[imt]
+
+
 def _gen_cond_C(self, vs, imt):
     # yield the coefficients for each condition
-    C185 = self.COEFFS_Vs30_150[imt]
-    C260 = self.COEFFS_Vs30_260[imt]
-    C365 = self.COEFFS_Vs30_365[imt]
-    C428 = self.COEFFS_Vs30_428[imt]
-    C530 = self.COEFFS_Vs30_530[imt]
-    C760 = self.COEFFS_Vs30_760[imt]
-    C1080 = self.COEFFS_Vs30_1080[imt]
-    C1500 = self.COEFFS_Vs30_1500[imt]
-    yield vs < 185.0, C185
-    yield (vs > 185.0) & (vs < 365.0), C260
-    yield vs == 365.0, C365
-    yield vs == 428.0, C428
-    yield (vs > 365.0) & (vs < 760.0), C530
-    yield vs == 760.0, C760
-    yield (vs > 760.0) & (vs < 1500.0), C1080
-    yield (vs >= 1500.0), C1500
+    yield vs < 185.0, _coeff(self, 150, imt)
+    yield vs == 185.0, _coeff(self, 185, imt)
+    yield (vs > 185.0) & (vs < 365.0), _coeff(self, 260, imt)
+    yield vs == 365.0, _coeff(self, 365, imt)
+    yield vs == 428.0, _coeff(self, 428, imt)
+    yield (vs > 365.0) & (vs < 760.0), _coeff(self, 530, imt)
+    yield vs == 760.0, _coeff(self, 760, imt)
+    yield (vs > 760.0) & (vs < 1500.0), _coeff(self, 1080, imt)
+    yield (vs >= 1500.0), _coeff(self, 1500, imt)
 
 
 class WongEtAl2022Shallow(GMPE):
