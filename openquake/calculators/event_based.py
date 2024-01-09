@@ -23,7 +23,6 @@ import logging
 import operator
 import numpy
 import pandas
-import shapely
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
