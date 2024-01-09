@@ -41,15 +41,15 @@ def _compute_magnitude(ctx, C):
 def _gen_cond_C(self, vs, imt):
     # yield the coefficients for each condition
     cond_coeff = [
-        (vs < 185.0, self.COEFFS_shallow_Vs30_150[imt]),
-        (vs == 185.0, self.COEFFS_shallow_Vs30_185[imt]),
-        ((vs > 185.0) & (vs < 365.0),  self.COEFFS_shallow_Vs30_260[imt]),
-        (vs == 365.0, self.COEFFS_shallow_Vs30_365[imt]),
-        (vs == 428.0, self.COEFFS_shallow_Vs30_428[imt]),
-        ((vs > 365.0) & (vs < 760.0),  self.COEFFS_shallow_Vs30_530[imt]),
-        (vs == 760.0, self.COEFFS_shallow_Vs30_760[imt]),
-        ((vs > 760.0) & (vs < 1500.0), self.COEFFS_shallow_Vs30_1080[imt]),
-        ((vs >= 1500.0), self.COEFFS_shallow_Vs30_1500[imt]),
+        (vs < 185.0, self.COEFFS_Vs30_150[imt]),
+        (vs == 185.0, self.COEFFS_Vs30_185[imt]),
+        ((vs > 185.0) & (vs < 365.0),  self.COEFFS_Vs30_260[imt]),
+        (vs == 365.0, self.COEFFS_Vs30_365[imt]),
+        (vs == 428.0, self.COEFFS_Vs30_428[imt]),
+        ((vs > 365.0) & (vs < 760.0),  self.COEFFS_Vs30_530[imt]),
+        (vs == 760.0, self.COEFFS_Vs30_760[imt]),
+        ((vs > 760.0) & (vs < 1500.0), self.COEFFS_Vs30_1080[imt]),
+        ((vs >= 1500.0), self.COEFFS_Vs30_1500[imt]),
     ]
     for cond, coeff in cond_coeff:
         yield cond, coeff
@@ -108,7 +108,7 @@ class WongEtAl2022Shallow(GMPE):
                     sig[m, cond] = C['SigmaTot']
 
     #: Coefficients from SA from Tables from Appendic C in Wong et al. 2022
-    COEFFS_shallow_Vs30_150 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_150 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-12.69233	1.64091	3.2	0	-1.89422	0.1493	0	-0.27992	0.3866	1.2756	1.332897
 5	0.2	-8.77422	1.45379	3.5	0	-2.0482	0.13771	0	-0.33978	0.4094	1.1358	1.207332
@@ -140,7 +140,7 @@ pga	-1 	29.05542	-2.59586	4.6	0	-7.37863	0.67997	0	-0.16529	0.6922	0.4774	0.8409
 pgv	-2 	16.07683	-0.83229	3.9	0	-4.79022	0.45682	0	-0.20432	0.5283
     """)
 
-    COEFFS_shallow_Vs30_185 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_185 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-13.19364	1.68037	3.1	0	-1.83593	0.14544	0	-0.28148	0.3724	1.2756	1.328848
 5	0.2	-8.79408	1.43896	3.5	0	-2.06632	0.14222	0	-0.34248	0.381	1.1358	1.197999
@@ -173,7 +173,7 @@ pgv	-2 	15.35176	-0.78585	3.8	0	-4.71966	0.45311	0	-0.19689	0.5031
 
     """)
 
-    COEFFS_shallow_Vs30_260 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_260 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-14.35371	1.79484	2.9	0	-1.66745	0.13007	0	-0.28825	0.3861	1.2756	1.332752
 5	0.2	-9.63654	1.51074	3.4	0	-1.94809	0.13306	0	-0.34759	0.4125	1.1358	1.208387
@@ -205,7 +205,7 @@ pga	-1 	22.30187	-1.5588	4.3	0	-6.37736	0.51072	0	-0.14672	0.71144	0.4774	0.8578
 pgv	-2 	14.66968	-0.75914	3.7	0	-4.70358	0.45882	0	-0.18164	0.5243
     """)
 
-    COEFFS_shallow_Vs30_365 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_365 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-14.90354	1.85488	2.9	0	-1.58566	0.1203	0	-0.29728	0.3831	1.2756	1.331886
 5	0.2	-10.47331	1.59148	3.3	0	-1.81477	0.12087	0	-0.35424	0.4161	1.1358	1.20962
@@ -237,7 +237,7 @@ pga	-1 	20.58466	-1.41581	4.2	0	-6.16192	0.49169	0	-0.14324	0.7231	0.4774	0.8665
 pgv	-2 	13.12894	-0.62021	3.6	0	-4.50438	0.44333	0	-0.18596	0.5198
     """)
 
-    COEFFS_shallow_Vs30_428 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_428 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-15.19784	1.90028	2.9	0	-1.54536	0.11537	0	-0.3012	0.3726	1.2756	1.328904
 5	0.2	-10.71071	1.61659	3.3	0	-1.78403	0.11728	0	-0.35703	0.391	1.1358	1.201217
@@ -269,7 +269,7 @@ pga	-1 	18.67909	-1.2768	4.2	0	-5.88336	0.47114	0	-0.14312	0.7121	0.4774	0.8573
 pgv	-2 	12.77377	-0.59006	3.6	0	-4.47669	0.44189	0	-0.18818	0.5039
     """)
 
-    COEFFS_shallow_Vs30_530 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_530 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-15.7025	1.95736	2.8	0	-1.45569	0.10622	0	-0.30744	0.3528	1.2756	1.323489
 5	0.2	-10.93376	1.65285	3.3	0	-1.74195	0.11191	0	-0.36216	0.3634	1.1358	1.192519
@@ -301,7 +301,7 @@ pga	-1 	19.25381	-1.37968	4.1	0	-6.02726	-6.02726	0	-0.14172	0.6998	0.4774	0.847
 pgv	-2 	12.31387	-0.53167	3.6	0	-4.42465	-4.42465	0	-0.19744	0.4784
     """)
 
-    COEFFS_shallow_Vs30_760 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_760 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-16.07739	1.99692	2.8	0	-1.41449	0.10118	0	-0.31138	0.3618	1.2756	1.325916
 5	0.2	-11.21796	1.67885	3.3	0	-1.71272	0.10846	0	-0.36544	0.3777	1.1358	1.196954
@@ -333,7 +333,7 @@ pga	-1 	17.13204	-1.20352	4	0	-5.7267	0.46719	0	-0.14231	0.6844	0.4774	0.8345
 pgv	-2 	10.89224	-0.40124	3.5	0	-4.23673	0.41962	0	-0.1976	0.4824
     """)
 
-    COEFFS_shallow_Vs30_1080 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_1080 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-16.2567	2.02096	2.8	0	-1.38545	0.09737	0	-0.31511	0.3571	1.2756	1.324642
 5	0.2	-11.36847	1.69993	3.3	0	-1.68801	0.10522	0	-0.36887	0.3719	1.1358	1.195137
@@ -365,7 +365,7 @@ pga	-1 	16.31762	-1.1733	3.9	0	-5.63243	0.46634	0	-0.13988	0.6881	0.4774	0.8346
 pgv	-2 	10.55	-0.35673	3.5	0	-4.19532	0.41473	0	-0.2055	0.4691
     """)
 
-    COEFFS_shallow_Vs30_1500 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_1500 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-16.44065	2.03994	2.8	0	-1.37085	0.09545	0	-0.31641	0.3583	1.2756	1.324966
 5	0.2	-11.48095	1.70249	3.3	0	-1.68898	0.1055	0	-0.36877	0.3717	1.1358	1.195074
