@@ -39,8 +39,6 @@ def _compute_magnitude(ctx, C):
 
 
 def _coeff(self, no, imt):
-    if 'Deep' in self.__class__.__name__:
-        return getattr(self, 'COEFFS_deep_Vs30_%d' % no)[imt]
     return getattr(self, 'COEFFS_Vs30_%d' % no)[imt]
 
 
@@ -404,7 +402,7 @@ class WongEtAl2022Deep(WongEtAl2022Shallow):
     """
     For deep events (depth > 20km)
     """
-    COEFFS_deep_Vs30_150 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_150 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	4.37553	0.77975	5.8	0	-4.59986	0.30767	0	-0.14658	0.2813	1.2756	1.30625
 5	0.2	6.55163	1.33405	5.9	0	-4.46379	0.19195	0	-0.223	0.3285	1.1358	1.18235
@@ -436,7 +434,7 @@ pga	-1 	101.4428	-9.5506	6.2	0	-17.31475	1.66075	0	-0.16232	0.5788	0.4774	0.7502
 pgv	-2 	52.29073	-3.78249	5.7	0	-10.07493	0.90801	0	-0.1844	0.445
     """)
 
-    COEFFS_deep_Vs30_185 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_185 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	2.23924	0.88904	5.7	0	-4.3267	0.29496	0	-0.14503	0.2903	1.2756	1.30822
 5	0.2	4.9761	1.26923	5.8	0	-4.2701	0.20407	0	-0.22666	0.3373	1.1358	1.18483
@@ -468,7 +466,7 @@ pga	-1 	101.7488	-9.15899	6.2	0	-17.37388	1.60314	0	-0.16908	0.583	0.4774	0.7535
 pgv	-2 	49.26893	-3.53262	5.6	0	-9.70275	0.87669	0	-0.18271	0.4627
     """)
 
-    COEFFS_deep_Vs30_260 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_260 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-4.06428	1.34282	5.4	0	-3.4532	0.23289	0	-0.1427	0.3058	1.2756	1.31174
 5	0.2	2.52438	1.35767	5.7	0	-3.94546	0.19376	0	-0.22802	0.3468	1.1358	1.18757
@@ -500,7 +498,7 @@ pga	-1 	83.41772	-6.63195	6	0	-14.92092	1.24728	0	-0.16212	0.606	0.4774	0.77146
 pgv	-2 	43.611	-3.09358	5.4	0	-9.00818	0.82445	0	-0.16302	0.4921
     """)
 
-    COEFFS_deep_Vs30_365 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_365 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-5.89428	1.54704	5.4	0	-3.18565	0.20388	0	-0.14813	0.2898	1.2756	1.30811
 5	0.2	0.82909	1.53292	5.7	0	-3.69799	0.16915	0	-0.23479	0.3377	1.1358	1.18494
@@ -532,7 +530,7 @@ pga	-1 	69.33356	-5.22513	5.8	0	-13.04691	1.05354	0	-0.15287	0.6102	0.4774	0.774
 pgv	-2 	44.09953	-3.2484	5.4	0	-9.16765	0.85807	0	-0.15093	0.4599
     """)
 
-    COEFFS_deep_Vs30_428 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_428 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-6.9155	1.66675	5.4	0	-3.03522	0.18615	0	-0.15158	0.2945	1.2756	1.3092
 5	0.2	-0.08881	1.63345	5.7	0	-3.56561	0.15429	0	-0.23807	0.3392	1.1358	1.1854
@@ -564,7 +562,7 @@ pga	-1 	68.52187	-5.09631	5.8	0	-12.9601	1.03629	0	-0.14898	0.6172	0.4774	0.7803
 pgv	-2 	39.70192	-2.85255	5.3	0	-8.55941	0.80414	0	-0.15077	0.4487
     """)
 
-    COEFFS_deep_Vs30_530 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_530 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-8.03767	1.81	5.4	0	-2.85976	0.16457	0	-0.15643	0.2767	1.2756	1.30527
 5	0.2	-1.25751	1.78877	5.7	0	-3.38239	0.13112	0	-0.24196	0.3092	1.1358	1.17714
@@ -596,7 +594,7 @@ pga	-1 	64.73113	-4.9809	5.7	0	-12.513	1.03056	0	-0.1412	0.637	0.4774	0.79604
 pgv	-2 	39.64739	-2.89068	5.3	0	-8.5942	0.81631	0	-0.14725	0.4549
     """)
 
-    COEFFS_deep_Vs30_760 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_760 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-9.22402	1.94021	5.4	0	-2.69597	0.14582	0	-0.15966	0.2835	1.2756	1.3067
 5	0.2	-2.19341	1.87567	5.7	0	-3.25694	0.11873	0	-0.24647	0.3272	1.1358	1.182
@@ -628,7 +626,7 @@ pga	-1 	51.14649	-3.57103	5.5	0	-10.59901	0.82422	0	-0.12837	0.6336	0.4774	0.793
 pgv	-2 	38.93484	-2.83525	5.3	0	-8.54137	0.81287	0	-0.14409	0.4554
     """)
 
-    COEFFS_deep_Vs30_1080 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_1080 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-9.94467	2.03274	5.4	0	-2.58611	0.13184	0	-0.16348	0.2739	1.2756	1.30468
 5	0.2	-2.85757	1.96038	5.7	0	-3.15687	0.10616	0	-0.24948	0.311	1.1358	1.17761
@@ -660,7 +658,7 @@ pga	-1 	49.01306	-3.53963	5.4	0	-10.36996	0.8279	0	-0.1149	0.6388	0.4774	0.79748
 pgv	-2 	35.32381	-2.5049	5.2	0	-8.04105	0.76843	0	-0.14424	0.4401
     """)
 
-    COEFFS_deep_Vs30_1500 = CoeffsTable(sa_damping=5, table="""
+    COEFFS_Vs30_1500 = CoeffsTable(sa_damping=5, table="""
 imt	Freq 	C1 	C2 	C4 	C5 	C6 	C7 	C8 	C10 	param_sigma	model_sigma	SigmaTot
 10	0.1	-10.49826	2.09582	5.4	0	-2.51426	0.12288	0	-0.16307	0.2731	1.2756	1.30451
 5	0.2	-3.07494	1.97375	5.7	0	-3.14119	0.10461	0	-0.24902	0.3084	1.1358	1.17692
