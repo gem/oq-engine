@@ -46,7 +46,8 @@ class LineResampleTestCase(unittest.TestCase):
         p4 = geo.Point(0.0449662998195, 0.172149398777, 21.2132034356)
         p5 = geo.Point(0.0899327195183, 0.217115442616, 28.2842712475)
         p6 = geo.Point(0.134899286793, 0.262081472606, 35.3553390593)
-        expected = geo.Line([p1, p2, p3, p4, p5, p6])
+        p7 = geo.Point(0.17986642, 0.30704752, 42.42641368)
+        expected = geo.Line([p1, p2, p3, p4, p5, p6, p7])
         self.assertEqual(expected, resampled)
 
     def test_resample_dense_trace(self):

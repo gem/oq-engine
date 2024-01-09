@@ -97,6 +97,7 @@ def _resample(coo, sect_len, orig_extremes):
                 chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
         else:
 
+            same_dir = True
             if len(rtra) > 1:
 
                 # Azimuth of the resampled edge
@@ -107,7 +108,7 @@ def _resample(coo, sect_len, orig_extremes):
                 azim_orig_edge = geodetic.azimuth(rtra[-1][0], rtra[-1][1],
                                                   coo[-1, 0], coo[-1, 1])
                 # Check
-                assert np.abs(azim_rsmp_edge - azim_orig_edge) < 30
+                same_dir = np.abs(azim_rsmp_edge - azim_orig_edge) < 30
 
             # This is the distance between the last sampled point and the last
             # point on the original edge
@@ -115,13 +116,18 @@ def _resample(coo, sect_len, orig_extremes):
 
             # We are processing the last point
             # if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
-            if dist_from_last > sect_len / 2 and not orig_extremes:
+            if ((dist_from_last > sect_len / 2 and not orig_extremes and
+                    same_dir) or
+                (dist_from_last < sect_len / 2 and not orig_extremes and
+                    not same_dir)):
+
                 # Adding more points still on the same segment
                 delta = txy[-1] - txy[-2]
                 chk_dst = utils.get_dist(txy[-1], txy[-2])
                 _update(rtra, rtra_prj, proj, rtra_prj[-1] +
                         sect_len * delta / chk_dst)
                 inc_len += sect_len
+
             elif orig_extremes:
                 # Adding last point
                 rtra.append(coo[-1])
