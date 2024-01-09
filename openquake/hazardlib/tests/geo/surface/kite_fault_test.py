@@ -32,7 +32,7 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-PLOTTING = True
+PLOTTING = False
 aae = np.testing.assert_almost_equal
 
 
@@ -896,6 +896,8 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         np.isfinite(smsh.mesh.lons[:, :])
         # FIXME
         # self.assertEqual(np.sum(np.sum(idx)), 207)
+
+        breakpoint()
 
         if PLOTTING:
             title = 'Top of the slab'

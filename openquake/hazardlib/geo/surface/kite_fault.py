@@ -773,7 +773,25 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     # Fix the orientation of the mesh
     msh = _fix_right_hand(msh)
 
+    # This is for debugging
+    # _dbg_plot_mesh(msh)
+
     return msh
+
+
+def _dbg_plot_mesh(mesh):
+
+    from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
+        set_axes_equal)
+
+    scl = 0.01
+    ax = plt.figure().add_subplot(projection='3d')
+    ax.plot(mesh[:, :, 0].flatten(),
+            mesh[:, :, 1].flatten(),
+            mesh[:, :, 2].flatten() * scl, '.')
+    ax.invert_zaxis()
+    set_axes_equal(ax)
+    plt.show()
 
 
 def _fix_right_hand(msh):
