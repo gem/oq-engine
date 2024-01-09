@@ -40,19 +40,22 @@ def _compute_magnitude(ctx, C):
 
 def _gen_cond_C(self, vs, imt):
     # yield the coefficients for each condition
-    cond_coeff = [
-        (vs < 185.0, self.COEFFS_Vs30_150[imt]),
-        (vs == 185.0, self.COEFFS_Vs30_185[imt]),
-        ((vs > 185.0) & (vs < 365.0),  self.COEFFS_Vs30_260[imt]),
-        (vs == 365.0, self.COEFFS_Vs30_365[imt]),
-        (vs == 428.0, self.COEFFS_Vs30_428[imt]),
-        ((vs > 365.0) & (vs < 760.0),  self.COEFFS_Vs30_530[imt]),
-        (vs == 760.0, self.COEFFS_Vs30_760[imt]),
-        ((vs > 760.0) & (vs < 1500.0), self.COEFFS_Vs30_1080[imt]),
-        ((vs >= 1500.0), self.COEFFS_Vs30_1500[imt]),
-    ]
-    for cond, coeff in cond_coeff:
-        yield cond, coeff
+    C185 = self.COEFFS_Vs30_150[imt]
+    C260 = self.COEFFS_Vs30_260[imt]
+    C365 = self.COEFFS_Vs30_365[imt]
+    C428 = self.COEFFS_Vs30_428[imt]
+    C530 = self.COEFFS_Vs30_530[imt]
+    C760 = self.COEFFS_Vs30_760[imt]
+    C1080 = self.COEFFS_Vs30_1080[imt]
+    C1500 = self.COEFFS_Vs30_1500[imt]
+    yield vs < 185.0, C185
+    yield (vs > 185.0) & (vs < 365.0), C260
+    yield vs == 365.0, C365
+    yield vs == 428.0, C428
+    yield (vs > 365.0) & (vs < 760.0), C530
+    yield vs == 760.0, C760
+    yield (vs > 760.0) & (vs < 1500.0), C1080
+    yield (vs >= 1500.0), C1500
 
 
 class WongEtAl2022Shallow(GMPE):
