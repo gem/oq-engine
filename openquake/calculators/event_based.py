@@ -321,7 +321,8 @@ def filter_stations(station_df, complete, rup, maxdist):
                         'switching to the unconditioned GMF computer',
                         ns, ns, maxdist)
     else:
-        station_data = station_df[numpy.isin(station_df.index, station_sites.sids)]
+        station_data = station_df[
+            numpy.isin(station_df.index, station_sites.sids)]
         if len(station_data) < ns:
             logging.info('Discarded %d/%d stations more distant than %d km',
                         ns - len(station_data), ns, maxdist)
@@ -484,8 +485,8 @@ class EventBasedCalculator(base.HazardCalculator):
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
         if oq.mosaic_model:  # 3-letter mosaic model
-            df = readinput.read_mosaic_df().set_index('code')
-            mosaic_model_geom = df.loc[oq.mosaic_model].geom
+            mosaic_df = readinput.read_mosaic_df().set_index('code')
+            model_geom = mosaic_df.loc[oq.mosaic_model].geom
         t0 = time.time()
         tot_ruptures = 0
         filtered_ruptures = 0
@@ -500,10 +501,11 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             geom = rup_array.geom
             if oq.mosaic_model:
-                ok = shapely.contains_xy(mosaic_model_geom, rup_array['hypo'])
-                rup_array = rup_array[ok]
-                geom = geom[ok]
-                filtered_ruptures += len(rup_array)
+                with self.monitor('restricting ruptures'):
+                    ok = shapely.contains_xy(model_geom, rup_array['hypo'])
+                    rup_array = rup_array[ok]
+                    geom = geom[ok]
+                    filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
