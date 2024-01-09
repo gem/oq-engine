@@ -33,7 +33,6 @@ from openquake.hazardlib.sourceconverter import SourceConverter
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
-#PLOTTING = True
 aae = np.testing.assert_almost_equal
 
 
@@ -897,7 +896,8 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
                                          sampling, idl, alg)
         np.isfinite(smsh.mesh.lons[:, :])
-        #self.assertEqual(np.sum(np.sum(idx)), 207)
+        # FIXME
+        # self.assertEqual(np.sum(np.sum(idx)), 207)
 
         if PLOTTING:
             title = 'Top of the slab'
