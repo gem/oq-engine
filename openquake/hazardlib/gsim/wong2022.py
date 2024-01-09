@@ -95,9 +95,10 @@ class WongEtAl2022Shallow(GMPE):
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         for m, imt in enumerate(imts):
             for mask, C in _gen_mask_C(self, ctx.vs30, imt):
-                mean[m, mask] = (C['C1'] +
-                           _compute_magnitude(ctx[mask], C) +
-                           _compute_distance(ctx[mask], C))
+                mean[m, mask] = (
+                    C['C1'] + _compute_magnitude(ctx[mask], C) +
+                    _compute_distance(ctx[mask], C)
+                )
                 if imt.string.startswith(('PGV')):
                     sig[m, mask] = 0
                 else:
