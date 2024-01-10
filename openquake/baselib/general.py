@@ -762,7 +762,6 @@ def copyobj(obj, **kwargs):
 class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays with the same lenghts.
-    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
