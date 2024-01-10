@@ -59,7 +59,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
             f'Site at lon={lon} lat={lat} is not covered by any model!')
     ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-    params['model'] = model
+    params['mosaic_model'] = model
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
@@ -127,7 +127,7 @@ def main(lon: valid.longitude,
         jobctx.params.update(
             get_params_from(
                 inputs, config.directory.mosaic_dir, exclude=['USA']))
-        if jobctx.params['model'] in PRELIMINARY_MODELS:
+        if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
             warnings.append(PRELIMINARY_MODEL_WARNING)
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
