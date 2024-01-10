@@ -60,7 +60,7 @@ jobs:
               GITHUB_BR=`echo ${{ github.head_ref }}`
               python install.py devel --version ${GITHUB_INPUT_REF}
           fi
-      - name: Run demos and upload to ci.openquake.org
+      - name: Run demos and upload to docs.openquake.org
         # uncomment the line below to avoid running this part when triggering the action manually
         # if: github.event.inputs.git-ref == ''
         shell: bash
@@ -78,13 +78,20 @@ jobs:
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
-          echo " Check if this is a pull request or not"
-          if [ -z "$GITHUB_HD_REF" ]
+          if [ -z "$GITHUB_INPUT_REF" ]
           then
-              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
-              GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
+              echo "Is not a workflow_dispatch RUN"
+              echo " Check if this is a pull request or not"
+              if [ -z "$GITHUB_HD_REF" ]
+              then
+                  echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
+                  GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
+              else
+                  echo " Is a pull request, use branch: $GITHUB_HD_BR"
+                  GITHUB_BR=`echo ${{ github.head_ref }}`
+              fi
           else
-              echo " Is a pull request, use branch: $GITHUB_HD_BR"
+              echo "Is a workflow_dispatch RUN, use: $GITHUB_INPUT_REF"
               GITHUB_BR=`echo ${{ github.head_ref }}`
           fi
           echo "BRANCH set to $GITHUB_BR"
