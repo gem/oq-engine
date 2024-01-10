@@ -95,6 +95,12 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
     # Plotting mesh
     if smsh is not None:
 
+        # Plotting nodes
+        idx = np.isfinite(smsh.mesh.lons)
+        ax.plot(smsh.mesh.lons[idx].flatten(),
+                smsh.mesh.lats[idx].flatten(),
+                smsh.mesh.depths[idx].flatten() * scl, '.g', ms=0.1)
+
         for i_row in range(smsh.mesh.lons.shape[0] - 1):
             for i_col in range(smsh.mesh.lons.shape[1] - 1):
 
@@ -797,7 +803,6 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
             title += '(IdealisedAsimmetricMeshTest)'
             ppp(self.profiles, srfc, title, ax_equal=False)
 
-    # @unittest.skip('')
     def test_mesh_creation_with_alignment(self):
         # Test construction of the mesh
         h_sampl = 2.5
@@ -826,7 +831,6 @@ class IdealisedAsimmetricMeshTest(unittest.TestCase):
         lons, lats = srfc.surface_projection
         # TODO
 
-    # @unittest.skip('')
     def test_get_width(self):
         """ Test the calculation of the width """
         h_sampl = 2.5
@@ -895,9 +899,8 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
                                          sampling, idl, alg)
-        np.isfinite(smsh.mesh.lons[:, :])
-        # FIXME
-        # self.assertEqual(np.sum(np.sum(idx)), 207)
+        idx = np.isfinite(smsh.mesh.lons[:, :])
+        self.assertEqual(np.sum(np.sum(idx)), 787)
 
         if PLOTTING:
             title = 'Top of the slab'
@@ -906,7 +909,6 @@ class SouthAmericaSegmentTest(unittest.TestCase):
 
 class VerticalProfilesTest(unittest.TestCase):
 
-    @unittest.skip('')
     def test_vertical_01(self):
 
         fname = os.path.join(BASE_DATA_PATH, 'poly_problem.xml')
@@ -936,7 +938,7 @@ class VerticalProfilesTest(unittest.TestCase):
             plt.show()
 
         # Testing that the mesh is vertical
-        expected = [-75.03541, 19.85003, -75.03541, 19.85003]
+        expected = [-75.551401, 19.83364, -75.551391, 19.83363]
         computed = [sfc.mesh.lons[0, 0], sfc.mesh.lats[0, 0],
                     sfc.mesh.lons[-1, 0], sfc.mesh.lats[-1, 0]]
         np.testing.assert_allclose(expected, computed)
@@ -952,7 +954,6 @@ class VerticalProfilesTest(unittest.TestCase):
 
 class TestNarrowSurface(unittest.TestCase):
 
-    @unittest.skip('')
     def test_narrow_01(self):
 
         # The profiles are aligned at the top and the bottom. Their horizontal
@@ -973,15 +974,21 @@ class TestNarrowSurface(unittest.TestCase):
         smsh = KiteSurface.from_profiles(
             self.profiles, v_sampl, h_sampl, idl, alg)
 
+        if PLOTTING:
+            title = 'Narrow'
+            ppp(self.profiles, smsh, title, ax_equal=True)
+
         # Testing
         expected_lons = np.array([[0.01, 0.], [0.01, 0.], [0.01, 0.],
                                   [0.01, 0.]])
-        expected_lats = np.array([[0., 0.], [0.00029411, 0.00029411],
-                                  [0.00058822, 0.00058822],
-                                  [0.00088233, 0.00088233]])
-        expected_deps = np.array([[0., 0.], [4.99989305, 4.99989305],
-                                  [9.99978609, 9.99978609],
-                                  [14.99967914, 14.99967914]])
+        expected_lats = np.array([[0., 0.],
+                                  [0.00033332, 0.00033332],
+                                  [0.00066665, 0.00066665],
+                                  [0.00099997, 0.00099997]])
+        expected_deps = np.array([[0., 0.],
+                                  [4.99986262, 4.99986262],
+                                  [9.99972525, 9.99972525],
+                                  [14.99958787, 14.99958787]])
         aae(smsh.mesh.lons, expected_lons)
         aae(smsh.mesh.lats, expected_lats)
         aae(smsh.mesh.depths, expected_deps)

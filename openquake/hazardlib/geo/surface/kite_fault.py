@@ -19,6 +19,8 @@
 Module :mod:`openquake.hazardlib.geo.surface.kite_fault` defines
 :class:`KiteSurface`.
 """
+
+import copy
 import numpy as np
 import numpy.typing as npt
 import matplotlib.pyplot as plt
@@ -759,7 +761,35 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     msh = msh.swapaxes(0, 1)
     msh = fix_mesh(msh)
 
-    # Sort edges of the mesh
+    # Sort the edges composing the mesh using their average depth
+    _edges_sort_by_mean_depth(msh)
+
+    # Adjust the sorting
+    _edges_fix_sorting(msh)
+
+    # Fix the orientation of the mesh
+    msh = _fix_right_hand(msh)
+
+    # This is for debugging
+    # _dbg_plot_mesh(msh)
+
+    return msh
+
+
+def _edges_fix_sorting(msh):
+    for i_row_u in range(0, msh.shape[0] - 1):
+        for i_row_l in range(i_row_u, msh.shape[0] - 1):
+            i_cols = np.logical_and(np.isfinite(msh[i_row_u, :, 2]),
+                                    np.isfinite(msh[i_row_l, :, 2]))
+            if np.any(msh[i_row_l, i_cols, 2] - msh[i_row_u, i_cols, 2] < 0):
+                # Swapping
+                tmpl = copy.copy(msh[i_row_l, :, :])
+                tmpu = copy.copy(msh[i_row_u, :, :])
+                msh[i_row_u, :, :] = tmpl
+                msh[i_row_l, :, :] = tmpu
+
+
+def _edges_sort_by_mean_depth(msh):
     mdep = []
     for irow in range(msh.shape[0]):
         tidx = np.isfinite(msh[irow, :, 2])
@@ -770,10 +800,20 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     msh[:, :, 1] = msh[idx, :, 1]
     msh[:, :, 2] = msh[idx, :, 2]
 
-    # Fix the orientation of the mesh
-    msh = _fix_right_hand(msh)
 
-    return msh
+def _dbg_plot_mesh(mesh):
+
+    from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
+        set_axes_equal)
+
+    scl = 0.01
+    ax = plt.figure().add_subplot(projection='3d')
+    ax.plot(mesh[:, :, 0].flatten(),
+            mesh[:, :, 1].flatten(),
+            mesh[:, :, 2].flatten() * scl, '.')
+    ax.invert_zaxis()
+    set_axes_equal(ax)
+    plt.show()
 
 
 def _fix_right_hand(msh):
@@ -1002,6 +1042,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Each element of the `csegs` list contains the start and end index of the
     # continuous part of an edge and the index of the edge (i.e. third element)
     csegs = np.array(csegs)
+
     # Sort the `csegs` array by increasing edge index, decreasing profile
     # index and starting profile index
     idxs = np.lexsort((csegs[:, 2], -csegs[:, 1], csegs[:, 0]))
@@ -1018,7 +1059,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Loop over the unique-start indexes of continuous parts of an edge
     for i_from in unique:
 
-        # Process all the edges that start with index `i_from`
+        # Process all the sub-edges that start with index `i_from`
         for cseg in csegs[csegs[:, 0] == i_from, :]:
 
             # If the edge starts with the first index
@@ -1047,6 +1088,9 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Build profiles
     npr = _build_profiles(new_edges)
 
+    # This is for debugging purposes
+    # monotonic, i_prof = _profiles_depth_is_monotonically_increasing(npr)
+
     # Check the sampled edges
     for key in new_edges:
         edg = np.array(new_edges[key])
@@ -1056,6 +1100,21 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # ax = _dbg_plot(new_edges, profs, npr, ref_idx)
 
     return npr
+
+
+def _profiles_depth_is_monotonically_increasing(profs):
+    # Check if the depths in all the profiles are monotonically increasing.
+    # This is not a strict requirement but it's useful as a general check.
+    # This function is used only for debugging purposes.
+    for i_prof, prof in enumerate(profs):
+        tmp = np.array(prof)
+        idx = np.isfinite(tmp[:, 2])
+        dff = np.diff(tmp[idx, 2])
+        chk = np.all(dff > 0)
+        if not chk:
+            print(dff)
+            return False, i_prof
+    return True, None
 
 
 def _check_sampling(edg, proj):
@@ -1173,7 +1232,9 @@ def _build_edges(coos):
     # 'sub-edges'
     #
     # :param coos:
-    #   A list with a triple. The first element in the triple is the
+    #   A list with a triple. The first element in the triple is the index of
+    #   the column from where the subedge starts, the second in the index of
+    #   the ending column and the last element is an array with the coordinates
     #
     edges = {}
     for coo in coos:
