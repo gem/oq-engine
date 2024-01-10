@@ -35,7 +35,7 @@ from urllib.parse import unquote_plus
 from xml.parsers.expat import ExpatError
 from django.http import (
     HttpResponse, HttpResponseNotFound, HttpResponseBadRequest,
-    HttpResponseForbidden)
+    HttpResponseForbidden, HttpResponseServerError)
 from django.core.mail import EmailMessage
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -603,6 +603,9 @@ def aelo_run(request):
     :param request:
         a `django.http.HttpRequest` object containing lon, lat, vs30, siteid
     """
+    if not config.directory.mosaic_dir:
+        return HttpResponseServerError(
+            'mosaic_dir is not specified in openquake.cfg')
     validation_errs = {}
     invalid_inputs = []
     try:
@@ -640,7 +643,8 @@ def aelo_run(request):
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid))
+            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid),
+            config.directory.mosaic_dir, exclude=('USA',))
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,

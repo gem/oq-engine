@@ -75,6 +75,8 @@ def from_file(fname, concurrent_jobs=8):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
@@ -105,7 +107,9 @@ def from_file(fname, concurrent_jobs=8):
                 continue
             dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
             tags.append(siteid)
-            allparams.append(get_params_from(dic))
+            # FIXME: should we exclude USA here or not?
+            allparams.append(get_params_from(
+                dic, config.directory.mosaic_dir, exclude=('USA',)))
 
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
@@ -143,7 +147,9 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
         from_file(lonlat_or_fname, concurrent_jobs)
         return
     lon, lat = lonlat_or_fname.split(',')
-    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30))
+    params = get_params_from(
+        dict(lon=lon, lat=lat, vs30=vs30), config.directory.mosaic_dir,
+        exclude=('USA',))  # FIXME: should we exclude USA here or not?
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -239,4 +245,5 @@ sample_gmfs.slowest = 'profile and show the slowest operations'
 
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, sample_rups=sample_rups, sample_gmfs=sample_gmfs)
+main = dict(run_site=run_site, sample_rups=sample_rups,
+            sample_gmfs=sample_gmfs)
