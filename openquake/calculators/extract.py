@@ -36,7 +36,7 @@ from openquake.baselib.hdf5 import ArrayWrapper
 from openquake.baselib.general import group_array, println
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree
-from openquake.hazardlib.gsim.base import (
+from openquake.hazardlib.contexts import (
     ContextMaker, read_cmakers, read_ctx_by_grp)
 from openquake.hazardlib.calc import disagg, stochastic, filters
 from openquake.hazardlib.stats import calc_stats
@@ -742,7 +742,7 @@ def extract_agg_curves(dstore, what):
         tagnames = []
     k = qdic['k']  # rlz or stat index
     lts = qdic['lt']
-    [l] = qdic['loss_type']  # loss type index
+    [li] = qdic['loss_type']  # loss type index
     tagdict = {tag: qdic[tag] for tag in tagnames}
     if set(tagnames) != info['tagnames']:
         raise ValueError('Expected tagnames=%s, got %s' %
@@ -834,7 +834,6 @@ def extract_agg_damages(dstore, what):
     if 'damages-rlzs' in dstore:
         oq = dstore['oqparam']
         lti = oq.lti[loss_type]
-        D = len(oq.limit_states) + 1
         damages = dstore['damages-rlzs'][:, :, lti]
     else:
         raise KeyError('No damages found in %s' % dstore)

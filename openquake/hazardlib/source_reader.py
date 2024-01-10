@@ -108,7 +108,7 @@ def create_source_info(csm, h5):
         src = srcs[0]
         num_ruptures = sum(src.num_ruptures for src in srcs)
         mutex = getattr(src, 'mutex_weight', 0)
-        trti = csm.full_lt.trti.get(src.tectonic_region_type, -1)
+        trti = csm.full_lt.trti.get(src.tectonic_region_type, 0)
         if src.code == b'p':
             code = b'p'
         else:
@@ -175,15 +175,12 @@ def get_csm(oq, full_lt, dstore=None):
     full_lt.ses_seed = oq.ses_seed
     logging.info('Reading the source model(s) in parallel')
 
-    # NB: the source models file are often NOT in the shared directory
-    # (for instance in oq-engine/demos) so the processpool must be used
-    dist = ('no' if os.environ.get('OQ_DISTRIBUTE') == 'no'
-            else 'processpool')
+    # NB: the source models file must be in the shared directory
     # NB: dstore is None in logictree_test.py
     allargs = []
     for fname in full_lt.source_model_lt.info.smpaths:
         allargs.append((fname, converter))
-    smdict = parallel.Starmap(read_source_model, allargs, distribute=dist,
+    smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
@@ -382,7 +379,6 @@ def reduce_sources(sources_with_same_id, full_lt):
     :returns: a list of truly unique sources, ordered by trt_smr
     """
     out = []
-    srcid = sources_with_same_id[0].source_id
     add_checksums(sources_with_same_id)
     for srcs in general.groupby(sources_with_same_id, checksum).values():
         # duplicate sources: same id, same checksum
@@ -391,8 +387,6 @@ def reduce_sources(sources_with_same_id, full_lt):
             src.trt_smr = tuple(s.trt_smr for s in srcs)
         else:
             src.trt_smr = src.trt_smr,
-        # tup = full_lt.get_trt_smrs(srcid)
-        # assert src.trt_smr == tup, (src.trt_smr, tup)
         out.append(src)
     out.sort(key=operator.attrgetter('trt_smr'))
     return out

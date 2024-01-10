@@ -1656,8 +1656,8 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.assertRaises(AssertionError, bs.filter_source, None)
 
     def test_tectonic_region_type(self):
-        test = lambda trt, source: \
-            logictree.BranchSet(
+        def test(trt, source): 
+            return logictree.BranchSet(
                 None, filters={'applyToTectonicRegionType': trt}
             ).filter_source(source)
 

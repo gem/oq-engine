@@ -41,6 +41,13 @@ ASCE07 = ['0.50000', '0.75315', '0.34598', '0.50000', '1.50000', '1.76943',
 ASCE41 = [1.5, 1.4308, 1.4308, 1.0, 0.83393, 0.83393, 0.6, 0.6, 0.98649, 0.4,
           0.4, 0.56995]
 
+def setup():
+    os.environ['OQ_APPLICATION_MODE'] = 'aelo'
+
+
+def teardown():
+    del os.environ['OQ_APPLICATION_MODE']
+
 
 def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
@@ -89,7 +96,6 @@ def test_JPN():
         aac(df.disagg_rate, df.interp_rate, rtol=.01)
 
 
-# not passing yet
 def test_KOR():
     # test with same name sources
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')

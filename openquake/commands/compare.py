@@ -258,7 +258,7 @@ def compare_med_gmv(imt, calc_ids: int, *,
     c = Comparator(calc_ids)
     try:
         [m] = set(list(ex.oqparam.imtls).index(imt) for ex in c.extractors)
-    except:
+    except ValueError:
         sys.exit('The imt %s is not present in all calculations' % imt)
     ex1, ex2 = c.extractors
     srcs1 = sorted(ex1.get('med_gmv'))
@@ -297,7 +297,8 @@ def compare_risk_by_event(event: int, calc_ids: int, *,
     df1 = ds1.read_df('gmf_data', 'sid', sel={'eid': event})
     df = df0.compare(df1)
     if len(df):
-        print('Not comparable GMFs: %s', df); return
+        print('Not comparable GMFs: %s', df)
+        return
     df0 = ds0.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
     df1 = ds1.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
     print(df0)

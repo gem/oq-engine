@@ -24,6 +24,7 @@ import sys
 import zlib
 import copy
 import math
+import time
 import pickle
 import socket
 import random
@@ -78,12 +79,17 @@ def cached_property(method):
         try:
             val = self.__dict__[name]
         except KeyError:
+            t0 = time.time()
             val = method(self)
+            cached_property.dt[name] = time.time() - t0
             self.__dict__[name] = val
         return val
     newmethod.__name__ = method.__name__
     newmethod.__doc__ = method.__doc__
     return property(newmethod)
+
+
+cached_property.dt = {}  # dictionary of times
 
 
 def nokey(item):
@@ -756,20 +762,20 @@ def copyobj(obj, **kwargs):
 class DictArray(Mapping):
     """
     A small wrapper over a dictionary of arrays with the same lenghts.
-    Ordered by the lexicographic order of the keys.
     """
     def __init__(self, imtls):
         levels = imtls[next(iter(imtls))]
         self.M = len(imtls)
         self.L1 = len(levels)
         self.size = self.M * self.L1
+        items = imtls.items()
         self.dt = numpy.dtype([(str(imt), F64, (self.L1,))
-                               for imt, imls in imtls.items()])
+                               for imt, imls in items])
         self.array = numpy.zeros((self.M, self.L1), F64)
         self.slicedic = {}
         n = 0
         self.mdic = {}
-        for m, (imt, imls) in enumerate(imtls.items()):
+        for m, (imt, imls) in enumerate(items):
             if len(imls) != self.L1:
                 raise ValueError('imt=%s has %d levels, expected %d' %
                                  (imt, len(imls), self.L1))

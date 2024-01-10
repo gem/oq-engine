@@ -34,17 +34,24 @@ def _update(rtra, rtra_prj, proj, pnt):
 
 
 def _resample(coo, sect_len, orig_extremes):
-    # returns array of resampled trace coordinates
-    N = len(coo)
+    # Returns array of resampled trace coordinates
+    #
+    # :param coo:
+    #   A :class:`numpy.ndarray` instance with three columns and n-lines
+    #   containing the coordinates of the polyline to be resampled.
+    # :param sect_len:
+    #   The resampling distance [km]
+    # :param orig_extremes:
+    #   A boolean. When true the last point in coo is also added.
 
-    # Project the coordinates of the trace
+    # Project the coordinates of the trace and save them in `txy`
     sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
     proj = utils.OrthographicProjection(*sbb)
     txy = coo.copy()
     txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
 
     # Compute the total length of the original trace
-    tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
+    # tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
     inc_len = 0.
 
     # Initialize the lists with the coordinates of the resampled trace
@@ -68,6 +75,7 @@ def _resample(coo, sect_len, orig_extremes):
         # If the pick a point that is not the last one on the trace we
         # compute the new sample by interpolation
         if idx < len(dis) - 1:
+
             pnt = find_t(
                 txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
             if pnt is None:
@@ -86,14 +94,29 @@ def _resample(coo, sect_len, orig_extremes):
                 # and the second vertex of the segment
                 chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
         else:
-            # Adding one point
-            if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
+
+            same_dir = True
+            if len(rtra) > 1:
+                same_dir = _get_same_dir(rtra, coo)
+
+            # This is the distance between the last sampled point and the last
+            # point on the original edge
+            dist_from_last = utils.get_dist(rtra_prj[-1], txy[-1])
+
+            # We are processing the last point
+            # if tot_len - inc_len > 0.5 * sect_len and not orig_extremes:
+            if ((dist_from_last > sect_len / 2 and not orig_extremes and
+                    same_dir) or
+                (dist_from_last < sect_len / 2 and not orig_extremes and
+                    not same_dir)):
+
                 # Adding more points still on the same segment
                 delta = txy[-1] - txy[-2]
                 chk_dst = utils.get_dist(txy[-1], txy[-2])
                 _update(rtra, rtra_prj, proj, rtra_prj[-1] +
                         sect_len * delta / chk_dst)
                 inc_len += sect_len
+
             elif orig_extremes:
                 # Adding last point
                 rtra.append(coo[-1])
@@ -103,6 +126,21 @@ def _resample(coo, sect_len, orig_extremes):
         idx_vtx = idx + 1
 
     return np.array(utils.clean_points(rtra))
+
+
+def _get_same_dir(rtra, coo):
+
+    # Azimuth of the resampled edge
+    azim_rsmp_edge = geodetic.azimuth(rtra[-2][0], rtra[-2][1],
+                                      rtra[-1][0], rtra[-1][1])
+    # Azimuth from the last resampled edge and the last point on
+    # the original edge
+    azim_orig_edge = geodetic.azimuth(rtra[-1][0], rtra[-1][1],
+                                      coo[-1, 0], coo[-1, 1])
+    # Check
+    same_dir = np.abs(azim_rsmp_edge - azim_orig_edge) < 30
+
+    return same_dir
 
 
 class Line(object):

@@ -45,19 +45,19 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 :class:`openquake.hmtk.strain.geodectic_strain.GeodeticStain` is a
 core class for storage and implementation of a geodetic strain rate
 model
-'''
+"""
 import numpy as np
 from copy import deepcopy
 
-DATA_VARIABLES = ['longitude', 'latitude', 'exx', 'eyy', 'exy']
+DATA_VARIABLES = ["longitude", "latitude", "exx", "eyy", "exy"]
 
 
 class GeodeticStrain(object):
-    '''
+    """
     :class:`openquake.hmtk.strain.geodetic_strain.GeodeticStrain` describes
     the geodetic strain model
 
@@ -75,10 +75,10 @@ class GeodeticStrain(object):
         Magnitudes for the corresponding activity rates
     :param list data_variables:
         List of strain data attributes in the current class
-    '''
+    """
 
     def __init__(self):
-        '''Instantiates'''
+        """Instantiates"""
         self.data = None
         self.regions = None
         self.seismicity_rate = None
@@ -87,7 +87,7 @@ class GeodeticStrain(object):
         self.data_variables = []
 
     def get_secondary_strain_data(self, strain_data=None):
-        '''
+        """
         Calculate the following and add to data dictionary:
         1) 2nd invarient of strain
         2) Dilatation rate
@@ -98,47 +98,50 @@ class GeodeticStrain(object):
             Strain data dictionary (as described) - will overwrite current
             data if input
 
-        '''
+        """
         if strain_data:
             self.data = strain_data
 
         if not isinstance(self.data, dict):
-            raise ValueError('Strain data not input or incorrectly formatted')
+            raise ValueError("Strain data not input or incorrectly formatted")
 
         # Check to ensure essential attributes are in data dictionary
         for essential_key in DATA_VARIABLES:
             if essential_key not in self.data:
                 print(self.data)
-                raise ValueError('Essential strain information %s missing!'
-                                 % essential_key)
+                raise ValueError(
+                    "Essential strain information %s missing!" % essential_key
+                )
         self.data_variables = deepcopy(DATA_VARIABLES)
 
         # Second Invarient
-        self.data['2nd_inv'] = np.sqrt(
-            (self.data['exx'] ** 2.) +
-            (self.data['eyy'] ** 2.) +
-            2.0 * (self.data['exy'] ** 2.))
+        self.data["2nd_inv"] = np.sqrt(
+            (self.data["exx"] ** 2.0)
+            + (self.data["eyy"] ** 2.0)
+            + 2.0 * (self.data["exy"] ** 2.0)
+        )
         # Dilatation
-        self.data['dilatation'] = self.data['exx'] + self.data['eyy']
+        self.data["dilatation"] = self.data["exx"] + self.data["eyy"]
         # err
-        self.data['err'] = -1. * self.data['dilatation']
-        center_normal_rate = (self.data['exx'] +
-                              self.data['eyy']) / 2.
-        radius_rate = np.sqrt((self.data['exx'] -
-                               center_normal_rate) ** 2. +
-                              (self.data['exy'] ** 2.))
+        self.data["err"] = -1.0 * self.data["dilatation"]
+        center_normal_rate = (self.data["exx"] + self.data["eyy"]) / 2.0
+        radius_rate = np.sqrt(
+            (self.data["exx"] - center_normal_rate) ** 2.0
+            + (self.data["exy"] ** 2.0)
+        )
         # e1h and e2h
-        self.data['e1h'] = center_normal_rate - radius_rate
-        self.data['e2h'] = center_normal_rate + radius_rate
-        self.data['area'] = np.zeros(self.get_number_observations())
-        self.data_variables.extend(['2nd_inv', 'dilatation', 'err', 'e1h',
-                                    'e2h'])
+        self.data["e1h"] = center_normal_rate - radius_rate
+        self.data["e2h"] = center_normal_rate + radius_rate
+        self.data["area"] = np.zeros(self.get_number_observations())
+        self.data_variables.extend(
+            ["2nd_inv", "dilatation", "err", "e1h", "e2h"]
+        )
 
     def get_number_observations(self):
-        '''
+        """
         Returns the number of observations in the data file
-        '''
-        if isinstance(self.data, dict) and ('exx' in self.data.keys()):
-            return len(self.data['exx'])
+        """
+        if isinstance(self.data, dict) and ("exx" in self.data.keys()):
+            return len(self.data["exx"])
         else:
             return 0

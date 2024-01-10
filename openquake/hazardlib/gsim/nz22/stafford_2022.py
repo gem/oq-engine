@@ -38,8 +38,16 @@ from openquake.hazardlib.gsim.chiou_youngs_2014 import (
     get_nonlinear_site_term,
 )
 
-CONSTANTS = {"c2": 1.06, "c4": -2.1, "c4a": -0.5, "crb": 50.0,
-             "c8a": 0.2695, "c11": 0.0, "phi6": 300.0, "phi6jp": 800.0}
+CONSTANTS = {
+    "c2": 1.06,
+    "c4": -2.1,
+    "c4a": -0.5,
+    "crb": 50.0,
+    "c8a": 0.2695,
+    "c11": 0.0,
+    "phi6": 300.0,
+    "phi6jp": 800.0,
+}
 
 
 def _sigmoid1d(x, start, finish, centre, slope):
@@ -52,7 +60,7 @@ def _sigmoid1d(x, start, finish, centre, slope):
     return y
 
 
-def _empirical_sigma(T, r, m, start = 0.4, finish = 0.15):
+def _empirical_sigma(T, r, m, start=0.4, finish=0.15):
     """
     Epistemic standard deviation associated with empirical constraint.
     Takes period `T`, rupture distance `r` and magnitude `m`.
@@ -62,7 +70,9 @@ def _empirical_sigma(T, r, m, start = 0.4, finish = 0.15):
     centre_m = _sigmoid1d(T, 5.82, 6.4, 3.5, 0.5)
     slope_m = _sigmoid1d(T, 0.42, 0.38, 2.5, 0.2)
     amplitude = finish - start
-    s_lnr = _sigmoid1d(np.log(np.clip(r, 10**-10, None)), 0.0, 1.0, centre_r, slope_r)
+    s_lnr = _sigmoid1d(
+        np.log(np.clip(r, 10**-10, None)), 0.0, 1.0, centre_r, slope_r
+    )
     s_m = _sigmoid1d(m, 1.0, 0.0, centre_m, slope_m)
     y = start + amplitude * s_lnr * s_m
     return y
@@ -76,7 +86,9 @@ def _saturation_sigma(m, r):
     return _sigmoid1d(
         np.log(np.clip(r, 10**-10, None)),
         0.6638 - 0.2570 * (np.clip(m, -np.inf, 7.0) - 6.0),
-        0.0, 0.7990, 0.9835
+        0.0,
+        0.7990,
+        0.9835,
     )
 
 
@@ -98,7 +110,7 @@ def _between_event(T, M):
     """
     Between-event standard deviation, function of period `T` and magnitude `M`
     """
-    # between event
+    # between event
     β0_0 = 0.45
     β0_1 = 0.35
     β1 = 0.4
@@ -121,7 +133,9 @@ def _between_station(T):
     β3_S2S = 0.8970
     β4_S2S = 0.7170
 
-    ϕS2S = β0_S2S + β1_S2S * (T / β4_S2S)**(β2_S2S) * np.exp(-β3_S2S * (T / β4_S2S))
+    ϕS2S = β0_S2S + β1_S2S * (T / β4_S2S) ** (β2_S2S) * np.exp(
+        -β3_S2S * (T / β4_S2S)
+    )
     return ϕS2S
 
 
@@ -139,130 +153,213 @@ def _neff_model(T):
     if T <= 0.3:
         return _sigmoid1d(np.log(T), β0, β1, β2, β3)
     else:
-        return β1 / ((T / 0.3)**β4)
+        return β1 / ((T / 0.3) ** β4)
 
 
-def get_adjustments (T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
+def get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
     ρEhEx = 0.4
     epistemic_scale_factor = 0.893
     # The scale factor of 0.9 is applied based upon the discussion that it accounts for the reduction in epistemic
     # uncertainty when no perfect correlation is assumed between rupture scenarios. See the note of Peter and
     # Brendon on slack.
     MEAN_ADJUSTMENT_TERMS_IF = {
-    "Lower": {
-        'delta_c1':(-1.28155 * epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag)
-                     if adjust_c1 is True
-                     else 0.0),
-        'delta_c1hm':(-1.28155 * epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup)
-                       if adjust_chm is True
-                       else 0.0),
-        'delta_c7':(-0.02578
-                    if adjust_c7 is True
-                    else 0.0),
-        'delta_c7b':(_sigmoid1d(np.log(T), -0.05737, 0.05733, -1.0324, 0.04875)
-                     if adjust_c7 is True
-                     else 0.0),
-        'delta_cg1':(_anelastic_correction(T) - 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
-                     if adjust_cg1 is True
-                     else 0.0),
-    },
-    "Central":{'delta_c1': 0.0,
-               'delta_c1hm' : 0.0,
-               'delta_c7':0.0,
-               'delta_c7b':(_sigmoid1d(np.log(T), -0.0865, 0.0, -1.5364, 0.3266)
-                            if adjust_c7 is True
-                            else 0.0),
-               'delta_cg1':(_anelastic_correction(T)
-                            if adjust_cg1 is True
-                            else 0.0),
-               },
-    "Upper":{
-        'delta_c1':(1.28155 * epistemic_scale_factor * _empirical_sigma(T, ctx.rrup, ctx.mag)
-                    if adjust_c1 is True
-                    else 0.0),
-        'delta_c1hm':(1.28155 * epistemic_scale_factor * ρEhEx * _saturation_sigma(ctx.mag, ctx.rrup)
-                      if adjust_chm is True
-                      else 0.0),
-        'delta_c7': 0.0,
-        'delta_c7b':0.0,
-        'delta_cg1':(_anelastic_correction(T) + 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
-                     if adjust_cg1 is True
-                     else 0.0),
-        }
+        "Lower": {
+            "delta_c1": (
+                -1.28155
+                * epistemic_scale_factor
+                * _empirical_sigma(T, ctx.rrup, ctx.mag)
+                if adjust_c1
+                else 0.0
+            ),
+            "delta_c1hm": (
+                -1.28155
+                * epistemic_scale_factor
+                * ρEhEx
+                * _saturation_sigma(ctx.mag, ctx.rrup)
+                if adjust_chm
+                else 0.0
+            ),
+            "delta_c7": (-0.02578 if adjust_c7 else 0.0),
+            "delta_c7b": (
+                _sigmoid1d(np.log(T), -0.05737, 0.05733, -1.0324, 0.04875)
+                if adjust_c7
+                else 0.0
+            ),
+            "delta_cg1": (
+                _anelastic_correction(T)
+                - 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
+                if adjust_cg1
+                else 0.0
+            ),
+        },
+        "Central": {
+            "delta_c1": 0.0,
+            "delta_c1hm": 0.0,
+            "delta_c7": 0.0,
+            "delta_c7b": (
+                _sigmoid1d(np.log(T), -0.0865, 0.0, -1.5364, 0.3266)
+                if adjust_c7
+                else 0.0
+            ),
+            "delta_cg1": (_anelastic_correction(T) if adjust_cg1 else 0.0),
+        },
+        "Upper": {
+            "delta_c1": (
+                1.28155
+                * epistemic_scale_factor
+                * _empirical_sigma(T, ctx.rrup, ctx.mag)
+                if adjust_c1
+                else 0.0
+            ),
+            "delta_c1hm": (
+                1.28155
+                * epistemic_scale_factor
+                * ρEhEx
+                * _saturation_sigma(ctx.mag, ctx.rrup)
+                if adjust_chm
+                else 0.0
+            ),
+            "delta_c7": 0.0,
+            "delta_c7b": 0.0,
+            "delta_cg1": (
+                _anelastic_correction(T)
+                + 1.28155 * epistemic_scale_factor * _anelastic_sigma(T)
+                if adjust_cg1
+                else 0.0
+            ),
+        },
     }
     return MEAN_ADJUSTMENT_TERMS_IF
 
 
 # Modified CY14 fucntions:
 
-def get_stress_scaling(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
+
+def get_stress_scaling(
+    T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+):
     """This term includes adjustments related to stress scaling."""
-    delta_c1 = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_c1"]
-    delta_c1hm = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_c1hm"]
-    return C['c1'] + delta_c1 + delta_c1hm
+    delta_c1 = get_adjustments(
+        T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+    )[mu_branch]["delta_c1"]
+    delta_c1hm = get_adjustments(
+        T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+    )[mu_branch]["delta_c1hm"]
+    return C["c1"] + delta_c1 + delta_c1hm
 
 
-def get_far_field_distance_scaling(T, C, ctx, mu_branch,adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
+def get_far_field_distance_scaling(
+    T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+):
     """
     Returns the far-field distance scaling term - both magnitude and
     distance. It includes adjustments made for NZ through delta_cg1.
     """
-    delta_cg1 = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_cg1"]
+    delta_cg1 = get_adjustments(
+        T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+    )[mu_branch]["delta_cg1"]
 
     # Get the attenuation distance scaling
-    f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(np.sqrt(ctx.rrup ** 2. + CONSTANTS["crb"] ** 2.))
+    f_r = (CONSTANTS["c4a"] - CONSTANTS["c4"]) * np.log(
+        np.sqrt(ctx.rrup**2.0 + CONSTANTS["crb"] ** 2.0)
+    )
     # Get the magnitude dependent term
-    f_rm = C["cg1"] + delta_cg1 + C["cg2"] / np.cosh(np.clip(ctx.mag - C["cg3"], 0.0, None))
+    f_rm = (
+        C["cg1"]
+        + delta_cg1
+        + C["cg2"] / np.cosh(np.clip(ctx.mag - C["cg3"], 0.0, None))
+    )
     return f_r + f_rm * ctx.rrup
 
 
-def get_source_scaling_terms(T, C, ctx, delta_ztor, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
+def get_source_scaling_terms(
+    T,
+    C,
+    ctx,
+    delta_ztor,
+    mu_branch,
+    adjust_c1,
+    adjust_chm,
+    adjust_c7,
+    adjust_cg1,
+):
     """
     Returns additional source scaling parameters related to style of
     faulting, dip and top of rupture depth. It includes adjustments for NZ backbone model through
     delta_c7 and delta_c7b.
     """
-    delta_c7 = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_c7"]
-    delta_c7b = get_adjustments(T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)[mu_branch]["delta_c7b"]
+    delta_c7 = get_adjustments(
+        T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+    )[mu_branch]["delta_c7"]
+    delta_c7b = get_adjustments(
+        T, ctx, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+    )[mu_branch]["delta_c7b"]
 
     f_src = np.zeros_like(ctx.mag)
-    coshm = np.cosh(2.0 * np.clip(ctx.mag - 4.5, 0., None))
+    coshm = np.cosh(2.0 * np.clip(ctx.mag - 4.5, 0.0, None))
     # Style of faulting term
     pos = (30 <= ctx.rake) & (ctx.rake <= 150)
     neg = (-120 <= ctx.rake) & (ctx.rake <= -60)
-        # reverse faulting flag
+    # reverse faulting flag
     f_src[pos] += C["c1a"] + (C["c1c"] / coshm[pos])
     # normal faulting flag
     f_src[neg] += C["c1b"] + (C["c1d"] / coshm[neg])
-        # Top of rupture term
-    f_src += ((C["c7"] + delta_c7) + ((C["c7b"] + delta_c7b) / coshm)) * delta_ztor
+    # Top of rupture term
+    f_src += (
+        (C["c7"] + delta_c7) + ((C["c7b"] + delta_c7b) / coshm)
+    ) * delta_ztor
     # Dip term
-    f_src += ((CONSTANTS["c11"] + (C["c11b"] / coshm)) * np.cos(np.radians(ctx.dip))**2)
+    f_src += (CONSTANTS["c11"] + (C["c11b"] / coshm)) * np.cos(
+        np.radians(ctx.dip)
+    ) ** 2
     return f_src
 
 
-def get_ln_y_ref(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1):
+def get_ln_y_ref(
+    T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+):
     """
     Returns the ground motion on the reference rock.
     """
     delta_ztor = _get_centered_ztor(ctx)
-    return (get_stress_scaling(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1) +
-            get_magnitude_scaling(C, ctx.mag) +
-            get_source_scaling_terms(T, C, ctx, delta_ztor, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1) +
-            get_hanging_wall_term(C, ctx) +
-            get_geometric_spreading(C, ctx.mag, ctx.rrup) +
-            get_far_field_distance_scaling(T, C, ctx, mu_branch,adjust_c1, adjust_chm, adjust_c7, adjust_cg1) +
-            get_directivity("Stafford2022", C, ctx))
+    return (
+        get_stress_scaling(
+            T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+        )
+        + get_magnitude_scaling(C, ctx.mag)
+        + get_source_scaling_terms(
+            T,
+            C,
+            ctx,
+            delta_ztor,
+            mu_branch,
+            adjust_c1,
+            adjust_chm,
+            adjust_c7,
+            adjust_cg1,
+        )
+        + get_hanging_wall_term(C, ctx)
+        + get_geometric_spreading(C, ctx.mag, ctx.rrup)
+        + get_far_field_distance_scaling(
+            T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+        )
+        + get_directivity("Stafford2022", C, ctx)
+    )
 
 
-def _nl_sigma (C, ctx, ln_y_ref):
+def _nl_sigma(C, ctx, ln_y_ref):
     vs = ctx.vs30.clip(-np.inf, 1130.0)
-    NL = C['phi2'] * ((np.exp(C['phi3'] * (vs - 360.0)) - np.exp(C['phi3'] * (1130.0 - 360.0))) *
-                      (np.exp(ln_y_ref) / (np.exp(ln_y_ref) + C['phi4'])))
+    NL = C["phi2"] * (
+        (
+            np.exp(C["phi3"] * (vs - 360.0))
+            - np.exp(C["phi3"] * (1130.0 - 360.0))
+        )
+        * (np.exp(ln_y_ref) / (np.exp(ln_y_ref) + C["phi4"]))
+    )
     return NL
 
 
-def get_stddevs (T, ln_y_ref, C, ctx, sigma_branch):
+def get_stddevs(T, ln_y_ref, C, ctx, sigma_branch):
     """
     Returns the standard deviation model described in equation 8.16 (Peter Stafford NSHM report)
     """
@@ -270,33 +367,57 @@ def get_stddevs (T, ln_y_ref, C, ctx, sigma_branch):
     phi_S2S = _between_station(T)
     phi_SS = 0.39
     NL = _nl_sigma(C, ctx, ln_y_ref)
-    phi = np.sqrt(phi_S2S**2 + (1.0 + NL)**2 * 0.736 * phi_SS**2 + 0.264 * phi_SS**2)
+    phi = np.sqrt(
+        phi_S2S**2 + (1.0 + NL) ** 2 * 0.736 * phi_SS**2 + 0.264 * phi_SS**2
+    )
     # nominal total standard deviation for the branch
-    sigma = np.sqrt((1.0 + NL)**2 * tau**2 + phi**2)
+    sigma = np.sqrt((1.0 + NL) ** 2 * tau**2 + phi**2)
 
-    #perform the potential inflation of σ for epistemic uncertainty
+    # perform the potential inflation of σ for epistemic uncertainty
     neff = _neff_model(T)
-    nfac = (_empirical_sigma(T, ctx.rrup, ctx.mag) / _empirical_sigma(T, 80.0, 5.0))**2
+    nfac = (
+        _empirical_sigma(T, ctx.rrup, ctx.mag) / _empirical_sigma(T, 80.0, 5.0)
+    ) ** 2
 
     ndof = neff / nfac
     if sigma_branch == "Lower":
-        sigma = np.sqrt((sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.1, ndof-1))
+        sigma = np.sqrt(
+            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.1, ndof - 1)
+        )
     elif sigma_branch == "Central":
-        sigma = np.sqrt((sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.5, ndof-1))
+        sigma = np.sqrt(
+            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.5, ndof - 1)
+        )
     elif sigma_branch == "Upper":
-        sigma = np.sqrt((sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.9, ndof-1))
+        sigma = np.sqrt(
+            (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.9, ndof - 1)
+        )
     else:
-        print("sigma branch not recognised: must be one of :Lower, :Central, :Upper")
+        print(
+            "sigma branch not recognised: must be one of :Lower, :Central, :Upper"
+        )
         sigma = np.NaN
     return sigma, np.abs((1.0 + NL) * tau), phi
 
 
-def get_mean_stddevs(T, mu_branch, sigma_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1, C, ctx):
+def get_mean_stddevs(
+    T,
+    mu_branch,
+    sigma_branch,
+    adjust_c1,
+    adjust_chm,
+    adjust_c7,
+    adjust_cg1,
+    C,
+    ctx,
+):
     """
     Return mean and standard deviation values.
     """
     # Get ground motion on reference rock
-    ln_y_ref = get_ln_y_ref(T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1)
+    ln_y_ref = get_ln_y_ref(
+        T, C, ctx, mu_branch, adjust_c1, adjust_chm, adjust_c7, adjust_cg1
+    )
     y_ref = np.exp(ln_y_ref)
     # Get the site amplification
     # Get basin depth
@@ -343,47 +464,54 @@ class Stafford2022(GMPE):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
-        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
+        const.StdDev.TOTAL,
+        const.StdDev.INTER_EVENT,
+        const.StdDev.INTRA_EVENT,
+    }
 
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
-    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured', 'z1pt0'}
+    REQUIRES_SITES_PARAMETERS = {"vs30", "vs30measured", "z1pt0"}
 
     #: Required rupture parameters are magnitude, rake,
     #: dip and ztor.
-    REQUIRES_RUPTURE_PARAMETERS = {'dip', 'rake', 'mag', 'ztor'}
+    REQUIRES_RUPTURE_PARAMETERS = {"dip", "rake", "mag", "ztor"}
 
     #: Required distance measures are RRup, Rjb and Rx.
-    REQUIRES_DISTANCES = {'rrup', 'rjb', 'rx'}
+    REQUIRES_DISTANCES = {"rrup", "rjb", "rx"}
 
     #: Reference shear wave velocity
     DEFINED_FOR_REFERENCE_VELOCITY = 1130
 
     def __init__(
-            self,
-            mu_branch ='Central',
-            sigma_branch = "Central",
-            adjust_c1 = True,
-            adjust_chm = True,
-            adjust_c7 = True,
-            adjust_cg1 = True,
-            **kwargs
-        ):
+        self,
+        mu_branch="Central",
+        sigma_branch="Central",
+        adjust_c1=True,
+        adjust_chm=True,
+        adjust_c7=True,
+        adjust_cg1=True,
+        **kwargs,
+    ):
         """
         Aditional parameter for epistemic central,
         lower and upper bounds.
         """
         super().__init__(
-            mu_branch=mu_branch, sigma_branch = sigma_branch, adjust_c1 = adjust_c1,
-            adjust_chm = adjust_chm, adjust_c7 = adjust_c7, adjust_cg1 = adjust_cg1,
-            **kwargs)
+            mu_branch=mu_branch,
+            sigma_branch=sigma_branch,
+            adjust_c1=adjust_c1,
+            adjust_chm=adjust_chm,
+            adjust_c7=adjust_c7,
+            adjust_cg1=adjust_cg1,
+            **kwargs,
+        )
         self.mu_branch = mu_branch
         self.sigma_branch = sigma_branch
         self.adjust_c1 = adjust_c1
         self.adjust_chm = adjust_chm
         self.adjust_c7 = adjust_c7
         self.adjust_cg1 = adjust_cg1
-
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
@@ -393,25 +521,45 @@ class Stafford2022(GMPE):
         """
         for m, imt in enumerate(imts):
             if repr(imt) == "PGV":
-                print("Invalid IMT provided. The model does not predict ground motions for PGV.")
+                print(
+                    "Invalid IMT provided. The model does not predict ground motions for PGV."
+                )
                 sig[m], tau[m], phi[m] = None, None, None
             elif repr(imt) == "PGA":
                 pga_mean, pga_sig, pga_tau, pga_phi = get_mean_stddevs(
-                    SA(0.01).period, self.mu_branch, self.sigma_branch, self.adjust_c1, self.adjust_chm,
-                    self.adjust_c7, self.adjust_cg1, self.COEFFS[SA(0.01)], ctx)
+                    SA(0.01).period,
+                    self.mu_branch,
+                    self.sigma_branch,
+                    self.adjust_c1,
+                    self.adjust_chm,
+                    self.adjust_c7,
+                    self.adjust_cg1,
+                    self.COEFFS[SA(0.01)],
+                    ctx,
+                )
                 # Peter has used T = 0.01 as the period for PGA because the coefficients (for 0.01s and PGA) are identical.
                 mean[m] = pga_mean
                 sig[m], tau[m], phi[m] = pga_sig, pga_tau, pga_phi
             else:
                 T = imt.period
                 imt_mean, imt_sig, imt_tau, imt_phi = get_mean_stddevs(
-                    T, self.mu_branch, self.sigma_branch, self.adjust_c1, self.adjust_chm, self.adjust_c7,
-                    self.adjust_cg1,  self.COEFFS[imt], ctx)
+                    T,
+                    self.mu_branch,
+                    self.sigma_branch,
+                    self.adjust_c1,
+                    self.adjust_chm,
+                    self.adjust_c7,
+                    self.adjust_cg1,
+                    self.COEFFS[imt],
+                    ctx,
+                )
                 mean[m] = imt_mean
                 sig[m], tau[m], phi[m] = imt_sig, imt_tau, imt_phi
 
     #: Coefficient tables are constructed from values in tables 1 - 5
-    COEFFS = CoeffsTable(sa_damping=5, table="""\
+    COEFFS = CoeffsTable(
+        sa_damping=5,
+        table="""\
 IMT     c1      c1a     c1b     c1c     c1d     cn      cm    c2      c3    c4     c4a  crb   c5      chm     c6      c7      c7b     c8     c8a    c8b       c9     c9a    c9b     c11      c11b        cg1        cg2       cg3     phi1       phi2      phi3     phi4     phi5   phi6  gjpit  gwn      phi1jp  phi5jp   phi6jp     tau1    tau2    sig1    sig2    sig3    sig2jp
 pga   -1.5065  0.165  -0.255  -0.165  0.255  16.0875  4.9993  1.06  1.9636  -2.1  -0.5  50  6.4551  3.0956  0.4908  0.0352   0.0462  0.     0.2695  0.4833  0.9228  0.1202  6.8607  0.      -0.4536    -0.007146  -0.006758  4.2542  -0.521   -0.1417   -0.00701   0.102151  0.     300  1.5817  0.7594  -0.6846  0.459    800.        0.4     0.26    0.4912  0.3762  0.8     0.4528
 pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1  -0.5  50  5.8096  3.0514  0.4407  0.0324   0.0097  0.2154 0.2695  5.      0.3079  0.1     6.5     0       -0.3834    -0.001852  -0.007403  4.3439  -0.7936  -0.0699   -0.008444  5.41      0.0202 300. 2.2306  0.335   -0.7966  0.9488   800.        0.3894  0.2578  0.4785  0.3629  0.7504  0.3918
@@ -439,4 +587,5 @@ pgv    2.3549  0.165  -0.0626 -0.165  0.0626  3.3024  5.423   1.06  2.3152  -2.1
 5     -4.5143  0.0484 -0.101  -0.0484 0.101  1.7228   6.2856  1.06  2.9169  -2.1  -0.5  50  7.5818  3.8376  0.45    0.0029  -0.0424  0.2154 0.2695  7.0389  0.      0.1     6.5     0.      -0.1001    -0.00101   -0.00364   3.709   -0.9872   0.       -0.00144   0.003223  0.321  300  3.7292  0.      -0.656   1.433    800.        0.4584  0.3435  0.4535  0.4535  0.7     0.4517
 7.5   -5.0009  0.022  -0.101  -0.022  0.101  1.5737   6.5428  1.06  2.932   -2.1  -0.5  50  7.5818  3.838   0.45    0.0007  -0.0348  0.2154 0.2695  7.4666  0.      0.1     6.5     0.      -0.1       -0.000964  -0.003686  3.6632  -0.8274   0.       -0.001369  0.001134  0.329  300  2.3763  0.      -0.5202  1.46     800.        0.4601  0.3459  0.4471  0.4471  0.7     0.4167
 10    -5.3461  0.0124 -0.1    -0.0124 0.1    1.5265   6.7415  1.06  2.9396  -2.1  -0.5  50  7.5818  3.838   0.45    0.0003  -0.0253  0.2154 0.2695  7.77    0.      0.1     6.5     0.      -0.1       -0.00095   -0.0037    3.623   -0.7053   0.       -0.001361  0.000515  0.33   300  1.7679  0.      -0.4068  1.464    800.        0.4612  0.3474  0.4426  0.4426  0.7     0.3755
-""")
+""",
+    )

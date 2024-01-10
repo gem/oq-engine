@@ -515,16 +515,6 @@ class SourceModelLogicTree(object):
             return
         prev_ids = ' '.join(pb.branch_id for pb in self.previous_branches)
         app2brs = branchset_node.attrib.get('applyToBranches') or prev_ids
-        '''
-        apply2empty = set()
-        for app2br in app2brs.split():
-            if app2br not in self.branches or self.branches[app2br].value == '':
-                apply2empty.add(app2br)
-        if apply2empty and apply2empty == set(app2brs.split()):
-            # skip branchset (see test_case_12)
-            self.previous_branches = branchset.branches
-            return
-        '''
         missing = set(prev_ids.split()) - set(app2brs.split())
         if missing:
             # apply only to some branches
@@ -583,8 +573,6 @@ class SourceModelLogicTree(object):
             value = parse_uncertainty(branchset.uncertainty_type,
                                       value_node, self.filename)
             if branchset.uncertainty_type in ('sourceModel', 'extendModel'):
-                if self.branchID and branchnode['branchID'] != self.branchID:
-                    continue
                 vals = []  # filenames with sources in it
                 try:
                     for fname in value_node.text.split():
@@ -597,7 +585,9 @@ class SourceModelLogicTree(object):
                 except Exception as exc:
                     raise LogicTreeError(
                         value_node, self.filename, str(exc)) from exc
-                if self.source_id:  # only the files containing source_id
+                if self.branchID and branchnode['branchID'] != self.branchID:
+                    value = ''  # reduce all branches except branchID
+                elif self.source_id:  # only the files containing source_id
                     value = ' '.join(reduce_fnames(vals, self.source_id))
             branch_id = branchnode.attrib.get('branchID')
             if branch_id in self.branches:
@@ -712,8 +702,8 @@ class SourceModelLogicTree(object):
                 "only one filter is allowed per branchset")
 
         if 'applyToTectonicRegionType' in f:
-            if not f['applyToTectonicRegionType'] \
-                    in self.tectonic_region_types:
+            if f['applyToTectonicRegionType'] \
+                    not in self.tectonic_region_types:
                 raise LogicTreeError(
                     branchset_node, self.filename,
                     "source models don't define sources of tectonic region "

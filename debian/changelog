@@ -1,3 +1,15 @@
+  [Michele Simionato]
+  * Fixed an ordering bug in the IMTs causing two peaks in the UHS in
+    some situations
+  * Fixed bug in the WongEtAl2022 GMPEs, reported by Thomas Bornstein
+  * Added a job.ini parameter `smlt_branch` to reduce the logic tree to
+    a specific branch
+  * Internal: extended `oq info` to shapefiles
+
+  [Anirudh Rao]
+  * Fixed the conditioned GMFs calculator in the case all the
+    stations are filtered away
+
   [Marco Pagani]
   * Fixed the algorithm used to generate kite surfaces
 

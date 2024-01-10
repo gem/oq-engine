@@ -43,7 +43,7 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
     # exceedance) for the conditioning IMT. `cs_poes` are the probabilities of
     # exceedance characterising the values in `imls`. `phi_b` is float.
     # `invtime` is the investigation time [yr]. `c` has shape M x ? x ?
-    M, O, _ = c.shape
+    M, _, _ = c.shape
     mu = mean_stds[0]  # shape (M, U)
     sig = mean_stds[1]  # shape (M, U)
 

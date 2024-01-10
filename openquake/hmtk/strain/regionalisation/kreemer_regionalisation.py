@@ -45,21 +45,22 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Modules: openquake.hmtk.strain.regionalisation.kreemer_regionalisation implements the
 class KreemerRegionalisation, which assigns a strain model to a tectonic
 region according to the classification of Kreemer, Holt and Haines (2003)
-'''
+"""
 import os
 import numpy as np
 from linecache import getlines
 
-KREEMER_GLOBAL_0506 = os.path.join(os.path.dirname(__file__),
-                                   'kreemer_polygons_area.txt')
+KREEMER_GLOBAL_0506 = os.path.join(
+    os.path.dirname(__file__), "kreemer_polygons_area.txt"
+)
 
 
 def _build_kreemer_cell(data, loc):
-    '''
+    """
     Constructs the "Kreemer Cell" from the input file. The Kreemer cell is
     simply a set of five lines describing the four nodes of the square (closed)
     :param list data:
@@ -68,19 +69,19 @@ def _build_kreemer_cell(data, loc):
         Pointer to location in data
     :returns:
         temp_poly - 5 by 2 numpy array of cell longitudes and latitudes
-    '''
+    """
 
     temp_poly = np.empty([5, 2], dtype=float)
     for ival in range(1, 6):
-        value = data[loc + ival].rstrip('\n')
-        value = value.lstrip(' ')
-        value = np.array((value.split(' ', 1))).astype(float)
+        value = data[loc + ival].rstrip("\n")
+        value = value.lstrip(" ")
+        value = np.array((value.split(" ", 1))).astype(float)
         temp_poly[ival - 1, :] = value.flatten()
     return temp_poly
 
 
 class KreemerRegionalisation(object):
-    '''
+    """
     Class for implmenting a regionalisation using the file type defined by
     Kreemer et al. (2003)
 
@@ -89,16 +90,15 @@ class KreemerRegionalisation(object):
     :param strain:
         Strain model as instance of openquake.hmtk.strain.geodetic_strain.GeodeticStrain
 
-    '''
+    """
 
     def __init__(self, filename=KREEMER_GLOBAL_0506):
-        '''
-        '''
+        """ """
         self.filename = filename
         self.strain = None
 
     def get_regionalisation(self, strain_model):
-        '''
+        """
         Gets the tectonic region type for every element inside the strain model
 
         :paramm strain_model:
@@ -108,15 +108,15 @@ class KreemerRegionalisation(object):
 
         :returns:
             Strain model with complete regionalisation
-        '''
+        """
         self.strain = strain_model
-        self.strain.data['region'] = np.array(
-            ['IPL'
-             for _ in range(self.strain.get_number_observations())],
-            dtype='|S13')
-        self.strain.data['area'] = np.array(
-            [np.nan
-             for _ in range(self.strain.get_number_observations())])
+        self.strain.data["region"] = np.array(
+            ["IPL" for _ in range(self.strain.get_number_observations())],
+            dtype="|S13",
+        )
+        self.strain.data["area"] = np.array(
+            [np.nan for _ in range(self.strain.get_number_observations())]
+        )
 
         regional_model = self.define_kreemer_regionalisation()
         for polygon in regional_model:
@@ -124,7 +124,7 @@ class KreemerRegionalisation(object):
         return self.strain
 
     def _point_in_tectonic_region(self, polygon):
-        '''
+        """
         Returns the region type and area according to the tectonic
         region
         :param polygon: Dictionary containing the following attributes -
@@ -132,31 +132,38 @@ class KreemerRegionalisation(object):
             'lat_lims' - Latitude limits (South, North)
             'region_type' - Tectonic region type (str)
             'area' - Area of cell in m ^ 2
-        '''
+        """
 
         marker = np.zeros(self.strain.get_number_observations(), dtype=bool)
         idlong = np.logical_and(
-            self.strain.data['longitude'] >= polygon['long_lims'][0],
-            self.strain.data['longitude'] < polygon['long_lims'][1])
-        id0 = np.where(np.logical_and(idlong, np.logical_and(
-            self.strain.data['latitude'] >= polygon['lat_lims'][0],
-            self.strain.data['latitude'] < polygon['lat_lims'][1])))[0]
+            self.strain.data["longitude"] >= polygon["long_lims"][0],
+            self.strain.data["longitude"] < polygon["long_lims"][1],
+        )
+        id0 = np.where(
+            np.logical_and(
+                idlong,
+                np.logical_and(
+                    self.strain.data["latitude"] >= polygon["lat_lims"][0],
+                    self.strain.data["latitude"] < polygon["lat_lims"][1],
+                ),
+            )
+        )[0]
         if len(id0) > 0:
             marker[id0] = True
             for iloc in id0:
-                self.strain.data['region'][iloc] = \
-                    polygon['region_type']
-                self.strain.data['area'][iloc] = polygon['area']
+                self.strain.data["region"][iloc] = polygon["region_type"]
+                self.strain.data["area"][iloc] = polygon["area"]
         marker = np.logical_not(marker)
         return marker
 
-    def define_kreemer_regionalisation(self, north=90., south=-90., east=180.,
-                                       west=-180.):
-        '''
+    def define_kreemer_regionalisation(
+        self, north=90.0, south=-90.0, east=180.0, west=-180.0
+    ):
+        """
         Applies the regionalisation defined according to the regionalisation
         typology of Corne Kreemer
-        '''
-        '''Applies the regionalisation of Kreemer (2003)
+        """
+        """Applies the regionalisation of Kreemer (2003)
         :param input_file:
             Filename (str) of input file contraining Kreemer regionalisation
         :param north:
@@ -168,36 +175,45 @@ class KreemerRegionalisation(object):
         :param west:
             Western limit (decimal degrees)for consideration (float)
         :returns: List of polygons corresonding to the Kreemer cells.
-        '''
+        """
         input_data = getlines(self.filename)
         kreemer_polygons = []
 
         for line_loc, line in enumerate(input_data):
-            if '>' in line[0]:
+            if ">" in line[0]:
                 polygon_dict = {}
                 # Get region type (char) and area (m ^ 2) from header
-                primary_data = line[2:].rstrip('\n')
-                primary_data = primary_data.split(' ', 1)
-                polygon_dict['region_type'] = primary_data[0].strip(' ')
-                polygon_dict['area'] = float(primary_data[1].strip(' '))
-                polygon_dict['cell'] = _build_kreemer_cell(input_data,
-                                                           line_loc)
-                polygon_dict['long_lims'] = np.array([
-                    np.min(polygon_dict['cell'][:, 0]),
-                    np.max(polygon_dict['cell'][:, 0])])
-                polygon_dict['lat_lims'] = np.array([
-                    np.min(polygon_dict['cell'][:, 1]),
-                    np.max(polygon_dict['cell'][:, 1])])
-                polygon_dict['cell'] = None
+                primary_data = line[2:].rstrip("\n")
+                primary_data = primary_data.split(" ", 1)
+                polygon_dict["region_type"] = primary_data[0].strip(" ")
+                polygon_dict["area"] = float(primary_data[1].strip(" "))
+                polygon_dict["cell"] = _build_kreemer_cell(
+                    input_data, line_loc
+                )
+                polygon_dict["long_lims"] = np.array(
+                    [
+                        np.min(polygon_dict["cell"][:, 0]),
+                        np.max(polygon_dict["cell"][:, 0]),
+                    ]
+                )
+                polygon_dict["lat_lims"] = np.array(
+                    [
+                        np.min(polygon_dict["cell"][:, 1]),
+                        np.max(polygon_dict["cell"][:, 1]),
+                    ]
+                )
+                polygon_dict["cell"] = None
 
-                if polygon_dict['long_lims'][0] >= 180.0:
-                    polygon_dict['long_lims'] = \
-                        polygon_dict['long_lims'] - 360.0
+                if polygon_dict["long_lims"][0] >= 180.0:
+                    polygon_dict["long_lims"] = (
+                        polygon_dict["long_lims"] - 360.0
+                    )
                 valid_check = [
-                    polygon_dict['long_lims'][0] >= west,
-                    polygon_dict['long_lims'][1] <= east,
-                    polygon_dict['lat_lims'][0] >= south,
-                    polygon_dict['lat_lims'][1] <= north]
+                    polygon_dict["long_lims"][0] >= west,
+                    polygon_dict["long_lims"][1] <= east,
+                    polygon_dict["lat_lims"][0] >= south,
+                    polygon_dict["lat_lims"][1] <= north,
+                ]
                 if all(valid_check):
                     kreemer_polygons.append(polygon_dict)
 

@@ -9,18 +9,18 @@
 #
 # The Hazard Modeller's Toolkit is free software: you can redistribute
 # it and/or modify it under the terms of the GNU Affero General Public
-# License as published by the Free Software Foundation, either version
-# 3 of the License, or (at your option) any later version.
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
 #
-# DISCLAIMER
-# 
+# DISCLAIMER
+#
 # The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
-# is released as a prototype implementation on behalf of
+# is released as a prototype implementation on behalf of
 # scientists and engineers working within the GEM Foundation (Global
-# Earthquake Model).
+# Earthquake Model).
 #
 # It is distributed for the purpose of open collaboration and in the
 # hope that it will be useful to the scientific, engineering, disaster
@@ -38,9 +38,9 @@
 # (hazard@globalquakemodel.org).
 #
 # The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
-# for more details.
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
 #
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
@@ -54,13 +54,13 @@ from openquake.hazardlib.mfd.evenly_discretized import EvenlyDiscretizedMFD
 
 
 def _scale_moment(magnitude, in_nm=False):
-    '''Returns the moment for a given magnitude.
+    """Returns the moment for a given magnitude.
     :param float magnitude:
         Earthquake magnitude
     :param bool in_nm:
         To return the value in newton metres set to true - otherwise in
         dyne-cm
-    '''
+    """
     if in_nm:
         return 10.0 ** ((1.5 * magnitude) + 9.05)
     else:
@@ -68,26 +68,29 @@ def _scale_moment(magnitude, in_nm=False):
 
 
 class BaseMFDfromSlip(object):
-    '''Base class for calculating magnitude frequency distribution
-    from a given slip value'''
+    """Base class for calculating magnitude frequency distribution
+    from a given slip value"""
+
     @abc.abstractmethod
     def setUp(self, mfd_conf):
-        '''Initialises the parameters from the mfd type'''
+        """Initialises the parameters from the mfd type"""
 
     @abc.abstractmethod
     def get_mmax(self, mfd_conf, msr, rake, area):
-        '''Gets the mmax for the fault - reading directly from the config file
-        or using the msr otherwise'''
+        """Gets the mmax for the fault - reading directly from the config file
+        or using the msr otherwise"""
 
     @abc.abstractmethod
     def get_mfd(self):
-        '''Calculates the magnitude frequency distribution'''
+        """Calculates the magnitude frequency distribution"""
 
     def to_evenly_discretized_mfd(self):
         """
         Returns the activity rate as an instance of the :class:
         openquake.hazardlib.mfd.evenly_discretized.EvenlyDiscretizedMFD
         """
-        return EvenlyDiscretizedMFD(self.mmin + self.bin_width / 2.,
-                                    self.bin_width,
-                                    self.occurrence_rate.tolist())
+        return EvenlyDiscretizedMFD(
+            self.mmin + self.bin_width / 2.0,
+            self.bin_width,
+            self.occurrence_rate.tolist(),
+        )

@@ -36,8 +36,9 @@ from openquake.baselib.hdf5 import FLOAT, INT, get_shape_descr
 from openquake.baselib.performance import performance_view, Monitor
 from openquake.baselib.python3compat import encode, decode
 from openquake.hazardlib import logictree, calc, source
-from openquake.hazardlib.contexts import KNOWN_DISTANCES
-from openquake.hazardlib.gsim.base import ContextMaker, Collapser
+from openquake.hazardlib.contexts import (
+    KNOWN_DISTANCES, ContextMaker, Collapser
+)
 from openquake.commonlib import util
 from openquake.risklib import riskmodels
 from openquake.risklib.scientific import (

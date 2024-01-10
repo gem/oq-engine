@@ -42,6 +42,8 @@ def engine_profile(jobctx, nrows):
 
 # ########################## run_site ############################## #
 
+
+# NB: this is called by the action mosaic/.gitlab-ci.yml
 def from_file(fname, concurrent_jobs=8):
     """
     Run a PSHA analysis on the given sites

@@ -250,7 +250,6 @@ class SourceGroup(collections.abc.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-        min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
 
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and

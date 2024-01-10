@@ -23,14 +23,13 @@ import logging
 import operator
 import numpy
 import pandas
-
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
 from openquake.hazardlib.probability_map import ProbabilityMap, get_mean_curve
 from openquake.hazardlib.stats import geom_avg_std, compute_stats
 from openquake.hazardlib.calc.stochastic import sample_ruptures
-from openquake.hazardlib.gsim.base import ContextMaker, FarAwayRupture
+from openquake.hazardlib.contexts import ContextMaker, FarAwayRupture
 from openquake.hazardlib.calc.filters import (
     nofilter, getdefault, get_distances, SourceFilter)
 from openquake.hazardlib.calc.gmf import GmfComputer
@@ -40,7 +39,6 @@ from openquake.hazardlib.calc.stochastic import get_rup_array, rupture_dt
 from openquake.hazardlib.source.rupture import (
     RuptureProxy, EBRupture, get_ruptures)
 from openquake.commonlib import util, logs, readinput, logictree, datastore
-from openquake.commonlib.global_model_getter import GlobalModelGetter
 from openquake.commonlib.calc import (
     gmvs_to_poes, make_hmaps, slice_dt, build_slice_by_event, RuptureImporter,
     SLICE_BY_EVENT_NSITES)
@@ -60,6 +58,7 @@ TWO24 = 2 ** 24
 TWO32 = numpy.float64(2 ** 32)
 rup_dt = numpy.dtype(
     [('rup_id', I64), ('rrup', F32), ('time', F32), ('task_no', U16)])
+
 
 def rup_weight(rup):
     return math.ceil(rup['nsites'] / 100)
@@ -315,10 +314,17 @@ def filter_stations(station_df, complete, rup, maxdist):
     ok = (get_distances(rup, complete, 'rrup') <= maxdist) & numpy.isin(
         complete.sids, station_df.index)
     station_sites = complete.filter(ok)
-    station_data = station_df[numpy.isin(station_df.index, station_sites.sids)]
-    if len(station_data) < ns:
-        logging.info('Discarded %d/%d stations more distant than %d km',
-                     ns - len(station_data), ns, maxdist)
+    if station_sites is None:
+        station_data = None
+        logging.warning('Discarded %d/%d stations more distant than %d km, '
+                        'switching to the unconditioned GMF computer',
+                        ns, ns, maxdist)
+    else:
+        station_data = station_df[
+            numpy.isin(station_df.index, station_sites.sids)]
+        if len(station_data) < ns:
+            logging.info('Discarded %d/%d stations more distant than %d km',
+                        ns - len(station_data), ns, maxdist)
     return station_data, station_sites
 
 
@@ -350,7 +356,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
     totw = sum(rup_weight(p) for p in allproxies) / (
         oq.concurrent_tasks or 1)
     logging.info('totw = {:_d}'.format(round(totw)))
-    if "station_data" in oq.inputs:
+    if station_data is not None:
         rlzs_by_gsim = full_lt.get_rlzs_by_gsim(0)
         cmaker = ContextMaker(trt, rlzs_by_gsim, oq)
         cmaker.scenario = True
@@ -367,7 +373,7 @@ def starmap_from_rups(func, oq, full_lt, sitecol, dstore, save_tmp=None):
         del proxy.geom  # to reduce data transfer
     dstore.swmr_on()
     smap = parallel.Starmap(func, h5=dstore.hdf5)
-    if save_tmp:	
+    if save_tmp:
         save_tmp(smap.monitor)
     for trt_smr, proxies in gb.items():
         trt = full_lt.trts[trt_smr // TWO24]
@@ -444,7 +450,7 @@ class EventBasedCalculator(base.HazardCalculator):
         logging.info('Counting the ruptures in the CompositeSourceModel')
         self.datastore.swmr_on()
         with self.monitor('counting ruptures', measuremem=True):
-            nrups = parallel.Starmap( # weighting the heavy sources
+            nrups = parallel.Starmap(  # weighting the heavy sources
                 count_ruptures, [(src,) for src in sources
                                  if src.code in b'AMSC'],
                 h5=self.datastore.hdf5,
@@ -464,12 +470,17 @@ class EventBasedCalculator(base.HazardCalculator):
         source_data = AccumDict(accum=[])
         allargs = []
         srcfilter = self.srcfilter
+        if oq.mosaic_model:  # 3-letter mosaic model
+            mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
+            model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
         for sg in self.csm.src_groups:
             if not sg.sources:
                 continue
             rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
             cmaker = ContextMaker(sg.trt, rgb, oq)
+            if oq.mosaic_model:
+                cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
         self.datastore.swmr_on()
@@ -477,21 +488,20 @@ class EventBasedCalculator(base.HazardCalculator):
             sample_ruptures, allargs, h5=self.datastore.hdf5)
         mon = self.monitor('saving ruptures')
         self.nruptures = 0  # estimated classical ruptures within maxdist
-        if oq.mosaic_model:  # 3-letter mosaic model
-            gmg = GlobalModelGetter('mosaic')
+        t0 = time.time()
+        tot_ruptures = 0
+        filtered_ruptures = 0
         for dic in smap:
             # NB: dic should be a dictionary, but when the calculation dies
             # for an OOM it can become None, thus giving a very confusing error
             if dic is None:
                 raise MemoryError('You ran out of memory!')
             rup_array = dic['rup_array']
+            tot_ruptures += len(rup_array)
             if len(rup_array) == 0:
                 continue
-            # TODO: for Paolo to add a very fast method is_inside
-            #if oq.mosaic_model:
-            #    ok = gmg.is_inside(
-            #         rup_array['lon'], rup_array['lat'], oq.mosaic_model)
-            #    rup_array = rup_array[ok]
+            geom = rup_array.geom
+            filtered_ruptures += len(rup_array)
             if dic['source_data']:
                 source_data += dic['source_data']
             if dic['eff_ruptures']:
@@ -500,7 +510,10 @@ class EventBasedCalculator(base.HazardCalculator):
                 self.nruptures += len(rup_array)
                 # NB: the ruptures will we reordered and resaved later
                 hdf5.extend(self.datastore['ruptures'], rup_array)
-                hdf5.extend(self.datastore['rupgeoms'], rup_array.geom)
+                hdf5.extend(self.datastore['rupgeoms'], geom)
+        t1 = time.time()
+        logging.info(f'{tot_ruptures} ruptures filtered to {filtered_ruptures}'
+                     f' and stored in {t1 - t0} seconds')
         if len(self.datastore['ruptures']) == 0:
             raise RuntimeError('No ruptures were generated, perhaps the '
                                'effective investigation time is too short')
@@ -554,7 +567,7 @@ class EventBasedCalculator(base.HazardCalculator):
         if oq.calculation_mode.startswith('scenario'):
             ngmfs = oq.number_of_ground_motion_fields
         rup = (oq.rupture_dict or 'rupture_model' in oq.inputs and
-                   oq.inputs['rupture_model'].endswith('.xml'))
+               oq.inputs['rupture_model'].endswith('.xml'))
         if rup:
             # check the number of branchsets
             bsets = len(gsim_lt._ltnode)

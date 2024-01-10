@@ -593,19 +593,19 @@ def _get_exposure(fname, stop=None):
     :returns:
         a pair (Exposure instance, list of asset nodes)
     """
-    [exposure] = nrml.read(fname, stop=stop)
-    if not exposure.tag.endswith('exposureModel'):
+    [xml] = nrml.read(fname, stop=stop)
+    if not xml.tag.endswith('exposureModel'):
         raise InvalidFile('%s: expected exposureModel, got %s' %
-                          (fname, exposure.tag))
+                          (fname, xml.tag))
     try:
-        conversions = exposure.conversions
+        conversions = xml.conversions
     except AttributeError:
         conversions = Node('conversions', nodes=[Node('costTypes', [])])
     # input_field -> oq_field
     pairs = [(f, 'value-' + f) for f in ANR_FIELDS | VAL_FIELDS] + [
         (f, 'occupants_' + f) for f in OCC_FIELDS]
     try:
-        for node in exposure.exposureFields:
+        for node in xml.exposureFields:
             noq = node['oq']
             if noq in ANR_FIELDS | VAL_FIELDS:
                 pairs.append((node['input'], 'value-' + noq))
@@ -624,11 +624,11 @@ def _get_exposure(fname, stop=None):
         # https://github.com/numpy/numpy/pull/5475
         area = Node('area', dict(type='?'))
     try:
-        occupancy_periods = exposure.occupancyPeriods.text.split()
+        occupancy_periods = xml.occupancyPeriods.text.split()
     except AttributeError:
         occupancy_periods = []
     try:
-        tagNames = exposure.tagNames
+        tagNames = xml.tagNames
     except AttributeError:
         tagNames = Node('tagNames', text='')
     tagnames = ~tagNames or []
@@ -639,22 +639,10 @@ def _get_exposure(fname, stop=None):
 
     # read the cost types and make some check
     cost_types = []
-    retrofitted = False
     for ct in conversions.costTypes:
         with context(fname, ct):
-            ctname = ct['name']
-            if ctname == 'structural' and 'retrofittedType' in ct.attrib:
-                if ct['retrofittedType'] != ct['type']:
-                    raise ValueError(
-                        'The retrofittedType %s is different from the type'
-                        '%s' % (ct['retrofittedType'], ct['type']))
-                if ct['retrofittedUnit'] != ct['unit']:
-                    raise ValueError(
-                        'The retrofittedUnit %s is different from the unit'
-                        '%s' % (ct['retrofittedUnit'], ct['unit']))
-                retrofitted = True  # tested in the ClassicalBCR demo
             cost_types.append(
-                (ctname, valid.cost_type_type(ct['type']), ct['unit']))
+                (ct['name'], valid.cost_type_type(ct['type']), ct['unit']))
     try:
         conv_area = conversions.area
     except AttributeError:
@@ -682,16 +670,16 @@ def _get_exposure(fname, stop=None):
         cc.cost_types[name] = ct['type']  # aggregated, per_asset, per_area
         cc.area_types[name] = area['type']
         cc.units[name] = ct['unit']
-    exp = Exposure(occupancy_periods, retrofitted, area.attrib, [], cc,
+    exp = Exposure(occupancy_periods, area.attrib, [], cc,
                    TagCollection(tagnames), pairs)
-    assets_text = exposure.assets.text.strip()
+    assets_text = xml.assets.text.strip()
     if assets_text:
         # the <assets> tag contains a list of file names
         dirname = os.path.dirname(fname)
         exp.datafiles = [os.path.join(dirname, f) for f in assets_text.split()]
     else:
         exp.datafiles = []
-    return exp, exposure.assets
+    return exp, xml.assets
 
 
 def _minimal_tagcol(fnames):
@@ -709,7 +697,16 @@ def _minimal_tagcol(fnames):
     return TagCollection(alltags)
 
 
-def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
+def set_attrib(asset):
+    retrofitted = False
+    for cost in getattr(asset, 'costs', []):
+        asset.attrib[cost['type']] = cost['value']
+        if 'retrofitted' in cost.attrib:
+            retrofitted = float(cost['retrofitted'])
+    return retrofitted
+
+
+def assets2df(asset_nodes, fields, ignore_missing_costs):
     """
     :returns: a DataFrame of assets from the asset nodes
     """
@@ -719,19 +716,20 @@ def assets2df(asset_nodes, fields, retrofitted, ignore_missing_costs):
         if name not in fields:
             fields.append(name)
     dtlist = [(f, object) for f in fields]
-    if retrofitted:
-        dtlist.append(('retrofitted', object))
     nodes = list(asset_nodes)
-    array = numpy.zeros(len(nodes), dtlist)
-    for asset, rec in zip(nodes, array):
+    for i, asset in enumerate(nodes):
+        retrofitted = set_attrib(asset)
+        if i == 0:   # first asset
+            if retrofitted:
+                dtlist.append(('retrofitted', object))
+            array = numpy.zeros(len(nodes), dtlist)
+        rec = array[i]
         # fix asset.attrib
         for occ in getattr(asset, 'occupancies', []):
             ofield = 'occupants_' + occ['period'].lower()
             asset.attrib[ofield] = occ['occupants']
-        for cost in getattr(asset, 'costs', []):
-            asset.attrib[cost['type']] = cost['value']
-            if retrofitted and 'retrofitted' in cost.attrib:
-                rec['retrofitted'] = float(cost['retrofitted'])
+        if retrofitted:
+            rec['retrofitted'] = retrofitted
         if hasattr(asset, 'tags'):
             asset.attrib.update(asset.tags.attrib)
 
@@ -807,12 +805,9 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
     exposure, assetnodes = _get_exposure(fname)
     if tagcol:
         exposure.tagcol = tagcol
-    if calculation_mode == 'classical_bcr':  # classical_bcr tests
-        exposure.retrofitted = True
     if assetnodes:
         df = assets2df(
-            assetnodes, exposure._csv_header(),
-            exposure.retrofitted, ignore_missing_costs)
+            assetnodes, exposure._csv_header(), ignore_missing_costs)
         fname_dfs = [(fname, df)]
     else:
         fname_dfs = exposure._read_csv(errors)
@@ -828,7 +823,7 @@ def read_exp_df(fname, calculation_mode='', ignore_missing_costs=(),
         occupants = any(n.startswith('occupants_') for n in names)
         if occupants and 'occupants_avg' not in names:
             df['occupants_avg'] = calc_occupants_avg(df)
-        if exposure.retrofitted:
+        if 'retrofitted' in df.columns:
             df['retrofitted'] = exposure.cost_calculator(
                 'structural', {'value-structural': df.retrofitted,
                                'value-number': df['value-number']})
@@ -877,7 +872,7 @@ class Exposure(object):
     """
     A class to read the exposure from XML/CSV files
     """
-    fields = ['occupancy_periods', 'retrofitted', 'area', 'assets',
+    fields = ['occupancy_periods', 'area', 'assets',
               'cost_calculator', 'tagcol', 'pairs']
 
     def __toh5__(self):
@@ -893,7 +888,7 @@ class Exposure(object):
         attrs = dict(
             loss_types=hdf5.array_of_vstr(loss_types),
             occupancy_periods=hdf5.array_of_vstr(self.occupancy_periods),
-            retrofitted=self.retrofitted, pairs=self.pairs)
+            pairs=self.pairs)
         return array, attrs
 
     def __fromh5__(self, array, attrs):

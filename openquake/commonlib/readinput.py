@@ -34,7 +34,8 @@ import numpy
 import pandas
 from scipy.spatial import cKDTree
 import requests
-from shapely import wkt
+from shapely import wkt, geometry
+import fiona
 
 from openquake.baselib import config, hdf5, parallel, InvalidFile
 from openquake.baselib.performance import Monitor
@@ -55,6 +56,7 @@ from openquake.hazardlib.geo.utils import (
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
+from openquake.qa_tests_data import mosaic, global_risk
 
 F32 = numpy.float32
 F64 = numpy.float64
@@ -434,7 +436,8 @@ def get_poor_site_model(fname):
     """
     :returns: a poor site model with only lon, lat fields
     """
-    data = [ln.replace(',', ' ') for ln in open(fname, encoding='utf-8-sig')]
+    with open(fname, encoding='utf-8-sig') as f:
+        data = [ln.replace(',', ' ') for ln in f]
     coords = sorted(valid.coordinates(','.join(data)))
     # sorting the coordinates so that event_based do not depend on the order
     dt = [('lon', float), ('lat', float), ('depth', float)]
@@ -453,7 +456,7 @@ def get_site_model_around(site_model_hdf5, rup, dist):
     idxs = kdt.query_ball_point(xyz, dist, eps=.001)
     return sm[idxs]
 
-    
+
 def get_site_model(oqparam):
     """
     :param oqparam:
@@ -730,7 +733,7 @@ def get_rupture(oqparam):
     return rup
 
 
-def get_source_model_lt(oqparam, branchID=''):
+def get_source_model_lt(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
@@ -738,7 +741,7 @@ def get_source_model_lt(oqparam, branchID=''):
         a :class:`openquake.hazardlib.logictree.SourceModelLogicTree`
         instance
     """
-    smlt = get_smlt(vars(oqparam), branchID)
+    smlt = get_smlt(vars(oqparam))
     srcids = set(smlt.source_data['source'])
     for src in oqparam.reqv_ignore_sources:
         if src not in srcids:
@@ -749,17 +752,15 @@ def get_source_model_lt(oqparam, branchID=''):
     return smlt
 
 
-def get_full_lt(oqparam, branchID=''):
+def get_full_lt(oqparam):
     """
     :param oqparam:
         an :class:`openquake.commonlib.oqvalidation.OqParam` instance
-    :param branchID:
-        used to read a single sourceModel branch (if given)
     :returns:
         a :class:`openquake.hazardlib.logictree.FullLogicTree`
         instance
     """
-    source_model_lt = get_source_model_lt(oqparam, branchID)
+    source_model_lt = get_source_model_lt(oqparam)
     trts = source_model_lt.tectonic_region_types
     trts_lower = {trt.lower() for trt in trts}
     reqv = oqparam.inputs.get('reqv', {})
@@ -882,7 +883,7 @@ def get_cache_path(oqparam, h5=None):
     return ''
 
 
-def get_composite_source_model(oqparam, dstore=None, branchID=''):
+def get_composite_source_model(oqparam, dstore=None):
     """
     Parse the XML and build a complete composite source model in memory.
 
@@ -892,7 +893,7 @@ def get_composite_source_model(oqparam, dstore=None, branchID=''):
          an open datastore where to save the source info
     """
     logging.info('Reading %s', oqparam.inputs['source_model_logic_tree'])
-    full_lt = get_full_lt(oqparam, branchID)
+    full_lt = get_full_lt(oqparam)
     path = get_cache_path(oqparam, dstore.hdf5 if dstore else None)
     if os.path.exists(path):
         from openquake.commonlib import datastore  # avoid circular import
@@ -982,21 +983,22 @@ def get_exposure(oqparam, h5=None):
     :returns:
         an :class:`Exposure` instance or a compatible AssetCollection
     """
-    fnames = oqparam.inputs['exposure']
+    oq = oqparam
+    fnames = oq.inputs['exposure']
     with Monitor('reading exposure', measuremem=True, h5=h5):
         fname = fnames[0]
-        if fname.endswith('.hdf5') and oqparam.rupture_dict:
+        if fname.endswith('.hdf5') and oq.rupture_dict:
             # reading the assets around a rupture
-            sm = get_site_model(oqparam)
+            sm = get_site_model(oq)
             gh3 = numpy.array(sorted(set(geohash3(sm['lon'], sm['lat']))))
             exposure = Global.exposure = asset.Exposure.read_around(fname, gh3)
         else:
             exposure = Global.exposure = asset.Exposure.read_all(
-                oqparam.inputs['exposure'], oqparam.calculation_mode,
-                oqparam.ignore_missing_costs,
-                errors='ignore' if oqparam.ignore_encoding_errors else None,
-                infr_conn_analysis=oqparam.infrastructure_connectivity_analysis,
-                aggregate_by=oqparam.aggregate_by)
+                oq.inputs['exposure'], oq.calculation_mode,
+                oq.ignore_missing_costs,
+                errors='ignore' if oq.ignore_encoding_errors else None,
+                infr_conn_analysis=oq.infrastructure_connectivity_analysis,
+                aggregate_by=oq.aggregate_by)
     return exposure
 
 
@@ -1096,7 +1098,7 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
 
     if (not oqparam.hazard_calculation_id and 'gmfs' not in oqparam.inputs
             and 'hazard_curves' not in oqparam.inputs
-            and not 'station_data' in oqparam.inputs
+            and 'station_data' not in oqparam.inputs
             and sitecol is not sitecol.complete):
         # for predefined hazard you cannot reduce the site collection; instead
         # you can in other cases, typically with a grid which is mostly empty
@@ -1466,3 +1468,35 @@ def get_checksum32(oqparam, h5=None):
     if h5:
         h5.attrs['checksum32'] = checksum
     return checksum
+
+
+# NOTE: we expect to call this for mosaic or global_risk, with buffer 0 or 0.1
+@functools.lru_cache(maxsize=4)
+def read_geometries(fname, code, buffer=0):
+    """
+    :param fname: path of the file containing the geometries
+    :param code: name of the primary key field
+    :param buffer: shapely buffer in degrees
+    :returns: data frame with codes and geometries
+    """
+    with fiona.open(fname) as f:
+        codes = []
+        geoms = []
+        for feature in f:
+            props = feature['properties']
+            codes.append(props[code])
+            geom = geometry.shape(feature['geometry'])
+            geoms.append(geom.buffer(buffer))
+    return pandas.DataFrame(dict(code=codes, geom=geoms))
+
+
+def read_mosaic_df(buffer=0.1):
+    fname = os.path.join(os.path.dirname(mosaic.__file__),
+                         'ModelBoundaries.shp')
+    return read_geometries(fname, 'code', buffer)
+
+
+def read_global_risk_df(buffer=0.1):
+    fname = os.path.join(os.path.dirname(global_risk.__file__),
+                         'geoBoundariesCGAZ_ADM0.shp')
+    return read_geometries(fname, 'shapeGroup', buffer)

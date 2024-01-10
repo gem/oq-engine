@@ -42,6 +42,7 @@ from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
+from openquake.qa_tests_data import mosaic
 from openquake.qa_tests_data.event_based_damage import case_15
 from openquake.qa_tests_data.logictree import case_09, case_13, case_56
 from openquake.qa_tests_data.classical import case_01, case_18
@@ -92,6 +93,13 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
+
+    def test_shp(self):
+        mosaic_dir = os.path.dirname(mosaic.__file__)
+        path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
+        with Print.patch() as p:
+            sap.runline(f'openquake.commands info {path}')
+        self.assertIn('GLD', str(p))
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -313,11 +321,11 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_extract_ruptures(self):
         job_ini = os.path.join(
             os.path.dirname(eb_case_1.__file__), 'job_ruptures.ini')
-        with Print.patch() as p:
+        with Print.patch():
             calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
         calc_id = calc.datastore.calc_id
         tempdir = tempfile.mkdtemp()
-        with Print.patch() as p:
+        with Print.patch():
             sap.runline("openquake.commands extract ruptures "
                         f"{calc_id} --extract-dir={tempdir}")
         fnames = os.listdir(tempdir)

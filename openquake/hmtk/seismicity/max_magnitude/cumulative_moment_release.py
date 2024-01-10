@@ -43,25 +43,27 @@
 # The GEM Foundation, and the authors of the software, assume no liability for
 # use of the software.
 
-'''
+"""
 Module :class: openquake.hmtk.seismicity.max_magnitude.cumulative_moment.CumulativeMoment
 implements cumulative moment estimator of maximum magnitude from instrumental
 seismicity
-'''
+"""
 from math import fabs
 import numpy as np
 from openquake.hmtk.seismicity.max_magnitude.base import (
-    BaseMaximumMagnitude, MAX_MAGNITUDE_METHODS)
+    BaseMaximumMagnitude,
+    MAX_MAGNITUDE_METHODS,
+)
 
 
 @MAX_MAGNITUDE_METHODS.add("get_mmax", number_bootstraps=int)
 class CumulativeMoment(BaseMaximumMagnitude):
-    '''Class to implement the bootstrapped cumulative moment estimator of
+    """Class to implement the bootstrapped cumulative moment estimator of
     maximum magnitude. Adapted by G. Weatherill from the Cumulative Strain
-    Energy approach originally suggested by Makropoulos & Burton (1983)'''
+    Energy approach originally suggested by Makropoulos & Burton (1983)"""
 
     def get_mmax(self, catalogue, config):
-        '''
+        """
         Calculates Maximum magnitude and its uncertainty
 
         :param catalogue:
@@ -81,45 +83,49 @@ class CumulativeMoment(BaseMaximumMagnitude):
         :returns:
             * Maximum magnitude (float)
             * Uncertainty on maximum magnituse (float)
-        '''
+        """
 
         # If no bootstraps no uncertainty on magnitudes then simply calculate
         # Mmax without uncertainty
         self.check_config(config)
-        cond = config['number_bootstraps'] == 1 or\
-            not isinstance(catalogue.data['sigmaMagnitude'], np.ndarray) or\
-            len(catalogue.data['sigmaMagnitude']) == 0 or\
-            np.all(np.isnan(catalogue.data['sigmaMagnitude']))
+        cond = (
+            config["number_bootstraps"] == 1
+            or not isinstance(catalogue.data["sigmaMagnitude"], np.ndarray)
+            or len(catalogue.data["sigmaMagnitude"]) == 0
+            or np.all(np.isnan(catalogue.data["sigmaMagnitude"]))
+        )
 
         if cond:
-            return self.cumulative_moment(catalogue.data['year'],
-                                          catalogue.data['magnitude']), 0.0
+            return self.cumulative_moment(
+                catalogue.data["year"], catalogue.data["magnitude"]
+            ), 0.0
 
-        neq = len(catalogue.data['magnitude'])
-        mmax_samp = np.zeros(config['number_bootstraps'], dtype=float)
+        neq = len(catalogue.data["magnitude"])
+        mmax_samp = np.zeros(config["number_bootstraps"], dtype=float)
 
         # Sample magnitudes from catalogue and calculate MMax from sample
-        for iloc in range(0, config['number_bootstraps']):
-            mw_sample = catalogue.data['magnitude'] + \
-                catalogue.data['sigmaMagnitude'] * np.random.normal(0., 1.,
-                                                                    neq)
-            mmax_samp[iloc] = self.cumulative_moment(catalogue.data['year'],
-                                                     mw_sample)
+        for iloc in range(0, config["number_bootstraps"]):
+            mw_sample = catalogue.data["magnitude"] + catalogue.data[
+                "sigmaMagnitude"
+            ] * np.random.normal(0.0, 1.0, neq)
+            mmax_samp[iloc] = self.cumulative_moment(
+                catalogue.data["year"], mw_sample
+            )
         # Return mean and standard deviation of samples
         return np.mean(mmax_samp), np.std(mmax_samp, ddof=1)
 
     def check_config(self, config):
-        '''
+        """
         Checks the configuration file for the number of bootstraps.
         Returns 1 if not found or invalid (i.e. < 0)
-        '''
-        nb = config['number_bootstraps'] or 0
+        """
+        nb = config["number_bootstraps"] or 0
         if nb < 1:
-            config['number_bootstraps'] = 1
+            config["number_bootstraps"] = 1
         return config
 
     def cumulative_moment(self, year, mag):
-        '''Calculation of Mmax using aCumulative Moment approach, adapted from
+        """Calculation of Mmax using aCumulative Moment approach, adapted from
         the cumulative strain energy method of Makropoulos & Burton (1983)
 
         :param year: Year of Earthquake
@@ -130,15 +136,15 @@ class CumulativeMoment(BaseMaximumMagnitude):
         :type iplot: Boolean
         :return mmax: Returns Maximum Magnitude
         :rtype mmax: Float
-        '''
+        """
         # Calculate seismic moment
-        m_o = 10. ** (9.05 + 1.5 * mag)
+        m_o = 10.0 ** (9.05 + 1.5 * mag)
         year_range = np.arange(np.min(year), np.max(year) + 1, 1)
         nyr = np.shape(year_range)[0]
         morate = np.zeros(nyr, dtype=float)
         # Get moment release per year
         for loc, tyr in enumerate(year_range):
-            idx = np.abs(year - tyr) < 1E-5
+            idx = np.abs(year - tyr) < 1e-5
             if np.sum(idx) > 0:
                 # Some moment release in that year
                 morate[loc] = np.sum(m_o[idx])
@@ -146,10 +152,11 @@ class CumulativeMoment(BaseMaximumMagnitude):
 
         # Average moment rate vector
         exp_morate = np.cumsum(ave_morate * np.ones(nyr))
-        modiff = (np.abs(np.max(np.cumsum(morate) - exp_morate)) +
-                  np.abs(np.min(np.cumsum(morate) - exp_morate)))
+        modiff = np.abs(np.max(np.cumsum(morate) - exp_morate)) + np.abs(
+            np.min(np.cumsum(morate) - exp_morate)
+        )
         # Return back to Mw
-        if fabs(modiff) < 1E-20:
+        if fabs(modiff) < 1e-20:
             return -np.inf
-        mmax = (2. / 3.) * (np.log10(modiff) - 9.05)
+        mmax = (2.0 / 3.0) * (np.log10(modiff) - 9.05)
         return mmax

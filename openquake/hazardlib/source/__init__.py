@@ -19,20 +19,21 @@ of seismic sources.
 """
 import logging
 from openquake.baselib import parallel
-from openquake.hazardlib import mfd
-from openquake.hazardlib.source.rupture import BaseRupture, \
-ParametricProbabilisticRupture, NonParametricProbabilisticRupture
+from openquake.hazardlib.source.rupture import (  # noqa
+    BaseRupture,
+    ParametricProbabilisticRupture,
+    NonParametricProbabilisticRupture
+)
 from openquake.hazardlib.source.base import BaseSeismicSource
-from openquake.hazardlib.source.point import PointSource
-from openquake.hazardlib.source.area import AreaSource
-from openquake.hazardlib.source.simple_fault import SimpleFaultSource
-from openquake.hazardlib.source.complex_fault import (
-    ComplexFaultSource, MINWEIGHT)
-from openquake.hazardlib.source.characteristic import CharacteristicFaultSource
-from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource
-from openquake.hazardlib.source.multi_point import MultiPointSource
-from openquake.hazardlib.source.kite_fault import KiteFaultSource
-from openquake.hazardlib.source.multi_fault import MultiFaultSource
+from openquake.hazardlib.source.point import PointSource  # noqa
+from openquake.hazardlib.source.area import AreaSource  # noqa
+from openquake.hazardlib.source.simple_fault import SimpleFaultSource  # noqa
+from openquake.hazardlib.source.complex_fault import ComplexFaultSource, MINWEIGHT  # noqa
+from openquake.hazardlib.source.characteristic import CharacteristicFaultSource  # noqa
+from openquake.hazardlib.source.non_parametric import NonParametricSeismicSource   # noqa
+from openquake.hazardlib.source.multi_point import MultiPointSource   # noqa
+from openquake.hazardlib.source.kite_fault import KiteFaultSource  # noqa
+from openquake.hazardlib.source.multi_fault import MultiFaultSource  # noqa
 
 
 def splittable(src):
