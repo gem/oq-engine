@@ -1602,7 +1602,8 @@ class OqParam(valid.ParamSet):
         """
         :returns: a numpy dtype {imt: float}
         """
-        return numpy.dtype([(imt, dtype) for imt in self.imtls])
+        imts = sorted(from_string(imt) for imt in self.imtls)
+        return numpy.dtype([(imt.string, dtype) for imt in imts])
 
     @property
     def lti(self):
