@@ -377,7 +377,8 @@ class ContextMaker(object):
                     raise TypeError('Expected string, got %s' % type(imt))
             self.imtls = param['imtls']
         elif 'hazard_imtls' in param:
-            self.imtls = DictArray(param['hazard_imtls'])
+            self.imtls = DictArray(
+                imt_module.sort_by_imt(param['hazard_imtls']))
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.cache_distances = param.get('cache_distances', False)
