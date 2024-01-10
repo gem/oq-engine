@@ -566,7 +566,7 @@ class ReadGeometryTestCase(unittest.TestCase):
         t0 = time.time()
         mosaic_dir = os.path.dirname(mosaic.__file__)
         geom_df = readinput.read_mosaic_df()
-        self.assertEqual(len(geom_df), 31)
+        self.assertEqual(len(geom_df), 30)
         sites_df = pandas.read_csv(os.path.join(mosaic_dir, 'scenarios.csv'),
                                    usecols=['lat', 'lon'])
         lonlats = sites_df[['lon', 'lat']].to_numpy()
