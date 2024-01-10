@@ -53,14 +53,13 @@ jobs:
         run: |
           if [ -z "$GITHUB_INPUT_REF" ]
           then
-              echo " Is not a workflow_dispatch RUN, use: $GITHUB_DEF_BR "
+              echo "This is not a workflow_dispatch RUN, use: $GITHUB_DEF_BR"
               python install.py devel --version ${GITHUB_DEF_BR}
           else
-              echo " Is a workflow_dispatch RUN, use: $GITHUB_INPUT_REF "
-              GITHUB_BR=`echo ${{ github.head_ref }}`
+              echo "This is a workflow_dispatch RUN, use: $GITHUB_INPUT_REF"
               python install.py devel --version ${GITHUB_INPUT_REF}
           fi
-      - name: Run demos and upload to ci.openquake.org
+      - name: Run demos and upload to docs.openquake.org
         # uncomment the line below to avoid running this part when triggering the action manually
         # if: github.event.inputs.git-ref == ''
         shell: bash
@@ -78,14 +77,21 @@ jobs:
           oq dump /tmp/oqdata.zip
           oq restore /tmp/oqdata.zip /tmp/oqdata
           helpers/zipdemos.sh $(pwd)/demos
-          echo " Check if this is a pull request or not"
-          if [ -z "$GITHUB_HD_REF" ]
+          if [ -z "$GITHUB_INPUT_REF" ]
           then
-              echo " Is not a pull request, use branch: $GITHUB_DEF_BR"
-              GITHUB_BR=`echo ${{ github.event.repository.default_branch }}`
+              echo "This is not a workflow_dispatch RUN"
+              echo "Check if this is a pull request or not"
+              if [ -z "$GITHUB_HD_REF" ]
+              then
+                  echo "This is not a pull request, use branch: $GITHUB_DEF_BR"
+                  GITHUB_BR=$GITHUB_DEF_BR
+              else
+                  echo "This is a pull request, use branch: $GITHUB_HD_REF"
+                  GITHUB_BR=$GITHUB_HD_REF
+              fi
           else
-              echo " Is a pull request, use branch: $GITHUB_HD_BR"
-              GITHUB_BR=`echo ${{ github.head_ref }}`
+              echo "This is a workflow_dispatch RUN, use: $GITHUB_INPUT_REF"
+              GITHUB_BR=$GITHUB_INPUT_REF
           fi
           echo "BRANCH set to $GITHUB_BR"
           gpg --quiet --batch --yes --decrypt --passphrase="$DOCS_SSH" --output ./.deploy_rsa ./.deploy_docs.enc
