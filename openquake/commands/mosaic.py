@@ -107,9 +107,7 @@ def from_file(fname, concurrent_jobs=8):
                 continue
             dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
             tags.append(siteid)
-            # FIXME: should we exclude USA here or not?
-            allparams.append(get_params_from(
-                dic, config.directory.mosaic_dir, exclude=('USA',)))
+            allparams.append(get_params_from(dic, config.directory.mosaic_dir))
 
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
@@ -148,8 +146,7 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
         return
     lon, lat = lonlat_or_fname.split(',')
     params = get_params_from(
-        dict(lon=lon, lat=lat, vs30=vs30), config.directory.mosaic_dir,
-        exclude=('USA',))  # FIXME: should we exclude USA here or not?
+        dict(lon=lon, lat=lat, vs30=vs30), config.directory.mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)

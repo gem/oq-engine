@@ -126,7 +126,7 @@ def main(lon: valid.longitude,
     try:
         jobctx.params.update(
             get_params_from(
-                inputs, config.directory.mosaic_dir, exclude=('USA',)))
+                inputs, config.directory.mosaic_dir, exclude=['USA']))
         if jobctx.params['model'] in PRELIMINARY_MODELS:
             warnings.append(PRELIMINARY_MODEL_WARNING)
         logging.root.handlers = []  # avoid breaking the logs

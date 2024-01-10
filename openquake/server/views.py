@@ -644,7 +644,7 @@ def aelo_run(request):
     try:
         params = get_params_from(
             dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid),
-            config.directory.mosaic_dir, exclude=('USA',))
+            config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
         response_data = {'status': 'failed', 'error_cls': type(exc).__name__,
