@@ -60,8 +60,9 @@ jobs:
               GITHUB_BR=`echo ${{ github.head_ref }}`
               python install.py devel --version ${GITHUB_INPUT_REF}
           fi
-      - name: Run demos and upload to ci.openquake.org if not workflow_dispatch
-        if: github.event.inputs.git-ref == ''
+      - name: Run demos and upload to ci.openquake.org
+        # uncomment the line below to avoid running this part when triggering the action manually
+        # if: github.event.inputs.git-ref == ''
         shell: bash
         env:
           DOCS_SSH: ${{ secrets.DOCS_ARTIFACTS }}
