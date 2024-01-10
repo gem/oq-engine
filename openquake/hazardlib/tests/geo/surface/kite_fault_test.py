@@ -95,6 +95,12 @@ def ppp(profiles: list, smsh: KiteSurface = None, title: str = '',
     # Plotting mesh
     if smsh is not None:
 
+        # Plotting nodes
+        idx = np.isfinite(smsh.mesh.lons)
+        ax.plot(smsh.mesh.lons[idx].flatten(),
+                smsh.mesh.lats[idx].flatten(),
+                smsh.mesh.depths[idx].flatten() * scl, '.g', ms=0.1)
+
         for i_row in range(smsh.mesh.lons.shape[0] - 1):
             for i_col in range(smsh.mesh.lons.shape[1] - 1):
 
@@ -893,11 +899,8 @@ class SouthAmericaSegmentTest(unittest.TestCase):
         alg = False
         smsh = KiteSurface.from_profiles(self.profiles, sampling,
                                          sampling, idl, alg)
-        np.isfinite(smsh.mesh.lons[:, :])
-        # FIXME
-        # self.assertEqual(np.sum(np.sum(idx)), 207)
-
-        breakpoint()
+        idx = np.isfinite(smsh.mesh.lons[:, :])
+        self.assertEqual(np.sum(np.sum(idx)), 787)
 
         if PLOTTING:
             title = 'Top of the slab'
