@@ -49,7 +49,7 @@ def test_CCA():
         dic = dict(lon=lon, lat=lat, site=site, vs30='760')
         with logs.init('job', job_ini) as log:
             log.params.update(get_params_from(
-                dic, MOSAIC_DIR, exclude=('USA')))
+                dic, MOSAIC_DIR, exclude=['USA']))
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
         if rtgmpy:
