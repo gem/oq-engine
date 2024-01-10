@@ -18,6 +18,7 @@
 
 from typing import Union
 import numpy as np
+
 try:
     import onnxruntime
 except ImportError:
@@ -230,7 +231,6 @@ def zhu_etal_2017_coastal(
         + dcdr_coeff * np.sqrt(dc) * dr
         + intercept
     )
-
     prob_liq = sigmoid(Xg)
 
     # Zhu et al. 2017 heuristically assign zero to the predicted probability

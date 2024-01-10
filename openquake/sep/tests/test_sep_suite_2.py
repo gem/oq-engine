@@ -28,7 +28,7 @@ from openquake.sep.liquefaction import (
     akhlagi_etal_2021_model_a,
     akhlagi_etal_2021_model_b,
     bozzoni_etal_2021_europe,
-    todorovic_silva_2022_nonparametric_general
+    todorovic_silva_2022_nonparametric_general,
 )
 
 from openquake.sep.classes import (
