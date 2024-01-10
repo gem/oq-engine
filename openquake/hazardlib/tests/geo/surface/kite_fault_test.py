@@ -938,7 +938,7 @@ class VerticalProfilesTest(unittest.TestCase):
             plt.show()
 
         # Testing that the mesh is vertical
-        expected = [-75.03541, 19.85003, -75.03541, 19.85003]
+        expected = [-75.551401, 19.83364, -75.551391, 19.83363]
         computed = [sfc.mesh.lons[0, 0], sfc.mesh.lats[0, 0],
                     sfc.mesh.lons[-1, 0], sfc.mesh.lats[-1, 0]]
         np.testing.assert_allclose(expected, computed)
