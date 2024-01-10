@@ -61,6 +61,7 @@ jobs:
               python install.py devel --version ${GITHUB_INPUT_REF}
           fi
       - name: Run demos and upload to ci.openquake.org
+        # uncomment the line below to avoid running this part when triggering the action manually
         # if: github.event.inputs.git-ref == ''
         shell: bash
         env:
