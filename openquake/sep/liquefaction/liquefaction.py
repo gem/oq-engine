@@ -494,7 +494,7 @@ def akhlagi_etal_2021_model_a(
     probability into binary classification is 0.4
     (see p.13 from Zhu et al., 2017).
 
-    Reference: Akhlaghi, A., Baise, L. G., Moaveni, B., Chansky, A. A.,
+    Reference: Akhlaghi, A., Baise, L. G., Moeveni, B., Chansky, A. A.,
     & Meyer, M. (2021). An Update to the Global Geospatial Liquefaction
     Model With Uncertainty Propagation. SSA Annual Meeting Abstracts (p. 162).
     Seismological Society of America.
