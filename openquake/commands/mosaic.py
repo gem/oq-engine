@@ -31,11 +31,6 @@ from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
 
 
-def get_asce41(calc_id):
-    dstore = datastore.read(calc_id)
-    return json.loads(dstore['asce41'][()].decode('ascii'))
-
-
 def engine_profile(jobctx, nrows):
     prof = cProfile.Profile()
     prof.runctx('engine.run_jobs([jobctx])', globals(), locals())
@@ -83,6 +78,8 @@ def from_file(fname, concurrent_jobs=8):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
@@ -113,7 +110,7 @@ def from_file(fname, concurrent_jobs=8):
                 continue
             dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
             tags.append(siteid)
-            allparams.append(get_params_from(dic))
+            allparams.append(get_params_from(dic, config.directory.mosaic_dir))
 
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
@@ -161,7 +158,8 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
             print(views.text_table(res, ext='org'), file=f)
         return
     lon, lat = lonlat_or_fname.split(',')
-    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30))
+    params = get_params_from(
+        dict(lon=lon, lat=lat, vs30=vs30), config.directory.mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)

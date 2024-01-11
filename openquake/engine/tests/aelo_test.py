@@ -41,13 +41,6 @@ ASCE07 = ['0.50000', '0.75315', '0.34598', '0.50000', '1.50000', '1.76943',
 ASCE41 = [1.5, 1.4308, 1.4308, 1.0, 0.83393, 0.83393, 0.6, 0.6, 0.98649, 0.4,
           0.4, 0.56995]
 
-def setup():
-    os.environ['OQ_APPLICATION_MODE'] = 'aelo'
-
-
-def teardown():
-    del os.environ['OQ_APPLICATION_MODE']
-
 
 def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
@@ -55,7 +48,8 @@ def test_CCA():
     for (site, lon, lat), expected in zip(SITES, EXPECTED):
         dic = dict(lon=lon, lat=lat, site=site, vs30='760')
         with logs.init('job', job_ini) as log:
-            log.params.update(get_params_from(dic, MOSAIC_DIR))
+            log.params.update(get_params_from(
+                dic, MOSAIC_DIR, exclude=['USA']))
             calc = base.calculators(log.get_oqparam(), log.calc_id)
             calc.run()
         if rtgmpy:
@@ -88,7 +82,8 @@ def test_JPN():
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
     dic = dict(lon=139, lat=36, site='JPN-site', vs30='760')
     with logs.init('job', job_ini) as log:
-        log.params.update(get_params_from(dic, MOSAIC_DIR))
+        log.params.update(get_params_from(
+            dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
@@ -101,7 +96,8 @@ def test_KOR():
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
     dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
     with logs.init('job', job_ini) as log:
-        log.params.update(get_params_from(dic, MOSAIC_DIR))
+        log.params.update(get_params_from(
+            dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:

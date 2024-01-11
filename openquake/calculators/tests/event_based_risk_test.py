@@ -433,6 +433,7 @@ agg_id
         self.assertEqualFiles(
             'expected/portfolio_losses.txt', fname, delta=1E-5)
 
+    def test_amplification(self):
         # this is a case with exposure, site model and region_grid_spacing
         self.run_calc(case_miriam.__file__, 'job2.ini', concurrent_tasks=4)
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']

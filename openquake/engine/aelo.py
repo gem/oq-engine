@@ -22,7 +22,6 @@ import os
 import sys
 import getpass
 import logging
-from unittest import mock
 import numpy
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
@@ -43,7 +42,7 @@ PRELIMINARY_MODEL_WARNING = (
     ' is under review and will be updated' ' during Year 3.')
 
 
-def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
+def get_params_from(inputs, mosaic_dir, exclude=()):
     """
     :param inputs: a dictionary with lon, lat, vs30, siteid
 
@@ -54,13 +53,13 @@ def get_params_from(inputs, mosaic_dir=config.directory.mosaic_dir):
     lon = float(inputs['lon'])
     lat = float(inputs['lat'])
     lonlats = numpy.array([(lon, lat)])
-    [model] = geo.utils.geolocate(lonlats, mosaic_df)
+    [model] = geo.utils.geolocate(lonlats, mosaic_df, exclude)
     if model == '???':
         raise ValueError(
             f'Site at lon={lon} lat={lat} is not covered by any model!')
     ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-    params['model'] = model
+    params['mosaic_model'] = model
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
@@ -112,39 +111,40 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
-    with mock.patch.dict(os.environ, {'OQ_APPLICATION_MODE': 'aelo'}):
-        inputs = dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid)
-        if jobctx is None:
-            # in  testing mode create a new job context
-            config.directory.mosaic_dir = os.path.join(
-                os.path.dirname(CDIR), 'qa_tests_data/mosaic')
-            dic = dict(calculation_mode='custom', description='AELO')
-            [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
-                                          None, getpass.getuser(), None)
+    inputs = dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid)
+    if jobctx is None:
+        # in  testing mode create a new job context
+        config.directory.mosaic_dir = os.path.join(
+            os.path.dirname(CDIR), 'qa_tests_data/mosaic')
+        dic = dict(calculation_mode='custom', description='AELO')
+        [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
+                                      None, getpass.getuser(), None)
 
-        if not config.directory.mosaic_dir:
-            sys.exit('mosaic_dir is not specified in openquake.cfg')
-        warnings = []
-        try:
-            jobctx.params.update(get_params_from(inputs))
-            if jobctx.params['model'] in PRELIMINARY_MODELS:
-                warnings.append(PRELIMINARY_MODEL_WARNING)
-            logging.root.handlers = []  # avoid breaking the logs
-        except Exception as exc:
-            # This can happen for instance:
-            # - if no model covers the given coordinates.
-            # - if no ini file was found
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                     exc=exc, warnings=warnings)
-            raise exc
-        try:
-            engine.run_jobs([jobctx])
-        except Exception as exc:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                     exc=exc, warnings=warnings)
-        else:
-            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                     exc=None, warnings=warnings)
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+    warnings = []
+    try:
+        jobctx.params.update(
+            get_params_from(
+                inputs, config.directory.mosaic_dir, exclude=['USA']))
+        if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
+            warnings.append(PRELIMINARY_MODEL_WARNING)
+        logging.root.handlers = []  # avoid breaking the logs
+    except Exception as exc:
+        # This can happen for instance:
+        # - if no model covers the given coordinates.
+        # - if no ini file was found
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=exc, warnings=warnings)
+        raise exc
+    try:
+        engine.run_jobs([jobctx])
+    except Exception as exc:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=exc, warnings=warnings)
+    else:
+        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                 exc=None, warnings=warnings)
 
 
 if __name__ == '__main__':
