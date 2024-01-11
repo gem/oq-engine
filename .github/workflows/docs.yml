@@ -88,14 +88,14 @@ jobs:
           echo "BS_REF: $GITHUB_BS_REF"
       - name: Check out the codebase
         uses: actions/checkout@v2
-      - name: Set up Python 3.8
+      - name: Set up Python 3.11
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.11'
       - name: Upgrade pip and install requirements
         run: |
           pip install -U pip
-          pip install -r ./requirements-py38-linux64.txt
+          pip install -r ./requirements-py311-linux64.txt
           pip install -r ./doc/requirements.txt
       - name: Install oq engine
         run: |
