@@ -29,8 +29,8 @@ from openquake.calculators.export import DISPLAY_NAME
 from openquake import commands
 
 # check for Python version
-PY_VER = sys.version_info[:2]
-if PY_VER < (3, 9):
+PYVER = sys.version_info[:2]
+if PYVER < (3, 9):
     sys.exit('Python 3.9+ is required, you are using %s', sys.executable)
 
 
