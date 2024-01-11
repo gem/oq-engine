@@ -41,6 +41,10 @@ def engine_profile(jobctx, nrows):
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
+def get_asce41(calc_id):
+    dstore = datastore.read(calc_id)
+    return json.loads(dstore['asce41'][()].decode('ascii'))
+
 
 # ########################## run_site ############################## #
 
