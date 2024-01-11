@@ -435,7 +435,6 @@ agg_id
 
     def test_amplification(self):
         # this is a case with exposure, site model and region_grid_spacing
-        # there is also amplification
         self.run_calc(case_miriam.__file__, 'job2.ini', concurrent_tasks=4)
         hcurves = dict(extract(self.calc.datastore, 'hcurves'))['all']
         sitecol = self.calc.datastore['sitecol']  # filtered sitecol
