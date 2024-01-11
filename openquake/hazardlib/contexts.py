@@ -1780,7 +1780,7 @@ def read_ctx_by_grp(dstore):
     dtlist = []
     for par, val in params.items():
         if len(val) == 0:
-            return []
+            return {}
         elif par == 'probs_occur':
             item = (par, object)
         elif par == 'occurrence_rate':
