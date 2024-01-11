@@ -408,7 +408,8 @@ class EventBasedRiskCalculator(event_based.EventBasedCalculator):
         """
         oq = self.oqparam
         self.gmf_bytes = 0
-        if 'gmf_data' not in self.datastore:  # start from ruptures
+        if oq.calculation_mode == 'ebrisk' or 'gmf_data' not in self.datastore:
+            # start from ruptures
             if (oq.ground_motion_fields and
                     'gsim_logic_tree' not in oq.inputs and
                     oq.gsim == '[FromFile]'):
