@@ -24,11 +24,14 @@ import logging
 import getpass
 import cProfile
 import numpy
+import pandas
+import collections
 from openquake.baselib import config, performance
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
+from openquake.hazardlib.geo.utils import geolocate
 
 
 def engine_profile(jobctx, nrows):
@@ -41,9 +44,11 @@ def engine_profile(jobctx, nrows):
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
+
 def get_asce41(calc_id):
     dstore = datastore.read(calc_id)
-    return json.loads(dstore['asce41'][()].decode('ascii'))
+    dic = json.loads(dstore['asce41'][()].decode('ascii'))
+    return {k: round(v, 2) for k, v in dic.items()}
 
 
 # ########################## run_site ############################## #
@@ -67,12 +72,7 @@ def from_file(fname, concurrent_jobs=8):
       excluding sites covered by other models
     * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
       all models except those specified in this list
-    * `OQ_ONLY_SITEIDS`: a comma-separated list of site identifiers
-      to be selected, excluding all others from the analysis
-    * `OQ_EXCLUDE_SITEIDS`: a comma-separated list of site identifiers to be
-      excluded, selecting all the others
-    * `OQ_MAX_SITES_PER_MODEL`: the maximum quantity of sites to be selected
-      between those covered by each model
+    * `OQ_ALL_SITES`: run all sites (default False: running one site per model)
 
     For instance::
 
@@ -87,34 +87,30 @@ def from_file(fname, concurrent_jobs=8):
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
-    only_siteids = os.environ.get('OQ_ONLY_SITEIDS', '')
-    exclude_siteids = os.environ.get('OQ_EXCLUDE_SITEIDS', '')
-    max_sites_per_model = int(os.environ.get('OQ_MAX_SITES_PER_MODEL', 1))
+    all_sites = os.environ.get('OQ_ALL_SITES', '')
     allparams = []
     tags = []
-    count_sites_per_model = {}
-    with open(fname) as f:
-        for line in f:
-            siteid, lon, lat = line.split(',')
-            if exclude_siteids and siteid in exclude_siteids.split(','):
-                continue
-            if only_siteids and siteid not in only_siteids.split(','):
-                continue
-            curr_model = siteid[:3]
-            if exclude_models and curr_model in exclude_models.split(','):
-                continue
-            if only_models and curr_model not in only_models.split(','):
-                continue
-            try:
-                count_sites_per_model[curr_model] += 1
-            except KeyError:
-                count_sites_per_model[curr_model] = 1
-            if (max_sites_per_model > 0 and
-                    count_sites_per_model[curr_model] > max_sites_per_model):
-                continue
-            dic = dict(siteid=siteid, lon=float(lon), lat=float(lat))
-            tags.append(siteid)
-            allparams.append(get_params_from(dic, config.directory.mosaic_dir))
+    lonlats = pandas.read_csv(fname)[['Longitude', 'Latitude']].to_numpy()
+    print('Found %d sites' % len(lonlats))
+    mosaic_df = readinput.read_mosaic_df(buffer=0.1)
+    models = geolocate(lonlats, mosaic_df)
+    count_sites_per_model = collections.Counter(models)
+    print(count_sites_per_model)
+    done = {}
+    for idx, (model, lonlat) in enumerate(zip(models, lonlats)):
+        if model in ('???', 'USA', 'GLD'):
+            continue
+        if exclude_models and model in exclude_models.split(','):
+            continue
+        if only_models and model not in only_models.split(','):
+            continue
+        if not all_sites and model in done:
+            continue
+        done[model] = True
+        siteid = model + ('%03d' % idx)
+        dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
+        tags.append(siteid)
+        allparams.append(get_params_from(dic, config.directory.mosaic_dir))
 
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
@@ -158,8 +154,10 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
 
     if lonlat_or_fname.endswith('.csv'):
         res = from_file(lonlat_or_fname, concurrent_jobs)
-        with open('asce41.org', 'w') as f:
+        fname = os.path.abspath('asce41.org')
+        with open(fname, 'w') as f:
             print(views.text_table(res, ext='org'), file=f)
+        print(f'Stored {fname}')
         return
     lon, lat = lonlat_or_fname.split(',')
     params = get_params_from(
