@@ -254,6 +254,10 @@ if LOCKDOWN and APPLICATION_MODE == 'AELO':
                 f'If APPLICATION_MODE is {APPLICATION_MODE}'
                 f' EMAIL_<HOST|PORT|USE_TLS|HOST_USER|HOST_PASSWORD>'
                 f' must all be defined')
+    if not config.directory.mosaic_dir:
+        raise NameError(
+            f'If APPLICATION_MODE is {APPLICATION_MODE}, '
+            f'mosaic_dir must be specified in openquake.cfg')
 
 if LOCKDOWN:
     # do not log to file unless running through the webui

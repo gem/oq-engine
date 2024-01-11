@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.geo.utils` contains functions that are common
 to several geographical primitives and some other low-level spatial operations.
 """
 
-import os
 import math
 import logging
 import collections
@@ -864,8 +863,6 @@ def geolocate(lonlats, geom_df, exclude=()):
     :param geom_df: DataFrame of geometries keyed by a "code" field
     :returns: codes associated to the points
     """
-    if os.environ.get('OQ_APPLICATION_MODE') == 'aelo':
-        exclude += ('USA', 'UCF')
     codes = numpy.array(['???'] * len(lonlats))
     for code, geom in zip(geom_df.code, geom_df.geom):
         if code in exclude:
