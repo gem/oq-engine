@@ -48,7 +48,7 @@ def engine_profile(jobctx, nrows):
 def get_asce41(calc_id):
     dstore = datastore.read(calc_id)
     dic = json.loads(dstore['asce41'][()].decode('ascii'))
-    return {k: v if isinstance(v, str) else round(v, 2)
+    return {k: numpy.nan if v == 'n.a.' else round(v, 2)
             for k, v in dic.items()}
 
 
