@@ -19,14 +19,21 @@
 import os
 import sys
 import time
+import json
 import logging
 import getpass
 import cProfile
+import numpy
 from openquake.baselib import config, performance
-from openquake.commonlib import readinput, logs
+from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
 from openquake.engine.aelo import get_params_from
+
+
+def get_asce41(calc_id):
+    dstore = datastore.read(calc_id)
+    return json.loads(dstore['asce41'][()].decode('ascii'))
 
 
 def engine_profile(jobctx, nrows):
@@ -46,7 +53,8 @@ def engine_profile(jobctx, nrows):
 # NB: this is called by the action mosaic/.gitlab-ci.yml
 def from_file(fname, concurrent_jobs=8):
     """
-    Run a PSHA analysis on the given sites
+    Run an AELO analysis on the given sites and returns an array with
+    the ASCE-41 parameters.
 
     The CSV file must contain in each row a site identifier
     starting with the 3-character code of the mosaic model that covers it, and
@@ -115,8 +123,10 @@ def from_file(fname, concurrent_jobs=8):
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
+    results = []
     for logctx in logctxs:
         job = logs.dbcmd('get_job', logctx.calc_id)
+        results.append(get_asce41(logctx.calc_id))
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:
@@ -128,6 +138,12 @@ def from_file(fname, concurrent_jobs=8):
     print('Total time: %.1f minutes' % dt)
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
+    columns = sorted(results[0])
+    asce41 = numpy.zeros(len(results), [(col, float) for col in columns])
+    for i, result in enumerate(results):
+        for col, val in result.items():
+            asce41[i][col] = val
+    return asce41
 
 
 def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
@@ -140,7 +156,9 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
         sys.exit('mosaic_dir is not specified in openquake.cfg')
 
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname, concurrent_jobs)
+        res = from_file(lonlat_or_fname, concurrent_jobs)
+        with open('asce41.org', 'w') as f:
+            print(views.text_table(res, ext='org'), file=f)
         return
     lon, lat = lonlat_or_fname.split(',')
     params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30))
@@ -208,13 +226,15 @@ def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
         engine.run_jobs([jobctx])
 
 
-def sample_rups(model, *, slowest: int=None):
+def sample_rups(model, *, slowest: int = None):
     """
     Sample the ruptures of the given model in the mosaic
     with an effective investigation time of 100,000 years
     """
     _sample(model, TRUNC_LEVEL, MIN_DIST, EXTREME_GMV, slowest,
             hc=None, gmf=False)
+
+
 sample_rups.model = '3-letter name of the model'
 sample_rups.slowest = 'profile and show the slowest operations'
 
@@ -223,12 +243,14 @@ def sample_gmfs(model, *,
                 trunclevel: float = TRUNC_LEVEL,
                 mindist: float = MIN_DIST,
                 extreme_gmv: float = EXTREME_GMV,
-                hc: int = None, slowest: int=None):
+                hc: int = None, slowest: int = None):
     """
     Sample the gmfs of the given model in the mosaic
     with an effective investigation time of 100,000 years
     """
     _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf=True)
+
+
 sample_gmfs.model = '3-letter name of the model'
 sample_gmfs.trunclevel = 'truncation level (default: the one in job_vs30.ini)'
 sample_gmfs.mindist = 'minimum_distance (default: 0)'
@@ -239,4 +261,6 @@ sample_gmfs.slowest = 'profile and show the slowest operations'
 
 # ################################## main ################################## #
 
-main = dict(run_site=run_site, sample_rups=sample_rups, sample_gmfs=sample_gmfs)
+main = dict(run_site=run_site,
+            sample_rups=sample_rups,
+            sample_gmfs=sample_gmfs)
