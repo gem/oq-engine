@@ -438,7 +438,11 @@ class EventBasedCalculator(base.HazardCalculator):
             self.srcfilter = nofilter
         if not self.datastore.parent:
             self.datastore.create_dset('ruptures', rupture_dt)
-            self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
+            self.datastore.create_dset('rupgeoms', hdf5.vfloat64)
+            # NB: using vfloat32 for the geometries would break
+            # oq-risk-tests/kite_ruptures, the strike would be
+            # different on AMD vs Intel processors due to different
+            # numerics and the discontinuity of arctan2
 
     def build_events_from_sources(self):
         """
