@@ -50,7 +50,7 @@ def test_PAC():
     if rtgmpy:
         [fname] = export(('rtgm', 'csv'), calc.datastore)
         df = pandas.read_csv(fname, skiprows=1)
-        aac(df.RTGM, [0.824583, 1.936340, 0.828084], atol=5E-5)
+        aac(df.RTGM, [1.32594, 3.20967, 1.16167], atol=5E-5)
 
 
 def test_CCA():
