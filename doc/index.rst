@@ -139,7 +139,7 @@ do not necessarily reflect the views of USAID or the United States Government.*
    :height: 100
    :alt: Google Season of Docs Logo
 
-.. |logo-efehr| image:: http://www.efehr.org/export/system/modules/ch.ethz.sed.bootstrap.efehr2021/resources/img/logos/efehr.png
+.. |logo-efehr| image:: _static/efehr-10pc-b25.png
    :height: 100
    :alt: EFEHR Logo
 
