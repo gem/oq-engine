@@ -1451,7 +1451,7 @@ def categorize(values, nchars=2):
             f'There are too many unique values ({len(uvalues)} > {mvalues})')
     prod = itertools.product(*[BASE183] * nchars)
     dic = {uvalue: ''.join(chars) for uvalue, chars in zip(uvalues, prod)}
-    return numpy.array([dic[v] for v in values], (numpy.string_, nchars))
+    return numpy.array([dic[v] for v in values], (numpy.bytes_, nchars))
 
 
 def get_nbytes_msg(sizedict, size=8):
@@ -1512,7 +1512,7 @@ class RecordBuilder(object):
             self.names.append(name)
             self.values.append(value)
             if isinstance(value, (str, bytes)):
-                tp = (numpy.string_, len(value) or 1)
+                tp = (numpy.bytes_, len(value) or 1)
             elif isinstance(value, numpy.ndarray):
                 tp = (value.dtype, len(value))
             else:

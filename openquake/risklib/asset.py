@@ -1024,7 +1024,7 @@ class Exposure(object):
         int_fields = [(str(name), U32) for name in self.tagcol.tagnames
                       if name not in ('id', 'site_id')]
         asset_dt = numpy.dtype(
-            [('id', (numpy.string_, valid.ASSET_ID_LENGTH)),
+            [('id', (numpy.bytes_, valid.ASSET_ID_LENGTH)),
              ('ordinal', U32), ('lon', F32), ('lat', F32),
              ('site_id', U32)] + [
                  (str(name), F32) for name in float_fields] + int_fields)

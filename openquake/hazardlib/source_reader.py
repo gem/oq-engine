@@ -43,7 +43,7 @@ CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
-    ('code', (numpy.string_, 1)),      # 2
+    ('code', (numpy.bytes_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('num_ruptures', numpy.uint32),    # 5

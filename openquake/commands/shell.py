@@ -38,7 +38,6 @@ class OpenQuake(object):
             self.fig, self.ax = pyplot.subplots()
         except Exception:  # for instance, no Tkinter
             pass
-        self.lookfor = partial(numpy.lookfor, module='openquake')
         self.extract = extract
         self.read = datastore.read
         self.nrml = nrml
