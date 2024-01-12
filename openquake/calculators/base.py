@@ -1118,7 +1118,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     fname = oqparam.inputs['gmfs']
     dtdict = {'sid': U32,
               'eid': U32,
-              'custom_site_id': (numpy.string_, 8),
+              'custom_site_id': (numpy.bytes_, 8),
               None: F32}
     array = hdf5.read_csv(
         fname, dtdict,
