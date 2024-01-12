@@ -113,7 +113,7 @@ def write_csv(dest, data, sep=',', fmt='%.6E', header=None, comment=None,
 
 
 class CalculatorTestCase(unittest.TestCase):
-    OVERWRITE_EXPECTED = True
+    OVERWRITE_EXPECTED = os.environ.get('OQ_OVERWRITE')
     edir = None  # will be set to a temporary directory
 
     @classmethod
