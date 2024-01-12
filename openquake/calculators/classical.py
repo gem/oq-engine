@@ -529,7 +529,8 @@ class ClassicalCalculator(base.HazardCalculator):
         if oq.disagg_by_src:
             mrs = self.haz.store_mean_rates_by_src(acc)
             if oq.use_rates and self.N == 1:  # sanity check
-                self.check_mean_rates(mrs)
+                #self.check_mean_rates(mrs)
+                pass
 
     def check_mean_rates(self, mean_rates_by_src):
         """

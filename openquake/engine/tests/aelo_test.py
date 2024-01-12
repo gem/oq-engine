@@ -42,6 +42,17 @@ ASCE41 = [1.5, 1.4308, 1.4308, 1.0, 0.83393, 0.83393, 0.6, 0.6, 0.98649, 0.4,
           0.4, 0.56995]
 
 
+def test_PAC():
+    job_ini = os.path.join(MOSAIC_DIR, 'PAC/in/job.ini')
+    with logs.init('job', job_ini) as log:
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    if rtgmpy:
+        [fname] = export(('rtgm', 'csv'), calc.datastore)
+        df = pandas.read_csv(fname, skiprows=1)
+        aac(df.RTGM, [0.824583, 1.936340, 0.828084], atol=5E-5)
+
+
 def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
