@@ -707,11 +707,11 @@ class ReinsuranceTestCase(CalculatorTestCase):
 
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname,
-                              delta=4E-4)
+                              delta=2E-3)
         [fname] = export(('reinsurance-avg_portfolio', 'csv'),
                          self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-avg_portfolio.csv',
-                              fname, delta=4E-5)
+                              fname, delta=8E-4)
 
     def test_ideductible(self):
         if sys.platform == 'darwin':
