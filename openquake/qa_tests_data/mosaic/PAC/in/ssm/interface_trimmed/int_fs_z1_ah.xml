@@ -12,7 +12,7 @@ xmlns:gml="http://www.opengis.net/gml"
     tectonicRegion="Subduction Interface"
     >
         <complexFaultSource
-        id="int_sosol"
+        id="int_sosol-1"
         name="Subduction interface sosol - MSR: ah - Declustering: uh"
         tectonicRegion="Subduction Interface"
         >
