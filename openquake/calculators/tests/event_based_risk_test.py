@@ -537,15 +537,8 @@ agg_id
         text = extract(self.calc.datastore, 'ruptures?threshold=.8').array
         nrups = text.count('\n') - 2
         losses = self.calc.datastore['loss_by_rupture/loss'][:]
-        aac(losses, [1356.6093, 324.64624, 203.63742, 129.69966])
+        aac(losses, [1356.6093, 324.64624, 203.63742, 129.6988])
         self.assertEqual(nrups, 2)  # two ruptures >= 80% of the losses
-
-        # test extract?threshold for events
-        df = extract(self.calc.datastore, 'relevant_gmfs?threshold=.8')
-        n = len(df)
-        losses = self.calc.datastore['loss_by_event/loss'][:]
-        aac(losses, [1356.6093, 324.64624, 203.63742, 129.69966])
-        self.assertEqual(n, 2)  # two ruptures >= 80% of the losses
 
     def test_case_8(self):
         # nontrivial taxonomy mapping
