@@ -705,6 +705,8 @@ class ReinsuranceTestCase(CalculatorTestCase):
                       calculation_mode='post_risk',
                       hazard_calculation_id=str(self.calc.datastore.calc_id))
 
+        # NB: the numbers are very machine-dependent, hence the large
+        # tolerance on the reinsurance-aggcurves
         [fname] = export(('reinsurance-aggcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/reinsurance-aggcurves.csv', fname,
                               delta=2E-3)
