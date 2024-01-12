@@ -45,8 +45,9 @@ PRELIMINARY_MODEL_WARNING = (
 def get_params_from(inputs, mosaic_dir, exclude=()):
     """
     :param inputs: a dictionary with lon, lat, vs30, siteid
+    :param mosaic_dir: directory where the mosaic is located
 
-    Build the job.ini parameters for the given lon, lat extracting them
+    Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
     mosaic_df = readinput.read_mosaic_df()
@@ -86,8 +87,6 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
-
-    # params['cachedir'] = datastore.get_datadir()
     return params
 
 
