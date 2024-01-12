@@ -17,7 +17,6 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 import sys
 import runpy
-from functools import partial
 import numpy
 from openquake.hazardlib import nrml
 from openquake.hazardlib.geo.geodetic import geodetic_distance
