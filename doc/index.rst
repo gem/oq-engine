@@ -119,6 +119,30 @@ Thanks
 See the list of `contributors <https://github.com/gem/oq-engine/blob/master/CONTRIBUTORS.txt>`_
 and `sponsors <https://github.com/gem/oq-engine#thanks>`_.
 
+
+Google Season of Docs funds were used to hire a technical writer to lead the development of
+improved documentation.  EFEHR|EPOS and USAID funds (through the FORCE project) were used to 
+allocate the time from GEM technical staff.
+
+*The RST format manual was made possible by the support of the American People 
+through the United States Agency for International Development (USAID.) The 
+contents of this study are the sole responsibility of the GEM Foundation and 
+do not necessarily reflect the views of USAID or the United States Government.*
+
+|logo-usaid| |logo-gsod| |logo-efehr| 
+
+.. |logo-usaid| image:: https://github.com/gem/oq-infrastructure/raw/master/logos/public/usaid.jpg
+   :height: 100
+   :alt: USAID Logo
+
+.. |logo-gsod| image:: https://developers.google.com/static/season-of-docs/images/logo/SeasonOfDocs_Logo_Stacked.png
+   :height: 100
+   :alt: Google Season of Docs Logo
+
+.. |logo-efehr| image:: _static/efehr-10pc-b25.png
+   :height: 100
+   :alt: EFEHR Logo
+
 .. toctree::
    :hidden:
 
