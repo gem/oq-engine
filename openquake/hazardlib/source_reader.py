@@ -240,7 +240,9 @@ def find_false_duplicates(smdict):
             for src in sgroup:
                 src.fname = os.path.basename(smodel.fname).rsplit('.')[0]
                 assert '!' not in src.fname, src.fname
-                acc[src.source_id].append(src)
+                srcid = (src.source_id if sgroup.atomic
+                         else basename(src.source_id))
+                acc[srcid].append(src)
                 if sgroup.atomic:
                     atomic.add(src.source_id)
     found = []
@@ -258,7 +260,6 @@ def find_false_duplicates(smdict):
                 gb[checksum(src)].append(src)
             if len(gb) > 1:
                 for same_checksum in gb.values():
-                    # sources with the same checksum get the same ID
                     for src in same_checksum:
                         src.source_id += '!%s' % src.fname
                 found.append(srcid)
