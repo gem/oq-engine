@@ -472,4 +472,5 @@ def main(dstore, csm):
     else:
         plot_mean_hcurves_rtgm(dstore, update_dstore=True)
         plot_disagg_by_src(dstore, update_dstore=True)
-        plot_governing_mce(dstore, update_dstore=True)
+        plt = plot_governing_mce(dstore, update_dstore=True)
+        plt.close()

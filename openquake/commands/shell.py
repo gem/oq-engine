@@ -49,7 +49,7 @@ class OpenQuake(object):
         # TODO: more utilities will be added when deemed useful
 
     def get_calc(self, job_ini):
-        log = logs.init("job", job_ini)
+        log = logs.init(job_ini)
         log.__enter__()
         return calculators(log.get_oqparam(), log.calc_id)
 

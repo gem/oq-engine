@@ -28,7 +28,7 @@ than 20 lines of code:
    from openquake.calculators.base import calculators
 
    def main(job_ini):
-       with logs.init('job', job_ini) as log:
+       with logs.init(job_ini) as log:
            calc = calculators(log.get_oqparam(), log.calc_id)
            calc.run(individual_rlzs='true', shutdown=True)
            print('The hazard curves are in %s::/hcurves-rlzs'
