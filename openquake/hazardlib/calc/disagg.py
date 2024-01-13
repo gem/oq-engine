@@ -730,7 +730,7 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
         reduced_lt.init()
     edges, s = edges_shapedic
     drates4D = numpy.zeros((s['mag'], s['dist'], s['eps'], len(imldic)))
-    source_id = re.split('[:;.]', groups[0].sources[0].source_id)[0]
+    source_id = re.split('[!:;.]', groups[0].sources[0].source_id)[0]
     rmap, ctxs, cmakers = calc_rmap(groups, reduced_lt, sitecol, oq)
     trt_rlzs = [numpy.uint32(rlzs) + cm.trti * TWO24 for cm in cmakers
                 for rlzs in cm.gsims.values()]

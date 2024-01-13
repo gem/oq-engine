@@ -1207,7 +1207,7 @@ class FullLogicTree(object):
         Filter the sources and set the tuple .trt_smr
         """
         groups = []
-        source_id = self.source_model_lt.source_id.split('!')[0]
+        source_id = self.source_model_lt.source_id
         for sg in src_groups:
             ok = self.set_trt_smr(sg, source_id)
             if ok:
