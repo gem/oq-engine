@@ -1439,7 +1439,7 @@ def run_calc(job_ini, **kw):
     :param kw: parameters to override
     :returns: a Calculator instance
     """
-    with logs.init("job", job_ini) as log:
+    with logs.init(job_ini) as log:
         log.params.update(kw)
         calc = calculators(log.get_oqparam(), log.calc_id)
         calc.run()
