@@ -51,7 +51,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
             params['hazard_calculation_id'] = hc_id
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
-    log = logs.init("job", dic, getattr(logging, loglevel.upper()),
+    log = logs.init(dic, log_level=getattr(logging, loglevel.upper()),
                     user_name=user_name, host=host)
     logs.dbcmd('update_job', log.calc_id,
                {'status': 'executing', 'pid': os.getpid()})
