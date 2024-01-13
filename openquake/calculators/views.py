@@ -1582,7 +1582,9 @@ def _drate(df, imt, src):
 
 
 def _irate(df, imt, src, iml, imls):
-    subdf = df[(df.imt == imt) & (df.src_id == src)]
+    subdf = df[(df.imt == imt) & (df.src_id == src)][
+        ['src_id', 'lvl', 'value']].groupby(
+        ['src_id', 'lvl']).sum().reset_index()
     interp = numpy.interp(numpy.log(iml), numpy.log(imls[subdf.lvl]),
                        numpy.log(subdf.value))
     return numpy.exp(interp)
@@ -1593,9 +1595,13 @@ def _irate(df, imt, src, iml, imls):
 def compare_disagg_rates(token, dstore):
     oq = dstore['oqparam']
     aw = dstore['mean_disagg_by_src']
+    mrs = dstore['mean_rates_by_src']
+    mean_rates_df = mrs.to_dframe()
+    if any('!' in src for src in mrs.src_id):
+        mean_rates_df['src_id'] = [
+            src.split('!')[0] for src in mean_rates_df.src_id]
     iml_disagg = dict(zip(aw.imt, aw.iml))
     mean_disagg_df = aw.to_dframe()
-    mean_rates_df = dstore['mean_rates_by_src'].to_dframe()
     imts_out, srcs_out, drates, irates = [], [], [], []
     for imt, iml in iml_disagg.items():
         imls = oq.imtls[imt]
