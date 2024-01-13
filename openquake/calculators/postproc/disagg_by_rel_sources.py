@@ -108,7 +108,8 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
     weights = {}  # src_id -> weights
     for idx, source_id in enumerate(rel_ids):
         src2idx[source_id] = idx
-        smlt = csm.full_lt.source_model_lt.reduce(source_id, num_samples=0)
+        smlt = csm.full_lt.source_model_lt.reduce(
+            basename(source_id, '!'), num_samples=0)
         gslt = csm.full_lt.gsim_lt.reduce(smlt.tectonic_region_types)
         weights[source_id] = [rlz.weight['weight'] for rlz in gslt]
         relt = FullLogicTree(smlt, gslt)

@@ -1171,7 +1171,7 @@ class FullLogicTree(object):
         sd = group_array(self.source_model_lt.source_data, 'source')
         out = []
         for src in srcs:
-            srcid = re.split('[:;.]', src.source_id)[0]
+            srcid = re.split('[!:;.]', src.source_id)[0]
             if source_id and srcid != source_id:
                 continue  # filter
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini
@@ -1207,7 +1207,7 @@ class FullLogicTree(object):
         Filter the sources and set the tuple .trt_smr
         """
         groups = []
-        source_id = self.source_model_lt.source_id
+        source_id = self.source_model_lt.source_id.split('!')[0]
         for sg in src_groups:
             ok = self.set_trt_smr(sg, source_id)
             if ok:
