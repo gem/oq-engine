@@ -177,8 +177,6 @@ def main(dstore, csm, imts, imls):
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mean_disagg_by_src, sigma_by_src = disagg_sources(
         csm, rel_ids, imts, imls, oq, sitecol, dstore)
-    df = views.view('compare_disagg_rates',  dstore)
-    logging.info('compare_disagg_rates=\n%s', df)
     src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])
@@ -186,9 +184,9 @@ def main(dstore, csm, imts, imls):
     for imt, src_ids in rel_ids_by_imt.items():
         df = mag_dist_eps[mag_dist_eps.imt == imt]
         out.append(df[numpy.isin(df.src, src_ids)])
-    mag_dist_eps = pandas.concat(out)
-    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    return mag_dist_eps.to_numpy(), sigma_by_src
+    mag_dist_eps_df = pandas.concat(out)
+    logging.info('mag_dist_eps=\n%s', mag_dist_eps_df)
+    return mag_dist_eps_df.to_numpy(), sigma_by_src
 
 
 if __name__ == '__main__':
