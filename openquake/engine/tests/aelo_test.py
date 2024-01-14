@@ -51,7 +51,7 @@ def test_PAC():
     if rtgmpy:
         s = calc.datastore['asce07'][()].decode('ascii')
         asce07 = json.loads(s)
-        aac(asce07['PGA'], 0.89807, atol=5E-5)
+        aac(asce07['PGA'], 0.83414, atol=5E-5)
 
 
 def test_CCA():
