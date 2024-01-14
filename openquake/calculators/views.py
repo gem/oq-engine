@@ -1582,15 +1582,14 @@ def _drate(df, imt, src):
 
 
 def _irate(df, imt, src, iml, imls):
-    subdf = df[(df.imt == imt) & (df.src_id == src)][
-        ['src_id', 'lvl', 'value']].groupby(
-        ['src_id', 'lvl']).sum().reset_index()
+    subdf = df[(df.imt == imt) & (df.src_id == src)]
     interp = numpy.interp(numpy.log(iml), numpy.log(imls[subdf.lvl]),
                        numpy.log(subdf.value))
     return numpy.exp(interp)
 
 
 # used only in AELO calculations
+# NB: in presence of !-sources the comparison makes no sense
 @view.add('compare_disagg_rates')
 def compare_disagg_rates(token, dstore):
     oq = dstore['oqparam']
@@ -1608,7 +1607,7 @@ def compare_disagg_rates(token, dstore):
         srcs = mean_disagg_df[mean_disagg_df.imt == imt].source_id
         for src in set(srcs):
             imts_out.append(imt)
-            srcs_out.append(src)    
+            srcs_out.append(src)
             drates.append(_drate(mean_disagg_df, imt, src))
             irates.append(_irate(mean_rates_df, imt, src, iml, imls))
     return pandas.DataFrame({'imt': imts_out, 'src': srcs_out, 
