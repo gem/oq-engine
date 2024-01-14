@@ -60,8 +60,7 @@ def test_KOR():
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
     dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
     with logs.init(job_ini) as log:
-        log.params.update(get_params_from(
-            dic, MOSAIC_DIR, exclude=['USA']))
+        log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
