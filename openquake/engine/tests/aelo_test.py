@@ -44,7 +44,7 @@ ASCE41 = [1.5, 1.4308, 1.4308, 1.0, 0.83393, 0.83393, 0.6, 0.6, 0.98649, 0.4,
 
 
 def test_PAC():
-    # test with same name sources and semicolon convention
+    # test with same name sources and semicolon convention, full enum
     job_ini = os.path.join(MOSAIC_DIR, 'PAC/in/job.ini')
     with logs.init(job_ini) as log:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -56,7 +56,7 @@ def test_PAC():
 
 
 def test_KOR():
-    # another test with same name sources, no semicolon convention
+    # another test with same name sources, no semicolon convention, sampling
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
     dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
     with logs.init(job_ini) as log:
