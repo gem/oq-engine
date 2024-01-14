@@ -44,6 +44,7 @@ ASCE41 = [1.5, 1.4308, 1.4308, 1.0, 0.83393, 0.83393, 0.6, 0.6, 0.98649, 0.4,
 
 
 def test_PAC():
+    # test with same name sources and semicolon convention, full enum
     job_ini = os.path.join(MOSAIC_DIR, 'PAC/in/job.ini')
     with logs.init(job_ini) as log:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -52,6 +53,19 @@ def test_PAC():
         s = calc.datastore['asce07'][()].decode('ascii')
         asce07 = json.loads(s)
         aac(asce07['PGA'], 0.83414, atol=5E-5)
+
+
+def test_KOR():
+    # another test with same name sources, no semicolon convention, sampling
+    job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
+    dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
+    with logs.init(job_ini) as log:
+        log.params.update(get_params_from(dic, MOSAIC_DIR))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    if rtgmpy:
+        df = views.view('compare_disagg_rates', calc.datastore)
+        aac(df.disagg_rate, df.interp_rate, rtol=.025)
 
 
 def test_CCA():
@@ -101,17 +115,3 @@ def test_JPN():
     if rtgmpy:
         df = views.view('compare_disagg_rates', calc.datastore)
         aac(df.disagg_rate, df.interp_rate, rtol=.01)
-
-
-def test_KOR():
-    # test with same name sources
-    job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
-    dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
-    with logs.init(job_ini) as log:
-        log.params.update(get_params_from(
-            dic, MOSAIC_DIR, exclude=['USA']))
-        calc = base.calculators(log.get_oqparam(), log.calc_id)
-        calc.run()
-    if rtgmpy:
-        df = views.view('compare_disagg_rates', calc.datastore)
-        aac(df.disagg_rate, df.interp_rate, rtol=.025)

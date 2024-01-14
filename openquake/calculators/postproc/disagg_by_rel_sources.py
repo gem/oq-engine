@@ -178,7 +178,7 @@ def main(dstore, csm, imts, imls):
     mean_disagg_by_src, sigma_by_src = disagg_sources(
         csm, rel_ids, imts, imls, oq, sitecol, dstore)
     df = views.view('compare_disagg_rates',  dstore)
-    logging.info(df)
+    logging.info('compare_disagg_rates=\n%s', df)
     src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])

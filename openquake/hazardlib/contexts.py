@@ -1061,6 +1061,17 @@ class ContextMaker(object):
                     rup_mutex)
         return ~pmap if rup_indep else pmap
 
+    def ratesNLG(self, srcgroup, sitecol):
+        """
+        Used for debugging simple sources
+
+        :param srcgroup: a group of sources
+        :param sitecol: a SiteCollection instance
+        :returns: an array of annual rates of shape (N, L, G)
+        """
+        pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
+        return (~pmap).to_rates()
+
     def update(self, pmap, ctxs, tom, rup_mutex={}):
         """
         :param pmap: probability map to update
