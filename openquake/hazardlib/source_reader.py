@@ -494,7 +494,7 @@ class CompositeSourceModel:
         """
         sources = set()
         for src in self.get_sources():
-            sources.add(basename(src, ';:.'))
+            sources.add(basename(src, ';:.').split('!')[0])
         return sorted(sources)
 
     def get_mags_by_trt(self, maximum_distance):
