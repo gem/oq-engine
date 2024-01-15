@@ -228,6 +228,7 @@ def get_source_model_04(node, fname, converter=default):
 @node_to_obj.add(('sourceModel', 'nrml/0.5'))
 def get_source_model_05(node, fname, converter=default):
     converter.fname = fname
+    source_ids = []
     groups = []  # expect a sequence of sourceGroup nodes
     for src_group in node:
         if 'sourceGroup' not in src_group.tag:
@@ -238,7 +239,10 @@ def get_source_model_05(node, fname, converter=default):
         sg = converter.convert_node(src_group)
         if sg and len(sg):
             # a source group can be empty if the source_id filtering is on
+            for src in sg:
+                source_ids.append(src.source_id)
             groups.append(sg)
+    check_unique(source_ids, 'in ' + fname)
     itime = node.get('investigation_time')
     if itime is not None:
         itime = valid.positivefloat(itime)
