@@ -48,8 +48,10 @@ def engine_profile(jobctx, nrows):
 def get_asce41(calc_id):
     dstore = datastore.read(calc_id)
     dic = json.loads(dstore['asce41'][()].decode('ascii'))
-    return {k: numpy.nan if v == 'n.a.' else round(v, 2)
-            for k, v in dic.items()}
+    dic = {k: numpy.nan if v == 'n.a.' else round(v, 2)
+           for k, v in dic.items()}
+    dic['siteid'] = dstore['oqparam'].description.split()[-1]
+    return dic
 
 
 # ########################## run_site ############################## #
@@ -98,7 +100,7 @@ def from_file(fname, concurrent_jobs=8):
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
     done = {}
-    for idx, (model, lonlat) in enumerate(zip(models, lonlats)):
+    for model, lonlat in zip(models, lonlats):
         if model in ('???', 'USA', 'GLD'):
             continue
         if exclude_models and model in exclude_models.split(','):
@@ -108,10 +110,11 @@ def from_file(fname, concurrent_jobs=8):
         if not all_sites and model in done:
             continue
         done[model] = True
-        siteid = model + ('%03d' % idx)
+        siteid = model + ('%d,%d' % tuple(lonlat))
         dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
         tags.append(siteid)
         allparams.append(get_params_from(dic, config.directory.mosaic_dir))
+        break
 
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
@@ -140,12 +143,7 @@ def from_file(fname, concurrent_jobs=8):
     print('Total time: %.1f minutes' % dt)
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
-    columns = sorted(results[0])
-    asce41 = numpy.zeros(len(results), [(col, float) for col in columns])
-    for i, result in enumerate(results):
-        for col, val in result.items():
-            asce41[i][col] = val
-    return asce41
+    return results
 
 
 def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
@@ -159,9 +157,11 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
 
     if lonlat_or_fname.endswith('.csv'):
         res = from_file(lonlat_or_fname, concurrent_jobs)
+        header = sorted(res[0])
+        rows = [[row[k] for k in header] for row in res]
         fname = os.path.abspath('asce41.org')
         with open(fname, 'w') as f:
-            print(views.text_table(res, ext='org'), file=f)
+            print(views.text_table(rows, header, ext='org'), file=f)
         print(f'Stored {fname}')
         return
     lon, lat = lonlat_or_fname.split(',')
