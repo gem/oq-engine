@@ -74,6 +74,7 @@ supplemented by a dictionary of validators.
 import io
 import re
 import sys
+import logging
 import operator
 import collections.abc
 
@@ -97,14 +98,18 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-def check_unique(ids, msg=''):
+def check_unique(ids, msg='', strict=True):
     """
     Raise a DuplicatedID exception if there are duplicated IDs
     """
     unique, counts = numpy.unique(ids, return_counts=True)
     for u, c in zip(unique, counts):
         if c > 1:
-            raise DuplicatedID('%s %s' % (u, msg))
+            errmsg = '%s %s' % (u, msg)
+            if strict:
+                raise DuplicatedID(errmsg)
+            else:
+                logging.error(errmsg)
 
 
 class SourceModel(collections.abc.Sequence):
@@ -242,7 +247,7 @@ def get_source_model_05(node, fname, converter=default):
             for src in sg:
                 source_ids.append(src.source_id)
             groups.append(sg)
-    check_unique(source_ids, 'in ' + fname)
+    check_unique(source_ids, 'in ' + fname, strict=False)  # FIXME: strict
     itime = node.get('investigation_time')
     if itime is not None:
         itime = valid.positivefloat(itime)
