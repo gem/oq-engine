@@ -312,7 +312,7 @@ class Hazard:
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
-                idx = self.srcidx[valid.basename(key, ';:').split('!')[0]]
+                idx = self.srcidx[valid.corename(key)]
                 mean_rates_by_src[..., idx] += self.get_rates(pmap)
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
         return mean_rates_by_src
