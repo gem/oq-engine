@@ -114,7 +114,6 @@ def from_file(fname, concurrent_jobs=8):
         dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
         tags.append(siteid)
         allparams.append(get_params_from(dic, config.directory.mosaic_dir))
-        break
 
     logging.root.handlers = []
     logctxs = engine.create_jobs(allparams, config.distribution.log_level,
