@@ -200,8 +200,7 @@ class BaseSeismicSource(metaclass=abc.ABCMeta):
         """
         :returns: a random seed derived from source_id and ses_seed
         """
-        baseid = re.split('!;', self.source_id)[0]
-        return zlib.crc32(baseid.encode('ascii'), ses_seed)
+        return zlib.crc32(self.source_id.encode('ascii'), ses_seed)
 
     def __init__(self, source_id, name, tectonic_region_type):
         self.source_id = source_id

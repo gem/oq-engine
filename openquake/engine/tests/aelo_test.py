@@ -52,7 +52,7 @@ def test_PAC():
     if rtgmpy:
         s = calc.datastore['asce07'][()].decode('ascii')
         asce07 = json.loads(s)
-        aac(asce07['PGA'], 0.89807, atol=5E-5)
+        aac(asce07['PGA'], 0.83414, atol=5E-5)
 
 
 def test_KOR():
@@ -114,5 +114,6 @@ def test_JPN():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
+        # sanity check: only possible without !-sources
         df = views.view('compare_disagg_rates', calc.datastore)
         aac(df.disagg_rate, df.interp_rate, rtol=.01)
