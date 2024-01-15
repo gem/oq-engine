@@ -119,7 +119,7 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
             srcs = pickle.loads(gzip.decompress(arr.tobytes()))
 
     if cmaker.disagg_by_src:
-        for srcs in groupby(srcs, valid.corename).values():
+        for srcs in groupby(srcs, valid.basename).values():
             pmap = ProbabilityMap(
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
