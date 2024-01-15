@@ -144,6 +144,7 @@ def read_source_model(fname, converter, monitor):
     [sm] = nrml.read_source_models([fname], converter)
     return {fname: sm}
 
+
 # NB: in classical this is called after reduce_sources, so ";" is not
 # added if the same source appears multiple times, len(srcs) == 1
 def _fix_dupl_ids(src_groups):
@@ -153,6 +154,7 @@ def _fix_dupl_ids(src_groups):
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
+            # happens in logictree/case_01/rup.ini
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
