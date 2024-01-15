@@ -1596,9 +1596,6 @@ def compare_disagg_rates(token, dstore):
     aw = dstore['mean_disagg_by_src']
     mrs = dstore['mean_rates_by_src']
     mean_rates_df = mrs.to_dframe()
-    if any('!' in src for src in mrs.src_id):
-        mean_rates_df['src_id'] = [
-            src.split('!')[0] for src in mean_rates_df.src_id]
     iml_disagg = dict(zip(aw.imt, aw.iml))
     mean_disagg_df = aw.to_dframe()
     imts_out, srcs_out, drates, irates = [], [], [], []
