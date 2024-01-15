@@ -43,7 +43,7 @@ CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
-    ('code', (numpy.string_, 1)),      # 2
+    ('code', (numpy.bytes_, 1)),      # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('num_ruptures', numpy.uint32),    # 5
@@ -144,6 +144,7 @@ def read_source_model(fname, converter, monitor):
     [sm] = nrml.read_source_models([fname], converter)
     return {fname: sm}
 
+
 # NB: in classical this is called after reduce_sources, so ";" is not
 # added if the same source appears multiple times, len(srcs) == 1
 def _fix_dupl_ids(src_groups):
@@ -153,6 +154,7 @@ def _fix_dupl_ids(src_groups):
             sources[src.source_id].append(src)
     for src_id, srcs in sources.items():
         if len(srcs) > 1:
+            # happens in logictree/case_01/rup.ini
             for i, src in enumerate(srcs):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
@@ -240,7 +242,9 @@ def find_false_duplicates(smdict):
             for src in sgroup:
                 src.fname = os.path.basename(smodel.fname).rsplit('.')[0]
                 assert '!' not in src.fname, src.fname
-                acc[src.source_id].append(src)
+                srcid = (src.source_id if sgroup.atomic
+                         else basename(src.source_id))
+                acc[srcid].append(src)
                 if sgroup.atomic:
                     atomic.add(src.source_id)
     found = []
@@ -258,7 +262,6 @@ def find_false_duplicates(smdict):
                 gb[checksum(src)].append(src)
             if len(gb) > 1:
                 for same_checksum in gb.values():
-                    # sources with the same checksum get the same ID
                     for src in same_checksum:
                         src.source_id += '!%s' % src.fname
                 found.append(srcid)
@@ -493,7 +496,7 @@ class CompositeSourceModel:
         """
         sources = set()
         for src in self.get_sources():
-            sources.add(basename(src, ';:.'))
+            sources.add(basename(src, ';:.').split('!')[0])
         return sorted(sources)
 
     def get_mags_by_trt(self, maximum_distance):

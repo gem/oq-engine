@@ -254,14 +254,27 @@ following list indicates several possible cases that a user may encounter, and t
 source IDs. Note that this list includes the cases that have been tested so far, and is not a comprehensive list of all 
 cases that may arise.
 
-1. Sources in the same source group/source model are scaled alternatives of each other. For example, this occurs when for a given source, epistemic uncertainties such as occurrence rates or geometries are considered, but the modeller has pre-scaled the rates rather than including the alternative hypothesis in separate logic tree branches.
+1. Sources in the same source group/source model are scaled
+   alternatives of each other. For example, this occurs when for a
+   given source, epistemic uncertainties such as occurrence rates or
+   geometries are considered, but the modeller has pre-scaled the
+   rates rather than including the alternative hypothesis in separate
+   logic tree branches.
 
    **Naming approach**: identical IDs.
 
-2. Sources in different files are alternatives of each other, e.g. each is used in a different branch of the source model logic tree.
+2. Sources in different files are alternatives of each other,
+   e.g. each is used in a different branch of the source model logic
+   tree.
 
    **Naming approach**: identical IDs.
-3. A source is defined in OQ by numerous sources, either in the same file or different ones. For example, one could have a set of non-parametric sources, each with many rutpures, that are grouped together into single files by magnitude. Or, one could have many point sources that together represent the seismicity from one source.
+
+3. A source is defined in OQ by numerous sources, either in the same
+   file or different ones. For example, one could have a set of
+   non-parametric sources, each with many ruptures, that are grouped
+   together into single files by magnitude. Or, one could have many
+   point sources that together represent the seismicity from one
+   source.
 
    **Naming approach**: colon convention
 

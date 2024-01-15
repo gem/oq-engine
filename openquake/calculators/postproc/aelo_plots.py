@@ -307,8 +307,10 @@ def plot_disagg_by_src(dstore, update_dstore=False):
                     ax1.loglog(imls_o, afes, 'silver', linewidth=0.7)
             # if it is, plot in color
             else:
-                ax[m].loglog(imls, afes, c=viridis(i), label=str(mrs.src_id[ind]))
-                ax1.loglog(imls_o, afes, c=viridis(i), label=str(mrs.src_id[ind]))
+                ax[m].loglog(imls, afes, c=viridis(i),
+                             label=str(mrs.src_id[ind]))
+                ax1.loglog(imls_o, afes, c=viridis(i),
+                           label=str(mrs.src_id[ind]))
                 i += 1
         # populate subplot - maximum component
         ax[m].grid('both')

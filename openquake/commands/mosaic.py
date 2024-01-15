@@ -124,7 +124,11 @@ def from_file(fname, concurrent_jobs=8):
     results = []
     for logctx in logctxs:
         job = logs.dbcmd('get_job', logctx.calc_id)
-        results.append(get_asce41(logctx.calc_id))
+        try:
+            results.append(get_asce41(logctx.calc_id))
+        except KeyError:
+            # asce41 could not be computed due to some error
+            continue
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
         out.append((job.id, job.description, tb[-1] if tb else ''))
         if tb:

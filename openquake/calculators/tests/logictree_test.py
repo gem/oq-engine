@@ -119,9 +119,7 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # check disagg_by_src
         src_ids = decode(self.calc.datastore['mean_rates_by_src/src_id'][:])
-        self.assertEqual(src_ids, ['SSC-AS-001!KOR_c1_M1_1',
-                                   'SSC-AS-001!KOR_c1_M1_2',
-                                   'SSC-AS-001!KOR_c1_M1_3'])
+        self.assertEqual(src_ids, ['SSC-AS-001'])
 
     # NB: this test is sensitive to the lower cutoff for the rates
     # it produces a huge rate 103.6 for the minimum level, cut off at 19.5

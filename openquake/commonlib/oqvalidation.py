@@ -583,7 +583,7 @@ pointsource_distance:
 postproc_func:
   Specify a postprocessing function in calculators/postproc.
   Example: *postproc_func = compute_mrd.main*
-  Default: '' (no postprocessing)
+  Default: 'dummy.main' (no postprocessing)
 
 postproc_args:
   Specify the arguments to be passed to the postprocessing function
