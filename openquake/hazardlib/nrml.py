@@ -109,7 +109,7 @@ def check_unique(ids, msg='', strict=True):
             if strict:
                 raise DuplicatedID(errmsg)
             else:
-                logging.error(errmsg)
+                logging.error('DuplicatedID: ' + errmsg)
 
 
 class SourceModel(collections.abc.Sequence):
