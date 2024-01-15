@@ -36,7 +36,7 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc import filters
 from openquake.hazardlib.stats import truncnorm_sf
-from openquake.hazardlib.logictree import corename
+from openquake.hazardlib.valid import corename
 from openquake.hazardlib.geo.utils import get_longitudinal_extent
 from openquake.hazardlib.geo.utils import (angular_distance, KM_TO_DEGREES,
                                            cross_idl)

@@ -28,7 +28,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
-from openquake.hazardlib.contexts import basename
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -243,7 +243,7 @@ def find_false_duplicates(smdict):
                 src.fname = os.path.basename(smodel.fname).rsplit('.')[0]
                 assert '!' not in src.fname, src.fname
                 srcid = (src.source_id if sgroup.atomic
-                         else basename(src.source_id))
+                         else basename(src))
                 acc[srcid].append(src)
                 if sgroup.atomic:
                     atomic.add(src.source_id)
