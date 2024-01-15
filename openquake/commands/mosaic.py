@@ -156,6 +156,9 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
 
     if lonlat_or_fname.endswith('.csv'):
         res = from_file(lonlat_or_fname, concurrent_jobs)
+        if not res:
+            # serious problem to debug
+            import pdb; pdb.set_trace()
         header = sorted(res[0])
         rows = [[row[k] for k in header] for row in res]
         fname = os.path.abspath('asce41.org')
