@@ -438,7 +438,9 @@ class EventBasedCalculator(base.HazardCalculator):
             self.srcfilter = nofilter
         if not self.datastore.parent:
             self.datastore.create_dset('ruptures', rupture_dt)
-            self.datastore.create_dset('rupgeoms', hdf5.vfloat32)
+            self.datastore.create_dset('rupgeoms', hdf5.vfloat64)
+            # NB: using vfloat32 for the geometries would make
+            # debugging a lot more difficult
 
     def build_events_from_sources(self):
         """

@@ -21,10 +21,10 @@ import numpy
 import pandas
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.contexts import basename
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
-from openquake.calculators import extract, views
+from openquake.calculators import extract
 
 
 def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
@@ -42,7 +42,7 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     dic = dict(src=[], imt=[], mag=[], dst=[], eps=[])
     grp = {}
     for src_id, grp_id in zip(src_info['source_id'], src_info['grp_id']):
-        src = basename(src_id.decode('utf8'), ':;')
+        src = basename(src_id.decode('utf8'), ':;').split('!')[0]
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
@@ -55,7 +55,7 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
             dic['src'].append(src)
             dic['imt'].append(imt)
             # NB: 0=mag, 1=dist, 2=eps are the dimensions of the array
-            if not src_mutex[grp[src]]:  # compute the mean
+            if not src_mutex[grp[src.split('!')[0]]]:  # compute the mean
                 mmag = numpy.average(mag, weights=rates_mag)
                 mdst = numpy.average(dst, weights=rates_dst)
                 meps = numpy.average(eps, weights=rates_eps)
@@ -84,7 +84,8 @@ def get_rel_source_ids(dstore, imts, imls, threshold):
         rates = aw.array['rate']  # for each source in decreasing order
         max_rate = rates[0]
         rel = aw.array[rates > threshold * max_rate]
-        source_ids[imt].update(rel['src_id'])
+        srcids = numpy.unique([s.split(b'!')[0] for s in rel['src_id']])
+        source_ids[imt].update(srcids)
     return source_ids
 
 
@@ -176,8 +177,6 @@ def main(dstore, csm, imts, imls):
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mean_disagg_by_src, sigma_by_src = disagg_sources(
         csm, rel_ids, imts, imls, oq, sitecol, dstore)
-    df = views.view('compare_disagg_rates',  dstore)
-    logging.info(df)
     src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])
@@ -185,9 +184,9 @@ def main(dstore, csm, imts, imls):
     for imt, src_ids in rel_ids_by_imt.items():
         df = mag_dist_eps[mag_dist_eps.imt == imt]
         out.append(df[numpy.isin(df.src, src_ids)])
-    mag_dist_eps = pandas.concat(out)
-    logging.info('mag_dist_eps=\n%s', mag_dist_eps)
-    return mag_dist_eps.to_numpy(), sigma_by_src
+    mag_dist_eps_df = pandas.concat(out)
+    logging.info('mag_dist_eps=\n%s', mag_dist_eps_df)
+    return mag_dist_eps_df.to_numpy(), sigma_by_src
 
 
 if __name__ == '__main__':

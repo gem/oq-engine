@@ -448,7 +448,8 @@ def main(dstore, csm):
             logging.warning('Missing module PIL: skipping plotting curves')
         else:
             plot_mean_hcurves_rtgm(dstore, update_dstore=True)
-            plot_governing_mce(dstore, update_dstore=True)
+            plt = plot_governing_mce(dstore, update_dstore=True)
+            plt.close()
         return
 
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
@@ -472,4 +473,5 @@ def main(dstore, csm):
     else:
         plot_mean_hcurves_rtgm(dstore, update_dstore=True)
         plot_disagg_by_src(dstore, update_dstore=True)
-        plot_governing_mce(dstore, update_dstore=True)
+        plt = plot_governing_mce(dstore, update_dstore=True)
+        plt.close()

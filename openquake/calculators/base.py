@@ -1118,7 +1118,7 @@ def import_gmfs_csv(dstore, oqparam, sitecol):
     fname = oqparam.inputs['gmfs']
     dtdict = {'sid': U32,
               'eid': U32,
-              'custom_site_id': (numpy.string_, 8),
+              'custom_site_id': (numpy.bytes_, 8),
               None: F32}
     array = hdf5.read_csv(
         fname, dtdict,
@@ -1439,7 +1439,7 @@ def run_calc(job_ini, **kw):
     :param kw: parameters to override
     :returns: a Calculator instance
     """
-    with logs.init("job", job_ini) as log:
+    with logs.init(job_ini) as log:
         log.params.update(kw)
         calc = calculators(log.get_oqparam(), log.calc_id)
         calc.run()

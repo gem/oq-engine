@@ -95,6 +95,7 @@ branch_dt = numpy.dtype([
 TRT_REGEX = re.compile(r'tectonicRegion="([^"]+?)"')
 ID_REGEX = re.compile(r'Source\s+id="([^"]+?)"')
 
+
 # this is very fast
 def get_trt_by_src(source_model_file, source_id=''):
     """
@@ -1171,7 +1172,7 @@ class FullLogicTree(object):
         sd = group_array(self.source_model_lt.source_data, 'source')
         out = []
         for src in srcs:
-            srcid = re.split('[:;.]', src.source_id)[0]
+            srcid = valid.corename(src)
             if source_id and srcid != source_id:
                 continue  # filter
             if self.trti == {'*': 0}:  # passed gsim=XXX in the job.ini

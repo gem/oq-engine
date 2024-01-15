@@ -1002,7 +1002,7 @@ def view_disagg(token, dstore):
     Ma, M, P = data.shape
     oq = dstore['oqparam']
     imts = list(oq.imtls)
-    dtlist = [('poe', float), ('imt', (numpy.string_, 10)),
+    dtlist = [('poe', float), ('imt', (numpy.bytes_, 10)),
               (kind.lower() + 'bin', int), ('prob', float)]
     lst = []
     for p, m, ma in itertools.product(range(P), range(M), range(Ma)):
@@ -1589,20 +1589,22 @@ def _irate(df, imt, src, iml, imls):
 
 
 # used only in AELO calculations
+# NB: in presence of !-sources the comparison makes no sense
 @view.add('compare_disagg_rates')
 def compare_disagg_rates(token, dstore):
     oq = dstore['oqparam']
     aw = dstore['mean_disagg_by_src']
+    mrs = dstore['mean_rates_by_src']
+    mean_rates_df = mrs.to_dframe()
     iml_disagg = dict(zip(aw.imt, aw.iml))
     mean_disagg_df = aw.to_dframe()
-    mean_rates_df = dstore['mean_rates_by_src'].to_dframe()
     imts_out, srcs_out, drates, irates = [], [], [], []
     for imt, iml in iml_disagg.items():
         imls = oq.imtls[imt]
         srcs = mean_disagg_df[mean_disagg_df.imt == imt].source_id
         for src in set(srcs):
             imts_out.append(imt)
-            srcs_out.append(src)    
+            srcs_out.append(src)
             drates.append(_drate(mean_disagg_df, imt, src))
             irates.append(_irate(mean_rates_df, imt, src, iml, imls))
     return pandas.DataFrame({'imt': imts_out, 'src': srcs_out, 

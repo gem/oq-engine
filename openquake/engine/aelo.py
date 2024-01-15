@@ -45,8 +45,9 @@ PRELIMINARY_MODEL_WARNING = (
 def get_params_from(inputs, mosaic_dir, exclude=()):
     """
     :param inputs: a dictionary with lon, lat, vs30, siteid
+    :param mosaic_dir: directory where the mosaic is located
 
-    Build the job.ini parameters for the given lon, lat extracting them
+    Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
     mosaic_df = readinput.read_mosaic_df()
@@ -86,8 +87,6 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
-
-    # params['cachedir'] = datastore.get_datadir()
     return params
 
 
@@ -112,6 +111,7 @@ def main(lon: valid.longitude,
     and from the command-line in testing mode.
     """
     inputs = dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid)
+    warnings = []
     if jobctx is None:
         # in  testing mode create a new job context
         config.directory.mosaic_dir = os.path.join(
@@ -119,24 +119,22 @@ def main(lon: valid.longitude,
         dic = dict(calculation_mode='custom', description='AELO')
         [jobctx] = engine.create_jobs([dic], config.distribution.log_level,
                                       None, getpass.getuser(), None)
-
-    if not config.directory.mosaic_dir:
-        sys.exit('mosaic_dir is not specified in openquake.cfg')
-    warnings = []
-    try:
-        jobctx.params.update(
-            get_params_from(
+    else:
+        # in production mode update jobctx.params
+        try:
+            jobctx.params.update(get_params_from(
                 inputs, config.directory.mosaic_dir, exclude=['USA']))
-        if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
-            warnings.append(PRELIMINARY_MODEL_WARNING)
-        logging.root.handlers = []  # avoid breaking the logs
-    except Exception as exc:
-        # This can happen for instance:
-        # - if no model covers the given coordinates.
-        # - if no ini file was found
-        callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
-                 exc=exc, warnings=warnings)
-        raise exc
+        except Exception as exc:
+            # This can happen for instance:
+            # - if no model covers the given coordinates.
+            # - if no ini file was found
+            callback(jobctx.calc_id, job_owner_email, outputs_uri, inputs,
+                     exc=exc, warnings=warnings)
+            raise exc
+
+    if jobctx.params['mosaic_model'] in PRELIMINARY_MODELS:
+        warnings.append(PRELIMINARY_MODEL_WARNING)
+    logging.root.handlers = []  # avoid breaking the logs
     try:
         engine.run_jobs([jobctx])
     except Exception as exc:

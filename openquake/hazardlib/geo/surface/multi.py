@@ -237,10 +237,10 @@ class MultiSurface(BaseSurface):
         """
         areas = self._get_areas()
         strikes = np.array([surf.get_strike() for surf in self.surfaces])
-        v1 = (np.sum(areas * np.sin(np.radians(strikes))) /
-              np.sum(areas))
-        v2 = (np.sum(areas * np.cos(np.radians(strikes))) /
-              np.sum(areas))
+        w = areas / areas.sum()  # area weights
+        s = np.radians(strikes)
+        v1 = w @ np.sin(s)
+        v2 = w @ np.cos(s)
         return np.degrees(np.arctan2(v1, v2)) % 360
 
     def get_dip(self):

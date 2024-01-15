@@ -308,7 +308,7 @@ def create_jobs(job_inis, log_level=logging.INFO, log_file=None,
     except Exception:  # gaierror
         host = None
     if len(job_inis) > 1 and not hc_id and not multi:  # first job as hc
-        job = logs.init("job", job_inis[0], log_level, log_file,
+        job = logs.init('job', job_inis[0], log_level, log_file,
                         user_name, hc_id, host)
         hc_id = job.calc_id
         jobs = [job]

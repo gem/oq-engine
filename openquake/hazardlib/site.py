@@ -30,7 +30,7 @@ from openquake.hazardlib.geo.geodetic import npoints_towards
 from openquake.hazardlib.geo.mesh import Mesh
 
 U32LIMIT = 2 ** 32
-ampcode_dt = (numpy.string_, 4)
+ampcode_dt = (numpy.bytes_, 4)
 param = dict(
     vs30measured='reference_vs30_type',
     vs30='reference_vs30_value',
@@ -164,8 +164,8 @@ site_param_dt = {
     'vs30measured': bool,
     'z1pt0': numpy.float64,
     'z2pt5': numpy.float64,
-    'siteclass': (numpy.string_, 1),
-    'geohash': (numpy.string_, 6),
+    'siteclass': (numpy.bytes_, 1),
+    'geohash': (numpy.bytes_, 6),
     'z1pt4': numpy.float64,
     'backarc': numpy.uint8,  # 0=forearc,1=backarc,2=alongarc
     'xvf': numpy.float64,
@@ -174,10 +174,10 @@ site_param_dt = {
 
     # Parameters for site amplification
     'ampcode': ampcode_dt,
-    'ec8': (numpy.string_, 1),
-    'ec8_p18': (numpy.string_, 2),
+    'ec8': (numpy.bytes_, 1),
+    'ec8_p18': (numpy.bytes_, 2),
     'h800': numpy.float64,
-    'geology': (numpy.string_, 20),
+    'geology': (numpy.bytes_, 20),
     'amplfactor': numpy.float64,
     'ch_ampl03': numpy.float64,
     'ch_ampl06': numpy.float64,
@@ -197,8 +197,8 @@ site_param_dt = {
     'dry_density': numpy.float64,
     'Fs': numpy.float64,
     'crit_accel': numpy.float64,
-    'unit': (numpy.string_, 5),
-    'liq_susc_cat': (numpy.string_, 2),
+    'unit': (numpy.bytes_, 5),
+    'liq_susc_cat': (numpy.bytes_, 2),
     'dw': numpy.float64,
     'yield_acceleration': numpy.float64,
     'slope': numpy.float64,
@@ -221,7 +221,7 @@ site_param_dt = {
     'T_eq': numpy.float64,
 
     # other parameters
-    'custom_site_id': (numpy.string_, 8),
+    'custom_site_id': (numpy.bytes_, 8),
     'region': numpy.uint32,
     'in_cshm': bool  # used in mcverry
 }

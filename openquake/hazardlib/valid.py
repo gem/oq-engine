@@ -1395,3 +1395,25 @@ class RjbEquivalent(object):
             repi_idx = numpy.abs(dist - self.repi).argmin()
             dists.append(self.reqv[repi_idx, mag_idx])
         return numpy.array(dists)
+
+
+def basename(src, splitchars='.:'):
+    """
+    :returns: the base name of a split source
+
+    >>> basename('SC:10;0')
+    'SC;0'
+    """
+    src_id = src if isinstance(src, str) else src.source_id
+    for char in splitchars:
+        src_id = re.sub(r'\%s\d+' % char, '', src_id)
+    return src_id
+
+
+def corename(src):
+    """
+    :param src: source object or source name
+    :returns: the core name of a source
+    """
+    src = src if isinstance(src, str) else src.source_id
+    return re.split('[!:;.]', src)[0]

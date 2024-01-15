@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import abc
 import copy
 import time
@@ -266,19 +265,6 @@ class Collapser(object):
 
 class FarAwayRupture(Exception):
     """Raised if the rupture is outside the maximum distance for all sites"""
-
-
-def basename(src, splitchars='.:'):
-    """
-    :returns: the base name of a split source
-
-    >>> basename('SC:10;0')
-    'SC;0'
-    """
-    src_id = src if isinstance(src, str) else src.source_id
-    for char in splitchars:
-        src_id = re.sub(r'\%s\d+' % char, '', src_id)
-    return src_id
 
 
 def get_num_distances(gsims):
@@ -1061,6 +1047,17 @@ class ContextMaker(object):
                     rup_mutex)
         return ~pmap if rup_indep else pmap
 
+    def ratesNLG(self, srcgroup, sitecol):
+        """
+        Used for debugging simple sources
+
+        :param srcgroup: a group of sources
+        :param sitecol: a SiteCollection instance
+        :returns: an array of annual rates of shape (N, L, G)
+        """
+        pmap = self.get_pmap(self.from_srcs(srcgroup, sitecol))
+        return (~pmap).to_rates()
+
     def update(self, pmap, ctxs, tom, rup_mutex={}):
         """
         :param pmap: probability map to update
@@ -1377,7 +1374,7 @@ class PmapMaker(object):
                 pmap.array = 1. - (1-pmap.array) * (1-pm.array)
             weight += src.weight
         dt = time.time() - t0
-        self.source_data['src_id'].append(basename(src))
+        self.source_data['src_id'].append(valid.basename(src))
         self.source_data['grp_id'].append(src.grp_id)
         self.source_data['nsites'].append(nsites)
         self.source_data['esites'].append(esites)
@@ -1404,10 +1401,11 @@ class PmapMaker(object):
         dic['task_no'] = self.task_no
         dic['grp_id'] = grp_id
         if self.disagg_by_src:
-            # all the sources in the group have the same source_id because
-            # of the groupby(group, basename) in classical.py
-            srcids = set(map(basename, self.sources))
-            assert len(srcids) == 1, srcids
+            # all the sources in the group must have the same source_id because
+            # of the groupby(group, corename) in classical.py
+            srcids = set(map(valid.basename, self.sources))
+            if len(srcids) > 1:
+                raise NameError('Invalid source naming: %s' % srcids)
             dic['basename'] = srcids.pop()
         return dic
 

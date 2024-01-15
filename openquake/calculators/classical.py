@@ -34,8 +34,8 @@ from openquake.baselib import (
     performance, parallel, hdf5, config, python3compat)
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
-from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.contexts import read_cmakers, basename, get_maxsize
+from openquake.hazardlib import valid, InvalidFile
+from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
 from openquake.hazardlib.probability_map import ProbabilityMap, rates_dt
@@ -304,7 +304,7 @@ class Hazard:
         for key, pmap in pmaps.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
-                idx = self.srcidx[basename(key, ';:')]
+                idx = self.srcidx[valid.corename(key)]
                 mean_rates_by_src[..., idx] += self.get_rates(pmap)
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
         return mean_rates_by_src
@@ -509,7 +509,7 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             if oq.disagg_by_src and not sg.atomic:
-                blks = groupby(sg, basename).values()
+                blks = groupby(sg, valid.corename).values()
             elif sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:

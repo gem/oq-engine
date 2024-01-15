@@ -361,7 +361,8 @@ def _nl_sigma(C, ctx, ln_y_ref):
 
 def get_stddevs(T, ln_y_ref, C, ctx, sigma_branch):
     """
-    Returns the standard deviation model described in equation 8.16 (Peter Stafford NSHM report)
+    Returns the standard deviation model described in equation 8.16
+    (Peter Stafford NSHM report)
     """
     tau = _between_event(T, ctx.mag)
     phi_S2S = _between_station(T)
@@ -393,10 +394,9 @@ def get_stddevs(T, ln_y_ref, C, ctx, sigma_branch):
             (sigma**2 / (ndof - 1)) * stats.chi2.ppf(0.9, ndof - 1)
         )
     else:
-        print(
-            "sigma branch not recognised: must be one of :Lower, :Central, :Upper"
-        )
-        sigma = np.NaN
+        print("sigma branch not recognised: "
+              "must be one of :Lower, :Central, :Upper")
+        sigma = np.nan
     return sigma, np.abs((1.0 + NL) * tau), phi
 
 

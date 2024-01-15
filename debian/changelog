@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Added missing validation on duplicate source IDs for source models
+    in format nrml/0.5
   * The calculation_mode=ebrisk was not honored when starting from GMFs
   * Fixed an ordering bug in the IMTs causing two peaks in the UHS in
     some situations

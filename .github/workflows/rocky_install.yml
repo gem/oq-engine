@@ -22,7 +22,7 @@ jobs:
         #more $GITHUB_EVENT_PATH
     strategy:
       matrix:
-        python-version: [3.8, 3.9]
+        python-version: [3.9]
         #container: ["rockylinux:8", "ubuntu:focal"]
         container: ["rockylinux:8"]
 
