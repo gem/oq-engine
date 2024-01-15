@@ -1401,10 +1401,11 @@ class PmapMaker(object):
         dic['task_no'] = self.task_no
         dic['grp_id'] = grp_id
         if self.disagg_by_src:
-            # all the sources in the group have the same source_id because
-            # of the groupby(group, basename) in classical.py
+            # all the sources in the group must have the same source_id because
+            # of the groupby(group, corename) in classical.py
             srcids = set(map(valid.basename, self.sources))
-            assert len(srcids) == 1, srcids
+            if len(srcids) > 1:
+                raise NameError('Invalid source naming: %s' % srcids)
             dic['basename'] = srcids.pop()
         return dic
 
