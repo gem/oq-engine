@@ -249,6 +249,7 @@ def add_checksums(srcs):
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
+# called before _fix_dupl_ids
 def find_false_duplicates(smdict):
     """
     Discriminate different sources with same ID (false duplicates)
