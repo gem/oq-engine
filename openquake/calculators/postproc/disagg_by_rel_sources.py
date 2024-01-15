@@ -21,7 +21,7 @@ import numpy
 import pandas
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
-from openquake.hazardlib.contexts import basename
+from openquake.hazardlib.valid import basename
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
