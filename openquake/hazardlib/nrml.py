@@ -150,10 +150,9 @@ class SourceModel(collections.abc.Sequence):
 
 class GeometryModel(object):
     """
-    Contains a dictionary of sections
+    Contains a dictionary of unique sections
     """
     def __init__(self, sections):
-        check_unique(sections)
         self.sections = sections
         self.src_groups = []
 
