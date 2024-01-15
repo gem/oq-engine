@@ -30,6 +30,7 @@ from openquake.hazardlib.geo.surface.kite_fault import (
     get_profiles_from_simple_fault_data)
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
 
 NS = "{http://openquake.org/xmlns/nrml/0.5}"
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
@@ -1009,7 +1010,6 @@ class TestProfilesFromSimpleFault(unittest.TestCase):
         pro = get_profiles_from_simple_fault_data(trace, usd, lsd, dip,
                                                   rup_mesh_spacing)
 
-        from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
 
         # This is the initial width
         width = (lsd - usd) / np.sin(np.radians(dip))
@@ -1037,12 +1037,18 @@ class TestSectionsUCF3(unittest.TestCase):
         # Read the profiles and create the surface
         path = os.path.join(BASE_DATA_PATH, 'section_1680_ucf.xml')
         prfs = _get_profiles(path)
-        hsmpl = 5
-        vsmpl = 5
+        hsmpl = 5.0
+        vsmpl = 5.0
         idl = False
         alg = False
-        self.srfc = KiteSurface.from_profiles(
+        srfc = KiteSurface.from_profiles(
             prfs['1680'][0], vsmpl, hsmpl, idl=idl, align=alg)
+
+        PLOTTING = True
+        if PLOTTING:
+            title = 'UCF 1680'
+            ppp(prfs['1680'][0], srfc, title, ax_equal=True)
+        breakpoint()
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
@@ -1085,6 +1091,7 @@ def _read_profile(filename: str) -> Line:
                                 float(aa[2])))
     return Line(points)
 
+
 def _get_profiles(fname):
     """ Gets profiles from a Geometry Model """
     [node] = read(fname)
@@ -1103,8 +1110,9 @@ def _get_profiles(fname):
                         for points in profile.LineString:
                             pnts = np.array(~points)
                             rng = range(0, len(pnts), 3)
-                            pro = Line([Point(pnts[i], pnts[i+1], pnts[i+2])
-                                        for i in rng])
+                            pro = Line([Point(
+                                pnts[i], pnts[i + 1], pnts[i + 2])
+                                for i in rng])
                             profiles.append(pro)
                     section_profiles = [profiles]
             all_profiles[section['id']] = section_profiles
