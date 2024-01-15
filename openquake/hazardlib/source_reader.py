@@ -55,6 +55,20 @@ source_info_dt = numpy.dtype([
 checksum = operator.attrgetter('checksum')
 
 
+def check_unique(ids, msg='', strict=True):
+    """
+    Raise a DuplicatedID exception if there are duplicated IDs
+    """
+    unique, counts = numpy.unique(ids, return_counts=True)
+    for u, c in zip(unique, counts):
+        if c > 1:
+            errmsg = '%s %s' % (u, msg)
+            if strict:
+                raise nrml.DuplicatedID(errmsg)
+            else:
+                logging.error('*' * 60 + ' DuplicatedID:\n' + errmsg)
+
+
 def gzpik(obj):
     """
     gzip and pickle a python object
@@ -187,7 +201,12 @@ def get_csm(oq, full_lt, dstore=None):
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, dstore)
-
+    # check_duplicates
+    for sm in smdict.values():
+        srcids = []
+        for sg in sm.src_groups:
+            srcids.extend(src.source_id for src in sg)
+        check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
     found = find_false_duplicates(smdict)
     if found:
         logging.warning('Found different sources with same ID %s',
@@ -291,8 +310,7 @@ def fix_geometry_sections(smdict, dstore):
     for gmod in gmodels:
         sec_ids.extend(gmod.sections)
         sections.update(gmod.sections)
-    nrml.check_unique(
-        sec_ids, 'section ID in files ' + ' '.join(gfiles))
+    check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
     s2i = {suid: i for i, suid in enumerate(sections)}
     for idx, sec in enumerate(sections.values()):
         sec.suid = idx

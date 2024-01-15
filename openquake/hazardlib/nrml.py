@@ -98,20 +98,6 @@ class DuplicatedID(Exception):
     """Raised when two sources with the same ID are found in a source model"""
 
 
-def check_unique(ids, msg='', strict=True):
-    """
-    Raise a DuplicatedID exception if there are duplicated IDs
-    """
-    unique, counts = numpy.unique(ids, return_counts=True)
-    for u, c in zip(unique, counts):
-        if c > 1:
-            errmsg = '%s %s' % (u, msg)
-            if strict:
-                raise DuplicatedID(errmsg)
-            else:
-                logging.error('*' * 60 + ' DuplicatedID:\n' + errmsg)
-
-
 class SourceModel(collections.abc.Sequence):
     """
     A container of source groups with attributes name, investigation_time
@@ -211,17 +197,12 @@ def get_geometry_model(node, fname, converter):
 @node_to_obj.add(('sourceModel', 'nrml/0.4'))
 def get_source_model_04(node, fname, converter=default):
     sources = []
-    source_ids = set()
     converter.fname = fname
     for src_node in node:
         src = converter.convert_node(src_node)
         if src is None:
             continue
-        if src.source_id in source_ids:
-            raise DuplicatedID(
-                'The source ID %s is duplicated!' % src.source_id)
         sources.append(src)
-        source_ids.add(src.source_id)
     groups = groupby(
         sources, operator.attrgetter('tectonic_region_type'))
     src_groups = sorted(sourceconverter.SourceGroup(
@@ -247,7 +228,6 @@ def get_source_model_05(node, fname, converter=default):
             for src in sg:
                 source_ids.append(src.source_id)
             groups.append(sg)
-    check_unique(source_ids, 'in ' + fname, strict=False)  # FIXME: strict
     itime = node.get('investigation_time')
     if itime is not None:
         itime = valid.positivefloat(itime)
