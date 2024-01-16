@@ -105,7 +105,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, sitecol, cmaker, dstore, monitor):
+def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
@@ -116,26 +116,34 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
             sitecol = dstore['sitecol']
         else:  # big
             arr = dstore.getitem('_csm')[cmaker.grp_id]
-            srcs = pickle.loads(gzip.decompress(arr.tobytes()))
-    # maximum size of the pmap array in GB
-    size_mb = (
-        len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2)
-    itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
+            sources = pickle.loads(gzip.decompress(arr.tobytes()))
 
-    # NB: disagg_by_src is disabled in case of tiling
-    assert not (itiles > 1 and cmaker.disagg_by_src)
-    N = len(sitecol)
-    for sites in sitecol.split_in_tiles(itiles):
-        pmap = ProbabilityMap(
-            sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
+    if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
+        for srcs in groupby(sources, valid.basename).values():
+            pmap = ProbabilityMap(
+                sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
-        result = hazclassical(srcs, sites, cmaker, pmap)
-        if N > cmaker.max_sites_disagg:  # save data transfer
-            result['pnemap'] = ~pmap.remove_zeros()
-        else:  # keep the shape of the underlying array in store_mean_rates
+            result = hazclassical(srcs, sitecol, cmaker, pmap)
             result['pnemap'] = ~pmap
-        result['pnemap'].trt_smrs = cmaker.trt_smrs
-        yield result
+            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            yield result
+    else:
+        # maximum size of the pmap array in GB
+        size_mb = (
+            len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2)
+        itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
+        N = len(sitecol)
+        for sites in sitecol.split_in_tiles(itiles):
+            pmap = ProbabilityMap(
+                sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
+                    cmaker.rup_indep)
+            result = hazclassical(sources, sites, cmaker, pmap)
+            if N > cmaker.max_sites_disagg:  # save data transfer
+                result['pnemap'] = ~pmap.remove_zeros()
+            else:  # keep the shape of the underlying array in store_mean_rates
+                result['pnemap'] = ~pmap
+            result['pnemap'].trt_smrs = cmaker.trt_smrs
+            yield result
 
 
 def postclassical(pgetter, N, hstats, individual_rlzs,
@@ -296,16 +304,16 @@ class Hazard:
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
-    def store_mean_rates_by_src(self, pmaps):
+    def store_mean_rates_by_src(self, dic):
         """
         Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
         """
         mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
-        for key, pmap in pmaps.items():
+        for key, rates in dic.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
                 idx = self.srcidx[valid.corename(key)]
-                mean_rates_by_src[..., idx] += self.get_rates(pmap)
+                mean_rates_by_src[..., idx] += rates
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
         return mean_rates_by_src
 
@@ -350,11 +358,11 @@ class ClassicalCalculator(base.HazardCalculator):
         pnemap = dic['pnemap']  # probabilities of no exceedence
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
-            # accumulate the poes for the given source
+            # accumulate the rates for the given source
             pm = ~pnemap
-            acc[source_id] = pm
             pm.grp_id = grp_id
             pm.trt_smrs = pnemap.trt_smrs
+            acc[source_id] += self.haz.get_rates(pm)
         G = pnemap.array.shape[2]
         for i, gid in enumerate(self.gids[grp_id]):
             self.pmap.multiply_pnes(pnemap, gid, i % G)
@@ -491,7 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Regular case
         """
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        acc = {}  # src_id -> pmap
+        acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
@@ -508,9 +516,7 @@ class ClassicalCalculator(base.HazardCalculator):
             sg = self.csm.src_groups[cm.grp_id]
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
-            if oq.disagg_by_src and not sg.atomic:
-                blks = groupby(sg, valid.corename).values()
-            elif sg.atomic or sg.weight <= maxw:
+            if sg.atomic or sg.weight <= maxw:
                 blks = [sg]
             else:
                 blks = block_splitter(sg, maxw, get_weight, sort=True)
