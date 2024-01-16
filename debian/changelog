@@ -1,4 +1,6 @@
   [Michele Simionato]
+  * Fixed the gmf_data exporter with a filtered site collection
+  * Fixed the naming convention on source IDs
   * Added missing validation on duplicate source IDs for source models
     in format nrml/0.5
   * The calculation_mode=ebrisk was not honored when starting from GMFs

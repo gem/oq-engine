@@ -1109,6 +1109,10 @@ def get_sitecol_assetcol(oqparam, haz_sitecol=None, exp_types=(), h5=None):
         if len(numpy.unique(gh)) < len(gh):
             logging.error('geohashes are not unique')
         sitecol.add_col('custom_site_id', 'S8', gh)
+        if sitecol is not sitecol.complete:
+            # tested in scenario_risk/test_case_8
+            gh = sitecol.complete.geohash(8)
+            sitecol.complete.add_col('custom_site_id', 'S8', gh)
     return sitecol, assetcol, discarded
 
 

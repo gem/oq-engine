@@ -218,6 +218,7 @@ class Input(object):
         hparams.setdefault('ses_seed', 42)
         hparams.setdefault('reference_vs30_type', 600)
         hparams.setdefault('split_sources', True)
+        hparams.setdefault('disagg_by_src', False)
         hparams.setdefault('reqv', {})
         hparams.setdefault('min_iml', numpy.zeros(M))
         hparams.setdefault('rupture_mesh_spacing', 5.),
