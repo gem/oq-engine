@@ -110,7 +110,7 @@ def from_file(fname, concurrent_jobs=8):
         if not all_sites and model in done:
             continue
         done[model] = True
-        siteid = model + ('%+d,%+d' % tuple(lonlat))
+        siteid = model + ('%+.1f,%+.1f' % tuple(lonlat))
         dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
         tags.append(siteid)
         allparams.append(get_params_from(dic, config.directory.mosaic_dir))
