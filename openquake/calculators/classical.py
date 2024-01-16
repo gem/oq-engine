@@ -119,6 +119,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             sources = pickle.loads(gzip.decompress(arr.tobytes()))
 
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
+        # in case_27 (Japan) we do NOT enter here; disagg_by_src
+        # still works since the atomic group contains a single source
+        # 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
             pmap = ProbabilityMap(
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
