@@ -350,7 +350,7 @@ class ClassicalCalculator(base.HazardCalculator):
         pnemap = dic['pnemap']  # probabilities of no exceedence
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
-            # store the poes for the given source
+            # accumulate the poes for the given source
             pm = ~pnemap
             acc[source_id] = pm
             pm.grp_id = grp_id

@@ -315,8 +315,7 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
-        numpy.testing.assert_equal(
-            ids, ['A!source_model_1', 'A!source_model_2', 'B'])
+        numpy.testing.assert_equal(ids, ['A!b1', 'A!b2', 'B'])
 
     def test_case_18(self):
         # test classical with 2 gsims and 1 sample
