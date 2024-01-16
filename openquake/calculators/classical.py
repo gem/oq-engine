@@ -105,7 +105,7 @@ def store_ctxs(dstore, rupdata_list, grp_id):
 #  ########################### task functions ############################ #
 
 
-def classical(srcs, sitecol, cmaker, dstore, monitor):
+def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     Call the classical calculator in hazardlib
     """
@@ -116,10 +116,10 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
             sitecol = dstore['sitecol']
         else:  # big
             arr = dstore.getitem('_csm')[cmaker.grp_id]
-            srcs = pickle.loads(gzip.decompress(arr.tobytes()))
+            sources = pickle.loads(gzip.decompress(arr.tobytes()))
 
-    if cmaker.disagg_by_src:
-        for srcs in groupby(srcs, valid.basename).values():
+    if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
+        for srcs in groupby(sources, valid.basename).values():
             pmap = ProbabilityMap(
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                 cmaker.rup_indep)
@@ -137,7 +137,7 @@ def classical(srcs, sitecol, cmaker, dstore, monitor):
             pmap = ProbabilityMap(
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
-            result = hazclassical(srcs, sites, cmaker, pmap)
+            result = hazclassical(sources, sites, cmaker, pmap)
             if N > cmaker.max_sites_disagg:  # save data transfer
                 result['pnemap'] = ~pmap.remove_zeros()
             else:  # keep the shape of the underlying array in store_mean_rates
