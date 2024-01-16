@@ -662,7 +662,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         pass
 
     def prepare(self, sites):
-        model_file = 'liquefaction/data/todorovic_silva_2022/reduced.onnx.gz'
+        model_file = 'liquefaction/data/todorovic_silva_2022/rf_v2.onnx.gz'
         model_path = path.join(path.dirname(__file__), model_file)
         with gzip.open(model_path, 'rb') as f:
             self.model = f.read()
