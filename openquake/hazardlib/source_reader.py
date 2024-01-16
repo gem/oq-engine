@@ -43,7 +43,7 @@ CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 source_info_dt = numpy.dtype([
     ('source_id', hdf5.vstr),          # 0
     ('grp_id', numpy.uint16),          # 1
-    ('code', (numpy.bytes_, 1)),      # 2
+    ('code', (numpy.bytes_, 1)),       # 2
     ('calc_time', numpy.float32),      # 3
     ('num_sites', numpy.uint32),       # 4
     ('num_ruptures', numpy.uint32),    # 5
@@ -148,14 +148,16 @@ def trt_smrs(src):
     return tuple(src.trt_smrs)
 
 
-def read_source_model(fname, converter, monitor):
+def read_source_model(fname, branch, converter, monitor):
     """
     :param fname: path to a source model XML file
+    :param branch: source model logic tree branch ID
     :param converter: SourceConverter
     :param monitor: a Monitor instance
     :returns: a SourceModel instance
     """
     [sm] = nrml.read_source_models([fname], converter)
+    sm.branch = branch
     return {fname: sm}
 
 
@@ -194,13 +196,23 @@ def get_csm(oq, full_lt, dstore=None):
     # NB: the source models file must be in the shared directory
     # NB: dstore is None in logictree_test.py
     allargs = []
-    for fname in full_lt.source_model_lt.info.smpaths:
-        allargs.append((fname, converter))
+    sdata = full_lt.source_model_lt.source_data
+    allpaths = set(full_lt.source_model_lt.info.smpaths)
+    dic = general.group_array(sdata, 'fname')
+    smpaths = []
+    for fname, rows in dic.items():
+        path = os.path.abspath(
+            os.path.join(full_lt.source_model_lt.basepath, fname))
+        smpaths.append(path)
+        allargs.append((path, rows[0]['branch'], converter))
+    for path in allpaths - set(smpaths):  # geometry models
+        allargs.append((path, '', converter))
     smdict = parallel.Starmap(read_source_model, allargs,
                               h5=dstore if dstore else None).reduce()
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
     fix_geometry_sections(smdict, dstore)
+
     # check_duplicates
     for sm in smdict.values():
         srcids = []
@@ -245,7 +257,7 @@ def add_checksums(srcs):
     """
     for src in srcs:
         dic = {k: v for k, v in vars(src).items()
-               if k not in 'source_id trt_smr smweight samples fname'}
+               if k not in 'source_id trt_smr smweight samples branch'}
         src.checksum = zlib.adler32(pickle.dumps(dic, protocol=4))
 
 
@@ -260,8 +272,7 @@ def find_false_duplicates(smdict):
     for smodel in smdict.values():
         for sgroup in smodel.src_groups:
             for src in sgroup:
-                src.fname = os.path.basename(smodel.fname).rsplit('.')[0]
-                assert '!' not in src.fname, src.fname
+                src.branch = smodel.branch
                 srcid = (src.source_id if sgroup.atomic
                          else basename(src))
                 acc[srcid].append(src)
@@ -283,7 +294,7 @@ def find_false_duplicates(smdict):
             if len(gb) > 1:
                 for same_checksum in gb.values():
                     for src in same_checksum:
-                        src.source_id += '!%s' % src.fname
+                        src.source_id += '!%s' % src.branch
                 found.append(srcid)
     return found
 
