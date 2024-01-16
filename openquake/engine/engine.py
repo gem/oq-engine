@@ -354,7 +354,7 @@ def cleanup(kind):
         workers_stop()
     elif kind == 'kill':
         # called in case of exceptions (or out of memory), requires ssh
-        print('Asking the DbServer to kill the workers')
+        print('Killing the workers')
         logs.dbcmd('workers_kill', config.zworkers)
 
 
@@ -397,8 +397,7 @@ def run_jobs(jobctxs, concurrent_jobs=3):
     try:
         if dist == 'zmq' and w.WorkerMaster(
                 config.zworkers).status() == []:
-            print('Asking the DbServer to start the workers %s' %
-                  config.zworkers.host_cores)
+            print('Starting the workers %s' % config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
         if jobarray and parallel.oq_distribute() != 'no':
