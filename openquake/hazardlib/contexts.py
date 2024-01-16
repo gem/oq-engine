@@ -1403,10 +1403,14 @@ class PmapMaker(object):
         if self.disagg_by_src:
             # all the sources in the group must have the same source_id because
             # of the groupby(group, corename) in classical.py
-            srcids = set(map(valid.basename, self.sources))
-            if len(srcids) > 1:
-                raise NameError('Invalid source naming: %s' % srcids)
-            dic['basename'] = srcids.pop()
+            coreids = set(map(valid.corename, self.sources))
+            if len(coreids) > 1:
+                raise NameError('Invalid source naming: %s' % coreids)
+
+            # in oq-risk-tests test_phl there are multiple srcids
+            # (mps-0!b1;0, mps-0!b1;1, ...); you can simply use the first,
+            # since in `store_mean_rates_by_src` we use corename
+            dic['basename'] = valid.basename(self.sources[0])
         return dic
 
 
