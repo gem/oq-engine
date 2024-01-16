@@ -304,16 +304,16 @@ class Hazard:
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
-    def store_mean_rates_by_src(self, pmaps):
+    def store_mean_rates_by_src(self, dic):
         """
         Store data inside mean_rates_by_src with shape (N, M, L1, Ns)
         """
         mean_rates_by_src = self.datastore['mean_rates_by_src/array'][()]
-        for key, pmap in pmaps.items():
+        for key, rates in dic.items():
             if isinstance(key, str):
                 # in case of mean_rates_by_src key is a source ID
                 idx = self.srcidx[valid.corename(key)]
-                mean_rates_by_src[..., idx] += self.get_rates(pmap)
+                mean_rates_by_src[..., idx] += rates
         self.datastore['mean_rates_by_src/array'][:] = mean_rates_by_src
         return mean_rates_by_src
 
@@ -358,11 +358,11 @@ class ClassicalCalculator(base.HazardCalculator):
         pnemap = dic['pnemap']  # probabilities of no exceedence
         source_id = dic.pop('basename', '')  # non-empty for disagg_by_src
         if source_id:
-            # accumulate the poes for the given source
+            # accumulate the rates for the given source
             pm = ~pnemap
-            acc[source_id] = pm
             pm.grp_id = grp_id
             pm.trt_smrs = pnemap.trt_smrs
+            acc[source_id] += self.haz.get_rates(pm)
         G = pnemap.array.shape[2]
         for i, gid in enumerate(self.gids[grp_id]):
             self.pmap.multiply_pnes(pnemap, gid, i % G)
@@ -499,7 +499,7 @@ class ClassicalCalculator(base.HazardCalculator):
         Regular case
         """
         self.create_rup()  # create the rup/ datasets BEFORE swmr_on()
-        acc = {}  # src_id -> pmap
+        acc = AccumDict(accum=0.)  # src_id -> pmap
         oq = self.oqparam
         L = oq.imtls.size
         Gt = len(self.trt_rlzs)
