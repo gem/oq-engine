@@ -8,6 +8,7 @@ from openquake.sep.liquefaction import (
 )
 
 INCH_PER_M = FT_PER_M * 12.0
+M_PER_KM = 1000
 
 
 def _hazus_displacement_correction_factor(

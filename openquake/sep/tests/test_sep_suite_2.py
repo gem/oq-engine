@@ -41,6 +41,7 @@ from openquake.sep.liquefaction.lateral_spreading import (
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 site_data_file = os.path.join(BASE_DATA_PATH, "test_site_params.csv")
+site_data_file_NZ = os.path.join(BASE_DATA_PATH, "test_site_params_NZ.csv")
 
 
 class test_landslides_cali_small(unittest.TestCase):
