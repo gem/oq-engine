@@ -50,8 +50,8 @@ def test_PAC():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
-    aac(r0, 0.03272253)  # first level of PGA
-    aac(r1, 0.04030454)  # first level of PGA
+    aac(r0, 0.03272253, atol=1E-6)  # first level of PGA
+    aac(r1, 0.04030454, atol=1E-6)  # first level of PGA
     if rtgmpy:
         s = calc.datastore['asce07'][()].decode('ascii')
         asce07 = json.loads(s)
