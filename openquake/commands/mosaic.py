@@ -163,7 +163,7 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     if concurrent_jobs is None:
-        concurrent_jobs = parallel.Starmap.CT // 8
+        concurrent_jobs = parallel.Starmap.CT // 8 or 1
 
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, concurrent_jobs)
