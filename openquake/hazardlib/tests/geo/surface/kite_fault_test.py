@@ -20,6 +20,7 @@ import glob
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
+from openquake.hazardlib.nrml import read
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.mesh import Mesh
@@ -29,8 +30,9 @@ from openquake.hazardlib.geo.surface.kite_fault import (
     get_profiles_from_simple_fault_data)
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.sourceconverter import SourceConverter
+from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
 
-
+NS = "{http://openquake.org/xmlns/nrml/0.5}"
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 PLOTTING = False
 aae = np.testing.assert_almost_equal
@@ -1008,7 +1010,6 @@ class TestProfilesFromSimpleFault(unittest.TestCase):
         pro = get_profiles_from_simple_fault_data(trace, usd, lsd, dip,
                                                   rup_mesh_spacing)
 
-        from openquake.hazardlib.geo.geodetic import npoints_towards, azimuth
 
         # This is the initial width
         width = (lsd - usd) / np.sin(np.radians(dip))
@@ -1028,6 +1029,25 @@ class TestProfilesFromSimpleFault(unittest.TestCase):
             pro[0].coo[-1, 0], coo[0][-1], decimal=3)
         np.testing.assert_almost_equal(
             pro[0].coo[-1, 1], coo[1][-1], decimal=3)
+
+
+class TestSectionsUCF3(unittest.TestCase):
+
+    def test_section_1680(self):
+        # Read the profiles and create the surface
+        path = os.path.join(BASE_DATA_PATH, 'section_1680_ucf.xml')
+        prfs = _get_profiles(path)
+        hsmpl = 5.0
+        vsmpl = 5.0
+        idl = False
+        alg = False
+        srfc = KiteSurface.from_profiles(
+            prfs['1680'][0], vsmpl, hsmpl, idl=idl, align=alg)
+
+        PLOTTING = True
+        if PLOTTING:
+            title = 'UCF 1680'
+            ppp(prfs['1680'][0], srfc, title, ax_equal=True)
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):
@@ -1069,3 +1089,30 @@ def _read_profile(filename: str) -> Line:
                                 float(aa[1]),
                                 float(aa[2])))
     return Line(points)
+
+
+def _get_profiles(fname):
+    """ Gets profiles from a Geometry Model """
+    [node] = read(fname)
+    all_profiles = {}
+    # Parse file
+    for section in node:
+        if section.tag == f"{NS}section":
+            # Parse the surfaces in each section
+            for surface in section:
+                section_profiles = []
+                if surface.tag == f"{NS}kiteSurface":
+                    # Parse the profiles for each surface
+                    profiles = []
+                    for profile in surface:
+                        # Get poslists
+                        for points in profile.LineString:
+                            pnts = np.array(~points)
+                            rng = range(0, len(pnts), 3)
+                            pro = Line([Point(
+                                pnts[i], pnts[i + 1], pnts[i + 2])
+                                for i in rng])
+                            profiles.append(pro)
+                    section_profiles = [profiles]
+            all_profiles[section['id']] = section_profiles
+    return all_profiles
