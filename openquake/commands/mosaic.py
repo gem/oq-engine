@@ -107,7 +107,7 @@ def from_file(fname, concurrent_jobs=4):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        if not all_sites and done[model] > 2:
+        if not all_sites and done[model] >= 2:
             continue
         done[model] += 1
         siteid = model + ('%+.1f,%+.1f' % tuple(lonlat))

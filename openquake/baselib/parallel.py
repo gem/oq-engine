@@ -1027,13 +1027,20 @@ def split_task(elements, func, args, duration, outs_per_task, monitor):
             break
 
 
+def logfinish(n, tot):
+    logging.info('Finished %d of %d jobs', n, tot)
+    return n + 1
+
+
 def multispawn(func, allargs, chunksize=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
-    logging.info('Running %d jobs', len(allargs))
+    tot = len(allargs)
+    logging.info('Running %d jobs', tot)
     allargs = allargs[::-1]  # so that the first argument is submitted first
     procs = {}  # sentinel -> process
+    n = 0
     while allargs:
         args = allargs.pop()
         proc = mp_context.Process(target=func, args=args)
@@ -1043,10 +1050,13 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
             for finished in wait(procs):
                 procs[finished].join()
                 del procs[finished]
+                n = logfinish(n, tot)
+                
     while procs:
         for finished in wait(procs):
             procs[finished].join()
             del procs[finished]
+            n = logfinish(n, tot)
 
 
 def slurm_task(calc_dir: str, task_id: str):
