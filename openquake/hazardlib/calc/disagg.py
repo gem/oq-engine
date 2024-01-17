@@ -416,8 +416,6 @@ class Disaggregator(object):
         self.mon3 = mon3
         if not hasattr(self, 'ctx_by_magi'):
             # the first time build the magnitude bins
-            if self.src_mutex:  # replace src_id with segment_id
-                self.fullctx.src_id = self.src_mutex['src_id']
             self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
         try:
             self.ctx = self.ctx_by_magi[magi]
@@ -426,6 +424,7 @@ class Disaggregator(object):
         if self.src_mutex:
             # make sure we can use idx_start_stop below
             # NB: using ctx.sort(order='src_id') would cause a ValueError
+            # FIXME: argsort can be problematic on AVX-512 processors!!
             self.ctx = self.ctx[numpy.argsort(self.ctx.src_id)]
         self.dist_idx[magi] = numpy.digitize(
             self.ctx.rrup, self.bin_edges[1]) - 1

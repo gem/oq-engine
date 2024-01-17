@@ -1302,6 +1302,8 @@ class PmapMaker(object):
                     delta = self.cmaker.deltagetter(src.id)
                     ctx.occurrence_rate += delta[ctx.rup_id]
             if self.fewsites:  # keep rupdata in memory (before collapse)
+                if self.src_mutex:
+                    ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
             yield ctx
 
