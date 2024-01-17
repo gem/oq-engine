@@ -1031,6 +1031,7 @@ def multispawn(func, allargs, chunksize=Starmap.num_cores):
     """
     Spawn processes with the given arguments
     """
+    logging.info('Running %d jobs', len(allargs))
     allargs = allargs[::-1]  # so that the first argument is submitted first
     procs = {}  # sentinel -> process
     while allargs:

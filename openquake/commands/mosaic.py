@@ -99,7 +99,7 @@ def from_file(fname, concurrent_jobs=8):
     models = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
-    done = {}
+    done = collections.Counter()
     for model, lonlat in zip(models, lonlats):
         if model in ('???', 'USA', 'GLD'):
             continue
@@ -107,9 +107,9 @@ def from_file(fname, concurrent_jobs=8):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        if not all_sites and model in done:
+        if not all_sites and done[model] > 2:
             continue
-        done[model] = True
+        done[model] += 1
         siteid = model + ('%+.1f,%+.1f' % tuple(lonlat))
         dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
         tags.append(siteid)
@@ -163,7 +163,7 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
         rows = [[row[k] for k in header] for row in res]
         fname = os.path.abspath('asce41.org')
         with open(fname, 'w') as f:
-            print(views.text_table(rows, header, ext='org'), file=f)
+            print(views.text_table(rows, header, ext='csv'), file=f)
         print(f'Stored {fname}')
         return
     lon, lat = lonlat_or_fname.split(',')

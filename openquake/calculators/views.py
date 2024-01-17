@@ -178,7 +178,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     | b    | 2     |
     +------+-------+
     """
-    assert ext in 'rst org html', ext
+    assert ext in 'csv rst org html', ext
     if isinstance(data, pandas.DataFrame):
         if data.index.name:
             data = data.reset_index()
@@ -214,11 +214,16 @@ def text_table(data, header=None, fmt=None, ext='rst'):
 
     wrap = '+-%s-+' if ext == 'rst' else '|-%s-|'
     sepline = wrap % '-+-'.join('-' * size for size in col_sizes)
-    templ = '| %s |' % ' | '.join('%-{}s'.format(size) for size in col_sizes)
+    sep = ',' if ext == 'csv' else ' | '
+    templ = sep.join('%-{}s'.format(size) for size in col_sizes)
+    if ext != 'csv':
+        templ = '| %s |' % templ
     if header and ext == 'rst':
         lines = [sepline, templ % tuple(header), sepline]
     elif header and ext == 'org':
         lines = [templ % tuple(header), sepline]
+    elif header and ext == 'csv':
+        lines = [templ % tuple(header)]
     else:
         lines = [sepline]
     for row in body:
