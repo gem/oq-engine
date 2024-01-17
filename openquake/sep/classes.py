@@ -46,8 +46,6 @@ from openquake.sep.liquefaction.liquefaction import (
 )
 from openquake.sep.liquefaction.lateral_spreading import (
     hazus_lateral_spreading_displacement, 
-    DR21_lateral_spreading_model_3,
-    DR21_lateral_spreading_model_5
 )
 from openquake.sep.liquefaction.vertical_settlement import (
     hazus_vertical_settlement,
@@ -695,62 +693,6 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
                 model=self.model)
         out.append(out_class)
         out.append(out_prob)
-        return out
-
-
-supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
-
-
-class DuranteRathje2021Model3(SecondaryPeril):
-    """
-    Returns the binary output, whether liquefaction occurred or not.
-    Returns the Lateral displacement class, either 0, 1 or 2, indicating
-    small, medium or large displacements.
-    """
-    outputs = ["LiqProb", "LSDClass"]
-
-    def __init__(self):
-        pass
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == 'PGA':
-                out_class, out_class_LSD = DR21_lateral_spreading_model_3(
-                wtd=sites.wtd, elevation=sites.elevation, dr=sites.dr, slope=sites.slope, pga=gmf)
-            out.append(out_class)
-            out.append(out_class_LSD)
-        return out
-
-
-supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
-
-class DuranteRathje2021Model5(SecondaryPeril):
-    """
-    Returns the binary output, whether liquefaction occurred or not.
-    Returns the Lateral displacement class, either 0, 1 or 2, indicating
-    small, medium or large displacements.
-    """
-    outputs = ["LiqProb", "LSDClass"]
-
-    def __init__(self):
-        pass
-
-    def prepare(self, sites):
-        pass
-
-    def compute(self, mag, imt_gmf, sites):
-        out = []
-        for im, gmf in imt_gmf:
-            if im.string == 'PGA':
-                out_class, out_class_LSD = DR21_lateral_spreading_model_5(
-                wtd=sites.wtd, elevation=sites.elevation, dr=sites.dr, slope=sites.slope, pga=gmf,
-                qtncs_med=sites.qtncs_med, qtncs_std=sites.qtncs_std, Ic_med=sites.Ic_med, Ic_std=sites.Ic_std)
-            out.append(out_class)
-            out.append(out_class_LSD)
         return out
 
 
