@@ -126,23 +126,32 @@ def from_file(fname, concurrent_jobs=4):
     results = []
     for logctx in logctxs:
         job = logs.dbcmd('get_job', logctx.calc_id)
+        tb = logs.dbcmd('get_traceback', logctx.calc_id)
+        out.append((job.id, job.description, tb[-1] if tb else ''))
+        if tb:
+            count_errors += 1
         try:
             results.append(get_asce41(logctx.calc_id))
         except KeyError:
             # asce41 could not be computed due to some error
             continue
-        tb = logs.dbcmd('get_traceback', logctx.calc_id)
-        out.append((job.id, job.description, tb[-1] if tb else ''))
-        if tb:
-            count_errors += 1
 
+    # printing/saving results
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
-    print('Total time: %.1f minutes' % dt)
-    if count_errors:
+    print('Total time: %.1f minutes' % dt) 
+    header = sorted(results[0])
+    rows = [[row[k] for k in header] for row in results]
+    fname = os.path.abspath('asce41.org')
+    with open(fname, 'w') as f:
+        print(views.text_table(rows, header, ext='csv'), file=f)
+    print(f'Stored {fname}')
+    if not results:
+        # serious problem to debug
+        import pdb; pdb.set_trace()
+    elif count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
-    return results
 
 
 def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
@@ -155,16 +164,7 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
         sys.exit('mosaic_dir is not specified in openquake.cfg')
 
     if lonlat_or_fname.endswith('.csv'):
-        res = from_file(lonlat_or_fname, concurrent_jobs)
-        if not res:
-            # serious problem to debug
-            import pdb; pdb.set_trace()
-        header = sorted(res[0])
-        rows = [[row[k] for k in header] for row in res]
-        fname = os.path.abspath('asce41.org')
-        with open(fname, 'w') as f:
-            print(views.text_table(rows, header, ext='csv'), file=f)
-        print(f'Stored {fname}')
+        from_file(lonlat_or_fname, concurrent_jobs)
         return
     lon, lat = lonlat_or_fname.split(',')
     params = get_params_from(
