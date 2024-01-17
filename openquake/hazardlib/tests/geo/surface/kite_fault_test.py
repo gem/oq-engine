@@ -1048,7 +1048,6 @@ class TestSectionsUCF3(unittest.TestCase):
         if PLOTTING:
             title = 'UCF 1680'
             ppp(prfs['1680'][0], srfc, title, ax_equal=True)
-        breakpoint()
 
 
 def _read_profiles(path: str, prefix: str = 'cs') -> (list, list):

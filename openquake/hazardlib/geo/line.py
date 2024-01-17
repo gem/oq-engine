@@ -25,6 +25,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
 
 TOLERANCE = 0.1
+SMALL = 1e-2
 
 
 def _update(rtra, rtra_prj, proj, pnt):
@@ -65,6 +66,7 @@ def _resample(coo, sect_len, orig_extremes):
         # Computing distances from the reference point
         dis = utils.get_dist(txy, rtra_prj[-1])
         if idx_vtx > 0:
+
             # Fixing distances for points before the index
             dis[0:idx_vtx] = 100000
 
@@ -129,6 +131,16 @@ def _resample(coo, sect_len, orig_extremes):
 
 
 def _get_same_dir(rtra, coo):
+
+    # If the line is vertical
+    if (np.abs(rtra[-2][0] - rtra[-1][0]) < SMALL and
+            np.abs(rtra[-2][1] - rtra[-1][1]) < SMALL):
+        same_dir = True
+        if coo[-1, 2] < rtra[-1][2]:
+            same_dir = False
+        breakpoint()
+        return same_dir
+
 
     # Azimuth of the resampled edge
     azim_rsmp_edge = geodetic.azimuth(rtra[-2][0], rtra[-2][1],
@@ -322,7 +334,6 @@ class Line(object):
         from the first point in the original line, a line segment is defined as
         the line connecting the last point in the resampled line and the next
         point in the original line.
-
 
         :param float sect_len:
             The length of the section, in km.
