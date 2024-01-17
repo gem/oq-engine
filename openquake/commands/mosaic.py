@@ -26,7 +26,7 @@ import cProfile
 import numpy
 import pandas
 import collections
-from openquake.baselib import config, performance
+from openquake.baselib import config, performance, parallel
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
@@ -48,9 +48,9 @@ def engine_profile(jobctx, nrows):
 def get_asce41(calc_id):
     dstore = datastore.read(calc_id)
     dic = json.loads(dstore['asce41'][()].decode('ascii'))
-    dic = {k: numpy.nan if v == 'n.a.' else round(v, 2)
+    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
            for k, v in dic.items()}
-    dic['siteid'] = dstore['oqparam'].description.split()[-1]
+    dic['siteid'] = dstore['oqparam'].description[12:]  # strip 'AELO for XXX'
     return dic
 
 
@@ -58,7 +58,7 @@ def get_asce41(calc_id):
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
-def from_file(fname, concurrent_jobs=8):
+def from_file(fname, concurrent_jobs):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
@@ -99,7 +99,7 @@ def from_file(fname, concurrent_jobs=8):
     models = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
-    done = {}
+    done = collections.Counter()
     for model, lonlat in zip(models, lonlats):
         if model in ('???', 'USA', 'GLD'):
             continue
@@ -107,10 +107,10 @@ def from_file(fname, concurrent_jobs=8):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        if not all_sites and model in done:
+        if not all_sites and done[model] >= 2:
             continue
-        done[model] = True
-        siteid = model + ('%+d,%+d' % tuple(lonlat))
+        done[model] += 1
+        siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
         dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
         tags.append(siteid)
         allparams.append(get_params_from(dic, config.directory.mosaic_dir))
@@ -126,45 +126,48 @@ def from_file(fname, concurrent_jobs=8):
     results = []
     for logctx in logctxs:
         job = logs.dbcmd('get_job', logctx.calc_id)
+        tb = logs.dbcmd('get_traceback', logctx.calc_id)
+        out.append((job.id, job.description, tb[-1] if tb else ''))
+        if tb:
+            count_errors += 1
         try:
             results.append(get_asce41(logctx.calc_id))
         except KeyError:
             # asce41 could not be computed due to some error
             continue
-        tb = logs.dbcmd('get_traceback', logctx.calc_id)
-        out.append((job.id, job.description, tb[-1] if tb else ''))
-        if tb:
-            count_errors += 1
 
+    # printing/saving results
     header = ['job_id', 'description', 'error']
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
-    print('Total time: %.1f minutes' % dt)
-    if count_errors:
+    print('Total time: %.1f minutes' % dt) 
+    header = sorted(results[0])
+    rows = [[row[k] for k in header] for row in results]
+    fname = os.path.abspath('asce41.csv')
+    with open(fname, 'w') as f:
+        print(views.text_table(rows, header, ext='csv'), file=f)
+    print(f'Stored {fname}')
+    if not results:
+        # serious problem to debug
+        import pdb; pdb.set_trace()
+    elif count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
-    return results
 
 
 def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = 8, vs30: float = 760):
+             concurrent_jobs: int = None, vs30: float = 760):
     """
     Run a PSHA analysis on the given lon and lat or given a CSV file
     formatted as described in the 'from_file' function
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
+    if concurrent_jobs is None:
+        # // 8 is chosen so that the core occupation in cole is decent
+        concurrent_jobs = parallel.Starmap.CT // 8 or 1
 
     if lonlat_or_fname.endswith('.csv'):
-        res = from_file(lonlat_or_fname, concurrent_jobs)
-        if not res:
-            # serious problem to debug
-            import pdb; pdb.set_trace()
-        header = sorted(res[0])
-        rows = [[row[k] for k in header] for row in res]
-        fname = os.path.abspath('asce41.org')
-        with open(fname, 'w') as f:
-            print(views.text_table(rows, header, ext='org'), file=f)
-        print(f'Stored {fname}')
+        from_file(lonlat_or_fname, concurrent_jobs)
         return
     lon, lat = lonlat_or_fname.split(',')
     params = get_params_from(

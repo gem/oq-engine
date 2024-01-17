@@ -12,7 +12,7 @@ on:
       - "RPM build of engine in Fedora Copr"
       - "Ubuntu test of OpenQuake Engine"
       - "Upgrade procedure for engine from 3.16 to Latest Release"
-      - "Windows full tests of OpenQuake Engine"
+      - "Windows amd64 full tests of OpenQuake Engine"
     types:
       - completed
 
