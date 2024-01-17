@@ -45,12 +45,12 @@ def engine_profile(jobctx, nrows):
                            ext='org'))
 
 
-def get_asce41(calc_id):
+def get_asce07(calc_id):
     dstore = datastore.read(calc_id)
-    dic = json.loads(dstore['asce41'][()].decode('ascii'))
-    dic = {k: numpy.nan if v == 'n.a.' else round(v, 2)
+    dic = json.loads(dstore['asce07'][()].decode('ascii'))
+    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
            for k, v in dic.items()}
-    dic['siteid'] = dstore['oqparam'].description.split()[-1]
+    dic['siteid'] = dstore['oqparam'].description[12:]  # strip 'AELO for XXX'
     return dic
 
 
@@ -61,7 +61,7 @@ def get_asce41(calc_id):
 def from_file(fname, concurrent_jobs=4):
     """
     Run an AELO analysis on the given sites and returns an array with
-    the ASCE-41 parameters.
+    the ASCE-07 parameters.
 
     The CSV file must contain in each row a site identifier
     starting with the 3-character code of the mosaic model that covers it, and
@@ -131,9 +131,9 @@ def from_file(fname, concurrent_jobs=4):
         if tb:
             count_errors += 1
         try:
-            results.append(get_asce41(logctx.calc_id))
+            results.append(get_asce07(logctx.calc_id))
         except KeyError:
-            # asce41 could not be computed due to some error
+            # asce07 could not be computed due to some error
             continue
 
     # printing/saving results
@@ -143,7 +143,7 @@ def from_file(fname, concurrent_jobs=4):
     print('Total time: %.1f minutes' % dt) 
     header = sorted(results[0])
     rows = [[row[k] for k in header] for row in results]
-    fname = os.path.abspath('asce41.org')
+    fname = os.path.abspath('asce07.csv')
     with open(fname, 'w') as f:
         print(views.text_table(rows, header, ext='csv'), file=f)
     print(f'Stored {fname}')
