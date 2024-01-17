@@ -58,7 +58,7 @@ def get_asce41(calc_id):
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
-def from_file(fname, concurrent_jobs=4):
+def from_file(fname, concurrent_jobs):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
