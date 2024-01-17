@@ -138,9 +138,7 @@ def _get_same_dir(rtra, coo):
         same_dir = True
         if coo[-1, 2] < rtra[-1][2]:
             same_dir = False
-        breakpoint()
         return same_dir
-
 
     # Azimuth of the resampled edge
     azim_rsmp_edge = geodetic.azimuth(rtra[-2][0], rtra[-2][1],

@@ -1043,8 +1043,16 @@ class TestSectionsUCF3(unittest.TestCase):
         alg = False
         srfc = KiteSurface.from_profiles(
             prfs['1680'][0], vsmpl, hsmpl, idl=idl, align=alg)
-
-        PLOTTING = True
+        # Expected mesh
+        expected = np.array([[[-122.0011, -121.9802],
+                              [-122.0011, -121.98029804]],
+                             [[37.6073, 37.5943],
+                              [37.60720196, 37.59420196]],
+                             [[0., 0.],
+                              [4.99998812, 4.99998065]]])
+        # Test
+        aae(srfc.mesh.array, expected)
+        # Plottin the surface
         if PLOTTING:
             title = 'UCF 1680'
             ppp(prfs['1680'][0], srfc, title, ax_equal=True)
