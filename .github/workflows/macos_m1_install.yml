@@ -80,7 +80,7 @@ jobs:
           oq dbserver upgrade
           sleep 5
 
-      - name: Run tests for calculators and advanced manual to test installation
+      - name: Run tests for calculators to test installation
         if: always()
         run: |
           source ~/openquake/bin/activate

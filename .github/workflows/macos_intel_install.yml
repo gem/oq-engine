@@ -73,7 +73,7 @@ jobs:
               oq engine --run $ini --exports csv,hdf5
           done
 
-      - name: Run tests for calculators and advanced manual to test installation
+      - name: Run tests for calculators to test installation
         if: always()
         run: |
           source ~/openquake/bin/activate
