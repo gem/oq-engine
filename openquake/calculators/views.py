@@ -223,7 +223,7 @@ def text_table(data, header=None, fmt=None, ext='rst'):
     elif header and ext == 'org':
         lines = [templ % tuple(header), sepline]
     elif header and ext == 'csv':
-        lines = [templ % tuple(header)]
+        lines = [','.join(header)]
     else:
         lines = [sepline]
     for row in body:
