@@ -26,7 +26,7 @@ import cProfile
 import numpy
 import pandas
 import collections
-from openquake.baselib import config, performance
+from openquake.baselib import config, performance, parallel
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
@@ -155,13 +155,15 @@ def from_file(fname, concurrent_jobs=4):
 
 
 def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
-             concurrent_jobs: int = 8, vs30: float = 760):
+             concurrent_jobs: int = None, vs30: float = 760):
     """
     Run a PSHA analysis on the given lon and lat or given a CSV file
     formatted as described in the 'from_file' function
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
+    if concurrent_jobs is None:
+        concurrent_jobs = parallel.Starmap.CT // 8
 
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, concurrent_jobs)
