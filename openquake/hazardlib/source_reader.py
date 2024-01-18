@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os.path
 import pickle
 import operator
@@ -28,7 +27,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
-from openquake.hazardlib.valid import basename
+from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -75,16 +74,6 @@ def gzpik(obj):
     """
     gz = gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
     return numpy.frombuffer(gz, numpy.uint8)
-
-
-def fragmentno(src):
-    "Postfix after :.; as an integer"
-    # in disagg/case-12 one has source IDs like 'SL_kerton:665!b16'
-    fragments = re.split('[:.;]', src.source_id)
-    if len(fragments) == 1:  # no fragment number, like in AELO for NZL
-        return -1
-    fragment = fragments[1].split('!')[0]  # strip !b16
-    return int(fragment)
 
 
 def mutex_by_grp(src_groups):
@@ -220,7 +209,13 @@ def get_csm(oq, full_lt, dstore=None):
         srcids = []
         for sg in sm.src_groups:
             srcids.extend(src.source_id for src in sg)
+            if sg.src_interdep == 'mutex':
+                # mutex sources in the same group must have all the same
+                # basename, i.e. the colon convention must be used
+                basenames = set(map(basename, sg))
+                assert len(basenames) == 1, basenames
         check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
+
     found = find_false_duplicates(smdict)
     if found:
         logging.warning('Found different sources with same ID %s',

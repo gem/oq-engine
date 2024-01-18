@@ -26,7 +26,7 @@ import cProfile
 import numpy
 import pandas
 import collections
-from openquake.baselib import config, performance, parallel
+from openquake.baselib import config, performance
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
@@ -107,7 +107,7 @@ def from_file(fname, concurrent_jobs):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        if not all_sites and done[model] >= 2:
+        if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
             continue
         done[model] += 1
         siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
@@ -162,10 +162,6 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
-    if concurrent_jobs is None:
-        # // 8 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 8 or 1
-
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, concurrent_jobs)
         return

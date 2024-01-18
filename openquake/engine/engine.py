@@ -358,15 +358,19 @@ def cleanup(kind):
         logs.dbcmd('workers_kill', config.zworkers)
 
 
-def run_jobs(jobctxs, concurrent_jobs=3):
+def run_jobs(jobctxs, concurrent_jobs=None):
     """
     Run jobs using the specified config file and other options.
 
     :param jobctxs:
         List of LogContexts
     :param concurrent_jobs:
-        How many jobs to run concurrently (default 3)
+        How many jobs to run concurrently (default num_cores/4)
     """
+    if concurrent_jobs is None:
+        # // 8 is chosen so that the core occupation in cole is decent
+        concurrent_jobs = parallel.Starmap.CT // 8 or 1
+
     dist = parallel.oq_distribute()
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     if hc_id:
