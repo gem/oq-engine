@@ -377,9 +377,8 @@ def run_jobs(jobctxs, concurrent_jobs=None):
                config.zworkers.host_cores == '127.0.0.1 -1')
     if use_zmq:
         # use multispawn with zmq on a single machine
-        orig_dist = os.environ.get('OQ_DISTRIBUTE', '')
+        orig_dist = parallel.oq_distribute()
         os.environ['OQ_DISTRIBUTE'] = 'zmq'
-    dist = parallel.oq_distribute()
 
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
