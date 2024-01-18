@@ -366,10 +366,6 @@ def install(inst, version, from_fork):
         if inst is server or inst is devel_server:
             subprocess.check_call(['chown', 'openquake', inst.OQDATA])
 
-    if (os.path.exists(inst.VENV) and
-            'openquake.cfg' in os.listdir(inst.VENV)):
-        sys.exit('Move %s first' % os.path.join(inst.VENV, 'openquake.cfg'))
-
     # recreate the openquake venv
     ensure(pyvenv=inst.VENV)
     print('Created %s' % inst.VENV)
