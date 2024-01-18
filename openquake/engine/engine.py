@@ -371,7 +371,11 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         # // 8 is chosen so that the core occupation in cole is decent
         concurrent_jobs = parallel.Starmap.CT // 8 or 1
 
+    if len(jobctxs) > 1 and config.zworkers.host_cores == '127.0.0.1 -1':
+        # use multispawn with zmq on a single machine
+        os.environ['OQ_DISTRIBUTE'] = 'zmq'
     dist = parallel.oq_distribute()
+
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     if hc_id:
         job = logs.dbcmd('get_job', hc_id)
