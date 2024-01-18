@@ -66,6 +66,9 @@ except ImportError:
                      'Operating System to install it')
 
 CDIR = os.path.dirname(os.path.abspath(__file__))
+REMOVE_VENV = '''Found pre-existing venv %s
+If you proceeed you will have to reinstall manually any software other
+than the engine that you may have there. Proceed? [y/N]'''
 
 
 class server:
@@ -195,7 +198,11 @@ def ensure(pip=None, pyvenv=None):
     try:
         if pyvenv:
             if os.path.exists(pyvenv):
-                shutil.rmtree(pyvenv)
+                answer = input(REMOVE_VENV % pyvenv)
+                if answer.lower() == 'y':
+                    shutil.rmtree(pyvenv)
+                else:
+                    sys.exit(0)
             venv.EnvBuilder(with_pip=True).create(pyvenv)
         else:
             subprocess.check_call([pip, '-m', 'ensurepip', '--upgrade'])
