@@ -136,8 +136,7 @@ class MetaGSIM(abc.ABCMeta):
                             'and compute in %s' % name)
         bad = bad_methods(dic)
         if bad:
-            print('%s cannot contain the methods %s' % (name, bad),
-                  file=sys.stderr)
+            sys.exit('%s cannot contain the methods %s' % (name, bad))
         for k, v in dic.items():
             if (k == 'compute' and v.__annotations__.get("ctx")
                     is not numpy.recarray):

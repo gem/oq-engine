@@ -124,12 +124,14 @@ class CondSpectraTestCase(unittest.TestCase):
             inp.cmaker, inp.group, inp.sitecol, 'SA(0.2)', imls)
         if sys.platform == 'darwin':
             raise unittest.SkipTest('skip on macOS')
+        # this is very sensitive to the platform; if you lower the tolerance
+        # the test will break on an AMD machine too
         aac(spectra.flatten(), [0.19164881, 0.23852505, 0.27692626, 0.35103066,
                                 0.39435944, 0.36436695, 0.34596382, 0.23299646,
-                                0.15524817, 0.11027446, 0.04034665], rtol=1E-6)
+                                0.15524817, 0.11027446, 0.04034665], rtol=5E-6)
         aac(s_sigma.flatten(), [0.33084368, 0.37107024, 0.389734, 0.27167148,
                                 0.02817097, 0.23704353, 0.32075199, 0.46459039,
-                                0.55801751, 0.59838493, 0.7080976], rtol=1E-6)
+                                0.55801751, 0.59838493, 0.7080976], atol=6E-6)
 
     def test_2_rlzs(self):
         # test with two GMPEs, 1 TRT

@@ -26,7 +26,7 @@ import cProfile
 import numpy
 import pandas
 import collections
-from openquake.baselib import config, performance, parallel
+from openquake.baselib import config, performance
 from openquake.commonlib import readinput, logs, datastore
 from openquake.calculators import views
 from openquake.engine import engine
@@ -107,7 +107,7 @@ def from_file(fname, concurrent_jobs):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        if not all_sites and done[model] >= 2:
+        if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
             continue
         done[model] += 1
         siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
@@ -115,9 +115,10 @@ def from_file(fname, concurrent_jobs):
         tags.append(siteid)
         allparams.append(get_params_from(dic, config.directory.mosaic_dir))
 
-    logging.root.handlers = []
-    logctxs = engine.create_jobs(allparams, config.distribution.log_level,
-                                 None, getpass.getuser(), None)
+    logging.root.handlers = []  # avoid too much logging
+    loglevel = 'warn' if len(allparams) > 99 else config.distribution.log_level
+    logctxs = engine.create_jobs(
+        allparams, loglevel, None, getpass.getuser(), None)
     for logctx, tag in zip(logctxs, tags):
         logctx.tag = tag
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
@@ -141,16 +142,16 @@ def from_file(fname, concurrent_jobs):
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt) 
+    if not results:
+        # serious problem to debug
+        import pdb; pdb.set_trace()
     header = sorted(results[0])
     rows = [[row[k] for k in header] for row in results]
     fname = os.path.abspath('asce41.csv')
     with open(fname, 'w') as f:
         print(views.text_table(rows, header, ext='csv'), file=f)
     print(f'Stored {fname}')
-    if not results:
-        # serious problem to debug
-        import pdb; pdb.set_trace()
-    elif count_errors:
+    if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
 
 
@@ -162,10 +163,6 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
-    if concurrent_jobs is None:
-        # // 8 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 8 or 1
-
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, concurrent_jobs)
         return
