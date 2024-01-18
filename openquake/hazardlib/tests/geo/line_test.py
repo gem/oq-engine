@@ -33,6 +33,7 @@ def _plott(rtra_prj, txy):
     ax.axis('equal')
     plt.show()
 
+
 class LineResampleTestCase(unittest.TestCase):
 
     def test_resample(self):
