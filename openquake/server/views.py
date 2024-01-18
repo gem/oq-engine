@@ -983,7 +983,7 @@ def web_engine_get_outputs(request, calc_id, **kwargs):
     if application_mode == 'AELO':
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
-        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
+        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
     return render(request, "engine/get_outputs.html",
                   dict(calc_id=calc_id, size_mb=size_mb, hmaps=hmaps,
                        hcurves=hcurves,
@@ -1044,7 +1044,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                         f'{value:.{ASCE_VIEW_DECIMALS}}')
         lon, lat = ds['oqparam'].sites[0][:2]  # e.g. [[-61.071, 14.686, 0.0]]
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
-        site_name = ds['oqparam'].description  # e.g. 'AELO Year 1, CCA'
+        site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         if 'warnings' in ds:
             ds_warnings = ds['warnings'][()].decode('utf8')
             if warnings is None:
