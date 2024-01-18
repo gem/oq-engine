@@ -141,16 +141,16 @@ def from_file(fname, concurrent_jobs):
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt) 
+    if not results:
+        # serious problem to debug
+        import pdb; pdb.set_trace()
     header = sorted(results[0])
     rows = [[row[k] for k in header] for row in results]
     fname = os.path.abspath('asce41.csv')
     with open(fname, 'w') as f:
         print(views.text_table(rows, header, ext='csv'), file=f)
     print(f'Stored {fname}')
-    if not results:
-        # serious problem to debug
-        import pdb; pdb.set_trace()
-    elif count_errors:
+    if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
 
 
