@@ -115,9 +115,10 @@ def from_file(fname, concurrent_jobs):
         tags.append(siteid)
         allparams.append(get_params_from(dic, config.directory.mosaic_dir))
 
-    logging.root.handlers = []
-    logctxs = engine.create_jobs(allparams, config.distribution.log_level,
-                                 None, getpass.getuser(), None)
+    logging.root.handlers = []  # avoid too much logging
+    loglevel = 'warn' if len(allparams) > 99 else config.distribution.log_level
+    logctxs = engine.create_jobs(
+        allparams, loglevel, None, getpass.getuser(), None)
     for logctx, tag in zip(logctxs, tags):
         logctx.tag = tag
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
