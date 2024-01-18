@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os.path
 import pickle
 import operator
@@ -210,7 +209,13 @@ def get_csm(oq, full_lt, dstore=None):
         srcids = []
         for sg in sm.src_groups:
             srcids.extend(src.source_id for src in sg)
+            if sg.src_interdep == 'mutex':
+                # mutex sources in the same group must have all the same
+                # basename, i.e. the colon convention must be used
+                basenames = set(map(basename, sg))
+                assert len(basenames) == 1, basenames
         check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
+
     found = find_false_duplicates(smdict)
     if found:
         logging.warning('Found different sources with same ID %s',
