@@ -1303,6 +1303,7 @@ class PmapMaker(object):
                     ctx.occurrence_rate += delta[ctx.rup_id]
             if self.fewsites:  # keep rupdata in memory (before collapse)
                 if self.src_mutex:
+                    # needed for Disaggregator.init
                     ctx.src_id = valid.fragmentno(src)
                 self.rupdata.append(ctx)
             yield ctx

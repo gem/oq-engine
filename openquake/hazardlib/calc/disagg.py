@@ -422,9 +422,10 @@ class Disaggregator(object):
         except KeyError:
             raise FarAwayRupture
         if self.src_mutex:
-            # make sure we can use idx_start_stop below
+            # make sure we can use idx_start_stop below, by ordering by src_id
+            # the src_id is set in contexts.py to be equal to the fragmentno
             # NB: using ctx.sort(order='src_id') would cause a ValueError
-            # FIXME: argsort can be problematic on AVX-512 processors!!
+            # NB: argsort can be problematic on AVX-512 processors!
             self.ctx = self.ctx[numpy.argsort(self.ctx.src_id)]
         self.dist_idx[magi] = numpy.digitize(
             self.ctx.rrup, self.bin_edges[1]) - 1
