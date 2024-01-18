@@ -30,6 +30,9 @@ urlpatterns = [
     re_path(r'^v1/available_gsims$', views.get_available_gsims),
     re_path(r'^v1/on_same_fs$', views.on_same_fs, name="on_same_fs"),
     re_path(r'^v1/ini_defaults$', views.get_ini_defaults, name="ini_defaults"),
+    re_path(
+        r"^announcements/",
+        include("pinax.announcements.urls", namespace="pinax_announcements")),
 ]
 
 # it is useful to disable the default redirect if the usage is via API only
@@ -75,11 +78,11 @@ if settings.LOCKDOWN:
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$',
-            LoginView.as_view(
-                template_name='account/login.html',
-                extra_context={'application_mode': application_mode},
-            ),
-            name="login"),
+                LoginView.as_view(
+                    template_name='account/login.html',
+                    extra_context={'application_mode': application_mode},
+                ),
+                name="login"),
         re_path(r'^accounts/logout/$', LogoutView.as_view(
             template_name='account/logout.html'), name="logout"),
         re_path(r'^accounts/ajax_login/$', views.ajax_login),

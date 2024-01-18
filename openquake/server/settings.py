@@ -33,7 +33,8 @@ except ImportError:
 
 TEST = 'test' in sys.argv
 
-INSTALLED_APPS = ('openquake.server.db',)
+INSTALLED_APPS = ('openquake.server.db',
+                  'pinax.announcements',)
 
 OQSERVER_ROOT = os.path.dirname(__file__)
 

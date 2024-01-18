@@ -1,3 +1,4 @@
+{% load pinax_announcements_tags %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -76,6 +77,17 @@
   {% endblock header %}
 
   {% block main %}
+  {% announcements as announcement_list %}
+  {% if announcement_list %}
+  <div class="announcements" style="padding: 20px; background-color: #ff9800; color: white; margin-bottom: 15px;">
+    {% for announcement in announcement_list %}
+      <div class="announcement">
+        <strong>{{ announcement.title }}</strong><br />
+          {{ announcement.content }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endblock main %}
   <div id="outdated"></div>
   {% block footer %}
