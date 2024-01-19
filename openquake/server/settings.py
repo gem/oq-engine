@@ -46,6 +46,7 @@ USE_X_FORWARDED_HOST = os.getenv('USE_X_FORWARDED_HOST', False)
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join('BASE_DIR','template')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -57,6 +58,9 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'openquake.server.utils.oq_server_context_processor',
             ],
+            'libraries': {
+                'servertag': 'libs.templatetags',
+        },
         },
     },
 ]
