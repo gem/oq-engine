@@ -59,7 +59,7 @@ TEMPLATES = [
                 'openquake.server.utils.oq_server_context_processor',
             ],
             'libraries': {
-                'servertag': 'libs.templatetags',
+                'servertag': 'templatetags',
         },
         },
     },
