@@ -373,11 +373,11 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         concurrent_jobs = parallel.Starmap.CT // 8 or 1
 
     hc_id = jobctxs[-1].params['hazard_calculation_id']
+    orig_dist = parallel.oq_distribute()
     use_zmq = (hc_id is None and len(jobctxs) > 1 and
                config.zworkers.host_cores == '127.0.0.1 -1')
     if use_zmq:
         # use multispawn with zmq on a single machine
-        orig_dist = parallel.oq_distribute()
         os.environ['OQ_DISTRIBUTE'] = 'zmq'
 
     if hc_id:
@@ -406,7 +406,8 @@ def run_jobs(jobctxs, concurrent_jobs=None):
                'start_time': datetime.utcnow()}
         logs.dbcmd('update_job', job.calc_id, dic)
     try:
-        if use_zmq and w.WorkerMaster(config.zworkers).status() == []:
+        if (orig_dist == 'zmq' or use_zmq) and \
+           w.WorkerMaster(config.zworkers).status() == []:
             print('Starting the workers %s' % config.zworkers.host_cores)
             logs.dbcmd('workers_start', config.zworkers)  # start the workers
         allargs = [(ctx,) for ctx in jobctxs]
@@ -415,7 +416,7 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         else:
             for jobctx in jobctxs:
                 run_calc(jobctx)
-        if use_zmq:
+        if orig_dist == 'zmq' or use_zmq:
             cleanup('stop', orig_dist)
     except Exception:
         ids = [jc.calc_id for jc in jobctxs]
@@ -423,7 +424,7 @@ def run_jobs(jobctxs, concurrent_jobs=None):
                           "AND status IN ('created', 'executing')", ids)
         for job_id, in rows:
             logs.dbcmd("set_status", job_id, 'failed')
-        if use_zmq:
+        if orig_dist == 'zmq' or use_zmq:
             cleanup('kill', orig_dist)
         raise
     return jobctxs

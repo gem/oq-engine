@@ -225,10 +225,10 @@ class PreClassicalCalculator(base.HazardCalculator):
                     # do not split the pointsources
                     smap.submit((pointsources + pointlike, sites, cmaker))
                 else:
-                    for block in block_splitter(pointsources, 1000):
+                    for block in block_splitter(pointsources, 2000):
                         smap.submit((block, sites, cmaker))
                     others.extend(pointlike)
-            for block in block_splitter(others, 20):
+            for block in block_splitter(others, 40):
                 smap.submit((block, sites, cmaker))
         normal = smap.reduce()
         if atomic_sources:  # case_35
