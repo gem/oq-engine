@@ -231,7 +231,12 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    csm = _get_csm(full_lt, groups, is_event_based)
+    if oq.sites and len(oq.sites) == 1:
+        # disable wkt in single-site calculations
+        set_wkt = False
+    else:
+        set_wkt = True
+    csm = _get_csm(full_lt, groups, is_event_based, set_wkt)
     for sg in csm.src_groups:
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
             dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
@@ -423,7 +428,7 @@ def reduce_sources(sources_with_same_id, full_lt):
     return out
 
 
-def _get_csm(full_lt, groups, event_based):
+def _get_csm(full_lt, groups, event_based, set_wkt):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
     # 3. reorder the sources by source_id
@@ -444,20 +449,23 @@ def _get_csm(full_lt, groups, event_based):
                 srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            # set ._wkt attribute (for later storage in the source_wkt dataset)
-            for src in sources:
-                # check on MultiFaultSources and NonParametricSources
-                mesh_size = getattr(src, 'mesh_size', 0)
-                if mesh_size > 1E6:
-                    msg = ('src "{}" has {:_d} underlying meshes with a total '
-                           'of {:_d} points!').format(
-                               src.source_id, src.count_ruptures(), mesh_size)
-                    logging.warning(msg)
-                src._wkt = src.wkt()
+            if set_wkt:
+                # set ._wkt attribute (for later storage in the source_wkt
+                # dataset); this is slow
+                msg = ('src "{}" has {:_d} underlying meshes with a total '
+                       'of {:_d} points!')
+                for src in sources:
+                    # check on MultiFaultSources and NonParametricSources
+                    mesh_size = getattr(src, 'mesh_size', 0)
+                    if mesh_size > 1E6:
+                        logging.warning(msg.format(
+                            src.source_id, src.count_ruptures(), mesh_size))
+                    src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
-    for ag in atomic:
-        for src in ag:
-            src._wkt = src.wkt()
+    if set_wkt:
+        for ag in atomic:
+            for src in ag:
+                src._wkt = src.wkt()
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
     for sg in src_groups:
