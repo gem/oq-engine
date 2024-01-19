@@ -58,9 +58,6 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'openquake.server.utils.oq_server_context_processor',
             ],
-            'libraries': {
-                'servertag': 'templatetags',
-        },
         },
     },
 ]
