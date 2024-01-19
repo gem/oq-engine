@@ -622,8 +622,9 @@ class SiteCollection(object):
         """
         m1, m2 = site_model[['lon', 'lat']], self[['lon', 'lat']]
         if len(m1) != len(m2) or (m1 != m2).any():  # associate
+            mode = 'strict' if len(self) == 1 else 'warn'
             _sitecol, site_model, _discarded = _GeographicObjects(
-                site_model).assoc(self, assoc_dist, 'warn')
+                site_model).assoc(self, assoc_dist, mode)
         ok = set(self.array.dtype.names) & set(site_model.dtype.names) - set(
             ignore) - {'lon', 'lat', 'depth'}
         for name in ok:
