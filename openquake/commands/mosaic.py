@@ -58,7 +58,7 @@ def get_asce41(calc_id):
 
 
 # NB: this is called by the action mosaic/.gitlab-ci.yml
-def from_file(fname, concurrent_jobs):
+def from_file(fname, mosaic_dir, concurrent_jobs):
     """
     Run an AELO analysis on the given sites and returns an array with
     the ASCE-41 parameters.
@@ -85,8 +85,6 @@ def from_file(fname, concurrent_jobs):
     starts with the codes `CAN` or `AUS`, i.e. those covered by the mosaic
     models for Canada and Australia.
     """
-    if not config.directory.mosaic_dir:
-        sys.exit('mosaic_dir is not specified in openquake.cfg')
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
@@ -113,7 +111,7 @@ def from_file(fname, concurrent_jobs):
         siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
         dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
         tags.append(siteid)
-        allparams.append(get_params_from(dic, config.directory.mosaic_dir))
+        allparams.append(get_params_from(dic, mosaic_dir))
 
     logging.root.handlers = []  # avoid too much logging
     loglevel = 'warn' if len(allparams) > 99 else config.distribution.log_level
@@ -155,7 +153,8 @@ def from_file(fname, concurrent_jobs):
         sys.exit(f'{count_errors} error(s) occurred')
 
 
-def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
+def run_site(lonlat_or_fname, mosaic_dir=None,
+             *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760):
     """
     Run a PSHA analysis on the given lon and lat or given a CSV file
@@ -163,12 +162,12 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
+    mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
-        from_file(lonlat_or_fname, concurrent_jobs)
+        from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
         return
     lon, lat = lonlat_or_fname.split(',')
-    params = get_params_from(
-        dict(lon=lon, lat=lat, vs30=vs30), config.directory.mosaic_dir)
+    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30), mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
@@ -179,6 +178,7 @@ def run_site(lonlat_or_fname, *, hc: int = None, slowest: int = None,
 
 
 run_site.lonlat_or_fname = 'lon,lat of the site to analyze or CSV file'
+run_site.mosaic_dir = 'mosaic directory'
 run_site.hc = 'previous calculation ID'
 run_site.slowest = 'profile and show the slowest operations'
 run_site.concurrent_jobs = 'maximum number of concurrent jobs'
