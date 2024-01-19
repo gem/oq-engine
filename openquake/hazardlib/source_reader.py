@@ -223,6 +223,7 @@ def get_csm(oq, full_lt, dstore=None):
 
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
+    logging.info('Done')
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
