@@ -837,8 +837,6 @@ def _check_csm(csm, oqparam, h5):
         csm.sitecol = h5['sitecol']
     else:
         csm.sitecol = get_site_collection(oqparam, h5)
-    if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
-        return
 
     if os.environ.get('OQ_CHECK_INPUT'):
         # slow checks
@@ -870,6 +868,9 @@ def _check_csm(csm, oqparam, h5):
             raise BBoxError(
                 'The bounding box of the sources is larger than half '
                 'the globe: %d degrees' % (bbox[2] - bbox[0]))
+
+    if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
+        return
 
 
 # tested in test_mosaic
