@@ -192,12 +192,8 @@ TRUNC_LEVEL = -1  # do not change it
 MIN_DIST = 0.
 
 
-def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
-    if not config.directory.mosaic_dir:
-        sys.exit('mosaic_dir is not specified in openquake.cfg')
-
-    ini = os.path.join(
-        config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
+def build_params(model, trunclevel, mindist, extreme_gmv, gmf):
+    ini = os.path.join(config.directory.mosaic_dir, model, 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
     # change the parameters to produce an eff_time of 100,000 years
     itime = int(round(float(params['investigation_time'])))
@@ -225,49 +221,48 @@ def _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf):
         logging.info('%s = %s' % (p, params[p]))
     logging.root.handlers = []  # avoid breaking the logs
     params['mosaic_model'] = logs.get_tag(ini)
-    [jobctx] = engine.create_jobs([params], config.distribution.log_level,
-                                  None, getpass.getuser(), hc)
-    if slowest:
-        engine_profile(jobctx, slowest or 40)
-    else:
-        engine.run_jobs([jobctx])
+    return params
 
 
-def sample_rups(model, *, slowest: int = None):
-    """
-    Sample the ruptures of the given model in the mosaic
-    with an effective investigation time of 100,000 years
-    """
-    _sample(model, TRUNC_LEVEL, MIN_DIST, EXTREME_GMV, slowest,
-            hc=None, gmf=False)
-
-
-sample_rups.model = '3-letter name of the model'
-sample_rups.slowest = 'profile and show the slowest operations'
-
-
-def sample_gmfs(model, *,
+def sample_rups(models, gmfs=False, *,
                 trunclevel: float = TRUNC_LEVEL,
                 mindist: float = MIN_DIST,
                 extreme_gmv: float = EXTREME_GMV,
-                hc: int = None, slowest: int = None):
+                slowest: int = None):
     """
-    Sample the gmfs of the given model in the mosaic
+    Sample the ruptures of the given models in the mosaic
     with an effective investigation time of 100,000 years
     """
-    _sample(model, trunclevel, mindist, extreme_gmv, slowest, hc, gmf=True)
+    if not config.directory.mosaic_dir:
+        sys.exit('mosaic_dir is not specified in openquake.cfg')
+
+    models = models.split(',')
+    hc = None
+    if len(models) == 1:
+        params = build_params(
+            models[0], trunclevel, mindist, extreme_gmv, gmfs)
+        [jobctx] = engine.create_jobs([params], config.distribution.log_level,
+                                      None, getpass.getuser(), hc)
+        if slowest:
+            engine_profile(jobctx, slowest or 40)
+        else:
+            engine.run_jobs([jobctx])
+        return
+    allparams = [build_params(model, trunclevel, mindist, extreme_gmv, gmfs)
+                 for model in models]
+    jobs = engine.create_jobs(allparams, config.distribution.log_level,
+                              None, getpass.getuser(), hc)
+    engine.run_jobs(jobs)
 
 
-sample_gmfs.model = '3-letter name of the model'
-sample_gmfs.trunclevel = 'truncation level (default: the one in job_vs30.ini)'
-sample_gmfs.mindist = 'minimum_distance (default: 0)'
-sample_gmfs.extreme_gmv = 'threshold above which a GMV is extreme'
-sample_gmfs.hc = 'previous hazard calculation'
-sample_gmfs.slowest = 'profile and show the slowest operations'
-
+sample_rups.models = '3-letter names of the models, comma-separated'
+sample_rups.trunclevel = 'truncation level (default: the one in job_vs30.ini)'
+sample_rups.mindist = 'minimum_distance (default: 0)'
+sample_rups.extreme_gmv = 'threshold above which a GMV is extreme'
+sample_rups.gmfs = 'compute GMFs'
+sample_rups.slowest = 'profile and show the slowest operations'
 
 # ################################## main ################################## #
 
 main = dict(run_site=run_site,
-            sample_rups=sample_rups,
-            sample_gmfs=sample_gmfs)
+            sample_rups=sample_rups)
