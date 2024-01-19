@@ -369,8 +369,8 @@ def run_jobs(jobctxs, concurrent_jobs=None):
         How many jobs to run concurrently (default num_cores/4)
     """
     if concurrent_jobs is None:
-        # // 8 is chosen so that the core occupation in cole is decent
-        concurrent_jobs = parallel.Starmap.CT // 8 or 1
+        # // 10 is chosen so that the core occupation in cole is decent
+        concurrent_jobs = parallel.Starmap.CT // 10 or 1
 
     hc_id = jobctxs[-1].params['hazard_calculation_id']
     orig_dist = parallel.oq_distribute()
