@@ -698,8 +698,9 @@ def collect_std(disaggs):
     sig = numpy.zeros((dis.Ma, dis.D, M, G))
     for (magi, dsti), v in out.items():
         sig[magi, dsti] = v.T / cnt[magi, dsti]
+
     # the sigmas are artificially zero for not covered (magi, disti) bins
-    # in that case we copy the minimum value from the covered bins
+    # in that case we copy the value of the first covered bin
     for m in range(M):
         for g in range(G):
             zeros = sig[:, :, m, g] == 0
