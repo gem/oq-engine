@@ -223,7 +223,6 @@ def get_csm(oq, full_lt, dstore=None):
 
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
-    logging.info('Done')
 
     # checking the changes
     changes = sum(sg.changes for sg in groups)
@@ -236,6 +235,8 @@ def get_csm(oq, full_lt, dstore=None):
         set_wkt = False
     else:
         set_wkt = True
+        logging.info('Setting src._wkt')
+
     csm = _get_csm(full_lt, groups, is_event_based, set_wkt)
     for sg in csm.src_groups:
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
