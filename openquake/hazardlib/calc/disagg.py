@@ -704,8 +704,8 @@ def collect_std(disaggs):
         for g in range(G):
             zeros = sig[:, :, m, g] == 0
             if zeros.any():
-                ok = sig[:, :, m, g] > 0
-                sig[zeros] = sig[:, :, m, g][ok].min()
+                magi, dsti = numpy.where(~zeros)
+                sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
     return sig
 
 
