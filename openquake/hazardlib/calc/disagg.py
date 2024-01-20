@@ -695,10 +695,20 @@ def collect_std(disaggs):
                     else:
                         out[magi, dsti][g] = val.copy()
                     cnt[magi, dsti] += 1 / G
-    res = numpy.zeros((dis.Ma, dis.D, M, G))
+    sig = numpy.zeros((dis.Ma, dis.D, M, G))
     for (magi, dsti), v in out.items():
-        res[magi, dsti] = v.T / cnt[magi, dsti]
-    return res
+        sig[magi, dsti] = v.T / cnt[magi, dsti]
+
+    # the sigmas are artificially zero for not covered (magi, disti) bins
+    # in that case we copy the value of the first covered bin
+    # NB: this is tested in test_rtgm
+    for m in range(M):
+        for g in range(G):
+            zeros = sig[:, :, m, g] == 0
+            if zeros.any():
+                magi, dsti = numpy.where(~zeros)
+                sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
+    return sig
 
 
 def get_ints(src_ids):

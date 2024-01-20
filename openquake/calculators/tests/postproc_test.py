@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.baselib.performance import Monitor
@@ -25,7 +26,7 @@ from openquake.hazardlib.contexts import read_cmakers, read_ctx_by_grp
 from openquake.hazardlib.cross_correlation import BakerJayaram2008
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
-from openquake.qa_tests_data.postproc import case_mrd
+from openquake.qa_tests_data.postproc import case_mrd, case_rtgm
 
 PLOT = False
 
@@ -180,3 +181,25 @@ class PostProcTestCase(CalculatorTestCase):
             axs.set_xlabel(f'{imts[0]}')
             axs.set_ylabel(f'{imts[1]}')
             plt.show()
+
+    def test_rtgm(self):
+        self.run_calc(case_rtgm.__file__, 'job.ini')
+        asce07 = self.calc.datastore['asce07'][()].decode('ascii')
+        dic07 = json.loads(asce07)
+        assert dic07 == {'PGA': 1.02584, 'PGA_2_50': 1.56541,
+                         'PGA_84th': 1.02584, 'PGA_det': 1.02584,
+                         'Ss': 2.50789, 'Ss_RT': 3.92357,
+                         'CRs': 0.94539, 'Ss_84th': 2.50789,
+                         'Ss_det': 2.50789, 'Ss_seismicity': 'Very High',
+                         'S1': 0.6, 'S1_RT': 0.99471,
+                         'CR1': 0.93496, 'S1_84th': 0.58673,
+                         'S1_det': 0.6, 'S1_seismicity': 'Very High'}
+        asce41 = self.calc.datastore['asce41'][()].decode('ascii')
+        dic41 = json.loads(asce41)
+        assert dic41 == {'BSE2N_Ss': 2.50789, 'BSE2E_Ss': 2.50789,
+                         'Ss_5_50': 3.14625, 'BSE1N_Ss': 1.67193,
+                         'BSE1E_Ss': 1.67193, 'Ss_20_50': 1.77483,
+                         'BSE2N_S1': 0.6, 'BSE2E_S1': 0.6,
+                         'S1_5_50': 0.79681, 'BSE1N_S1': 0.4,
+                         'BSE1E_S1': 0.4, 'S1_20_50': 0.43427}
+
