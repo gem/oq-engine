@@ -701,6 +701,7 @@ def collect_std(disaggs):
 
     # the sigmas are artificially zero for not covered (magi, disti) bins
     # in that case we copy the value of the first covered bin
+    # NB: this is tested in test_rtgm
     for m in range(M):
         for g in range(G):
             zeros = sig[:, :, m, g] == 0
