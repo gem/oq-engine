@@ -430,7 +430,6 @@ def calc_asce(dstore, csm, site_idx):
         dstore, csm, IMTS, imls_disagg)
     det_imt, mag_dst_eps_sig = get_deterministic(
         prob_mce, mag_dist_eps, sigma_by_src)
-    dstore['mag_dst_eps_sig'] = mag_dst_eps_sig
     logging.info(f'{det_imt=}')
     prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
         prob_mce, det_imt, DLLs, rtgm_df)

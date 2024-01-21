@@ -102,10 +102,6 @@ def test_CCA():
         df = pandas.read_csv(fname, skiprows=1)
         aac(df.value, ASCE41, atol=5E-5)
 
-        # run mag_dst_eps_sig exporter
-        [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
-        pandas.read_csv(fname, skiprows=1)
-
 
 def test_JPN():
     # test with mutex sources

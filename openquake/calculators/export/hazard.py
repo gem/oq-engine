@@ -716,7 +716,7 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
-# TODO: extend to export multiple sites
+# NB: this is exporting only the first site and it is okay
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
     js = dstore[ekey[0]][0].decode('utf8')
@@ -733,17 +733,3 @@ def export_asce(ekey, dstore):
                 comment=comment)
     return [fname]
 
-
-@export.add(('mag_dst_eps_sig', 'csv'))
-def export_mag_dst_eps_sig(ekey, dstore):
-    data = dstore[ekey[0]][:]
-    sitecol = dstore['sitecol']
-    writer = writers.CsvWriter(fmt='%.5f')
-    fname = dstore.export_path('%s.csv' % ekey[0])
-    comment = dstore.metadata.copy()
-    comment['lon'] = sitecol.lons[0]
-    comment['lat'] = sitecol.lats[0]
-    comment['vs30'] = sitecol.vs30[0]
-    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
-    writer.save(data, fname, comment=comment)
-    return [fname]
