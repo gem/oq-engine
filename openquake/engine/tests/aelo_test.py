@@ -53,7 +53,7 @@ def test_PAC():
     aac(r0, 0.03272253, atol=1E-6)  # first level of PGA
     aac(r1, 0.04030454, atol=1E-6)  # first level of PGA
     if rtgmpy:
-        s = calc.datastore['asce07'][()].decode('ascii')
+        s = calc.datastore['asce07'][0].decode('ascii')
         asce07 = json.loads(s)
         aac(asce07['PGA'], 0.83414, atol=5E-5)
 
@@ -67,7 +67,7 @@ def test_KOR():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
-        s = calc.datastore['asce07'][()].decode('ascii')
+        s = calc.datastore['asce07'][0].decode('ascii')
         asce07 = json.loads(s)
         aac(asce07['PGA'], 0.618, atol=5E-5)
 
