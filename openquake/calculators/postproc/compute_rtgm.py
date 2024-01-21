@@ -384,9 +384,11 @@ def get_asce41(dstore, mce, facts):
 
 
 def calc_asce(dstore, csm, site_idx):
-    rup_df = dstore.read_df('rup')
-    rup_df = rup_df[rup_df.sids == site_idx]
-    if len(rup_df) == 0:
+    """
+    :returns: (asce07, asce41, rtgm_df, warning)
+    """
+    mrs = dstore['mean_rates_by_src'][site_idx]
+    if mrs.sum() == 0:
         warning = (
             'The seismic hazard at the site is 0: there are no ruptures'
             ' close to the site. ASCE 7-16 and ASCE 41-17 parameters'
@@ -436,8 +438,8 @@ def calc_asce(dstore, csm, site_idx):
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     asce41 = get_asce41(dstore, mce, facts)
-    logging.info('ASCE 7-16 for site %d=%s', site_idx, asce07)
-    logging.info('ASCE 41-17 for site %d=%s', site_idx, asce41)
+    logging.info('ASCE 7-16 for site #%d=%s', site_idx, asce07)
+    logging.info('ASCE 41-17 for site #%d=%s', site_idx, asce41)
     return asce07, asce41, rtgm_df, ''
 
 
