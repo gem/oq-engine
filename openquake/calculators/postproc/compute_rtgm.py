@@ -408,7 +408,8 @@ def main(dstore, csm):
         dstore['asce07'] = hdf5.dumps(asce07)
         dstore['asce41'] = hdf5.dumps(asce41)
         return
-    if dstore['mean_rates_ss'][:].max() < MIN_AFE:
+    mean_rates = to_rates(dstore['hcurves-stats'][0, 0])
+    if mean_rates.max() < MIN_AFE:
         warning = (
             'The seismic hazard at the site is very low. ASCE 7-16 and'
             ' ASCE 41-17 parameters cannot be computed.')
