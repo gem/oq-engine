@@ -664,6 +664,13 @@ def getargnames(task_func):
         return inspect.getfullargspec(task_func.__call__).args[1:]
 
 
+def get_return_ip(receiver_host):
+    if receiver_host:
+        return socket.gethostbyname(receiver_host)
+    hostname = socket.gethostname()
+    return socket.gethostbyname(hostname)
+
+
 class Starmap(object):
     pids = ()
     running_tasks = []  # currently running tasks
@@ -792,11 +799,10 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        if self.distribute in ('no', 'processpool'):
+        if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
-            self.return_ip = socket.gethostbyname(
-                config.dbserver.receiver_host or socket.gethostname())
+            self.return_ip = get_return_ip(config.dbserver.receiver_host)
             logging.debug(f'{self.return_ip=}')
         self.monitor.backurl = None  # overridden later
         self.tasks = []  # populated by .submit
