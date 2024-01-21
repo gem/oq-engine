@@ -104,7 +104,7 @@ def norm_imt(imt):
     return imt.replace('(', '').replace(')', '').replace('.', 'P')
 
 
-def calc_rtgm_df(hcurves, sitecol, oq):
+def calc_rtgm_df(hcurves, site, oq):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
@@ -139,7 +139,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
         elif afe[-1] > MIN_AFE:
             raise ValueError("the max iml is too low: change the job.ini")
         else:
-            hazdic = _get_hazdic(afe, IMT, imtls[imt] * fact, sitecol)
+            hazdic = _get_hazdic(afe, IMT, imtls[imt] * fact, site)
             rtgm_haz = rtgmpy.GroundMotionHazard.from_dict(hazdic)
             results = rtgmpy.BuildingCodeRTGMCalc.calc_rtgm(rtgm_haz, 'ASCE7')
             rtgmCalc = results['RTGM'][IMT]['rtgmCalc']
@@ -165,8 +165,7 @@ def calc_rtgm_df(hcurves, sitecol, oq):
     return pd.DataFrame(dic), np.array(facts)
 
 
-def _get_hazdic(afe, imt, imtls, sitecol):
-    [site] = sitecol  # there must be a single site
+def _get_hazdic(afe, imt, imtls, site):
     hazdic = {
         'site': {'name': 'site',
                  'lon': site.location.x,
@@ -429,8 +428,8 @@ def main(dstore, csm):
     stats = list(oq.hazard_stats())
     assert stats[0] == 'mean', stats[0]
     hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
-    sitecol = dstore['sitecol']
-    rtgm_df, facts = calc_rtgm_df(hcurves, sitecol, oq)
+    [site] = dstore['sitecol']
+    rtgm_df, facts = calc_rtgm_df(hcurves, site, oq)
     logging.info('Computed RTGM\n%s', rtgm_df)
     dstore.create_df('rtgm', rtgm_df)
     facts[0] = 1  # for PGA the Prob MCE is already geometric mean
