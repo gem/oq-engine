@@ -667,14 +667,7 @@ def getargnames(task_func):
 def get_return_ip(receiver_host):
     if receiver_host:
         return socket.gethostbyname(receiver_host)
-    try:
-        hostname = socket.gethostname()
-    except socket.gaierror:
-        # fails on macos in the GitHub actions
-        if sys.platform == 'darwin':
-            return '127.0.0.1'
-        else:
-            raise
+    hostname = socket.gethostname()
     return socket.gethostbyname(hostname)
 
 
@@ -806,7 +799,7 @@ class Starmap(object):
         self.monitor.inject = (self.argnames[-1].startswith('mon') or
                                self.argnames[-1].endswith('mon'))
         self.receiver = 'tcp://0.0.0.0:%s' % config.dbserver.receiver_ports
-        if self.distribute in ('no', 'processpool'):
+        if self.distribute in ('no', 'processpool') or sys.platform != 'linux':
             self.return_ip = '127.0.0.1'  # zmq returns data to localhost
         else:  # zmq returns data to the receiver_host
             self.return_ip = get_return_ip(config.dbserver.receiver_host)
