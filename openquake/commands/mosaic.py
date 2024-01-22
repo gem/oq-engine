@@ -109,7 +109,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             continue
         done[model] += 1
         siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
-        dic = dict(siteid=siteid, sites='%s %s' % lonlat)
+        dic = dict(siteid=siteid, sites='%s %s' % tuple(lonlat))
         tags.append(siteid)
         allparams.append(get_params_from(dic, mosaic_dir))
 
