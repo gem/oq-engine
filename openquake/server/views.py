@@ -579,7 +579,8 @@ def aelo_callback(
     from_email = 'aelonoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
-    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
+    lon, lat = inputs['sites'].split()
+    body = (f"Input values: lon = {lon}, lat = {lat},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
     if warnings is not None:
         for warning in warnings:
