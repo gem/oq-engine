@@ -44,14 +44,19 @@ def engine_profile(jobctx, nrows):
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
+def fix(asce, siteid):
+    dic = json.loads(asce.decode('ascii'))
+    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
+           for k, v in dic.items()}
+    dic['siteid'] = siteid
+    return dic
+
 
 def get_asce41(calc_id):
     dstore = datastore.read(calc_id)
-    dic = json.loads(dstore['asce41'][()].decode('ascii'))
-    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
-           for k, v in dic.items()}
-    dic['siteid'] = dstore['oqparam'].description[12:]  # strip 'AELO for XXX'
-    return dic
+    model = dstore['oqparam'].description[9:]
+    return [fix(a, '%s%d' % (model, sid))
+            for sid, a in enumerate(dstore['asce41'])]
 
 
 # ########################## run_site ############################## #
@@ -98,7 +103,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
     done = collections.Counter()
-    for model, lonlat in zip(models, lonlats):
+    for model in numpy.unique(models):
         if model in ('???', 'USA', 'GLD'):
             continue
         if exclude_models and model in exclude_models.split(','):
@@ -108,8 +113,10 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
             continue
         done[model] += 1
-        siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
-        dic = dict(siteid=siteid, sites='%s %s' % lonlat)
+        siteid = model
+        sites = ','.join('%s %s' % tuple(lonlat)
+                         for lonlat in lonlats[models==model])
+        dic = dict(siteid=siteid, sites=sites)
         tags.append(siteid)
         allparams.append(get_params_from(dic, mosaic_dir))
 
@@ -130,7 +137,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if tb:
             count_errors += 1
         try:
-            results.append(get_asce41(logctx.calc_id))
+            results.extend(get_asce41(logctx.calc_id))
         except KeyError:
             # asce41 could not be computed due to some error
             continue
