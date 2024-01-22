@@ -429,7 +429,7 @@ def calc_asce(dstore, csm, site_idx):
         return asce07, asce41, rtgm_df, 'Low hazard'
 
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-        dstore, csm, IMTS, imls_disagg)
+        dstore, csm, IMTS, imls_disagg, site_idx)
     det_imt, mag_dst_eps_sig = get_deterministic(
         prob_mce, mag_dist_eps, sigma_by_src)
     logging.info(f'{det_imt=}')
@@ -468,10 +468,10 @@ def main(dstore, csm):
     dstore['warnings'] = np.array(warnings)
     dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
-    if Image is None:  # missing PIL
-        logging.warning('Missing module PIL: skipping plotting curves')
-        return
-    for site_idx in range(N):
+    if N == 1:
+        if Image is None:  # missing PIL
+            logging.warning('Missing module PIL: skipping plotting curves')
+            return
         plot_mean_hcurves_rtgm(dstore, site_idx, update_dstore=True)
         if warnings[site_idx] != 'Low hazard':
             plot_disagg_by_src(dstore, site_idx, update_dstore=True)

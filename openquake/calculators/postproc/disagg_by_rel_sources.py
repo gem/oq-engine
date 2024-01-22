@@ -22,6 +22,7 @@ import pandas
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.valid import basename
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
@@ -147,7 +148,7 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls):
+def main(dstore, csm, imts, imls, site_idx=0):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -167,8 +168,9 @@ def main(dstore, csm, imts, imls):
     oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-    sitecol = parent['sitecol']
-    assert len(sitecol) == 1, sitecol
+    site = list(parent['sitecol'])[site_idx]
+    sitecol = SiteCollection([site])
+    sitecol.sids[:] = 0
     rel_ids_by_imt = get_rel_source_ids(dstore, imts, imls, threshold=.1)
     for imt, ids in rel_ids_by_imt.items():
         rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))

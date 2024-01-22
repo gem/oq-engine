@@ -184,7 +184,7 @@ class PostProcTestCase(CalculatorTestCase):
 
     def test_rtgm(self):
         self.run_calc(case_rtgm.__file__, 'job.ini')
-        asce07 = self.calc.datastore['asce07'][()].decode('ascii')
+        asce07 = self.calc.datastore['asce07'][0].decode('ascii')
         dic07 = json.loads(asce07)
         assert dic07 == {'PGA': 1.02584, 'PGA_2_50': 1.56541,
                          'PGA_84th': 1.02584, 'PGA_det': 1.02584,
@@ -194,7 +194,7 @@ class PostProcTestCase(CalculatorTestCase):
                          'S1': 0.6, 'S1_RT': 0.99471,
                          'CR1': 0.93496, 'S1_84th': 0.58673,
                          'S1_det': 0.6, 'S1_seismicity': 'Very High'}
-        asce41 = self.calc.datastore['asce41'][()].decode('ascii')
+        asce41 = self.calc.datastore['asce41'][0].decode('ascii')
         dic41 = json.loads(asce41)
         assert dic41 == {'BSE2N_Ss': 2.50789, 'BSE2E_Ss': 2.50789,
                          'Ss_5_50': 3.14625, 'BSE1N_Ss': 1.67193,
