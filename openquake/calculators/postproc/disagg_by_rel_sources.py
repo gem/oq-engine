@@ -70,18 +70,19 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     return pandas.DataFrame(dic)
 
 
-def get_rel_source_ids(dstore, imts, imls, threshold):
+def get_rel_source_ids(dstore, imts, imls, site_id, threshold):
     """
     :param dstore: a DataStore instance with a dataset `mean_rates_by_src`
     :param imts: a list of IMTs
     :param imls: a list of IMLs
+    :param site_id: site index
     :param threshold: fraction of the max rate, used to discard sources
     :returns: dictionary IMT -> relevant source IDs
     """
     source_ids = general.AccumDict(accum=set())  # IMT -> src_ids
     for imt, iml in zip(imts, imls):
         aw = extract.extract(
-            dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+            dstore, f'mean_rates_by_src?imt={imt}&iml={iml}&site_id={site_id}')
         rates = aw.array['rate']  # for each source in decreasing order
         max_rate = rates[0]
         rel = aw.array[rates > threshold * max_rate]
@@ -171,7 +172,8 @@ def main(dstore, csm, imts, imls, site_idx=0):
     site = list(parent['sitecol'])[site_idx]
     sitecol = SiteCollection([site])
     sitecol.sids[:] = 0
-    rel_ids_by_imt = get_rel_source_ids(dstore, imts, imls, threshold=.1)
+    rel_ids_by_imt = get_rel_source_ids(
+        dstore, imts, imls, site_idx, threshold=.1)
     for imt, ids in rel_ids_by_imt.items():
         rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
         logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
