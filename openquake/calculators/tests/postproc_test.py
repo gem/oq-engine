@@ -19,6 +19,10 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+try:
+    import rtgmpy
+except ImportError:
+    rtgmpy = None
 from openquake.baselib.performance import Monitor
 from openquake.hazardlib.calc.mrd import (
     update_mrd, get_uneven_bins_edges, calc_mean_rate_dist)
@@ -184,6 +188,8 @@ class PostProcTestCase(CalculatorTestCase):
 
     def test_rtgm(self):
         self.run_calc(case_rtgm.__file__, 'job.ini')
+        if rtgmpy is None:
+            return
         asce07 = self.calc.datastore['asce07'][0].decode('ascii')
         dic07 = json.loads(asce07)
         assert dic07 == {'PGA': 1.02584, 'PGA_2_50': 1.56541,
