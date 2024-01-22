@@ -160,7 +160,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     Run a PSHA analysis on the given sites or given a CSV file
     formatted as described in the 'from_file' function. For instance
 
-    # oq mosaic run_site 10,20;30,40;50,60
+    # oq mosaic run_site 10,20:30,40:50,60
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
