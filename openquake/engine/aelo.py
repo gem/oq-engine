@@ -22,7 +22,6 @@ import os
 import sys
 import getpass
 import logging
-import numpy
 from openquake.baselib import config, sap
 from openquake.hazardlib import valid, geo
 from openquake.commonlib import readinput
@@ -112,7 +111,7 @@ def main(lon: valid.longitude,
     This script is meant to be called from the WebUI in production mode,
     and from the command-line in testing mode.
     """
-    inputs = dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid)
+    inputs = dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid)
     warnings = []
     if jobctx is None:
         # in  testing mode create a new job context
