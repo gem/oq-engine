@@ -76,6 +76,16 @@
   {% endblock header %}
 
   {% block main %}
+  {% if announcements %}
+  <div class="announcements" style="padding: 20px; background-color: #ff9800; color: white; margin-bottom: 15px;">
+    {% for announcement in announcements %}
+      <div class="announcement">
+        <strong>{{ announcement.title }}</strong><br />
+          {{ announcement.content }}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endblock main %}
   <div id="outdated"></div>
   {% block footer %}
