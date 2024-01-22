@@ -640,7 +640,7 @@ def aelo_run(request):
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid),
+            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:

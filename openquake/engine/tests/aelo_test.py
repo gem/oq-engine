@@ -61,7 +61,7 @@ def test_PAC():
 def test_KOR():
     # another test with same name sources, no semicolon convention, sampling
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
-    dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
+    dic = dict(sites='128.8 35', site='KOR-site', vs30='760')
     with logs.init(job_ini) as log:
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
@@ -76,7 +76,7 @@ def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
     for (site, lon, lat), expected in zip(SITES, EXPECTED):
-        dic = dict(lon=lon, lat=lat, site=site, vs30='760')
+        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
         with logs.init(job_ini) as log:
             log.params.update(get_params_from(
                 dic, MOSAIC_DIR, exclude=['USA']))
@@ -106,7 +106,7 @@ def test_CCA():
 def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
-    dic = dict(lon=139, lat=36, site='JPN-site', vs30='760')
+    dic = dict(sites='139 36', site='JPN-site', vs30='760')
     with logs.init(job_ini) as log:
         log.params.update(get_params_from(
             dic, MOSAIC_DIR, exclude=['USA']))

@@ -44,27 +44,29 @@ PRELIMINARY_MODEL_WARNING = (
 
 def get_params_from(inputs, mosaic_dir, exclude=()):
     """
-    :param inputs: a dictionary with lon, lat, vs30, siteid
+    :param inputs: a dictionary with sites, vs30, siteid
     :param mosaic_dir: directory where the mosaic is located
 
     Build the job.ini parameters for the given lon, lat by extracting them
     from the mosaic files.
     """
     mosaic_df = readinput.read_mosaic_df()
-    lon = float(inputs['lon'])
-    lat = float(inputs['lat'])
-    lonlats = numpy.array([(lon, lat)])
-    [model] = geo.utils.geolocate(lonlats, mosaic_df, exclude)
-    if model == '???':
+    lonlats = valid.coordinates(inputs['sites'])
+    models = geo.utils.geolocate(lonlats, mosaic_df, exclude)
+    if len(set(models)) > 1:
+        raise ValueError("The sites must all belong to the same model, got %s"
+                         % set(models))
+    lon, lat, _dep = lonlats[0]
+    if models[0] == '???':
         raise ValueError(
             f'Site at lon={lon} lat={lat} is not covered by any model!')
-    ini = os.path.join(mosaic_dir, model, 'in', 'job_vs30.ini')
+    ini = os.path.join(mosaic_dir, models[0], 'in', 'job_vs30.ini')
     params = readinput.get_params(ini)
-    params['mosaic_model'] = model
+    params['mosaic_model'] = models[0]
     if 'siteid' in inputs:
         params['description'] = 'AELO for ' + inputs['siteid']
     else:
-        params['description'] += ' (%(lon)s, %(lat)s)' % inputs
+        params['description'] += f' ({lon}, {lat})'
     params['ps_grid_spacing'] = '0.'  # required for disagg_by_src
     params['pointsource_distance'] = '100.'
     params['intensity_measure_types_and_levels'] = IMTLS
@@ -72,7 +74,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     params['disagg_by_src'] = 'true'
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
-    params['sites'] = '%(lon)s %(lat)s' % inputs
+    params['sites'] = inputs['sites']
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
     params['distance_bin_width'] = '20'

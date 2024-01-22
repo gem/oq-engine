@@ -109,7 +109,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             continue
         done[model] += 1
         siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
-        dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
+        dic = dict(siteid=siteid, sites='%s %s' % lonlat)
         tags.append(siteid)
         allparams.append(get_params_from(dic, mosaic_dir))
 
@@ -157,8 +157,10 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
              *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760):
     """
-    Run a PSHA analysis on the given lon and lat or given a CSV file
-    formatted as described in the 'from_file' function
+    Run a PSHA analysis on the given sites or given a CSV file
+    formatted as described in the 'from_file' function. For instance
+
+    # oq mosaic run_site 10,20;30,40;50,60
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
@@ -166,8 +168,8 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
         return
-    lon, lat = lonlat_or_fname.split(',')
-    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30), mosaic_dir)
+    sites = lonlat_or_fname.replace(',', ' ').replace(';', ',')
+    params = get_params_from(dict(sites=sites, vs30=vs30), mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
