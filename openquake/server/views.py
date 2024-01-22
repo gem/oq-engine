@@ -579,7 +579,8 @@ def aelo_callback(
     from_email = 'aelonoreply@openquake.org'
     to = [job_owner_email]
     reply_to = 'aelosupport@openquake.org'
-    body = (f"Input values: lon = {inputs['lon']}, lat = {inputs['lat']},"
+    lon, lat = inputs['sites'].split()
+    body = (f"Input values: lon = {lon}, lat = {lat},"
             f" vs30 = {inputs['vs30']}, siteid = {inputs['siteid']}\n\n")
     if warnings is not None:
         for warning in warnings:
@@ -640,7 +641,7 @@ def aelo_run(request):
     # build a LogContext object associated to a database job
     try:
         params = get_params_from(
-            dict(lon=lon, lat=lat, vs30=vs30, siteid=siteid),
+            dict(sites='%s %s' % (lon, lat), vs30=vs30, siteid=siteid),
             config.directory.mosaic_dir, exclude=['USA'])
         logging.root.handlers = []  # avoid breaking the logs
     except Exception as exc:
@@ -1003,6 +1004,7 @@ def is_model_preliminary(ds):
         return False
 
 
+# this is extracting only the first site and it is okay
 @cross_domain_ajax
 @require_http_methods(['GET'])
 def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
@@ -1017,7 +1019,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         if is_model_preliminary(ds):
             warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
-            asce07_js = ds['asce07'][()].decode('utf8')
+            asce07_js = ds['asce07'][0].decode('utf8')
             asce07 = json.loads(asce07_js)
             for key, value in asce07.items():
                 if key not in ('PGA', 'Ss', 'S1'):
@@ -1032,7 +1034,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce07_with_units[key + ' (g)'] = (
                         f'{value:.{ASCE_VIEW_DECIMALS}}')
         if 'asce41' in ds:
-            asce41_js = ds['asce41'][()].decode('utf8')
+            asce41_js = ds['asce41'][0].decode('utf8')
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
                 if not key.startswith('BSE'):
@@ -1046,7 +1048,7 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         vs30 = ds['oqparam'].override_vs30  # e.g. 760.0
         site_name = ds['oqparam'].description[9:]  # e.g. 'AELO for CCA'->'CCA'
         if 'warnings' in ds:
-            ds_warnings = ds['warnings'][()].decode('utf8')
+            ds_warnings = '\n'.join(s.decode('utf8') for s in ds['warnings'])
             if warnings is None:
                 warnings = ds_warnings
             else:

@@ -88,7 +88,7 @@ def _get_label(imt):
     return imtlab + ' - ' + comp
 
 
-def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
+def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
     """
     :param dstore: the datastore
     :returns: figure of hazard curves
@@ -112,7 +112,7 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     # get investigation time
     window = dinfo['investigation_time']
     # get hazard curves, put into rates
-    mean_hcurve = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
+    mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
     for m, hcurve in enumerate(mean_hcurve):
         AFE.append(to_rates(hcurve, window))
         # get the AFE of the iml that will be disaggregated for each IMT
@@ -163,7 +163,7 @@ def plot_mean_hcurves_rtgm(dstore, update_dstore=False):
     return plt
 
 
-def plot_governing_mce(dstore, update_dstore=False):
+def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     """
     :param dstore: the datastore
     :returns: image of governing MCE
@@ -172,7 +172,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     plt = import_plt()
-    js = dstore['asce07'][()].decode('utf8')
+    js = dstore['asce07'][site_idx].decode('utf8')
     dic = json.loads(js)
     MCEr = [dic['PGA'], dic['Ss'], dic['S1']]
     T = [from_string(imt).period for imt in imtls]
@@ -219,7 +219,7 @@ def plot_governing_mce(dstore, update_dstore=False):
     return plt
 
 
-def plot_disagg_by_src(dstore, update_dstore=False):
+def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     dinfo = get_info(dstore)
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
@@ -228,7 +228,7 @@ def plot_disagg_by_src(dstore, update_dstore=False):
     # get the IML for the 2475 RP
     rtgm_probmce = rtgm_df['ProbMCE']
     # get hazard curves, put into rates
-    mean_hcurve = dstore['hcurves-stats'][0, 0]  # shape(M, L1)
+    mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
     plt = import_plt()
     fig, ax = plt.subplots(3, figsize=(8, 15))
 
@@ -272,7 +272,7 @@ def plot_disagg_by_src(dstore, update_dstore=False):
 
         for i, src in enumerate(mrs.src_id):
             # get contribution at target level for that source
-            afes = mrs[0, m, :, i]
+            afes = mrs[site_idx, m, :, i]
             if (afes == 0).all():
                 continue
             afe_uhgm = _find_afe_target(
@@ -293,7 +293,7 @@ def plot_disagg_by_src(dstore, update_dstore=False):
         # use i to cycle through the colors for the major source contributors
         i = j = 0
         for ind in out_contr_all:
-            afes = mrs[0, m, :, ind]
+            afes = mrs[site_idx, m, :, ind]
             # if it's not a big contributor, plot in silver
             if out_contr_all[ind] <= fact * largest_contr:
                 if j == 0:
