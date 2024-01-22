@@ -22,6 +22,7 @@ import pandas
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.valid import basename
+from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
@@ -69,18 +70,19 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     return pandas.DataFrame(dic)
 
 
-def get_rel_source_ids(dstore, imts, imls, threshold):
+def get_rel_source_ids(dstore, imts, imls, site_id, threshold):
     """
     :param dstore: a DataStore instance with a dataset `mean_rates_by_src`
     :param imts: a list of IMTs
     :param imls: a list of IMLs
+    :param site_id: site index
     :param threshold: fraction of the max rate, used to discard sources
     :returns: dictionary IMT -> relevant source IDs
     """
     source_ids = general.AccumDict(accum=set())  # IMT -> src_ids
     for imt, iml in zip(imts, imls):
         aw = extract.extract(
-            dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
+            dstore, f'mean_rates_by_src?imt={imt}&iml={iml}&site_id={site_id}')
         rates = aw.array['rate']  # for each source in decreasing order
         max_rate = rates[0]
         rel = aw.array[rates > threshold * max_rate]
@@ -147,7 +149,7 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls):
+def main(dstore, csm, imts, imls, site_idx=0):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -167,9 +169,11 @@ def main(dstore, csm, imts, imls):
     oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-    sitecol = parent['sitecol']
-    assert len(sitecol) == 1, sitecol
-    rel_ids_by_imt = get_rel_source_ids(dstore, imts, imls, threshold=.1)
+    site = list(parent['sitecol'])[site_idx]
+    sitecol = SiteCollection([site])
+    sitecol.sids[:] = 0
+    rel_ids_by_imt = get_rel_source_ids(
+        dstore, imts, imls, site_idx, threshold=.1)
     for imt, ids in rel_ids_by_imt.items():
         rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
         logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))

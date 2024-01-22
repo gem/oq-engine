@@ -20,14 +20,14 @@ import unittest
 import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
-from openquake.hazardlib.nrml import read
+
 from openquake.hazardlib.geo.geodetic import (
     geodetic_distance, npoints_towards)
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.nrml import to_python
 from openquake.hazardlib.sourceconverter import SourceConverter
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import (
-    _read_profiles)
+    _read_profiles, _get_profiles)
 from openquake.hazardlib.geo import Point, Line
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.surface.kite_fault import (
@@ -35,7 +35,7 @@ from openquake.hazardlib.geo.surface.kite_fault import (
     _get_proj_from_profiles)
 from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 
-NS = "{http://openquake.org/xmlns/nrml/0.5}"
+
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
@@ -561,29 +561,3 @@ def _plt_results(clo, cla, dst, msrf, title, boundary=True):
     _ = plt.clabel(cs)
     plt.title(title)
     return fig, ax
-
-
-def _get_profiles(fname):
-    """ Gets profiles from a Geometry Model """
-    [node] = read(fname)
-    all_profiles = {}
-    # Parse file
-    for section in node:
-        if section.tag == f"{NS}section":
-            # Parse the surfaces in each section
-            for surface in section:
-                section_profiles = []
-                if surface.tag == f"{NS}kiteSurface":
-                    # Parse the profiles for each surface
-                    profiles = []
-                    for profile in surface:
-                        # Get poslists
-                        for points in profile.LineString:
-                            pnts = np.array(~points)
-                            rng = range(0, len(pnts), 3)
-                            pro = Line([Point(pnts[i], pnts[i+1], pnts[i+2])
-                                        for i in rng])
-                            profiles.append(pro)
-                    section_profiles = [profiles]
-            all_profiles[section['id']] = section_profiles
-    return all_profiles

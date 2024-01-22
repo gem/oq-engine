@@ -416,16 +416,16 @@ class Disaggregator(object):
         self.mon3 = mon3
         if not hasattr(self, 'ctx_by_magi'):
             # the first time build the magnitude bins
-            if self.src_mutex:  # replace src_id with segment_id
-                self.fullctx.src_id = self.src_mutex['src_id']
             self.ctx_by_magi = split_by_magbin(self.fullctx, self.bin_edges[0])
         try:
             self.ctx = self.ctx_by_magi[magi]
         except KeyError:
             raise FarAwayRupture
         if self.src_mutex:
-            # make sure we can use idx_start_stop below
+            # make sure we can use idx_start_stop below, by ordering by src_id
+            # the src_id is set in contexts.py to be equal to the fragmentno
             # NB: using ctx.sort(order='src_id') would cause a ValueError
+            # NB: argsort can be problematic on AVX-512 processors!
             self.ctx = self.ctx[numpy.argsort(self.ctx.src_id)]
         self.dist_idx[magi] = numpy.digitize(
             self.ctx.rrup, self.bin_edges[1]) - 1
@@ -695,10 +695,20 @@ def collect_std(disaggs):
                     else:
                         out[magi, dsti][g] = val.copy()
                     cnt[magi, dsti] += 1 / G
-    res = numpy.zeros((dis.Ma, dis.D, M, G))
+    sig = numpy.zeros((dis.Ma, dis.D, M, G))
     for (magi, dsti), v in out.items():
-        res[magi, dsti] = v.T / cnt[magi, dsti]
-    return res
+        sig[magi, dsti] = v.T / cnt[magi, dsti]
+
+    # the sigmas are artificially zero for not covered (magi, disti) bins
+    # in that case we copy the value of the first covered bin
+    # NB: this is tested in test_rtgm
+    for m in range(M):
+        for g in range(G):
+            zeros = sig[:, :, m, g] == 0
+            if zeros.any():
+                magi, dsti = numpy.where(~zeros)
+                sig[zeros, m, g] = sig[magi[0], dsti[0], m, g]
+    return sig
 
 
 def get_ints(src_ids):

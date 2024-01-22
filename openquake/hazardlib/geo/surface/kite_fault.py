@@ -770,7 +770,7 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     # Fix the orientation of the mesh
     msh = _fix_right_hand(msh)
 
-    # This is for debugging
+    # INFO: this is just for debugging
     # _dbg_plot_mesh(msh)
 
     return msh
@@ -925,6 +925,7 @@ def _fix_profiles(profiles, profile_sd, align, idl):
     lengths = np.array([prf.get_length() for prf in rprofiles])
     if np.max(lengths) - np.min(lengths) > profile_sd * 0.1:
         ref_idx = np.argmax(lengths)
+
 
     # Check that in each profile the points are equally spaced
     for pro in rprofiles:
@@ -1088,7 +1089,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
     # Build profiles
     npr = _build_profiles(new_edges)
 
-    # This is for debugging purposes
+    # INFO: this is just for debugging purposes
     # monotonic, i_prof = _profiles_depth_is_monotonically_increasing(npr)
 
     # Check the sampled edges
@@ -1096,7 +1097,7 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
         edg = np.array(new_edges[key])
         _check_sampling(edg, proj)
 
-    # This is used only for debugging purposes
+    # INFO: this is used only for debugging purposes
     # ax = _dbg_plot(new_edges, profs, npr, ref_idx)
 
     return npr

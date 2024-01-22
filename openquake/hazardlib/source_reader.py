@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import os.path
 import pickle
 import operator
@@ -28,7 +27,7 @@ import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile
-from openquake.hazardlib.valid import basename
+from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
@@ -75,16 +74,6 @@ def gzpik(obj):
     """
     gz = gzip.compress(pickle.dumps(obj, pickle.HIGHEST_PROTOCOL))
     return numpy.frombuffer(gz, numpy.uint8)
-
-
-def fragmentno(src):
-    "Postfix after :.; as an integer"
-    # in disagg/case-12 one has source IDs like 'SL_kerton:665!b16'
-    fragments = re.split('[:.;]', src.source_id)
-    if len(fragments) == 1:  # no fragment number, like in AELO for NZL
-        return -1
-    fragment = fragments[1].split('!')[0]  # strip !b16
-    return int(fragment)
 
 
 def mutex_by_grp(src_groups):
@@ -220,7 +209,13 @@ def get_csm(oq, full_lt, dstore=None):
         srcids = []
         for sg in sm.src_groups:
             srcids.extend(src.source_id for src in sg)
+            if sg.src_interdep == 'mutex':
+                # mutex sources in the same group must have all the same
+                # basename, i.e. the colon convention must be used
+                basenames = set(map(basename, sg))
+                assert len(basenames) == 1, basenames
         check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
+
     found = find_false_duplicates(smdict)
     if found:
         logging.warning('Found different sources with same ID %s',
@@ -235,7 +230,14 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Applied {:_d} changes to the composite source model'.
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
-    csm = _get_csm(full_lt, groups, is_event_based)
+    if oq.sites and len(oq.sites) == 1:
+        # disable wkt in single-site calculations
+        set_wkt = False
+    else:
+        set_wkt = True
+        logging.info('Setting src._wkt')
+
+    csm = _get_csm(full_lt, groups, is_event_based, set_wkt)
     for sg in csm.src_groups:
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
             dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
@@ -427,7 +429,7 @@ def reduce_sources(sources_with_same_id, full_lt):
     return out
 
 
-def _get_csm(full_lt, groups, event_based):
+def _get_csm(full_lt, groups, event_based, set_wkt):
     # 1. extract a single source from multiple sources with the same ID
     # 2. regroup the sources in non-atomic groups by TRT
     # 3. reorder the sources by source_id
@@ -448,20 +450,23 @@ def _get_csm(full_lt, groups, event_based):
                 srcs = reduce_sources(srcs, full_lt)
             lst.extend(srcs)
         for sources in general.groupby(lst, trt_smrs).values():
-            # set ._wkt attribute (for later storage in the source_wkt dataset)
-            for src in sources:
-                # check on MultiFaultSources and NonParametricSources
-                mesh_size = getattr(src, 'mesh_size', 0)
-                if mesh_size > 1E6:
-                    msg = ('src "{}" has {:_d} underlying meshes with a total '
-                           'of {:_d} points!').format(
-                               src.source_id, src.count_ruptures(), mesh_size)
-                    logging.warning(msg)
-                src._wkt = src.wkt()
+            if set_wkt:
+                # set ._wkt attribute (for later storage in the source_wkt
+                # dataset); this is slow
+                msg = ('src "{}" has {:_d} underlying meshes with a total '
+                       'of {:_d} points!')
+                for src in sources:
+                    # check on MultiFaultSources and NonParametricSources
+                    mesh_size = getattr(src, 'mesh_size', 0)
+                    if mesh_size > 1E6:
+                        logging.warning(msg.format(
+                            src.source_id, src.count_ruptures(), mesh_size))
+                    src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
-    for ag in atomic:
-        for src in ag:
-            src._wkt = src.wkt()
+    if set_wkt:
+        for ag in atomic:
+            for src in ag:
+                src._wkt = src.wkt()
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
     for sg in src_groups:

@@ -833,43 +833,43 @@ def _check_csm(csm, oqparam, h5):
     srcs = csm.get_sources()
     check_min_mag(srcs, oqparam.minimum_magnitude)
 
-    if os.environ.get('OQ_CHECK_INPUT'):
-        source.check_complex_faults(srcs)
-
-    # build a smart SourceFilter
     if h5 and 'sitecol' in h5:
         csm.sitecol = h5['sitecol']
     else:
         csm.sitecol = get_site_collection(oqparam, h5)
     if csm.sitecol is None:  # missing sites.csv (test_case_1_ruptures)
         return
-    srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
-    logging.info('Checking sources bounding box using %s', csm.sitecol)
-    lons = []
-    lats = []
-    for src in srcs:
-        if hasattr(src, 'location'):
-            lons.append(src.location.x)
-            lats.append(src.location.y)
-            continue
-        try:
-            box = srcfilter.get_enlarged_box(src)
-        except BBoxError as exc:
-            logging.error(exc)
-            continue
-        lons.append(box[0])
-        lats.append(box[1])
-        lons.append(box[2])
-        lats.append(box[3])
-    if cross_idl(*(list(csm.sitecol.lons) + lons)):
-        lons = numpy.array(lons) % 360
-    else:
-        lons = numpy.array(lons)
-    bbox = (lons.min(), min(lats), lons.max(), max(lats))
-    if bbox[2] - bbox[0] > 180:
-        raise BBoxError(
-            'The bounding box of the sources is larger than half '
-            'the globe: %d degrees' % (bbox[2] - bbox[0]))
+
+    if os.environ.get('OQ_CHECK_INPUT'):
+        # slow checks
+        source.check_complex_faults(srcs)
+        srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
+        logging.info('Checking sources bounding box using %s', csm.sitecol)
+        lons = []
+        lats = []
+        for src in srcs:
+            if hasattr(src, 'location'):
+                lons.append(src.location.x)
+                lats.append(src.location.y)
+                continue
+            try:
+                box = srcfilter.get_enlarged_box(src)
+            except BBoxError as exc:
+                logging.error(exc)
+                continue
+            lons.append(box[0])
+            lats.append(box[1])
+            lons.append(box[2])
+            lats.append(box[3])
+        if cross_idl(*(list(csm.sitecol.lons) + lons)):
+            lons = numpy.array(lons) % 360
+        else:
+            lons = numpy.array(lons)
+        bbox = (lons.min(), min(lats), lons.max(), max(lats))
+        if bbox[2] - bbox[0] > 180:
+            raise BBoxError(
+                'The bounding box of the sources is larger than half '
+                'the globe: %d degrees' % (bbox[2] - bbox[0]))
 
 
 # tested in test_mosaic

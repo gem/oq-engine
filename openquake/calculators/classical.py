@@ -278,8 +278,6 @@ class Hazard:
         """
         Store pnes inside the _rates dataset
         """
-        if self.N == 1:  # single site, store mean_rates_ss
-            mean_rates_ss = numpy.zeros((self.M, self.L1))
         # store by IMT to save memory
         for m, imt in enumerate(self.imtls):
             slc = self.imtls(imt)
@@ -299,11 +297,7 @@ class Hazard:
             sbs = build_slice_by_sid(sids, self.offset)
             hdf5.extend(self.datastore['_rates/slice_by_sid'], sbs)
             self.offset += len(sids)
-            if self.N == 1:  # single site, store mean_rates_ss
-                mean_rates_ss[m] += rates[0] @ self.weig
 
-        if self.N == 1:  # single site
-            self.datastore['mean_rates_ss'] = mean_rates_ss
         self.acc['nsites'] = self.offset
         return self.offset * 16  # 4 + 2 + 2 + 8 bytes
 
@@ -542,10 +536,10 @@ class ClassicalCalculator(base.HazardCalculator):
 
     def check_mean_rates(self, mean_rates_by_src):
         """
-        The sum of the mean_rates_by_src must correspond to the mean_rates_ss
+        The sum of the mean_rates_by_src must correspond to the mean_rates
         """
         try:
-            exp = self.datastore['mean_rates_ss'][:]
+            exp = disagg.to_rates(self.datastore['hcurves-stats'][0, 0])
         except KeyError:  # if there are no ruptures close to the site
             return
         got = mean_rates_by_src[0].sum(axis=2)  # sum over the sources
