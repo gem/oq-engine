@@ -189,7 +189,8 @@ def main(dstore, csm, imts, imls, site_idx=0):
         df = mag_dist_eps[mag_dist_eps.imt == imt]
         out.append(df[numpy.isin(df.src, src_ids)])
     mag_dist_eps_df = pandas.concat(out)
-    logging.info('mag_dist_eps=\n%s', mag_dist_eps_df)
+    logging.info('mag_dist_eps(%.1f,%.1f)=\n%s',
+                 site.location.x, site.location.y, mag_dist_eps_df)
     return mag_dist_eps_df.to_numpy(), sigma_by_src
 
 
