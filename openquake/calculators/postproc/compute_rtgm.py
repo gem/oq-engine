@@ -402,7 +402,8 @@ def _calc_asce(dstore, site_idx):
         logging.warning(warning)
         asce07 = get_low_hazard_asce07()
         asce41 = get_low_hazard_asce41()
-        return dict(asce07=asce07, asce41=asce41, rtgm_df=None, warning=warning)
+        return dict(asce07=asce07, asce41=asce41, rtgm_df=None,
+                    warning=warning, sid=site_id)
 
     mean_rates = to_rates(dstore['hcurves-stats'][site_idx, 0])
     if mean_rates.max() < MIN_AFE:
@@ -411,7 +412,8 @@ def _calc_asce(dstore, site_idx):
         logging.warning(warning)
         asce07 = get_low_hazard_asce07()
         asce41 = get_low_hazard_asce41()
-        return dict(asce07=asce07, asce41=asce41, rtgm_df=None, warning=warning)
+        return dict(asce07=asce07, asce41=asce41, rtgm_df=None,
+                    warning=warning, sid=site_idx)
 
     logging.info('Computing Risk Targeted Ground Motion for site #%d', site_idx)
     oq = dstore['oqparam']
@@ -432,7 +434,7 @@ def _calc_asce(dstore, site_idx):
             prob_mce, dummy_det, DLLs, rtgm_df, low_haz=True)
         asce41 = get_asce41(dstore, mce, facts)
         return dict(asce07=asce07, asce41=asce41, rtgm_df=rtgm_df,
-                    warning='Low hazard')
+                    warning='Low hazard', sid=site_idx)
 
     mag_dist_eps, mean_disagg_by_src, sigma_by_src = (
         postproc.disagg_by_rel_sources.main(
@@ -447,7 +449,8 @@ def _calc_asce(dstore, site_idx):
     asce41 = get_asce41(dstore, mce, facts)
     logging.info('ASCE 7-16 for site #%d=%s', site_idx, asce07)
     logging.info('ASCE 41-17 for site #%d=%s', site_idx, asce41)
-    return dict(asce07=asce07, asce41=asce41, rtgm_df=rtgm_df, warning='')
+    return dict(asce07=asce07, asce41=asce41, rtgm_df=rtgm_df,
+                warning='', sid=site_idx)
 
 
 def main(dstore, csm):
@@ -459,23 +462,23 @@ def main(dstore, csm):
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
     N = len(dstore['sitecol'])
-    asce07 = []
-    asce41 = []
-    warnings = []
-    rtgm_dfs = []
+    asce07 = [''] * N
+    asce41 = [''] * N
+    warnings = [''] * N
+    rtgm_dfs = [None] * N
     allargs = [(dstore, sid) for sid in range(N)]
     dstore.swmr_on()
     # (calc_asce(*args) for args in allargs):
     for dic in parallel.Starmap(calc_asce, allargs, h5=dstore.hdf5):
-        asce07.append(hdf5.dumps(dic['asce07']))
-        asce41.append(hdf5.dumps(dic['asce41']))
-        warnings.append(dic['warning'])
-        if dic['rtgm_df'] is not None:
-            rtgm_dfs.append(dic['rtgm_df'])
+        sid = dic['sid']
+        asce07[sid] = hdf5.dumps(dic['asce07'])
+        asce41[sid] = hdf5.dumps(dic['asce41'])
+        warnings[sid] = dic['warning']
+        rtgm_dfs[sid] = dic['rtgm_df']
     dstore['asce07'] = np.array(asce07)
     dstore['asce41'] = np.array(asce41)
     dstore['warnings'] = np.array(warnings)
-    if not rtgm_dfs:
+    if all(df is None for df in rtgm_dfs):
         return
 
     dstore.create_df('rtgm', pd.concat(rtgm_dfs))
