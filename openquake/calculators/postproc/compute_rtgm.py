@@ -48,7 +48,7 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, parallel
 from openquake.hazardlib.imt import from_string
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.calculators import postproc
@@ -385,28 +385,27 @@ def get_asce41(dstore, mce, facts):
 
 def calc_asce(dstore, csm, site_idx):
     """
-    :returns: (asce07, asce41, rtgm_df, warning)
+    :returns: dictionary with keys (asce07, asce41, rtgm_df, warning)
     """
+    dstore.open('r')
     mrs = dstore['mean_rates_by_src'][site_idx]
     if mrs.sum() == 0:
-        warning = (
-            'The seismic hazard at the site is 0: there are no ruptures'
-            ' close to the site. ASCE 7-16 and ASCE 41-17 parameters'
-            ' cannot be computed.')
+        warning = ('The seismic hazard at the site is 0: there are no ruptures'
+                   ' close to the site. ASCE 7-16 and ASCE 41-17 parameters'
+                   ' cannot be computed.')
         logging.warning(warning)
         asce07 = get_low_hazard_asce07()
         asce41 = get_low_hazard_asce41()
-        return asce07, asce41, None, warning
+        return dict(asce07=asce07, asce41=asce41, rtgm_df=None, warning=warning)
 
     mean_rates = to_rates(dstore['hcurves-stats'][site_idx, 0])
     if mean_rates.max() < MIN_AFE:
-        warning = (
-            'The seismic hazard at the site is very low. ASCE 7-16 and'
-            ' ASCE 41-17 parameters cannot be computed.')
+        warning = ('The seismic hazard at the site is very low. ASCE 7-16 and'
+                   ' ASCE 41-17 parameters cannot be computed.')
         logging.warning(warning)
         asce07 = get_low_hazard_asce07()
         asce41 = get_low_hazard_asce41()
-        return asce07, asce41, None, warning
+        return dict(asce07=asce07, asce41=asce41, rtgm_df=None, warning=warning)
 
     logging.info('Computing Risk Targeted Ground Motion for site #%d', site_idx)
     oq = dstore['oqparam']
@@ -426,7 +425,8 @@ def calc_asce(dstore, csm, site_idx):
         prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
             prob_mce, dummy_det, DLLs, rtgm_df, low_haz=True)
         asce41 = get_asce41(dstore, mce, facts)
-        return asce07, asce41, rtgm_df, 'Low hazard'
+        return dict(asce07=asce07, asce41=asce41, rtgm_df=rtgm_df,
+                    warning='Low hazard')
 
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
         dstore, csm, IMTS, imls_disagg, site_idx)
@@ -440,7 +440,7 @@ def calc_asce(dstore, csm, site_idx):
     asce41 = get_asce41(dstore, mce, facts)
     logging.info('ASCE 7-16 for site #%d=%s', site_idx, asce07)
     logging.info('ASCE 41-17 for site #%d=%s', site_idx, asce41)
-    return asce07, asce41, rtgm_df, ''
+    return dict(asce07=asce07, asce41=asce41, rtgm_df=rtgm_df, warning='')
 
 
 def main(dstore, csm):
@@ -456,24 +456,27 @@ def main(dstore, csm):
     asce41 = []
     warnings = []
     rtgm_dfs = []
-    for site_idx in range(N):
-        a07, a41, rtgm, w = calc_asce(dstore, csm, site_idx)
-        asce07.append(hdf5.dumps(a07))
-        asce41.append(hdf5.dumps(a41))
-        warnings.append(w)
-        if rtgm is not None:
-            rtgm_dfs.append(rtgm)
+    allargs = [(dstore, csm, sid) for sid in range(N)]
+    for dic in parallel.Starmap(calc_asce, allargs):
+        asce07.append(hdf5.dumps(dic['asce07']))
+        asce41.append(hdf5.dumps(dic['asce41']))
+        warnings.append(dic['warning'])
+        if dic['rtgm_df'] is not None:
+            rtgm_dfs.append(dic['rtgm_df'])
     dstore['asce07'] = np.array(asce07)
     dstore['asce41'] = np.array(asce41)
     dstore['warnings'] = np.array(warnings)
-    dstore.create_df('rtgm', pd.concat(rtgm_dfs))
+    if not rtgm_dfs:
+        return
 
+    dstore.create_df('rtgm', pd.concat(rtgm_dfs))
     if N == 1:
         if Image is None:  # missing PIL
             logging.warning('Missing module PIL: skipping plotting curves')
             return
-        plot_mean_hcurves_rtgm(dstore, site_idx, update_dstore=True)
-        if warnings[site_idx] != 'Low hazard':
-            plot_disagg_by_src(dstore, site_idx, update_dstore=True)
-        plt = plot_governing_mce(dstore, site_idx, update_dstore=True)
+        sid = 0
+        plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+        if warnings[sid] != 'Low hazard':
+            plot_disagg_by_src(dstore, sid, update_dstore=True)
+        plt = plot_governing_mce(dstore, sid, update_dstore=True)
         plt.close()
