@@ -644,24 +644,25 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         return out
 
 
-def init_session(model, providers=onnxruntime.get_available_providers()):
-    inference_session = onnxruntime.InferenceSession(model, providers=providers)
-    return inference_session
-
-class PickableInferenceSession:
+class PicklableInferenceSession:
     def __init__(self, model):
         self.model = model
-        self.inference_session = init_session(self.model)
+        self.inference_session = onnxruntime.InferenceSession(
+            self.model, providers=onnxruntime.get_available_providers()
+        )
 
     def run(self, *args):
         return self.inference_session.run(*args)
 
     def __getstate__(self):
-        return {'model': self.model}
+        return {"model": self.model}
 
     def __setstate__(self, values):
-        self.model = values['model']
-        self.inference_session = init_session(self.model)   
+        self.model = values["model"]
+        self.inference_session = onnxruntime.InferenceSession(
+            self.model, providers=onnxruntime.get_available_providers()
+        )
+
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):
     """
@@ -682,6 +683,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         model_path = path.join(path.dirname(__file__), model_file)
         with gzip.open(model_path, "rb") as f:
             self.model = f.read()
+        self.inference_session = PicklableInferenceSession(self.model)
 
     def compute(self, mag, imt_gmf, sites):
         out = []
