@@ -185,7 +185,7 @@ site_param_dt = {
     'ch_phis2s06': numpy.float64,
     'ch_phiss03': numpy.float64,
     'ch_phiss06': numpy.float64,
-    'fpeak': numpy.float64,
+    'f0': numpy.float64,
     # Fundamental period and and amplitude of HVRSR spectra
     'THV': numpy.float64,
     'PHV': numpy.float64,
