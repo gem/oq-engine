@@ -683,6 +683,7 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         model_path = path.join(path.dirname(__file__), model_file)
         with gzip.open(model_path, 'rb') as f:
             self.model = f.read()
+        self.inference_session = PickableInferenceSession(self.model)
 
     def compute(self, mag, imt_gmf, sites):
         out = []
