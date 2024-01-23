@@ -230,3 +230,22 @@ tr.asce_output {
     font-weight: normal;
     float: left;
 }
+
+.announcements-box {
+    padding: 10px 20px 20px;
+    background-color: #ff9800;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.announcement {
+    margin: 0.5rem 0;
+}
+
+.announcement h2 {
+    margin: 0!important;
+    padding: 0;
+    color: #fff;
+    text-decoration: underline;
+}
