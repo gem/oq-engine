@@ -98,13 +98,7 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
-    """
-    Disaggregate by relevant sources.
-
-    :returns: mean_disagg_by_src and sigma_by_src
-    """
-    edges, shp = disagg.get_edges_shapedic(oq, sitecol)
+def submit_sources(csm, rel_ids, edges, shp, imts, imls, oq, sitecol, dstore):
     imldic = dict(zip(imts, imls))
     src2idx = {}
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
@@ -121,8 +115,13 @@ def disagg_sources(csm, rel_ids, imts, imls, oq, sitecol, dstore):
         groups = relt.reduce_groups(csm.src_groups)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, sitecol, relt, (edges, shp), oq, imldic))
+    return smap, src2idx, weights
+
+
+def collect_results(smap, src2idx, weights, edges, shp, rel_ids,
+                    imts, imls, dstore):
     mags, dists, lons, lats, eps, trts = edges
-    Ns, M1 = len(rel_ids), len(imldic)
+    Ns, M1 = len(rel_ids), len(imts)
     rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
     std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
     rates2D = 0.  # (Ns, M1)
@@ -179,8 +178,12 @@ def main(dstore, csm, imts, imls, site_idx=0):
         logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
 
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
-    mean_disagg_by_src, sigma_by_src = disagg_sources(
-        csm, rel_ids, imts, imls, oq, sitecol, dstore)
+    edges, shp = disagg.get_edges_shapedic(oq, sitecol)
+    smap, src2idx, weights = submit_sources(
+        csm, rel_ids, edges, shp, imts, imls, oq, sitecol, dstore)
+    mean_disagg_by_src, sigma_by_src = collect_results(
+        smap, src2idx, weights, edges, shp, rel_ids,
+        imts, imls, dstore)
     src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])
