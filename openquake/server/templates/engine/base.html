@@ -79,10 +79,12 @@
   {% if announcements %}
   <div class="announcements-box">
     {% for announcement in announcements %}
+      {% if announcement.show %}
       <div class="announcement">
         <h2>{{ announcement.title }}</h2>
           {{ announcement.content }}
       </div>
+      {% endif %}
     {% endfor %}
   </div>
   {% endif %}
