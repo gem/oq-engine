@@ -383,15 +383,17 @@ def get_asce41(dstore, mce, facts):
     return asce41
 
 
-def calc_asce(dstore, csm, site_idx):
+def calc_asce(dstore, site_idx):
     with dstore:
-        return _calc_asce(dstore, csm, site_idx)
+        return _calc_asce(dstore, site_idx)
 
 
-def _calc_asce(dstore, csm, site_idx):
+def _calc_asce(dstore, site_idx):
     """
     :returns: dictionary with keys (asce07, asce41, rtgm_df, warning)
     """
+    csm = dstore['_csm']
+    csm.init(dstore['full_lt'])
     mrs = dstore['mean_rates_by_src'][site_idx]
     if mrs.sum() == 0:
         warning = ('The seismic hazard at the site is 0: there are no ruptures'
@@ -461,7 +463,7 @@ def main(dstore, csm):
     asce41 = []
     warnings = []
     rtgm_dfs = []
-    allargs = [(dstore, csm, sid) for sid in range(N)]
+    allargs = [(dstore, sid) for sid in range(N)]
     dstore.swmr_on()
     # (calc_asce(*args) for args in allargs):
     for dic in parallel.Starmap(calc_asce, allargs, h5=dstore.hdf5):
