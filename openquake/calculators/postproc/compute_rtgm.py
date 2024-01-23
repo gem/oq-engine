@@ -480,8 +480,9 @@ def main(dstore, csm):
     dstore['warnings'] = np.array(warnings)
     if all(df is None for df in rtgm_dfs):
         return
+    else:
+        dstore.create_df('rtgm', pd.concat(rtgm_dfs))
 
-    dstore.create_df('rtgm', pd.concat(rtgm_dfs))
     if N == 1:
         if Image is None:  # missing PIL
             logging.warning('Missing module PIL: skipping plotting curves')
