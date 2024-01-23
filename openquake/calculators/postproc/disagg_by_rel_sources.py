@@ -98,7 +98,13 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def submit_sources(csm, rel_ids, edges, shp, imts, imls, oq, sitecol, dstore):
+def submit_sources(csm, edges, shp, imts, imls, oq, site, dstore):
+    rel_ids_by_imt = get_rel_source_ids(
+        dstore, imts, imls, site.id, threshold=.1)
+    for imt, ids in rel_ids_by_imt.items():
+        rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
+        logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
+    rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     imldic = dict(zip(imts, imls))
     src2idx = {}
     smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
@@ -114,8 +120,8 @@ def submit_sources(csm, rel_ids, edges, shp, imts, imls, oq, sitecol, dstore):
         logging.info('Considering source %s (%d realizations)', source_id, Z)
         groups = relt.reduce_groups(csm.src_groups)
         assert groups, 'No groups for %s' % source_id
-        smap.submit((groups, sitecol, relt, (edges, shp), oq, imldic))
-    return smap, src2idx, weights
+        smap.submit((groups, site, relt, (edges, shp), oq, imldic))
+    return smap, rel_ids, rel_ids_by_imt, src2idx, weights
 
 
 def collect_results(smap, src2idx, weights, edges, shp, rel_ids,
@@ -168,19 +174,11 @@ def main(dstore, csm, imts, imls, site_idx=0):
     oq.mags_by_trt = {
                 trt: python3compat.decode(dset[:])
                 for trt, dset in parent['source_mags'].items()}
-    site = list(parent['sitecol'])[site_idx]
-    sitecol = SiteCollection([site])
-    sitecol.sids[:] = 0
-    rel_ids_by_imt = get_rel_source_ids(
-        dstore, imts, imls, site_idx, threshold=.1)
-    for imt, ids in rel_ids_by_imt.items():
-        rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
-        logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
-
-    rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
+    sitecol = parent['sitecol']
+    site = list(sitecol)[site_idx]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    smap, src2idx, weights = submit_sources(
-        csm, rel_ids, edges, shp, imts, imls, oq, sitecol, dstore)
+    smap, rel_ids, rel_ids_by_imt, src2idx, weights = submit_sources(
+        csm, edges, shp, imts, imls, oq, site, dstore)
     mean_disagg_by_src, sigma_by_src = collect_results(
         smap, src2idx, weights, edges, shp, rel_ids,
         imts, imls, dstore)
