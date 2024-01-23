@@ -146,7 +146,7 @@ def collect_results(smap, src2idx, weights, edges, shp, rel_ids, imts, imls):
 
 
 # tested in LogicTreeTestCase::test_case_05, case_07, case_12
-def main(dstore, csm, imts, imls, site_idx=0):
+def main(dstore, csm, imts, imls_by_sid):
     """
     Compute and store the mean disaggregation by Mag_Dist_Eps for
     each relevant source in the source model. Assume there is a single site.
@@ -154,7 +154,7 @@ def main(dstore, csm, imts, imls, site_idx=0):
     :param dstore: a DataStore instance
     :param csm: a CompositeSourceModel instance
     :param imts: a list of IMTs (subset of the IMTs in the job.ini)
-    :param imls: a list of IMLs (Risk Targeted Ground Motion in AELO)
+    :param imls_by_sid: a dictionary site ID -> IMLs
     """
     oq = dstore['oqparam']
     for imt in imts:
@@ -163,10 +163,10 @@ def main(dstore, csm, imts, imls, site_idx=0):
                               (oq.inputs['job_ini'], imt))
 
     parent = dstore.parent or dstore
-    oq.mags_by_trt = {
-                trt: python3compat.decode(dset[:])
-                for trt, dset in parent['source_mags'].items()}
+    oq.mags_by_trt = {trt: python3compat.decode(dset[:])
+                      for trt, dset in parent['source_mags'].items()}
     sitecol = parent['sitecol']
+    [(site_idx, imls)] = imls_by_sid.items()
     site = list(sitecol)[site_idx]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
     rel_ids_by_imt = get_rel_source_ids(

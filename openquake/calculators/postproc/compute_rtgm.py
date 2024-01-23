@@ -437,10 +437,10 @@ def calc_asce(dstore, csm, rtgm_df, facts, sid):
     """
     :returns: (asce07, asce41, rtgm_df, warning)
     """
-    imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
+    imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / facts}
     prob_mce = rtgm_df.ProbMCE.to_numpy()
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-        dstore, csm, IMTS, imls_disagg, sid)
+        dstore, csm, IMTS, imls_by_sid)
     det_imt, mag_dst_eps_sig = get_deterministic(
         prob_mce, mag_dist_eps, sigma_by_src)
     logging.info(f'{det_imt=}')
