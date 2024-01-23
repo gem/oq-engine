@@ -50,17 +50,17 @@ def test_PAC():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
 
-    # first site, first level of PGA
+    # site (160, -9.5), first level of PGA
     r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
     if rtgmpy:
         a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
         aac([r0, r1, a7['PGA']], [0.0327251, 0.04031283, 0.83427], atol=1E-6)
 
-    # second site, first level of PGA
+    # site (160, -9.4), first level of PGA
     r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
     if rtgmpy:
         a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
-        aac([r0, r1, a7['PGA']], [0.03272051, 0.04030216, 0.81311], atol=1E-6)
+        aac([r0, r1, a7['PGA']], [0.03272051, 0.04030216, 0.79588], atol=1E-6)
 
 
 def test_KOR():

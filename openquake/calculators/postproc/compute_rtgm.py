@@ -108,7 +108,7 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
     """
     Obtaining Risk-Targeted Ground Motions from the hazard curves.
 
-    :param hcurves: array of hazard curves of shape (1, M, L1)
+    :param hcurves: array of hazard curves of shape (M, L1)
     :param site: a Site object
     :param oq: OqParam instance
 
@@ -122,7 +122,7 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
     imtls = oq.imtls
     imts, facts = [], []
     for m, imt in enumerate(IMTS):
-        afe = to_rates(hcurves[0, m], oq.investigation_time, minrate=1E-12)
+        afe = to_rates(hcurves[m], oq.investigation_time, minrate=1E-12)
 
         IMT = norm_imt(imt)
         imts.append(IMT)
@@ -412,10 +412,11 @@ def calc_asce(dstore, csm, site_idx):
     oq = dstore['oqparam']
     stats = list(oq.hazard_stats())
     assert stats[0] == 'mean', stats[0]
-    hcurves = dstore['hcurves-stats'][:, 0]  # shape NML1
+    hcurves = dstore['hcurves-stats'][site_idx, 0]  # shape ML1
     site = list(dstore['sitecol'])[site_idx]
+    loc = site.location
     rtgm_df, facts = calc_rtgm_df(hcurves, site, site_idx, oq)
-    logging.info('Computed RTGM\n%s', rtgm_df)
+    logging.info('Computed RTGM(%.1f,%.1f)\n%s', loc.x, loc.y, rtgm_df)
     facts[0] = 1  # for PGA the Prob MCE is already geometric mean
     imls_disagg = rtgm_df.ProbMCE.to_numpy() / facts
     prob_mce = rtgm_df.ProbMCE.to_numpy()
