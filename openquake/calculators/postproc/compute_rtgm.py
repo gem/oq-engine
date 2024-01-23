@@ -457,6 +457,7 @@ def main(dstore, csm):
     warnings = []
     rtgm_dfs = []
     allargs = [(dstore, csm, sid) for sid in range(N)]
+    # (calc_asce(*args) for args in allargs):
     for dic in parallel.Starmap(calc_asce, allargs):
         asce07.append(hdf5.dumps(dic['asce07']))
         asce41.append(hdf5.dumps(dic['asce41']))
