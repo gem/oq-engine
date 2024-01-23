@@ -384,10 +384,14 @@ def get_asce41(dstore, mce, facts):
 
 
 def calc_asce(dstore, csm, site_idx):
+    with dstore:
+        return _calc_asce(dstore, csm, site_idx)
+
+
+def _calc_asce(dstore, csm, site_idx):
     """
     :returns: dictionary with keys (asce07, asce41, rtgm_df, warning)
     """
-    dstore.open('r')
     mrs = dstore['mean_rates_by_src'][site_idx]
     if mrs.sum() == 0:
         warning = ('The seismic hazard at the site is 0: there are no ruptures'
@@ -428,8 +432,9 @@ def calc_asce(dstore, csm, site_idx):
         return dict(asce07=asce07, asce41=asce41, rtgm_df=rtgm_df,
                     warning='Low hazard')
 
-    mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-        dstore, csm, IMTS, imls_disagg, site_idx)
+    mag_dist_eps, mean_disagg_by_src, sigma_by_src = (
+        postproc.disagg_by_rel_sources.main(
+            dstore, csm, IMTS, imls_disagg, site_idx))
     det_imt, mag_dst_eps_sig = get_deterministic(
         prob_mce, mag_dist_eps, sigma_by_src)
     logging.info(f'{det_imt=}')
@@ -457,8 +462,9 @@ def main(dstore, csm):
     warnings = []
     rtgm_dfs = []
     allargs = [(dstore, csm, sid) for sid in range(N)]
+    dstore.swmr_on()
     # (calc_asce(*args) for args in allargs):
-    for dic in parallel.Starmap(calc_asce, allargs):
+    for dic in parallel.Starmap(calc_asce, allargs, h5=dstore.hdf5):
         asce07.append(hdf5.dumps(dic['asce07']))
         asce41.append(hdf5.dumps(dic['asce41']))
         warnings.append(dic['warning'])
