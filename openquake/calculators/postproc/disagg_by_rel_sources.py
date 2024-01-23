@@ -22,7 +22,6 @@ import pandas
 from openquake.baselib import sap, hdf5, python3compat, parallel, general
 from openquake.hazardlib import InvalidFile
 from openquake.hazardlib.valid import basename
-from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib.logictree import FullLogicTree
 from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
@@ -98,16 +97,14 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def submit_sources(csm, edges, shp, imts, imls, oq, site, dstore):
-    rel_ids_by_imt = get_rel_source_ids(
-        dstore, imts, imls, site.id, threshold=.1)
+def submit_sources(csm, edges, shp, imts, imls, oq, site, rel_ids_by_imt):
     for imt, ids in rel_ids_by_imt.items():
         rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
         logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     imldic = dict(zip(imts, imls))
     src2idx = {}
-    smap = parallel.Starmap(disagg.disagg_source, h5=dstore.hdf5)
+    smap = parallel.Starmap(disagg.disagg_source)
     weights = {}  # src_id -> weights
     for idx, source_id in enumerate(rel_ids):
         src2idx[source_id] = idx
@@ -124,8 +121,7 @@ def submit_sources(csm, edges, shp, imts, imls, oq, site, dstore):
     return smap, rel_ids, rel_ids_by_imt, src2idx, weights
 
 
-def collect_results(smap, src2idx, weights, edges, shp, rel_ids,
-                    imts, imls, dstore):
+def collect_results(smap, src2idx, weights, edges, shp, rel_ids, imts, imls):
     mags, dists, lons, lats, eps, trts = edges
     Ns, M1 = len(rel_ids), len(imts)
     rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
@@ -146,10 +142,6 @@ def collect_results(smap, src2idx, weights, edges, shp, rel_ids,
         shape_descr=['source_id', 'mag', 'dist', 'imt'],
         source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
     sigma_by_src = hdf5.ArrayWrapper(std, dic2)
-    dstore.close()
-    dstore.open('r+')
-    dstore['mean_disagg_by_src'] = mean_disagg_by_src
-    dstore['sigma_by_src'] = sigma_by_src
     return mean_disagg_by_src, sigma_by_src
 
 
@@ -177,11 +169,16 @@ def main(dstore, csm, imts, imls, site_idx=0):
     sitecol = parent['sitecol']
     site = list(sitecol)[site_idx]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
+    rel_ids_by_imt = get_rel_source_ids(
+        dstore, imts, imls, site.id, threshold=.1)
     smap, rel_ids, rel_ids_by_imt, src2idx, weights = submit_sources(
-        csm, edges, shp, imts, imls, oq, site, dstore)
+        csm, edges, shp, imts, imls, oq, site, rel_ids_by_imt)
     mean_disagg_by_src, sigma_by_src = collect_results(
-        smap, src2idx, weights, edges, shp, rel_ids,
-        imts, imls, dstore)
+        smap, src2idx, weights, edges, shp, rel_ids, imts, imls)
+    dstore.close()
+    dstore.open('r+')
+    dstore['mean_disagg_by_src'] = mean_disagg_by_src
+    dstore['sigma_by_src'] = sigma_by_src
     src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])
