@@ -423,7 +423,7 @@ def process_sites(dstore, csm):
 
 def calc_asce(dstore, csm, rtgm_df, sid):
     """
-    :returns: (asce07, asce41, rtgm_df, warning)
+    :returns: (asce07, asce41)
     """
     imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.facts}
     prob_mce = rtgm_df.ProbMCE.to_numpy()
