@@ -49,25 +49,30 @@ def test_PAC():
     with logs.init(job_ini) as log:
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
+
+    # site (160, -9.5), first level of PGA
     r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
-    aac(r0, 0.03272253, atol=1E-6)  # first level of PGA
-    aac(r1, 0.04030454, atol=1E-6)  # first level of PGA
     if rtgmpy:
-        s = calc.datastore['asce07'][()].decode('ascii')
-        asce07 = json.loads(s)
-        aac(asce07['PGA'], 0.83414, atol=5E-5)
+        a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
+        aac([r0, r1, a7['PGA']], [0.0327251, 0.04031283, 0.83427], atol=1E-6)
+
+    # site (160, -9.4), first level of PGA
+    r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
+    if rtgmpy:
+        a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
+        aac([r0, r1, a7['PGA']], [0.03272051, 0.04030216, 0.79588], atol=1E-6)
 
 
 def test_KOR():
     # another test with same name sources, no semicolon convention, sampling
     job_ini = os.path.join(MOSAIC_DIR, 'KOR/in/job_vs30.ini')
-    dic = dict(lon=128.8, lat=35, site='KOR-site', vs30='760')
+    dic = dict(sites='128.8 35', site='KOR-site', vs30='760')
     with logs.init(job_ini) as log:
         log.params.update(get_params_from(dic, MOSAIC_DIR))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
     if rtgmpy:
-        s = calc.datastore['asce07'][()].decode('ascii')
+        s = calc.datastore['asce07'][0].decode('ascii')
         asce07 = json.loads(s)
         aac(asce07['PGA'], 0.618, atol=5E-5)
 
@@ -76,7 +81,7 @@ def test_CCA():
     # RTGM under and over the deterministic limit for the CCA model
     job_ini = os.path.join(MOSAIC_DIR, 'CCA/in/job_vs30.ini')
     for (site, lon, lat), expected in zip(SITES, EXPECTED):
-        dic = dict(lon=lon, lat=lat, site=site, vs30='760')
+        dic = dict(sites='%s %s' % (lon, lat), site=site, vs30='760')
         with logs.init(job_ini) as log:
             log.params.update(get_params_from(
                 dic, MOSAIC_DIR, exclude=['USA']))
@@ -102,15 +107,11 @@ def test_CCA():
         df = pandas.read_csv(fname, skiprows=1)
         aac(df.value, ASCE41, atol=5E-5)
 
-        # run mag_dst_eps_sig exporter
-        [fname] = export(('mag_dst_eps_sig', 'csv'), calc.datastore)
-        pandas.read_csv(fname, skiprows=1)
-
 
 def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
-    dic = dict(lon=139, lat=36, site='JPN-site', vs30='760')
+    dic = dict(sites='139 36', site='JPN-site', vs30='760')
     with logs.init(job_ini) as log:
         log.params.update(get_params_from(
             dic, MOSAIC_DIR, exclude=['USA']))

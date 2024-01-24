@@ -574,11 +574,14 @@ def export_mean_rates_by_src(ekey, dstore):
     return fnames
 
 
+# this exports only the first site and it is okay
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
     aw = dstore['mean_disagg_by_src']
     df = aw.to_dframe()
+    df = df[df.site_id == 0]
+    del df['site_id']
     df = df[df.value > 0]  # don't export zeros
     df.rename(columns={'value': 'afoe'}, inplace=True)
     fname = dstore.export_path('%s.%s' % ekey)
@@ -716,9 +719,10 @@ def export_rtgm(ekey, dstore):
     return [fname]
 
 
+# NB: this is exporting only the first site and it is okay
 @export.add(('asce07', 'csv'), ('asce41', 'csv'))
 def export_asce(ekey, dstore):
-    js = dstore[ekey[0]][()].decode('utf8')
+    js = dstore[ekey[0]][0].decode('utf8')
     sitecol = dstore['sitecol']
     dic = json.loads(js)
     writer = writers.CsvWriter(fmt='%.5f')
@@ -732,17 +736,3 @@ def export_asce(ekey, dstore):
                 comment=comment)
     return [fname]
 
-
-@export.add(('mag_dst_eps_sig', 'csv'))
-def export_mag_dst_eps_sig(ekey, dstore):
-    data = dstore[ekey[0]][:]
-    sitecol = dstore['sitecol']
-    writer = writers.CsvWriter(fmt='%.5f')
-    fname = dstore.export_path('%s.csv' % ekey[0])
-    comment = dstore.metadata.copy()
-    comment['lon'] = sitecol.lons[0]
-    comment['lat'] = sitecol.lats[0]
-    comment['vs30'] = sitecol.vs30[0]
-    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
-    writer.save(data, fname, comment=comment)
-    return [fname]

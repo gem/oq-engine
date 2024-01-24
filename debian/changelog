@@ -1,4 +1,9 @@
-  [Michele Simionato]
+    [Anirudh Rao]
+  * Improved the performance of non-parametric liquefaction models
+
+    [Michele Simionato]
+  * Renamed 'fpeak' as 'f0' in the HassaniAtkinson2020 GMPE so that the
+    Manea2021 GMPE can work
   * Internal: extended the command `oq mosaic sample_rups` to multiple models
   * After 3 years of deprecation, forbidden custom methods in GMPE classes
   * Changed the universal installer to recreate the venv

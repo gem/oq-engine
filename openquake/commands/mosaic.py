@@ -44,14 +44,19 @@ def engine_profile(jobctx, nrows):
     print(views.text_table(data, ['ncalls', 'cumtime', 'path'],
                            ext='org'))
 
+def fix(asce, siteid):
+    dic = json.loads(asce.decode('ascii'))
+    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
+           for k, v in dic.items()}
+    dic['siteid'] = siteid
+    return dic
+
 
 def get_asce41(calc_id):
     dstore = datastore.read(calc_id)
-    dic = json.loads(dstore['asce41'][()].decode('ascii'))
-    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
-           for k, v in dic.items()}
-    dic['siteid'] = dstore['oqparam'].description[12:]  # strip 'AELO for XXX'
-    return dic
+    model = dstore['oqparam'].description[9:]
+    return [fix(a, '%s%d' % (model, sid))
+            for sid, a in enumerate(dstore['asce41'])]
 
 
 # ########################## run_site ############################## #
@@ -98,7 +103,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
     done = collections.Counter()
-    for model, lonlat in zip(models, lonlats):
+    for model, lonlat in sorted(zip(models, map(tuple, lonlats))):
         if model in ('???', 'USA', 'GLD'):
             continue
         if exclude_models and model in exclude_models.split(','):
@@ -108,8 +113,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
             continue
         done[model] += 1
-        siteid = model + ('%+6.1f%+6.1f' % tuple(lonlat))
-        dic = dict(siteid=siteid, lon=lonlat[0], lat=lonlat[1])
+        siteid = model + ('%+6.1f%+6.1f' % lonlat)
+        dic = dict(siteid=siteid, sites='%s %s' % lonlat)
         tags.append(siteid)
         allparams.append(get_params_from(dic, mosaic_dir))
 
@@ -130,7 +135,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if tb:
             count_errors += 1
         try:
-            results.append(get_asce41(logctx.calc_id))
+            results.extend(get_asce41(logctx.calc_id))
         except KeyError:
             # asce41 could not be computed due to some error
             continue
@@ -157,8 +162,10 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
              *, hc: int = None, slowest: int = None,
              concurrent_jobs: int = None, vs30: float = 760):
     """
-    Run a PSHA analysis on the given lon and lat or given a CSV file
-    formatted as described in the 'from_file' function
+    Run a PSHA analysis on the given sites or given a CSV file
+    formatted as described in the 'from_file' function. For instance
+
+    # oq mosaic run_site 10,20:30,40:50,60
     """
     if not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
@@ -166,8 +173,8 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
     if lonlat_or_fname.endswith('.csv'):
         from_file(lonlat_or_fname, mosaic_dir, concurrent_jobs)
         return
-    lon, lat = lonlat_or_fname.split(',')
-    params = get_params_from(dict(lon=lon, lat=lat, vs30=vs30), mosaic_dir)
+    sites = lonlat_or_fname.replace(',', ' ').replace(':', ',')
+    params = get_params_from(dict(sites=sites, vs30=vs30), mosaic_dir)
     logging.root.handlers = []  # avoid breaking the logs
     [jobctx] = engine.create_jobs([params], config.distribution.log_level,
                                   None, getpass.getuser(), hc)
