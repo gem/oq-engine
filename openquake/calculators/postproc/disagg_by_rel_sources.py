@@ -69,6 +69,18 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
     return pandas.DataFrame(dic)
 
 
+def interp_rates_by_src(dstore, imts, imls_by_sid):
+    rates = []
+    for sid, imls in imls_by_sid.items():
+        _rates = []
+        for imt, iml in zip(imts, imls):
+            aw = extract.extract(
+                dstore, f'mean_rates_by_src?imt={imt}&iml={iml}&site_id={sid}')
+            _rates.append(aw['rate'])
+        rates.append(_rates)
+    return numpy.array(rates)  # shape (N, M, Ns) 
+
+
 def get_rel_source_ids(dstore, imts, imls, site_id, threshold):
     """
     :param dstore: a DataStore instance with a dataset `mean_rates_by_src`
