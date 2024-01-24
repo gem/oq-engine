@@ -441,6 +441,10 @@ def calc_asce(dstore, csm, rtgm_df, sid):
     return asce07, asce41
 
 
+def to_array(dic):
+    return np.array([dic[sid] for sid in sorted(dic)])
+
+
 def main(dstore, csm):
     """
     :param dstore: datastore with the classical calculation
@@ -450,9 +454,9 @@ def main(dstore, csm):
         logging.warning('Missing module rtgmpy: skipping AELO calculation')
         return
     N = len(dstore['sitecol'])
-    asce07 = []
-    asce41 = []
-    warnings = []
+    asce07 = {}
+    asce41 = {}
+    warnings = {}
     rtgm_dfs = []
     for sid, (rtgm, warning) in enumerate(process_sites(dstore, csm)):
         if warning.startswith(('Zero hazard', 'Very low hazard')):
@@ -465,14 +469,16 @@ def main(dstore, csm):
             a41 = get_asce41(dstore, mce, rtgm.facts)
         else:  # High hazard
             a07, a41 = calc_asce(dstore, csm, rtgm, sid)
-        asce07.append(hdf5.dumps(a07))
-        asce41.append(hdf5.dumps(a41))
-        warnings.append(warning)
+        asce07[sid] = hdf5.dumps(a07)
+        asce41[sid] = hdf5.dumps(a41)
+        warnings[sid] = warning
+        if warning:
+            warning.logging(warning)
         if rtgm is not None:
             rtgm_dfs.append(rtgm)
-    dstore['asce07'] = np.array(asce07)
-    dstore['asce41'] = np.array(asce41)
-    dstore['warnings'] = np.array(warnings)
+    dstore['asce07'] = to_array(asce07)
+    dstore['asce41'] = to_array(asce41)
+    dstore['warnings'] = to_array(warnings)
     if not rtgm_dfs:
         return
 
@@ -482,7 +488,7 @@ def main(dstore, csm):
             logging.warning('Missing module PIL: skipping plotting curves')
             return
         plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-        if warnings[sid] != 'Low hazard':
+        if not warnings[sid]:
             plot_disagg_by_src(dstore, sid, update_dstore=True)
         plt = plot_governing_mce(dstore, sid, update_dstore=True)
         plt.close()
