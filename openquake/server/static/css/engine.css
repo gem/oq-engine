@@ -249,3 +249,9 @@ tr.asce_output {
     color: #fff;
     text-decoration: underline;
 }
+
+.aelo-input {
+    width: 201px;
+    vertical-align: top!important;
+    height: 11px!important;
+}
