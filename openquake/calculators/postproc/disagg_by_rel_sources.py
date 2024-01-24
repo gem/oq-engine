@@ -177,8 +177,8 @@ def main(dstore, csm, imts, imls_by_sid):
         smap, src2idx, weights, edges, shp, rel_ids, imts, imls)
     dstore.close()
     dstore.open('r+')
-    dstore['mean_disagg_by_src'] = mean_disagg_by_src
-    dstore['sigma_by_src'] = sigma_by_src
+    dstore[f'mean_disagg_by_src/{site.id}'] = mean_disagg_by_src
+    dstore[f'sigma_by_src/{site.id}'] = sigma_by_src
     src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
         mean_disagg_by_src, src_mutex, dstore['source_info'])

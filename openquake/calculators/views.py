@@ -1598,7 +1598,7 @@ def _irate(df, imt, src, iml, imls):
 @view.add('compare_disagg_rates')
 def compare_disagg_rates(token, dstore):
     oq = dstore['oqparam']
-    aw = dstore['mean_disagg_by_src']
+    aw = dstore['mean_disagg_by_src/0']
     mrs = dstore['mean_rates_by_src']
     mean_rates_df = mrs.to_dframe()
     iml_disagg = dict(zip(aw.imt, aw.iml))

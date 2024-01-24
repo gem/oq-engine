@@ -128,7 +128,7 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
 
         # test mean_disagg_by_src
-        [fname] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
+        [fname] = export(('mean_disagg_by_src/0', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/mean_disagg_by_src.csv', fname)
 
     def test_case_05_bis(self):
