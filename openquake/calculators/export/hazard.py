@@ -578,8 +578,10 @@ def export_mean_rates_by_src(ekey, dstore):
 @export.add(('mean_disagg_by_src', 'csv'))
 def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
-    aw = dstore['mean_disagg_by_src/0']
+    aw = dstore['mean_disagg_by_src']
     df = aw.to_dframe()
+    df = df[df.site_id == 0]
+    del df['site_id']
     df = df[df.value > 0]  # don't export zeros
     df.rename(columns={'value': 'afoe'}, inplace=True)
     fname = dstore.export_path('%s.%s' % ekey)

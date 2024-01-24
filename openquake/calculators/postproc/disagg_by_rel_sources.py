@@ -27,11 +27,12 @@ from openquake.hazardlib.calc import disagg
 from openquake.calculators import extract
 
 
-def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
+def get_mag_dist_eps_df(sid, mean_disagg_by_src, src_mutex, src_info):
     """
     Compute mag, dist, eps, sig for each (src, imt) combination.
 
-    :param mean_disagg_by_src: ArrayWrapper of rates (src, mag, dst, eps, imt)
+    :param mean_disagg_by_src:
+        ArrayWrapper of rates (sid, src, mag, dst, eps, imt)
     :param src_mutex: array grp_id -> boolean
     :param src_info: source_info dataset
     :returns: a DataFrame with columns src, imt, mag, dst, eps, sig
@@ -46,7 +47,7 @@ def get_mag_dist_eps_df(mean_disagg_by_src, src_mutex, src_info):
         grp[src] = grp_id
     for s, src in enumerate(mean_disagg_by_src.source_id):
         for m, imt in enumerate(mean_disagg_by_src.imt):
-            rates = mean_disagg_by_src[s, :, :, :, m]
+            rates = mean_disagg_by_src[0, s, :, :, :, m]
             if (rates == 0).all():
                 continue  # no contribution from this imt
             rates_mag = rates.sum((1, 2))
@@ -125,26 +126,25 @@ def submit_sources(dstore, csm, edges, shp, imts, imls, oq, site):
 
 def collect_results(smap, src2idx, weights, edges, shp, rel_ids_by_imt,
                     imts, imls):
+    N = 1
     rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mags, dists, lons, lats, eps, trts = edges
     Ns, M1 = len(rel_ids), len(imts)
-    rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
-    std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
-    rates2D = 0.  # (Ns, M1)
-    for sid, srcid, std4D, rates4D, _rates2D in smap:
+    rates = numpy.zeros((N, Ns, shp['mag'], shp['dist'], shp['eps'], M1))
+    std = numpy.zeros((N, Ns, shp['mag'], shp['dist'], M1))
+    for sid, srcid, std4D, rates4D, _ in smap:
         idx = src2idx[srcid]
-        rates[idx] += rates4D
-        std[idx] += std4D @ weights[srcid]  # shape (Ma, D, M, G) -> (Ma, D, M)
-        rates2D += _rates2D
+        rates[0, idx] += rates4D
+        std[0, idx] += std4D @ weights[srcid]  # (Ma, D, M, G) -> (Ma, D, M)
     dic = dict(
-        shape_descr=['source_id', 'mag', 'dist', 'eps', 'imt'],
-        source_id=rel_ids, mag=middle(mags), dist=middle(dists),
-        eps=middle(eps), imt=imts, iml=imls, view=rates.sum(axis=(1, 2, 3)),
-        rates2D=rates2D)
+        shape_descr=['site_id', 'source_id', 'mag', 'dist', 'eps', 'imt'],
+        site_id=[0], source_id=rel_ids, mag=middle(mags), dist=middle(dists),
+        eps=middle(eps), imt=imts, iml=imls, view=rates.sum(axis=(2, 3, 4)))
     mean_disagg_by_src = hdf5.ArrayWrapper(rates, dic)
     dic2 = dict(
-        shape_descr=['source_id', 'mag', 'dist', 'imt'],
-        source_id=rel_ids, imt=imts, mag=middle(mags), dist=middle(dists))
+        shape_descr=['site_id', 'source_id', 'mag', 'dist', 'imt'],
+        site_id=[0], source_id=rel_ids, imt=imts, mag=middle(mags),
+        dist=middle(dists))
     sigma_by_src = hdf5.ArrayWrapper(std, dic2)
     return mean_disagg_by_src, sigma_by_src
 
@@ -179,11 +179,11 @@ def main(dstore, csm, imts, imls_by_sid):
         smap, src2idx, weights, edges, shp, rel_ids_by_imt, imts, imls)
     dstore.close()
     dstore.open('r+')
-    dstore[f'mean_disagg_by_src/{site.id}'] = mean_disagg_by_src
-    dstore[f'sigma_by_src/{site.id}'] = sigma_by_src
+    dstore['mean_disagg_by_src'] = mean_disagg_by_src
+    dstore['sigma_by_src'] = sigma_by_src
     src_mutex = dstore['mutex_by_grp']['src_mutex']
     mag_dist_eps = get_mag_dist_eps_df(
-        mean_disagg_by_src, src_mutex, dstore['source_info'])
+        site.id, mean_disagg_by_src, src_mutex, dstore['source_info'])
     out = []
     for imt, src_ids in rel_ids_by_imt.items():
         df = mag_dist_eps[mag_dist_eps.imt == imt]
