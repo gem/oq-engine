@@ -179,7 +179,7 @@ def _get_hazdic(afe, imt, imtls, site):
     return hazdic
 
 
-def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src, sid):
+def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src):
     """
     :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
     :param mag_dist_eps: disaggregation MDE by source
@@ -193,7 +193,7 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src, sid):
     mag_dist_eps_sig = []
     for src, imt, mag, dist, eps in mag_dist_eps:
         m = imtidx[imt]
-        sig = sigma_by_src[sid, srcidx[src], :, :, m]  # shape (Ma, D)
+        sig = sigma_by_src[srcidx[src], :, :, m]  # shape (Ma, D)
         rgi = RegularGridInterpolator(
             (sigma_by_src.mag, sigma_by_src.dist), sig)
         sigma = rgi((np.round(mag, 3), np.round(dist, 3)))
@@ -432,7 +432,7 @@ def calc_asce(dstore, csm, rtgm):
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         rtgm_df = rtgm[sid]
         det_imt, mag_dst_eps_sig = get_deterministic(
-            rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src, sid)
+            rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
         logging.info(f'{det_imt=}')
         prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
             det_imt, DLLs, rtgm_df)
