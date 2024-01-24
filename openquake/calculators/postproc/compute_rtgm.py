@@ -405,7 +405,6 @@ def process_sites(dstore, csm):
                        ' ASCE 41-17 parameters cannot be computed.')
             yield None, warning
 
-        logging.info('Computing Risk Targeted Ground Motion for site #%d', sid)
         oq = dstore['oqparam']
         stats = list(oq.hazard_stats())
         assert stats[0] == 'mean', stats[0]
