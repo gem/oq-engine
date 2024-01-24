@@ -477,7 +477,7 @@ def main(dstore, csm):
             rtgm[sid] = rtgm_df
         warnings[sid] = warning
         if warning:
-            logging.logging(warning)
+            logging.warning(warning)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
     for sid, a07, a41 in calc_asce(dstore, csm, rtgm):
