@@ -208,7 +208,7 @@ def get_deterministic(prob_mce, mag_dist_eps, sigma_by_src, sid):
     return det.to_dict(), np.array(mag_dist_eps_sig, dt)
 
 
-def get_low_hazard_asce07():
+def get_zero_hazard_asce07():
     na = 'n.a.'
     asce07 = {
              'PGA': 0,
@@ -233,7 +233,7 @@ def get_low_hazard_asce07():
     return asce07
 
 
-def get_low_hazard_asce41():
+def get_zero_hazard_asce41():
     na = 'n.a.'
     asce41 = {'BSE2N_Ss': na,
               'BSE2E_Ss': na,
@@ -421,24 +421,26 @@ def process_sites(dstore, csm):
             yield rtgm_df, ''
 
 
-def calc_asce(dstore, csm, rtgm_df, sid):
+def calc_asce(dstore, csm, rtgm):
     """
-    :returns: (asce07, asce41)
+    :yields: (sid, asce07, asce41)
     """
-    imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.facts}
-    prob_mce = rtgm_df.ProbMCE.to_numpy()
-    mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-        dstore, csm, IMTS, imls_by_sid)
-    det_imt, mag_dst_eps_sig = get_deterministic(
-        prob_mce, mag_dist_eps, sigma_by_src, sid=0)
-    logging.info(f'{det_imt=}')
-    prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(det_imt, DLLs, rtgm_df)
-    logging.info(f'{mce=}')
-    logging.info(f'{det_mce=}')
-    asce41 = get_asce41(dstore, mce, rtgm_df.facts)
-    logging.info('ASCE 7-16 for site #%d=%s', sid, asce07)
-    logging.info('ASCE 41-17 for site #%d=%s', sid, asce41)
-    return asce07, asce41
+    for sid, rtgm_df in rtgm.items():
+        imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.facts}
+        prob_mce = rtgm_df.ProbMCE.to_numpy()
+        mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
+            dstore, csm, IMTS, imls_by_sid)
+        det_imt, mag_dst_eps_sig = get_deterministic(
+            prob_mce, mag_dist_eps, sigma_by_src, sid=0)
+        logging.info(f'{det_imt=}')
+        prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
+            det_imt, DLLs, rtgm_df)
+        logging.info(f'{mce=}')
+        logging.info(f'{det_mce=}')
+        asce41 = get_asce41(dstore, mce, rtgm_df.facts)
+        logging.info('ASCE 7-16 for site #%d=%s', sid, asce07)
+        logging.info('ASCE 41-17 for site #%d=%s', sid, asce41)
+        yield sid, asce07, asce41
 
 
 def to_array(dic):
@@ -458,32 +460,35 @@ def main(dstore, csm):
     asce41 = {}
     warnings = {}
     rtgm_dfs = []
-    for sid, (rtgm, warning) in enumerate(process_sites(dstore, csm)):
+    rtgm = {}
+    for sid, (rtgm_df, warning) in enumerate(process_sites(dstore, csm)):
         if warning.startswith(('Zero hazard', 'Very low hazard')):
-            a07 = get_low_hazard_asce07()
-            a41 = get_low_hazard_asce41()
+            asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
+            asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
         elif warning.startswith('Low hazard'):
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
-                dummy_det, DLLs, rtgm, low_haz=True)
-            a41 = get_asce41(dstore, mce, rtgm.facts)
+                dummy_det, DLLs, rtgm_df, low_haz=True)
+            a41 = get_asce41(dstore, mce, rtgm_df.facts)
+            asce07[sid] = hdf5.dumps(a07)
+            asce41[sid] = hdf5.dumps(a41)
         else:  # High hazard
-            a07, a41 = calc_asce(dstore, csm, rtgm, sid)
-        asce07[sid] = hdf5.dumps(a07)
-        asce41[sid] = hdf5.dumps(a41)
+            rtgm[sid] = rtgm_df
         warnings[sid] = warning
         if warning:
             warning.logging(warning)
-        if rtgm is not None:
-            rtgm_dfs.append(rtgm)
+        if rtgm_df is not None:
+            rtgm_dfs.append(rtgm_df)
+    for sid, a07, a41 in calc_asce(dstore, csm, rtgm):
+        asce07[sid] = hdf5.dumps(a07)
+        asce41[sid] = hdf5.dumps(a41)
+
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
     dstore['warnings'] = to_array(warnings)
-    if not rtgm_dfs:
-        return
-
-    dstore.create_df('rtgm', pd.concat(rtgm_dfs))
-    if N == 1:
+    if rtgm_dfs:
+        dstore.create_df('rtgm', pd.concat(rtgm_dfs))
+    if rtgm_dfs and N == 1:
         if Image is None:  # missing PIL
             logging.warning('Missing module PIL: skipping plotting curves')
             return
