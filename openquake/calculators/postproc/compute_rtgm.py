@@ -425,13 +425,14 @@ def calc_asce(dstore, csm, rtgm):
     """
     :yields: (sid, asce07, asce41)
     """
+    imls_by_sid = {}
     for sid, rtgm_df in rtgm.items():
-        imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.facts}
-        prob_mce = rtgm_df.ProbMCE.to_numpy()
-        mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
-            dstore, csm, IMTS, imls_by_sid)
+        imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.facts
+    out = postproc.disagg_by_rel_sources.main(dstore, csm, IMTS, imls_by_sid)
+    for sid, (mag_dist_eps, sigma_by_src) in out.items():
+        rtgm_df = rtgm[sid]
         det_imt, mag_dst_eps_sig = get_deterministic(
-            prob_mce, mag_dist_eps, sigma_by_src, sid=0)
+            rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src, sid)
         logging.info(f'{det_imt=}')
         prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
             det_imt, DLLs, rtgm_df)
