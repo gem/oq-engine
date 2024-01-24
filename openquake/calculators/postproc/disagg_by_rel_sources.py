@@ -131,7 +131,7 @@ def collect_results(smap, src2idx, weights, edges, shp, rel_ids_by_imt,
     rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
     std = numpy.zeros((Ns, shp['mag'], shp['dist'], M1))
     rates2D = 0.  # (Ns, M1)
-    for srcid, std4D, rates4D, _rates2D in smap:
+    for sid, srcid, std4D, rates4D, _rates2D in smap:
         idx = src2idx[srcid]
         rates[idx] += rates4D
         std[idx] += std4D @ weights[srcid]  # shape (Ma, D, M, G) -> (Ma, D, M)
