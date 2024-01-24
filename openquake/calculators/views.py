@@ -1535,7 +1535,7 @@ def view_relevant_sources(token, dstore):
     """
     imt = token.split(':')[1]
     kw = dstore['oqparam'].postproc_args
-    iml = dict(zip(kw['imts'], kw['imls']))[imt]
+    [iml] = kw['imls_by_sid']['0']
     aw = extract(dstore, f'mean_rates_by_src?imt={imt}&iml={iml}')
     rates = aw.array['rate']  # for each source in decreasing order
     return aw.array[rates > .1 * rates[0]]

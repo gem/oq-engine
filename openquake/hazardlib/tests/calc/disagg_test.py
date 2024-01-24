@@ -273,10 +273,10 @@ def test_single_source(job_ini):
     job_ini = os.path.join(DATA_PATH, 'data', 'disagg', job_ini)
     inp = read_input(job_ini)
     oq = inp.oq
+    [site] = inp.sitecol
     edges_shapedic = disagg.get_edges_shapedic(oq, inp.sitecol)
     srcid, std4D, rates4D, rates2D = disagg.disagg_source(
-        inp.groups, inp.sitecol, inp.full_lt, edges_shapedic,
-        oq, {'PGA': .1})
+        inp.groups, site, inp.full_lt, edges_shapedic, oq, {'PGA': .1})
     # rates5D has shape (Ma, D, E, M, P), rates2D shape (M, L1)
     print(srcid)
     print(rates4D.sum(axis=(1, 2)))

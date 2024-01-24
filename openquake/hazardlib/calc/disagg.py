@@ -721,13 +721,13 @@ def get_ints(src_ids):
     return numpy.uint32(out)
 
 
-def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
+def disagg_source(groups, site, reduced_lt, edges_shapedic,
                   oq, imldic, monitor=Monitor()):
     """
     Compute disaggregation for the given source.
 
     :param groups: groups containing a single source ID
-    :param sitecol: a SiteCollection with a single site
+    :param site: a Site object
     :param reduced_lt: a FullLogicTree reduced to the source ID
     :param edges_shapedic: pair (bin_edges, shapedic)
     :param oq: OqParam instance
@@ -735,7 +735,8 @@ def disagg_source(groups, sitecol, reduced_lt, edges_shapedic,
     :param monitor: a Monitor instance
     :returns: source_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
-    assert len(sitecol) == 1, sitecol
+    sitecol = SiteCollection([site])
+    sitecol.sids[:] = 0
     if not hasattr(reduced_lt, 'trt_rlzs'):
         reduced_lt.init()
     edges, s = edges_shapedic
