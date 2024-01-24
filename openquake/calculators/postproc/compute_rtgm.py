@@ -163,7 +163,10 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
            'DLL': DLLs,
            'sid': [site_idx]*len(imts)}
 
-    return pd.DataFrame(dic), np.array(facts)
+    rtgm_df = pd.DataFrame(dic)
+    rtgm_df.facts = np.array(facts)
+    rtgm_df.facts[0] = 1  # for PGA the Prob MCE is already geometric mean
+    return rtgm_df
 
 
 def _get_hazdic(afe, imt, imtls, site):
@@ -398,7 +401,7 @@ def process_sites(dstore, csm):
             logging.warning(warning)
             asce07 = get_low_hazard_asce07()
             asce41 = get_low_hazard_asce41()
-            yield asce07, asce41, None, None, warning
+            yield asce07, asce41, None, warning
 
         mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
         if mean_rates.max() < MIN_AFE:
@@ -408,7 +411,7 @@ def process_sites(dstore, csm):
             logging.warning(warning)
             asce07 = get_low_hazard_asce07()
             asce41 = get_low_hazard_asce41()
-            yield asce07, asce41, None, None, warning
+            yield asce07, asce41, None, warning
 
         logging.info('Computing Risk Targeted Ground Motion for site #%d', sid)
         oq = dstore['oqparam']
@@ -417,9 +420,8 @@ def process_sites(dstore, csm):
         hcurves = dstore['hcurves-stats'][sid, 0]  # shape ML1
         site = list(dstore['sitecol'])[sid]
         loc = site.location
-        rtgm_df, facts = calc_rtgm_df(hcurves, site, sid, oq)
+        rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
         logging.info('Computed RTGM(%.1f,%.1f)\n%s', loc.x, loc.y, rtgm_df)
-        facts[0] = 1  # for PGA the Prob MCE is already geometric mean
         prob_mce = rtgm_df.ProbMCE.to_numpy()
 
         if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
@@ -427,17 +429,17 @@ def process_sites(dstore, csm):
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
                 prob_mce, dummy_det, DLLs, rtgm_df, low_haz=True)
-            asce41 = get_asce41(dstore, mce, facts)
-            yield asce07, asce41, rtgm_df, facts, 'Low hazard'
+            asce41 = get_asce41(dstore, mce, rtgm_df.facts)
+            yield asce07, asce41, rtgm_df, 'Low hazard'
         else:
-            yield None, None, rtgm_df, facts, 'High hazard'
+            yield None, None, rtgm_df, 'High hazard'
 
 
-def calc_asce(dstore, csm, rtgm_df, facts, sid):
+def calc_asce(dstore, csm, rtgm_df, sid):
     """
     :returns: (asce07, asce41, rtgm_df, warning)
     """
-    imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / facts}
+    imls_by_sid = {sid: rtgm_df.ProbMCE.to_numpy() / rtgm_df.facts}
     prob_mce = rtgm_df.ProbMCE.to_numpy()
     mag_dist_eps, sigma_by_src = postproc.disagg_by_rel_sources.main(
         dstore, csm, IMTS, imls_by_sid)
@@ -448,7 +450,7 @@ def calc_asce(dstore, csm, rtgm_df, facts, sid):
         prob_mce, det_imt, DLLs, rtgm_df)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
-    asce41 = get_asce41(dstore, mce, facts)
+    asce41 = get_asce41(dstore, mce, rtgm_df.facts)
     logging.info('ASCE 7-16 for site #%d=%s', sid, asce07)
     logging.info('ASCE 41-17 for site #%d=%s', sid, asce41)
     return asce07, asce41
@@ -468,9 +470,9 @@ def main(dstore, csm):
     warnings = []
     rtgm_dfs = []
     out = process_sites(dstore, csm)
-    for sid, (a07, a41, rtgm, facts, w) in enumerate(out):
+    for sid, (a07, a41, rtgm, w) in enumerate(out):
         if w == 'High hazard':
-            a07, a41 = calc_asce(dstore, csm, rtgm, facts, sid)
+            a07, a41 = calc_asce(dstore, csm, rtgm, sid)
         asce07.append(hdf5.dumps(a07))
         asce41.append(hdf5.dumps(a41))
         warnings.append(w)
