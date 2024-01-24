@@ -50,6 +50,13 @@ from openquake.sep.liquefaction.lateral_spreading import (
 from openquake.sep.liquefaction.vertical_settlement import (
     hazus_vertical_settlement,
 )
+from os import path
+import gzip
+
+try:
+    import onnxruntime
+except ImportError:
+    onnxruntime = None
 
 
 class SecondaryPeril(metaclass=abc.ABCMeta):
@@ -160,9 +167,7 @@ class NewmarkDisplacement(SecondaryPeril):
 class GrantEtAl2016RockSlopeFailure(SecondaryPeril):
     outputs = ["Disp"]
 
-    def __init__(
-        self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05
-    ):
+    def __init__(self, c1=0.215, c2=2.341, c3=-1.438, crit_accel_threshold=0.05):
         self.c1 = c1
         self.c2 = c2
         self.c3 = c3
@@ -639,7 +644,24 @@ class Bozzoni2021LiquefactionEurope(SecondaryPeril):
         return out
 
 
-supported = [cls.__name__ for cls in SecondaryPeril.__subclasses__()]
+class PicklableInferenceSession:
+    def __init__(self, model):
+        self.model = model
+        self.inference_session = onnxruntime.InferenceSession(
+            self.model, providers=onnxruntime.get_available_providers()
+        )
+
+    def run(self, *args):
+        return self.inference_session.run(*args)
+
+    def __getstate__(self):
+        return {"model": self.model}
+
+    def __setstate__(self, values):
+        self.model = values["model"]
+        self.inference_session = onnxruntime.InferenceSession(
+            self.model, providers=onnxruntime.get_available_providers()
+        )
 
 
 class TodorovicSilva2022NonParametric(SecondaryPeril):
@@ -655,21 +677,25 @@ class TodorovicSilva2022NonParametric(SecondaryPeril):
         pass
 
     def prepare(self, sites):
-        pass
+        model_file = (
+            "liquefaction/data/todorovic_silva_2022/todorovic_silva_2022.onnx.gz"
+        )
+        model_path = path.join(path.dirname(__file__), model_file)
+        with gzip.open(model_path, "rb") as f:
+            self.model = f.read()
+        self.inference_session = PicklableInferenceSession(self.model)
 
     def compute(self, mag, imt_gmf, sites):
         out = []
         for im, gmf in imt_gmf:
             if im.string == "PGV":
-                (
-                    out_class,
-                    out_prob,
-                ) = todorovic_silva_2022_nonparametric_general(
+                out_class, out_prob = todorovic_silva_2022_nonparametric_general(
                     pgv=gmf,
                     vs30=sites.vs30,
                     dw=sites.dw,
                     wtd=sites.gwd,
                     precip=sites.precip,
+                    session=self.inference_session,
                 )
             out.append(out_class)
             out.append(out_prob)

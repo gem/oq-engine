@@ -18,6 +18,11 @@ from openquake.sep.landslide.rockfalls import (
     newmark_displ_from_pga,
 )
 
+from openquake.sep.classes import (
+    PicklableInferenceSession,
+    TodorovicSilva2022NonParametric,
+)
+
 from openquake.sep.liquefaction import (
     hazus_liquefaction_probability,
     zhu_etal_2015_general,
@@ -98,9 +103,7 @@ class test_landslides_cali_small(unittest.TestCase):
             ]
         )
 
-        np.testing.assert_array_almost_equal(
-            self.sites["Fs"], factor_of_safety
-        )
+        np.testing.assert_array_almost_equal(self.sites["Fs"], factor_of_safety)
 
     def test_rock_slope_static_factor_of_safety(self):
         factor_of_safety = np.array(
@@ -118,9 +121,7 @@ class test_landslides_cali_small(unittest.TestCase):
             ]
         )
 
-        np.testing.assert_array_almost_equal(
-            self.sites["Fs_rs"], factor_of_safety
-        )
+        np.testing.assert_array_almost_equal(self.sites["Fs_rs"], factor_of_safety)
 
     def test_critical_accel(self):
         ca = np.array(
@@ -163,9 +164,7 @@ class test_landslides_cali_small(unittest.TestCase):
             pga=self.pga, critical_accel=self.sites["crit_accel"], M=7.5
         )
 
-        nd = np.array(
-            [0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        )
+        nd = np.array([0.0, 0.0, 0.0, 2.19233517, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
         np.testing.assert_array_almost_equal(self.sites["newmark_disp"], nd)
 
@@ -187,13 +186,9 @@ class test_landslides_cali_small(unittest.TestCase):
             pga=self.pga, critical_accel=self.sites["crit_accel_rs"]
         )
 
-        nd = np.array(
-            [0.0, 0.0, 0.0, 1.080767, 1.080767, 0.0, 0.0, 1.080767, 0.0, 0.0]
-        )
+        nd = np.array([0.0, 0.0, 0.0, 1.080767, 1.080767, 0.0, 0.0, 1.080767, 0.0, 0.0])
 
-        np.testing.assert_array_almost_equal(
-            self.sites["rock_slope_displacement"], nd
-        )
+        np.testing.assert_array_almost_equal(self.sites["rock_slope_displacement"], nd)
 
 
 class test_liquefaction_cali_small(unittest.TestCase):
@@ -282,9 +277,7 @@ class test_liquefaction_cali_small(unittest.TestCase):
             vs30=self.sites["vs30"],
         )
 
-        zlp = np.array(
-            [1, 1, 0.999999, 1, 1, 0.999999, 0.999989, 0.999922, 1, 1]
-        )
+        zlp = np.array([1, 1, 0.999999, 1, 1, 0.999999, 0.999989, 0.999922, 1, 1])
         clq = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
         np.testing.assert_array_almost_equal(prob_liq, zlp)
@@ -532,12 +525,16 @@ class test_liquefaction_cali_small(unittest.TestCase):
         np.testing.assert_array_almost_equal(out_class, clq)
 
     def test_todorovic_2022(self):
+        model_instance = TodorovicSilva2022NonParametric()
+        model_instance.prepare(self.sites)
+        inference_session = PicklableInferenceSession(model_instance.model)
         out_class, out_prob = todorovic_silva_2022_nonparametric_general(
             pgv=self.pgv,
             vs30=self.sites["vs30"],
             dw=self.sites["dw"],
             wtd=self.sites["gwd"],
             precip=self.sites["precip"],
+            session=inference_session,
         )
 
         clq = np.array([0, 0, 0, 0, 0, 1, 0, 0, 1, 1])
