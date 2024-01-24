@@ -97,7 +97,9 @@ def middle(arr):
     return [(m1 + m2) / 2 for m1, m2 in zip(arr[:-1], arr[1:])]
 
 
-def submit_sources(csm, edges, shp, imts, imls, oq, site, rel_ids_by_imt):
+def submit_sources(dstore, csm, edges, shp, imts, imls, oq, site):
+    rel_ids_by_imt = get_rel_source_ids(
+        dstore, imts, imls, site.id, threshold=.1)
     for imt, ids in rel_ids_by_imt.items():
         rel_ids_by_imt[imt] = ids = python3compat.decode(sorted(ids))
         logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
@@ -118,10 +120,12 @@ def submit_sources(csm, edges, shp, imts, imls, oq, site, rel_ids_by_imt):
         groups = relt.reduce_groups(csm.src_groups)
         assert groups, 'No groups for %s' % source_id
         smap.submit((groups, site, relt, (edges, shp), oq, imldic))
-    return smap, rel_ids, rel_ids_by_imt, src2idx, weights
+    return smap, rel_ids_by_imt, src2idx, weights
 
 
-def collect_results(smap, src2idx, weights, edges, shp, rel_ids, imts, imls):
+def collect_results(smap, src2idx, weights, edges, shp, rel_ids_by_imt,
+                    imts, imls):
+    rel_ids = sorted(set.union(*map(set, rel_ids_by_imt.values())))
     mags, dists, lons, lats, eps, trts = edges
     Ns, M1 = len(rel_ids), len(imts)
     rates = numpy.zeros((Ns, shp['mag'], shp['dist'], shp['eps'], M1))
@@ -169,12 +173,10 @@ def main(dstore, csm, imts, imls_by_sid):
     [(site_idx, imls)] = imls_by_sid.items()
     site = list(sitecol)[site_idx]
     edges, shp = disagg.get_edges_shapedic(oq, sitecol)
-    rel_ids_by_imt = get_rel_source_ids(
-        dstore, imts, imls, site.id, threshold=.1)
-    smap, rel_ids, rel_ids_by_imt, src2idx, weights = submit_sources(
-        csm, edges, shp, imts, imls, oq, site, rel_ids_by_imt)
+    smap, rel_ids_by_imt, src2idx, weights = submit_sources(
+        dstore, csm, edges, shp, imts, imls, oq, site)
     mean_disagg_by_src, sigma_by_src = collect_results(
-        smap, src2idx, weights, edges, shp, rel_ids, imts, imls)
+        smap, src2idx, weights, edges, shp, rel_ids_by_imt, imts, imls)
     dstore.close()
     dstore.open('r+')
     dstore[f'mean_disagg_by_src/{site.id}'] = mean_disagg_by_src
