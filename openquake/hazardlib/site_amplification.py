@@ -261,7 +261,10 @@ class Amplifier(object):
         """
         for gsims in gsims_by_trt.values():
             for gsim in gsims:
-                gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
+                try:
+                    gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
+                except AttributeError:  # only if check is disable
+                    continue
                 if gsim_ref and gsim_ref < self.vs30_ref:
                     raise ValueError(
                         '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'

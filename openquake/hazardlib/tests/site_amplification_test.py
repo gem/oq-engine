@@ -28,7 +28,7 @@ from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.probability_map import ProbabilityCurve
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib import valid
 
 aac = numpy.testing.assert_allclose
 
@@ -113,7 +113,7 @@ class AmplifierTestCase(unittest.TestCase):
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
-        gmm = BooreAtkinson2008()
+        gmm = valid.gsim('CanadaSHM6_ActiveCrust_BooreEtAl2014')
         a.check(self.vs30, 0, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
         numpy.testing.assert_allclose(
             a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
