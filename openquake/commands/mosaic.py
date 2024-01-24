@@ -103,7 +103,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
     done = collections.Counter()
-    for model, lonlat in sorted(zip(models, map(tuple, lonlats))):
+    for model in numpy.unique(models):
         if model in ('???', 'USA', 'GLD'):
             continue
         if exclude_models and model in exclude_models.split(','):
@@ -113,8 +113,10 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
             continue
         done[model] += 1
-        siteid = model + ('%+6.1f%+6.1f' % lonlat)
-        dic = dict(siteid=siteid, sites='%s %s' % lonlat)
+        siteid = model
+        sites = ','.join('%s %s' % tuple(lonlat)
+                         for lonlat in lonlats[models==model])
+        dic = dict(siteid=siteid, sites=sites)
         tags.append(siteid)
         allparams.append(get_params_from(dic, mosaic_dir))
 
