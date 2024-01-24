@@ -251,7 +251,7 @@ def get_low_hazard_asce41():
     return asce41
 
 
-def get_mce_asce07(prob_mce, det_imt, DLLs, rtgm, low_haz=False):
+def get_mce_asce07(det_imt, DLLs, rtgm, low_haz=False):
     """
     :param prob_mce: Probabilistic Maximum Considered Earthquake (UHGM for PGA)
     :param det_imt: deterministic ground motion for each IMT
@@ -263,6 +263,7 @@ def get_mce_asce07(prob_mce, det_imt, DLLs, rtgm, low_haz=False):
     :returns: a dictionary imt -> deterministic MCE
     :returns: a dictionary all ASCE 7-16 parameters
     """
+    prob_mce = rtgm.ProbMCE.to_numpy()
     imts = rtgm['IMT']
     for i, imt in enumerate(imts):
         if imt == 'SA0P2':
@@ -428,7 +429,7 @@ def process_sites(dstore, csm):
             logging.warning('Low hazard, do not disaggregate by source')
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
-                prob_mce, dummy_det, DLLs, rtgm_df, low_haz=True)
+                dummy_det, DLLs, rtgm_df, low_haz=True)
             asce41 = get_asce41(dstore, mce, rtgm_df.facts)
             yield asce07, asce41, rtgm_df, 'Low hazard'
         else:
@@ -446,8 +447,7 @@ def calc_asce(dstore, csm, rtgm_df, sid):
     det_imt, mag_dst_eps_sig = get_deterministic(
         prob_mce, mag_dist_eps, sigma_by_src)
     logging.info(f'{det_imt=}')
-    prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
-        prob_mce, det_imt, DLLs, rtgm_df)
+    prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(det_imt, DLLs, rtgm_df)
     logging.info(f'{mce=}')
     logging.info(f'{det_mce=}')
     asce41 = get_asce41(dstore, mce, rtgm_df.facts)
