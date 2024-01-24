@@ -733,7 +733,7 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     :param oq: OqParam instance
     :param imldic: dictionary imt->iml
     :param monitor: a Monitor instance
-    :returns: source_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
+    :returns: sid, src_id, std(Ma, D, G, M), rates(Ma, D, E, M), rates(M, L1)
     """
     sitecol = SiteCollection([site])
     sitecol.sids[:] = 0
@@ -761,4 +761,4 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     std4D = collect_std(disaggs)
     gws = reduced_lt.g_weights(trt_rlzs)
     rates3D = calc_mean_rates(rmap, gws, oq.imtls, list(imldic))  # (N, M, L1)
-    return source_id, std4D, drates4D, rates3D[0]  # (M, L1) rates for the site
+    return site.id, source_id, std4D, drates4D, rates3D[0]
