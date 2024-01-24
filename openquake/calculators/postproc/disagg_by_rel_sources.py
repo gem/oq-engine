@@ -190,10 +190,11 @@ def main(dstore, csm, imts, imls_by_sid):
     dstore.close()
     dstore.open('r+')
     # replace mean_disagg_by_src with mag_dist_eps in the output
-    for site in sites:
+    for i, site in enumerate(sites):
         mean_disagg_by_src, sigma_by_src = out[site.id]
-        dstore['mean_disagg_by_src'] = mean_disagg_by_src
-        dstore['sigma_by_src'] = sigma_by_src
+        if i == 0:  # store only the first site
+            dstore['mean_disagg_by_src'] = mean_disagg_by_src
+            dstore['sigma_by_src'] = sigma_by_src
         mag_dist_eps = get_mag_dist_eps_df(
             mean_disagg_by_src, src_mutex, dstore['source_info'])
         dfs = []
