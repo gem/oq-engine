@@ -121,7 +121,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         allparams.append(get_params_from(dic, mosaic_dir))
 
     logging.root.handlers = []  # avoid too much logging
-    loglevel = 'warn' if len(allparams) > 99 else config.distribution.log_level
+    loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
     for logctx, tag in zip(logctxs, tags):
