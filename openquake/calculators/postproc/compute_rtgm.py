@@ -155,17 +155,17 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
             else:
                 RTGM[m] = rtgmCalc['rtgm'] / fact  # for geometric mean
                 MCE[m] = RTGM_max[m]
+    facts[0] = 1. # for PGA the Prob MCE is already geometric mean
     dic = {'IMT': imts,
            'UHGM_2475yr-GM': UHGM,
            'RTGM': RTGM_max,
            'ProbMCE': MCE,
            'RiskCoeff': riskCoeff,
            'DLL': DLLs,
+           'fact': np.array(facts),
            'sid': [site_idx]*len(imts)}
 
     rtgm_df = pd.DataFrame(dic)
-    rtgm_df.facts = np.array(facts)
-    rtgm_df.facts[0] = 1  # for PGA the Prob MCE is already geometric mean
     return rtgm_df
 
 
@@ -405,7 +405,6 @@ def process_sites(dstore, csm):
                        ' ASCE 41-17 parameters cannot be computed.')
             yield None, warning
 
-        logging.info('Computing Risk Targeted Ground Motion for site #%d', sid)
         oq = dstore['oqparam']
         stats = list(oq.hazard_stats())
         assert stats[0] == 'mean', stats[0]
@@ -427,7 +426,7 @@ def calc_asce(dstore, csm, rtgm):
     """
     imls_by_sid = {}
     for sid, rtgm_df in rtgm.items():
-        imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.facts
+        imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
     out = postproc.disagg_by_rel_sources.main(dstore, csm, IMTS, imls_by_sid)
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
         rtgm_df = rtgm[sid]
@@ -438,7 +437,7 @@ def calc_asce(dstore, csm, rtgm):
             det_imt, DLLs, rtgm_df)
         logging.info(f'{mce=}')
         logging.info(f'{det_mce=}')
-        asce41 = get_asce41(dstore, mce, rtgm_df.facts)
+        asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy())
         logging.info('ASCE 7-16 for site #%d=%s', sid, asce07)
         logging.info('ASCE 41-17 for site #%d=%s', sid, asce41)
         yield sid, asce07, asce41
@@ -470,7 +469,7 @@ def main(dstore, csm):
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
                 dummy_det, DLLs, rtgm_df, low_haz=True)
-            a41 = get_asce41(dstore, mce, rtgm_df.facts)
+            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy())
             asce07[sid] = hdf5.dumps(a07)
             asce41[sid] = hdf5.dumps(a41)
         else:  # High hazard
