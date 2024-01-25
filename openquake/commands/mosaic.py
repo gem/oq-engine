@@ -96,14 +96,16 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     all_sites = os.environ.get('OQ_ALL_SITES', '')
     allparams = []
     tags = []
-    lonlats = pandas.read_csv(fname)[['Longitude', 'Latitude']].to_numpy()
+    sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
+    lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
     models = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
     done = collections.Counter()
-    for model, lonlat in sorted(zip(models, map(tuple, lonlats))):
+    triples = zip(models, sites_df.ID, map(tuple, lonlats))
+    for model, id, lonlat in sorted(triples):
         if model in ('???', 'USA', 'GLD'):
             continue
         if exclude_models and model in exclude_models.split(','):
@@ -113,13 +115,13 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
             continue
         done[model] += 1
-        siteid = model + ('%+6.1f%+6.1f' % lonlat)
+        siteid = model + str(id)
         dic = dict(siteid=siteid, sites='%s %s' % lonlat)
         tags.append(siteid)
         allparams.append(get_params_from(dic, mosaic_dir))
 
     logging.root.handlers = []  # avoid too much logging
-    loglevel = 'warn' if len(allparams) > 99 else config.distribution.log_level
+    loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
     for logctx, tag in zip(logctxs, tags):
