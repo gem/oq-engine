@@ -264,3 +264,29 @@ tr.asce_output {
 .output-action-btn {
     width: 90px;
 }
+
+.my-pngs a {
+    width: 190px;
+}
+.my-pngs {
+    margin-bottom: 3px;
+}
+
+.outputs-general-btns-left,
+.outputs-general-btns-center,
+.outputs-general-btns-right {
+    width: calc(100% / 3);
+    float: left;
+}
+
+.outputs-general-btns-left {
+    text-align: left;
+}
+
+.outputs-general-btns-center {
+    text-align: center;
+}
+
+.outputs-general-btns-right {
+    text-align: right;
+}

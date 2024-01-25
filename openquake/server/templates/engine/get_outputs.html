@@ -9,23 +9,21 @@
       <div class="row">
         <div id="oq-body-wrapper">
           <div class="span12">
-              {% if application_mode == 'AELO' %}
-              <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
-              {% else %}
-              <h2>Outputs from calculation {{ calc_id }}</h2>
-              {% endif %}
-              <div id="my-outputs" class="well"></div>
+            {% if application_mode == 'AELO' %}
+            <h2>Outputs from site: {{ site_name }}, lat: {{ lat }}, lon: {{ lon }}, vs30: {{ vs30 }}</h2>
+            {% else %}
+            <h2>Outputs from calculation {{ calc_id }}</h2>
+            {% endif %}
+            <div id="my-outputs" class="well"></div>
+            <div class="outputs-general-btns-left">
               {% if application_mode == 'AELO' %}
               <div id="to-simplified-outputs">
                 <a href="{{ oq_engine_server_url }}/engine/{{ calc_id }}/outputs_aelo" class="btn btn-sm">
                   View simplified outputs page</a>
               </div>
               {% endif %}
-              <div id="my-datastore">
-                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
-                   title="Size: {{ size_mb }} MB" class="btn btn-sm">
-                  Download hdf5 datastore</a>
-              </div>
+            </div>
+            <div class="outputs-general-btns-center">
               {% if hmaps %}
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/hmap_0_0" class="btn btn-sm">
@@ -33,7 +31,6 @@
               </div>
               {% endif %}
               {% if governing_mce %}
-              </br>
               <div class="my-pngs">
                 <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/download_png/governing_mce.png" class="btn btn-sm">
                   Show governing MCE</a>
@@ -53,6 +50,14 @@
                   Show hazard curves per source</a>
               </div>
               {% endfor %}
+            </div>
+            <div class="outputs-general-btns-right">
+              <div id="my-datastore">
+                <a href="{{ oq_engine_server_url }}/v1/calc/{{ calc_id }}/datastore"
+                   title="Size: {{ size_mb }} MB" class="btn btn-sm">
+                  Download hdf5 datastore</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
