@@ -110,11 +110,12 @@ class AmplifierTestCase(unittest.TestCase):
         gmm = valid.gsim('CanadaSHM6_ActiveCrust_BooreEtAl2014')
         with self.assertRaises(AttributeError) as ctx:
             a.check(self.vs30, 0, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
-        self.assertIn('The parameter "vs30_tolerance" is >= 0, but'
-                      ' the attribute DEFINED_FOR_REFERENCE_VELOCITY'
-                      ' is missing in the gsim'
-                      ' [CanadaSHM6_ActiveCrust_BooreEtAl2014]',
-                      str(ctx.exception))
+        self.assertIn(
+            'The attribute DEFINED_FOR_REFERENCE_VELOCITY is missing in the'
+            ' gsim [CanadaSHM6_ActiveCrust_BooreEtAl2014]. However, at your'
+            ' peril, you can disable the vs30 consistency check by setting'
+            ' vs30_tolerance = -1',
+            str(ctx.exception))
 
     def test_trivial(self):
         # using the heaviside function, i.e. `amplify_one` has contributions

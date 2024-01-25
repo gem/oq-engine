@@ -265,9 +265,10 @@ class Amplifier(object):
                     continue
                 elif not hasattr(gsim, 'DEFINED_FOR_REFERENCE_VELOCITY'):
                     raise AttributeError(
-                        f'The parameter "vs30_tolerance" is >= 0, but'
-                        f' the attribute DEFINED_FOR_REFERENCE_VELOCITY is'
-                        f' missing in the gsim {gsim}')
+                        f'The attribute DEFINED_FOR_REFERENCE_VELOCITY is'
+                        f' missing in the gsim {gsim}. However, at your peril,'
+                        f' you can disable the vs30 consistency check by'
+                        f' setting vs30_tolerance = -1')
                 gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
                 if gsim_ref and gsim_ref < self.vs30_ref:
                     raise ValueError(
