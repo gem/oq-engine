@@ -101,7 +101,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     models = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
-    triples = zip(models, sites_df.ID, map(tuple, lonlats))
+    triples = zip(models, map(tuple, lonlats), sites_df.ID)
     for model, id, lonlat in sorted(triples):
         if model in ('???', 'USA', 'GLD'):
             continue
