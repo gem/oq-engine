@@ -230,3 +230,65 @@ tr.asce_output {
     font-weight: normal;
     float: left;
 }
+
+.announcements-box {
+    padding: 10px 20px 20px;
+    background-color: #ff9800;
+    color: white;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.announcement {
+    margin: 0.5rem 0;
+}
+
+.announcement h2 {
+    margin: 0!important;
+    padding: 0;
+    color: #fff;
+    text-decoration: underline;
+}
+
+.aelo-input {
+    width: 201px;
+    vertical-align: top!important;
+    height: 11px!important;
+}
+
+/* customization of bootstrap button hover, to avoid turning to black */
+.btn:hover, .btn:focus {
+    color: #fff!important;
+}
+
+.output-action-btn {
+    width: 90px;
+}
+
+.my-pngs a {
+    width: 190px;
+}
+.my-pngs {
+    margin-bottom: 3px;
+}
+
+.outputs-general-btns-left,
+.outputs-general-btns-center,
+.outputs-general-btns-right {
+    width: calc(100% / 3);
+    float: left;
+    min-height: 100px;
+    display: block;
+}
+
+.outputs-general-btns-left {
+    text-align: left;
+}
+
+.outputs-general-btns-center {
+    text-align: center;
+}
+
+.outputs-general-btns-right {
+    text-align: right;
+}

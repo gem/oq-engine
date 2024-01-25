@@ -75,11 +75,11 @@ if settings.LOCKDOWN:
     urlpatterns += [
         re_path(r'^admin/', admin.site.urls),
         re_path(r'accounts/login/$',
-            LoginView.as_view(
-                template_name='account/login.html',
-                extra_context={'application_mode': application_mode},
-            ),
-            name="login"),
+                LoginView.as_view(
+                    template_name='account/login.html',
+                    extra_context={'application_mode': application_mode},
+                ),
+                name="login"),
         re_path(r'^accounts/logout/$', LogoutView.as_view(
             template_name='account/logout.html'), name="logout"),
         re_path(r'^accounts/ajax_login/$', views.ajax_login),
