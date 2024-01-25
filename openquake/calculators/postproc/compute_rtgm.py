@@ -389,7 +389,7 @@ def get_asce41(dstore, mce, facts, sid):
 
 def process_sites(dstore, csm):
     """
-    :returns: (rtgm_df, warning)
+    :yields: (sid, rtgm_df, warning)
     """
     for site in dstore['sitecol']:
         sid = site.id
@@ -397,13 +397,13 @@ def process_sites(dstore, csm):
         if mrs.sum() == 0:
             warning = ('Zero hazard: there are no ruptures close to the site. '
                        'ASCE 7-16 and ASCE 41-17 parameters cannot be computed')
-            yield None, warning
+            yield sid, None, warning
 
         mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
         if mean_rates.max() < MIN_AFE:
             warning = ('Very low hazard: ASCE 7-16 and'
                        ' ASCE 41-17 parameters cannot be computed.')
-            yield None, warning
+            yield sid, None, warning
 
         oq = dstore['oqparam']
         stats = list(oq.hazard_stats())
@@ -415,9 +415,9 @@ def process_sites(dstore, csm):
         logging.info('Computed RTGM(%.1f,%.1f)\n%s', loc.x, loc.y, rtgm_df)
 
         if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-            yield rtgm_df, 'Low hazard: do not disaggregate by source'
+            yield sid, rtgm_df, 'Low hazard: do not disaggregate by source'
         else:
-            yield rtgm_df, ''
+            yield sid, rtgm_df, ''
 
 
 def calc_asce(dstore, csm, rtgm):
@@ -464,7 +464,7 @@ def main(dstore, csm):
     warnings = {}
     rtgm_dfs = []
     rtgm = {}
-    for sid, (rtgm_df, warning) in enumerate(process_sites(dstore, csm)):
+    for sid, rtgm_df, warning in process_sites(dstore, csm):
         if warning.startswith(('Zero hazard', 'Very low hazard')):
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
