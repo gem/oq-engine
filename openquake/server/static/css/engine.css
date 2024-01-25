@@ -255,3 +255,12 @@ tr.asce_output {
     vertical-align: top!important;
     height: 11px!important;
 }
+
+/* customization of bootstrap button hover, to avoid turning to black */
+.btn:hover, .btn:focus {
+    color: #fff!important;
+}
+
+.output-action-btn {
+    width: 90px;
+}

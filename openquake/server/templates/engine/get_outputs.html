@@ -87,7 +87,7 @@
             <table class="table table-disable-hover table-condensed">
             <% _.each(output.get('outtypes'), function(outtype) { %>
               <tr>
-                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm">Download <%= outtype %></a></td>
+                <td><a href="{{ oq_engine_server_url }}/v1/calc/result/<%= output.get('id') %>?export_type=<%= outtype %>" class="btn btn-sm output-action-btn">Download <%= outtype %></a></td>
               </tr>
             <% }); %>
             </table>
