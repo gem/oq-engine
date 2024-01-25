@@ -106,7 +106,7 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
         f = 0 if imt == 0.0 else _find_fact_maxC(T, 'ASCE7-16')
         imls.append([im*f for im in imtls[imt]])
     # get rtgm ouptut from the datastore
-    rtgm_df = dstore.read_df('rtgm')
+    rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     # get the IML for the 2475 RP
     rtgm_probmce = rtgm_df['ProbMCE']
     # get investigation time
@@ -179,7 +179,11 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
 
     limit_det = [0.5, 1.5, 0.6]
     # presenting as maximum component -> do not need conversion facts
-    rtgm_probmce = dstore.read_df('rtgm')['ProbMCE']
+    rtgm = dstore.read_df('rtgm', sel=dict(sid=site_idx))
+    if (rtgm.RTGM == 0).all():
+        logging.warning('Low hazard, no governing MCE')
+        return
+    rtgm_probmce = rtgm.ProbMCE.to_numpy()
     plt.figure(figsize=(8, 6))
     plt.rcParams.update({'font.size': 15})
     plt.plot(T, limit_det, 'kx', markersize=15, label='DLL', linewidth=1)
@@ -224,7 +228,11 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     # get imls and imts, make arrays
     imtls = dinfo['imtls']
     # get rtgm ouptut from the datastore
-    rtgm_df = dstore.read_df('rtgm')
+    rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
+    if (rtgm_df.RTGM == 0).all():
+        logging.warning('Low hazard, no disaggregation by source')
+        return
+
     # get the IML for the 2475 RP
     rtgm_probmce = rtgm_df['ProbMCE']
     # get hazard curves, put into rates
@@ -247,7 +255,7 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         imls = numpy.array([iml*f for iml in imls_o])
         # have to compute everything for max comp. and for geom. mean
         RTGM = rtgm_probmce[m]
-        RTGM_o = rtgm_probmce[m]/f
+        RTGM_o = rtgm_probmce[m] / f
         afe_target = _find_afe_target(imls, mean_hcurve[m], RTGM)
         afe_target_o = _find_afe_target(imls_o, mean_hcurve[m], RTGM_o)
 
