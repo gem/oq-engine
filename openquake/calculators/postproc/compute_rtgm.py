@@ -428,7 +428,10 @@ def calc_asce(dstore, csm, rtgm):
     for sid, rtgm_df in rtgm.items():
         imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
     out = postproc.disagg_by_rel_sources.main(dstore, csm, IMTS, imls_by_sid)
+    sitecol = dstore['sitecol']
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
+        lon = sitecol.lons[sid]
+        lat = sitecol.lats[sid]
         rtgm_df = rtgm[sid]
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
@@ -438,8 +441,8 @@ def calc_asce(dstore, csm, rtgm):
         logging.info(f'{mce=}')
         logging.info(f'{det_mce=}')
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy())
-        logging.info('ASCE 7-16 for site #%d=%s', sid, asce07)
-        logging.info('ASCE 41-17 for site #%d=%s', sid, asce41)
+        logging.info('ASCE 7-16(%.1f,%.1f)=%s', lon, lat, asce07)
+        logging.info('ASCE 41-17(%.1f,%.1f)=%s', lon, lat, asce41)
         yield sid, asce07, asce41
 
 
