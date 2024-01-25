@@ -96,7 +96,8 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     all_sites = os.environ.get('OQ_ALL_SITES', '')
     allparams = []
     tags = []
-    lonlats = pandas.read_csv(fname)[['Longitude', 'Latitude']].to_numpy()
+    sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
+    lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
     models = geolocate(lonlats, mosaic_df)
