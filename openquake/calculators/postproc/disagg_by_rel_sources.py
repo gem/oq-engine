@@ -105,11 +105,14 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
     weights = {}  # sid, src_id -> weights
     for site in sites:
         sid = site.id
+        lon = site.location.x
+        lat = site.location.y
         imls = imls_by_sid[sid]
         dic = get_rel_source_ids(dstore, imts, imls, sid, threshold=.1)
         for imt, ids in dic.items():
             rel_ids_by_imt[sid][imt] = ids = python3compat.decode(sorted(ids))
-            logging.info('Relevant sources for %s: %s', imt, ' '.join(ids))
+            logging.info('Relevant sources for (%.1f,%.1f) %s: %s',
+                         lon, lat, imt, ' '.join(ids))
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
         imldic = dict(zip(imts, imls))
         for idx, source_id in enumerate(rel_ids):

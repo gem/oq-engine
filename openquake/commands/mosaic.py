@@ -80,7 +80,6 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
       excluding sites covered by other models
     * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
       all models except those specified in this list
-    * `OQ_ALL_SITES`: run all sites (default False: running one site per model)
 
     For instance::
 
@@ -93,7 +92,6 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
-    all_sites = os.environ.get('OQ_ALL_SITES', '')
     allparams = []
     tags = []
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
@@ -103,7 +101,6 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     models = geolocate(lonlats, mosaic_df)
     count_sites_per_model = collections.Counter(models)
     print(count_sites_per_model)
-    done = collections.Counter()
     triples = zip(models, sites_df.ID, map(tuple, lonlats))
     for model, id, lonlat in sorted(triples):
         if model in ('???', 'USA', 'GLD'):
@@ -112,9 +109,6 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
-            continue
-        done[model] += 1
         siteid = model + str(id)
         dic = dict(siteid=siteid, sites='%s %s' % lonlat)
         tags.append(siteid)
