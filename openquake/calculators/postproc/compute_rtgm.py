@@ -335,7 +335,7 @@ def get_mce_asce07(det_imt, DLLs, rtgm, low_haz=False):
     return prob_mce_out, mce, det_mce, asce07
 
 
-def get_asce41(dstore, mce, facts):
+def get_asce41(dstore, mce, facts, sid):
     """
     :param dstore: the datastore
     :param mce: governing MCE
@@ -343,7 +343,7 @@ def get_asce41(dstore, mce, facts):
     :returns: a dictionary with the ASCE-41 parameters
     """
     fact = dict(zip(mce, facts))
-    hmap = dstore["hmaps-stats"][0, 0]  # mean hazard on the site, shape (M, P)
+    hmap = dstore["hmaps-stats"][sid, 0]  # mean hazard, shape (M, P)
     oq = dstore['oqparam']
     poes = oq.poes
     imts = list(oq.imtls)
@@ -440,7 +440,7 @@ def calc_asce(dstore, csm, rtgm):
             det_imt, DLLs, rtgm_df)
         logging.info(f'{mce=}')
         logging.info(f'{det_mce=}')
-        asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy())
+        asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
         logging.info('ASCE 7-16(%.1f,%.1f)=%s', lon, lat, asce07)
         logging.info('ASCE 41-17(%.1f,%.1f)=%s', lon, lat, asce41)
         yield sid, asce07, asce41
