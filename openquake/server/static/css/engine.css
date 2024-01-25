@@ -277,6 +277,8 @@ tr.asce_output {
 .outputs-general-btns-right {
     width: calc(100% / 3);
     float: left;
+    min-height: 100px;
+    display: block;
 }
 
 .outputs-general-btns-left {
