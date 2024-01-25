@@ -472,7 +472,7 @@ def main(dstore, csm):
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
                 dummy_det, DLLs, rtgm_df, low_haz=True)
-            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy())
+            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
             asce07[sid] = hdf5.dumps(a07)
             asce41[sid] = hdf5.dumps(a41)
         else:  # High hazard
