@@ -80,7 +80,6 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
       excluding sites covered by other models
     * `OQ_EXCLUDE_MODELS`: same as above, but selecting sites covered by
       all models except those specified in this list
-    * `OQ_ALL_SITES`: run all sites (default False: running one site per model)
 
     For instance::
 
@@ -93,30 +92,27 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     t0 = time.time()
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
-    all_sites = os.environ.get('OQ_ALL_SITES', '')
     allparams = []
     tags = []
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
-    models = geolocate(lonlats, mosaic_df)
-    count_sites_per_model = collections.Counter(models)
+    sites_df['model']= geolocate(lonlats, mosaic_df)
+    count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
-    done = collections.Counter()
-    for model in numpy.unique(models):
+    for model, df in sites_df.groupby('model'):
         if model in ('???', 'USA', 'GLD'):
             continue
         if exclude_models and model in exclude_models.split(','):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        if not all_sites and done[model] >= 12:  # 12 chosen for the JPN error
-            continue
-        done[model] += 1
+
+        df = df.sort_values('ID')
         siteid = model
         sites = ','.join('%s %s' % tuple(lonlat)
-                         for lonlat in lonlats[models==model])
+                         for lonlat in lonlats[df.index])
         dic = dict(siteid=siteid, sites=sites)
         tags.append(siteid)
         allparams.append(get_params_from(dic, mosaic_dir))
