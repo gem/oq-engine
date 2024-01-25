@@ -89,6 +89,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
+    params['export_dir'] = ''
     return params
 
 
