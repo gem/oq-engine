@@ -274,6 +274,8 @@ class Amplifier(object):
                     raise ValueError(
                         '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'
                         % (gsim.__class__.__name__, gsim_ref, self.vs30_ref))
+        if vs30_tolerance < 0:
+            return
         if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
             raise ValueError('Some vs30 in the site collection is different '
                              'from vs30_ref=%d over the tolerance of %d' %

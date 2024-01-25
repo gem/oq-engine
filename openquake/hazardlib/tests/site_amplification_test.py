@@ -117,6 +117,14 @@ class AmplifierTestCase(unittest.TestCase):
             ' vs30_tolerance = -1',
             str(ctx.exception))
 
+    def test_missing_attribute_but_negative_vs30_tolerance(self):
+        fname = gettemp(trivial_ampl_func)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        a = Amplifier(self.imtls, df, self.soil_levels)
+        gmm = valid.gsim('CanadaSHM6_ActiveCrust_BooreEtAl2014')
+        a.check(self.vs30, -1, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
+
     def test_trivial(self):
         # using the heaviside function, i.e. `amplify_one` has contributions
         # only for soil_intensity < a * mid_intensity with a=1
