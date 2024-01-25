@@ -108,22 +108,18 @@ class AmplifierTestCase(unittest.TestCase):
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
         gmm = valid.gsim('CanadaSHM6_ActiveCrust_BooreEtAl2014')
+        vs30_tolerance = -1
+        a.check(self.vs30, vs30_tolerance, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
+        vs30_tolerance = 0
         with self.assertRaises(AttributeError) as ctx:
-            a.check(self.vs30, 0, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
+            a.check(self.vs30, vs30_tolerance,
+                    {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
         self.assertIn(
             'The attribute DEFINED_FOR_REFERENCE_VELOCITY is missing in the'
             ' gsim [CanadaSHM6_ActiveCrust_BooreEtAl2014]. However, at your'
             ' peril, you can disable the vs30 consistency check by setting'
             ' vs30_tolerance = -1',
             str(ctx.exception))
-
-    def test_missing_attribute_but_negative_vs30_tolerance(self):
-        fname = gettemp(trivial_ampl_func)
-        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
-                      index='ampcode')
-        a = Amplifier(self.imtls, df, self.soil_levels)
-        gmm = valid.gsim('CanadaSHM6_ActiveCrust_BooreEtAl2014')
-        a.check(self.vs30, -1, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
 
     def test_trivial(self):
         # using the heaviside function, i.e. `amplify_one` has contributions
