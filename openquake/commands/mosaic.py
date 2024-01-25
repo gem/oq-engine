@@ -109,7 +109,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if only_models and model not in only_models.split(','):
             continue
 
-        df = df.sort_values('ID')
+        df = df.sort_values(['Longitude', 'Latitude'])
         siteid = model
         sites = ','.join('%s %s' % tuple(lonlat)
                          for lonlat in lonlats[df.index])
