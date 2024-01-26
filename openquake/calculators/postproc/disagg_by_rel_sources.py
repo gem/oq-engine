@@ -111,7 +111,7 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
         dic = get_rel_source_ids(dstore, imts, imls, sid, threshold=.1)
         for imt, ids in dic.items():
             rel_ids_by_imt[sid][imt] = ids = python3compat.decode(sorted(ids))
-            logging.info('Relevant sources for (%.1f,%.1f) %s: %s',
+            logging.info('(%.1f,%.1f) relevant source for %s: %s',
                          lon, lat, imt, ' '.join(ids))
         rel_ids = sorted(set.union(*map(set, rel_ids_by_imt[sid].values())))
         imldic = dict(zip(imts, imls))
@@ -123,8 +123,8 @@ def submit_sources(dstore, csm, edges, shp, imts, imls_by_sid, oq, sites):
             relt = FullLogicTree(smlt, gslt)
             Z = relt.get_num_paths()
             assert Z, relt  # sanity check
-            logging.info('Considering source %s (%d realizations)',
-                         source_id, Z)
+            logging.info('(%.1f,%.1f) source %s (%d realizations)',
+                         lon, lat, source_id, Z)
             groups = relt.reduce_groups(csm.src_groups)
             assert groups, 'No groups for %s' % source_id
             smap.submit((groups, site, relt, (edges, shp), oq, imldic))
@@ -205,7 +205,7 @@ def main(dstore, csm, imts, imls_by_sid):
             df = mag_dist_eps[mag_dist_eps.imt == imt]
             dfs.append(df[numpy.isin(df.src, src_ids)])
         mag_dist_eps_df = pandas.concat(dfs)
-        logging.info('mag_dist_eps(%.1f,%.1f)=\n%s',
+        logging.info('(%.1f,%.1f) mag_dist_eps=\n%s',
                      site.location.x, site.location.y, mag_dist_eps_df)
         out[site.id] = mag_dist_eps_df.to_numpy(), sigma_by_src
     return out
