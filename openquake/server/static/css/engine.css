@@ -12,7 +12,7 @@ h2 {
     padding-top: 10px;
     width: 1080px;
 }
-@media (min-width: 640px) and (max-width: 1079px) {
+@media (min-width: 640px) and (max-width: 1120px) {
     .content-wrap {
         width: 90%;
     }
