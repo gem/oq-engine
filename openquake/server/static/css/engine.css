@@ -259,11 +259,16 @@ tr.asce_output {
     width: 241px;
     vertical-align: top!important;
     height: 11px!important;
+    padding-bottom: 10px!important;
 }
 
 /* customization of bootstrap button hover, to avoid turning to black */
 .btn:hover, .btn:focus {
     color: #fff!important;
+}
+
+.btn {
+    border: none!important;
 }
 
 .output-action-btn {
