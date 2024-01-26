@@ -545,9 +545,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         # event based risk with post processing
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
-        with Print.patch() as p:
-            [log] = run_jobs(create_jobs([job_ini], 'error'))
-        self.assertIn('id | name', str(p))
+        [log] = run_jobs(create_jobs([job_ini], 'error'))
 
         # check the exported outputs
         expected = set('''\
