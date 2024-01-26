@@ -52,11 +52,11 @@ def fix(asce, siteid):
     return dic
 
 
-def get_asce41(calc_id):
+def get_asce41(calc_id, ids):
     dstore = datastore.read(calc_id)
-    siteid = dstore['oqparam'].description[9:]
-    a41 = dstore['asce41'][0]
-    return [fix(a41, siteid)]
+    model = dstore['oqparam'].description[9:12]
+    return [fix(a, model + str(id))
+            for id, a in zip(ids[model], dstore['asce41'])]
 
 
 # ########################## run_site ############################## #
@@ -93,33 +93,33 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     only_models = os.environ.get('OQ_ONLY_MODELS', '')
     exclude_models = os.environ.get('OQ_EXCLUDE_MODELS', '')
     allparams = []
-    tags = []
+    ids = {}
     sites_df = pandas.read_csv(fname)  # header ID,Latitude,Longitude
     lonlats = sites_df[['Longitude', 'Latitude']].to_numpy()
     print('Found %d sites' % len(lonlats))
     mosaic_df = readinput.read_mosaic_df(buffer=0.1)
-    models = geolocate(lonlats, mosaic_df)
-    count_sites_per_model = collections.Counter(models)
+    sites_df['model']= geolocate(lonlats, mosaic_df)
+    count_sites_per_model = collections.Counter(sites_df.model)
     print(count_sites_per_model)
-    triples = zip(models, map(tuple, lonlats), sites_df.ID)
-    for model, lonlat, id in sorted(triples):
+    for model, df in sites_df.groupby('model'):
         if model in ('???', 'USA', 'GLD'):
             continue
         if exclude_models and model in exclude_models.split(','):
             continue
         if only_models and model not in only_models.split(','):
             continue
-        siteid = model + str(id)
-        dic = dict(siteid=siteid, sites='%s %s' % lonlat)
-        tags.append(siteid)
+
+        df = df.sort_values(['Longitude', 'Latitude'])
+        ids[model] = df.ID.to_numpy()
+        sites = ','.join('%s %s' % tuple(lonlat)
+                         for lonlat in lonlats[df.index])
+        dic = dict(siteid=model + str(ids[model]), sites=sites)
         allparams.append(get_params_from(dic, mosaic_dir))
 
     logging.root.handlers = []  # avoid too much logging
     loglevel = 'warn' if len(allparams) > 9 else config.distribution.log_level
     logctxs = engine.create_jobs(
         allparams, loglevel, None, getpass.getuser(), None)
-    for logctx, tag in zip(logctxs, tags):
-        logctx.tag = tag
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
@@ -131,7 +131,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if tb:
             count_errors += 1
         try:
-            results.extend(get_asce41(logctx.calc_id))
+            results.extend(get_asce41(logctx.calc_id, ids))
         except KeyError:
             # asce41 could not be computed due to some error
             continue

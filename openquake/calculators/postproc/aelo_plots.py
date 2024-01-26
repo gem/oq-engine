@@ -18,14 +18,12 @@
 import io
 import os
 import numpy
-import logging
 import json
 import matplotlib as mpl
 from scipy import interpolate
 from openquake.hazardlib.calc.mean_rates import to_rates
 from openquake.hazardlib.imt import from_string
 from openquake.calculators.extract import get_info
-
 try:
     from PIL import Image
 except ImportError:
@@ -152,14 +150,9 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
     plt.ylim([10E-6, 1.1])
     plt.xlim([0.01, 4])
     if update_dstore:
-        if Image is not None:
-            bio = io.BytesIO()
-            plt.savefig(bio, format='png', bbox_inches='tight')
-            logging.info('Storing png/hcurves.png')
-            dstore['png/hcurves.png'] = Image.open(bio)
-        else:
-            logging.warning(
-                'Missing module PIL: skipping storing png/hcurves.png')
+        bio = io.BytesIO()
+        plt.savefig(bio, format='png', bbox_inches='tight')
+        dstore['png/hcurves.png'] = Image.open(bio)
     return plt
 
 
@@ -181,7 +174,6 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     # presenting as maximum component -> do not need conversion facts
     rtgm = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm.RTGM == 0).all():
-        logging.warning('Low hazard, no governing MCE')
         return
     rtgm_probmce = rtgm.ProbMCE.to_numpy()
     plt.figure(figsize=(8, 6))
@@ -212,14 +204,9 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     plt.legend(loc="upper right", fontsize='13')
     plt.xlim([-0.02, 1.2])
     if update_dstore:
-        if Image is not None:
-            bio = io.BytesIO()
-            plt.savefig(bio, format='png', bbox_inches='tight')
-            logging.info('Storing png/governing_mce.png')
-            dstore['png/governing_mce.png'] = Image.open(bio)
-        else:
-            logging.warning(
-                'Missing module PIL: skipping storing png/governing_mce.png')
+        bio = io.BytesIO()
+        plt.savefig(bio, format='png', bbox_inches='tight')
+        dstore['png/governing_mce.png'] = Image.open(bio)
     return plt
 
 
@@ -230,7 +217,6 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     # get rtgm ouptut from the datastore
     rtgm_df = dstore.read_df('rtgm', sel=dict(sid=site_idx))
     if (rtgm_df.RTGM == 0).all():
-        logging.warning('Low hazard, no disaggregation by source')
         return
 
     # get the IML for the 2475 RP
@@ -337,30 +323,19 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         ax1.set_xlim([0.01, 4])
 
         if update_dstore:
-            if Image is not None:
-                # save single imt plot
-                bio1 = io.BytesIO()
-                fig1.savefig(bio1, format='png', bbox_inches='tight')
-                # keep these in webui until we finish checks and have a command
-                # line exporter, then we can change the name to _{imt} and they
-                # will not appear in the webui
-                dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
-            else:
-                logging.warning(
-                    f'Missing module PIL: skipping storing'
-                    f' png/disagg_by_src-{imt}.png')
+            # save single imt plot
+            bio1 = io.BytesIO()
+            fig1.savefig(bio1, format='png', bbox_inches='tight')
+            # keep these in webui until we finish checks and have a command
+            # line exporter, then we can change the name to _{imt} and they
+            # will not appear in the webui
+            dstore[f'png/disagg_by_src-{imt}.png'] = Image.open(bio1)
         fig1.tight_layout()
 
     if update_dstore:
-        if Image is not None:
-            # save triple plot
-            bio = io.BytesIO()
-            fig.savefig(bio, format='png', bbox_inches='tight')
-            logging.info('Storing png/disagg_by_src.png')
-            dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
-        else:
-            logging.warning(
-                'Missing module PIL: skipping storing'
-                ' png/disagg_by_src-All-IMTs.png')
+        # save triple plot
+        bio = io.BytesIO()
+        fig.savefig(bio, format='png', bbox_inches='tight')
+        dstore['png/disagg_by_src-All-IMTs.png'] = Image.open(bio)
     fig.tight_layout()
     return plt
