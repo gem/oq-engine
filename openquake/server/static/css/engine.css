@@ -10,6 +10,7 @@ h2 {
 
 .content-wrap {
     padding-top: 10px;
+    width: 1080px;
 }
 
 .container,
@@ -21,6 +22,10 @@ h2 {
 
 .navbar .nav.account-bar {
     margin-top: 0;
+}
+
+.span12 {
+    width: 100%;
 }
 
 .span10 {
@@ -251,7 +256,7 @@ tr.asce_output {
 }
 
 .aelo-input {
-    width: 201px;
+    width: 241px;
     vertical-align: top!important;
     height: 11px!important;
 }
@@ -291,4 +296,8 @@ tr.asce_output {
 
 .outputs-general-btns-right {
     text-align: right;
+}
+
+.calc-list-btn {
+    width: 56px;
 }
