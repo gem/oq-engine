@@ -82,12 +82,9 @@ def collapse_nphc(src):
         src.magnitude_scaling_relationship = PointMSR()
 
 
-def _filter(srcs, min_mag, fraction=1.):
-    # filter by magnitude and optionally sample source
-    # count the ruptures
+def _filter(srcs, min_mag):
+    # filter by magnitude and count the ruptures
     mmag = getdefault(min_mag, srcs[0].tectonic_region_type)
-    if fraction < 1.:
-        srcs = general.random_filter(srcs, fraction)
     out = [src for src in srcs if src.get_mags()[-1] >= mmag]
     for ss in out:
         ss.num_ruptures = ss.count_ruptures()
@@ -117,7 +114,7 @@ def preclassical(srcs, sites, cmaker, monitor):
             splits.extend(split_source(src))
         else:
             splits.append(src)
-    splits = _filter(splits, cmaker.oq.minimum_magnitude, cmaker.fraction)
+    splits = _filter(splits, cmaker.oq.minimum_magnitude)
     mon = monitor('weighting sources', measuremem=False)
     if sites is None or spacing == 0:
         if sites is None:
@@ -205,10 +202,8 @@ class PreClassicalCalculator(base.HazardCalculator):
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
-        ss = os.environ.get('OQ_SAMPLE_SOURCES')
         for grp_id, srcs in sources_by_key.items():
             cmaker = cmakers[grp_id]
-            cmaker.fraction = float(ss) if ss else 1.
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
