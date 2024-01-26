@@ -388,7 +388,7 @@ def get_asce41(dstore, mce, facts, sid):
 
 def process_sites(dstore, csm):
     """
-    :yields: (sid, rtgm_df, warning)
+    :yields: (site, rtgm_df, warning)
     """
     for site in dstore['sitecol']:
         sid = site.id
@@ -442,7 +442,7 @@ def calc_asce(dstore, csm, rtgm):
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
         logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
         logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
-        yield sid, asce07, asce41
+        yield sid, mag_dst_eps_sig, asce07, asce41
 
 
 def to_array(dic):
@@ -483,9 +483,10 @@ def main(dstore, csm):
             logging.warning('(%.1f,%.1f) ' + warning, loc.x, loc.y)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
-    for sid, a07, a41 in calc_asce(dstore, csm, rtgm):
+    for sid, mdes, a07, a41 in calc_asce(dstore, csm, rtgm):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
+        dstore[f'mag_dst_eps_sig/{sid}'] = mdes
 
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)

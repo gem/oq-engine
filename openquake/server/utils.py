@@ -23,6 +23,7 @@ import django
 
 from time import sleep
 from django.conf import settings
+from django.apps import apps
 from openquake.engine import __version__ as oqversion
 
 if settings.LOCKDOWN:
@@ -103,16 +104,18 @@ def oq_server_context_processor(request):
 
     context = {}
 
+    announcement_model = apps.get_model(app_label='db',
+                                        model_name='Announcement')
+
     webui_host = request.get_host()
-    context['oq_engine_server_url'] = ('//' +
-                                       (webui_host if webui_host else
-                                        request.META.get('HTTP_HOST',
-                                                        'localhost:8800'))
-                                        + settings.WEBUI_PATHPREFIX)
+    context['oq_engine_server_url'] = (
+        '//' + (webui_host if webui_host else request.META.get(
+            'HTTP_HOST', 'localhost:8800')) + settings.WEBUI_PATHPREFIX)
     # this context var is also evaluated by the STANDALONE_APPS to identify
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
     context['server_name'] = settings.SERVER_NAME
+    context['announcements'] = announcement_model.objects.all()
     return context
 
 
