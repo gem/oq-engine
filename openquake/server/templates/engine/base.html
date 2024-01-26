@@ -73,6 +73,9 @@
       </section>
     </div> <!-- /.navbar-inner -->
   </div> <!-- /.navbar navbar-fixed-top -->
+  {% endblock header %}
+
+  {% block main %}
   {% if announcements %}
   <div class="announcements-box">
     {% for announcement in announcements %}
@@ -85,9 +88,6 @@
     {% endfor %}
   </div>
   {% endif %}
-  {% endblock header %}
-
-  {% block main %}
   {% endblock main %}
   <div id="outdated"></div>
   {% block footer %}
