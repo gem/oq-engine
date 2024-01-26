@@ -131,7 +131,6 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
         facts.append(fact)
 
         if afe[0] < MIN_AFE:
-            logging.warning('Hazard is too low for %s', imt)
             UHGM[m] = 0
             RTGM_max[m] = 0
             MCE[m] = 0
@@ -397,13 +396,13 @@ def process_sites(dstore, csm):
         if mrs.sum() == 0:
             warning = ('Zero hazard: there are no ruptures close to the site. '
                        'ASCE 7-16 and ASCE 41-17 parameters cannot be computed')
-            yield sid, None, warning
+            yield site, None, warning
 
         mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
         if mean_rates.max() < MIN_AFE:
             warning = ('Very low hazard: ASCE 7-16 and'
                        ' ASCE 41-17 parameters cannot be computed.')
-            yield sid, None, warning
+            yield site, None, warning
 
         oq = dstore['oqparam']
         stats = list(oq.hazard_stats())
@@ -412,12 +411,12 @@ def process_sites(dstore, csm):
         site = list(dstore['sitecol'])[sid]
         loc = site.location
         rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
-        logging.info('Computed RTGM(%.1f,%.1f)\n%s', loc.x, loc.y, rtgm_df)
+        logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
         if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-            yield sid, rtgm_df, 'Low hazard: do not disaggregate by source'
+            yield site, rtgm_df, 'Low hazard: do not disaggregate by source'
         else:
-            yield sid, rtgm_df, ''
+            yield site, rtgm_df, ''
 
 
 def calc_asce(dstore, csm, rtgm):
@@ -435,14 +434,14 @@ def calc_asce(dstore, csm, rtgm):
         rtgm_df = rtgm[sid]
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
-        logging.info(f'{det_imt=}')
+        logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
             det_imt, DLLs, rtgm_df)
-        logging.info(f'{mce=}')
-        logging.info(f'{det_mce=}')
+        logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
+        logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
         asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
-        logging.info('ASCE 7-16(%.1f,%.1f)=%s', lon, lat, asce07)
-        logging.info('ASCE 41-17(%.1f,%.1f)=%s', lon, lat, asce41)
+        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
+        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
         yield sid, asce07, asce41
 
 
@@ -464,7 +463,9 @@ def main(dstore, csm):
     warnings = {}
     rtgm_dfs = []
     rtgm = {}
-    for sid, rtgm_df, warning in process_sites(dstore, csm):
+    for site, rtgm_df, warning in process_sites(dstore, csm):
+        sid = site.id
+        loc = site.location
         if warning.startswith(('Zero hazard', 'Very low hazard')):
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
@@ -479,7 +480,7 @@ def main(dstore, csm):
             rtgm[sid] = rtgm_df
         warnings[sid] = warning
         if warning:
-            logging.warning(warning)
+            logging.warning('(%.1f,%.1f) ' + warning, loc.x, loc.y)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
     for sid, a07, a41 in calc_asce(dstore, csm, rtgm):
