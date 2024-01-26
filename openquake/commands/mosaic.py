@@ -54,9 +54,9 @@ def fix(asce, siteid):
 
 def get_asce41(calc_id):
     dstore = datastore.read(calc_id)
-    model = dstore['oqparam'].description[9:]
-    return [fix(a, '%s%d' % (model, sid))
-            for sid, a in enumerate(dstore['asce41'])]
+    siteid = dstore['oqparam'].description[9:]
+    a41 = dstore['asce41'][0]
+    return [fix(a41, siteid)]
 
 
 # ########################## run_site ############################## #
