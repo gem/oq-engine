@@ -414,7 +414,7 @@ def process_sites(dstore, csm):
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
         if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-            yield site, rtgm_df, 'Low hazard: do not disaggregate by source'
+            yield site, rtgm_df, 'Low hazard'
         else:
             yield site, rtgm_df, ''
 
