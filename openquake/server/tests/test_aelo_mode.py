@@ -218,6 +218,10 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         assert resp.status_code == 404, resp
 
     def test_announcement(self):
+        # NOTE: this test might be moved to the currently missing
+        #       test_restricted_mode.py. Anyway, both the AELO and the
+        #       RESTRICTED modes imply LOCKDOWN=True and add the announcements
+        #       app to the INSTALLED_APPS.
         announcement = Announcement(
             title='TEST TITLE', content='Test content', show=False)
         announcement.save()
