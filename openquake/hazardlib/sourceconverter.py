@@ -37,6 +37,7 @@ from openquake.hazardlib.source.multi_fault import MultiFaultSource
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2**16
 EPSILON = 1E-12
 source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
@@ -1144,6 +1145,8 @@ class SourceConverter(RuptureConverter):
             with context(self.fname, node):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
+                for idx in idxs:
+                    assert U32(idx).max() < TWO16, idx
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt, idxs,
                                    dic['probs_occur'],
