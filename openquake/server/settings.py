@@ -305,7 +305,7 @@ if LOCKDOWN:
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
-        'announcements',
+        'openquake.server.announcements',
         )
 
     # Official documentation suggests to override the entire TEMPLATES
