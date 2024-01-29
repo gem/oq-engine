@@ -36,6 +36,7 @@ import django
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
+from openquake.server.announcements.models import Announcement
 
 django.setup()
 try:
@@ -215,3 +216,9 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         assert resp.status_code == 404, resp
+
+    def test_announcement(self):
+        announcement = Announcement(
+            title='TEST TITLE', content='Test content', show=False)
+        announcement.save()
+        announcement.delete()
