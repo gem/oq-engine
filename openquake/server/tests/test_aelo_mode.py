@@ -36,11 +36,11 @@ import django
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
-from openquake.server.announcements.models import Announcement
 
 django.setup()
 try:
     from django.contrib.auth.models import User  # noqa
+    from openquake.server.announcements.models import Announcement  # noqa
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
