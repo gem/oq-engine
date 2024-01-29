@@ -26,17 +26,17 @@ def allocate_mem(n):
     for _ in range(n):
         z = numpy.zeros((1024, 1024, 13))  # 104 MB
         lst.append(z)
-        yield z.nbytes
+        yield z
 
 
-def main(n: int = 10):
+def main(n: int = 1):
     """
     Allocate a lot of memory; used to simulate OOM situations
     """
     tot = 0
     allargs = [(n,) for _ in range(parallel.Starmap.num_cores)]
-    for nbytes in parallel.Starmap(allocate_mem, allargs):
-        tot += nbytes
+    for z in parallel.Starmap(allocate_mem, allargs):
+        tot += z.nbytes
     logging.warning('Allocated %.1f GB', tot / 1024**3)
 
 
