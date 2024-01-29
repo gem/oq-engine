@@ -35,10 +35,9 @@ from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 F32 = np.float32
-BLOCKSIZE = 200
-# NB: we need enough sources for parallelization and not too
-# big to cause an out-of-memory when building the contexts
-
+BLOCKSIZE = 2000
+# NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
+# however it uses a lot of RAM in classical when reading the sources
 
 class MultiFaultSource(BaseSeismicSource):
     """
