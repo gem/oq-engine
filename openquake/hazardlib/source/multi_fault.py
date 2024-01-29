@@ -52,7 +52,7 @@ class MultiFaultSource(BaseSeismicSource):
     :param tectonic_region_type:
         A string that defines the TRT of the fault source
     :param rupture_idxs:
-        A list of lists. Each element contains the IDs of the sections
+        A list of arrays. Each element contains the IDs of the sections
         participating to a rupture. The cardinality of this list is N.
         The IDs are integers.
     :param occurrence_probs:
@@ -107,7 +107,7 @@ class MultiFaultSource(BaseSeismicSource):
         if self.hdf5path == '':  # in the tests
             return self.sections
         with hdf5.File(self.hdf5path, 'r') as f:
-            geoms = f['multi_fault_sections'][:]
+            geoms = f['multi_fault_sections'][:]  # small
         sections = [geom_to_kite(geom) for geom in geoms]
         for idx, sec in enumerate(sections):
             sec.suid = idx
