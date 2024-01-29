@@ -24,7 +24,7 @@ from openquake.baselib import parallel, sap
 def allocate_mem(n):
     lst = []
     for _ in range(n):
-        z = numpy.zeros((1024, 1024))  # 8 MB
+        z = numpy.zeros((1024, 1024, 13))  # 104 MB
         lst.append(z)
         yield z.nbytes
 
