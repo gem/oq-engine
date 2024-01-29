@@ -19,8 +19,6 @@
 import io
 import os
 import time
-import gzip
-import pickle
 import psutil
 import logging
 import operator
