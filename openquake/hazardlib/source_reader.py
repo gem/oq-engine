@@ -31,6 +31,7 @@ from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
+U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
@@ -347,7 +348,7 @@ def fix_geometry_sections(smdict, dstore):
                         raise RuntimeError('Missing geometryModel files!')
                     if dstore:
                         src.hdf5path = dstore.tempname
-                    src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                    src.rupture_idxs = [U16([s2i[idx] for idx in idxs])
                                         for idxs in src.rupture_idxs]
                     for idxs in src.rupture_idxs:
                         section_idxs.extend(idxs)
