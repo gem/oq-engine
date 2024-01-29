@@ -112,16 +112,18 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
     with dstore:
-        if sitecol is None:  # regular
-            sitecol = dstore['sitecol']
-        else:  # big
-            arr = dstore.getitem('_csm')[cmaker.grp_id]
-            sources = pickle.loads(gzip.decompress(arr.tobytes()))
+        if sitecol is None:  # regular calculator
+            with monitor('reading sitecol'):
+                sitecol = dstore['sitecol']
+        else:  # tiling calculator, read the sources from the datastore
+            with monitor('reading sources'):
+                arr = dstore.getitem('_csm')[cmaker.grp_id]
+                sources = pickle.loads(gzip.decompress(arr.tobytes()))
 
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
-        # in case_27 (Japan) we do NOT enter here; disagg_by_src
-        # still works since the atomic group contains a single source
-        # 'case' (mutex combination of case:01, case:02)
+        # in case_27 (Japan) we do NOT enter here;
+        # disagg_by_src still works since the atomic group contains a single
+        # source 'case' (mutex combination of case:01, case:02)
         for srcs in groupby(sources, valid.basename).values():
             pmap = ProbabilityMap(
                 sitecol.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
@@ -131,11 +133,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
     else:
-        # NB: the parameter config.memory.pmap_max_mb avoids the hanging
-        # of oq1 due to too large zmq packets
+        # size_mb is the maximum size of the pmap array in GB
         size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
                    * 8 / 1024**2)
-        # size_mb is the maximum size of the pmap array in GB
+        # NB: the parameter config.memory.pmap_max_mb avoids the hanging
+        # of oq1 due to too large zmq packets
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
         N = len(sitecol)
         for sites in sitecol.split_in_tiles(itiles):
