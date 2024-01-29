@@ -111,14 +111,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     """
     # NB: removing the yield would cause terrible slow tasks
     cmaker.init_monitoring(monitor)
-    with dstore:
-        if sitecol is None:  # regular calculator
-            with monitor('reading sitecol'):
-                sitecol = dstore['sitecol']
-        else:  # tiling calculator, read the sources from the datastore
-            with monitor('reading sources'):
-                arr = dstore.getitem('_csm')[cmaker.grp_id]
-                sources = pickle.loads(gzip.decompress(arr.tobytes()))
+    if sitecol is None:  # regular calculator
+        with dstore, monitor('reading sitecol'):
+            sitecol = dstore['sitecol']
 
     if cmaker.disagg_by_src and not getattr(sources, 'atomic', False):
         # in case_27 (Japan) we do NOT enter here;
@@ -572,10 +567,10 @@ class ClassicalCalculator(base.HazardCalculator):
             cm.rup_indep = getattr(sg, 'rup_interdep', None) != 'mutex'
             cm.pmap_max_mb = float(config.memory.pmap_max_mb)
             if sg.atomic or sg.weight <= maxw:
-                allargs.append((None, self.sitecol, cm, ds))
+                allargs.append((sg, self.sitecol, cm, ds))
             else:
                 for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
-                    allargs.append((None, tile, cm, ds))
+                    allargs.append((sg, tile, cm, ds))
                     self.ntiles += 1
 
         self.datastore.swmr_on()  # must come before the Starmap
