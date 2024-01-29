@@ -1,3 +1,7 @@
+  [Michele Simionato]
+  * Reduced memory consumption in multiFaultSources
+  * Implemented batch processing for AELO calculations
+
   [Anirudh Rao]
   * Improved the performance of non-parametric liquefaction models
 
