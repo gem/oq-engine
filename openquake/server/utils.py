@@ -104,8 +104,12 @@ def oq_server_context_processor(request):
 
     context = {}
 
-    announcement_model = apps.get_model(app_label='db',
+    announcement_model = apps.get_model(app_label='announcements',
                                         model_name='Announcement')
+    if announcement_model is not None:
+        announcements = announcement_model.objects.all()
+    else:
+        announcements = None
 
     webui_host = request.get_host()
     context['oq_engine_server_url'] = (
@@ -115,7 +119,7 @@ def oq_server_context_processor(request):
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
     context['server_name'] = settings.SERVER_NAME
-    context['announcements'] = announcement_model.objects.all()
+    context['announcements'] = announcements
     return context
 
 

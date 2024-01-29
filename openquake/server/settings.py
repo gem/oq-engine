@@ -305,6 +305,7 @@ if LOCKDOWN:
         'django.contrib.messages',
         'django.contrib.sessions',
         'django.contrib.admin',
+        'announcements',
         )
 
     # Official documentation suggests to override the entire TEMPLATES
