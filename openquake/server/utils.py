@@ -104,12 +104,13 @@ def oq_server_context_processor(request):
 
     context = {}
 
-    announcement_model = apps.get_model(app_label='announcements',
-                                        model_name='Announcement')
-    if announcement_model is not None:
-        announcements = announcement_model.objects.all()
-    else:
+    try:
+        announcement_model = apps.get_model(app_label='announcements',
+                                            model_name='Announcement')
+    except LookupError:
         announcements = None
+    else:
+        announcements = announcement_model.objects.all()
 
     webui_host = request.get_host()
     context['oq_engine_server_url'] = (
