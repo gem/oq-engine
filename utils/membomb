@@ -17,10 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Allocate a lot of    memory; used to simulate OOM situations
-"""
-
 import logging
 import numpy
 from openquake.baselib import parallel, sap
@@ -34,6 +30,9 @@ def allocate_mem(n):
 
 
 def main(n: int = 10):
+    """
+    Allocate a lot of memory; used to simulate OOM situations
+    """
     tot = 0
     allargs = [(n,) for _ in range(parallel.Starmap.num_cores)]
     for nbytes in parallel.Starmap(allocate_mem, allargs):
