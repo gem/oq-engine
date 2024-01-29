@@ -131,7 +131,6 @@ def calc_rtgm_df(hcurves, site, site_idx, oq):
         facts.append(fact)
 
         if afe[0] < MIN_AFE:
-            logging.warning('Hazard is too low for %s', imt)
             UHGM[m] = 0
             RTGM_max[m] = 0
             MCE[m] = 0
@@ -335,7 +334,7 @@ def get_mce_asce07(det_imt, DLLs, rtgm, low_haz=False):
     return prob_mce_out, mce, det_mce, asce07
 
 
-def get_asce41(dstore, mce, facts):
+def get_asce41(dstore, mce, facts, sid):
     """
     :param dstore: the datastore
     :param mce: governing MCE
@@ -343,7 +342,7 @@ def get_asce41(dstore, mce, facts):
     :returns: a dictionary with the ASCE-41 parameters
     """
     fact = dict(zip(mce, facts))
-    hmap = dstore["hmaps-stats"][0, 0]  # mean hazard on the site, shape (M, P)
+    hmap = dstore["hmaps-stats"][sid, 0]  # mean hazard, shape (M, P)
     oq = dstore['oqparam']
     poes = oq.poes
     imts = list(oq.imtls)
@@ -389,7 +388,7 @@ def get_asce41(dstore, mce, facts):
 
 def process_sites(dstore, csm):
     """
-    :returns: (rtgm_df, warning)
+    :yields: (site, rtgm_df, warning)
     """
     for site in dstore['sitecol']:
         sid = site.id
@@ -397,13 +396,13 @@ def process_sites(dstore, csm):
         if mrs.sum() == 0:
             warning = ('Zero hazard: there are no ruptures close to the site. '
                        'ASCE 7-16 and ASCE 41-17 parameters cannot be computed')
-            yield None, warning
+            yield site, None, warning
 
         mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
         if mean_rates.max() < MIN_AFE:
             warning = ('Very low hazard: ASCE 7-16 and'
                        ' ASCE 41-17 parameters cannot be computed.')
-            yield None, warning
+            yield site, None, warning
 
         oq = dstore['oqparam']
         stats = list(oq.hazard_stats())
@@ -412,12 +411,12 @@ def process_sites(dstore, csm):
         site = list(dstore['sitecol'])[sid]
         loc = site.location
         rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
-        logging.info('Computed RTGM(%.1f,%.1f)\n%s', loc.x, loc.y, rtgm_df)
+        logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
         if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-            yield rtgm_df, 'Low hazard: do not disaggregate by source'
+            yield site, rtgm_df, 'Low hazard'
         else:
-            yield rtgm_df, ''
+            yield site, rtgm_df, ''
 
 
 def calc_asce(dstore, csm, rtgm):
@@ -428,19 +427,22 @@ def calc_asce(dstore, csm, rtgm):
     for sid, rtgm_df in rtgm.items():
         imls_by_sid[sid] = rtgm_df.ProbMCE.to_numpy() / rtgm_df.fact.to_numpy()
     out = postproc.disagg_by_rel_sources.main(dstore, csm, IMTS, imls_by_sid)
+    sitecol = dstore['sitecol']
     for sid, (mag_dist_eps, sigma_by_src) in out.items():
+        lon = sitecol.lons[sid]
+        lat = sitecol.lats[sid]
         rtgm_df = rtgm[sid]
         det_imt, mag_dst_eps_sig = get_deterministic(
             rtgm_df.ProbMCE.to_numpy(), mag_dist_eps, sigma_by_src)
-        logging.info(f'{det_imt=}')
+        logging.info(f'(%.1f,%.1f) {det_imt=}', lon, lat)
         prob_mce_out, mce, det_mce, asce07 = get_mce_asce07(
             det_imt, DLLs, rtgm_df)
-        logging.info(f'{mce=}')
-        logging.info(f'{det_mce=}')
-        asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy())
-        logging.info('ASCE 7-16 for site #%d=%s', sid, asce07)
-        logging.info('ASCE 41-17 for site #%d=%s', sid, asce41)
-        yield sid, asce07, asce41
+        logging.info(f'(%.1f,%.1f) {mce=}', lon, lat)
+        logging.info(f'(%.1f,%.1f) {det_mce=}', lon, lat)
+        asce41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
+        logging.info('(%.1f,%.1f) ASCE 7-16=%s', lon, lat, asce07)
+        logging.info('(%.1f,%.1f) ASCE 41-17=%s', lon, lat, asce41)
+        yield sid, mag_dst_eps_sig, asce07, asce41
 
 
 def to_array(dic):
@@ -461,7 +463,9 @@ def main(dstore, csm):
     warnings = {}
     rtgm_dfs = []
     rtgm = {}
-    for sid, (rtgm_df, warning) in enumerate(process_sites(dstore, csm)):
+    for site, rtgm_df, warning in process_sites(dstore, csm):
+        sid = site.id
+        loc = site.location
         if warning.startswith(('Zero hazard', 'Very low hazard')):
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
@@ -469,31 +473,28 @@ def main(dstore, csm):
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
                 dummy_det, DLLs, rtgm_df, low_haz=True)
-            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy())
+            a41 = get_asce41(dstore, mce, rtgm_df.fact.to_numpy(), sid)
             asce07[sid] = hdf5.dumps(a07)
             asce41[sid] = hdf5.dumps(a41)
         else:  # High hazard
             rtgm[sid] = rtgm_df
         warnings[sid] = warning
         if warning:
-            logging.warning(warning)
+            logging.warning('(%.1f,%.1f) ' + warning, loc.x, loc.y)
         if rtgm_df is not None:
             rtgm_dfs.append(rtgm_df)
-    for sid, a07, a41 in calc_asce(dstore, csm, rtgm):
+    for sid, mdes, a07, a41 in calc_asce(dstore, csm, rtgm):
         asce07[sid] = hdf5.dumps(a07)
         asce41[sid] = hdf5.dumps(a41)
+        dstore[f'mag_dst_eps_sig/{sid}'] = mdes
 
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
     dstore['warnings'] = to_array(warnings)
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
-    if rtgm_dfs and N == 1:
-        if Image is None:  # missing PIL
-            logging.warning('Missing module PIL: skipping plotting curves')
-            return
+    if rtgm_dfs and N == 1 and not warnings[sid]:
+        sid = 0
         plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-        if not warnings[sid]:
-            plot_disagg_by_src(dstore, sid, update_dstore=True)
-        plt = plot_governing_mce(dstore, sid, update_dstore=True)
-        plt.close()
+        plot_disagg_by_src(dstore, sid, update_dstore=True)
+        plot_governing_mce(dstore, sid, update_dstore=True)

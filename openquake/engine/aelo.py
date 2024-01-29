@@ -74,6 +74,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     params['uniform_hazard_spectra'] = 'true'
     params['use_rates'] = 'true'
     params['sites'] = inputs['sites']
+    params['max_sites_disagg'] = '1'
     if 'vs30' in inputs:
         params['override_vs30'] = '%(vs30)s' % inputs
     params['distance_bin_width'] = '20'
@@ -88,6 +89,7 @@ def get_params_from(inputs, mosaic_dir, exclude=()):
     else:
         raise ValueError('Invalid investigation time %(investigation_time)s'
                          % params)
+    params['export_dir'] = ''
     return params
 
 

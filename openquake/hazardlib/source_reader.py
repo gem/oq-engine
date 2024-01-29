@@ -26,7 +26,7 @@ import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
-from openquake.hazardlib import nrml, sourceconverter, InvalidFile
+from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
@@ -469,8 +469,16 @@ def _get_csm(full_lt, groups, event_based, set_wkt):
                 src._wkt = src.wkt()
     src_groups.extend(atomic)
     _fix_dupl_ids(src_groups)
+
+    # optionally sample the sources
+    ss = os.environ.get('OQ_SAMPLE_SOURCES')
     for sg in src_groups:
         sg.sources.sort(key=operator.attrgetter('source_id'))
+        if ss:
+            srcs = []
+            for src in sg:
+                srcs.extend(calc.filters.split_source(src))
+            sg.sources = general.random_filter(srcs, float(ss)) or [srcs[0]]
     return CompositeSourceModel(full_lt, src_groups)
 
 

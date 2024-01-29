@@ -131,9 +131,11 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
             result['pnemap'].trt_smrs = cmaker.trt_smrs
             yield result
     else:
-        # maximum size of the pmap array in GB
-        size_mb = (
-            len(cmaker.gsims) * cmaker.imtls.size * len(sitecol) * 8 / 1024**2)
+        # NB: the parameter config.memory.pmap_max_mb avoids the hanging
+        # of oq1 due to too large zmq packets
+        size_mb = (len(cmaker.gsims) * cmaker.imtls.size * len(sitecol)
+                   * 8 / 1024**2)
+        # size_mb is the maximum size of the pmap array in GB
         itiles = int(numpy.ceil(size_mb / cmaker.pmap_max_mb))
         N = len(sitecol)
         for sites in sitecol.split_in_tiles(itiles):
@@ -141,7 +143,8 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
                 sites.sids, cmaker.imtls.size, len(cmaker.gsims)).fill(
                     cmaker.rup_indep)
             result = hazclassical(sources, sites, cmaker, pmap)
-            if N > cmaker.max_sites_disagg:  # save data transfer
+            if N > cmaker.max_sites_disagg and not cmaker.disagg_by_src:
+                # save data transfer
                 result['pnemap'] = ~pmap.remove_zeros()
             else:  # keep the shape of the underlying array in store_mean_rates
                 result['pnemap'] = ~pmap

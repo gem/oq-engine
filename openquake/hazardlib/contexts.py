@@ -1205,10 +1205,7 @@ class ContextMaker(object):
                     elif src.code == b'C':
                         src.weight += 10.
                     elif src.code == b'F':
-                        if N <= self.max_sites_disagg:
-                            src.weight *= 100  # superheavy
-                        else:
-                            src.weight += 30.
+                        src.weight *= 100  # superheavy
                     else:
                         src.weight += 1.
 

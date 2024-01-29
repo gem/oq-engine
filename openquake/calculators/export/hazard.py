@@ -734,3 +734,18 @@ def export_asce(ekey, dstore):
                 comment=comment)
     return [fname]
 
+
+# NB: exporting only the site #0; this is okay
+@export.add(('mag_dst_eps_sig', 'csv'))
+def export_mag_dst_eps_sig(ekey, dstore):
+    data = dstore[ekey[0] + '/0'][:]
+    sitecol = dstore['sitecol']
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    comment['lon'] = sitecol.lons[0]
+    comment['lat'] = sitecol.lats[0]
+    comment['vs30'] = sitecol.vs30[0]
+    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
+    writer.save(data, fname, comment=comment)
+    return [fname]
