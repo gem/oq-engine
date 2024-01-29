@@ -33,6 +33,7 @@ import csv
 import logging
 
 import django
+from django.apps import apps
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
@@ -40,7 +41,6 @@ from openquake.server.tests.views_test import EngineServerTestCase
 django.setup()
 try:
     from django.contrib.auth.models import User  # noqa
-    from openquake.server.announcements.models import Announcement  # noqa
 except RuntimeError:
     # Django tests are meant to be run with the command
     # OQ_CONFIG_FILE=openquake/server/tests/data/openquake.cfg \
@@ -218,11 +218,13 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         assert resp.status_code == 404, resp
 
     def test_announcement(self):
+        announcement_model = apps.get_model(app_label='announcements',
+                                            model_name='Announcement')
         # NOTE: this test might be moved to the currently missing
         #       test_restricted_mode.py. Anyway, both the AELO and the
         #       RESTRICTED modes imply LOCKDOWN=True and add the announcements
         #       app to the INSTALLED_APPS.
-        announcement = Announcement(
+        announcement = announcement_model(
             title='TEST TITLE', content='Test content', show=False)
         announcement.save()
         announcement.delete()
