@@ -971,6 +971,8 @@ def web_engine(request, **kwargs):
 def web_engine_get_outputs(request, calc_id, **kwargs):
     application_mode = settings.APPLICATION_MODE.upper()
     job = logs.dbcmd('get_job', calc_id)
+    if job is None:
+        return HttpResponseNotFound()
     with datastore.read(job.ds_calc_dir + '.hdf5') as ds:
         if 'png' in ds:
             # NOTE: only one hmap can be visualized currently
