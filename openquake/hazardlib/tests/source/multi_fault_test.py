@@ -18,8 +18,9 @@ import os
 import tempfile
 import unittest
 import numpy
-from openquake.baselib import hdf5, python3compat
-from openquake.hazardlib.source.multi_fault import MultiFaultSource
+from openquake.baselib import hdf5, python3compat, general
+from openquake.hazardlib.source.multi_fault import (
+    MultiFaultSource, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -57,8 +58,8 @@ class MultiFaultTestCase(unittest.TestCase):
         sections = [sfc_a, sfc_b, sfc_c]
 
         # Rupture indexes
-        rup_idxs = [[0], [1], [2], [0, 1], [0, 2],
-                    [1, 2], [0, 1, 2]]
+        rup_idxs = [numpy.uint16(x) for x in [[0], [1], [2], [0, 1], [0, 2],
+                                              [1, 2], [0, 1, 2]]]
 
         # Magnitudes
         rup_mags = [5.8, 5.8, 5.8, 6.2, 6.2, 6.2, 6.5]
@@ -74,9 +75,9 @@ class MultiFaultTestCase(unittest.TestCase):
                 [0.90, 0.10]]
         self.sections = sections
         self.rup_idxs = rup_idxs
-        self.pmfs = pmfs
+        self.pmfs = numpy.array(pmfs)
         self.mags = numpy.array(rup_mags)
-        self.rakes = rakes
+        self.rakes = numpy.array(rakes)
 
     def test01(self):
         # test instantiation
@@ -99,6 +100,17 @@ class MultiFaultTestCase(unittest.TestCase):
         # test rupture generation
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
+
+        # test save and load
+        fname = general.gettemp(suffix='.hdf5')
+        save([src], self.sections, fname)
+        [got] = load(fname)
+        for name in 'mags rakes probs_occur'.split():
+            numpy.testing.assert_almost_equal(
+                getattr(src, name), getattr(got, name))
+        for a, b in zip(src.rupture_idxs, got.rupture_idxs):
+            print(a, b)
+            numpy.testing.assert_almost_equal(a, b)
 
     def test02(self):
         # test set_sections, 3 is not a known section ID
