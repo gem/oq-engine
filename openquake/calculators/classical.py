@@ -577,7 +577,7 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
                     allargs.append((None, tile, cm, ds))
                     self.ntiles += 1
-
+        logging.info('Generated %d tiles', self.ntiles)
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(
                 classical, allargs, h5=self.datastore.hdf5):
