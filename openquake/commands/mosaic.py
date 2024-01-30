@@ -163,7 +163,7 @@ def run_site(lonlat_or_fname, mosaic_dir=None,
 
     # oq mosaic run_site 10,20:30,40:50,60
     """
-    if not config.directory.mosaic_dir:
+    if not mosaic_dir and not config.directory.mosaic_dir:
         sys.exit('mosaic_dir is not specified in openquake.cfg')
     mosaic_dir = mosaic_dir or config.directory.mosaic_dir
     if lonlat_or_fname.endswith('.csv'):
