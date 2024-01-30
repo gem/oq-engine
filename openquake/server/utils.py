@@ -104,8 +104,13 @@ def oq_server_context_processor(request):
 
     context = {}
 
-    announcement_model = apps.get_model(app_label='db',
-                                        model_name='Announcement')
+    try:
+        announcement_model = apps.get_model(app_label='announcements',
+                                            model_name='Announcement')
+    except LookupError:
+        announcements = None
+    else:
+        announcements = announcement_model.objects.filter(show=True)
 
     webui_host = request.get_host()
     context['oq_engine_server_url'] = (
@@ -115,7 +120,7 @@ def oq_server_context_processor(request):
     # the running environment. Keep it as it is
     context['oq_engine_version'] = oqversion
     context['server_name'] = settings.SERVER_NAME
-    context['announcements'] = announcement_model.objects.all()
+    context['announcements'] = announcements
     return context
 
 
