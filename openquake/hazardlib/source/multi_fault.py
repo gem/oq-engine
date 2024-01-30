@@ -29,7 +29,8 @@ from openquake.hazardlib.source.rupture import (
     NonParametricProbabilisticRupture, ParametricProbabilisticRupture)
 from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
-from openquake.hazardlib.geo.surface.kite_fault import geom_to_kite
+from openquake.hazardlib.geo.surface.kite_fault import (
+    geom_to_kite, kite_to_geom)
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -80,6 +81,7 @@ class MultiFaultSource(BaseSeismicSource):
         self.mags = magnitudes
         self.rakes = rakes
         self.infer_occur_rates = infer_occur_rates
+        self.investigation_time = investigation_time
         if infer_occur_rates:
             self.occur_rates = -np.log([p[0] for p in occurrence_probs])
             self.occur_rates[self.occur_rates <= 0] = 1E-30
@@ -105,7 +107,7 @@ class MultiFaultSource(BaseSeismicSource):
         :returns: the underlying sections as KiteSurfaces
         """
         if self.hdf5path == '':  # in the tests
-            return self.sections
+            return self.sections  # empty hdf5path
         with hdf5.File(self.hdf5path, 'r') as f:
             geoms = f['multi_fault_sections'][:]  # small
         sections = [geom_to_kite(geom) for geom in geoms]
@@ -215,3 +217,46 @@ class MultiFaultSource(BaseSeismicSource):
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1
+
+
+def save(sources, sections, hdf5path):
+    """
+    Debug utility to serialize MultiFaultSources
+    """
+    with hdf5.File(hdf5path, 'w') as h5:
+        for src in sources:
+            h5.save_vlen(f'{src.source_id}/rupture_idxs', src.rupture_idxs)
+            h5[f'{src.source_id}/probs_occur'] = src.probs_occur
+            h5[f'{src.source_id}/mags'] = src.mags
+            h5[f'{src.source_id}/rakes'] = src.rakes
+            attrs = h5[f'{src.source_id}'].attrs
+            attrs['name'] = src.name
+            attrs['tectonic_region_type'] = src.tectonic_region_type
+            attrs['investigation_time'] = src.investigation_time
+            attrs['infer_occur_rates'] = src.infer_occur_rates
+            h5.save_vlen('multi_fault_sections',
+                         [kite_to_geom(sec) for sec in sections])
+
+def load(hdf5path):
+    """
+    :returns: list of sources serialized with `multi_fault.save`
+    """
+    srcs = []
+    with hdf5.File(hdf5path, 'r') as h5:
+        for key in list(h5):
+            if key == 'multi_fault_sections':
+                continue
+            data = h5[key]
+            name = data.attrs['name']
+            trt = data.attrs['tectonic_region_type']
+            itime = data.attrs['investigation_time']
+            infer = data.attrs['infer_occur_rates']
+            rids = data['rupture_idxs'][:]
+            mags = data['mags'][:]
+            rakes = data['rakes'][:]
+            probs = data['probs_occur'][:]
+            src = MultiFaultSource(key, name, trt, rids, probs, mags, rakes,
+                                   itime, infer)
+            src.hdf5path = hdf5path
+            srcs.append(src)
+    return srcs
