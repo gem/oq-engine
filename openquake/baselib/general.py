@@ -1378,6 +1378,9 @@ def getsizeof(o, ids=None):
     if id(o) in ids:
         return 0
 
+    if hasattr(o, 'nbytes'):
+        return o.nbytes
+
     nbytes = sys.getsizeof(o)
     ids.add(id(o))
 
