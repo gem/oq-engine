@@ -444,7 +444,6 @@ class KiteSurface(BaseSurface):
             Lower edge  |____________________|
 
         """
-
         # Fix profiles
         rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
@@ -707,7 +706,6 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     :returns:
         An instance of  :class:`openquake.hazardlib.geo.Mesh`
     """
-
     # Compute information needed for the geographic projection
     proj = _get_proj_from_profiles(rprof)
 
