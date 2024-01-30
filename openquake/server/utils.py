@@ -110,7 +110,7 @@ def oq_server_context_processor(request):
     except LookupError:
         announcements = None
     else:
-        announcements = announcement_model.objects.all()
+        announcements = announcement_model.objects.filter(show=True)
 
     webui_host = request.get_host()
     context['oq_engine_server_url'] = (
