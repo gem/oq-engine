@@ -1,3 +1,7 @@
+  [Paolo Tormene]
+  * Added the possibility to display/hide announcements on top of all WebUI
+    pages, setting them up via the Django admin interface
+
   [Michele Simionato]
   * Reduced memory consumption in multiFaultSources
   * Implemented batch processing for AELO calculations
