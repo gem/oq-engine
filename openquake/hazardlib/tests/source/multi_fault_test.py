@@ -121,3 +121,17 @@ class MultiFaultTestCase(unittest.TestCase):
             mfs.set_sections(self.sections)
         expected = 'list index out of range'
         self.assertEqual(expected, str(ctx.exception))
+
+
+if __name__ == '__main__':
+    # run a performance test with a reduced UCERF source
+    from openquake.baselib import performance
+    from openquake.hazardlib.site import SiteCollection
+    from openquake.hazardlib import valid, contexts
+    srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
+    gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
+    with performance.Monitor() as mon:
+        cmaker.from_srcs(srcs, sitecol)
+    print(mon)

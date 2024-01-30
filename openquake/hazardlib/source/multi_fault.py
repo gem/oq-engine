@@ -107,7 +107,7 @@ class MultiFaultSource(BaseSeismicSource):
         :returns: the underlying sections as KiteSurfaces
         """
         if self.hdf5path == '':  # in the tests
-            return self.sections
+            return self.sections  # empty hdf5path
         with hdf5.File(self.hdf5path, 'r') as f:
             geoms = f['multi_fault_sections'][:]  # small
         sections = [geom_to_kite(geom) for geom in geoms]
@@ -257,5 +257,6 @@ def load(hdf5path):
             probs = data['probs_occur'][:]
             src = MultiFaultSource(key, name, trt, rids, probs, mags, rakes,
                                    itime, infer)
+            src.hdf5path = hdf5path
             srcs.append(src)
     return srcs
