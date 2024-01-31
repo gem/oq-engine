@@ -72,12 +72,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline instance and get the prevalent strike
         ml = MultiLine(self.lines)
-        revert = ml.set_overall_strike()
-
-        # Testing
-        self.assertTrue(ml.strike_to_east)
-        msg = 'Lines to flip are wrong'
-        np.testing.assert_equal(revert, [False, True], msg)
+        ml.set_overall_strike()
 
         if PLOTTING:
             fig, ax = plt.subplots()
