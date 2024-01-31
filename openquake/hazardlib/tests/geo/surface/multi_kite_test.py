@@ -386,10 +386,6 @@ class NZLTestCase(unittest.TestCase):
         self.msrf2 = MultiSurface(sfcs2)
 
     def test_nzl_tors(self):
-
-        # Set the rupture traces
-        self.msrf._set_tor()
-
         if PLOTTING:
             # Plotting profiles and surfaces
             _, ax = plt.subplots(1, 1)
