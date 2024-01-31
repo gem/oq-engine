@@ -384,7 +384,7 @@ class Line(object):
                                 coo[1:, 0], coo[1:, 1])
         pidx = set([0, coo.shape[0] - 1])
         idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
-        pidx = sorted(list(pidx.union(set(idx + 1))))
+        pidx = sorted(pidx.union(set(idx + 1)))
         self.coo = coo[pidx]
 
     def resample_to_num_points(self, num_points):
