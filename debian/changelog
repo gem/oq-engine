@@ -3,6 +3,7 @@
     pages, setting them up via the Django admin interface
 
   [Michele Simionato]
+  * Fixed ZalachorisRathje2019 (mag > Mb_ -> mag >= Mb_)
   * Reduced memory consumption in multiFaultSources
   * Implemented batch processing for AELO calculations
 
