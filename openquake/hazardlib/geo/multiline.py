@@ -47,15 +47,6 @@ class MultiLine():
         self.tut = None
         self.weis = None
 
-    def get_lengths(self) -> np.ndarray:
-        """
-        Computes the total lenght for each polyline composing the multiline
-
-        :returns:
-            A :class:`numpy.ndarray` instance
-        """
-        return get_lengths(self.lines)
-
     def get_average_azimuths(self) -> np.ndarray:
         """
         Computes the average azimuth for each polyline composing the multiline
@@ -77,7 +68,7 @@ class MultiLine():
 
         """
         # Get lenghts and average azimuths
-        llenghts = self.get_lengths()
+        llenghts = np.array([ln.get_length() for ln in self.lines])
         avgaz = self.get_average_azimuths()
 
         gos = get_overall_strike
@@ -241,16 +232,6 @@ def get_tus(lines: list, mesh: Mesh):
     return tupps, uupps, weis
 
 
-def get_lengths(lines: list) -> np.ndarray:
-    """
-    Computes the total lenght for each polyline composing the multiline
-
-    :returns:
-        A :class:`numpy.ndarray` instance
-    """
-    return np.array([line.get_length() for line in lines])
-
-
 def get_average_azimuths(lines: list) -> np.ndarray:
     """
     Computes the average azimuth for each polyline composing the multiline
@@ -271,7 +252,7 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
 
     # Get lenghts and average azimuths
     if llens is None:
-        llens = get_lengths(lines)
+        llens = np.array([ln.get_length() for ln in lines])
     if avgaz is None:
         avgaz = get_average_azimuths(lines)
 
