@@ -30,8 +30,8 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
-OVERWRITE = False
-
+OVERWRITE = os.environ.get('OQ_OVERWRITE')
+SPC = 2
 aae = np.testing.assert_almost_equal
 
 
@@ -61,10 +61,9 @@ class Ry0TestCase(unittest.TestCase):
         return ry0
 
     def test_ry0a(self):
-        spc = 2.0
         pro1 = Line([Point(0.2, 0.05, 0.0), Point(0.2, 0.0, 15.0)])
         pro2 = Line([Point(0.0, 0.05, 0.0), Point(0.0, 0.0, 15.0)])
-        sfc = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        sfc = KiteSurface.from_profiles([pro1, pro2], SPC, SPC)
         ry0 = self._test_ry0(sfc)
 
         # Saving data
@@ -78,10 +77,9 @@ class Ry0TestCase(unittest.TestCase):
         aae(er['ry0'], ry0, decimal=1)
 
     def test_ry0b(self):
-        spc = 2.0
         pro1 = Line([Point(0.2, 0.0, 0.0), Point(0.2, 0.05, 15.0)])
         pro2 = Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.05, 15.0)])
-        sfc = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        sfc = KiteSurface.from_profiles([pro1, pro2], SPC, SPC)
         ry0 = self._test_ry0(sfc)
 
         # Saving data
@@ -95,11 +93,10 @@ class Ry0TestCase(unittest.TestCase):
         aae(er['ry0'], ry0, decimal=1)
 
     def test_ry0c(self):
-        spc = 2.0
         pro1 = Line([Point(0.5, 0.05, 0.0), Point(0.5, 0.1, 15.0)])
         pro2 = Line([Point(0.4, 0.05, 0.0), Point(0.4, 0.1, 15.0)])
         pro3 = Line([Point(0.35, 0.0, 0.0), Point(0.3, 0.05, 15.0)])
-        sfc = KiteSurface.from_profiles([pro1, pro2, pro3], spc, spc)
+        sfc = KiteSurface.from_profiles([pro1, pro2, pro3], SPC, SPC)
         ry0 = self._test_ry0(sfc)
 
         # Saving data
@@ -143,13 +140,6 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
         self.msfc = MultiSurface([sfc1, sfc2], tol=2.)
 
     def test_get_tor(self):
-        # Set the top of ruptures
-        self.msfc._set_tor()
-
-        # Testing
-        aae = np.testing.assert_almost_equal
-        aae(self.coo1, self.msfc.tors.lines[0].coo[:, 0:2], decimal=2)
-        aae(self.coo2, self.msfc.tors.lines[1].coo[:, 0:2], decimal=2)
-
-    def _set_tu(self):
-        uut, tut = self.msfc.lines.get_tu
+        # Testing, coo1 and coo2 are inverted due to the origin inversion
+        aae(self.coo2, self.msfc.tors.lines[0].coo[:, 0:2], decimal=2)
+        aae(self.coo1, self.msfc.tors.lines[1].coo[:, 0:2], decimal=2)
