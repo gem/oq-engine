@@ -47,15 +47,6 @@ class MultiLine():
         self.tut = None
         self.weis = None
 
-    def get_average_azimuths(self) -> np.ndarray:
-        """
-        Computes the average azimuth for each polyline composing the multiline
-
-        :returns:
-            A :class:`numpy.ndarray` instance
-        """
-        return get_average_azimuths(self.lines)
-
     def set_overall_strike(self):
         """
         Computes the overall strike direction for the multiline and revert the
@@ -69,7 +60,7 @@ class MultiLine():
         """
         # Get lenghts and average azimuths
         llenghts = np.array([ln.get_length() for ln in self.lines])
-        avgaz = self.get_average_azimuths()
+        avgaz = get_average_azimuths(self.lines)
 
         gos = get_overall_strike
         revert, strike_east, avg_azim, nl = gos(self.lines, llenghts, avgaz)
