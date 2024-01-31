@@ -68,7 +68,6 @@ class MultiLineTestCase(unittest.TestCase):
         self.lines = [linea, lineb]
 
     def test_get_strike_01(self):
-        """ get strike 01 """
 
         # Create the multiline instance and get the prevalent strike
         ml = MultiLine(self.lines)
@@ -84,20 +83,16 @@ class MultiLineTestCase(unittest.TestCase):
             plt.show()
 
     def test_set_origin(self):
-        """ test computing origin """
 
         # Create the multiline instance and get the origin
         ml = MultiLine(self.lines)
-        ml._set_origin()
         expected = [0.0, 0.0]
         np.testing.assert_almost_equal([ml.olon, ml.olat], expected)
 
     def test_coordinate_shift(self):
-        """ test calculation of coordinate shift """
 
         # Creating the multiline and computing the shift
         ml = MultiLine(self.lines)
-        ml._set_coordinate_shift()
 
         # Computing the distance between the origin and the endnode of the
         # second polyline
@@ -108,7 +103,6 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Set the origin and compute the overall strike and the azimuths of
         # the polylines composing the multiline instance
-        ml._set_origin()
         ggazi = geo.geodetic.azimuth
         azim = ggazi(ml.olon, ml.olat, lo, la)
         delta = abs(ml.overall_strike - azim)
@@ -118,7 +112,6 @@ class MultiLineTestCase(unittest.TestCase):
         np.testing.assert_almost_equal([0, computed], ml.shift)
 
     def test_set_tu(self):
-
         # Get the coords of the lines composing the multiline
         lons = []
         lats = []

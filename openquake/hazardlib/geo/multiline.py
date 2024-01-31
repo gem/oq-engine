@@ -46,6 +46,10 @@ class MultiLine():
         self.uut = None
         self.tut = None
         self.weis = None
+        # compute the origin of the multiline and set the shift parameter
+        self._set_origin()
+        self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
+                                          self.overall_strike)
 
     def set_overall_strike(self):
         """
@@ -84,27 +88,11 @@ class MultiLine():
 
         return soidx
 
-    def _set_coordinate_shift(self):
-        """
-        Computes the coordinate shift for each line in the multiline. This is
-        used to compute coordinates in the GC2 system
-        """
-        # If not defined, compute the origin of the multiline
-        if self.olon is None:
-            self._set_origin()
-
-        # Set the shift param
-        self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
-                                          self.overall_strike)
-
     def set_tu(self, mesh: Mesh = None):
         """
         Computes the T and U coordinates for the multiline. If a mesh is
         given first we compute the required info.
         """
-        if self.shift is None:
-            self._set_coordinate_shift()
-
         if self.tupps is None:
             assert mesh is not None
             tupps, uupps, weis = get_tus(self.lines, mesh)
@@ -121,11 +109,6 @@ class MultiLine():
         """
         This is needed to compute Ry0
         """
-
-        # This is the same in both cases
-        if self.shift is None:
-            self._set_coordinate_shift()
-
         # Get the mesh with the endpoints of each polyline
         mesh = self.get_endpoints_mesh()
 
@@ -165,8 +148,7 @@ class MultiLine():
         if self.uut is None:
             assert mesh is not None
             self.set_tu(mesh)
-        rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
-        return rx
+        return self.tut[0]
 
     def get_ry0_distance(self, mesh: Mesh = None):
         """
@@ -186,8 +168,7 @@ class MultiLine():
         condition = self.uut > self.u_max
         ry0[condition] = self.uut[condition] - self.u_max
 
-        out = ry0[0] if len(ry0.shape) > 1 else ry0
-        return out
+        return ry0
 
 
 def get_tus(lines: list, mesh: Mesh):

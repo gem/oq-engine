@@ -345,7 +345,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
             for line in self.msrf.tors.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
-            self.msrf.tors._set_origin()
             ax.plot(self.msrf.tors.olon, self.msrf.tors.olat, 'o')
             plt.show()
 

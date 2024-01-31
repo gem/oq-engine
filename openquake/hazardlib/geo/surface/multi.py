@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
-from openquake.hazardlib.geo.multiline import get_tu, MultiLine
+from openquake.hazardlib.geo.multiline import get_tu
 
 
 class MultiSurface(BaseSurface):
@@ -117,10 +117,8 @@ class MultiSurface(BaseSurface):
         for srfc in self.surfaces:
 
             if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
-                lo, la = srfc.get_tor()
-                line = geo.Line.from_vectors(lo, la)
-                line.keep_corners(self.tol)
-                tors.append(line)
+                srfc.tor_line.keep_corners(self.tol)
+                tors.append(srfc.tor_line)
 
             elif isinstance(srfc, PlanarSurface):
                 lo = []
@@ -144,7 +142,6 @@ class MultiSurface(BaseSurface):
         # Set the multiline representing the rupture traces i.e. vertical
         # projections at the surface of the top of ruptures
         self.tors = geo.MultiLine(tors)
-        self.tors._set_coordinate_shift()
 
     def get_min_distance(self, mesh):
         """
@@ -359,8 +356,6 @@ class MultiSurface(BaseSurface):
         Set the values of T and U
         """
         self._set_tor()  # affects scenario/case_24
-        if self.tors.shift is None:
-            self.tors._set_coordinate_shift()
         tupps = []
         uupps = []
         weis = []

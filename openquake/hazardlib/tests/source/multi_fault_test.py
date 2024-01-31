@@ -130,6 +130,18 @@ if __name__ == '__main__':
     from openquake.hazardlib.site import SiteCollection
     from openquake.hazardlib import valid, contexts
     srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+
+    rups = list(srcs[0].iter_ruptures())
+    lines = []
+    data = []
+    for rup in rups:
+        for surf in rup.surface.surfaces:
+            lines.append(surf.tor_line)
+            data.append(surf.tor_line.coo.tobytes())
+    uni, inv = numpy.unique(data, return_inverse=True)
+    # only 230/174,486 lines are unique, i.e. a 760x speedup is possible
+    print('Found %d/%d unique segments' % (len(uni), len(data)))
+    # import pdb; pdb.set_trace()
     sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'])
