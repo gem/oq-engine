@@ -27,6 +27,18 @@ from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
+def get_endpoints_mesh(lines):
+    """
+    Build mesh with end points
+    """
+    lons = []
+    lats = []
+    for line in lines:
+        lons.extend([line.coo[0, 0], line.coo[-1, 0]])
+        lats.extend([line.coo[0, 1], line.coo[-1, 1]])
+    return Mesh(np.array(lons), np.array(lats))
+
+
 class MultiLine():
     """
     A collection of polylines with associated methods and attributes. For the
@@ -49,7 +61,7 @@ class MultiLine():
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
-        ep_mesh = self.get_endpoints_mesh()
+        ep_mesh = get_endpoints_mesh(self.lines)
         u, _ = get_tu(self.shift, *get_tus(self.lines, ep_mesh))
         self.u_max = np.abs(u).max()
 
@@ -89,17 +101,6 @@ class MultiLine():
             self.shift = self.shift[soidx]
 
         return soidx
-
-    def get_endpoints_mesh(self):
-        """
-        Build mesh with end points
-        """
-        lons = []
-        lats = []
-        for line in self.lines:
-            lons.extend([line.coo[0, 0], line.coo[-1, 0]])
-            lats.extend([line.coo[0, 1], line.coo[-1, 1]])
-        return Mesh(np.array(lons), np.array(lats))
 
     # used only in the multiline_test
     def get_tu(self, mesh):
@@ -214,17 +215,11 @@ def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
         The longitude and latitude coordinates of the origin and an array with
         the indexes used to sort the lines according to the origin
     """
-
-    # Create the list of endpoints
-    endp = []
-    for line in lines:
-        endp.append([line.coo[0, 0], line.coo[0, 1]])
-        endp.append([line.coo[-1, 0], line.coo[-1, 1]])
-    endp = np.array(endp)
+    ep = get_endpoints_mesh(lines)
 
     # Project the endpoints
-    proj = utils.OrthographicProjection.from_lons_lats(endp[:, 0], endp[:, 1])
-    px, py = proj(endp[:, 0], endp[:, 1])
+    proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)
+    px, py = proj(ep.lons, ep.lats)
 
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
