@@ -144,6 +144,7 @@ class MultiSurface(BaseSurface):
         # Set the multiline representing the rupture traces i.e. vertical
         # projections at the surface of the top of ruptures
         self.tors = geo.MultiLine(tors)
+        self.tors._set_coordinate_shift()
 
     def get_min_distance(self, mesh):
         """
