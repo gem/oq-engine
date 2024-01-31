@@ -215,8 +215,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
                               [-70.32703837, 19.65038823, 0.0]]),
                     np.array([[-70.33, 19.65, 0.0],
                               [-70.57740671, 19.66979434, 0.0]])]
-        self.msrf._set_tor()
-
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
             for sfc in self.msrf.surfaces:
@@ -388,10 +386,6 @@ class NZLTestCase(unittest.TestCase):
         self.msrf2 = MultiSurface(sfcs2)
 
     def test_nzl_tors(self):
-
-        # Set the rupture traces
-        self.msrf._set_tor()
-
         if PLOTTING:
             # Plotting profiles and surfaces
             _, ax = plt.subplots(1, 1)

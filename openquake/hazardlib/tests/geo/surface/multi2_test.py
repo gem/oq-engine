@@ -140,9 +140,6 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
         self.msfc = MultiSurface([sfc1, sfc2], tol=2.)
 
     def test_get_tor(self):
-        # Set the top of ruptures
-        self.msfc._set_tor()
-
         # Testing, coo1 and coo2 are inverted due to the origin inversion
         aae(self.coo2, self.msfc.tors.lines[0].coo[:, 0:2], decimal=2)
         aae(self.coo1, self.msfc.tors.lines[1].coo[:, 0:2], decimal=2)
