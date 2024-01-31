@@ -168,8 +168,7 @@ class MultiSurface(BaseSurface):
         # for which the first dimension represents the different surfaces
         # and the second dimension the mesh points.
         dists = np.array(
-            [surf.get_min_distance(mesh).flatten() for surf in self.surfaces]
-        )
+            [surf.get_min_distance(mesh).flatten() for surf in self.surfaces])
 
         # find for each point in mesh the index of closest surface
         idx = dists == np.min(dists, axis=0)
@@ -351,9 +350,14 @@ class MultiSurface(BaseSurface):
             self.areas = np.array(self.areas)
         return self.areas
 
-    def _set_tu(self, mesh):
+    def get_rx_distance(self, mesh):
         """
-        Set the values of T and U
+        :param mesh:
+            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
+            coordinates of the sites.
+        :returns:
+            A :class:`numpy.ndarray` instance with the Rx distance. Note that
+            the Rx distance is directly taken from the GC2 t-coordinate.
         """
         tupps = []
         uupps = []
@@ -366,25 +370,7 @@ class MultiSurface(BaseSurface):
 
         # `get_tu` is a function in the multiline module
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
-        self.uut = uut
-        self.tut = tut
-        self.site_mesh = mesh
-
-    def get_rx_distance(self, mesh):
-        """
-        :param mesh:
-            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
-            coordinates of the sites.
-        :returns:
-            A :class:`numpy.ndarray` instance with the Rx distance. Note that
-            the Rx distance is directly taken from the GC2 t-coordinate.
-        """
-        # This checks that the info stored is consistent with the mesh of
-        # points used
-        condition2 = self.site_mesh is not None and self.site_mesh != mesh
-        if self.uut is None or condition2:
-            self._set_tu(mesh)
-        rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
+        rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
     def get_ry0_distance(self, mesh):
