@@ -27,6 +27,18 @@ from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
+def get_endpoints_mesh(lines):
+    """
+    Build mesh with end points
+    """
+    lons = []
+    lats = []
+    for line in lines:
+        lons.extend([line.coo[0, 0], line.coo[-1, 0]])
+        lats.extend([line.coo[0, 1], line.coo[-1, 1]])
+    return Mesh(np.array(lons), np.array(lats))
+
+
 class MultiLine():
     """
     A collection of polylines with associated methods and attributes. For the
@@ -43,13 +55,15 @@ class MultiLine():
         self.u_max = None
         self.tupps = None
         self.uupps = None
-        self.uut = None
-        self.tut = None
         self.weis = None
         # compute the origin of the multiline and set the shift parameter
         self._set_origin()
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
+
+        ep_mesh = get_endpoints_mesh(self.lines)
+        u, _ = get_tu(self.shift, *get_tus(self.lines, ep_mesh))
+        self.u_max = np.abs(u).max()
 
     def set_overall_strike(self):
         """
@@ -88,55 +102,11 @@ class MultiLine():
 
         return soidx
 
-    def set_tu(self, mesh: Mesh = None):
-        """
-        Computes the T and U coordinates for the multiline. If a mesh is
-        given first we compute the required info.
-        """
-        if self.tupps is None:
-            assert mesh is not None
-            tupps, uupps, weis = get_tus(self.lines, mesh)
-        else:
-            tupps = self.tupps
-            uupps = self.uupps
-            weis = self.weis
-
-        uut, tut = get_tu(self.shift, tupps, uupps, weis)
-        self.uut = uut
-        self.tut = tut
-
-    def set_u_max(self):
-        """
-        This is needed to compute Ry0
-        """
-        # Get the mesh with the endpoints of each polyline
-        mesh = self.get_endpoints_mesh()
-
-        if self.tupps is None:
-            tupps, uupps, weis = get_tus(self.lines, mesh)
-        else:
-            tupps = self.tupps
-            uupps = self.uupps
-            weis = self.weis
-
-        uut, _ = get_tu(self.shift, tupps, uupps, weis)
-
-        # Maximum U value
-        self.u_max = max(abs(uut))
-
-    def get_endpoints_mesh(self) -> Mesh:
-        """
-        Build mesh with end points
-        """
-        lons = []
-        lats = []
-        for line in self.lines:
-            lons.extend([line.coo[0, 0], line.coo[-1, 0]])
-            lats.extend([line.coo[0, 1], line.coo[-1, 1]])
-        mesh = Mesh(np.array(lons), np.array(lats))
-        return mesh
-
-    def get_rx_distance(self, mesh: Mesh = None):
+    # used only in the multiline_test
+    def get_tu(self, mesh):
+        return get_tu(self.shift, *get_tus(self.lines, mesh))
+        
+    def get_rx_distance(self, mesh):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
@@ -145,28 +115,21 @@ class MultiLine():
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        if self.uut is None:
-            assert mesh is not None
-            self.set_tu(mesh)
-        return self.tut[0]
+        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
+        return tut[0]
 
-    def get_ry0_distance(self, mesh: Mesh = None):
+    def get_ry0_distance(self, mesh):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        if self.uut is None:
-            assert mesh is not None
-            self.set_tu(mesh)
+        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
 
-        if self.u_max is None:
-            self.set_u_max()
+        ry0 = np.zeros_like(uut)
+        ry0[uut < 0] = abs(uut[uut < 0])
 
-        ry0 = np.zeros_like(self.uut)
-        ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
-
-        condition = self.uut > self.u_max
-        ry0[condition] = self.uut[condition] - self.u_max
+        condition = uut > self.u_max
+        ry0[condition] = uut[condition] - self.u_max
 
         return ry0
 
@@ -252,17 +215,11 @@ def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
         The longitude and latitude coordinates of the origin and an array with
         the indexes used to sort the lines according to the origin
     """
-
-    # Create the list of endpoints
-    endp = []
-    for line in lines:
-        endp.append([line.coo[0, 0], line.coo[0, 1]])
-        endp.append([line.coo[-1, 0], line.coo[-1, 1]])
-    endp = np.array(endp)
+    ep = get_endpoints_mesh(lines)
 
     # Project the endpoints
-    proj = utils.OrthographicProjection.from_lons_lats(endp[:, 0], endp[:, 1])
-    px, py = proj(endp[:, 0], endp[:, 1])
+    proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)
+    px, py = proj(ep.lons, ep.lats)
 
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
