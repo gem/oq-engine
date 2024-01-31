@@ -357,6 +357,7 @@ class MultiSurface(BaseSurface):
         """
         Set the values of T and U
         """
+        self._set_tor()
         if self.tors.shift is None:
             self.tors._set_coordinate_shift()
         tupps = []
