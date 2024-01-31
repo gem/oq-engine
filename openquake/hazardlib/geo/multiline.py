@@ -49,15 +49,14 @@ class MultiLine():
         self.lines = [copy.copy(ln) for ln in lines]
         self.strike_to_east = None
         self.overall_strike = None
-        self.olon = None
-        self.olat = None
-        self.shift = None
-        self.u_max = None
-        self.tupps = None
-        self.uupps = None
-        self.weis = None
-        # compute the origin of the multiline and set the shift parameter
-        self._set_origin()
+
+        # compute the overall strike and the origin of the multiline
+        self.set_overall_strike()
+        self.olon, self.olat, soidx = get_origin(
+            self.lines, self.strike_to_east, self.overall_strike)
+
+        # Reorder the lines according to the origin and compute the shift
+        self.lines = [self.lines[i] for i in soidx]
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
@@ -79,28 +78,6 @@ class MultiLine():
         self.strike_to_east = strike_east
         self.overall_strike = avg_azim
         self.lines = nl
-
-    def _set_origin(self):
-        """
-        Compute the origin necessary to calculate the coordinate shift and sort
-        the information accordingly
-        """
-        # If missing, set the overall strike direction
-        if self.strike_to_east is None:
-            self.set_overall_strike()
-
-        # Calculate the origin
-        olo, ola, soidx = get_origin(
-            self.lines, self.strike_to_east, self.overall_strike)
-        self.olon = olo
-        self.olat = ola
-
-        # Reorder the lines and the shift according to the origin
-        self.lines = [self.lines[i] for i in soidx]
-        if self.shift is not None:
-            self.shift = self.shift[soidx]
-
-        return soidx
 
     # used only in the multiline_test
     def get_tu(self, mesh):

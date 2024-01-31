@@ -30,7 +30,7 @@ from openquake.hazardlib.tests.geo.surface.kite_fault_test import plot_mesh_2d
 BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
-OVERWRITE = False
+OVERWRITE = os.environ.get('OQ_OVERWRITE')
 
 aae = np.testing.assert_almost_equal
 
@@ -146,10 +146,6 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
         # Set the top of ruptures
         self.msfc._set_tor()
 
-        # Testing
-        aae = np.testing.assert_almost_equal
-        aae(self.coo1, self.msfc.tors.lines[0].coo[:, 0:2], decimal=2)
-        aae(self.coo2, self.msfc.tors.lines[1].coo[:, 0:2], decimal=2)
-
-    def _set_tu(self):
-        uut, tut = self.msfc.lines.get_tu
+        # Testing, coo1 and coo2 are inverted due to the shift
+        aae(self.coo2, self.msfc.tors.lines[0].coo[:, 0:2], decimal=2)
+        aae(self.coo1, self.msfc.tors.lines[1].coo[:, 0:2], decimal=2)
