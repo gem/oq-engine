@@ -49,6 +49,10 @@ class MultiLine():
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
+        mesh = self.get_endpoints_mesh()
+        u, _ = get_tu(self.shift, *get_tus(self.lines, mesh))
+        self.u_max = np.abs(u).max()
+
     def set_overall_strike(self):
         """
         Computes the overall strike direction for the multiline and revert the
@@ -117,16 +121,11 @@ class MultiLine():
         """
         uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
 
-        # Get the mesh with the endpoints of each polyline
-        msh = self.get_endpoints_mesh()
-        u, _ = get_tu(self.shift, *get_tus(self.lines, msh))
-        u_max = max(abs(u))
-
         ry0 = np.zeros_like(uut)
         ry0[uut < 0] = abs(uut[uut < 0])
 
-        condition = uut > u_max
-        ry0[condition] = uut[condition] - u_max
+        condition = uut > self.u_max
+        ry0[condition] = uut[condition] - self.u_max
 
         return ry0
 

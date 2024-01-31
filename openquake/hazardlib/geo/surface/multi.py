@@ -355,7 +355,6 @@ class MultiSurface(BaseSurface):
         """
         Set the values of T and U
         """
-        self._set_tor()  # affects scenario/case_24
         tupps = []
         uupps = []
         weis = []
