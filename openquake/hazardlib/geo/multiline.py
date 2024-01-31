@@ -165,8 +165,7 @@ class MultiLine():
         if self.uut is None:
             assert mesh is not None
             self.set_tu(mesh)
-        rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
-        return rx
+        return self.tut[0]
 
     def get_ry0_distance(self, mesh: Mesh = None):
         """
@@ -186,8 +185,7 @@ class MultiLine():
         condition = self.uut > self.u_max
         ry0[condition] = self.uut[condition] - self.u_max
 
-        out = ry0[0] if len(ry0.shape) > 1 else ry0
-        return out
+        return ry0
 
 
 def get_tus(lines: list, mesh: Mesh):
