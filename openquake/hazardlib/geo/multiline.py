@@ -51,35 +51,25 @@ class MultiLine():
         """
         Computes the overall strike direction for the multiline and revert the
         lines with strike direction opposite to the prevalent one
-
-        :param lines:
-            A list of :class:`openquake.hazardlib.geo.line.Line` instances
-
-        :return:
-
         """
-        # Get lenghts and average azimuths
+        # get lenghts and average azimuths
         llenghts = np.array([ln.get_length() for ln in self.lines])
         avgaz = np.array([line.average_azimuth() for line in self.lines])
-
-        gos = get_overall_strike
-        revert, strike_east, avg_azim, nl = gos(self.lines, llenghts, avgaz)
-
+        # set strike
+        revert, strike_east, avg_azim, nl = get_overall_strike(
+            self.lines, llenghts, avgaz)
         self.strike_to_east = strike_east
         self.overall_strike = avg_azim
         self.lines = nl
-
-        return revert
 
     def _set_origin(self):
         """
         Compute the origin necessary to calculate the coordinate shift and sort
         the information accordingly
         """
-
         # If missing, set the overall strike direction
         if self.strike_to_east is None:
-            _ = self.set_overall_strike()
+            self.set_overall_strike()
 
         # Calculate the origin
         olo, ola, soidx = get_origin(
@@ -101,7 +91,7 @@ class MultiLine():
         """
         # If not defined, compute the origin of the multiline
         if self.olon is None:
-            _ = self._set_origin()
+            self._set_origin()
 
         # Set the shift param
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
