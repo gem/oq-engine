@@ -387,7 +387,7 @@ class MultiSurface(BaseSurface):
         # This checks that the info stored is consistent with the mesh of
         # points used
         condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
-        if (self.uut is None) or condition2:
+        if self.uut is None or condition2:
             self._set_tu(mesh)
         rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
         return rx
