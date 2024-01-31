@@ -60,7 +60,7 @@ class MultiLine():
         """
         # Get lenghts and average azimuths
         llenghts = np.array([ln.get_length() for ln in self.lines])
-        avgaz = get_average_azimuths(self.lines)
+        avgaz = np.array([line.average_azimuth() for line in self.lines])
 
         gos = get_overall_strike
         revert, strike_east, avg_azim, nl = gos(self.lines, llenghts, avgaz)
@@ -223,16 +223,6 @@ def get_tus(lines: list, mesh: Mesh):
     return tupps, uupps, weis
 
 
-def get_average_azimuths(lines: list) -> np.ndarray:
-    """
-    Computes the average azimuth for each polyline composing the multiline
-
-    :returns:
-        A :class:`numpy.ndarray` instance
-    """
-    return np.array([line.average_azimuth() for line in lines])
-
-
 def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     """
     Computes the overall strike direction for the multiline
@@ -245,7 +235,7 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     if llens is None:
         llens = np.array([ln.get_length() for ln in lines])
     if avgaz is None:
-        avgaz = get_average_azimuths(lines)
+        avgaz = np.array([line.average_azimuth() for line in lines])
 
     # Find general azimuth trend
     ave = get_average_azimuth(avgaz, llens)
