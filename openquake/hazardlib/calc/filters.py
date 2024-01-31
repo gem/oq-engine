@@ -51,7 +51,7 @@ def _distances_from_dcache(rup, sites, param, dcache):
     Calculates the distances for multi-surfaces using a cache.
 
     :param rup:
-        An instance of :class:`openquake.hazardlib.source.rupture.BaseRupture`
+        A rupture with a MultiSurface containing surfaces with a .suid
     :param sites:
         A list of sites or a site collection
     :param param:
@@ -75,6 +75,7 @@ def _distances_from_dcache(rup, sites, param, dcache):
             # coordinates for each section.
             for key, val in _multi_distances(srf, sites, param).items():
                 dcache[srf.suid, key] = val
+
     # Computing distances using the cache
     if param in ['rjb', 'rrup']:
         dcache.hit += 1

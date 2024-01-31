@@ -68,6 +68,7 @@ class MultiSurface(BaseSurface):
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
+    # NB: this is NEVER used in the calculation
     @property
     def mesh(self):
         """
@@ -87,10 +88,11 @@ class MultiSurface(BaseSurface):
     def __init__(self, surfaces: list, tol: float = 1):
         """
         Intialize a multi surface object from a list of surfaces
-        :param list surfaces:
+
+        :param surfaces:
             A list of instances of subclasses of
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
-        :param float tol:
+        :param tol:
             A float in decimal degrees representing the tolerance admitted in
             representing the rupture trace.
         """
@@ -102,6 +104,7 @@ class MultiSurface(BaseSurface):
         self.uut = None
         self.site_mesh = None
 
+    # called at each instantiation
     def _set_tor(self):
         """
         Computes the list of the vertical surface projections of the top of
@@ -110,7 +113,6 @@ class MultiSurface(BaseSurface):
         instance of a :class:`openquake.hazardlib.geo.multiline.Multiline`
         """
         tors = []
-        classes = (ComplexFaultSurface, SimpleFaultSurface)
 
         for srfc in self.surfaces:
 
@@ -128,7 +130,7 @@ class MultiSurface(BaseSurface):
                     la.append(pnt.latitude)
                 tors.append(geo.line.Line.from_vectors(lo, la))
 
-            elif isinstance(srfc, classes):
+            elif isinstance(srfc, (ComplexFaultSurface, SimpleFaultSurface)):
                 lons = srfc.mesh.lons[0, :]
                 lats = srfc.mesh.lats[0, :]
                 coo = np.array([[lo, la] for lo, la in zip(lons, lats)])
@@ -314,8 +316,7 @@ class MultiSurface(BaseSurface):
         for surf in self.surfaces:
             dists.append(
                surf.get_min_distance(Mesh(np.array([longitude]),
-                                          np.array([latitude]),
-                                          None)))
+                                          np.array([latitude]))))
         dists = np.array(dists).flatten()
         idx = dists == np.min(dists)
         return np.array(self.surfaces)[idx][0].get_middle_point()
@@ -352,11 +353,11 @@ class MultiSurface(BaseSurface):
             self.areas = np.array(self.areas)
         return self.areas
 
-    def _set_tu(self, mesh: Mesh):
+    def _set_tu(self, mesh):
         """
         Set the values of T and U
         """
-        self._set_tor()
+        self._set_tor()  # affects scenario/case_24
         if self.tors.shift is None:
             self.tors._set_coordinate_shift()
         tupps = []
@@ -385,8 +386,8 @@ class MultiSurface(BaseSurface):
         """
         # This checks that the info stored is consistent with the mesh of
         # points used
-        condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
-        if (self.uut is None) or condition2:
+        condition2 = self.site_mesh is not None and self.site_mesh != mesh
+        if self.uut is None or condition2:
             self._set_tu(mesh)
         rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
         return rx
@@ -397,7 +398,6 @@ class MultiSurface(BaseSurface):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
             coordinates of the sites.
         """
-        self._set_tor()
         return self.tors.get_ry0_distance(mesh)
 
 

@@ -47,57 +47,29 @@ class MultiLine():
         self.tut = None
         self.weis = None
 
-    def get_lengths(self) -> np.ndarray:
-        """
-        Computes the total lenght for each polyline composing the multiline
-
-        :returns:
-            A :class:`numpy.ndarray` instance
-        """
-        return get_lengths(self.lines)
-
-    def get_average_azimuths(self) -> np.ndarray:
-        """
-        Computes the average azimuth for each polyline composing the multiline
-
-        :returns:
-            A :class:`numpy.ndarray` instance
-        """
-        return get_average_azimuths(self.lines)
-
     def set_overall_strike(self):
         """
         Computes the overall strike direction for the multiline and revert the
         lines with strike direction opposite to the prevalent one
-
-        :param lines:
-            A list of :class:`openquake.hazardlib.geo.line.Line` instances
-
-        :return:
-
         """
-        # Get lenghts and average azimuths
-        llenghts = self.get_lengths()
-        avgaz = self.get_average_azimuths()
-
-        gos = get_overall_strike
-        revert, strike_east, avg_azim, nl = gos(self.lines, llenghts, avgaz)
-
+        # get lenghts and average azimuths
+        llenghts = np.array([ln.get_length() for ln in self.lines])
+        avgaz = np.array([line.average_azimuth() for line in self.lines])
+        # set strike
+        revert, strike_east, avg_azim, nl = get_overall_strike(
+            self.lines, llenghts, avgaz)
         self.strike_to_east = strike_east
         self.overall_strike = avg_azim
         self.lines = nl
-
-        return revert
 
     def _set_origin(self):
         """
         Compute the origin necessary to calculate the coordinate shift and sort
         the information accordingly
         """
-
         # If missing, set the overall strike direction
         if self.strike_to_east is None:
-            _ = self.set_overall_strike()
+            self.set_overall_strike()
 
         # Calculate the origin
         olo, ola, soidx = get_origin(
@@ -119,7 +91,7 @@ class MultiLine():
         """
         # If not defined, compute the origin of the multiline
         if self.olon is None:
-            _ = self._set_origin()
+            self._set_origin()
 
         # Set the shift param
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
@@ -241,26 +213,6 @@ def get_tus(lines: list, mesh: Mesh):
     return tupps, uupps, weis
 
 
-def get_lengths(lines: list) -> np.ndarray:
-    """
-    Computes the total lenght for each polyline composing the multiline
-
-    :returns:
-        A :class:`numpy.ndarray` instance
-    """
-    return np.array([line.get_length() for line in lines])
-
-
-def get_average_azimuths(lines: list) -> np.ndarray:
-    """
-    Computes the average azimuth for each polyline composing the multiline
-
-    :returns:
-        A :class:`numpy.ndarray` instance
-    """
-    return np.array([line.average_azimuth() for line in lines])
-
-
 def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     """
     Computes the overall strike direction for the multiline
@@ -271,9 +223,9 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
 
     # Get lenghts and average azimuths
     if llens is None:
-        llens = get_lengths(lines)
+        llens = np.array([ln.get_length() for ln in lines])
     if avgaz is None:
-        avgaz = get_average_azimuths(lines)
+        avgaz = np.array([line.average_azimuth() for line in lines])
 
     # Find general azimuth trend
     ave = get_average_azimuth(avgaz, llens)
