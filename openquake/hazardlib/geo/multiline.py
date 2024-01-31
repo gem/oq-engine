@@ -46,6 +46,7 @@ class MultiLine():
         self.uut = None
         self.tut = None
         self.weis = None
+        self._set_coordinate_shift()
 
     def set_overall_strike(self):
         """
@@ -102,9 +103,6 @@ class MultiLine():
         Computes the T and U coordinates for the multiline. If a mesh is
         given first we compute the required info.
         """
-        if self.shift is None:
-            self._set_coordinate_shift()
-
         if self.tupps is None:
             assert mesh is not None
             tupps, uupps, weis = get_tus(self.lines, mesh)
@@ -121,11 +119,6 @@ class MultiLine():
         """
         This is needed to compute Ry0
         """
-
-        # This is the same in both cases
-        if self.shift is None:
-            self._set_coordinate_shift()
-
         # Get the mesh with the endpoints of each polyline
         mesh = self.get_endpoints_mesh()
 
