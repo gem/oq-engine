@@ -357,7 +357,6 @@ class MultiSurface(BaseSurface):
         """
         Set the values of T and U
         """
-        self._set_tor()
         if self.tors.shift is None:
             self.tors._set_coordinate_shift()
         tupps = []
@@ -398,7 +397,6 @@ class MultiSurface(BaseSurface):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
             coordinates of the sites.
         """
-        self._set_tor()
         return self.tors.get_ry0_distance(mesh)
 
 
