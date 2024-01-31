@@ -49,8 +49,8 @@ class MultiLine():
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
-        mesh = self.get_endpoints_mesh()
-        u, _ = get_tu(self.shift, *get_tus(self.lines, mesh))
+        ep_mesh = self.get_endpoints_mesh()
+        u, _ = get_tu(self.shift, *get_tus(self.lines, ep_mesh))
         self.u_max = np.abs(u).max()
 
     def set_overall_strike(self):
@@ -90,7 +90,7 @@ class MultiLine():
 
         return soidx
 
-    def get_endpoints_mesh(self) -> Mesh:
+    def get_endpoints_mesh(self):
         """
         Build mesh with end points
         """
@@ -99,10 +99,9 @@ class MultiLine():
         for line in self.lines:
             lons.extend([line.coo[0, 0], line.coo[-1, 0]])
             lats.extend([line.coo[0, 1], line.coo[-1, 1]])
-        mesh = Mesh(np.array(lons), np.array(lats))
-        return mesh
+        return Mesh(np.array(lons), np.array(lats))
 
-    def get_rx_distance(self, mesh: Mesh = None):
+    def get_rx_distance(self, mesh=None):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
@@ -114,7 +113,7 @@ class MultiLine():
         uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
         return tut[0]
 
-    def get_ry0_distance(self, mesh: Mesh = None):
+    def get_ry0_distance(self, mesh=None):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
