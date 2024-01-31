@@ -125,11 +125,23 @@ class MultiFaultTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     # run a performance test with a reduced UCERF source
+    import zlib
     import pandas
     from openquake.baselib import performance, writers
     from openquake.hazardlib.site import SiteCollection
     from openquake.hazardlib import valid, contexts
     srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+
+    rups = list(srcs[0].iter_ruptures())
+    lines = []  # there will be 174,486 lines
+    checksums = []
+    for rup in rups:
+        for surf in rup.surface.surfaces:
+            lines.append(surf.tor_line)
+            checksums.append(zlib.adler32(surf.tor_line.coo.tobytes()))
+    cs = numpy.unique(checksums)  # only 230 lines are unique, i.e. 760x speedup
+    print('Found %d/%d unique segments' % (len(cs), len(checksums)))
+
     sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'])
