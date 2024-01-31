@@ -44,7 +44,6 @@ class GetTorTestCase(unittest.TestCase):
         """ Planar rupture """
         tmp = os.path.join(cd, 'data', 'msurface18.csv')
         surf = MultiSurface.from_csv(tmp)
-        surf._set_tor()
 
         # Expected value inferred from the input file
         expected = numpy.array([[-117.955505, 33.769615, 0],
