@@ -268,7 +268,8 @@ class Line(object):
         >>> from openquake.hazardlib.geo.point import Point as P
         >>> '%.1f' % Line([P(0, 0), P(1e-5, 1e-5)]).average_azimuth()
         '45.0'
-        >>> '%.1f' % Line([P(0, 0), P(0, 1e-5), P(1e-5, 1e-5)]).average_azimuth()
+        >>> '%.1f' % Line([P(0, 0), P(0, 1e-5), P(1e-5, 1e-5)]
+        ... ).average_azimuth()
         '45.0'
         >>> line = Line([P(0, 0), P(-2e-5, 0), P(-2e-5, 1.154e-5)])
         >>> '%.1f' % line.average_azimuth()
@@ -383,7 +384,7 @@ class Line(object):
                                 coo[1:, 0], coo[1:, 1])
         pidx = set([0, coo.shape[0] - 1])
         idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
-        pidx = sorted(list(pidx.union(set(idx + 1))))
+        pidx = sorted(pidx.union(set(idx + 1)))
         self.coo = coo[pidx]
 
     def resample_to_num_points(self, num_points):

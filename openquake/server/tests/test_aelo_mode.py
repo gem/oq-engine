@@ -33,6 +33,7 @@ import csv
 import logging
 
 import django
+from django.apps import apps
 from django.test import Client
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
@@ -215,3 +216,15 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         with open(os.path.join(self.datadir, 'archive_err_1.zip'), 'rb') as a:
             resp = self.post('validate_zip', dict(archive=a))
         assert resp.status_code == 404, resp
+
+    def test_announcement(self):
+        # NOTE: this test might be moved to the currently missing
+        #       test_restricted_mode.py. Anyway, both the AELO and the
+        #       RESTRICTED modes imply LOCKDOWN=True and add the announcements
+        #       app to the INSTALLED_APPS.
+        announcement_model = apps.get_model(app_label='announcements',
+                                            model_name='Announcement')
+        announcement = announcement_model(
+            title='TEST TITLE', content='Test content', show=False)
+        announcement.save()
+        announcement.delete()

@@ -562,7 +562,7 @@ class ClassicalCalculator(base.HazardCalculator):
         assert not oq.disagg_by_src
         assert self.N > self.oqparam.max_sites_disagg, self.N
         allargs = []
-        self.ntiles = 0
+        self.ntiles = []
         if '_csm' in self.datastore.parent:
             ds = self.datastore.parent
         else:
@@ -574,10 +574,11 @@ class ClassicalCalculator(base.HazardCalculator):
             if sg.atomic or sg.weight <= maxw:
                 allargs.append((None, self.sitecol, cm, ds))
             else:
-                for tile in self.sitecol.split(numpy.ceil(sg.weight / maxw)):
+                tiles = self.sitecol.split(numpy.ceil(sg.weight / maxw))
+                for tile in tiles:
                     allargs.append((None, tile, cm, ds))
-                    self.ntiles += 1
-
+                    self.ntiles.append(len(tiles))
+        logging.info('Generated %d tiles', self.ntiles)
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(
                 classical, allargs, h5=self.datastore.hdf5):

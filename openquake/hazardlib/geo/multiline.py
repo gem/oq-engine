@@ -27,6 +27,18 @@ from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
+def get_endpoints_mesh(lines):
+    """
+    Build mesh with end points
+    """
+    lons = []
+    lats = []
+    for line in lines:
+        lons.extend([line.coo[0, 0], line.coo[-1, 0]])
+        lats.extend([line.coo[0, 1], line.coo[-1, 1]])
+    return Mesh(np.array(lons), np.array(lats))
+
+
 class MultiLine():
     """
     A collection of polylines with associated methods and attributes. For the
@@ -43,61 +55,39 @@ class MultiLine():
         self.u_max = None
         self.tupps = None
         self.uupps = None
-        self.uut = None
-        self.tut = None
         self.weis = None
+        # compute the origin of the multiline and set the shift parameter
+        self._set_origin()
+        self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
+                                          self.overall_strike)
 
-    def get_lengths(self) -> np.ndarray:
-        """
-        Computes the total lenght for each polyline composing the multiline
-
-        :returns:
-            A :class:`numpy.ndarray` instance
-        """
-        return get_lengths(self.lines)
-
-    def get_average_azimuths(self) -> np.ndarray:
-        """
-        Computes the average azimuth for each polyline composing the multiline
-
-        :returns:
-            A :class:`numpy.ndarray` instance
-        """
-        return get_average_azimuths(self.lines)
+        ep_mesh = get_endpoints_mesh(self.lines)
+        u, _ = get_tu(self.shift, *get_tus(self.lines, ep_mesh))
+        self.u_max = np.abs(u).max()
 
     def set_overall_strike(self):
         """
         Computes the overall strike direction for the multiline and revert the
         lines with strike direction opposite to the prevalent one
-
-        :param lines:
-            A list of :class:`openquake.hazardlib.geo.line.Line` instances
-
-        :return:
-
         """
-        # Get lenghts and average azimuths
-        llenghts = self.get_lengths()
-        avgaz = self.get_average_azimuths()
-
-        gos = get_overall_strike
-        revert, strike_east, avg_azim, nl = gos(self.lines, llenghts, avgaz)
-
+        # get lenghts and average azimuths
+        llenghts = np.array([ln.get_length() for ln in self.lines])
+        avgaz = np.array([line.average_azimuth() for line in self.lines])
+        # set strike
+        revert, strike_east, avg_azim, nl = get_overall_strike(
+            self.lines, llenghts, avgaz)
         self.strike_to_east = strike_east
         self.overall_strike = avg_azim
         self.lines = nl
-
-        return revert
 
     def _set_origin(self):
         """
         Compute the origin necessary to calculate the coordinate shift and sort
         the information accordingly
         """
-
         # If missing, set the overall strike direction
         if self.strike_to_east is None:
-            _ = self.set_overall_strike()
+            self.set_overall_strike()
 
         # Calculate the origin
         olo, ola, soidx = get_origin(
@@ -112,76 +102,11 @@ class MultiLine():
 
         return soidx
 
-    def _set_coordinate_shift(self):
-        """
-        Computes the coordinate shift for each line in the multiline. This is
-        used to compute coordinates in the GC2 system
-        """
-        # If not defined, compute the origin of the multiline
-        if self.olon is None:
-            _ = self._set_origin()
-
-        # Set the shift param
-        self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
-                                          self.overall_strike)
-
-    def set_tu(self, mesh: Mesh = None):
-        """
-        Computes the T and U coordinates for the multiline. If a mesh is
-        given first we compute the required info.
-        """
-        if self.shift is None:
-            self._set_coordinate_shift()
-
-        if self.tupps is None:
-            assert mesh is not None
-            tupps, uupps, weis = get_tus(self.lines, mesh)
-        else:
-            tupps = self.tupps
-            uupps = self.uupps
-            weis = self.weis
-
-        uut, tut = get_tu(self.shift, tupps, uupps, weis)
-        self.uut = uut
-        self.tut = tut
-
-    def set_u_max(self):
-        """
-        This is needed to compute Ry0
-        """
-
-        # This is the same in both cases
-        if self.shift is None:
-            self._set_coordinate_shift()
-
-        # Get the mesh with the endpoints of each polyline
-        mesh = self.get_endpoints_mesh()
-
-        if self.tupps is None:
-            tupps, uupps, weis = get_tus(self.lines, mesh)
-        else:
-            tupps = self.tupps
-            uupps = self.uupps
-            weis = self.weis
-
-        uut, _ = get_tu(self.shift, tupps, uupps, weis)
-
-        # Maximum U value
-        self.u_max = max(abs(uut))
-
-    def get_endpoints_mesh(self) -> Mesh:
-        """
-        Build mesh with end points
-        """
-        lons = []
-        lats = []
-        for line in self.lines:
-            lons.extend([line.coo[0, 0], line.coo[-1, 0]])
-            lats.extend([line.coo[0, 1], line.coo[-1, 1]])
-        mesh = Mesh(np.array(lons), np.array(lats))
-        return mesh
-
-    def get_rx_distance(self, mesh: Mesh = None):
+    # used only in the multiline_test
+    def get_tu(self, mesh):
+        return get_tu(self.shift, *get_tus(self.lines, mesh))
+        
+    def get_rx_distance(self, mesh):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
@@ -190,32 +115,23 @@ class MultiLine():
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        if self.uut is None:
-            assert mesh is not None
-            self.set_tu(mesh)
-        rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
-        return rx
+        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
+        return tut[0]
 
-    def get_ry0_distance(self, mesh: Mesh = None):
+    def get_ry0_distance(self, mesh):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        if self.uut is None:
-            assert mesh is not None
-            self.set_tu(mesh)
+        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
 
-        if self.u_max is None:
-            self.set_u_max()
+        ry0 = np.zeros_like(uut)
+        ry0[uut < 0] = abs(uut[uut < 0])
 
-        ry0 = np.zeros_like(self.uut)
-        ry0[self.uut < 0] = abs(self.uut[self.uut < 0])
+        condition = uut > self.u_max
+        ry0[condition] = uut[condition] - self.u_max
 
-        condition = self.uut > self.u_max
-        ry0[condition] = self.uut[condition] - self.u_max
-
-        out = ry0[0] if len(ry0.shape) > 1 else ry0
-        return out
+        return ry0
 
 
 def get_tus(lines: list, mesh: Mesh):
@@ -241,26 +157,6 @@ def get_tus(lines: list, mesh: Mesh):
     return tupps, uupps, weis
 
 
-def get_lengths(lines: list) -> np.ndarray:
-    """
-    Computes the total lenght for each polyline composing the multiline
-
-    :returns:
-        A :class:`numpy.ndarray` instance
-    """
-    return np.array([line.get_length() for line in lines])
-
-
-def get_average_azimuths(lines: list) -> np.ndarray:
-    """
-    Computes the average azimuth for each polyline composing the multiline
-
-    :returns:
-        A :class:`numpy.ndarray` instance
-    """
-    return np.array([line.average_azimuth() for line in lines])
-
-
 def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     """
     Computes the overall strike direction for the multiline
@@ -271,9 +167,9 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
 
     # Get lenghts and average azimuths
     if llens is None:
-        llens = get_lengths(lines)
+        llens = np.array([ln.get_length() for ln in lines])
     if avgaz is None:
-        avgaz = get_average_azimuths(lines)
+        avgaz = np.array([line.average_azimuth() for line in lines])
 
     # Find general azimuth trend
     ave = get_average_azimuth(avgaz, llens)
@@ -319,17 +215,11 @@ def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
         The longitude and latitude coordinates of the origin and an array with
         the indexes used to sort the lines according to the origin
     """
-
-    # Create the list of endpoints
-    endp = []
-    for line in lines:
-        endp.append([line.coo[0, 0], line.coo[0, 1]])
-        endp.append([line.coo[-1, 0], line.coo[-1, 1]])
-    endp = np.array(endp)
+    ep = get_endpoints_mesh(lines)
 
     # Project the endpoints
-    proj = utils.OrthographicProjection.from_lons_lats(endp[:, 0], endp[:, 1])
-    px, py = proj(endp[:, 0], endp[:, 1])
+    proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)
+    px, py = proj(ep.lons, ep.lats)
 
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike

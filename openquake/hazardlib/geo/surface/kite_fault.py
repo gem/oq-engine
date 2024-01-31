@@ -29,8 +29,8 @@ from shapely.geometry import Polygon
 
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo import Point, Line
-from openquake.hazardlib.geo.line import _resample
+from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo.line import _resample, Line
 from openquake.hazardlib.geo.mesh import RectangularMesh
 from openquake.hazardlib.geo import utils as geo_utils
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -72,6 +72,7 @@ class KiteSurface(BaseSurface):
         self._fix_right_hand()
         self.strike = self.dip = None
         self.width = None
+        self._set_tor()
 
     def _clean(self):
         """
@@ -115,7 +116,7 @@ class KiteSurface(BaseSurface):
     def get_surface_boundaries(self):
         return self._get_external_boundary()
 
-    def get_tor(self):
+    def _set_tor(self):
         """
         Provides longitude and latitude coordinates of the vertical surface
         projection of the top of rupture. This is used in the GC2 method to
@@ -129,11 +130,13 @@ class KiteSurface(BaseSurface):
             latitudes
         """
         chk = np.isfinite(self.mesh.lons)
-        iro = (chk).argmax(axis=0)
-        ico = np.arange(0, self.mesh.lons.shape[1])
+        iro = chk.argmax(axis=0)
+        ico = np.arange(self.mesh.lons.shape[1])
         ico = ico[iro <= 1]
         iro = iro[iro <= 1]
-        return self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
+        lo, la = self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
+        # top_left, top_right coordinates
+        self.tor_line = Line.from_vectors(lo, la)
 
     def is_vertical(self):
         """ True if all the profiles, and hence the surface, are vertical """
@@ -444,7 +447,6 @@ class KiteSurface(BaseSurface):
             Lower edge  |____________________|
 
         """
-
         # Fix profiles
         rprof, ref_idx = _fix_profiles(profiles, profile_sd, align, idl)
 
@@ -707,7 +709,6 @@ def _create_mesh(rprof, ref_idx, edge_sd, idl, align):
     :returns:
         An instance of  :class:`openquake.hazardlib.geo.Mesh`
     """
-
     # Compute information needed for the geographic projection
     proj = _get_proj_from_profiles(rprof)
 

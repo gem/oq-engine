@@ -335,6 +335,15 @@ def fix_geometry_sections(smdict, dstore):
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
         with hdf5.File(dstore.tempname, 'w') as h5:
+            '''
+            mesh = dstore['sitecol'].mesh
+            # this is absurdly fast
+            logging.info('Computing distances sections->points')
+            dists = numpy.array([sec.get_min_distance(mesh)
+                                 for sec in sections.values()])
+            h5.create_dataset('dists', data=dists)  # shape (Ns, N)
+            logging.info(f'Stored {general.humansize(dists.nbytes)}')
+            '''
             h5.save_vlen('multi_fault_sections',
                          [kite_to_geom(sec) for sec in sections.values()])
 

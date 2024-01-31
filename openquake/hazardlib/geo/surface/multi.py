@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
-from openquake.hazardlib.geo.multiline import get_tu, MultiLine
+from openquake.hazardlib.geo.multiline import get_tu
 
 
 class MultiSurface(BaseSurface):
@@ -68,6 +68,7 @@ class MultiSurface(BaseSurface):
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
+    # NB: this is NEVER used in the calculation
     @property
     def mesh(self):
         """
@@ -87,10 +88,11 @@ class MultiSurface(BaseSurface):
     def __init__(self, surfaces: list, tol: float = 1):
         """
         Intialize a multi surface object from a list of surfaces
-        :param list surfaces:
+
+        :param surfaces:
             A list of instances of subclasses of
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
-        :param float tol:
+        :param tol:
             A float in decimal degrees representing the tolerance admitted in
             representing the rupture trace.
         """
@@ -102,6 +104,7 @@ class MultiSurface(BaseSurface):
         self.uut = None
         self.site_mesh = None
 
+    # called at each instantiation
     def _set_tor(self):
         """
         Computes the list of the vertical surface projections of the top of
@@ -110,15 +113,12 @@ class MultiSurface(BaseSurface):
         instance of a :class:`openquake.hazardlib.geo.multiline.Multiline`
         """
         tors = []
-        classes = (ComplexFaultSurface, SimpleFaultSurface)
 
         for srfc in self.surfaces:
 
             if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
-                lo, la = srfc.get_tor()
-                line = geo.Line.from_vectors(lo, la)
-                line.keep_corners(self.tol)
-                tors.append(line)
+                srfc.tor_line.keep_corners(self.tol)
+                tors.append(srfc.tor_line)
 
             elif isinstance(srfc, PlanarSurface):
                 lo = []
@@ -128,7 +128,7 @@ class MultiSurface(BaseSurface):
                     la.append(pnt.latitude)
                 tors.append(geo.line.Line.from_vectors(lo, la))
 
-            elif isinstance(srfc, classes):
+            elif isinstance(srfc, (ComplexFaultSurface, SimpleFaultSurface)):
                 lons = srfc.mesh.lons[0, :]
                 lats = srfc.mesh.lats[0, :]
                 coo = np.array([[lo, la] for lo, la in zip(lons, lats)])
@@ -314,8 +314,7 @@ class MultiSurface(BaseSurface):
         for surf in self.surfaces:
             dists.append(
                surf.get_min_distance(Mesh(np.array([longitude]),
-                                          np.array([latitude]),
-                                          None)))
+                                          np.array([latitude]))))
         dists = np.array(dists).flatten()
         idx = dists == np.min(dists)
         return np.array(self.surfaces)[idx][0].get_middle_point()
@@ -352,13 +351,10 @@ class MultiSurface(BaseSurface):
             self.areas = np.array(self.areas)
         return self.areas
 
-    def _set_tu(self, mesh: Mesh):
+    def _set_tu(self, mesh):
         """
         Set the values of T and U
         """
-        self._set_tor()
-        if self.tors.shift is None:
-            self.tors._set_coordinate_shift()
         tupps = []
         uupps = []
         weis = []
@@ -385,8 +381,8 @@ class MultiSurface(BaseSurface):
         """
         # This checks that the info stored is consistent with the mesh of
         # points used
-        condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
-        if (self.uut is None) or condition2:
+        condition2 = self.site_mesh is not None and self.site_mesh != mesh
+        if self.uut is None or condition2:
             self._set_tu(mesh)
         rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
         return rx
@@ -397,79 +393,4 @@ class MultiSurface(BaseSurface):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
             coordinates of the sites.
         """
-        self._set_tor()
         return self.tors.get_ry0_distance(mesh)
-
-
-def _multi_distances(surface, sites, param):
-    if param == 'rrup':
-        dist = surface.get_min_distance(sites)
-    elif param == 'rjb':
-        dist = surface.get_joyner_boore_distance(sites)
-    elif param in ['rx', 'ry0']:
-        # In this case we compute the GC2 coordinates for the surface
-        tor_lo, tor_la = surface.get_tor()
-        tor = geo.line.Line.from_vectors(tor_lo, tor_la)
-        t_upp, u_upp, wei = tor.get_tu(sites)
-        wei_sum = np.squeeze(np.sum(wei, axis=0))
-        # Get the u-coordinate on the last vertex of the trace
-        mesh = Mesh(tor_lo[[0, -1]], tor_la[[0, -1]])
-        _, uu, _ = tor.get_tu(mesh)
-        # Save data
-        dists = {'tor': tor, 't_upp': t_upp, 'u_upp': u_upp, 'wei': wei_sum,
-                 'umax': max(uu)}
-    else:
-        raise ValueError(f'Unknown distance measure {param}')
-    if param in ['rrup', 'rjb']:
-        dists = {param: dist}
-    return dists
-
-
-def _multi_rx_ry0(dcache, suids, param):
-
-    # Get the multiline used to compute distances
-    multil = _get_multi_line(dcache, suids)
-
-    # Get GC coordinates
-    multil.set_tu()
-
-    # Get Rx and Ry0
-    if param == 'rx':
-        return multil.get_rx_distance()
-    elif param == 'ry0':
-        return multil.get_ry0_distance()
-    else:
-        raise ValueError('%s is not rx or ry0' % param)
-
-
-def _get_multi_line(dcache, suids):
-
-    # Retrieve info from the cache
-    lines = [dcache[key, 'tor'] for key in suids]
-
-    # Create the multiline
-    multil = MultiLine(lines)
-    revert = multil.set_overall_strike()
-    soidx = multil._set_origin()
-    revert = revert[soidx]
-
-    # Load data in cache
-    tupps = [dcache[suids[i], 't_upp'] for i in soidx]
-    uupps = [dcache[suids[i], 'u_upp'] for i in soidx]
-    weis = [dcache[suids[i], 'wei'] for i in soidx]
-    umax = [dcache[suids[i], 'umax'] for i in soidx]
-
-    # Change sign to the reverted surface traces
-    for i, flag in enumerate(revert):
-        if flag:
-            tupps[i] = -tupps[i]
-            uupps[i] = -(uupps[i] - umax[i])
-
-    # Fixing shift
-    multil._set_coordinate_shift()
-    multil.set_u_max()
-    multil.tupps = tupps
-    multil.uupps = uupps
-    multil.weis = np.array(weis)  # shape (N, 3)
-    multil.weis.flags.writeable = False  # nobody must change the weights
-    return multil

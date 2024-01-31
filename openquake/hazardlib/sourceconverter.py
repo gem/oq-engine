@@ -567,7 +567,7 @@ class RuptureConverter(object):
                 surface = geo.KiteSurface.from_profiles(
                     profs[0], self.rupture_mesh_spacing,
                     self.rupture_mesh_spacing, sec_id=sec_id)
-            else:
+            else:  # normally found in sections.xml
                 surfaces = []
                 for prof in profs:
                     surfaces.append(geo.KiteSurface.from_profiles(

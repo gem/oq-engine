@@ -18,8 +18,6 @@
 
 from typing import Union
 import numpy as np
-import gzip
-import os
 
 try:
     import onnxruntime

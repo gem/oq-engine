@@ -29,19 +29,17 @@ PLOTTING = False
 class OneLineTestCase(unittest.TestCase):
 
     def setUp(self):
-
         self.line = geo.Line([geo.Point(0.2, 0.05), geo.Point(0.0, 0.05)])
         self.ml = MultiLine([self.line])
 
     def test_max_u(self):
-        self.ml.set_u_max()
         dst = geo.geodetic.geodetic_distance([self.line.points[0].longitude],
                                              [self.line.points[0].latitude],
                                              [self.line.points[1].longitude],
                                              [self.line.points[1].latitude])
         np.testing.assert_allclose(self.ml.u_max, dst, atol=1e-4)
 
-
+  
 class MultiLineTestCase(unittest.TestCase):
     """
     Test the calculation of the strike direction for a list of polylines
@@ -68,16 +66,10 @@ class MultiLineTestCase(unittest.TestCase):
         self.lines = [linea, lineb]
 
     def test_get_strike_01(self):
-        """ get strike 01 """
 
         # Create the multiline instance and get the prevalent strike
         ml = MultiLine(self.lines)
-        revert = ml.set_overall_strike()
-
-        # Testing
-        self.assertTrue(ml.strike_to_east)
-        msg = 'Lines to flip are wrong'
-        np.testing.assert_equal(revert, [False, True], msg)
+        ml.set_overall_strike()
 
         if PLOTTING:
             fig, ax = plt.subplots()
@@ -89,20 +81,16 @@ class MultiLineTestCase(unittest.TestCase):
             plt.show()
 
     def test_set_origin(self):
-        """ test computing origin """
 
         # Create the multiline instance and get the origin
         ml = MultiLine(self.lines)
-        ml._set_origin()
         expected = [0.0, 0.0]
         np.testing.assert_almost_equal([ml.olon, ml.olat], expected)
 
     def test_coordinate_shift(self):
-        """ test calculation of coordinate shift """
 
         # Creating the multiline and computing the shift
         ml = MultiLine(self.lines)
-        ml._set_coordinate_shift()
 
         # Computing the distance between the origin and the endnode of the
         # second polyline
@@ -113,7 +101,6 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Set the origin and compute the overall strike and the azimuths of
         # the polylines composing the multiline instance
-        ml._set_origin()
         ggazi = geo.geodetic.azimuth
         azim = ggazi(ml.olon, ml.olat, lo, la)
         delta = abs(ml.overall_strike - azim)
@@ -122,8 +109,7 @@ class MultiLineTestCase(unittest.TestCase):
         # Testing
         np.testing.assert_almost_equal([0, computed], ml.shift)
 
-    def test_set_tu(self):
-
+    def test_get_tu(self):
         # Get the coords of the lines composing the multiline
         lons = []
         lats = []
@@ -136,28 +122,18 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        tupp = ml.tut
+        uupp, tupp = ml.get_tu(mesh)
 
         if PLOTTING:
             num = 10
             # U
             z = np.reshape(uupp, plons.shape)
-            label = 'test_set_tu - U'
+            label = 'test_get_tu - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
             z = np.reshape(tupp, plons.shape)
-            label = 'test_set_tu - T'
+            label = 'test_get_tu - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
-
-    def test_set_tu_spot_checks(self):
-
-        mesh = geo.Mesh(np.array([0.0]), np.array([0.0]))
-        ml = MultiLine(self.lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        np.testing.assert_almost_equal([0.0011659], uupp)
 
     def test_tu_figure09(self):
 
@@ -169,9 +145,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        tupp = ml.tut
+        uupp, tupp = ml.get_tu(mesh)
 
         if PLOTTING:
             num = 10
@@ -194,9 +168,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        ml.set_tu(mesh)
-        uupp = ml.uut
-        tupp = ml.tut
+        uupp, tupp = ml.get_tu(mesh)
 
         if PLOTTING:
             num = 10

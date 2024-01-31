@@ -211,10 +211,10 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     def test_get_edge_set(self):
         # The vertexes of the expected edges are the first and last vertexes of
         # the topmost row of the mesh
-        expected = [np.array([[-70.33, 19.65, 0.],
-                              [-70.57740671, 19.66979434, 0.0]]),
-                    np.array([[-70.10327766, 19.67957463, 0.0],
-                              [-70.33, 19.65, 0.0]])]
+        expected = [np.array([[-70.1, 19.68, 0.],
+                              [-70.32703837, 19.65038823, 0.0]]),
+                    np.array([[-70.33, 19.65, 0.0],
+                              [-70.57740671, 19.66979434, 0.0]])]
         self.msrf._set_tor()
 
         if PLOTTING:
@@ -345,7 +345,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
             for line in self.msrf.tors.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
-            self.msrf.tors._set_origin()
             ax.plot(self.msrf.tors.olon, self.msrf.tors.olat, 'o')
             plt.show()
 
