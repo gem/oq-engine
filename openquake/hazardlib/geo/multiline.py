@@ -46,7 +46,10 @@ class MultiLine():
         self.uut = None
         self.tut = None
         self.weis = None
-        self._set_coordinate_shift()
+        # compute the origin of the multiline and set the shift parameter
+        self._set_origin()
+        self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
+                                          self.overall_strike)
 
     def set_overall_strike(self):
         """
@@ -84,19 +87,6 @@ class MultiLine():
             self.shift = self.shift[soidx]
 
         return soidx
-
-    def _set_coordinate_shift(self):
-        """
-        Computes the coordinate shift for each line in the multiline. This is
-        used to compute coordinates in the GC2 system
-        """
-        # If not defined, compute the origin of the multiline
-        if self.olon is None:
-            self._set_origin()
-
-        # Set the shift param
-        self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
-                                          self.overall_strike)
 
     def set_tu(self, mesh: Mesh = None):
         """
