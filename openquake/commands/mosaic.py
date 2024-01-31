@@ -143,7 +143,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     print('Total time: %.1f minutes' % dt) 
     if not results:
         # serious problem to debug
-        import pdb; pdb.set_trace()
+        breakpoint()
     header = sorted(results[0])
     rows = [[row[k] for k in header] for row in results]
     fname = os.path.abspath('asce41.csv')

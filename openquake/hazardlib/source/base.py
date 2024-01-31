@@ -17,7 +17,6 @@
 Module :mod:`openquake.hazardlib.source.base` defines a base class for
 seismic sources.
 """
-import re
 import abc
 import zlib
 import numpy

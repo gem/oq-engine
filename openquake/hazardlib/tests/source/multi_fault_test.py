@@ -162,5 +162,5 @@ if __name__ == '__main__':
                 continue
             try:
                 aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
-            except:
-                import pdb; pdb.set_trace()
+            except Exception:
+                breakpoint()
