@@ -125,7 +125,8 @@ class MultiFaultTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     # run a performance test with a reduced UCERF source
-    from openquake.baselib import performance
+    import pandas
+    from openquake.baselib import performance, writers
     from openquake.hazardlib.site import SiteCollection
     from openquake.hazardlib import valid, contexts
     srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
@@ -133,5 +134,21 @@ if __name__ == '__main__':
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'])
     with performance.Monitor() as mon:
-        cmaker.from_srcs(srcs, sitecol)
-    print(mon)
+        [ctxt] = cmaker.from_srcs(srcs, sitecol)
+    print(mon, ctxt)
+    inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
+    out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
+    ctx = ctxt[::50]
+    if os.environ.get('OQ_OVERWRITE'):
+        writers.write_csv(inp, ctx)
+    else:
+        writers.write_csv(out, ctx)
+        df = pandas.read_csv(inp, na_values=['NAN'])
+        aac = numpy.testing.assert_allclose
+        for col in df.columns:
+            if col == 'probs_occur:2':
+                continue
+            try:
+                aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
+            except:
+                import pdb; pdb.set_trace()
