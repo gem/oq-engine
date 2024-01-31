@@ -104,7 +104,7 @@ class MultiSurface(BaseSurface):
         self.uut = None
         self.site_mesh = None
 
-    # called at each instantiation and then again in _set_tu
+    # called at each instantiation
     def _set_tor(self):
         """
         Computes the list of the vertical surface projections of the top of
@@ -117,6 +117,7 @@ class MultiSurface(BaseSurface):
         for srfc in self.surfaces:
 
             if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
+                srfc.tor_line.keep_corners(self.tol)
                 tors.append(srfc.tor_line)
 
             elif isinstance(srfc, PlanarSurface):
