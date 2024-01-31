@@ -101,7 +101,11 @@ class MultiLine():
             lats.extend([line.coo[0, 1], line.coo[-1, 1]])
         return Mesh(np.array(lons), np.array(lats))
 
-    def get_rx_distance(self, mesh=None):
+    # used only in the multiline_test
+    def get_tu(self, mesh):
+        return get_tu(self.shift, *get_tus(self.lines, mesh))
+        
+    def get_rx_distance(self, mesh):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
@@ -113,7 +117,7 @@ class MultiLine():
         uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
         return tut[0]
 
-    def get_ry0_distance(self, mesh=None):
+    def get_ry0_distance(self, mesh):
         """
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
