@@ -31,7 +31,7 @@ BASE_PATH = os.path.dirname(__file__)
 BASE_DATA_PATH = os.path.join(BASE_PATH, 'data')
 PLOTTING = False
 OVERWRITE = os.environ.get('OQ_OVERWRITE')
-
+SPC = 2
 aae = np.testing.assert_almost_equal
 
 
@@ -61,10 +61,9 @@ class Ry0TestCase(unittest.TestCase):
         return ry0
 
     def test_ry0a(self):
-        spc = 2.0
         pro1 = Line([Point(0.2, 0.05, 0.0), Point(0.2, 0.0, 15.0)])
         pro2 = Line([Point(0.0, 0.05, 0.0), Point(0.0, 0.0, 15.0)])
-        sfc = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        sfc = KiteSurface.from_profiles([pro1, pro2], SPC, SPC)
         ry0 = self._test_ry0(sfc)
 
         # Saving data
@@ -78,10 +77,9 @@ class Ry0TestCase(unittest.TestCase):
         aae(er['ry0'], ry0, decimal=1)
 
     def test_ry0b(self):
-        spc = 2.0
         pro1 = Line([Point(0.2, 0.0, 0.0), Point(0.2, 0.05, 15.0)])
         pro2 = Line([Point(0.0, 0.0, 0.0), Point(0.0, 0.05, 15.0)])
-        sfc = KiteSurface.from_profiles([pro1, pro2], spc, spc)
+        sfc = KiteSurface.from_profiles([pro1, pro2], SPC, SPC)
         ry0 = self._test_ry0(sfc)
 
         # Saving data
@@ -95,11 +93,10 @@ class Ry0TestCase(unittest.TestCase):
         aae(er['ry0'], ry0, decimal=1)
 
     def test_ry0c(self):
-        spc = 2.0
         pro1 = Line([Point(0.5, 0.05, 0.0), Point(0.5, 0.1, 15.0)])
         pro2 = Line([Point(0.4, 0.05, 0.0), Point(0.4, 0.1, 15.0)])
         pro3 = Line([Point(0.35, 0.0, 0.0), Point(0.3, 0.05, 15.0)])
-        sfc = KiteSurface.from_profiles([pro1, pro2, pro3], spc, spc)
+        sfc = KiteSurface.from_profiles([pro1, pro2, pro3], SPC, SPC)
         ry0 = self._test_ry0(sfc)
 
         # Saving data
