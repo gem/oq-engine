@@ -61,7 +61,7 @@ class MultiLine():
                                           self.overall_strike)
 
         ep_mesh = get_endpoints_mesh(self.lines)
-        u, _ = get_tu(self.shift, *get_tus(self.lines, ep_mesh))
+        u, _ = self.get_tu(ep_mesh)
         self.u_max = np.abs(u).max()
 
     def set_overall_strike(self):
@@ -79,10 +79,12 @@ class MultiLine():
         self.overall_strike = avg_azim
         self.lines = nl
 
-    # used only in the multiline_test
     def get_tu(self, mesh):
-        return get_tu(self.shift, *get_tus(self.lines, mesh))
-        
+        """
+        Given a mesh, computes the T and U coordinates for the multiline
+        """
+        return _get_tu(self.shift, *get_tus(self.lines, mesh))
+
     def get_rx_distance(self, mesh):
         """
         :param mesh:
@@ -92,7 +94,7 @@ class MultiLine():
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
+        uut, tut = self.get_tu(mesh)
         return tut[0]
 
     def get_ry0_distance(self, mesh):
@@ -100,7 +102,7 @@ class MultiLine():
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
+        uut, tut = self.get_tu(mesh)
 
         ry0 = np.zeros_like(uut)
         ry0[uut < 0] = abs(uut[uut < 0])
@@ -258,10 +260,7 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
-def get_tu(shifts, tupps, uupps, weis):
-    """
-    Given a mesh, computes the T and U coordinates for the multiline
-    """
+def _get_tu(shifts, tupps, uupps, weis):
     for i, (shift, tupp, uupp, wei) in enumerate(
             zip(shifts, tupps, uupps, weis)):
         if i == 0:  # initialize
