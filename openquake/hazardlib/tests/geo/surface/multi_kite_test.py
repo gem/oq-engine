@@ -69,6 +69,7 @@ class MultiSurfaceOneTestCase(unittest.TestCase):
         prf3 = Line([Point(0.3, 0, 0), Point(0.3, -0.00001, 20.)])
         sfca = KiteSurface.from_profiles([prf1, prf2, prf3], 1., 1.)
         self.msrf = MultiSurface([sfca])
+        self.msrf._set_tor()
 
     def test_get_width(self):
         # Surface is almost vertical. The width must be equal to the depth
@@ -136,6 +137,7 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
 
         # Create the surface and mesh needed for the test
         self.msrf = MultiSurface([sfca, sfcb])
+        self.msrf._set_tor()
         self.coo = np.array([[-0.1, 0.0], [0.0, 0.1]])
         self.mesh = Mesh(self.coo[:, 0], self.coo[:, 1])
 
@@ -192,6 +194,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         self.srfc50 = srfc50
         self.srfc51 = srfc51
         self.msrf = MultiSurface([srfc50, srfc51])
+        self.msrf._set_tor()
         self.mesh = mesh
         self.los = [self.msrf.surfaces[0].mesh.lons,
                     self.msrf.surfaces[1].mesh.lons]
@@ -222,12 +225,12 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
                 mesh = sfc.mesh
                 ax.plot(mesh.lons, mesh.lats, '.', color=col)
                 ax.plot(mesh.lons[0, :],  mesh.lats[0, :], lw=3)
-            for line in self.msrf.tors.lines:
+            for line in self.msrf.tor.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], 'x-r')
             plt.show()
 
         # Note that method is executed when the object is initialized
-        for es, expct in zip(self.msrf.tors.lines, expected):
+        for es, expct in zip(self.msrf.tor.lines, expected):
             np.testing.assert_array_almost_equal(es.coo, expct, decimal=2)
 
     def test_get_strike(self):
@@ -341,9 +344,9 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         if PLOTTING:
             title = f'{type(self).__name__} - Ry0'
             fig, ax = _plt_results(self.clo, self.cla, dst, self.msrf, title)
-            for line in self.msrf.tors.lines:
+            for line in self.msrf.tor.lines:
                 ax.plot(line.coo[:, 0], line.coo[:, 1], '-r', lw=3)
-            ax.plot(self.msrf.tors.olon, self.msrf.tors.olat, 'o')
+            ax.plot(self.msrf.tor.olon, self.msrf.tor.olat, 'o')
             plt.show()
 
         # Saving data
@@ -378,6 +381,7 @@ class NZLTestCase(unittest.TestCase):
         for sec in gmodel.sections:
             sfcs.append(gmodel.sections[sec])
         self.msrf = MultiSurface(sfcs)
+        self.msrf._set_tor()
 
         # Create second surface
         keys = list(gmodel.sections)
@@ -394,7 +398,7 @@ class NZLTestCase(unittest.TestCase):
                 for pro in sfc.profiles:
                     ax.plot(pro.coo[:, 0], pro.coo[:, 1], '--b')
             # Plotting traces
-            for line in self.msrf.tors.lines:
+            for line in self.msrf.tor.lines:
                 col = np.random.rand(3)
                 coo = line.coo
                 ax.plot(coo[:, 0], coo[:, 1], color=col)
