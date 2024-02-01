@@ -79,8 +79,7 @@ def _resample(coo, sect_len, orig_extremes):
         # compute the new sample by interpolation
         if idx < len(dis) - 1:
 
-            pnt = find_t(
-                txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
+            pnt = find_t(txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
             if len(pnt) == 0:
                 raise ValueError('Did not find the intersection')
             _update(rtra, rtra_prj, proj, pnt)
@@ -639,7 +638,7 @@ def get_versor(arr):
     return (arr.T / np.linalg.norm(arr, axis=1)).T
 
 
-#@compile("(float64[3],float64[3],float64[3],float64)")
+#@compile("(float64[:],float64[:],float64[:],float64)")
 def find_t(pnt0, pnt1, ref_pnt, distance):
     """
     Find the point on the segment within `pnt0` and `pnt1` at `distance` from
