@@ -1191,7 +1191,7 @@ class ContextMaker(object):
                     elif src.code == b'C':
                         src.weight += 10.
                     elif src.code == b'F':
-                        src.weight *= 100  # superheavy
+                        src.weight *= 30  # superheavy
                     else:
                         src.weight += 1.
 
