@@ -80,7 +80,7 @@ def _resample(coo, sect_len, orig_extremes):
         if idx < len(dis) - 1:
 
             pnt = find_t(txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
-            if pnt.sum() == 0:
+            if np.isnan(pnt).any():
                 raise ValueError('Did not find the intersection')
             _update(rtra, rtra_prj, proj, pnt)
             inc_len += sect_len
@@ -680,7 +680,7 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
 
     # In this case the line is not intersecting the sphere
     if chk < 0:
-        return np.zeros(3)
+        return np.array([np.nan, np.nan, np.nan])
 
     # Computing the points of intersection
     pu = (-pb + (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)
