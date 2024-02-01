@@ -44,23 +44,74 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
-def get_distances(rupture, sites, param):
+def _get_dist(surface, sites, param):
+    # compute distances without any cache
+    if param == 'rrup':
+        dist = surface.get_min_distance(sites)
+    elif param == 'rx':
+        dist = surface.get_rx_distance(sites)
+    elif param == 'ry0':
+        dist = surface.get_ry0_distance(sites)
+    elif param == 'rjb':
+        dist = surface.get_joyner_boore_distance(sites)
+    elif param == 'closest_point' or param == 'clon' or param == 'clat':
+        t = surface.get_closest_points(sites)  # tested in classical/case_83
+        if param == 'closest_point':
+            dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+        elif param == 'clon':
+            dist = t.lons.reshape(-1, 1)
+        elif param == 'clat':
+            dist = t.lats.reshape(-1, 1)
+    else:
+        raise ValueError('Unknown distance measure %r' % param)
+    return dist
+
+
+def _surf_dist(surface, sites, param, dcache):
+    # compute distances with a cache, but only for MultiSurfaces
+
+    if dcache is None or not hasattr(surface, 'surfaces'):
+        return _get_dist(surface, sites, param)
+
+    # assume the underlying surfaces have .suid attributes
+    suids = [s.suid for s in surface.surfaces]
+    for surf in surface.surfaces:
+        if (surf.suid, param) not in dcache:
+            dcache[surf.suid, param] = _get_dist(surf, sites, param)
+    if param in ('rrup', 'rjb'):
+        dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
+    elif param in ('rx', 'ry0'):
+        if surface.tor is None:
+            surface._set_tor()
+        if param == 'rx':
+            uut, tut = surface.tor.get_tu(sites)
+            dist = tut[0] if len(tut[0].shape) > 1 else tut
+        elif param == 'ry0':
+            dist = surface.tor.get_ry0_distance(sites)
+    else:
+        raise NotImplementedError(param)  # should never happen
+    return dist
+
+
+def get_distances(rupture, sites, param, dcache=None):
     """
     :param rupture: a rupture
     :param sites: a mesh of points or a site collection
     :param param: the kind of distance to compute (default rjb)
+    :param dcache: distance cache dictionary or None if disabled
     :returns: an array of distances from the given sites
     """
-    if not rupture.surface:  # PointRupture
+    surf = rupture.surface
+    if not surf:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
-        dist = rupture.surface.get_min_distance(sites)
+        dist = _surf_dist(surf, sites, 'rrup', dcache)
     elif param == 'rx':
-        dist = rupture.surface.get_rx_distance(sites)
+        dist = _surf_dist(surf, sites, 'rx', dcache)
     elif param == 'ry0':
-        dist = rupture.surface.get_ry0_distance(sites)
+        dist = _surf_dist(surf, sites, 'ry0', dcache)
     elif param == 'rjb':
-        dist = rupture.surface.get_joyner_boore_distance(sites)
+        dist = _surf_dist(surf, sites, 'rjb', dcache)
     elif param == 'rhypo':
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'repi':
@@ -68,17 +119,11 @@ def get_distances(rupture, sites, param):
     elif param == 'rcdpp':
         dist = rupture.get_cdppvalue(sites)
     elif param == 'azimuth':
-        dist = rupture.surface.get_azimuth(sites)
+        dist = surf.get_azimuth(sites)
     elif param == 'azimuth_cp':
-        dist = rupture.surface.get_azimuth_of_closest_point(sites)
+        dist = surf.get_azimuth_of_closest_point(sites)
     elif param == 'closest_point' or param == 'clon' or param == 'clat':
-        t = rupture.surface.get_closest_points(sites)
-        if param == 'closest_point':
-            dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
-        if param == 'clon':
-            dist = numpy.reshape([t.lons], (len(t.lons), 1))  # shape (N, 1)
-        if param == 'clat':
-            dist = numpy.reshape([t.lats], (len(t.lons), 1))  # shape (N, 1)  
+        dist = _surf_dist(surf, sites, param, dcache)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
