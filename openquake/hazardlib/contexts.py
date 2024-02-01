@@ -929,7 +929,9 @@ class ContextMaker(object):
             rups_sites, src_id, getattr(src, 'dcache', None))
         blocks = block_splitter(rctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
-        return self.ctx_mon.iter(map(self.recarray, blocks))
+        dcache = getattr(src, 'dcache', {})
+        return self.ctx_mon.iter(map(self.recarray, blocks),
+                                 atexit=dcache.clear)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
