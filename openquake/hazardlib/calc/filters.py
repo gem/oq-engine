@@ -55,13 +55,13 @@ def _get_dist(surface, sites, param):
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
     elif param == 'closest_point' or param == 'clon' or param == 'clat':
-        t = surface.get_closest_points(sites)
+        t = surface.get_closest_points(sites)  # tested in classical/case_83
         if param == 'closest_point':
             dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
         elif param == 'clon':
-            dist = numpy.reshape([t.lons], (len(t.lons), 1))  # shape (N, 1)
+            dist = t.lons.reshape(-1, 1)
         elif param == 'clat':
-            dist = numpy.reshape([t.lats], (len(t.lons), 1))  # shape (N, 1)  
+            dist = t.lats.reshape(-1, 1)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
