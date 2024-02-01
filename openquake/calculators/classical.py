@@ -477,7 +477,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.execute_reg(maxw)
         else:
             logging.info('Using parallel tiling')
-            self.execute_big(maxw)
+            self.execute_big(maxw * 2)  # build half the tasks
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
