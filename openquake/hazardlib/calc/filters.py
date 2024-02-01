@@ -68,7 +68,8 @@ def _get_dist(surface, sites, param):
 
 
 def _surf_dist(surface, sites, param, dcache):
-    # compute distances with a cache only for MultiSurfaces
+    # compute distances with a cache, but only for MultiSurfaces
+
     if dcache is None or not hasattr(surface, 'surfaces'):
         return _get_dist(surface, sites, param)
 
@@ -82,7 +83,7 @@ def _surf_dist(surface, sites, param, dcache):
         dcache.tot += 1
     if param in ('rrup', 'rjb'):
         dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
-    else:  # rx or ry0
+    elif param in ('rx', 'ry0'):
         if surface.tor is None:
             surface._set_tor()
         if param == 'rx':
@@ -90,6 +91,8 @@ def _surf_dist(surface, sites, param, dcache):
             dist = tut[0] if len(tut[0].shape) > 1 else tut
         elif param == 'ry0':
             dist = surface.tor.get_ry0_distance(sites)
+    else:
+        raise NotImplementedError(param)  # should never happen
     return dist
 
 
