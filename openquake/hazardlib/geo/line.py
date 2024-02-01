@@ -590,6 +590,7 @@ def get_tu(ui, ti, sl, weights):
     return t_upp, u_upp
 
 
+#@compile('(float64[:,:],float64[:,:],float64[:])')
 def get_ti_weights(ui, ti, segments_len):
     """
     Compute the weights
