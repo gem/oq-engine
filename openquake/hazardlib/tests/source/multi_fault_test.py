@@ -147,10 +147,9 @@ if __name__ == '__main__':
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     with performance.Monitor() as mon:
         [ctxt] = cmaker.from_srcs(srcs, sitecol)
-    print(mon, ctxt)
-    misses = cmaker.dcache.tot - cmaker.dcache.hit
-    speedup = cmaker.dcache.tot / misses
-    print(f'cache {speedup=}')
+    print(mon)
+    dcache = srcs[0].dcache
+    print(dcache)
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
     ctx = ctxt[::50]

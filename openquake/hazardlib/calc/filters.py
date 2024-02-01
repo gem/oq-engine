@@ -78,9 +78,6 @@ def _surf_dist(surface, sites, param, dcache):
     for surf in surface.surfaces:
         if (surf.suid, param) not in dcache:
             dcache[surf.suid, param] = _get_dist(surf, sites, param)
-        else:
-            dcache.hit += 1
-        dcache.tot += 1
     if param in ('rrup', 'rjb'):
         dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
     elif param in ('rx', 'ry0'):
