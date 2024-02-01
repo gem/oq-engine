@@ -26,6 +26,7 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -44,8 +45,41 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
+def _closest_points(surfaces, mesh, dcache):
+    # for each point in the mesh compute the minimum distance to each
+    # surface. Builds a ``distances`` matrix, the first dimension
+    # representing the surfaces and the second dimension the mesh points
+    dists = numpy.array(
+        [_surf_dist(surf, mesh, 'rrup', dcache) for surf in surfaces])
+
+    # find for each point in mesh the index of closest surface
+    idx = (dists == numpy.min(dists, axis=0))
+
+    # loop again over surfaces. For each surface compute the closest
+    # points, and associate them to the mesh points for which the surface
+    # is the closest. Note that if a surface is not the closest to any of
+    # the mesh points then the calculation is skipped
+    lons = numpy.empty_like(mesh.lons)
+    lats = numpy.empty_like(mesh.lats)
+    depths = None if mesh.depths is None else numpy.empty_like(mesh.depths)
+
+    # the centroid info for the sites must be evaluated and populated
+    # one site at a time
+    for jdx in idx.T:
+        i = numpy.where(jdx)[0][0]
+        surf = surfaces[i]
+        cps = _surf_dist(surf, mesh, 'closest_point', dcache)
+        idx_i = idx[i, :]
+        lons[idx_i] = cps[idx_i, 0]
+        lats[idx_i] = cps[idx_i, 1]
+        if depths is not None:
+            depths[idx_i] = cps[idx_i, 2]
+    return Mesh(lons, lats, depths)
+
+
 def _get_dist(surface, sites, param):
-    # compute distances without any cache
+    # compute distances without any cache for simple surfaces
+    assert not hasattr(surface, 'surfaces'), surface
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
     elif param == 'rx':
@@ -88,6 +122,14 @@ def _surf_dist(surface, sites, param, dcache):
             dist = tut[0] if len(tut[0].shape) > 1 else tut
         elif param == 'ry0':
             dist = surface.tor.get_ry0_distance(sites)
+    elif param in ('closest_point', 'clon', 'clat'):
+        t = _closest_points(surface.surfaces, sites, dcache)
+        if param == 'closest_point':
+            dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+        elif param == 'clon':
+            dist = t.lons.reshape(-1, 1)
+        elif param == 'clat':
+            dist = t.lats.reshape(-1, 1)
     else:
         raise NotImplementedError(param)  # should never happen
     return dist
