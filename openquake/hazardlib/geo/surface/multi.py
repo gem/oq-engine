@@ -186,10 +186,6 @@ class MultiSurface(BaseSurface):
             lats[idx_i] = cps.lats[idx_i]
             if depths is not None:
                 depths[idx_i] = cps.depths[idx_i]
-        lons = lons.reshape(mesh.lons.shape)
-        lats = lats.reshape(mesh.lats.shape)
-        if depths is not None:
-            depths = depths.reshape(mesh.depths.shape)
         return Mesh(lons, lats, depths)
 
     def get_joyner_boore_distance(self, mesh):
