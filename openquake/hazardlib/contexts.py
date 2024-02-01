@@ -368,6 +368,12 @@ class ContextMaker(object):
         elif not hasattr(self, 'imtls'):
             raise KeyError('Missing imtls in ContextMaker!')
         self.cache_distances = param.get('cache_distances', False)
+        if self.cache_distances:
+            # use a cache (surface ID, dist_type) for MultiFaultSources
+            self.dcache = AccumDict()
+            self.dcache.hit = 0		
+        else:
+            self.dcache = None  # disabled
         self.max_sites_disagg = param.get('max_sites_disagg', 10)
         self.time_per_task = param.get('time_per_task', 60)
         self.collapse_level = int(param.get('collapse_level', -1))
@@ -465,6 +471,18 @@ class ContextMaker(object):
                    self.REQUIRES_RUPTURE_PARAMETERS |
                    self.REQUIRES_SITES_PARAMETERS)
         self.collapser = Collapser(self.collapse_level, kfields)
+
+    def dcache_size(self):
+        """
+        :returns: the size in bytes of the distance cache
+        """
+        if not self.dcache:
+            return 0
+        nbytes = 0
+        for arr in self.dcache.values():
+            if isinstance(arr, numpy.ndarray):
+                nbytes += arr.nbytes
+        return nbytes
 
     def restrict(self, imts):
         """
@@ -683,7 +701,7 @@ class ContextMaker(object):
         ctx.rrup = distances
         ctx.sites = sites
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists = get_distances(rup, sites, param)
+            dists = get_distances(rup, sites, param, self.dcache)
             setattr(ctx, param, dists)
 
         # Equivalent distances
@@ -873,7 +891,7 @@ class ContextMaker(object):
                 continue
             magdist = self.maximum_distance(rups[0].mag)
             for u, rup in enumerate(rups):
-                dist = get_distances(rup, sites, 'rrup')
+                dist = get_distances(rup, sites, 'rrup', self.dcache)
                 mask = dist <= magdist
                 if mask.any():
                     r_sites = sites.filter(mask)
