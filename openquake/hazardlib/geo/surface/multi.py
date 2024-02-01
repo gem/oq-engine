@@ -100,9 +100,6 @@ class MultiSurface(BaseSurface):
         self.tol = tol
         self._set_tor()
         self.areas = None
-        self.tut = None
-        self.uut = None
-        self.site_mesh = None
 
     # called at each instantiation
     def _set_tor(self):

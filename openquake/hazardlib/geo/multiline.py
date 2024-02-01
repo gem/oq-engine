@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 import copy
 import numpy as np
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
@@ -109,6 +109,14 @@ class MultiLine():
         ry0[condition] = uut[condition] - self.u_max
 
         return ry0
+
+    def to_mesh(self):
+        """
+        Assuming the L lines are all segments (i.e. contains 2 points)
+        returns a RectangularMesh of shape (L, 2)
+        """
+        coo = np.array([ln.coo for ln in self.lines])  # shape (L, 2, 3)
+        return RectangularMesh(coo[:, :, 0], coo[:, :, 1])
 
 
 def get_tus(lines: list, mesh: Mesh):
