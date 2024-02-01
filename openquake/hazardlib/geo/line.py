@@ -590,18 +590,19 @@ def get_tu(ui, ti, sl, weights):
     return t_upp, u_upp
 
 
-#@compile('(float64[:,:],float64[:,:],float64[:])')
+@compile('(float64[:,:],float64[:,:],float64[:])')
 def get_ti_weights(ui, ti, segments_len):
     """
     Compute the weights
     """
+    S1, S2 = ui.shape
     weights = np.zeros_like(ui)
     terma = np.zeros_like(ui)
     term1 = np.zeros_like(ui)
     term2 = np.zeros_like(ui)
-    idx_on_trace = np.zeros_like(ui[0, :], dtype=bool)
+    idx_on_trace = np.zeros(S2, dtype=np.bool_)
 
-    for i in range(ti.shape[0]):
+    for i in range(S1):
 
         # More general case
         cond0 = np.abs(ti[i, :]) >= TOLERANCE
