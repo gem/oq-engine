@@ -80,7 +80,7 @@ def _resample(coo, sect_len, orig_extremes):
         if idx < len(dis) - 1:
 
             pnt = find_t(txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
-            if len(pnt) == 0:
+            if pnt.sum() == 0:
                 raise ValueError('Did not find the intersection')
             _update(rtra, rtra_prj, proj, pnt)
             inc_len += sect_len
@@ -638,7 +638,7 @@ def get_versor(arr):
     return (arr.T / np.linalg.norm(arr, axis=1)).T
 
 
-#@compile("(float64[:],float64[:],float64[:],float64)")
+@compile("(float64[:],float64[:],float64[:],float64)")
 def find_t(pnt0, pnt1, ref_pnt, distance):
     """
     Find the point on the segment within `pnt0` and `pnt1` at `distance` from
@@ -680,7 +680,7 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
 
     # In this case the line is not intersecting the sphere
     if chk < 0:
-        return np.zeros(0)
+        return np.zeros(3)
 
     # Computing the points of intersection
     pu = (-pb + (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)
@@ -688,9 +688,9 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
     y = y1 + pu * (y2 - y1)
     z = z1 + pu * (z2 - z1)
 
-    if (x >= np.min([x1, x2]) and x <= np.max([x1, x2]) and
-            y >= np.min([y1, y2]) and y <= np.max([y1, y2]) and
-            z >= np.min([z1, z2]) and z <= np.max([z1, z2])):
+    if (x >= min(x1, x2) and x <= max(x1, x2) and
+            y >= min(y1, y2) and y <= max(y1, y2) and
+            z >= min(z1, z2) and z <= max(z1, z2)):
         out = [x, y, z]
     else:
         pu = (-pb - (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)
