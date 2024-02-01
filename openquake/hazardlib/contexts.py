@@ -613,6 +613,8 @@ class ContextMaker(object):
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 ctxs.extend(self.get_ctx_iter(src, sites))
+            if hasattr(src, 'dcache'):
+                print(src.dcache)
         return concat(ctxs)
 
     def make_legacy_ctx(self, rup):
@@ -906,8 +908,6 @@ class ContextMaker(object):
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and self.cache_distances:  # multifault source
                 src.dcache = Cache()  # enable distance cache
-            else:
-                src.dcache = None
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:

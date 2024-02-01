@@ -87,7 +87,7 @@ class Cache(dict):
         return sum(getsizeof(val) for val in self.values())
 
     def __str__(self):
-        templ = '<Cache hit=%d, misses=%d, speedup=%.1f, size=%s>'
+        templ = '<Cache hit=%d, miss=%d, speedup=%.1f, size=%s>'
         return templ % (self.hit, self.miss, self.speedup,
                         humansize(self.getsize()))
 
