@@ -81,7 +81,7 @@ def _resample(coo, sect_len, orig_extremes):
 
             pnt = find_t(
                 txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
-            if pnt is None:
+            if len(pnt) == 0:
                 raise ValueError('Did not find the intersection')
             _update(rtra, rtra_prj, proj, pnt)
             inc_len += sect_len
@@ -636,9 +636,10 @@ def get_versor(arr):
     """
     Returns the versor (i.e. a unit vector) of a vector
     """
-    return np.divide(arr.T, np.linalg.norm(arr, axis=1)).T
+    return (arr.T / np.linalg.norm(arr, axis=1)).T
 
 
+#@compile("(float64[3],float64[3],float64[3],float64)")
 def find_t(pnt0, pnt1, ref_pnt, distance):
     """
     Find the point on the segment within `pnt0` and `pnt1` at `distance` from
@@ -656,7 +657,6 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
     :returns:
         A 1D :class:`numpy.ndarray` instance of length 3
     """
-
     x1 = pnt0[0]
     y1 = pnt0[1]
     z1 = pnt0[2]
@@ -681,7 +681,7 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
 
     # In this case the line is not intersecting the sphere
     if chk < 0:
-        return None
+        return np.zeros(0)
 
     # Computing the points of intersection
     pu = (-pb + (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)
