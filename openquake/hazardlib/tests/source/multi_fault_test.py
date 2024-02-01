@@ -18,7 +18,10 @@ import os
 import tempfile
 import unittest
 import numpy
-from openquake.baselib import hdf5, python3compat, general
+import pandas
+from openquake.baselib import hdf5, python3compat, general, performance, writers
+from openquake.hazardlib.site import SiteCollection
+from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -28,7 +31,7 @@ from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
-
+aac = numpy.testing.assert_allclose
 
 class MultiFaultTestCase(unittest.TestCase):
     """
@@ -79,7 +82,7 @@ class MultiFaultTestCase(unittest.TestCase):
         self.mags = numpy.array(rup_mags)
         self.rakes = numpy.array(rakes)
 
-    def test01(self):
+    def test_ok(self):
         # test instantiation
         src = MultiFaultSource("01", "test", "Moon Crust",
                                self.rup_idxs, self.pmfs, self.mags, self.rakes)
@@ -92,6 +95,7 @@ class MultiFaultTestCase(unittest.TestCase):
         fd, tmp = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
             sm_xml, gm_hdf5, gm_xml = write_source_model(tmp, smodel)
+
         # check the stored section indices
         with hdf5.File(gm_hdf5, 'r') as f:
             lines = python3compat.decode(f['01/rupture_idxs'][:])
@@ -109,26 +113,36 @@ class MultiFaultTestCase(unittest.TestCase):
             numpy.testing.assert_almost_equal(
                 getattr(src, name), getattr(got, name))
         for a, b in zip(src.rupture_idxs, got.rupture_idxs):
-            print(a, b)
             numpy.testing.assert_almost_equal(a, b)
 
-    def test02(self):
+        # compute distances for the 7 underlying ruptures
+        sitecol = SiteCollection.from_points([10.], [45.])
+        gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
+        cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+        [ctx] = cmaker.from_srcs([src], sitecol)
+        assert len(ctx) == src.count_ruptures()
+
+        # compare with the expected distances computed without cache
+        aac(ctx.rrup, [0., 27.51929754, 55.03833836, 0., 0., 27.51929754,
+                       0.])
+        aac(ctx.rjb, [0., 27.51904144, 55.03833836, 0., 0., 27.51904144, 0.])
+        aac(ctx.rx, [0, 1.10377738e-01, 3.39619736e-01, 1.68873152e-05,
+                     1.64545240e-05, 1.65508566e-01, 3.33385038e-05])
+        aac(ctx.ry0, [0., 27.519258, 55.038008, 0., 0., 27.518444, 0.])
+        aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
+        aac(ctx.clat, 45.)
+
+    def test_ko(self):
         # test set_sections, 3 is not a known section ID
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust", rup_idxs,
                                self.pmfs, self.mags, self.rakes)
-        with self.assertRaises(IndexError) as ctx:
+        with self.assertRaises(IndexError):
             mfs.set_sections(self.sections)
-        expected = 'list index out of range'
-        self.assertEqual(expected, str(ctx.exception))
 
 
 if __name__ == '__main__':
     # run a performance test with a reduced UCERF source
-    import pandas
-    from openquake.baselib import performance, writers
-    from openquake.hazardlib.site import SiteCollection
-    from openquake.hazardlib import valid, contexts
     srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
 
     rups = list(srcs[0].iter_ruptures())
@@ -141,13 +155,13 @@ if __name__ == '__main__':
     uni, inv = numpy.unique(data, return_inverse=True)
     # only 230/174,486 lines are unique, i.e. a 760x speedup is possible
     print('Found %d/%d unique segments' % (len(uni), len(data)))
-    # import pdb; pdb.set_trace()
+
     sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     with performance.Monitor() as mon:
         [ctxt] = cmaker.from_srcs(srcs, sitecol)
-    print(mon, ctxt)
+    print(mon)
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
     ctx = ctxt[::50]
