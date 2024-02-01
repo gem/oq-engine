@@ -115,11 +115,14 @@ class MultiFaultTestCase(unittest.TestCase):
         for a, b in zip(src.rupture_idxs, got.rupture_idxs):
             numpy.testing.assert_almost_equal(a, b)
 
-        # test distances
+        # compute distances for the 7 underlying ruptures
         sitecol = SiteCollection.from_points([10.], [45.])
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
         [ctx] = cmaker.from_srcs([src], sitecol)
+        assert len(ctx) == src.count_ruptures()
+
+        # compare with the expected distances computed without cache
         aac(ctx.rrup, [0., 27.51929754, 55.03833836, 0., 0., 27.51929754,
                        0.])
         aac(ctx.rjb, [0., 27.51904144, 55.03833836, 0., 0., 27.51904144, 0.])
