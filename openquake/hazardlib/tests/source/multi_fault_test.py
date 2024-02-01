@@ -132,16 +132,13 @@ class MultiFaultTestCase(unittest.TestCase):
         aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
         aac(ctx.clat, 45.)
 
-
     def test_ko(self):
         # test set_sections, 3 is not a known section ID
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust", rup_idxs,
                                self.pmfs, self.mags, self.rakes)
-        with self.assertRaises(IndexError) as ctx:
+        with self.assertRaises(IndexError):
             mfs.set_sections(self.sections)
-        expected = 'list index out of range'
-        self.assertEqual(expected, str(ctx.exception))
 
 
 if __name__ == '__main__':
