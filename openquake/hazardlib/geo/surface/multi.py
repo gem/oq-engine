@@ -27,7 +27,6 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
-from openquake.hazardlib.geo.multiline import get_tu
 
 
 class MultiSurface(BaseSurface):
@@ -98,7 +97,7 @@ class MultiSurface(BaseSurface):
         """
         self.surfaces = surfaces
         self.tol = tol
-        self._set_tor()
+        self.tor = None
         self.areas = None
 
     # called at each instantiation
@@ -138,7 +137,7 @@ class MultiSurface(BaseSurface):
 
         # Set the multiline representing the rupture traces i.e. vertical
         # projections at the surface of the top of ruptures
-        self.tors = geo.MultiLine(tors)
+        self.tor = geo.MultiLine(tors)
 
     def get_min_distance(self, mesh):
         """
@@ -356,17 +355,9 @@ class MultiSurface(BaseSurface):
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        tupps = []
-        uupps = []
-        weis = []
-        for line in self.tors.lines:
-            tu, uu, we = line.get_tu(mesh)
-            tupps.append(tu)
-            uupps.append(uu)
-            weis.append(np.squeeze(np.sum(we, axis=0)))
-
-        # `get_tu` is a function in the multiline module
-        uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
+        if self.tor is None:
+            self._set_tor()
+        uut, tut = self.tor.get_tu(mesh)
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
@@ -376,4 +367,6 @@ class MultiSurface(BaseSurface):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
             coordinates of the sites.
         """
-        return self.tors.get_ry0_distance(mesh)
+        if self.tor is None:
+            self._set_tor()
+        return self.tor.get_ry0_distance(mesh)

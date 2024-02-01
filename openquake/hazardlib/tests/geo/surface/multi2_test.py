@@ -39,6 +39,7 @@ class Ry0TestCase(unittest.TestCase):
 
     def _test_ry0(self, sfc):
         msurf = MultiSurface([sfc])
+        msurf._set_tor()
         mesh, mlons, mlats = get_mesh(-0.2, 0.6, -0.2, 0.3, 0.0025)
         ry0 = msurf.get_ry0_distance(mesh)
 
@@ -54,7 +55,7 @@ class Ry0TestCase(unittest.TestCase):
             ax = plot_pattern(lons, lats, np.reshape(ry0, mlons.shape),
                               mlons, mlats, label, num, show=False)
             plot_mesh_2d(ax, msurf.surfaces[0])
-            ax.plot(msurf.tors.olon, msurf.tors.olat, 'sg', mfc='none',
+            ax.plot(msurf.tor.olon, msurf.tor.olat, 'sg', mfc='none',
                     mec='green')
             plt.show()
 
@@ -138,8 +139,9 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
 
         # Multi surface
         self.msfc = MultiSurface([sfc1, sfc2], tol=2.)
+        self.msfc._set_tor()
 
     def test_get_tor(self):
         # Testing, coo1 and coo2 are inverted due to the origin inversion
-        aae(self.coo2, self.msfc.tors.lines[0].coo[:, 0:2], decimal=2)
-        aae(self.coo1, self.msfc.tors.lines[1].coo[:, 0:2], decimal=2)
+        aae(self.coo2, self.msfc.tor.lines[0].coo[:, 0:2], decimal=2)
+        aae(self.coo1, self.msfc.tor.lines[1].coo[:, 0:2], decimal=2)

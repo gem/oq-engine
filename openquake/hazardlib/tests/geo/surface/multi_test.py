@@ -44,14 +44,15 @@ class GetTorTestCase(unittest.TestCase):
         """ Planar rupture """
         tmp = os.path.join(cd, 'data', 'msurface18.csv')
         surf = MultiSurface.from_csv(tmp)
+        surf._set_tor()
 
         # Expected value inferred from the input file
         expected = numpy.array([[-117.955505, 33.769615, 0],
                                 [-117.9903, 33.797646, 0]])
-        aae(expected, surf.tors.lines[0].coo)
+        aae(expected, surf.tor.lines[0].coo)
         expected = numpy.array([[-117.9903, 33.797646, 0],
                                 [-117.99624, 33.802425, 0]])
-        aae(expected, surf.tors.lines[1].coo)
+        aae(expected, surf.tor.lines[1].coo)
 
 
 class MultiSurfaceTestCase(unittest.TestCase):
@@ -316,7 +317,7 @@ def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):
                       mlons, mlats, label, num, show=False)
     lons = surf.surfaces[0].mesh.lons
     lats = surf.surfaces[0].mesh.lats
-    for line in surf.tors.lines:
+    for line in surf.tor.lines:
         ax.plot(line.coo[:, 0], line.coo[:, 1], '-r')
         ax.plot(line.coo[0, 0], line.coo[0, 1], 'g', marker="$s$", ms=5)
         ax.plot(line.coo[-1, 0], line.coo[-1, 1], 'r', marker="$e$",
