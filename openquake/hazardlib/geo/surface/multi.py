@@ -27,7 +27,7 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import (
     PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
-from openquake.hazardlib.geo.multiline import get_tu
+from openquake.hazardlib.geo.multiline import get_tu, get_tus
 
 
 class MultiSurface(BaseSurface):
@@ -356,17 +356,8 @@ class MultiSurface(BaseSurface):
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        tupps = []
-        uupps = []
-        weis = []
-        for line in self.tors.lines:
-            tu, uu, we = line.get_tu(mesh)
-            tupps.append(tu)
-            uupps.append(uu)
-            weis.append(we.sum(axis=0))
-
-        # `get_tu` is a function in the multiline module
-        uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
+        # `get_tu(s)` are functions in the multiline module
+        uut, tut = get_tu(self.tors.shift, *get_tus(self.tors.lines, mesh))
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 

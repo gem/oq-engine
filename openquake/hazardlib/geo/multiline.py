@@ -130,15 +130,16 @@ def get_tus(lines: list, mesh: Mesh):
         An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
         sites location.
     """
-    uupps = []
-    tupps = []
-    weis = []
-    for line in lines:
-        tupp, uupp, wei = line.get_tu(mesh)
-        wei_sum = np.squeeze(np.sum(wei, axis=0))
-        uupps.append(uupp)
-        tupps.append(tupp)
-        weis.append(wei_sum)
+    L = len(lines)
+    N = len(mesh)
+    tupps = np.zeros((L, N))
+    uupps = np.zeros((L, N))
+    weis = np.zeros((L, N))
+    for i, line in enumerate(lines):
+        tu, uu, we = line.get_tu(mesh)
+        tupps[i] = tu
+        uupps[i] = uu
+        weis[i] = we.sum(axis=0)
     return tupps, uupps, weis
 
 
@@ -261,16 +262,16 @@ def get_tu(shifts, tupps, uupps, weis):
     """
     Given a mesh, computes the T and U coordinates for the multiline
     """
-    for i, (shift, tupp, uupp, wei_sum) in enumerate(
+    for i, (shift, tupp, uupp, wei) in enumerate(
             zip(shifts, tupps, uupps, weis)):
         if i == 0:  # initialize
-            uut = (uupp + shift) * wei_sum
-            tut = tupp * wei_sum
-            wet = copy.copy(wei_sum)
+            uut = (uupp + shift) * wei
+            tut = tupp * wei
+            wet = wei.copy()
         else:  # update the values
-            uut += (uupp + shift) * wei_sum
-            tut += tupp * wei_sum
-            wet += wei_sum
+            uut += (uupp + shift) * wei
+            tut += tupp * wei
+            wet += wei
 
     # Normalize by the sum of weights
     uut /= wet
