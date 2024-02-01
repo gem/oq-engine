@@ -77,9 +77,8 @@ def _closest_points(surfaces, mesh, dcache):
     return Mesh(lons, lats, depths)
 
 
-def _get_dist(surface, sites, param):
-    # compute distances without any cache for simple surfaces
-    assert not hasattr(surface, 'surfaces'), surface
+def _get_surf_dist(surface, sites, param):
+    # compute distances without any cache
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
     elif param == 'rx':
@@ -105,13 +104,13 @@ def _surf_dist(surface, sites, param, dcache):
     # compute distances with a cache, but only for MultiSurfaces
 
     if dcache is None or not hasattr(surface, 'surfaces'):
-        return _get_dist(surface, sites, param)
+        return _get_surf_dist(surface, sites, param)
 
     # assume the underlying surfaces have .suid attributes
     suids = [s.suid for s in surface.surfaces]
     for surf in surface.surfaces:
         if (surf.suid, param) not in dcache:
-            dcache[surf.suid, param] = _get_dist(surf, sites, param)
+            dcache[surf.suid, param] = _get_surf_dist(surf, sites, param)
     if param in ('rrup', 'rjb'):
         dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
     elif param in ('rx', 'ry0'):
