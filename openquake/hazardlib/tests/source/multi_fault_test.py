@@ -148,8 +148,9 @@ if __name__ == '__main__':
     with performance.Monitor() as mon:
         [ctxt] = cmaker.from_srcs(srcs, sitecol)
     print(mon, ctxt)
-    import pdb; pdb.set_trace()
-
+    misses = cmaker.dcache.tot - cmaker.dcache.hit
+    speedup = cmaker.dcache.tot / misses
+    print(f'cache {speedup=}')
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
     ctx = ctxt[::50]

@@ -68,15 +68,29 @@ def _get_dist(surface, sites, param):
 
 
 def _surf_dist(surface, sites, param, dcache):
-    # compute distances with a cache only if the surface has a .suid
-    if dcache is None or not hasattr(surface, 'suid'):
+    # compute distances with a cache only for MultiSurfaces
+    if dcache is None or not hasattr(surface, 'surfaces'):
         return _get_dist(surface, sites, param)
-    if (surface.suid, param) not in dcache:
-        dcache[surface.suid, param] = _get_dist(surface, sites, param)
-    else:
-        dcache.hit += 1
-    dcache.tot += 1
-    return dcache[surface.suid, param]
+
+    # assume the underlying surfaces have .suid attributes
+    suids = [s.suid for s in surface.surfaces]
+    for surf in surface.surfaces:
+        if (surf.suid, param) not in dcache:
+            dcache[surf.suid, param] = _get_dist(surf, sites, param)
+        else:
+            dcache.hit += 1
+        dcache.tot += 1
+    if param in ('rrup', 'rjb'):
+        dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
+    else:  # rx or ry0
+        if surface.tor is None:
+            surface._set_tor()
+        if param == 'rx':
+            uut, tut = surface.tor.get_tu(sites)
+            dist = tut[0] if len(tut[0].shape) > 1 else tut
+        elif param == 'ry0':
+            dist = surface.tor.get_ry0_distance(sites)
+    return dist
 
 
 def get_distances(rupture, sites, param, dcache=None):
