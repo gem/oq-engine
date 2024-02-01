@@ -20,6 +20,7 @@
 """
 import copy
 import numpy as np
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
@@ -557,6 +558,7 @@ def get_average_azimuth(azimuths, distances) -> float:
     return azimuth
 
 
+@compile('(float64[:,:],float64[:,:],float64[:], float64[:,:])')
 def get_tu(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
@@ -573,22 +575,18 @@ def get_tu(ui, ti, sl, weights):
         A :class:`numpy.ndarray` instance of cardinality (num segments x num
         sites)
     """
-    assert ui.shape == ti.shape == weights.shape
-
     # Sum of weights - This has shape equal to the number of sites
-    weight_sum = np.sum(weights, axis=0)
+    weight_sum = weights.sum(axis=0)
 
     # Compute T
-    t_upp = ti * weights
-    t_upp = np.divide(t_upp, weight_sum.T).T
-    t_upp = np.sum(t_upp, axis=1)
+    t_upp = (ti * weights / weight_sum.T).sum(axis=0)
 
     # Compute U
     u_upp = ui[0] * weights[0]
     for i in range(1, len(sl)):
         delta = np.sum(sl[:i])
         u_upp += ((ui[i] + delta) * weights[i])
-    u_upp = np.divide(u_upp, weight_sum.T).T
+    u_upp = (u_upp / weight_sum.T).T
     return t_upp, u_upp
 
 
