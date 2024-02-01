@@ -371,7 +371,8 @@ class ContextMaker(object):
         if self.cache_distances:
             # use a cache (surface ID, dist_type) for MultiFaultSources
             self.dcache = AccumDict()
-            self.dcache.hit = 0		
+            self.dcache.hit = 0
+            self.dcache.tot = 0
         else:
             self.dcache = None  # disabled
         self.max_sites_disagg = param.get('max_sites_disagg', 10)

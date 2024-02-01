@@ -73,6 +73,9 @@ def _surf_dist(surface, sites, param, dcache):
         return _get_dist(surface, sites, param)
     if (surface.suid, param) not in dcache:
         dcache[surface.suid, param] = _get_dist(surface, sites, param)
+    else:
+        dcache.hit += 1
+    dcache.tot += 1
     return dcache[surface.suid, param]
 
 

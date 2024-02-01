@@ -158,13 +158,11 @@ class MultiSurface(BaseSurface):
         <.base.BaseSurface.get_closest_points>`
         for spec of input and result values.
         """
-        # first, for each point in mesh compute minimum distance to each
-        # surface. The distance matrix is flattend, because mesh can be of
-        # an arbitrary shape. By flattening we obtain a ``distances`` matrix
-        # for which the first dimension represents the different surfaces
-        # and the second dimension the mesh points.
+        # for each point in the mesh compute the minimum distance to each
+        # surface. Builds a ``distances`` matrix, the first dimension
+        # representing the surfaces and the second dimension the mesh points
         dists = np.array(
-            [surf.get_min_distance(mesh).flatten() for surf in self.surfaces])
+            [surf.get_min_distance(mesh) for surf in self.surfaces])
 
         # find for each point in mesh the index of closest surface
         idx = dists == np.min(dists, axis=0)
@@ -173,11 +171,9 @@ class MultiSurface(BaseSurface):
         # points, and associate them to the mesh points for which the surface
         # is the closest. Note that if a surface is not the closest to any of
         # the mesh points then the calculation is skipped
-        lons = np.empty_like(mesh.lons.flatten())
-        lats = np.empty_like(mesh.lats.flatten())
-
-        depths = None if mesh.depths is None else \
-            np.empty_like(mesh.depths.flatten())
+        lons = np.empty_like(mesh.lons)
+        lats = np.empty_like(mesh.lats)
+        depths = None if mesh.depths is None else np.empty_like(mesh.depths)
 
         # the centroid info for the sites must be evaluated and populated
         # one site at a time

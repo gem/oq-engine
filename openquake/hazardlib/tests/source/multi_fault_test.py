@@ -144,10 +144,12 @@ if __name__ == '__main__':
     # import pdb; pdb.set_trace()
     sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     with performance.Monitor() as mon:
         [ctxt] = cmaker.from_srcs(srcs, sitecol)
     print(mon, ctxt)
+    import pdb; pdb.set_trace()
+
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
     ctx = ctxt[::50]
