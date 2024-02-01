@@ -433,24 +433,22 @@ class Line(object):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
 
-        # Sites
-        mlo = mesh.lons
-        mla = mesh.lats
+        # all sites
+        lons = np.concatenate([mesh.lons, self.coo[:, 0]])
+        lats = np.concatenate([mesh.lats, self.coo[:, 1]])
 
-        # Projection
-        lons = list(mlo.flatten()) + list(self.coo[:, 0])
-        lats = list(mla.flatten()) + list(self.coo[:, 1])
+        # projection
         west, east, north, south = utils.get_spherical_bounding_box(lons, lats)
         proj = utils.OrthographicProjection(west, east, north, south)
 
-        # Projected coordinates for the trace
+        # projected coordinates for the trace
         tcoo = self.coo[:, 0], self.coo[:, 1]
         txy = np.zeros_like(self.coo)
         txy[:, 0], txy[:, 1] = proj(*tcoo)
 
-        # Projected coordinates for the sites
-        sxy = np.zeros((len(mla), 2))
-        sxy[:, 0], sxy[:, 1] = proj(mlo, mla)
+        # projected coordinates for the sites
+        sxy = np.zeros((len(mesh), 2))
+        sxy[:, 0], sxy[:, 1] = proj(mesh.lons, mesh.lats)
 
         # Compute u hat and t hat for each segment. tmp has shape
         # (num_segments x 3)
