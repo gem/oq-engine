@@ -263,8 +263,6 @@ def get_tu(shifts, tupps, uupps, weis):
     """
     for i, (shift, tupp, uupp, wei_sum) in enumerate(
             zip(shifts, tupps, uupps, weis)):
-        if len(wei_sum.shape) > 1:
-            wei_sum = np.squeeze(wei_sum)
         if i == 0:  # initialize
             uut = (uupp + shift) * wei_sum
             tut = tupp * wei_sum

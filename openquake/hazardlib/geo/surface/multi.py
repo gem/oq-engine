@@ -363,7 +363,7 @@ class MultiSurface(BaseSurface):
             tu, uu, we = line.get_tu(mesh)
             tupps.append(tu)
             uupps.append(uu)
-            weis.append(np.squeeze(np.sum(we, axis=0)))
+            weis.append(we.sum(axis=0))
 
         # `get_tu` is a function in the multiline module
         uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
