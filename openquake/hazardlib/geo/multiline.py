@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 
 import copy
 import numpy as np
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.line import get_average_azimuth
@@ -260,6 +261,7 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
+@compile('float64[:],float64[:,:],float64[:,:],float64[:,:]')
 def _get_tu(shifts, tupps, uupps, weis):
     for i, (shift, tupp, uupp, wei) in enumerate(
             zip(shifts, tupps, uupps, weis)):
