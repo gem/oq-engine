@@ -61,9 +61,8 @@ mp = multiprocessing.get_context('spawn')
 
 
 class Cache(dict):
-    def __init__(self):
-        self.miss = 0
-        self.tot = 0
+    miss = 0
+    tot = 0
 
     @property
     def hit(self):
