@@ -1025,7 +1025,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
         if is_model_preliminary(ds):
             warnings = PRELIMINARY_MODEL_WARNING
         if 'asce07' in ds:
-            asce07_js = ds['asce07'][0].decode('utf8')
+            try:
+                asce07_js = ds['asce07'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce07_js = ds['asce07'][()].decode('utf8')
             asce07 = json.loads(asce07_js)
             for key, value in asce07.items():
                 if key not in ('PGA', 'Ss', 'S1'):
@@ -1040,7 +1044,11 @@ def web_engine_get_outputs_aelo(request, calc_id, **kwargs):
                     asce07_with_units[key + ' (g)'] = (
                         f'{value:.{ASCE_VIEW_DECIMALS}}')
         if 'asce41' in ds:
-            asce41_js = ds['asce41'][0].decode('utf8')
+            try:
+                asce41_js = ds['asce41'][0].decode('utf8')
+            except ValueError:
+                # NOTE: for backwards compatibility, read scalar
+                asce41_js = ds['asce41'][()].decode('utf8')
             asce41 = json.loads(asce41_js)
             for key, value in asce41.items():
                 if not key.startswith('BSE'):
