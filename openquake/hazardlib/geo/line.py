@@ -20,6 +20,7 @@
 """
 import copy
 import numpy as np
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo import Point
@@ -78,9 +79,8 @@ def _resample(coo, sect_len, orig_extremes):
         # compute the new sample by interpolation
         if idx < len(dis) - 1:
 
-            pnt = find_t(
-                txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
-            if pnt is None:
+            pnt = find_t(txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
+            if np.isnan(pnt).any():
                 raise ValueError('Did not find the intersection')
             _update(rtra, rtra_prj, proj, pnt)
             inc_len += sect_len
@@ -433,24 +433,22 @@ class Line(object):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
 
-        # Sites
-        mlo = mesh.lons
-        mla = mesh.lats
+        # all sites
+        lons = np.concatenate([mesh.lons, self.coo[:, 0]])
+        lats = np.concatenate([mesh.lats, self.coo[:, 1]])
 
-        # Projection
-        lons = list(mlo.flatten()) + list(self.coo[:, 0])
-        lats = list(mla.flatten()) + list(self.coo[:, 1])
+        # projection
         west, east, north, south = utils.get_spherical_bounding_box(lons, lats)
         proj = utils.OrthographicProjection(west, east, north, south)
 
-        # Projected coordinates for the trace
+        # projected coordinates for the trace
         tcoo = self.coo[:, 0], self.coo[:, 1]
         txy = np.zeros_like(self.coo)
         txy[:, 0], txy[:, 1] = proj(*tcoo)
 
-        # Projected coordinates for the sites
-        sxy = np.zeros((len(mla), 2))
-        sxy[:, 0], sxy[:, 1] = proj(mlo, mla)
+        # projected coordinates for the sites
+        sxy = np.zeros((len(mesh), 2))
+        sxy[:, 0], sxy[:, 1] = proj(mesh.lons, mesh.lats)
 
         # Compute u hat and t hat for each segment. tmp has shape
         # (num_segments x 3)
@@ -559,6 +557,7 @@ def get_average_azimuth(azimuths, distances) -> float:
     return azimuth
 
 
+@compile('(float64[:,:],float64[:,:],float64[:], float64[:,:])')
 def get_tu(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
@@ -575,36 +574,34 @@ def get_tu(ui, ti, sl, weights):
         A :class:`numpy.ndarray` instance of cardinality (num segments x num
         sites)
     """
-    assert ui.shape == ti.shape == weights.shape
-
     # Sum of weights - This has shape equal to the number of sites
-    weight_sum = np.sum(weights, axis=0)
+    weight_sum = weights.sum(axis=0)
 
     # Compute T
-    t_upp = ti * weights
-    t_upp = np.divide(t_upp, weight_sum.T).T
-    t_upp = np.sum(t_upp, axis=1)
+    t_upp = (ti * weights / weight_sum.T).sum(axis=0)
 
     # Compute U
     u_upp = ui[0] * weights[0]
     for i in range(1, len(sl)):
         delta = np.sum(sl[:i])
         u_upp += ((ui[i] + delta) * weights[i])
-    u_upp = np.divide(u_upp, weight_sum.T).T
+    u_upp = (u_upp / weight_sum.T).T
     return t_upp, u_upp
 
 
+@compile('(float64[:,:],float64[:,:],float64[:])')
 def get_ti_weights(ui, ti, segments_len):
     """
     Compute the weights
     """
+    S1, S2 = ui.shape
     weights = np.zeros_like(ui)
     terma = np.zeros_like(ui)
     term1 = np.zeros_like(ui)
     term2 = np.zeros_like(ui)
-    idx_on_trace = np.zeros_like(ui[0, :], dtype=bool)
+    idx_on_trace = np.zeros(S2, dtype=np.bool_)
 
-    for i in range(ti.shape[0]):
+    for i in range(S1):
 
         # More general case
         cond0 = np.abs(ti[i, :]) >= TOLERANCE
@@ -638,9 +635,10 @@ def get_versor(arr):
     """
     Returns the versor (i.e. a unit vector) of a vector
     """
-    return np.divide(arr.T, np.linalg.norm(arr, axis=1)).T
+    return (arr.T / np.linalg.norm(arr, axis=1)).T
 
 
+@compile("(float64[:],float64[:],float64[:],float64)")
 def find_t(pnt0, pnt1, ref_pnt, distance):
     """
     Find the point on the segment within `pnt0` and `pnt1` at `distance` from
@@ -658,7 +656,6 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
     :returns:
         A 1D :class:`numpy.ndarray` instance of length 3
     """
-
     x1 = pnt0[0]
     y1 = pnt0[1]
     z1 = pnt0[2]
@@ -683,7 +680,7 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
 
     # In this case the line is not intersecting the sphere
     if chk < 0:
-        return None
+        return np.array([np.nan, np.nan, np.nan])
 
     # Computing the points of intersection
     pu = (-pb + (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)
@@ -691,9 +688,9 @@ def find_t(pnt0, pnt1, ref_pnt, distance):
     y = y1 + pu * (y2 - y1)
     z = z1 + pu * (z2 - z1)
 
-    if (x >= np.min([x1, x2]) and x <= np.max([x1, x2]) and
-            y >= np.min([y1, y2]) and y <= np.max([y1, y2]) and
-            z >= np.min([z1, z2]) and z <= np.max([z1, z2])):
+    if (x >= min(x1, x2) and x <= max(x1, x2) and
+            y >= min(y1, y2) and y <= max(y1, y2) and
+            z >= min(z1, z2) and z <= max(z1, z2)):
         out = [x, y, z]
     else:
         pu = (-pb - (pb**2 - 4 * pa * pc)**0.5) / (2 * pa)

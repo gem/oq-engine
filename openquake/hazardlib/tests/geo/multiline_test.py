@@ -80,13 +80,6 @@ class MultiLineTestCase(unittest.TestCase):
                 ax.plot(line.coo[-1, 0], line.coo[-1, 1], 'xb')
             plt.show()
 
-    def test_set_origin(self):
-
-        # Create the multiline instance and get the origin
-        ml = MultiLine(self.lines)
-        expected = [0.0, 0.0]
-        np.testing.assert_almost_equal([ml.olon, ml.olat], expected)
-
     def test_coordinate_shift(self):
 
         # Creating the multiline and computing the shift

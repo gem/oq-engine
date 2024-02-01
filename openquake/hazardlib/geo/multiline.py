@@ -21,8 +21,9 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 
 import copy
 import numpy as np
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
 from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
@@ -49,20 +50,19 @@ class MultiLine():
         self.lines = [copy.copy(ln) for ln in lines]
         self.strike_to_east = None
         self.overall_strike = None
-        self.olon = None
-        self.olat = None
-        self.shift = None
-        self.u_max = None
-        self.tupps = None
-        self.uupps = None
-        self.weis = None
-        # compute the origin of the multiline and set the shift parameter
-        self._set_origin()
+
+        # compute the overall strike and the origin of the multiline
+        self.set_overall_strike()
+        self.olon, self.olat, soidx = get_origin(
+            self.lines, self.strike_to_east, self.overall_strike)
+
+        # Reorder the lines according to the origin and compute the shift
+        self.lines = [self.lines[i] for i in soidx]
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
         ep_mesh = get_endpoints_mesh(self.lines)
-        u, _ = get_tu(self.shift, *get_tus(self.lines, ep_mesh))
+        u, _ = self.get_tu(ep_mesh)
         self.u_max = np.abs(u).max()
 
     def set_overall_strike(self):
@@ -80,32 +80,12 @@ class MultiLine():
         self.overall_strike = avg_azim
         self.lines = nl
 
-    def _set_origin(self):
-        """
-        Compute the origin necessary to calculate the coordinate shift and sort
-        the information accordingly
-        """
-        # If missing, set the overall strike direction
-        if self.strike_to_east is None:
-            self.set_overall_strike()
-
-        # Calculate the origin
-        olo, ola, soidx = get_origin(
-            self.lines, self.strike_to_east, self.overall_strike)
-        self.olon = olo
-        self.olat = ola
-
-        # Reorder the lines and the shift according to the origin
-        self.lines = [self.lines[i] for i in soidx]
-        if self.shift is not None:
-            self.shift = self.shift[soidx]
-
-        return soidx
-
-    # used only in the multiline_test
     def get_tu(self, mesh):
-        return get_tu(self.shift, *get_tus(self.lines, mesh))
-        
+        """
+        Given a mesh, computes the T and U coordinates for the multiline
+        """
+        return _get_tu(self.shift, *get_tus(self.lines, mesh))
+
     def get_rx_distance(self, mesh):
         """
         :param mesh:
@@ -115,7 +95,7 @@ class MultiLine():
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
+        uut, tut = self.get_tu(mesh)
         return tut[0]
 
     def get_ry0_distance(self, mesh):
@@ -123,7 +103,7 @@ class MultiLine():
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        uut, tut = get_tu(self.shift, *get_tus(self.lines, mesh))
+        uut, tut = self.get_tu(mesh)
 
         ry0 = np.zeros_like(uut)
         ry0[uut < 0] = abs(uut[uut < 0])
@@ -132,6 +112,14 @@ class MultiLine():
         ry0[condition] = uut[condition] - self.u_max
 
         return ry0
+
+    def to_mesh(self):
+        """
+        Assuming the L lines are all segments (i.e. contains 2 points)
+        returns a RectangularMesh of shape (L, 2)
+        """
+        coo = np.array([ln.coo for ln in self.lines])  # shape (L, 2, 3)
+        return RectangularMesh(coo[:, :, 0], coo[:, :, 1])
 
 
 def get_tus(lines: list, mesh: Mesh):
@@ -145,15 +133,16 @@ def get_tus(lines: list, mesh: Mesh):
         An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
         sites location.
     """
-    uupps = []
-    tupps = []
-    weis = []
-    for line in lines:
-        tupp, uupp, wei = line.get_tu(mesh)
-        wei_sum = np.squeeze(np.sum(wei, axis=0))
-        uupps.append(uupp)
-        tupps.append(tupp)
-        weis.append(wei_sum)
+    L = len(lines)
+    N = len(mesh)
+    tupps = np.zeros((L, N))
+    uupps = np.zeros((L, N))
+    weis = np.zeros((L, N))
+    for i, line in enumerate(lines):
+        tu, uu, we = line.get_tu(mesh)
+        tupps[i] = tu
+        uupps[i] = uu
+        weis[i] = we.sum(axis=0)
     return tupps, uupps, weis
 
 
@@ -272,22 +261,18 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
-def get_tu(shifts, tupps, uupps, weis):
-    """
-    Given a mesh, computes the T and U coordinates for the multiline
-    """
-    for i, (shift, tupp, uupp, wei_sum) in enumerate(
+@compile('float64[:],float64[:,:],float64[:,:],float64[:,:]')
+def _get_tu(shifts, tupps, uupps, weis):
+    for i, (shift, tupp, uupp, wei) in enumerate(
             zip(shifts, tupps, uupps, weis)):
-        if len(wei_sum.shape) > 1:
-            wei_sum = np.squeeze(wei_sum)
         if i == 0:  # initialize
-            uut = (uupp + shift) * wei_sum
-            tut = tupp * wei_sum
-            wet = copy.copy(wei_sum)
+            uut = (uupp + shift) * wei
+            tut = tupp * wei
+            wet = wei.copy()
         else:  # update the values
-            uut += (uupp + shift) * wei_sum
-            tut += tupp * wei_sum
-            wet += wei_sum
+            uut += (uupp + shift) * wei
+            tut += tupp * wei
+            wet += wei
 
     # Normalize by the sum of weights
     uut /= wet

@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 from openquake.hazardlib import geo
+from openquake.hazardlib.geo.line import find_t
 
 PLOTTING = False
 
@@ -483,12 +484,10 @@ class LineSphereIntersectionTest(unittest.TestCase):
 
     def test01(self):
         """ See example https://www.geogebra.org/m/mwanwvwj """
-        pnt0 = np.array([13, 2, 9])
-        # pnt1 = np.array([7, -4, 6])
-        pnt1 = np.array([5, -6, 5])
-        ref_pnt = np.array([0, 0, 0])
+        pnt0 = np.array([13., 2., 9.])
+        pnt1 = np.array([5., -6., 5.])
+        ref_pnt = np.array([0., 0., 0.])
         distance = 10.
-        from openquake.hazardlib.geo.line import find_t
         computed = find_t(pnt0, pnt1, ref_pnt, distance)
         expected = np.array([6.92, -4.08, 5.96])
         np.testing.assert_almost_equal(computed, expected, decimal=1)
