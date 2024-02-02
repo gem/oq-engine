@@ -460,7 +460,7 @@ def get_bounding_box(obj, maxdist):
 
 # NB: returns (west, east, north, south) which is DIFFERENT from
 # get_bounding_box return (west, south, east, north)
-#@compile(["(f8[:],f8[:])", "(f8[:,:],f8[:,:])"])
+@compile("(f8[:],f8[:])")
 def get_spherical_bounding_box(lons, lats):
     """
     Given a collection of points find and return the bounding box,
@@ -478,6 +478,7 @@ def get_spherical_bounding_box(lons, lats):
         180 degrees (it is impossible to define a single hemisphere
         bound to poles that would contain the whole collection).
     """
+    assert len(lons.shape) == 1, lons.shape
     ok = numpy.isfinite(lons)
     if not ok.all():
         lons = lons[ok]
@@ -489,7 +490,6 @@ def get_spherical_bounding_box(lons, lats):
         # points are lying on both sides of the international date line
         # (meridian 180). the actual west longitude is the lowest positive
         # longitude and east one is the highest negative.
-        lons = lons.flatten()  # in case of a RectangularMesh
         west = lons[lons > 0].min()
         east = lons[lons < 0].max()
         ext0 = get_longitudinal_extent(west, lons)

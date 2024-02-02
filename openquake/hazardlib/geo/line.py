@@ -174,13 +174,11 @@ class Line(object):
         """
         self = cls.__new__(cls)
         self.coo = coo
-        self.coo.flags.writeable = False  # avoid dirty coding
         return self
 
     def __init__(self, points):
         points = utils.clean_points(points)  # can remove points!
         self.coo = np.array([[p.x, p.y, p.z] for p in points])
-        self.coo.flags.writeable = False  # avoid dirty coding
 
     @property
     def points(self):
