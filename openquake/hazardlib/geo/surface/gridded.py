@@ -85,7 +85,8 @@ class GriddedSurface(BaseSurface):
             northern and southern borders of the bounding box respectively.
             Values are floats in decimal degrees.
         """
-        return utils.get_spherical_bounding_box(self.mesh.lons, self.mesh.lats)
+        return utils.get_spherical_bounding_box(
+            self.mesh.lons.flatten(), self.mesh.lats.flatten())
 
     def get_surface_boundaries(self):
         """
