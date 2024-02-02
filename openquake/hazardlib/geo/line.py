@@ -20,6 +20,7 @@
 """
 import copy
 import numpy as np
+from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
@@ -47,8 +48,7 @@ def _resample(coo, sect_len, orig_extremes):
     #   A boolean. When true the last point in coo is also added.
 
     # Project the coordinates of the trace and save them in `txy`
-    sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
-    proj = utils.OrthographicProjection(*sbb)
+    proj = utils.OrthographicProjection.from_lons_lats(coo[:, 0], coo[:, 1])
     txy = coo.copy()
     txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
 
@@ -183,6 +183,11 @@ class Line(object):
     @property
     def points(self):
         return [self[i] for i in range(len(self.coo))]
+
+    @cached_property
+    def proj(self):
+        return utils.OrthographicProjection.from_lons_lats(
+            self.coo[:, 0], self.coo[:, 1])
 
     def __eq__(self, other):
         """
@@ -386,19 +391,16 @@ class Line(object):
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-
         # all sites
         lons = np.concatenate([mesh.lons, self.coo[:, 0]])
         lats = np.concatenate([mesh.lats, self.coo[:, 1]])
 
         # projection
-        west, east, north, south = utils.get_spherical_bounding_box(lons, lats)
-        proj = utils.OrthographicProjection(west, east, north, south)
+        proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
 
         # projected coordinates for the trace
-        tcoo = self.coo[:, 0], self.coo[:, 1]
-        txy = np.zeros_like(self.coo)
-        txy[:, 0], txy[:, 1] = proj(*tcoo)
+        txy = np.zeros((len(self.coo), 2))
+        txy[:, 0], txy[:, 1] = proj(self.coo[:, 0], self.coo[:, 1])
 
         # projected coordinates for the sites
         sxy = np.zeros((len(mesh), 2))
@@ -408,17 +410,14 @@ class Line(object):
         # (num_segments x 3)
         slen, uhat, that = self.get_tu_hat()
 
-        # Lengths of the segments
-        segments_len = slen
-
         # Get local coordinates for the sites
         ui, ti = self.get_ui_ti(mesh, uhat, that)
 
         # Compute the weights
-        weights, iot = get_ti_weights(ui, ti, segments_len)
+        weights, iot = get_ti_weights(ui, ti, slen)
 
         # Now compute T and U
-        t_upp, u_upp = get_tu(ui, ti, segments_len, weights)
+        t_upp, u_upp = get_tu(ui, ti, slen, weights)
         t_upp[iot] = 0.0
         return t_upp, u_upp, weights
 
@@ -427,21 +426,13 @@ class Line(object):
         Compute the t and u coordinates. ti and ui have shape
         (num_segments x num_sites).
         """
-
-        # Creating the projection
-        if not hasattr(self, 'proj'):
-            oprj = utils.OrthographicProjection
-            proj = oprj.from_lons_lats(self.coo[:, 0], self.coo[:, 1])
-            self.proj = proj
-        proj = self.proj
-
         # Sites projected coordinates
         sxy = np.zeros((len(mesh.lons), 2))
-        sxy[:, 0], sxy[:, 1] = proj(mesh.lons, mesh.lats)
+        sxy[:, 0], sxy[:, 1] = self.proj(mesh.lons, mesh.lats)
 
         # Polyline projected coordinates
         txy = np.zeros_like(self.coo)
-        txy[:, 0], txy[:, 1] = proj(self.coo[:, 0], self.coo[:, 1])
+        txy[:, 0], txy[:, 1] = self.proj(self.coo[:, 0], self.coo[:, 1])
 
         # Initializing ti and ui coordinates
         ui = np.zeros((txy.shape[0] - 1, sxy.shape[0]))
@@ -452,8 +443,8 @@ class Line(object):
             tmp = copy.copy(sxy)
             tmp[:, 0] -= txy[i, 0]
             tmp[:, 1] -= txy[i, 1]
-            ui[i, :] = np.dot(tmp, uhat[i, 0:2])
-            ti[i, :] = np.dot(tmp, that[i, 0:2])
+            ui[i, :] = tmp @ uhat[i, 0:2]
+            ti[i, :] = tmp @ that[i, 0:2]
         return ui, ti
 
     def get_tu_hat(self):
@@ -469,16 +460,8 @@ class Line(object):
             Two arrays of size n x 3 (when n is the number of segments
             composing the trace
         """
-
-        # Creating the projection
-        if not hasattr(self, 'proj'):
-            oprj = utils.OrthographicProjection
-            proj = oprj.from_lons_lats(self.coo[:, 0], self.coo[:, 1])
-            self.proj = proj
-
         # Projected coordinates
         sx, sy = self.proj(self.coo[:, 0], self.coo[:, 1])
-
         slen = ((sx[1:] - sx[:-1])**2 + (sy[1:] - sy[:-1])**2)**0.5
         sg = np.zeros((len(sx) - 1, 3))
         sg[:, 0] = sx[1:] - sx[:-1]
