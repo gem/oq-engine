@@ -1067,7 +1067,8 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
             # If the edge starts with the first index
             if i_from == unique[0]:
-                tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
+                line = Line.from_coo(parr[cseg[0]:cseg[1], cseg[2]])
+                tmp = _resample(line, sd, True)
 
                 if len(tmp) < 3:
                     tmp = tmp[:, :]
