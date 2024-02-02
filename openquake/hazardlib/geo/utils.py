@@ -495,7 +495,7 @@ def get_spherical_bounding_box(lons, lats):
         ext1 = get_longitudinal_extent(lons, east)
         if not ((ext0 >= 0) & (ext1 >= 0)).all():
             raise ValueError('points collection has longitudinal extent '
-                             'wider than 180 deg')
+                             'wider than 180 degrees')
     return west, east, north, south
 
 
