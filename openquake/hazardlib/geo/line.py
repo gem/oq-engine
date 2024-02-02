@@ -49,7 +49,7 @@ def _resample(coo, sect_len, orig_extremes):
 
     # Project the coordinates of the trace and save them in `txy`
     proj = utils.OrthographicProjection.from_lons_lats(coo[:, 0], coo[:, 1])
-    txy = proj.coords(coo[:, 0], coo[:, 1], coo[:, 2])
+    txy = proj.coords(coo[:, 0], coo[:, 1], coo[:, 2]).T
 
     # Compute the total length of the original trace
     # tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
@@ -411,10 +411,10 @@ class Line(object):
         (num_segments x num_sites).
         """
         # Sites projected coordinates
-        sxy = self.proj.coords(mesh.lons, mesh.lats)
+        sxy = self.proj.coords(mesh.lons, mesh.lats).T
 
         # Polyline projected coordinates
-        txy = self.proj.coords(self.coo[:, 0], self.coo[:, 1])
+        txy = self.proj.coords(self.coo[:, 0], self.coo[:, 1]).T
 
         # Initializing ti and ui coordinates
         ui = np.zeros((txy.shape[0] - 1, sxy.shape[0]))
@@ -443,7 +443,7 @@ class Line(object):
             composing the trace
         """
         # Projected coordinates
-        sx, sy = self.proj(self.coo[:, 0], self.coo[:, 1])
+        sx, sy = self.proj.coords(self.coo[:, 0], self.coo[:, 1])
         slen = ((sx[1:] - sx[:-1])**2 + (sy[1:] - sy[:-1])**2)**0.5
         sg = np.zeros((len(sx) - 1, 3))
         sg[:, 0] = sx[1:] - sx[:-1]

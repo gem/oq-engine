@@ -571,10 +571,9 @@ class OrthographicProjection(object):
                                  'center lon=%s lat=%s' %
                                  (numpy.degrees(self.lambda0),
                                   numpy.degrees(self.phi0)))
-            xx = numpy.cos(phis) * numpy.sin(lambdas)
+            xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
             yy = (self.cos_phi0 * numpy.sin(phis) - self.sin_phi0 * cos_phis
-                  * numpy.cos(lambdas))
-            return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+                  * numpy.cos(lambdas)) * EARTH_RADIUS
         else:
             # "reverse" mode, arguments are actually abscissae
             # and ordinates in 2d space
@@ -592,19 +591,19 @@ class OrthographicProjection(object):
             xx[idx] = xx[idx] - 360.
             idx = xx <= -180.
             xx[idx] = xx[idx] + 360.
-            return xx, yy
+        return numpy.array([xx, yy])
 
     def coords(self, lons, lats, deps=None):
         """
-        :returns: array of shape (N, 2) or (N, 3) of projected coordinates
+        :returns: array of shape (2, N) or (3, N) of projected coordinates
         """
         if deps is None:
-            txy = numpy.zeros((len(lons), 2))
+            txy = numpy.zeros((2, len(lons)))
         else:
-            txy = numpy.zeros((len(lons), 3))
-        txy[:, 0], txy[:, 1] = self(lons, lats)
+            txy = numpy.zeros((3, len(lons)))
+        txy[0], txy[1] = self(lons, lats)
         if deps is not None:
-            txy[:, 2] = deps
+            txy[2] = deps
         return txy
 
         
