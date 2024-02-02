@@ -30,14 +30,17 @@ from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 def get_endpoints(lines):
     """
-    :returns an array of shape (L, 2, 3)
+    :returns a mesh of shape 2L
     """
-    lons = []
-    lats = []
-    for line in lines:
-        lons.extend([line.coo[0, 0], line.coo[-1, 0]])
-        lats.extend([line.coo[0, 1], line.coo[-1, 1]])
-    return Mesh(np.array(lons), np.array(lats))
+    L = len(lines)
+    lons = np.zeros(2*L)
+    lats = np.zeros(2*L)
+    for i, line in enumerate(lines):
+        lons[2*i] = line.coo[0, 0]
+        lons[2*i + 1] = line.coo[-1, 0]
+        lats[2*i] = line.coo[0, 1]
+        lats[2*i + 1] = line.coo[-1, 1]
+    return Mesh(lons, lats)
 
 
 class MultiLine(object):
