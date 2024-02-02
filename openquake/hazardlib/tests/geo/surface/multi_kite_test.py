@@ -260,15 +260,15 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         aae(a1 + a2, area)
 
     def test_get_bounding_box(self):
-        bb = self.msrf.get_bounding_box()
+        west, east, north, south = self.msrf.get_bounding_box()
         if PLOTTING:
             _, ax = plt.subplots(1, 1)
-            ax.plot([bb.west, bb.east, bb.east, bb.west],
-                    [bb.south, bb.south, bb.north, bb.north], '-')
+            ax.plot([west, east, east, west],
+                    [south, south, north, north], '-')
             ax.plot(self.los[0], self.las[0], '.')
             ax.plot(self.los[1], self.las[1], '.')
             plt.show()
-        aae([bb.west, bb.east, bb.south, bb.north],
+        aae([west, east, south, north],
             [-70.5772, -70.1032, 19.650, 19.7405], decimal=2)
 
     def test_get_middle_point(self):
