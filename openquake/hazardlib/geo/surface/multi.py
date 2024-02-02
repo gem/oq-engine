@@ -67,7 +67,7 @@ class MultiSurface(BaseSurface):
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
-    # NB: this is NEVER used in the calculation
+    # NB: without a cache, get_closest_points calls it
     @property
     def mesh(self):
         """
@@ -113,6 +113,10 @@ class MultiSurface(BaseSurface):
         for srfc in self.surfaces:
 
             if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
+                # in classical/case_62 there are KiteSurfaces and
+                # PlanarSurfaces together in NonParametricSources
+                # the `suid` is used only in MultiFaultSources
+                srfc._set_tor(getattr(srfc, 'suid', None))
                 srfc.tor_line.keep_corners(self.tol)
                 tors.append(srfc.tor_line)
 
@@ -149,44 +153,6 @@ class MultiSurface(BaseSurface):
         """
         dists = [surf.get_min_distance(mesh) for surf in self.surfaces]
         return np.min(dists, axis=0)
-
-    def get_closest_points(self, mesh):
-        """
-        For each point in ``mesh`` find the closest surface element, and return
-        the corresponding closest point.
-        See :meth:`superclass method
-        <.base.BaseSurface.get_closest_points>`
-        for spec of input and result values.
-        """
-        # for each point in the mesh compute the minimum distance to each
-        # surface. Builds a ``distances`` matrix, the first dimension
-        # representing the surfaces and the second dimension the mesh points
-        dists = np.array(
-            [surf.get_min_distance(mesh) for surf in self.surfaces])
-
-        # find for each point in mesh the index of closest surface
-        idx = dists == np.min(dists, axis=0)
-
-        # loop again over surfaces. For each surface compute the closest
-        # points, and associate them to the mesh points for which the surface
-        # is the closest. Note that if a surface is not the closest to any of
-        # the mesh points then the calculation is skipped
-        lons = np.empty_like(mesh.lons)
-        lats = np.empty_like(mesh.lats)
-        depths = None if mesh.depths is None else np.empty_like(mesh.depths)
-
-        # the centroid info for the sites must be evaluated and populated
-        # one site at a time
-        for jdx in idx.T:
-            i = np.where(jdx)[0][0]
-            surf = self.surfaces[i]
-            cps = surf.get_closest_points(mesh)
-            idx_i = idx[i, :]
-            lons[idx_i] = cps.lons[idx_i]
-            lats[idx_i] = cps.lats[idx_i]
-            if depths is not None:
-                depths[idx_i] = cps.depths[idx_i]
-        return Mesh(lons, lats, depths)
 
     def get_joyner_boore_distance(self, mesh):
         """

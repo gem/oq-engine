@@ -28,19 +28,22 @@ from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
-def get_endpoints_mesh(lines):
+def get_endpoints(lines):
     """
-    Build mesh with end points
+    :returns a mesh of shape 2L
     """
-    lons = []
-    lats = []
-    for line in lines:
-        lons.extend([line.coo[0, 0], line.coo[-1, 0]])
-        lats.extend([line.coo[0, 1], line.coo[-1, 1]])
-    return Mesh(np.array(lons), np.array(lats))
+    L = len(lines)
+    lons = np.zeros(2*L)
+    lats = np.zeros(2*L)
+    for i, line in enumerate(lines):
+        lons[2*i] = line.coo[0, 0]
+        lons[2*i + 1] = line.coo[-1, 0]
+        lats[2*i] = line.coo[0, 1]
+        lats[2*i + 1] = line.coo[-1, 1]
+    return Mesh(lons, lats)
 
 
-class MultiLine():
+class MultiLine(object):
     """
     A collection of polylines with associated methods and attributes. For the
     most part, these are used to compute distances according to the GC2
@@ -61,7 +64,7 @@ class MultiLine():
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
-        ep_mesh = get_endpoints_mesh(self.lines)
+        ep_mesh = get_endpoints(self.lines)
         u, _ = self.get_tu(ep_mesh)
         self.u_max = np.abs(u).max()
 
@@ -204,7 +207,7 @@ def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
         The longitude and latitude coordinates of the origin and an array with
         the indexes used to sort the lines according to the origin
     """
-    ep = get_endpoints_mesh(lines)
+    ep = get_endpoints(lines)
 
     # Project the endpoints
     proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)
