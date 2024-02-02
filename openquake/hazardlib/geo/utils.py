@@ -594,7 +594,20 @@ class OrthographicProjection(object):
             xx[idx] = xx[idx] + 360.
             return xx, yy
 
+    def coords(self, lons, lats, deps=None):
+        """
+        :returns: array of shape (N, 2) or (N, 3) of projected coordinates
+        """
+        if deps is None:
+            txy = numpy.zeros((len(lons), 2))
+        else:
+            txy = numpy.zeros((len(lons), 3))
+        txy[:, 0], txy[:, 1] = self(lons, lats)
+        if deps is not None:
+            txy[:, 2] = deps
+        return txy
 
+        
 def get_middle_point(lon1, lat1, lon2, lat2):
     """
     Given two points return the point exactly in the middle lying on the same

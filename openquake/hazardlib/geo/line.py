@@ -49,8 +49,7 @@ def _resample(coo, sect_len, orig_extremes):
 
     # Project the coordinates of the trace and save them in `txy`
     proj = utils.OrthographicProjection.from_lons_lats(coo[:, 0], coo[:, 1])
-    txy = coo.copy()
-    txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
+    txy = proj.coords(coo[:, 0], coo[:, 1], coo[:, 2])
 
     # Compute the total length of the original trace
     # tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
@@ -391,21 +390,6 @@ class Line(object):
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        # all sites
-        lons = np.concatenate([mesh.lons, self.coo[:, 0]])
-        lats = np.concatenate([mesh.lats, self.coo[:, 1]])
-
-        # projection
-        proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
-
-        # projected coordinates for the trace
-        txy = np.zeros((len(self.coo), 2))
-        txy[:, 0], txy[:, 1] = proj(self.coo[:, 0], self.coo[:, 1])
-
-        # projected coordinates for the sites
-        sxy = np.zeros((len(mesh), 2))
-        sxy[:, 0], sxy[:, 1] = proj(mesh.lons, mesh.lats)
-
         # Compute u hat and t hat for each segment. tmp has shape
         # (num_segments x 3)
         slen, uhat, that = self.get_tu_hat()
@@ -427,12 +411,10 @@ class Line(object):
         (num_segments x num_sites).
         """
         # Sites projected coordinates
-        sxy = np.zeros((len(mesh.lons), 2))
-        sxy[:, 0], sxy[:, 1] = self.proj(mesh.lons, mesh.lats)
+        sxy = self.proj.coords(mesh.lons, mesh.lats)
 
         # Polyline projected coordinates
-        txy = np.zeros_like(self.coo)
-        txy[:, 0], txy[:, 1] = self.proj(self.coo[:, 0], self.coo[:, 1])
+        txy = self.proj.coords(self.coo[:, 0], self.coo[:, 1])
 
         # Initializing ti and ui coordinates
         ui = np.zeros((txy.shape[0] - 1, sxy.shape[0]))
