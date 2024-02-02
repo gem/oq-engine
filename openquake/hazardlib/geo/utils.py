@@ -26,6 +26,7 @@ import logging
 import collections
 
 import numpy
+import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry, contains_xy
@@ -41,7 +42,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
-EARTH_RADIUS = geo.geodetic.EARTH_RADIUS
+EARTH_RADIUS = 6371.0
 spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
@@ -382,7 +383,7 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     return False
 
 
-@compile("(f8,f8)")
+@numba.vectorize("(f8,f8)")
 def get_longitudinal_extent(lon1, lon2):
     """
     Return the distance between two longitude values as an angular measure.
@@ -459,7 +460,7 @@ def get_bounding_box(obj, maxdist):
 
 # NB: returns (west, east, north, south) which is DIFFERENT from
 # get_bounding_box return (west, south, east, north)
-#@compile("(f8[:],f8[:])")
+#@compile(["(f8[:],f8[:])", "(f8[:,:],f8[:,:])"])
 def get_spherical_bounding_box(lons, lats):
     """
     Given a collection of points find and return the bounding box,
@@ -477,7 +478,6 @@ def get_spherical_bounding_box(lons, lats):
         180 degrees (it is impossible to define a single hemisphere
         bound to poles that would contain the whole collection).
     """
-    lons.nbytes
     ok = numpy.isfinite(lons)
     if not ok.all():
         lons = lons[ok]
@@ -492,9 +492,9 @@ def get_spherical_bounding_box(lons, lats):
         lons = lons.flatten()  # in case of a RectangularMesh
         west = lons[lons > 0].min()
         east = lons[lons < 0].max()
-        if not all((get_longitudinal_extent(west, lon) >= 0
-                    and get_longitudinal_extent(lon, east) >= 0)
-                   for lon in lons):
+        ext0 = get_longitudinal_extent(west, lons)
+        ext1 = get_longitudinal_extent(lons, east)
+        if not ((ext0 >= 0) & (ext1 >= 0)).all():
             raise ValueError('points collection has longitudinal extent '
                              'wider than 180 deg')
     return west, east, north, south
