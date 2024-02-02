@@ -350,7 +350,8 @@ class BaseSurface:
             Values are floats in decimal degrees.
         """
         mesh = _get_finite_mesh(self.mesh)
-        return utils.get_spherical_bounding_box(mesh.lons, mesh.lats)
+        return utils.get_spherical_bounding_box(
+            mesh.lons.flatten(), mesh.lats.flatten())
 
     def get_middle_point(self):
         """

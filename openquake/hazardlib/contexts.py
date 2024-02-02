@@ -884,9 +884,10 @@ class ContextMaker(object):
                     if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id
                         if self.fewsites:
-                            c = rup.surface.get_closest_points(sites.complete)
-                            rctx.clon = c.lons[rctx.sids]
-                            rctx.clat = c.lats[rctx.sids]
+                            cp = get_distances(
+                                rup, r_sites, 'closest_point', dcache)
+                            rctx.clon = cp[:, 0]
+                            rctx.clat = cp[:, 1]
                     yield rctx
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
@@ -929,7 +930,9 @@ class ContextMaker(object):
             rups_sites, src_id, getattr(src, 'dcache', None))
         blocks = block_splitter(rctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
-        return self.ctx_mon.iter(map(self.recarray, blocks))
+        dcache = getattr(src, 'dcache', {})
+        return self.ctx_mon.iter(map(self.recarray, blocks),
+                                 atstop=dcache.clear)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
@@ -1191,7 +1194,7 @@ class ContextMaker(object):
                     elif src.code == b'C':
                         src.weight += 10.
                     elif src.code == b'F':
-                        src.weight *= 100  # superheavy
+                        src.weight *= 30  # superheavy
                     else:
                         src.weight += 1.
 

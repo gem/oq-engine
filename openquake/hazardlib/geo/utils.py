@@ -26,6 +26,7 @@ import logging
 import collections
 
 import numpy
+import numba
 from scipy.spatial import cKDTree
 from scipy.spatial.distance import cdist, euclidean
 from shapely import geometry, contains_xy
@@ -41,9 +42,8 @@ F32 = numpy.float32
 F64 = numpy.float64
 KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
-EARTH_RADIUS = geo.geodetic.EARTH_RADIUS
+EARTH_RADIUS = 6371.0
 spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
-SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
@@ -383,6 +383,7 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     return False
 
 
+@numba.vectorize("(f8,f8)")
 def get_longitudinal_extent(lon1, lon2):
     """
     Return the distance between two longitude values as an angular measure.
@@ -459,6 +460,7 @@ def get_bounding_box(obj, maxdist):
 
 # NB: returns (west, east, north, south) which is DIFFERENT from
 # get_bounding_box return (west, south, east, north)
+@compile(["(f8[:],f8[:])", "(f4[:],f4[:])"])
 def get_spherical_bounding_box(lons, lats):
     """
     Given a collection of points find and return the bounding box,
@@ -481,24 +483,20 @@ def get_spherical_bounding_box(lons, lats):
         lons = lons[ok]
         lats = lats[ok]
 
-    north, south = numpy.max(lats), numpy.min(lats)
-    west, east = numpy.min(lons), numpy.max(lons)
-    assert (-180 <= west <= 180) and (-180 <= east <= 180), (west, east)
+    north, south = lats.max(), lats.min()
+    west, east = lons.min(), lons.max()
     if get_longitudinal_extent(west, east) < 0:
         # points are lying on both sides of the international date line
         # (meridian 180). the actual west longitude is the lowest positive
         # longitude and east one is the highest negative.
-        if hasattr(lons, 'flatten'):
-            # fixes test_surface_crossing_international_date_line
-            lons = lons.flatten()
-        west = min(lon for lon in lons if lon > 0)
-        east = max(lon for lon in lons if lon < 0)
-        if not all((get_longitudinal_extent(west, lon) >= 0
-                    and get_longitudinal_extent(lon, east) >= 0)
-                   for lon in lons):
+        west = lons[lons > 0].min()
+        east = lons[lons < 0].max()
+        ext0 = get_longitudinal_extent(west, lons)
+        ext1 = get_longitudinal_extent(lons, east)
+        if not ((ext0 >= 0) & (ext1 >= 0)).all():
             raise ValueError('points collection has longitudinal extent '
-                             'wider than 180 deg')
-    return SphericalBB(west, east, north, south)
+                             'wider than 180 degrees')
+    return west, east, north, south
 
 
 class OrthographicProjection(object):
@@ -795,8 +793,7 @@ def bbox2poly(bbox):
 # length 6 = .61 km  resolution, length 5 = 2.4 km resolution,
 # length 4 = 20 km, length 3 = 78 km
 # used in SiteCollection.geohash
-@compile(['(f8[:],f8[:],u1)',
-          '(f4[:],f4[:],u1)'])
+@compile(['(f8[:],f8[:],u1)', '(f4[:],f4[:],u1)'])
 def geohash(lons, lats, length):
     """
     Encode a position given in lon, lat into a geohash of the given lenght

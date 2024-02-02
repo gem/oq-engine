@@ -174,13 +174,11 @@ class Line(object):
         """
         self = cls.__new__(cls)
         self.coo = coo
-        self.coo.flags.writeable = False  # avoid dirty coding
         return self
 
     def __init__(self, points):
         points = utils.clean_points(points)  # can remove points!
         self.coo = np.array([[p.x, p.y, p.z] for p in points])
-        self.coo.flags.writeable = False  # avoid dirty coding
 
     @property
     def points(self):
@@ -281,50 +279,6 @@ class Line(object):
         distances = geodetic.geodetic_distance(lons[:-1], lats[:-1],
                                                lons[1:], lats[1:])
         return get_average_azimuth(azimuths, distances)
-
-    def resample_old(self, section_length):
-        """
-        Resample this line into sections.  The first point in the resampled
-        line corresponds to the first point in the original line.  Starting
-        from the first point in the original line, a line segment is defined as
-        the line connecting the last point in the resampled line and the next
-        point in the original line.  The line segment is then split into
-        sections of length equal to ``section_length``. The resampled line is
-        obtained by concatenating all sections.  The number of sections in a
-        line segment is calculated as follows: ``round(segment_length /
-        section_length)``.  Note that the resulting line has a length that is
-        an exact multiple of ``section_length``, therefore its length is in
-        general smaller or greater (depending on the rounding) than the length
-        of the original line.  For a straight line, the difference between the
-        resulting length and the original length is at maximum half of the
-        ``section_length``.  For a curved line, the difference may be larger,
-        because of corners getting cut.
-
-        :param section_length:
-            The length of the section, in km.
-        :type section_length:
-            float
-        :returns:
-            A new line resampled into sections based on the given length.
-        :rtype:
-            An instance of :class:`Line`
-        """
-        resampled_points = []
-        # 1. Resample the first section. 2. Loop over the remaining points
-        # in the line and resample the remaining sections.
-        # 3. Extend the list with the resampled points, except the first one
-        # (because it's already contained in the previous set of
-        # resampled points).
-        resampled_points.extend(
-            self[0].equally_spaced_points(self[1], section_length))
-
-        # Skip the first point, it's already resampled
-        for i in range(2, len(self)):
-            points = resampled_points[-1].equally_spaced_points(
-                self[i], section_length)
-            resampled_points.extend(points[1:])
-
-        return Line(resampled_points)
 
     def resample(self, sect_len: float, orig_extremes=False):
         """

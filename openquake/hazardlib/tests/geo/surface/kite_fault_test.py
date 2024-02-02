@@ -227,6 +227,7 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
         """ test calculation of trace (i.e. surface projection of tor) """
         lons = np.flipud([0.0, 0.05, 0.1, 0.15, 0.20])
         lats = np.array([0.0, 0.0, 0.0, 0.0, 0.05])
+        self.ksfc._set_tor()
         coo = self.ksfc.tor_line.coo
         aae(lons, coo[:, 0])
         aae(lats, coo[:, 1])
@@ -277,6 +278,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         self.mesh = Mesh(lons=self.mlons.flatten(), lats=self.mlats.flatten())
 
     def test_get_tor(self):
+        self.srfc._set_tor()
         coo = self.srfc.tor_line.coo
 
         # Expected results extracted manually from the mesh

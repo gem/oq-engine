@@ -116,8 +116,8 @@ class SimpleFaultSurface(BaseSurface):
             raise ValueError("the fault trace must have at least two points")
         if not fault_trace.horizontal():
             raise ValueError("the fault trace must be horizontal")
-        tlats = [point.latitude for point in fault_trace.points]
-        tlons = [point.longitude for point in fault_trace.points]
+        tlats = numpy.array([point.latitude for point in fault_trace.points])
+        tlons = numpy.array([point.longitude for point in fault_trace.points])
         if geo_utils.line_intersects_itself(tlons, tlats):
             raise ValueError("fault trace intersects itself")
         if not 0.0 < dip <= 90.0:
