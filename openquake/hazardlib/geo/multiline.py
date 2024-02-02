@@ -40,7 +40,7 @@ def get_endpoints_mesh(lines):
     return Mesh(np.array(lons), np.array(lats))
 
 
-class MultiLine():
+class MultiLine(object):
     """
     A collection of polylines with associated methods and attributes. For the
     most part, these are used to compute distances according to the GC2

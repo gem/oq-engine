@@ -67,7 +67,7 @@ class MultiSurface(BaseSurface):
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
-    # NB: this is NEVER used in the calculation
+    # NB: without a cache, get_closest_points calls it
     @property
     def mesh(self):
         """
