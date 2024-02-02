@@ -74,7 +74,7 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
 
     def test_intersects_on_international_date_line(self):
         lons = numpy.array([178, 178, -178, 170])
-        lats = [0, 10, 0, 5]
+        lats = numpy.array([0, 10, 0, 5])
         self.assertEqual(True, self.func(lons, lats))
 
     def test_doesnt_intersect_on_international_date_line(self):
