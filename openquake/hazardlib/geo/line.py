@@ -18,7 +18,6 @@
 """
  Module :mod:`openquake.hazardlib.geo.line` defines :class:`Line`.
 """
-import copy
 import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
@@ -420,7 +419,7 @@ class Line(object):
 
         # For each section
         for i in range(ui.shape[0]):
-            tmp = copy.copy(sxy)
+            tmp = np.copy(sxy)
             tmp[:, 0] -= txy[i, 0]
             tmp[:, 1] -= txy[i, 1]
             ui[i, :] = tmp @ uhat[i, 0:2]
