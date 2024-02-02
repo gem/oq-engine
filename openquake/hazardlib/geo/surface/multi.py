@@ -242,7 +242,7 @@ class MultiSurface(BaseSurface):
             west, east, north, south = surf.get_bounding_box()
             lons.extend([west, east])
             lats.extend([north, south])
-        return utils.get_spherical_bounding_box(lons, lats)
+        return utils.get_spherical_bounding_box(np.array(lons), np.array(lats))
 
     def get_middle_point(self):
         """

@@ -43,7 +43,6 @@ KM_TO_DEGREES = 0.0089932  # 1 degree == 111 km
 DEGREES_TO_RAD = 0.01745329252  # 1 radians = 57.295779513 degrees
 EARTH_RADIUS = geo.geodetic.EARTH_RADIUS
 spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
-SphericalBB = collections.namedtuple('SphericalBB', 'west east north south')
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
@@ -476,6 +475,7 @@ def get_spherical_bounding_box(lons, lats):
         180 degrees (it is impossible to define a single hemisphere
         bound to poles that would contain the whole collection).
     """
+    lons.nbytes
     ok = numpy.isfinite(lons)
     if not ok.all():
         lons = lons[ok]
@@ -498,7 +498,7 @@ def get_spherical_bounding_box(lons, lats):
                    for lon in lons):
             raise ValueError('points collection has longitudinal extent '
                              'wider than 180 deg')
-    return SphericalBB(west, east, north, south)
+    return west, east, north, south
 
 
 class OrthographicProjection(object):
