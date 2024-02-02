@@ -20,7 +20,6 @@
 """
 import copy
 import numpy as np
-from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import utils
