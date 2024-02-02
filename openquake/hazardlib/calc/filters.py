@@ -116,7 +116,7 @@ def _surf_param(surface, sites, param, dcache):
     elif param in ('closest_point', 'clon', 'clat'):
         t = _closest_points(surface.surfaces, sites, dcache)
         if param == 'closest_point':
-            dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+            dist = t.array.T  # shape (N, 3)
         elif param == 'clon':
             dist = t.lons.reshape(-1, 1)
         elif param == 'clat':
