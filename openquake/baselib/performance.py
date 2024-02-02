@@ -374,8 +374,10 @@ class Monitor(object):
                 return dset[slc]
             return pickle.loads(dset[()])
 
-    def iter(self, genobj, atexit=lambda: None):
+    def iter(self, genobj, atstop=lambda: None):
         """
+        :param genobj: a generator object
+        :param atstop: optional thunk to call at StopIteration
         :yields: the elements of the generator object
         """
         while True:
@@ -384,7 +386,7 @@ class Monitor(object):
                 with self:
                     obj = next(genobj)
             except StopIteration:
-                atexit()
+                atstop()
                 return
             else:
                 yield obj

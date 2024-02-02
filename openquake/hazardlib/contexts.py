@@ -931,7 +931,7 @@ class ContextMaker(object):
         # the weight of 10_000 ensure less than 1MB per block (recarray)
         dcache = getattr(src, 'dcache', {})
         return self.ctx_mon.iter(map(self.recarray, blocks),
-                                 atexit=dcache.clear)
+                                 atstop=dcache.clear)
 
     def max_intensity(self, sitecol1, mags, dists):
         """
