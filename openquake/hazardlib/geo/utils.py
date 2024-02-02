@@ -460,7 +460,7 @@ def get_bounding_box(obj, maxdist):
 
 # NB: returns (west, east, north, south) which is DIFFERENT from
 # get_bounding_box return (west, south, east, north)
-@compile("(f8[:],f8[:])")
+@compile(["(f8[:],f8[:])", "(f4[:],f4[:])"])
 def get_spherical_bounding_box(lons, lats):
     """
     Given a collection of points find and return the bounding box,
@@ -478,7 +478,6 @@ def get_spherical_bounding_box(lons, lats):
         180 degrees (it is impossible to define a single hemisphere
         bound to poles that would contain the whole collection).
     """
-    assert len(lons.shape) == 1, lons.shape
     ok = numpy.isfinite(lons)
     if not ok.all():
         lons = lons[ok]
