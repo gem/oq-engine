@@ -554,7 +554,7 @@ class OrthographicProjection(object):
         self.sin_phi0 = numpy.sin(self.phi0)
         self.sin_pi_over_4 = (2 ** 0.5) / 2
 
-    def __call__(self, lons, lats, reverse=False):
+    def __call__(self, lons, lats, deps=None, reverse=False):
         assert not numpy.isnan(lons).any(), lons
         if not reverse:
             lambdas, phis = numpy.radians(lons), numpy.radians(lats)
@@ -591,20 +591,10 @@ class OrthographicProjection(object):
             xx[idx] = xx[idx] - 360.
             idx = xx <= -180.
             xx[idx] = xx[idx] + 360.
-        return numpy.array([xx, yy])
-
-    def coords(self, lons, lats, deps=None):
-        """
-        :returns: array of shape (2, N) or (3, N) of projected coordinates
-        """
         if deps is None:
-            txy = numpy.zeros((2, len(lons)))
+            return numpy.array([xx, yy])
         else:
-            txy = numpy.zeros((3, len(lons)))
-        txy[0], txy[1] = self(lons, lats)
-        if deps is not None:
-            txy[2] = deps
-        return txy
+            return numpy.array([xx, yy, deps])
 
         
 def get_middle_point(lon1, lat1, lon2, lat2):
