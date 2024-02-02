@@ -113,7 +113,7 @@ class MultiSurface(BaseSurface):
         for srfc in self.surfaces:
 
             if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
-                srfc._set_tor()
+                srfc._set_tor(srfc.suid)
                 srfc.tor_line.keep_corners(self.tol)
                 tors.append(srfc.tor_line)
 

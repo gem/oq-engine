@@ -115,7 +115,7 @@ class KiteSurface(BaseSurface):
     def get_surface_boundaries(self):
         return self._get_external_boundary()
 
-    def _set_tor(self):
+    def _set_tor(self, suid=None):
         """
         Provides longitude and latitude coordinates of the vertical surface
         projection of the top of rupture. This is used in the GC2 method to
@@ -136,6 +136,8 @@ class KiteSurface(BaseSurface):
         lo, la = self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
         # top_left, top_right coordinates
         self.tor_line = Line.from_vectors(lo, la)
+        if suid is not None:
+            self.tor_line.suid = suid
 
     def is_vertical(self):
         """ True if all the profiles, and hence the surface, are vertical """

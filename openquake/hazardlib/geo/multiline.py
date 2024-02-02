@@ -28,9 +28,9 @@ from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
-def get_endpoints_mesh(lines):
+def get_endpoints(lines):
     """
-    Build mesh with end points
+    :returns an array of shape (L, 2, 3)
     """
     lons = []
     lats = []
@@ -61,7 +61,7 @@ class MultiLine(object):
         self.shift = get_coordinate_shift(self.lines, self.olon, self.olat,
                                           self.overall_strike)
 
-        ep_mesh = get_endpoints_mesh(self.lines)
+        ep_mesh = get_endpoints(self.lines)
         u, _ = self.get_tu(ep_mesh)
         self.u_max = np.abs(u).max()
 
@@ -204,7 +204,7 @@ def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
         The longitude and latitude coordinates of the origin and an array with
         the indexes used to sort the lines according to the origin
     """
-    ep = get_endpoints_mesh(lines)
+    ep = get_endpoints(lines)
 
     # Project the endpoints
     proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)

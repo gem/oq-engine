@@ -150,6 +150,7 @@ if __name__ == '__main__':
     data = []
     for rup in rups:
         for surf in rup.surface.surfaces:
+            surf._set_tor(surf.suid)
             lines.append(surf.tor_line)
             data.append(surf.tor_line.coo.tobytes())
     uni, inv = numpy.unique(data, return_inverse=True)
