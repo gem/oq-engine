@@ -72,7 +72,6 @@ class KiteSurface(BaseSurface):
         self._fix_right_hand()
         self.strike = self.dip = None
         self.width = None
-        self._set_tor()
 
     def _clean(self):
         """
