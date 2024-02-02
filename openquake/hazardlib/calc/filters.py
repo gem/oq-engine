@@ -45,39 +45,31 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
-def _closest_points(surfaces, mesh, dcache):
-    # for each point in the mesh compute the minimum distance to each
-    # surface. Builds a ``distances`` matrix, the first dimension
-    # representing the surfaces and the second dimension the mesh points
-    dists = numpy.array(
-        [_surf_dist(surf, mesh, 'rrup', dcache) for surf in surfaces])
+# compute closest points from surfaces with a cache
+def _closest_points(surfaces, sites, dcache):
 
-    # find for each point in mesh the index of closest surface
-    idx = (dists == numpy.min(dists, axis=0))
+    # build a matrix of shape (num_surfaces, num_sites)
+    dists = numpy.array([_surf_param(surf, sites, 'rrup', dcache)
+                         for surf in surfaces])
 
-    # loop again over surfaces. For each surface compute the closest
-    # points, and associate them to the mesh points for which the surface
-    # is the closest. Note that if a surface is not the closest to any of
-    # the mesh points then the calculation is skipped
-    lons = numpy.empty_like(mesh.lons)
-    lats = numpy.empty_like(mesh.lats)
-    depths = None if mesh.depths is None else numpy.empty_like(mesh.depths)
+    # find for each site the index of the closest surface
+    idx = (dists == dists.min(axis=0))  # shape (num_surfaces, num_sites)
 
-    # the centroid info for the sites must be evaluated and populated
-    # one site at a time
+    # compute the closest point mesh one site at the time
+    lons = numpy.empty_like(sites.lons)
+    lats = numpy.empty_like(sites.lats)
+    deps = numpy.empty_like(sites.depths)
     for jdx in idx.T:
         i = numpy.where(jdx)[0][0]
-        surf = surfaces[i]
-        cps = _surf_dist(surf, mesh, 'closest_point', dcache)
+        cps = _surf_param(surfaces[i], sites, 'closest_point', dcache)
         idx_i = idx[i, :]
         lons[idx_i] = cps[idx_i, 0]
         lats[idx_i] = cps[idx_i, 1]
-        if depths is not None:
-            depths[idx_i] = cps[idx_i, 2]
-    return Mesh(lons, lats, depths)
+        deps[idx_i] = cps[idx_i, 2]
+    return Mesh(lons, lats, deps)
 
 
-def _get_surf_dist(surface, sites, param):
+def _surf_param_nc(surface, sites, param):
     # compute distances without any cache
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
@@ -87,10 +79,10 @@ def _get_surf_dist(surface, sites, param):
         dist = surface.get_ry0_distance(sites)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
-    elif param == 'closest_point' or param == 'clon' or param == 'clat':
+    elif param in ('closest_point', 'clon', 'clat'):
         t = surface.get_closest_points(sites)  # tested in classical/case_83
         if param == 'closest_point':
-            dist = numpy.vstack([t.lons, t.lats, t.depths]).T  # shape (N, 3)
+            dist = t.array.T  # shape (N, 3)
         elif param == 'clon':
             dist = t.lons.reshape(-1, 1)
         elif param == 'clat':
@@ -100,17 +92,17 @@ def _get_surf_dist(surface, sites, param):
     return dist
 
 
-def _surf_dist(surface, sites, param, dcache):
+def _surf_param(surface, sites, param, dcache):
     # compute distances with a cache, but only for MultiSurfaces
 
     if dcache is None or not hasattr(surface, 'surfaces'):
-        return _get_surf_dist(surface, sites, param)
+        return _surf_param_nc(surface, sites, param)
 
     # assume the underlying surfaces have .suid attributes
     suids = [s.suid for s in surface.surfaces]
     for surf in surface.surfaces:
         if (surf.suid, param) not in dcache:
-            dcache[surf.suid, param] = _get_surf_dist(surf, sites, param)
+            dcache[surf.suid, param] = _surf_param_nc(surf, sites, param)
     if param in ('rrup', 'rjb'):
         dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
     elif param in ('rx', 'ry0'):
@@ -146,13 +138,13 @@ def get_distances(rupture, sites, param, dcache=None):
     if not surf:  # PointRupture
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
-        dist = _surf_dist(surf, sites, 'rrup', dcache)
+        dist = _surf_param(surf, sites, 'rrup', dcache)
     elif param == 'rx':
-        dist = _surf_dist(surf, sites, 'rx', dcache)
+        dist = _surf_param(surf, sites, 'rx', dcache)
     elif param == 'ry0':
-        dist = _surf_dist(surf, sites, 'ry0', dcache)
+        dist = _surf_param(surf, sites, 'ry0', dcache)
     elif param == 'rjb':
-        dist = _surf_dist(surf, sites, 'rjb', dcache)
+        dist = _surf_param(surf, sites, 'rjb', dcache)
     elif param == 'rhypo':
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'repi':
@@ -164,7 +156,7 @@ def get_distances(rupture, sites, param, dcache=None):
     elif param == 'azimuth_cp':
         dist = surf.get_azimuth_of_closest_point(sites)
     elif param == 'closest_point' or param == 'clon' or param == 'clat':
-        dist = _surf_dist(surf, sites, param, dcache)
+        dist = _surf_param(surf, sites, param, dcache)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
