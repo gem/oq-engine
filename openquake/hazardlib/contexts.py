@@ -433,11 +433,10 @@ def build_ctx_Pp(src, sitecol, cmaker):
         dd['clon'] = numpy.float64(0.)
         dd['clat'] = numpy.float64(0.)
 
-    zeroctx = RecordBuilder(**dd).zeros
+    builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
                        if par in dd]
-    cmaker.ruptparams = (
-        cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'})
+    cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
 
     with cmaker.ir_mon:
         # building planar geometries
@@ -465,7 +464,7 @@ def build_ctx_Pp(src, sitecol, cmaker):
             pla = planarlist[0]
 
         offset = src.offset + magi * len(pla)
-        zctx = zeroctx((len(pla), len(sites)))
+        zctx = builder.zeros((len(pla), len(sites)))
 
         if cmaker.fewsites:
             # the loop below is a bit slow
