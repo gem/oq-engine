@@ -308,6 +308,76 @@ def simple_cmaker(gsims, imts, **params):
 
 build_ctx = CallableDict(keyfunc=operator.attrgetter('code'))
 
+
+def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id,
+                    start_stop, tom):
+    # computing distances
+    rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+    # get the closest points on the surface
+    if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
+        closest = project_back(planar, xx, yy)  # (3, U, N)
+    dists = {'rrup': rrup}
+    for par in cmaker.REQUIRES_DISTANCES - {'rrup'}:
+        dists[par] = get_distances_planar(planar, sites, par)
+    for par in dists:
+        dst = dists[par]
+        if cmaker.minimum_distance:
+            dst[dst < cmaker.minimum_distance] = cmaker.minimum_distance
+
+    # ctx has shape (U, N), ctxt (N, U)
+    ctxt = zeroctx.T  # smart trick taking advantage of numpy magic
+    ctxt['src_id'] = src_id
+
+    if cmaker.fewsites:
+        # the loop below is a bit slow
+        for u, rup_id in enumerate(range(*start_stop)):
+            zeroctx[u]['rup_id'] = rup_id
+
+    # setting rupture parameters
+    for par in cmaker.ruptparams:
+        if par == 'mag':
+            ctxt[par] = mag
+        elif par == 'occurrence_rate':
+            ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+        elif par == 'width':
+            ctxt[par] = planar.wlr[:, 0]
+        elif par == 'strike':
+            ctxt[par] = planar.sdr[:, 0]
+        elif par == 'dip':
+            ctxt[par] = planar.sdr[:, 1]
+        elif par == 'rake':
+            ctxt[par] = planar.sdr[:, 2]
+        elif par == 'ztor':  # top edge depth
+            ctxt[par] = planar.corners[:, 2, 0]
+        elif par == 'zbot':  # bottom edge depth
+            ctxt[par] = planar.corners[:, 2, 3]
+        elif par == 'hypo_lon':
+            ctxt[par] = planar.hypo[:, 0]
+        elif par == 'hypo_lat':
+            ctxt[par] = planar.hypo[:, 1]
+        elif par == 'hypo_depth':
+            ctxt[par] = planar.hypo[:, 2]
+
+    # setting distance parameters
+    for par in dists:
+        zeroctx[par] = dists[par]
+    if cmaker.fewsites:
+        zeroctx['clon'] = closest[0]
+        zeroctx['clat'] = closest[1]
+
+    # setting site parameters
+    for par in cmaker.siteparams:
+        zeroctx[par] = sites.array[par]  # shape N-> (U, N)
+    if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
+        # read Probability Mass Function from model and reshape it
+        # into predetermined shape of probs_occur
+        pmf = tom.get_pmf(planar.wlr[:, 2],
+                          n_max=zeroctx['probs_occur'].shape[2])
+        zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
+
+    return zeroctx.flatten()
+
+
 @build_ctx.add(b'P', b'p')
 def build_ctx_Pp(src, sitecol, cmaker):
     """
@@ -331,7 +401,7 @@ def build_ctx_Pp(src, sitecol, cmaker):
         dd['clon'] = numpy.float64(0.)
         dd['clat'] = numpy.float64(0.)
 
-    zeros = RecordBuilder(**dd).zeros
+    zeroctx = RecordBuilder(**dd).zeros
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
                        if par in dd]
     cmaker.ruptparams = (
@@ -365,11 +435,10 @@ def build_ctx_Pp(src, sitecol, cmaker):
         offset = src.offset + magi * len(pla)
         start_stop = offset, offset + len(pla)
 
-        # building contexts; ctx has shape (U, N), ctxt (N, U)
-        ctx = cmaker._get_ctx_planar(
-            zeros((len(pla), len(sites))),
-            mag, pla, sites, src.id, start_stop, tom
-        ).flatten()
+        # building contexts
+        ctx = _get_ctx_planar(
+            cmaker, zeroctx((len(pla), len(sites))),
+            mag, pla, sites, src.id, start_stop, tom)
         ctxt = ctx[ctx.rrup < magdist[mag]]
         if len(ctxt):
             yield ctxt
@@ -773,73 +842,6 @@ class ContextMaker(object):
                 ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         return ctx
-
-    def _get_ctx_planar(self, zeroctx, mag, planar, sites, src_id,
-                        start_stop, tom):
-        # computing distances
-        rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-        # get the closest points on the surface
-        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
-            closest = project_back(planar, xx, yy)  # (3, U, N)
-        dists = {'rrup': rrup}
-        for par in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists[par] = get_distances_planar(planar, sites, par)
-        for par in dists:
-            dst = dists[par]
-            if self.minimum_distance:
-                dst[dst < self.minimum_distance] = self.minimum_distance
-
-        ctxt = zeroctx.T  # smart trick taking advantage of numpy magic
-        ctxt['src_id'] = src_id
-
-        if self.fewsites:
-            # the loop below is a bit slow
-            for u, rup_id in enumerate(range(*start_stop)):
-                zeroctx[u]['rup_id'] = rup_id
-
-        # setting rupture parameters
-        for par in self.ruptparams:
-            if par == 'mag':
-                ctxt[par] = mag
-            elif par == 'occurrence_rate':
-                ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
-            elif par == 'width':
-                ctxt[par] = planar.wlr[:, 0]
-            elif par == 'strike':
-                ctxt[par] = planar.sdr[:, 0]
-            elif par == 'dip':
-                ctxt[par] = planar.sdr[:, 1]
-            elif par == 'rake':
-                ctxt[par] = planar.sdr[:, 2]
-            elif par == 'ztor':  # top edge depth
-                ctxt[par] = planar.corners[:, 2, 0]
-            elif par == 'zbot':  # bottom edge depth
-                ctxt[par] = planar.corners[:, 2, 3]
-            elif par == 'hypo_lon':
-                ctxt[par] = planar.hypo[:, 0]
-            elif par == 'hypo_lat':
-                ctxt[par] = planar.hypo[:, 1]
-            elif par == 'hypo_depth':
-                ctxt[par] = planar.hypo[:, 2]
-
-        # setting distance parameters
-        for par in dists:
-            zeroctx[par] = dists[par]
-        if self.fewsites:
-            zeroctx['clon'] = closest[0]
-            zeroctx['clat'] = closest[1]
-
-        # setting site parameters
-        for par in self.siteparams:
-            zeroctx[par] = sites.array[par]  # shape N-> (U, N)
-        if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
-            # read Probability Mass Function from model and reshape it
-            # into predetermined shape of probs_occur
-            pmf = tom.get_pmf(planar.wlr[:, 2],
-                              n_max=zeroctx['probs_occur'].shape[2])
-            zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
-
-        return zeroctx
 
     def _quartets(self, src, sitecol, cdist, magdist, planardict):
         minmag = self.maximum_distance.x[0]
