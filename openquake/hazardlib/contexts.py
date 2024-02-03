@@ -309,8 +309,46 @@ def simple_cmaker(gsims, imts, **params):
 build_ctx = CallableDict(keyfunc=operator.attrgetter('code'))
 
 
+def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    # splitting by magnitude
+    if src.count_nphc() == 1:
+        # one rupture per magnitude
+        for m, (mag, pla) in enumerate(planardict.items()):
+            if minmag < mag < maxmag:
+                yield m, mag, pla, sitecol
+    else:
+        for m, rup in enumerate(src.iruptures()):
+            mag = rup.mag
+            if mag > maxmag or mag < minmag:
+                continue
+            arr = [rup.surface.array.reshape(-1, 3)]
+            pla = planardict[mag]
+            # NB: having a good psdist is essential for performance!
+            psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
+                                    magdist)
+            close = sitecol.filter(cdist <= psdist)
+            far = sitecol.filter(cdist > psdist)
+            if cmaker.fewsites:
+                if close is None:  # all is far, common for small mag
+                    yield m, mag, arr, sitecol
+                else:  # something is close
+                    yield m, mag, pla, sitecol
+            else:  # many sites
+                if close is None:  # all is far
+                    yield m, mag, arr, far
+                elif far is None:  # all is close
+                    yield m, mag, pla, close
+                else:  # some sites are far, some are close
+                    yield m, mag, arr, far
+                    yield m, mag, pla, close
+
+
+# helper used to populate contexts for planar ruptures
 def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id,
                     start_stop, tom):
+
     # computing distances
     rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
     # get the closest points on the surface
@@ -375,7 +413,7 @@ def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id,
                           n_max=zeroctx['probs_occur'].shape[2])
         zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
 
-    return zeroctx.flatten()
+    return zeroctx.flatten()  # shape N*U
 
 
 @build_ctx.add(b'P', b'p')
@@ -423,8 +461,8 @@ def build_ctx_Pp(src, sitecol, cmaker):
     if sitecol is None:
         return []
 
-    for magi, mag, planarlist, sites in cmaker._quartets(
-            src, sitecol, cdist[mask], magdist, planardict):
+    for magi, mag, planarlist, sites in _quartets(
+            cmaker, src, sitecol, cdist[mask], magdist, planardict):
         if not planarlist:
             continue
         elif len(planarlist) > 1:  # when using ps_grid_spacing
@@ -842,41 +880,6 @@ class ContextMaker(object):
                 ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         return ctx
-
-    def _quartets(self, src, sitecol, cdist, magdist, planardict):
-        minmag = self.maximum_distance.x[0]
-        maxmag = self.maximum_distance.x[-1]
-        # splitting by magnitude
-        if src.count_nphc() == 1:
-            # one rupture per magnitude
-            for m, (mag, pla) in enumerate(planardict.items()):
-                if minmag < mag < maxmag:
-                    yield m, mag, pla, sitecol
-        else:
-            for m, rup in enumerate(src.iruptures()):
-                mag = rup.mag
-                if mag > maxmag or mag < minmag:
-                    continue
-                arr = [rup.surface.array.reshape(-1, 3)]
-                pla = planardict[mag]
-                # NB: having a good psdist is essential for performance!
-                psdist = src.get_psdist(m, mag, self.pointsource_distance,
-                                        magdist)
-                close = sitecol.filter(cdist <= psdist)
-                far = sitecol.filter(cdist > psdist)
-                if self.fewsites:
-                    if close is None:  # all is far, common for small mag
-                        yield m, mag, arr, sitecol
-                    else:  # something is close
-                        yield m, mag, pla, sitecol
-                else:  # many sites
-                    if close is None:  # all is far
-                        yield m, mag, arr, far
-                    elif far is None:  # all is close
-                        yield m, mag, pla, close
-                    else:  # some sites are far, some are close
-                        yield m, mag, arr, far
-                        yield m, mag, pla, close
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id, dcache=None):
