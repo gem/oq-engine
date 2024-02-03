@@ -146,15 +146,15 @@ class MultiFaultSource(BaseSeismicSource):
         # iter on the ruptures
         step = kwargs.get('step', 1)
         n = len(self.mags)
-        s = self.get_sections()  # KiteSurfaces
+        sec = self.get_sections()  # KiteSurfaces
         for i in range(0, n, step**2):
             idxs = self.rupture_idxs[i]
             if len(idxs) == 1:
-                sfc = s[idxs[0]]
+                sfc = sec[idxs[0]]
             else:
-                sfc = MultiSurface([s[idx] for idx in idxs])
+                sfc = MultiSurface([sec[idx] for idx in idxs])
             rake = self.rakes[i]
-            hypo = s[idxs[0]].get_middle_point()
+            hypo = sec[idxs[0]].get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
             if self.infer_occur_rates:
                 yield ParametricProbabilisticRupture(
