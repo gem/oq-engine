@@ -464,12 +464,11 @@ def build_ctx_Pp(src, sitecol, cmaker):
             pla = planarlist[0]
 
         offset = src.offset + magi * len(pla)
-        zctx = builder.zeros((len(pla), len(sites)))
+        zctx = builder.zeros((len(pla), len(sites)))  # shape (N, U)
 
         if cmaker.fewsites:
-            # the loop below is a bit slow
-            for u, rup_id in enumerate(range(offset, offset+len(pla))):
-                zctx[u]['rup_id'] = rup_id
+            rup_ids = zctx['rup_id'].T  # numpy trick, shape (U, N)
+            rup_ids[:] = numpy.arange(offset, offset+len(pla))
 
         # building contexts
         ctx = _get_ctx_planar(cmaker, zctx, mag, pla, sites, src.id, tom)
