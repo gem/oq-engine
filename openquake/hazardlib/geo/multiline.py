@@ -89,41 +89,6 @@ class MultiLine(object):
         """
         return _get_tu(self.shift, *get_tus(self.lines, mesh))
 
-    def get_rx_distance(self, mesh):
-        """
-        :param mesh:
-            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
-            coordinates of the sites.
-        :returns:
-            A :class:`numpy.ndarray` instance with the Rx distance. Note that
-            the Rx distance is directly taken from the GC2 t-coordinate.
-        """
-        uut, tut = self.get_tu(mesh)
-        return tut[0]
-
-    def get_ry0_distance(self, mesh):
-        """
-        :param mesh:
-            An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
-        """
-        uut, tut = self.get_tu(mesh)
-
-        ry0 = np.zeros_like(uut)
-        ry0[uut < 0] = abs(uut[uut < 0])
-
-        condition = uut > self.u_max
-        ry0[condition] = uut[condition] - self.u_max
-
-        return ry0
-
-    def to_mesh(self):
-        """
-        Assuming the L lines are all segments (i.e. contains 2 points)
-        returns a RectangularMesh of shape (L, 2)
-        """
-        coo = np.array([ln.coo for ln in self.lines])  # shape (L, 2, 3)
-        return RectangularMesh(coo[:, :, 0], coo[:, :, 1])
-
 
 def get_tus(lines: list, mesh: Mesh):
     """

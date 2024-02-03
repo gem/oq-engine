@@ -328,4 +328,10 @@ class MultiSurface(BaseSurface):
         """
         if self.tor is None:
             self._set_tor()
-        return self.tor.get_ry0_distance(mesh)
+
+        uut, tut = self.tor.get_tu(mesh)
+        ry0 = np.zeros_like(uut)
+        ry0[uut < 0] = np.abs(uut[uut < 0])
+        condition = uut > self.tor.u_max
+        ry0[condition] = uut[condition] - self.tor.u_max
+        return ry0
