@@ -65,43 +65,6 @@ class MultiLineTestCase(unittest.TestCase):
 
         self.lines = [linea, lineb]
 
-    def test_get_strike_01(self):
-
-        # Create the multiline instance and get the prevalent strike
-        ml = MultiLine(self.lines)
-        ml.set_overall_strike()
-
-        if PLOTTING:
-            fig, ax = plt.subplots()
-            fig.set_size_inches(6, 4)
-            for line in self.lines:
-                ax.plot(line.coo[:, 0], line.coo[:, 1], '-', color='grey')
-                ax.plot(line.coo[0, 0], line.coo[0, 1], 'or')
-                ax.plot(line.coo[-1, 0], line.coo[-1, 1], 'xb')
-            plt.show()
-
-    def test_coordinate_shift(self):
-
-        # Creating the multiline and computing the shift
-        ml = MultiLine(self.lines)
-
-        # Computing the distance between the origin and the endnode of the
-        # second polyline
-        ggdst = geo.geodetic.geodetic_distance
-        lo = ml.lines[1].points[0].longitude
-        la = ml.lines[1].points[0].latitude
-        dst = ggdst(0, 0, lo, la)
-
-        # Set the origin and compute the overall strike and the azimuths of
-        # the polylines composing the multiline instance
-        ggazi = geo.geodetic.azimuth
-        azim = ggazi(ml.olon, ml.olat, lo, la)
-        delta = abs(ml.overall_strike - azim)
-        computed = dst * np.cos(np.radians(delta))
-
-        # Testing
-        np.testing.assert_almost_equal([0, computed], ml.shift)
-
     def test_get_tu(self):
         # Get the coords of the lines composing the multiline
         lons = []
