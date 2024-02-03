@@ -244,6 +244,7 @@ class MultiSurface(BaseSurface):
             lats.extend([north, south])
         return utils.get_spherical_bounding_box(np.array(lons), np.array(lats))
 
+    # NB: this is only called by CharacteristicSources, see logictree/case_20
     def get_middle_point(self):
         """
         If :class:`MultiSurface` is defined by a single surface, simply
