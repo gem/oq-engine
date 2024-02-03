@@ -113,10 +113,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     cmaker.init_monitoring(monitor)
     with dstore:
         if sitecol is None:  # regular calculator
-            with monitor('reading sitecol'):
-                sitecol = dstore['sitecol']
+            sitecol = dstore['sitecol']  # super-fast
         else:  # tiling calculator, read the sources from the datastore
-            with monitor('reading sources'):
+            with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(gzip.decompress(arr.tobytes()))
 
