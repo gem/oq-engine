@@ -23,7 +23,7 @@ import copy
 import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.line import get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
@@ -60,7 +60,8 @@ class MultiLine(object):
         # set strike
         revert, strike_east, avg_azim, self.lines = get_overall_strike(
             self.lines, llenghts, avgaz)
-        olon, olat, soidx = get_origin(self.lines, strike_east, avg_azim)
+        ep = get_endpoints(self.lines)
+        olon, olat, soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
         self.lines = [self.lines[i] for i in soidx]
@@ -151,7 +152,7 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     return revert, strike_to_east, avg_azim, lines
 
 
-def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
+def get_origin(ep, strike_to_east: bool, avg_strike: float):
     """
     Compute the origin necessary to calculate the coordinate shift
 
@@ -159,7 +160,6 @@ def get_origin(lines: list, strike_to_east: bool, avg_strike: float):
         The longitude and latitude coordinates of the origin and an array with
         the indexes used to sort the lines according to the origin
     """
-    ep = get_endpoints(lines)
 
     # Project the endpoints
     proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)
