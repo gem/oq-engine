@@ -554,7 +554,7 @@ class OrthographicProjection(object):
         self.sin_phi0 = numpy.sin(self.phi0)
         self.sin_pi_over_4 = (2 ** 0.5) / 2
 
-    def __call__(self, lons, lats, reverse=False):
+    def __call__(self, lons, lats, deps=None, reverse=False):
         assert not numpy.isnan(lons).any(), lons
         if not reverse:
             lambdas, phis = numpy.radians(lons), numpy.radians(lats)
@@ -571,10 +571,9 @@ class OrthographicProjection(object):
                                  'center lon=%s lat=%s' %
                                  (numpy.degrees(self.lambda0),
                                   numpy.degrees(self.phi0)))
-            xx = numpy.cos(phis) * numpy.sin(lambdas)
+            xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
             yy = (self.cos_phi0 * numpy.sin(phis) - self.sin_phi0 * cos_phis
-                  * numpy.cos(lambdas))
-            return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+                  * numpy.cos(lambdas)) * EARTH_RADIUS
         else:
             # "reverse" mode, arguments are actually abscissae
             # and ordinates in 2d space
@@ -592,9 +591,12 @@ class OrthographicProjection(object):
             xx[idx] = xx[idx] - 360.
             idx = xx <= -180.
             xx[idx] = xx[idx] + 360.
-            return xx, yy
+        if deps is None:
+            return numpy.array([xx, yy])
+        else:
+            return numpy.array([xx, yy, deps])
 
-
+        
 def get_middle_point(lon1, lat1, lon2, lat2):
     """
     Given two points return the point exactly in the middle lying on the same

@@ -244,6 +244,7 @@ class MultiSurface(BaseSurface):
             lats.extend([north, south])
         return utils.get_spherical_bounding_box(np.array(lons), np.array(lats))
 
+    # NB: this is only called by CharacteristicSources, see logictree/case_20
     def get_middle_point(self):
         """
         If :class:`MultiSurface` is defined by a single surface, simply
@@ -328,4 +329,10 @@ class MultiSurface(BaseSurface):
         """
         if self.tor is None:
             self._set_tor()
-        return self.tor.get_ry0_distance(mesh)
+
+        uut, tut = self.tor.get_tu(mesh)
+        ry0 = np.zeros_like(uut)
+        ry0[uut < 0] = np.abs(uut[uut < 0])
+        condition = uut > self.tor.u_max
+        ry0[condition] = uut[condition] - self.tor.u_max
+        return ry0

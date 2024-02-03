@@ -109,10 +109,9 @@ def _surf_param(surface, sites, param, dcache):
         if surface.tor is None:
             surface._set_tor()
         if param == 'rx':
-            uut, tut = surface.tor.get_tu(sites)
-            dist = tut[0] if len(tut[0].shape) > 1 else tut
+            dist = surface.get_rx_distance(sites)
         elif param == 'ry0':
-            dist = surface.tor.get_ry0_distance(sites)
+            dist = surface.get_ry0_distance(sites)
     elif param in ('closest_point', 'clon', 'clat'):
         t = _closest_points(surface.surfaces, sites, dcache)
         if param == 'closest_point':
