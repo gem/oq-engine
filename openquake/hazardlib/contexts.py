@@ -918,8 +918,9 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(build_ctx(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
-            if src.code == b'F' and self.cache_distances:  # multifault source
-                src.dcache = Cache()  # enable distance cache
+            if src.code == b'F' and self.cache_distances and step == 1:
+                # enable distance cache only for multifault sources
+                src.dcache = Cache()
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
