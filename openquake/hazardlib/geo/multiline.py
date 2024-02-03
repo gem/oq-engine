@@ -50,16 +50,14 @@ class MultiLine(object):
     method.
     """
     def __init__(self, lines):
-        self.lines = [copy.copy(ln) for ln in lines]
-
         # compute the overall strike and the origin of the multiline
         # get lenghts and average azimuths
-        llenghts = np.array([ln.get_length() for ln in self.lines])
-        avgaz = np.array([line.average_azimuth() for line in self.lines])
+        llenghts = np.array([ln.get_length() for ln in lines])
+        avgaz = np.array([line.average_azimuth() for line in lines])
 
         # set strike
         revert, strike_east, avg_azim, self.lines = get_overall_strike(
-            self.lines, llenghts, avgaz)
+            lines, llenghts, avgaz)
         ep = get_endpoints(self.lines)
         olon, olat, soidx = get_origin(ep, strike_east, avg_azim)
 
@@ -109,6 +107,8 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     :param lines:
         A list of :class:`openquake.hazardlib.geo.line.Line` instances
     """
+    # copying the lines to avoid flipping the originals
+    lines = [copy.copy(ln) for ln in lines]
 
     # Get lenghts and average azimuths
     if llens is None:
