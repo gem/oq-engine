@@ -21,6 +21,7 @@ import copy
 import time
 import logging
 import warnings
+import operator
 import itertools
 import collections
 from unittest.mock import patch
@@ -31,7 +32,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale, Cache)
+    sqrscale, Cache, CallableDict)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -301,6 +302,182 @@ def simple_cmaker(gsims, imts, **params):
     dic = dict(imtls={imt: [0] for imt in imts})
     dic.update(**params)
     return ContextMaker('*', gsims, dic)
+
+
+# ############################ build_ctx ################################## #
+
+build_ctx = CallableDict(keyfunc=operator.attrgetter('code'))
+
+# generator of quartets (rup_index, mag, planar_array, sites)
+def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    # splitting by magnitude
+    if src.count_nphc() == 1:
+        # one rupture per magnitude
+        for m, (mag, pla) in enumerate(planardict.items()):
+            if minmag < mag < maxmag:
+                yield m, mag, pla, sitecol
+    else:
+        for m, rup in enumerate(src.iruptures()):
+            mag = rup.mag
+            if mag > maxmag or mag < minmag:
+                continue
+            arr = [rup.surface.array.reshape(-1, 3)]
+            pla = planardict[mag]
+            # NB: having a good psdist is essential for performance!
+            psdist = src.get_psdist(m, mag, cmaker.pointsource_distance,
+                                    magdist)
+            close = sitecol.filter(cdist <= psdist)
+            far = sitecol.filter(cdist > psdist)
+            if cmaker.fewsites:
+                if close is None:  # all is far, common for small mag
+                    yield m, mag, arr, sitecol
+                else:  # something is close
+                    yield m, mag, pla, sitecol
+            else:  # many sites
+                if close is None:  # all is far
+                    yield m, mag, arr, far
+                elif far is None:  # all is close
+                    yield m, mag, pla, close
+                else:  # some sites are far, some are close
+                    yield m, mag, arr, far
+                    yield m, mag, pla, close
+
+
+# helper used to populate contexts for planar ruptures
+def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
+
+    # computing distances
+    rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
+    # get the closest points on the surface
+    if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
+        closest = project_back(planar, xx, yy)  # (3, U, N)
+    dists = {'rrup': rrup}
+    for par in cmaker.REQUIRES_DISTANCES - {'rrup'}:
+        dists[par] = get_distances_planar(planar, sites, par)
+    for par in dists:
+        dst = dists[par]
+        if cmaker.minimum_distance:
+            dst[dst < cmaker.minimum_distance] = cmaker.minimum_distance
+
+    # ctx has shape (U, N), ctxt (N, U)
+    ctxt = zeroctx.T  # smart trick taking advantage of numpy magic
+    ctxt['src_id'] = src_id
+
+    # setting rupture parameters
+    for par in cmaker.ruptparams:
+        if par == 'mag':
+            ctxt[par] = mag
+        elif par == 'occurrence_rate':
+            ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
+        elif par == 'width':
+            ctxt[par] = planar.wlr[:, 0]
+        elif par == 'strike':
+            ctxt[par] = planar.sdr[:, 0]
+        elif par == 'dip':
+            ctxt[par] = planar.sdr[:, 1]
+        elif par == 'rake':
+            ctxt[par] = planar.sdr[:, 2]
+        elif par == 'ztor':  # top edge depth
+            ctxt[par] = planar.corners[:, 2, 0]
+        elif par == 'zbot':  # bottom edge depth
+            ctxt[par] = planar.corners[:, 2, 3]
+        elif par == 'hypo_lon':
+            ctxt[par] = planar.hypo[:, 0]
+        elif par == 'hypo_lat':
+            ctxt[par] = planar.hypo[:, 1]
+        elif par == 'hypo_depth':
+            ctxt[par] = planar.hypo[:, 2]
+
+    # setting distance parameters
+    for par in dists:
+        zeroctx[par] = dists[par]
+    if cmaker.fewsites:
+        zeroctx['clon'] = closest[0]
+        zeroctx['clat'] = closest[1]
+
+    # setting site parameters
+    for par in cmaker.siteparams:
+        zeroctx[par] = sites.array[par]  # shape N-> (U, N)
+    if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
+        # read Probability Mass Function from model and reshape it
+        # into predetermined shape of probs_occur
+        pmf = tom.get_pmf(planar.wlr[:, 2],
+                          n_max=zeroctx['probs_occur'].shape[2])
+        zeroctx['probs_occur'] = pmf[:, numpy.newaxis, :]
+
+    return zeroctx.flatten()  # shape N*U
+
+
+@build_ctx.add(b'P', b'p')
+def build_ctx_Pp(src, sitecol, cmaker):
+    """
+    Context generator for point sources and collapsed point sources
+    """
+    dd = cmaker.defaultdict.copy()
+    tom = getattr(src, 'temporal_occurrence_model', None)
+
+    if tom and isinstance(tom, NegativeBinomialTOM):
+        if hasattr(src, 'pointsources'):  # CollapsedPointSource
+            maxrate = max(max(ps.mfd.occurrence_rates)
+                          for ps in src.pointsources)
+        else:  # regular source
+            maxrate = max(src.mfd.occurrence_rates)
+        p_size = tom.get_pmf(maxrate).shape[1]
+        dd['probs_occur'] = numpy.zeros(p_size)
+    else:
+        dd['probs_occur'] = numpy.zeros(0)
+
+    if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
+        dd['clon'] = numpy.float64(0.)
+        dd['clat'] = numpy.float64(0.)
+
+    builder = RecordBuilder(**dd)
+    cmaker.siteparams = [par for par in sitecol.array.dtype.names
+                       if par in dd]
+    cmaker.ruptparams = cmaker.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'}
+
+    with cmaker.ir_mon:
+        # building planar geometries
+        planardict = src.get_planar(cmaker.shift_hypo)
+
+    magdist = {mag: cmaker.maximum_distance(mag)
+               for mag, rate in src.get_annual_occurrence_rates()}
+    # cmaker.maximum_distance(mag) can be 0 if outside the mag range
+    maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
+    maxdist = magdist[maxmag]
+    cdist = sitecol.get_cdist(src.location)
+    # NB: having a decent max_radius is essential for performance!
+    mask = cdist <= maxdist + src.max_radius(maxdist)
+    sitecol = sitecol.filter(mask)
+    if sitecol is None:
+        return []
+
+    for magi, mag, planarlist, sites in _quartets(
+            cmaker, src, sitecol, cdist[mask], magdist, planardict):
+        if not planarlist:
+            continue
+        elif len(planarlist) > 1:  # when using ps_grid_spacing
+            pla = numpy.concatenate(planarlist).view(numpy.recarray)
+        else:
+            pla = planarlist[0]
+
+        offset = src.offset + magi * len(pla)
+        zctx = builder.zeros((len(pla), len(sites)))  # shape (N, U)
+
+        if cmaker.fewsites:
+            rup_ids = zctx['rup_id'].T  # numpy trick, shape (U, N)
+            rup_ids[:] = numpy.arange(offset, offset+len(pla))
+
+        # building contexts
+        ctx = _get_ctx_planar(cmaker, zctx, mag, pla, sites, src.id, tom)
+        ctxt = ctx[ctx.rrup < magdist[mag]]
+        if len(ctxt):
+            yield ctxt
+
+
+# ############################ ContextMaker ############################### #
 
 
 class ContextMaker(object):
@@ -699,172 +876,6 @@ class ContextMaker(object):
 
         return ctx
 
-    def _get_ctx_planar(self, mag, planar, sites, src_id, start_stop, tom):
-        # computing distances
-        rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
-        # get the closest points on the surface
-        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
-            closest = project_back(planar, xx, yy)  # (3, U, N)
-        dists = {'rrup': rrup}
-        for par in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists[par] = get_distances_planar(planar, sites, par)
-        for par in dists:
-            dst = dists[par]
-            if self.minimum_distance:
-                dst[dst < self.minimum_distance] = self.minimum_distance
-
-        # building contexts; ctx has shape (U, N), ctxt (N, U)
-        ctx = self.build_ctx((len(planar), len(sites)))
-        ctxt = ctx.T  # smart trick taking advantage of numpy magic
-        ctxt['src_id'] = src_id
-
-        if self.fewsites:
-            # the loop below is a bit slow
-            for u, rup_id in enumerate(range(*start_stop)):
-                ctx[u]['rup_id'] = rup_id
-
-        # setting rupture parameters
-        for par in self.ruptparams:
-            if par == 'mag':
-                ctxt[par] = mag
-            elif par == 'occurrence_rate':
-                ctxt[par] = planar.wlr[:, 2]  # shape U-> (N, U)
-            elif par == 'width':
-                ctxt[par] = planar.wlr[:, 0]
-            elif par == 'strike':
-                ctxt[par] = planar.sdr[:, 0]
-            elif par == 'dip':
-                ctxt[par] = planar.sdr[:, 1]
-            elif par == 'rake':
-                ctxt[par] = planar.sdr[:, 2]
-            elif par == 'ztor':  # top edge depth
-                ctxt[par] = planar.corners[:, 2, 0]
-            elif par == 'zbot':  # bottom edge depth
-                ctxt[par] = planar.corners[:, 2, 3]
-            elif par == 'hypo_lon':
-                ctxt[par] = planar.hypo[:, 0]
-            elif par == 'hypo_lat':
-                ctxt[par] = planar.hypo[:, 1]
-            elif par == 'hypo_depth':
-                ctxt[par] = planar.hypo[:, 2]
-
-        # setting distance parameters
-        for par in dists:
-            ctx[par] = dists[par]
-        if self.fewsites:
-            ctx['clon'] = closest[0]
-            ctx['clat'] = closest[1]
-
-        # setting site parameters
-        for par in self.siteparams:
-            ctx[par] = sites.array[par]  # shape N-> (U, N)
-        if hasattr(tom, 'get_pmf'):  # NegativeBinomialTOM
-            # read Probability Mass Function from model and reshape it
-            # into predetermined shape of probs_occur
-            pmf = tom.get_pmf(planar.wlr[:, 2],
-                              n_max=ctx['probs_occur'].shape[2])
-            ctx['probs_occur'] = pmf[:, numpy.newaxis, :]
-
-        return ctx
-
-    def gen_ctxs_planar(self, src, sitecol):
-        """
-        :param src: a (Collapsed)PointSource
-        :param sitecol: a filtered SiteCollection
-        :yields: context arrays
-        """
-        dd = self.defaultdict.copy()
-        tom = getattr(src, 'temporal_occurrence_model', None)
-
-        if tom and isinstance(tom, NegativeBinomialTOM):
-            if hasattr(src, 'pointsources'):  # CollapsedPointSource
-                maxrate = max(max(ps.mfd.occurrence_rates)
-                              for ps in src.pointsources)
-            else:  # regular source
-                maxrate = max(src.mfd.occurrence_rates)
-            p_size = tom.get_pmf(maxrate).shape[1]
-            dd['probs_occur'] = numpy.zeros(p_size)
-        else:
-            dd['probs_occur'] = numpy.zeros(0)
-
-        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
-            dd['clon'] = numpy.float64(0.)
-            dd['clat'] = numpy.float64(0.)
-
-        self.build_ctx = RecordBuilder(**dd).zeros
-        self.siteparams = [par for par in sitecol.array.dtype.names
-                           if par in dd]
-        self.ruptparams = (
-            self.REQUIRES_RUPTURE_PARAMETERS | {'occurrence_rate'})
-
-        with self.ir_mon:
-            # building planar geometries
-            planardict = src.get_planar(self.shift_hypo)
-
-        magdist = {mag: self.maximum_distance(mag)
-                   for mag, rate in src.get_annual_occurrence_rates()}
-        # self.maximum_distance(mag) can be 0 if outside the mag range
-        maxmag = max(mag for mag, dist in magdist.items() if dist > 0)
-        maxdist = magdist[maxmag]
-        cdist = sitecol.get_cdist(src.location)
-        # NB: having a decent max_radius is essential for performance!
-        mask = cdist <= maxdist + src.max_radius(maxdist)
-        sitecol = sitecol.filter(mask)
-        if sitecol is None:
-            return []
-
-        for magi, mag, planarlist, sites in self._quartets(
-                src, sitecol, cdist[mask], magdist, planardict):
-            if not planarlist:
-                continue
-            elif len(planarlist) > 1:  # when using ps_grid_spacing
-                pla = numpy.concatenate(planarlist).view(numpy.recarray)
-            else:
-                pla = planarlist[0]
-
-            offset = src.offset + magi * len(pla)
-            start_stop = offset, offset + len(pla)
-            ctx = self._get_ctx_planar(
-                mag, pla, sites, src.id, start_stop, tom).flatten()
-            ctxt = ctx[ctx.rrup < magdist[mag]]
-            if len(ctxt):
-                yield ctxt
-
-    def _quartets(self, src, sitecol, cdist, magdist, planardict):
-        minmag = self.maximum_distance.x[0]
-        maxmag = self.maximum_distance.x[-1]
-        # splitting by magnitude
-        if src.count_nphc() == 1:
-            # one rupture per magnitude
-            for m, (mag, pla) in enumerate(planardict.items()):
-                if minmag < mag < maxmag:
-                    yield m, mag, pla, sitecol
-        else:
-            for m, rup in enumerate(src.iruptures()):
-                mag = rup.mag
-                if mag > maxmag or mag < minmag:
-                    continue
-                arr = [rup.surface.array.reshape(-1, 3)]
-                pla = planardict[mag]
-                # NB: having a good psdist is essential for performance!
-                psdist = src.get_psdist(m, mag, self.pointsource_distance,
-                                        magdist)
-                close = sitecol.filter(cdist <= psdist)
-                far = sitecol.filter(cdist > psdist)
-                if self.fewsites:
-                    if close is None:  # all is far, common for small mag
-                        yield m, mag, arr, sitecol
-                    else:  # something is close
-                        yield m, mag, pla, sitecol
-                else:  # many sites
-                    if close is None:  # all is far
-                        yield m, mag, arr, far
-                    elif far is None:  # all is close
-                        yield m, mag, pla, close
-                    else:  # some sites are far, some are close
-                        yield m, mag, arr, far
-                        yield m, mag, pla, close
-
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id, dcache=None):
         """
@@ -905,10 +916,11 @@ class ContextMaker(object):
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
         if getattr(src, 'location', None) and step == 1:
-            return self.pla_mon.iter(self.gen_ctxs_planar(src, sitecol))
+            return self.pla_mon.iter(build_ctx(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
-            if src.code == b'F' and self.cache_distances:  # multifault source
-                src.dcache = Cache()  # enable distance cache
+            if src.code == b'F' and self.cache_distances and step == 1:
+                # enable distance cache only for multifault sources
+                src.dcache = Cache()
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
