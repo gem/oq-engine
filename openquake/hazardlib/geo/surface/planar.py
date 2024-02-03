@@ -937,10 +937,10 @@ class PlanarSurface(BaseSurface):
                    array.uv2 * yy.reshape(yy.shape + (1, )))
         return Mesh(*geo_utils.cartesian_to_spherical(vectors))
 
-    def _get_top_edge_centroid(self):
+    def get_top_edge_centroid(self):
         """
         Overrides :meth:`superclass' method
-        <openquake.hazardlib.geo.surface.base.BaseSurface._get_top_edge_centroid>`
+        <openquake.hazardlib.geo.surface.base.BaseSurface.get_top_edge_centroid>`
         in order to avoid creating a mesh.
         """
         lon, lat = geo_utils.get_middle_point(
