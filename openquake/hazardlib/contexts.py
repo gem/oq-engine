@@ -308,7 +308,7 @@ def simple_cmaker(gsims, imts, **params):
 
 build_ctx = CallableDict(keyfunc=operator.attrgetter('code'))
 
-
+# generator of quartets (rup_index, mag, planar_array, sites)
 def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
