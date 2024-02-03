@@ -346,8 +346,7 @@ def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
 
 
 # helper used to populate contexts for planar ruptures
-def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id,
-                    start_stop, tom):
+def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
 
     # computing distances
     rrup, xx, yy = project(planar, sites.xyz)  # (3, U, N)
@@ -365,11 +364,6 @@ def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id,
     # ctx has shape (U, N), ctxt (N, U)
     ctxt = zeroctx.T  # smart trick taking advantage of numpy magic
     ctxt['src_id'] = src_id
-
-    if cmaker.fewsites:
-        # the loop below is a bit slow
-        for u, rup_id in enumerate(range(*start_stop)):
-            zeroctx[u]['rup_id'] = rup_id
 
     # setting rupture parameters
     for par in cmaker.ruptparams:
@@ -471,12 +465,15 @@ def build_ctx_Pp(src, sitecol, cmaker):
             pla = planarlist[0]
 
         offset = src.offset + magi * len(pla)
-        start_stop = offset, offset + len(pla)
+        zctx = zeroctx((len(pla), len(sites)))
+
+        if cmaker.fewsites:
+            # the loop below is a bit slow
+            for u, rup_id in enumerate(range(offset, offset+len(pla))):
+                zctx[u]['rup_id'] = rup_id
 
         # building contexts
-        ctx = _get_ctx_planar(
-            cmaker, zeroctx((len(pla), len(sites))),
-            mag, pla, sites, src.id, start_stop, tom)
+        ctx = _get_ctx_planar(cmaker, zctx, mag, pla, sites, src.id, tom)
         ctxt = ctx[ctx.rrup < magdist[mag]]
         if len(ctxt):
             yield ctxt
