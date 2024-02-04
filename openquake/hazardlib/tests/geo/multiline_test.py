@@ -78,7 +78,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        uupp, tupp = ml.get_tu(mesh)
+        uupp, tupp = ml.get_tus(mesh)
 
         if PLOTTING:
             num = 10
@@ -101,7 +101,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_tu(mesh)
+        uupp, tupp = ml.get_tus(mesh)
 
         if PLOTTING:
             num = 10
@@ -124,7 +124,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_tu(mesh)
+        uupp, tupp = ml.get_tus(mesh)
 
         if PLOTTING:
             num = 10
