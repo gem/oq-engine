@@ -115,8 +115,8 @@ class MultiSurface(BaseSurface):
             if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
                 # in classical/case_62 there are KiteSurfaces and
                 # PlanarSurfaces together in NonParametricSources
-                # the `suid` is used only in MultiFaultSources
-                # srfc.tor_line.suid = getattr(srfc, 'suid', None)
+                # the `idx` is used only in MultiFaultSources
+                # srfc.tor_line.idx = getattr(srfc, 'idx', None)
                 srfc.tor_line.keep_corners(self.tol)
                 tors.append(srfc.tor_line)
 

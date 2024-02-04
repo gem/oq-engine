@@ -98,13 +98,13 @@ def _surf_param(surface, sites, param, dcache):
     if dcache is None or not hasattr(surface, 'surfaces'):
         return _surf_param_nc(surface, sites, param)
 
-    # assume the underlying surfaces have .suid attributes
-    suids = [s.suid for s in surface.surfaces]
+    # assume the underlying surfaces have .idx attributes
+    idxs = [s.idx for s in surface.surfaces]
     for surf in surface.surfaces:
-        if (surf.suid, param) not in dcache:
-            dcache[surf.suid, param] = _surf_param_nc(surf, sites, param)
+        if (surf.idx, param) not in dcache:
+            dcache[surf.idx, param] = _surf_param_nc(surf, sites, param)
     if param in ('rrup', 'rjb'):
-        dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
+        dist = numpy.min([dcache[idx, param] for idx in idxs], axis=0)
     elif param in ('rx', 'ry0'):
         if surface.tor is None:
             surface._set_tor()
