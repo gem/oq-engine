@@ -116,7 +116,7 @@ class MultiSurface(BaseSurface):
                 # in classical/case_62 there are KiteSurfaces and
                 # PlanarSurfaces together in NonParametricSources
                 # the `suid` is used only in MultiFaultSources
-                srfc._set_tor(getattr(srfc, 'suid', None))
+                srfc.tor_line.suid = getattr(srfc, 'suid', None)
                 srfc.tor_line.keep_corners(self.tol)
                 tors.append(srfc.tor_line)
 
