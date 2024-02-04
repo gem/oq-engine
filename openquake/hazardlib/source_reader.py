@@ -66,7 +66,7 @@ def check_unique(ids, msg='', strict=True):
             if strict:
                 raise nrml.DuplicatedID(errmsg)
             else:
-                logging.error('*' * 60 + ' DuplicatedID:\n' + errmsg)
+                logging.info('*' * 60 + ' DuplicatedID:\n' + errmsg)
 
 
 def gzpik(obj):
