@@ -24,7 +24,6 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
-from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -153,10 +152,8 @@ def main():
         N = len(sitecol)
         us = numpy.zeros((L, N))
         ts = numpy.zeros((L, N))
-        u2s = numpy.zeros((L, 2))
         for i, line in enumerate(lines):
-            us[i], ts[i], _w = line.get_tuw(sitecol)
-            u2s[i] = line.tuw[1]
+            ts[i], us[i], _w = line.get_tuw(sitecol)
     print(mon)
 
     rups = list(src.iter_ruptures())
