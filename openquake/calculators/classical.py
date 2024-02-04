@@ -573,11 +573,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((None, self.sitecol, cm, ds))
             else:
                 tiles = self.sitecol.split(numpy.ceil(sg.weight / maxw))
+                logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
                 for tile in tiles:
                     allargs.append((None, tile, cm, ds))
                     self.ntiles.append(len(tiles))
-        logging.warning('Generated at most %d tiles (avg=%.1f)',
-                        max(self.ntiles), numpy.mean(self.ntiles))
+        logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(
                 classical, allargs, h5=self.datastore.hdf5):
