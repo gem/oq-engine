@@ -73,31 +73,17 @@ class MultiLine(object):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        return _get_tu(self.shift, *get_tus(self.lines, mesh))
-
-
-def get_tus(lines: list, mesh: Mesh):
-    """
-    Computes the T and U coordinates for all the polylines in `lines` and the
-    sites in the `mesh`
-
-    :param lines:
-        A list of :class:`openquake.hazardlib.geo.line.Line` instances
-    :param mesh:
-        An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
-        sites location.
-    """
-    L = len(lines)
-    N = len(mesh)
-    tupps = np.zeros((L, N))
-    uupps = np.zeros((L, N))
-    weis = np.zeros((L, N))
-    for i, line in enumerate(lines):
-        tu, uu, we = line.get_tu(mesh)
-        tupps[i] = tu
-        uupps[i] = uu
-        weis[i] = we.sum(axis=0)
-    return tupps, uupps, weis
+        L = len(self.lines)
+        N = len(mesh)
+        tupps = np.zeros((L, N))
+        uupps = np.zeros((L, N))
+        weis = np.zeros((L, N))
+        for i, line in enumerate(self.lines):
+            tu, uu, we = line.get_tu(mesh)
+            tupps[i] = tu
+            uupps[i] = uu
+            weis[i] = we.sum(axis=0)
+        return _get_tu(self.shift, tupps, uupps, weis)
 
 
 def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
