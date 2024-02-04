@@ -24,6 +24,7 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -141,7 +142,7 @@ class MultiFaultTestCase(unittest.TestCase):
             mfs.set_sections(self.sections)
 
 
-if __name__ == '__main__':
+def main():
     # run a performance test with a reduced UCERF source
     srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
 
@@ -178,3 +179,16 @@ if __name__ == '__main__':
                 aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
             except Exception:
                 breakpoint()
+
+def main2():
+    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
+    with performance.Monitor() as mon:
+        lines = [sec.tor_line for sec in src.get_sections()]
+        ml = MultiLine(lines)
+        ml.get_tus(sitecol)
+    print(mon)
+
+
+if __name__ == '__main__':
+    main2()
