@@ -380,14 +380,14 @@ class Line(object):
         return Line(resampled_points)
 
     @cached_property
-    def utw(self):
+    def tuw(self):
         """
         Array of shape (3, 2) constructed from the endpoints
         """
         lons = np.array([self.coo[0, 0], self.coo[-1, 0]])
         lats = np.array([self.coo[0, 1], self.coo[-1, 1]])
-        u, t, w = self.get_tuw(mesh.Mesh(lons, lats))
-        return np.array([u, t, w.sum(axis=0)])
+        t, u, w = self.get_tuw(mesh.Mesh(lons, lats))
+        return np.array([t, u, w.sum(axis=0)])
 
     def get_tuw(self, mesh):
         """

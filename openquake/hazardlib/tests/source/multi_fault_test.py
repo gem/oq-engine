@@ -156,7 +156,7 @@ def main():
         u2s = numpy.zeros((L, 2))
         for i, line in enumerate(lines):
             us[i], ts[i], _w = line.get_tuw(sitecol)
-            u2s[i] = line.utw[0]
+            u2s[i] = line.tuw[1]
     print(mon)
 
     rups = list(src.iter_ruptures())
