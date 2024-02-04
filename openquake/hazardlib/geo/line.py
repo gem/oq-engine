@@ -386,10 +386,10 @@ class Line(object):
         """
         lons = np.array([self.coo[0, 0], self.coo[-1, 0]])
         lats = np.array([self.coo[0, 1], self.coo[-1, 1]])
-        u, t, w = self.get_utw(mesh.Mesh(lons, lats))
+        u, t, w = self.get_tuw(mesh.Mesh(lons, lats))
         return np.array([u, t, w.sum(axis=0)])
 
-    def get_utw(self, mesh):
+    def get_tuw(self, mesh):
         """
         Computes the U and T coordinates of the GC2 method for a mesh of
         points.
@@ -408,7 +408,7 @@ class Line(object):
         weights, iot = get_ti_weights(ui, ti, slen)
 
         # Now compute T and U
-        t_upp, u_upp = get_utw(ui, ti, slen, weights)
+        t_upp, u_upp = get_tuw(ui, ti, slen, weights)
         t_upp[iot] = 0.0
         return t_upp, u_upp, weights
 
@@ -485,7 +485,7 @@ def get_average_azimuth(azimuths, distances) -> float:
 
 
 @compile('(float64[:,:],float64[:,:],float64[:], float64[:,:])')
-def get_utw(ui, ti, sl, weights):
+def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
 

@@ -244,7 +244,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_utw(mesh)
+        tupp, uupp, wei = line.get_tuw(mesh)
         expected_t = geo.geodetic.distance(0.2, 0.0, 0.0,
                                            coo[0, 0], coo[0, 1], 0.0)
         expected_u = geo.geodetic.distance(0.0, 0.0, 0.0,
@@ -268,7 +268,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh = geo.Mesh(coo[:, 0], coo[:, 1])
 
         # Compute the TU coordinates
-        tupp, u_upp, wei = line.get_utw(mesh)
+        tupp, u_upp, wei = line.get_tuw(mesh)
 
         # TODO add test
 
@@ -285,7 +285,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.005)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_utw(mesh)
+        tupp, uupp, wei = line.get_tuw(mesh)
 
         # Plotting results
         if PLOTTING:
@@ -306,7 +306,7 @@ class ComputeTUTest(unittest.TestCase):
         mesh, plons, plats = get_mesh(-0.6, 0.6, -1.0, 0.4, 0.01)
 
         # Compute the TU coordinates
-        tupp, uupp, wei = line.get_utw(mesh)
+        tupp, uupp, wei = line.get_tuw(mesh)
 
         if PLOTTING:
             num = 10

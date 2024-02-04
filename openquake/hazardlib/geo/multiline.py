@@ -76,7 +76,7 @@ class MultiLine(object):
         uupps = np.zeros((L, N))
         weis = np.zeros((L, N))
         for i, line in enumerate(self.lines):
-            tu, uu, we = line.get_utw(mesh)
+            tu, uu, we = line.get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
