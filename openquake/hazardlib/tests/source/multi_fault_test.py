@@ -144,9 +144,22 @@ class MultiFaultTestCase(unittest.TestCase):
 
 def main():
     # run a performance test with a reduced UCERF source
-    srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
+    print('Computing u, t, u2 values for the sections')
+    with performance.Monitor() as mon:
+        lines = [sec.tor_line for sec in src.get_sections()]
+        L = len(lines)
+        N = len(sitecol)
+        us = numpy.zeros((L, N))
+        ts = numpy.zeros((L, N))
+        u2s = numpy.zeros((L, 2))
+        for i, line in enumerate(lines):
+            us[i], ts[i], _w = line.get_tu(sitecol)
+            u2s[i] = line.utw[0]
+    print(mon)
 
-    rups = list(srcs[0].iter_ruptures())
+    rups = list(src.iter_ruptures())
     lines = []
     data = []
     for rup in rups:
@@ -157,11 +170,10 @@ def main():
     # only 230/174,486 lines are unique, i.e. a 760x speedup is possible
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 
-    sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     with performance.Monitor() as mon:
-        [ctxt] = cmaker.from_srcs(srcs, sitecol)
+        [ctxt] = cmaker.from_srcs([src], sitecol)
     print(mon)
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
@@ -180,15 +192,6 @@ def main():
             except Exception:
                 breakpoint()
 
-def main2():
-    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
-    sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
-    with performance.Monitor() as mon:
-        lines = [sec.tor_line for sec in src.get_sections()]
-        ml = MultiLine(lines)
-        ml.get_tus(sitecol)
-    print(mon)
-
 
 if __name__ == '__main__':
-    main2()
+    main()

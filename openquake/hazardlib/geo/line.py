@@ -21,9 +21,7 @@
 import numpy as np
 from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import mesh, geodetic, utils, Point
 
 TOLERANCE = 0.1
 SMALL = 1e-2
@@ -381,6 +379,16 @@ class Line(object):
 
         return Line(resampled_points)
 
+    @cached_property
+    def utw(self):
+        """
+        Array of shape (3, 2) constructed from the endpoints
+        """
+        lons = np.array([self.coo[0, 0], self.coo[-1, 0]])
+        lats = np.array([self.coo[0, 1], self.coo[-1, 1]])
+        u, t, w = self.get_tu(mesh.Mesh(lons, lats))
+        return np.array([u, t, w.sum(axis=0)])
+
     def get_tu(self, mesh):
         """
         Computes the U and T coordinates of the GC2 method for a mesh of
@@ -391,7 +399,7 @@ class Line(object):
         """
         # Compute u hat and t hat for each segment. tmp has shape
         # (num_segments x 3)
-        slen, uhat, that = self.get_tu_hat()
+        slen, uhat, that = self.tu_hat
 
         # Get local coordinates for the sites
         ui, ti = self.get_ui_ti(mesh, uhat, that)
@@ -428,7 +436,8 @@ class Line(object):
             ti[i, :] = tmp @ that[i, 0:2]
         return ui, ti
 
-    def get_tu_hat(self):
+    @cached_property
+    def tu_hat(self):
         """
         Return the unit vectors defining the local origin for each segment of
         the trace.
