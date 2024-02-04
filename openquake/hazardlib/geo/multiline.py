@@ -64,9 +64,7 @@ class MultiLine(object):
         # Reorder the lines according to the origin and compute the shift
         self.lines = [self.lines[i] for i in soidx]
         self.shift = get_coordinate_shift(self.lines, olon, olat, avg_azim)
-
-        u, _ = self.get_tus(ep)
-        self.u_max = np.abs(u).max()
+        self.u_max = np.abs(self.get_tus(ep)[0]).max()
 
     def get_tus(self, mesh):
         """
