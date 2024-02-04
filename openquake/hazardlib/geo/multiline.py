@@ -65,8 +65,7 @@ class MultiLine(object):
         self.lines = [self.lines[i] for i in soidx]
         self.shift = get_coordinate_shift(self.lines, olon, olat, avg_azim)
 
-        ep_mesh = get_endpoints(self.lines)
-        u, _ = self.get_tus(ep_mesh)
+        u, _ = self.get_tus(ep)
         self.u_max = np.abs(u).max()
 
     def get_tus(self, mesh):
