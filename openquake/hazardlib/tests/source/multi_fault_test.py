@@ -155,7 +155,7 @@ def main():
         ts = numpy.zeros((L, N))
         u2s = numpy.zeros((L, 2))
         for i, line in enumerate(lines):
-            us[i], ts[i], _w = line.get_ut(sitecol)
+            us[i], ts[i], _w = line.get_utw(sitecol)
             u2s[i] = line.utw[0]
     print(mon)
 

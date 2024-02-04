@@ -65,7 +65,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         self.lines = [linea, lineb]
 
-    def test_get_ut(self):
+    def test_get_utw(self):
         # Get the coords of the lines composing the multiline
         lons = []
         lats = []
