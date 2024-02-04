@@ -475,7 +475,6 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            logging.info('Using parallel tiling')
             self.execute_big(maxw * 2)  # build half the tasks
         self.store_info()
         if self.cfactor[0] == 0:
@@ -577,8 +576,8 @@ class ClassicalCalculator(base.HazardCalculator):
                 for tile in tiles:
                     allargs.append((None, tile, cm, ds))
                     self.ntiles.append(len(tiles))
-        logging.info('Generated at most %d tiles (avg=%.1f)',
-                     max(self.ntiles), numpy.mean(self.ntiles))
+        logging.warning('Generated at most %d tiles (avg=%.1f)',
+                        max(self.ntiles), numpy.mean(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(
                 classical, allargs, h5=self.datastore.hdf5):
