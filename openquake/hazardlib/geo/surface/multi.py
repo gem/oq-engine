@@ -317,7 +317,7 @@ class MultiSurface(BaseSurface):
         """
         if self.tor is None:
             self._set_tor()
-        uut, tut = self.tor.get_tus(mesh)
+        uut, tut = self.tor.get_uts(mesh)
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
@@ -330,7 +330,7 @@ class MultiSurface(BaseSurface):
         if self.tor is None:
             self._set_tor()
 
-        uut, tut = self.tor.get_tus(mesh)
+        uut, tut = self.tor.get_uts(mesh)
         ry0 = np.zeros_like(uut)
         ry0[uut < 0] = np.abs(uut[uut < 0])
         condition = uut > self.tor.u_max

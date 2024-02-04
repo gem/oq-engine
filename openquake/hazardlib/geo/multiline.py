@@ -64,9 +64,9 @@ class MultiLine(object):
         # Reorder the lines according to the origin and compute the shift
         self.lines = [self.lines[i] for i in soidx]
         self.shift = get_coordinate_shift(self.lines, olon, olat, avg_azim)
-        self.u_max = np.abs(self.get_tus(ep)[0]).max()
+        self.u_max = np.abs(self.get_uts(ep)[0]).max()
 
-    def get_tus(self, mesh):
+    def get_uts(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
@@ -76,11 +76,11 @@ class MultiLine(object):
         uupps = np.zeros((L, N))
         weis = np.zeros((L, N))
         for i, line in enumerate(self.lines):
-            tu, uu, we = line.get_tu(mesh)
+            tu, uu, we = line.get_ut(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
-        return _get_tus(self.shift, tupps, uupps, weis)
+        return _get_uts(self.shift, tupps, uupps, weis)
 
 
 def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
@@ -200,7 +200,7 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
 
 
 @compile('float64[:],float64[:,:],float64[:,:],float64[:,:]')
-def _get_tus(shifts, tupps, uupps, weis):
+def _get_uts(shifts, tupps, uupps, weis):
     for i, (shift, tupp, uupp, wei) in enumerate(
             zip(shifts, tupps, uupps, weis)):
         if i == 0:  # initialize
