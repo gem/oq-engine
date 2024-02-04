@@ -21,7 +21,7 @@
 import numpy as np
 from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import mesh, geodetic, utils, Point
+from openquake.hazardlib.geo import geodetic, utils, Point
 
 TOLERANCE = 0.1
 SMALL = 1e-2
