@@ -16,7 +16,6 @@
 
 import unittest
 import numpy as np
-import matplotlib.pyplot as plt
 
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.multiline import MultiLine
