@@ -112,7 +112,7 @@ class MultiFaultSource(BaseSeismicSource):
             geoms = f['multi_fault_sections'][:]  # small
         sections = [geom_to_kite(geom) for geom in geoms]
         for idx, sec in enumerate(sections):
-            sec.suid = idx
+            sec.idx = idx
         return sections
 
     # used in the tests, where the sections are manually given and not
@@ -125,7 +125,7 @@ class MultiFaultSource(BaseSeismicSource):
 
         # this is fundamental for the distance cache.
         for idx, sec in enumerate(sections):
-            sec.suid = idx
+            sec.idx = idx
 
         # `i` is the index of the rupture of the `n` admitted by this source.
         # In this loop we check that all the IDs of the sections composing one

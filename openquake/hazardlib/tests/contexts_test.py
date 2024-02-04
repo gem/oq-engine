@@ -399,7 +399,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         geom = to_python(geom_path, sc)
         src = ssm[0][0]
         sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
+        s2i = {idx: i for i, idx in enumerate(geom.sections)}
         src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                             for idxs in src.rupture_idxs]
         src.set_sections(sections)
@@ -456,7 +456,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         geom = to_python(geom_path, sc)
         src = ssm[0][0]
         sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
+        s2i = {idx: i for i, idx in enumerate(geom.sections)}
         src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                             for idxs in src.rupture_idxs]
         src.set_sections(sections)

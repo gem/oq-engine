@@ -21,9 +21,7 @@
 import numpy as np
 from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import mesh, geodetic, utils, Point
 
 TOLERANCE = 0.1
 SMALL = 1e-2
@@ -381,7 +379,7 @@ class Line(object):
 
         return Line(resampled_points)
 
-    def get_tu(self, mesh):
+    def get_tuw(self, mesh):
         """
         Computes the U and T coordinates of the GC2 method for a mesh of
         points.
@@ -391,7 +389,7 @@ class Line(object):
         """
         # Compute u hat and t hat for each segment. tmp has shape
         # (num_segments x 3)
-        slen, uhat, that = self.get_tu_hat()
+        slen, uhat, that = self.tu_hat
 
         # Get local coordinates for the sites
         ui, ti = self.get_ui_ti(mesh, uhat, that)
@@ -400,7 +398,7 @@ class Line(object):
         weights, iot = get_ti_weights(ui, ti, slen)
 
         # Now compute T and U
-        t_upp, u_upp = get_tu(ui, ti, slen, weights)
+        t_upp, u_upp = get_tuw(ui, ti, slen, weights)
         t_upp[iot] = 0.0
         return t_upp, u_upp, weights
 
@@ -428,7 +426,8 @@ class Line(object):
             ti[i, :] = tmp @ that[i, 0:2]
         return ui, ti
 
-    def get_tu_hat(self):
+    @cached_property
+    def tu_hat(self):
         """
         Return the unit vectors defining the local origin for each segment of
         the trace.
@@ -476,7 +475,7 @@ def get_average_azimuth(azimuths, distances) -> float:
 
 
 @compile('(float64[:,:],float64[:,:],float64[:], float64[:,:])')
-def get_tu(ui, ti, sl, weights):
+def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
 

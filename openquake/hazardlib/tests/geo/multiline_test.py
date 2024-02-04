@@ -65,7 +65,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         self.lines = [linea, lineb]
 
-    def test_get_tu(self):
+    def test_get_tuw(self):
         # Get the coords of the lines composing the multiline
         lons = []
         lats = []
@@ -78,17 +78,17 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        uupp, tupp = ml.get_tu(mesh)
+        uupp, tupp = ml.get_uts(mesh)
 
         if PLOTTING:
             num = 10
             # U
             z = np.reshape(uupp, plons.shape)
-            label = 'test_get_tu - U'
+            label = 'test_get_ut - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
             z = np.reshape(tupp, plons.shape)
-            label = 'test_get_tu - T'
+            label = 'test_get_ut - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
     def test_tu_figure09(self):
@@ -101,7 +101,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_tu(mesh)
+        uupp, tupp = ml.get_uts(mesh)
 
         if PLOTTING:
             num = 10
@@ -124,7 +124,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_tu(mesh)
+        uupp, tupp = ml.get_uts(mesh)
 
         if PLOTTING:
             num = 10

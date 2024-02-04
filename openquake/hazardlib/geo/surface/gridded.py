@@ -46,7 +46,7 @@ class GriddedSurface(BaseSurface):
 
     def __init__(self, mesh=None):
         self.mesh = mesh
-        self.suid = None
+        self.idx = None
         self.strike = None
         self.dip = None
 
