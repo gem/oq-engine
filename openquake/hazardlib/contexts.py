@@ -439,10 +439,6 @@ def build_ctx_Pp(src, sitecol, cmaker):
     else:
         dd['probs_occur'] = numpy.zeros(0)
 
-    if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
-        dd['clon'] = numpy.float64(0.)
-        dd['clat'] = numpy.float64(0.)
-
     builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
                        if par in dd]
@@ -631,8 +627,8 @@ class ContextMaker(object):
         dic['src_id'] = I32(0)
         dic['rup_id'] = U32(0)
         dic['sids'] = U32(0)
-        dic['rrup'] = numpy.float64(0)
-        dic['occurrence_rate'] = numpy.float64(0)
+        dic['rrup'] = F64(0)
+        dic['occurrence_rate'] = F64(0)
         self.defaultdict = dic
         self.shift_hypo = param.get('shift_hypo')
 
@@ -737,9 +733,6 @@ class ContextMaker(object):
             shps = [ctx.probs_occur.shape for ctx in ctxs]
             np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
-        if self.fewsites:  # must be at the end
-            dd['clon'] = numpy.float64(0.)
-            dd['clat'] = numpy.float64(0.)
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
@@ -888,6 +881,9 @@ class ContextMaker(object):
             if 'rrup' in self.REQUIRES_DISTANCES:
                 ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
+        if self.fewsites:
+            set_distances(ctx, rup, sites, 'clon_clat', dcache)
+
         return ctx
 
     # this is called for non-point sources (or point sources in preclassical)
@@ -906,11 +902,8 @@ class ContextMaker(object):
                     r_sites = sites.filter(mask)
                     rctx = self.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
                     rctx.src_id = src_id
-                    if src_id >= 0:  # classical calculation
+                    if src_id >= 0:
                         rctx.rup_id = rup.rup_id
-                        if self.fewsites:
-                            set_distances(
-                                rctx, rup, r_sites, 'clon_clat', dcache)
                     yield rctx
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
@@ -927,6 +920,10 @@ class ContextMaker(object):
             iterator over recarrays
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
+            self.defaultdict['clon'] = F64(0.)
+            self.defaultdict['clat'] = F64(0.)
+
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(build_ctx(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
