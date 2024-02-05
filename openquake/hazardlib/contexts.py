@@ -497,17 +497,18 @@ def build_ctx_F(src, sitecol, cmaker):
     rctxs = []
     with cmaker.ir_mon:
         rups = list(src.iter_ruptures())
-    for i, rup in enumerate(rups):
-        if rup.mag > maxmag or rup.mag < minmag:
-            continue
-        rup.rup_id = src.offset + i
-        dist = get_distances(rup, sitecol, 'rrup')
-        mask = dist <= cmaker.maximum_distance(rup.mag)
-        if mask.any():
-            r_sites = sitecol.filter(mask)
-            rctx = cmaker.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
-            rctx.src_id = src.id
-            rctxs.append(rctx)
+    with cmaker.ctx_mon:
+        for i, rup in enumerate(rups):
+            if rup.mag > maxmag or rup.mag < minmag:
+                continue
+            rup.rup_id = src.offset + i
+            dist = get_distances(rup, sitecol, 'rrup')
+            mask = dist <= cmaker.maximum_distance(rup.mag)
+            if mask.any():
+                r_sites = sitecol.filter(mask)
+                rctx = cmaker.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
+                rctx.src_id = src.id
+                rctxs.append(rctx)
     if cmaker.cache_distances:
         dcache.clear()
     yield cmaker.recarray(rctxs)
@@ -664,7 +665,7 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.pla_mon = monitor('planar contexts', measuremem=False)
-        self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
+        self.ctx_mon = monitor('nonplanar contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
@@ -957,7 +958,7 @@ class ContextMaker(object):
             return self.pla_mon.iter(build_ctx(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:  # multifault source
-                return self.ctx_mon.iter(build_ctx(src, sitecol, self))
+                return build_ctx(src, sitecol, self)
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:

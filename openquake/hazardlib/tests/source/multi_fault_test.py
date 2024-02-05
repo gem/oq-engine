@@ -169,8 +169,9 @@ def main():
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
-    with performance.Monitor() as mon:
-        [ctxt] = cmaker.from_srcs([src], sitecol)
+    [ctxt] = cmaker.from_srcs([src], sitecol)
+    print(cmaker.ir_mon)
+    print(cmaker.ctx_mon)
     print(mon)
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
