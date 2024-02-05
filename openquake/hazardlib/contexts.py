@@ -497,6 +497,10 @@ def build_ctx_F(src, sitecol, cmaker):
     rctxs = []
     with cmaker.ir_mon:
         rups = list(src.iter_ruptures())
+    if 'clon' in cmaker.defaultdict:
+        dnames = cmaker.REQUIRES_DISTANCES | {'clon', 'clat'}
+    else:
+        dnames = cmaker.REQUIRES_DISTANCES
     with cmaker.ctx_mon:
         for i, rup in enumerate(rups):
             if rup.mag > maxmag or rup.mag < minmag:
@@ -505,8 +509,9 @@ def build_ctx_F(src, sitecol, cmaker):
             dist = get_distances(rup, sitecol, 'rrup')
             mask = dist <= cmaker.maximum_distance(rup.mag)
             if mask.any():
-                r_sites = sitecol.filter(mask)
-                rctx = cmaker.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
+                rctx = cmaker.get_legacy_ctx(rup, sitecol, dist, dcache)
+                for name in dnames:
+                    setattr(rctx, name, getattr(rctx, name)[mask])
                 rctx.src_id = src.id
                 rctxs.append(rctx)
     if cmaker.cache_distances:

@@ -144,7 +144,7 @@ class MultiFaultTestCase(unittest.TestCase):
 def main():
     # run a performance test with a reduced UCERF source
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
-    sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
+    sitecol = SiteCollection.from_points([-122, -121], [37, 27])
     print('Computing u, t, u2 values for the sections')
     with performance.Monitor() as mon:
         lines = [sec.tor_line for sec in src.get_sections()]
@@ -164,11 +164,11 @@ def main():
             lines.append(surf.tor_line)
             data.append(surf.tor_line.coo.tobytes())
     uni, inv = numpy.unique(data, return_inverse=True)
-    # only 230/174,486 lines are unique, i.e. a 760x speedup is possible
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+    cmaker = contexts.simple_cmaker(
+        [gsim], ['PGA'], max_sites_disagg=1, cache_distances=1)
     [ctxt] = cmaker.from_srcs([src], sitecol)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
