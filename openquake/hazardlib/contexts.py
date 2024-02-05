@@ -483,8 +483,38 @@ def build_ctx_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
-# ############################ ContextMaker ############################### #
+@build_ctx.add(b'F')
+def build_ctx_F(src, sitecol, cmaker):
+    """
+    Context generator for multifault sources
+    """
+    if cmaker.cache_distances:
+        dcache = Cache()
+    else:
+        dcache = None
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    rctxs = []
+    with cmaker.ir_mon:
+        rups = list(src.iter_ruptures())
+    with cmaker.ctx_mon:
+        for i, rup in enumerate(rups):
+            if rup.mag > maxmag or rup.mag < minmag:
+                continue
+            rup.rup_id = src.offset + i
+            dist = get_distances(rup, sitecol, 'rrup')
+            mask = dist <= cmaker.maximum_distance(rup.mag)
+            if mask.any():
+                r_sites = sitecol.filter(mask)
+                rctx = cmaker.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
+                rctx.src_id = src.id
+                rctxs.append(rctx)
+    if cmaker.cache_distances:
+        dcache.clear()
+    yield cmaker.recarray(rctxs)
 
+    
+# ############################ ContextMaker ############################### #
 
 class ContextMaker(object):
     """
@@ -635,7 +665,7 @@ class ContextMaker(object):
     def init_monitoring(self, monitor):
         # instantiating child monitors, may be called in the workers
         self.pla_mon = monitor('planar contexts', measuremem=False)
-        self.ctx_mon = monitor('nonplanar contexts', measuremem=False)
+        self.ctx_mon = monitor('nonplanar contexts', measuremem=True)
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
@@ -793,8 +823,6 @@ class ContextMaker(object):
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 ctxs.extend(self.get_ctx_iter(src, sites))
-            if hasattr(src, 'dcache'):
-                print(src.dcache)
         return concat(ctxs)
 
     def make_legacy_ctx(self, rup):
@@ -927,9 +955,8 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(build_ctx(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
-            if src.code == b'F' and self.cache_distances and step == 1:
-                # enable distance cache only for multifault sources
-                src.dcache = Cache()
+            if src.code == b'F' and step == 1:  # multifault source
+                return build_ctx(src, sitecol, self)
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
@@ -951,9 +978,7 @@ class ContextMaker(object):
             rups_sites, src_id, getattr(src, 'dcache', None))
         blocks = block_splitter(rctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
-        dcache = getattr(src, 'dcache', {})
-        return self.ctx_mon.iter(map(self.recarray, blocks),
-                                 atstop=dcache.clear)
+        return self.ctx_mon.iter(map(self.recarray, blocks))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
