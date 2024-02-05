@@ -888,6 +888,9 @@ class ContextMaker(object):
             if 'rrup' in self.REQUIRES_DISTANCES:
                 ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
+        if self.fewsites:
+            set_distances(ctx, rup, sites, 'clon_clat', dcache)
+
         return ctx
 
     # this is called for non-point sources (or point sources in preclassical)
@@ -906,11 +909,8 @@ class ContextMaker(object):
                     r_sites = sites.filter(mask)
                     rctx = self.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
                     rctx.src_id = src_id
-                    if src_id >= 0:  # classical calculation
+                    if src_id >= 0:
                         rctx.rup_id = rup.rup_id
-                        if self.fewsites:
-                            set_distances(
-                                rctx, rup, r_sites, 'clon_clat', dcache)
                     yield rctx
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):

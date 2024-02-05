@@ -123,7 +123,12 @@ def get_distances(rupture, sites, param, dcache=None):
     """
     surf = rupture.surface
     if not surf:  # PointRupture
-        dist = rupture.hypocenter.distance_to_mesh(sites)
+        if param == 'clon_clat':
+            dist = numpy.empty((len(sites), 2))
+            dist[:, 0] = rupture.hypocenter.x
+            dist[:, 1] = rupture.hypocenter.y
+        else:
+            dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
         dist = _surf_param(surf, sites, 'rrup', dcache)
     elif param == 'rx':
