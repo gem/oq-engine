@@ -952,9 +952,9 @@ class ZhaoEtAl2016SSlabPErg(ZhaoEtAl2016Asc):
     # Requires site coordinates for ray tracing
     REQUIRES_SITES_PARAMETERS = {'vs30', 'lon', 'lat'}
 
-    #: Required distance measure is Rrup, Rvolc and closest_point
-    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'closest_point', 'clon', 'clat'}
-    
+    #: Required distance measure is Rrup, Rvolc and clon, clat
+    REQUIRES_DISTANCES = {'rrup', 'rvolc', 'clon', 'clat'}
+
     # Set coeff tables
     COEFFS = COEFFS_SLAB
     COEFFS_SITE = COEFFS_SITE_SLAB
