@@ -440,8 +440,8 @@ def build_ctx_Pp(src, sitecol, cmaker):
         dd['probs_occur'] = numpy.zeros(0)
 
     if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
-        dd['clon'] = numpy.float64(0.)
-        dd['clat'] = numpy.float64(0.)
+        dd['clon'] = F64(0.)
+        dd['clat'] = F64(0.)
 
     builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
@@ -631,8 +631,8 @@ class ContextMaker(object):
         dic['src_id'] = I32(0)
         dic['rup_id'] = U32(0)
         dic['sids'] = U32(0)
-        dic['rrup'] = numpy.float64(0)
-        dic['occurrence_rate'] = numpy.float64(0)
+        dic['rrup'] = F64(0)
+        dic['occurrence_rate'] = F64(0)
         self.defaultdict = dic
         self.shift_hypo = param.get('shift_hypo')
 
@@ -738,8 +738,8 @@ class ContextMaker(object):
             np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
         if self.fewsites:  # must be at the end
-            dd['clon'] = numpy.float64(0.)
-            dd['clat'] = numpy.float64(0.)
+            dd['clon'] = F64(0.)
+            dd['clat'] = F64(0.)
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
