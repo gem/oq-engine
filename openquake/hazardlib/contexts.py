@@ -488,6 +488,10 @@ def build_ctx_F(src, sitecol, cmaker):
     """
     Context generator for multifault sources
     """
+    if cmaker.cache_distances:
+        dcache = Cache()
+    else:
+        dcache = None
     minmag = cmaker.maximum_distance.x[0]
     maxmag = cmaker.maximum_distance.x[-1]
     rctxs = []
@@ -501,14 +505,15 @@ def build_ctx_F(src, sitecol, cmaker):
         mask = dist <= cmaker.maximum_distance(rup.mag)
         if mask.any():
             r_sites = sitecol.filter(mask)
-            rctx = cmaker.get_legacy_ctx(rup, r_sites, dist[mask])
+            rctx = cmaker.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
             rctx.src_id = src.id
             rctxs.append(rctx)
+    if cmaker.cache_distances:
+        dcache.clear()
     yield cmaker.recarray(rctxs)
 
     
 # ############################ ContextMaker ############################### #
-
 
 class ContextMaker(object):
     """
@@ -951,11 +956,8 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(build_ctx(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
-            if src.code == b'F' and self.cache_distances and step == 1:
-                # enable distance cache only for multifault sources
-                src.dcache = Cache()
-                return self.pla_mon.iter(build_ctx(src, sitecol, self),
-                                         atstop=src.dcache.clear)
+            if src.code == b'F' and step == 1:  # multifault source
+                return self.ctx_mon.iter(build_ctx(src, sitecol, self))
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
@@ -977,9 +979,7 @@ class ContextMaker(object):
             rups_sites, src_id, getattr(src, 'dcache', None))
         blocks = block_splitter(rctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
-        dcache = getattr(src, 'dcache', {})
-        return self.ctx_mon.iter(map(self.recarray, blocks),
-                                 atstop=dcache.clear)
+        return self.ctx_mon.iter(map(self.recarray, blocks))
 
     def max_intensity(self, sitecol1, mags, dists):
         """
