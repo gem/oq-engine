@@ -498,9 +498,9 @@ def build_ctx_F(src, sitecol, cmaker):
     with cmaker.ir_mon:
         rups = list(src.iter_ruptures())
     if 'clon' in cmaker.defaultdict:
-        dnames = cmaker.REQUIRES_DISTANCES | {'clon', 'clat'}
+        dnames = cmaker.REQUIRES_DISTANCES | {'clon', 'clat', 'sids'}
     else:
-        dnames = cmaker.REQUIRES_DISTANCES
+        dnames = cmaker.REQUIRES_DISTANCES | {'sids'}
     with cmaker.ctx_mon:
         for i, rup in enumerate(rups):
             if rup.mag > maxmag or rup.mag < minmag:
