@@ -176,8 +176,7 @@ def main():
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker(
-        [gsim], ['PGA'], max_sites_disagg=1, cache_distances=1)
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     [ctxt] = cmaker.from_srcs([src], sitecol)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
