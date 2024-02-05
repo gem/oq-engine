@@ -506,6 +506,7 @@ def build_ctx_F(src, sitecol, cmaker):
             mask = dist <= cmaker.maximum_distance(rup.mag)
             if mask.any():
                 rctx = cmaker.get_legacy_ctx(rup, sitecol, dist, dcache)
+                # copy the correct slice of distances and site_params
                 for key in cmaker.defaultdict:
                     arr = getattr(rctx, key)
                     if isinstance(arr, numpy.ndarray):
