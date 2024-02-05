@@ -932,7 +932,8 @@ class ContextMaker(object):
                 dist = get_distances(rup, sites, 'rrup', dcache)
                 mask = dist <= magdist
                 if mask.any():
-                    rctx = self.get_legacy_ctx(rup, sites, dist, dcache)
+                    r_sites = sites.filter(mask)
+                    rctx = self.get_legacy_ctx(rup, r_sites, dist[mask], dcache)
                     rctx.src_id = src_id
                     if src_id >= 0:
                         rctx.rup_id = rup.rup_id
