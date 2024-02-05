@@ -56,9 +56,8 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc clon_clat'
-    .split())
+KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
+azimuthcp rvolc clon_clat clon clat'''.split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
@@ -873,7 +872,12 @@ class ContextMaker(object):
         ctx.rrup = distances
         ctx.sites = sites
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            set_distances(ctx, rup, sites, param, dcache)
+            if param == 'clon':
+                set_distances(ctx, rup, sites, 'clon_clat', dcache)
+            elif param == 'clat':
+                pass
+            else:
+                set_distances(ctx, rup, sites, param, dcache)
 
         # Equivalent distances
         reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)

@@ -140,7 +140,7 @@ def get_distances(rupture, sites, param, dcache=None):
         dist = rupture.get_cdppvalue(sites)
     elif param == 'azimuth':
         dist = surf.get_azimuth(sites)
-    elif param == 'azimuth_cp':
+    elif param == 'azimuthcp':
         dist = surf.get_azimuth_of_closest_point(sites)
     elif param == 'clon_clat':
         dist = _surf_param(surf, sites, param, dcache)
