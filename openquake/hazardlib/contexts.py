@@ -439,10 +439,6 @@ def build_ctx_Pp(src, sitecol, cmaker):
     else:
         dd['probs_occur'] = numpy.zeros(0)
 
-    if cmaker.fewsites or 'clon' in cmaker.REQUIRES_DISTANCES:
-        dd['clon'] = F64(0.)
-        dd['clat'] = F64(0.)
-
     builder = RecordBuilder(**dd)
     cmaker.siteparams = [par for par in sitecol.array.dtype.names
                        if par in dd]
@@ -737,9 +733,6 @@ class ContextMaker(object):
             shps = [ctx.probs_occur.shape for ctx in ctxs]
             np = max(i[1] if len(i) > 1 else i[0] for i in shps)
         dd['probs_occur'] = numpy.zeros(np)
-        if self.fewsites:  # must be at the end
-            dd['clon'] = F64(0.)
-            dd['clat'] = F64(0.)
         C = sum(len(ctx) for ctx in ctxs)
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
@@ -927,6 +920,10 @@ class ContextMaker(object):
             iterator over recarrays
         """
         self.fewsites = len(sitecol.complete) <= self.max_sites_disagg
+        if self.fewsites or 'clon' in self.REQUIRES_DISTANCES:
+            self.defaultdict['clon'] = F64(0.)
+            self.defaultdict['clat'] = F64(0.)
+
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(build_ctx(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
