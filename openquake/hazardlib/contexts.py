@@ -483,6 +483,30 @@ def build_ctx_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
+@build_ctx.add(b'F')
+def build_ctx_F(src, sitecol, cmaker):
+    """
+    Context generator for multifault sources
+    """
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    rctxs = []
+    with cmaker.ir_mon:
+        rups = list(src.iter_ruptures())
+    for i, rup in enumerate(rups):
+        if rup.mag > maxmag or rup.mag < minmag:
+            continue
+        rup.rup_id = src.offset + i
+        dist = get_distances(rup, sitecol, 'rrup')
+        mask = dist <= cmaker.maximum_distance(rup.mag)
+        if mask.any():
+            r_sites = sitecol.filter(mask)
+            rctx = cmaker.get_legacy_ctx(rup, r_sites, dist[mask])
+            rctx.src_id = src.id
+            rctxs.append(rctx)
+    yield cmaker.recarray(rctxs)
+
+    
 # ############################ ContextMaker ############################### #
 
 
@@ -930,6 +954,8 @@ class ContextMaker(object):
             if src.code == b'F' and self.cache_distances and step == 1:
                 # enable distance cache only for multifault sources
                 src.dcache = Cache()
+                return self.pla_mon.iter(build_ctx(src, sitecol, self),
+                                         atstop=src.dcache.clear)
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
