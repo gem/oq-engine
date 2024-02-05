@@ -515,7 +515,8 @@ def build_ctx_F(src, sitecol, cmaker):
                 rctxs.append(rctx)
     if cmaker.cache_distances:
         dcache.clear()
-    yield cmaker.recarray(rctxs)
+    if len(rctxs):
+        yield cmaker.recarray(rctxs)
 
     
 # ############################ ContextMaker ############################### #
