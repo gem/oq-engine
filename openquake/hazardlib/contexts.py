@@ -823,8 +823,6 @@ class ContextMaker(object):
             sites = srcfilter.get_close_sites(src)
             if sites is not None:
                 ctxs.extend(self.get_ctx_iter(src, sites))
-            if hasattr(src, 'dcache'):
-                print(src.dcache)
         return concat(ctxs)
 
     def make_legacy_ctx(self, rup):

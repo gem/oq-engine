@@ -221,18 +221,19 @@ class BaseCalculator(metaclass=abc.ABCMeta):
         :param remove: set it to False to remove the hdf5cache file (if any)
         :param shutdown: set it to True to shutdown the ProcessPool
         """
+        oq = self.oqparam
         with self._monitor:
             self._monitor.username = kw.get('username', '')
             if concurrent_tasks is None:  # use the job.ini parameter
-                ct = self.oqparam.concurrent_tasks
+                ct = oq.concurrent_tasks
             else:  # used the parameter passed in the command-line
                 ct = concurrent_tasks
             if ct == 0:  # disable distribution temporarily
                 oq_distribute = os.environ.get('OQ_DISTRIBUTE')
                 os.environ['OQ_DISTRIBUTE'] = 'no'
-            if ct != self.oqparam.concurrent_tasks:
+            if ct != oq.concurrent_tasks:
                 # save the used concurrent_tasks
-                self.oqparam.concurrent_tasks = ct
+                oq.concurrent_tasks = ct
             if self.precalc is None:
                 logging.info('Running %s with concurrent_tasks = %d',
                              self.__class__.__name__, ct)
@@ -263,9 +264,12 @@ class BaseCalculator(metaclass=abc.ABCMeta):
                         os.environ['OQ_DISTRIBUTE'] = oq_distribute
                 readinput.Global.reset()
 
-                # remove temporary hdf5 file, if any (currently none)
-                if os.path.exists(self.datastore.tempname) and remove:
-                    os.remove(self.datastore.tempname)
+                # remove temporary hdf5 file, if any
+                if os.path.exists(self.datastore.tempname):
+                    if remove and oq.calculation_mode != 'preclassical':
+                        # removing in preclassical with multiFaultSources
+                        # would break --hc which is reading the temp file
+                        os.remove(self.datastore.tempname)
         return getattr(self, 'exported', {})
 
     def core_task(*args):
