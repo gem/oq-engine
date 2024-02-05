@@ -117,6 +117,10 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # compute distances for the 7 underlying ruptures
         sitecol = SiteCollection.from_points([10.], [45.])
+        sitecol._set('vs30', 760.)
+        sitecol._set('vs30measured', 1)
+        sitecol._set('z1pt0', 100.)
+        sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
         [ctx] = cmaker.from_srcs([src], sitecol)
@@ -145,6 +149,11 @@ def main():
     # run a performance test with a reduced UCERF source
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
     sitecol = SiteCollection.from_points([-122, -121], [37, 27])
+    sitecol._set('vs30', 760.)
+    sitecol._set('vs30measured', 1)
+    sitecol._set('z1pt0', 100.)
+    sitecol._set('z2pt5', 5.)
+
     print('Computing u, t, u2 values for the sections')
     with performance.Monitor() as mon:
         lines = [sec.tor_line for sec in src.get_sections()]
