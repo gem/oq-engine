@@ -57,8 +57,7 @@ TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
 KNOWN_DISTANCES = frozenset(
-    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc closest_point\
-        clon clat'
+    'rrup rx ry0 rjb rhypo repi rcdpp azimuth azimuth_cp rvolc clon_clat'
     .split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
@@ -70,6 +69,16 @@ STD = 1
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
+
+
+def set_distances(ctx, rup, sites, param, dcache):
+    dists = get_distances(rup, sites, param, dcache)
+    if '_' in param:
+        p0, p1 = param.split('_')  # rx_ry0
+        setattr(ctx, p0, dists[:, 0])
+        setattr(ctx, p1, dists[:, 1])
+    else:
+        setattr(ctx, param, dists)
 
 
 def round_dist(dst):
@@ -739,10 +748,10 @@ class ContextMaker(object):
                     val = getattr(ctx, par)
                 else:
                     val = getattr(ctx, par, numpy.nan)
-                if par == 'closest_point':
-                    ra['clon'][slc] = val[:, 0]
-                    ra['clat'][slc] = val[:, 1]
-                elif par not in ['clon', 'clat'] or 'closest_point' not in dd:
+                if par == 'clon_clat':
+                    ra['clon'][slc] = ctx.clon
+                    ra['clat'][slc] = ctx.clat
+                elif par not in ['clon', 'clat'] or 'clon_clat' not in dd:
                     getattr(ra, par)[slc] = val
             ra.sids[slc] = ctx.sids
             start = slc.stop
@@ -860,8 +869,7 @@ class ContextMaker(object):
         ctx.rrup = distances
         ctx.sites = sites
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            dists = get_distances(rup, sites, param, dcache)
-            setattr(ctx, param, dists)
+            set_distances(ctx, rup, sites, param, dcache)
 
         # Equivalent distances
         reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
@@ -893,10 +901,8 @@ class ContextMaker(object):
                     if src_id >= 0:  # classical calculation
                         rctx.rup_id = rup.rup_id
                         if self.fewsites:
-                            cp = get_distances(
-                                rup, r_sites, 'closest_point', dcache)
-                            rctx.clon = cp[:, 0]
-                            rctx.clat = cp[:, 1]
+                            set_distances(
+                                rctx, rup, r_sites, 'clon_clat', dcache)
                     yield rctx
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
