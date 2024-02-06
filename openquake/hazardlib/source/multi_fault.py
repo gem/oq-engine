@@ -71,12 +71,11 @@ class MultiFaultSource(BaseSeismicSource):
     hdf5path = ''
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
-                 rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
+                 occurrence_probs: Union[list, np.ndarray],
                  magnitudes: list, rakes: list, investigation_time=0,
                  infer_occur_rates=False):
-        nrups = len(rupture_idxs)
-        assert len(occurrence_probs) == len(magnitudes) == len(rakes) == nrups
-        self.rupture_idxs = rupture_idxs
+        nrups = len(magnitudes)
+        assert len(occurrence_probs) == len(rakes) == nrups
         self.probs_occur = occurrence_probs
         self.mags = magnitudes
         self.rakes = rakes
@@ -110,6 +109,7 @@ class MultiFaultSource(BaseSeismicSource):
             return self.sections  # empty hdf5path
         with hdf5.File(self.hdf5path, 'r') as f:
             geoms = f['multi_fault_sections'][:]  # small
+            self.rupture_idxs = f[f'rupture_idxs/{self.source_id}'][:]
         sections = [geom_to_kite(geom) for geom in geoms]
         for idx, sec in enumerate(sections):
             sec.idx = idx
@@ -117,12 +117,11 @@ class MultiFaultSource(BaseSeismicSource):
 
     # used in the tests, where the sections are manually given and not
     # read from the HDF5 file
-    def set_sections(self, sections):
+    def set_sections(self, sections, rupture_idxs):
         """
         :param sections: a list of N surfaces
         """
         assert sections
-
         # this is fundamental for the distance cache.
         for idx, sec in enumerate(sections):
             sec.idx = idx
@@ -131,9 +130,10 @@ class MultiFaultSource(BaseSeismicSource):
         # In this loop we check that all the IDs of the sections composing one
         # rupture have a object in the section list describing their geometry.
         for i in range(len(self.mags)):
-            for idx in self.rupture_idxs[i]:
+            for idx in rupture_idxs[i]:
                 sections[idx]
         self.sections = sections
+        self.rupture_idxs = rupture_idxs
 
     def iter_ruptures(self, **kwargs):
         """
@@ -166,6 +166,13 @@ class MultiFaultSource(BaseSeismicSource):
                     self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                     PMF(data))
 
+    def gen_blocks(self, lst):
+        if len(self.mags) <= BLOCKSIZE:  # already split
+            yield self.source_id, lst
+            return
+        for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
+            yield '%s:%d' % (self.source_id, i), lst[slc]
+
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
             yield self
@@ -176,7 +183,6 @@ class MultiFaultSource(BaseSeismicSource):
                 '%s:%d' % (self.source_id, i),
                 self.name,
                 self.tectonic_region_type,
-                self.rupture_idxs[slc],
                 self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc])
@@ -251,12 +257,12 @@ def load(hdf5path):
             trt = data.attrs['tectonic_region_type']
             itime = data.attrs['investigation_time']
             infer = data.attrs['infer_occur_rates']
-            rids = data['rupture_idxs'][:]
             mags = data['mags'][:]
             rakes = data['rakes'][:]
             probs = data['probs_occur'][:]
-            src = MultiFaultSource(key, name, trt, rids, probs, mags, rakes,
+            src = MultiFaultSource(key, name, trt, probs, mags, rakes,
                                    itime, infer)
+            src.rupture_idxs = data['rupture_idxs'][:]
             src.hdf5path = hdf5path
             srcs.append(src)
     return srcs

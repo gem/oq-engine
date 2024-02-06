@@ -335,15 +335,6 @@ def fix_geometry_sections(smdict, dstore):
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
         with hdf5.File(dstore.tempname, 'w') as h5:
-            '''
-            mesh = dstore['sitecol'].mesh
-            # this is absurdly fast
-            logging.info('Computing distances sections->points')
-            dists = numpy.array([sec.get_min_distance(mesh)
-                                 for sec in sections.values()])
-            h5.create_dataset('dists', data=dists)  # shape (Ns, N)
-            logging.info(f'Stored {general.humansize(dists.nbytes)}')
-            '''
             h5.save_vlen('multi_fault_sections',
                          [kite_to_geom(sec) for sec in sections.values()])
 
@@ -357,9 +348,12 @@ def fix_geometry_sections(smdict, dstore):
                         raise RuntimeError('Missing geometryModel files!')
                     if dstore:
                         src.hdf5path = dstore.tempname
-                    src.rupture_idxs = [U16([s2i[idx] for idx in idxs])
-                                        for idxs in src.rupture_idxs]
-                    for idxs in src.rupture_idxs:
+                    rupture_idxs = [U16([s2i[idx] for idx in idxs])
+                                    for idxs in src.rupture_idxs]
+                    with hdf5.File(dstore.tempname, 'r+') as h5:
+                        for srcid, block in src.gen_blocks(rupture_idxs):
+                            h5.save_vlen(f'rupture_idxs/{srcid}', block)
+                    for idxs in rupture_idxs:
                         section_idxs.extend(idxs)
     cnt = collections.Counter(section_idxs)
     if cnt:
