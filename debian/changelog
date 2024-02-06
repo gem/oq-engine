@@ -1,5 +1,5 @@
   [Michele Simionato]
-  * Fixed disaggregation in case of grp_probability != 1
+  * Fixed disaggregation in case of mutex sources
 
   [Paolo Tormene]
   * Added the possibility to display/hide announcements on top of all WebUI
