@@ -239,20 +239,26 @@ def get_csm(oq, full_lt, dstore=None):
         logging.info('Setting src._wkt')
 
     csm = _get_csm(full_lt, groups, is_event_based, set_wkt)
+    out = []
+    probs = []
     for sg in csm.src_groups:
         if sg.src_interdep == 'mutex' and 'src_mutex' not in dstore:
-            dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
-                      ('num_ruptures', int), ('mutex_weight', float)]
-            out = []
             segments = []
             for src in sg:
                 segments.append(int(src.source_id.split(':')[1]))
-                t = (src.source_id, src.count_ruptures(),
-                     src.grp_id, src.mutex_weight)
+                t = (src.source_id, src.grp_id,
+                     src.count_ruptures(),src.mutex_weight)
                 out.append(t)
+            probs.append((src.grp_id, sg.grp_probability))
             assert len(segments) == len(set(segments)), segments
-            dstore.create_dset('src_mutex', numpy.array(out, dtlist),
-                               fillvalue=None)
+    if out:
+        dtlist = [('src_id', hdf5.vstr), ('grp_id', int),
+                  ('num_ruptures', int), ('mutex_weight', float)]
+        dstore.create_dset('src_mutex', numpy.array(out, dtlist),
+                           fillvalue=None)
+        lst = [('grp_id', int), ('probability', float)]
+        dstore.create_dset('grp_probability', numpy.array(probs, lst),
+                           fillvalue=None)
     return csm
 
 
