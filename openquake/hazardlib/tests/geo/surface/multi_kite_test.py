@@ -339,6 +339,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
     def test_get_ry0(self):
 
         # Results visually inspected
+        assert len(self.mesh) == 28000
         dst = self.msrf.get_ry0_distance(self.mesh)
 
         if PLOTTING:

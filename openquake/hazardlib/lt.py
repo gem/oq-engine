@@ -150,7 +150,7 @@ def charGeom(utype, node, filename):
             top_left, top_right, bottom_right, bottom_left = tuple(nodes)
             surface = geo.PlanarSurface.from_corner_points(
                 top_left, top_right, bottom_right, bottom_left)
-            surface.suid = f'{i}'
+            surface.idx = f'{i}'
             surfaces.append(surface)
         else:
             raise LogicTreeError(

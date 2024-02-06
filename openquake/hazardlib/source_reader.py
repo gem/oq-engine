@@ -66,7 +66,7 @@ def check_unique(ids, msg='', strict=True):
             if strict:
                 raise nrml.DuplicatedID(errmsg)
             else:
-                logging.error('*' * 60 + ' DuplicatedID:\n' + errmsg)
+                logging.info('*' * 60 + ' DuplicatedID:\n' + errmsg)
 
 
 def gzpik(obj):
@@ -328,9 +328,9 @@ def fix_geometry_sections(smdict, dstore):
         sec_ids.extend(gmod.sections)
         sections.update(gmod.sections)
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    s2i = {suid: i for i, suid in enumerate(sections)}
+    s2i = {idx: i for i, idx in enumerate(sections)}
     for idx, sec in enumerate(sections.values()):
-        sec.suid = idx
+        sec.idx = idx
     if sections:
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')

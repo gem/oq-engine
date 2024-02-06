@@ -91,7 +91,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc1, pmf)
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.25, -0.1, 0.0)),
                                 Site(Point(-0.1, 0.0, 0.0))])
         dsts = get_distances(rup, sites, param)
@@ -119,7 +119,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc2, pmf)
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.25, -0.6, 0.0))])
         dsts = get_distances(rup, sites, param)
 
@@ -149,7 +149,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rups = [r for r in src.iter_ruptures()]
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.0, 0.0, 0.0)),
                                 Site(Point(-0.2, 0.0, 0.0))])
         dsts = get_distances(rups[0], sites, param)
@@ -399,7 +399,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         geom = to_python(geom_path, sc)
         src = ssm[0][0]
         sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
+        s2i = {idx: i for i, idx in enumerate(geom.sections)}
         src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                             for idxs in src.rupture_idxs]
         src.set_sections(sections)
@@ -456,7 +456,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         geom = to_python(geom_path, sc)
         src = ssm[0][0]
         sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
+        s2i = {idx: i for i, idx in enumerate(geom.sections)}
         src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                             for idxs in src.rupture_idxs]
         src.set_sections(sections)

@@ -113,10 +113,9 @@ def classical(sources, sitecol, cmaker, dstore, monitor):
     cmaker.init_monitoring(monitor)
     with dstore:
         if sitecol is None:  # regular calculator
-            with monitor('reading sitecol'):
-                sitecol = dstore['sitecol']
+            sitecol = dstore['sitecol']  # super-fast
         else:  # tiling calculator, read the sources from the datastore
-            with monitor('reading sources'):
+            with monitor('reading sources'):  # fast, but uses a lot of RAM
                 arr = dstore.getitem('_csm')[cmaker.grp_id]
                 sources = pickle.loads(gzip.decompress(arr.tobytes()))
 
@@ -476,8 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            logging.info('Using parallel tiling')
-            self.execute_big(maxw * 2)  # build half the tasks
+            self.execute_big(maxw)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -575,11 +573,11 @@ class ClassicalCalculator(base.HazardCalculator):
                 allargs.append((None, self.sitecol, cm, ds))
             else:
                 tiles = self.sitecol.split(numpy.ceil(sg.weight / maxw))
+                logging.info('Group #%d, %d tiles', cm.grp_id, len(tiles))
                 for tile in tiles:
                     allargs.append((None, tile, cm, ds))
                     self.ntiles.append(len(tiles))
-        logging.info('Generated at most %d tiles (avg=%.1f)',
-                     max(self.ntiles), numpy.mean(self.ntiles))
+        logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(
                 classical, allargs, h5=self.datastore.hdf5):

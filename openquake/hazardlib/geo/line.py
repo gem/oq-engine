@@ -18,12 +18,10 @@
 """
  Module :mod:`openquake.hazardlib.geo.line` defines :class:`Line`.
 """
-import copy
 import numpy as np
+from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import geodetic
-from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo import Point
+from openquake.hazardlib.geo import geodetic, utils, Point
 
 TOLERANCE = 0.1
 SMALL = 1e-2
@@ -35,7 +33,7 @@ def _update(rtra, rtra_prj, proj, pnt):
     rtra_prj.append(pnt)
 
 
-def _resample(coo, sect_len, orig_extremes):
+def _resample(line, sect_len, orig_extremes):
     # Returns array of resampled trace coordinates
     #
     # :param coo:
@@ -47,10 +45,7 @@ def _resample(coo, sect_len, orig_extremes):
     #   A boolean. When true the last point in coo is also added.
 
     # Project the coordinates of the trace and save them in `txy`
-    sbb = utils.get_spherical_bounding_box(coo[:, 0], coo[:, 1])
-    proj = utils.OrthographicProjection(*sbb)
-    txy = coo.copy()
-    txy[:, 0], txy[:, 1] = proj(coo[:, 0], coo[:, 1])
+    txy = line.proj(line.coo[:, 0], line.coo[:, 1], line.coo[:, 2]).T
 
     # Compute the total length of the original trace
     # tot_len = sum(utils.get_dist(txy[i], txy[i - 1]) for i in range(1, N))
@@ -58,7 +53,7 @@ def _resample(coo, sect_len, orig_extremes):
 
     # Initialize the lists with the coordinates of the resampled trace
     rtra_prj = [txy[0]]
-    rtra = [coo[0]]
+    rtra = [line.coo[0]]
 
     # Resampling
     idx_vtx = -1
@@ -82,7 +77,7 @@ def _resample(coo, sect_len, orig_extremes):
             pnt = find_t(txy[idx + 1, :], txy[idx, :], rtra_prj[-1], sect_len)
             if np.isnan(pnt).any():
                 raise ValueError('Did not find the intersection')
-            _update(rtra, rtra_prj, proj, pnt)
+            _update(rtra, rtra_prj, line.proj, pnt)
             inc_len += sect_len
 
             # Adding more points still on the same segment
@@ -90,7 +85,8 @@ def _resample(coo, sect_len, orig_extremes):
             chk_dst = utils.get_dist(txy[idx + 1], rtra_prj[-1])
             rat = delta / chk_dst
             while chk_dst > sect_len * 0.9999:
-                _update(rtra, rtra_prj, proj, rtra_prj[-1] + sect_len * rat)
+                _update(rtra, rtra_prj, line.proj,
+                        rtra_prj[-1] + sect_len * rat)
                 inc_len += sect_len
                 # This is the distance between the last resampled point
                 # and the second vertex of the segment
@@ -99,7 +95,7 @@ def _resample(coo, sect_len, orig_extremes):
 
             same_dir = True
             if len(rtra) > 1:
-                same_dir = _get_same_dir(rtra, coo)
+                same_dir = _get_same_dir(rtra, line.coo)
 
             # This is the distance between the last sampled point and the last
             # point on the original edge
@@ -115,13 +111,13 @@ def _resample(coo, sect_len, orig_extremes):
                 # Adding more points still on the same segment
                 delta = txy[-1] - txy[-2]
                 chk_dst = utils.get_dist(txy[-1], txy[-2])
-                _update(rtra, rtra_prj, proj, rtra_prj[-1] +
+                _update(rtra, rtra_prj, line.proj, rtra_prj[-1] +
                         sect_len * delta / chk_dst)
                 inc_len += sect_len
 
             elif orig_extremes:
                 # Adding last point
-                rtra.append(coo[-1])
+                rtra.append(line.coo[-1])
             break
 
         # Updating index
@@ -179,6 +175,11 @@ class Line(object):
     def __init__(self, points):
         points = utils.clean_points(points)  # can remove points!
         self.coo = np.array([[p.x, p.y, p.z] for p in points])
+
+    @cached_property
+    def proj(self):
+        return utils.OrthographicProjection.from_lons_lats(
+            self.coo[:, 0], self.coo[:, 1])
 
     @property
     def points(self):
@@ -298,7 +299,7 @@ class Line(object):
         :returns:
             A new line resampled into sections based on the given length.
         """
-        return Line.from_coo(_resample(self.coo, sect_len, orig_extremes))
+        return Line.from_coo(_resample(self, sect_len, orig_extremes))
 
     def get_lengths(self) -> np.ndarray:
         """
@@ -378,7 +379,7 @@ class Line(object):
 
         return Line(resampled_points)
 
-    def get_tu(self, mesh):
+    def get_tuw(self, mesh):
         """
         Computes the U and T coordinates of the GC2 method for a mesh of
         points.
@@ -388,19 +389,16 @@ class Line(object):
         """
         # Compute u hat and t hat for each segment. tmp has shape
         # (num_segments x 3)
-        slen, uhat, that = self.get_tu_hat()
-
-        # Lengths of the segments
-        segments_len = slen
+        slen, uhat, that = self.tu_hat
 
         # Get local coordinates for the sites
         ui, ti = self.get_ui_ti(mesh, uhat, that)
 
         # Compute the weights
-        weights, iot = get_ti_weights(ui, ti, segments_len)
+        weights, iot = get_ti_weights(ui, ti, slen)
 
         # Now compute T and U
-        t_upp, u_upp = get_tu(ui, ti, segments_len, weights)
+        t_upp, u_upp = get_tuw(ui, ti, slen, weights)
         t_upp[iot] = 0.0
         return t_upp, u_upp, weights
 
@@ -409,21 +407,11 @@ class Line(object):
         Compute the t and u coordinates. ti and ui have shape
         (num_segments x num_sites).
         """
-
-        # Creating the projection
-        if not hasattr(self, 'proj'):
-            oprj = utils.OrthographicProjection
-            proj = oprj.from_lons_lats(self.coo[:, 0], self.coo[:, 1])
-            self.proj = proj
-        proj = self.proj
-
         # Sites projected coordinates
-        sxy = np.zeros((len(mesh.lons), 2))
-        sxy[:, 0], sxy[:, 1] = proj(mesh.lons, mesh.lats)
+        sxy = self.proj(mesh.lons, mesh.lats).T
 
         # Polyline projected coordinates
-        txy = np.zeros_like(self.coo)
-        txy[:, 0], txy[:, 1] = proj(self.coo[:, 0], self.coo[:, 1])
+        txy = self.proj(self.coo[:, 0], self.coo[:, 1]).T
 
         # Initializing ti and ui coordinates
         ui = np.zeros((txy.shape[0] - 1, sxy.shape[0]))
@@ -431,14 +419,15 @@ class Line(object):
 
         # For each section
         for i in range(ui.shape[0]):
-            tmp = copy.copy(sxy)
+            tmp = np.copy(sxy)
             tmp[:, 0] -= txy[i, 0]
             tmp[:, 1] -= txy[i, 1]
-            ui[i, :] = np.dot(tmp, uhat[i, 0:2])
-            ti[i, :] = np.dot(tmp, that[i, 0:2])
+            ui[i, :] = tmp @ uhat[i, 0:2]
+            ti[i, :] = tmp @ that[i, 0:2]
         return ui, ti
 
-    def get_tu_hat(self):
+    @cached_property
+    def tu_hat(self):
         """
         Return the unit vectors defining the local origin for each segment of
         the trace.
@@ -451,16 +440,8 @@ class Line(object):
             Two arrays of size n x 3 (when n is the number of segments
             composing the trace
         """
-
-        # Creating the projection
-        if not hasattr(self, 'proj'):
-            oprj = utils.OrthographicProjection
-            proj = oprj.from_lons_lats(self.coo[:, 0], self.coo[:, 1])
-            self.proj = proj
-
         # Projected coordinates
         sx, sy = self.proj(self.coo[:, 0], self.coo[:, 1])
-
         slen = ((sx[1:] - sx[:-1])**2 + (sy[1:] - sy[:-1])**2)**0.5
         sg = np.zeros((len(sx) - 1, 3))
         sg[:, 0] = sx[1:] - sx[:-1]
@@ -494,7 +475,7 @@ def get_average_azimuth(azimuths, distances) -> float:
 
 
 @compile('(float64[:,:],float64[:,:],float64[:], float64[:,:])')
-def get_tu(ui, ti, sl, weights):
+def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
 

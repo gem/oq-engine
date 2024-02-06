@@ -117,6 +117,10 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # compute distances for the 7 underlying ruptures
         sitecol = SiteCollection.from_points([10.], [45.])
+        sitecol._set('vs30', 760.)
+        sitecol._set('vs30measured', 1)
+        sitecol._set('z1pt0', 100.)
+        sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
         [ctx] = cmaker.from_srcs([src], sitecol)
@@ -141,27 +145,41 @@ class MultiFaultTestCase(unittest.TestCase):
             mfs.set_sections(self.sections)
 
 
-if __name__ == '__main__':
+def main():
     # run a performance test with a reduced UCERF source
-    srcs = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    sitecol = SiteCollection.from_points([-122, -121], [37, 27])
+    sitecol._set('vs30', 760.)
+    sitecol._set('vs30measured', 1)
+    sitecol._set('z1pt0', 100.)
+    sitecol._set('z2pt5', 5.)
 
-    rups = list(srcs[0].iter_ruptures())
+    print('Computing u, t, u2 values for the sections')
+    with performance.Monitor() as mon:
+        lines = [sec.tor_line for sec in src.get_sections()]
+        L = len(lines)
+        N = len(sitecol)
+        us = numpy.zeros((L, N))
+        ts = numpy.zeros((L, N))
+        for i, line in enumerate(lines):
+            ts[i], us[i], _w = line.get_tuw(sitecol)
+    print(mon)
+
+    rups = list(src.iter_ruptures())
     lines = []
     data = []
     for rup in rups:
         for surf in rup.surface.surfaces:
-            surf._set_tor(surf.suid)
             lines.append(surf.tor_line)
             data.append(surf.tor_line.coo.tobytes())
     uni, inv = numpy.unique(data, return_inverse=True)
-    # only 230/174,486 lines are unique, i.e. a 760x speedup is possible
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 
-    sitecol = SiteCollection.from_points([-122], [37])  # San Francisco
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
-    with performance.Monitor() as mon:
-        [ctxt] = cmaker.from_srcs(srcs, sitecol)
+    [ctxt] = cmaker.from_srcs([src], sitecol)
+    print(cmaker.ir_mon)
+    print(cmaker.ctx_mon)
     print(mon)
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
@@ -179,3 +197,7 @@ if __name__ == '__main__':
                 aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
             except Exception:
                 breakpoint()
+
+
+if __name__ == '__main__':
+    main()

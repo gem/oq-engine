@@ -342,7 +342,7 @@ class SiteCollection(object):
         """
         sfc = rup.surface
         if point == 'TC':
-            pnt = sfc._get_top_edge_centroid()
+            pnt = sfc.get_top_edge_centroid()
             lon, lat = pnt.x, pnt.y
         elif point == 'BC':
             lon, lat = get_middle_point(

@@ -28,6 +28,7 @@ from scipy import stats
 from shapely.geometry import Polygon
 
 from openquake.baselib.node import Node
+from openquake.baselib.general import cached_property
 from openquake.hazardlib.geo import geodetic
 from openquake.hazardlib.geo import Point
 from openquake.hazardlib.geo.line import _resample, Line
@@ -115,7 +116,8 @@ class KiteSurface(BaseSurface):
     def get_surface_boundaries(self):
         return self._get_external_boundary()
 
-    def _set_tor(self, suid=None):
+    @cached_property
+    def tor_line(self):
         """
         Provides longitude and latitude coordinates of the vertical surface
         projection of the top of rupture. This is used in the GC2 method to
@@ -133,11 +135,9 @@ class KiteSurface(BaseSurface):
         ico = np.arange(self.mesh.lons.shape[1])
         ico = ico[iro <= 1]
         iro = iro[iro <= 1]
-        lo, la = self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
         # top_left, top_right coordinates
-        self.tor_line = Line.from_vectors(lo, la)
-        if suid is not None:
-            self.tor_line.suid = suid
+        lo, la = self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
+        return Line.from_vectors(lo, la)
 
     def is_vertical(self):
         """ True if all the profiles, and hence the surface, are vertical """
@@ -1067,7 +1067,8 @@ def _get_resampled_profs(npr, profs, sd, proj, idl, ref_idx, forward=True):
 
             # If the edge starts with the first index
             if i_from == unique[0]:
-                tmp = _resample(parr[cseg[0]:cseg[1], cseg[2]], sd, True)
+                line = Line.from_coo(parr[cseg[0]:cseg[1], cseg[2]])
+                tmp = _resample(line, sd, True)
 
                 if len(tmp) < 3:
                     tmp = tmp[:, :]

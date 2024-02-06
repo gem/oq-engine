@@ -58,15 +58,13 @@ def _closest_points(surfaces, sites, dcache):
     # compute the closest point mesh one site at the time
     lons = numpy.empty_like(sites.lons)
     lats = numpy.empty_like(sites.lats)
-    deps = numpy.empty_like(sites.depths)
     for jdx in idx.T:
         i = numpy.where(jdx)[0][0]
-        cps = _surf_param(surfaces[i], sites, 'closest_point', dcache)
+        cps = _surf_param(surfaces[i], sites, 'clon_clat', dcache)
         idx_i = idx[i, :]
         lons[idx_i] = cps[idx_i, 0]
         lats[idx_i] = cps[idx_i, 1]
-        deps[idx_i] = cps[idx_i, 2]
-    return Mesh(lons, lats, deps)
+    return Mesh(lons, lats)
 
 
 def _surf_param_nc(surface, sites, param):
@@ -79,14 +77,9 @@ def _surf_param_nc(surface, sites, param):
         dist = surface.get_ry0_distance(sites)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
-    elif param in ('closest_point', 'clon', 'clat'):
+    elif param == 'clon_clat':
         t = surface.get_closest_points(sites)  # tested in classical/case_83
-        if param == 'closest_point':
-            dist = t.array.T  # shape (N, 3)
-        elif param == 'clon':
-            dist = t.lons.reshape(-1, 1)
-        elif param == 'clat':
-            dist = t.lats.reshape(-1, 1)
+        dist = t.array.T[:, 0:2]  # shape (N, 2)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
@@ -98,29 +91,23 @@ def _surf_param(surface, sites, param, dcache):
     if dcache is None or not hasattr(surface, 'surfaces'):
         return _surf_param_nc(surface, sites, param)
 
-    # assume the underlying surfaces have .suid attributes
-    suids = [s.suid for s in surface.surfaces]
+    # assume the underlying surfaces have .idx attributes
+    idxs = [s.idx for s in surface.surfaces]
     for surf in surface.surfaces:
-        if (surf.suid, param) not in dcache:
-            dcache[surf.suid, param] = _surf_param_nc(surf, sites, param)
+        if (surf.idx, param) not in dcache:
+            dcache[surf.idx, param] = _surf_param_nc(surf, sites, param)
     if param in ('rrup', 'rjb'):
-        dist = numpy.min([dcache[suid, param] for suid in suids], axis=0)
+        dist = numpy.min([dcache[idx, param] for idx in idxs], axis=0)
     elif param in ('rx', 'ry0'):
         if surface.tor is None:
             surface._set_tor()
         if param == 'rx':
-            uut, tut = surface.tor.get_tu(sites)
-            dist = tut[0] if len(tut[0].shape) > 1 else tut
+            dist = surface.get_rx_distance(sites)
         elif param == 'ry0':
-            dist = surface.tor.get_ry0_distance(sites)
-    elif param in ('closest_point', 'clon', 'clat'):
+            dist = surface.get_ry0_distance(sites)
+    elif param == 'clon_clat':
         t = _closest_points(surface.surfaces, sites, dcache)
-        if param == 'closest_point':
-            dist = t.array.T  # shape (N, 3)
-        elif param == 'clon':
-            dist = t.lons.reshape(-1, 1)
-        elif param == 'clat':
-            dist = t.lats.reshape(-1, 1)
+        dist = t.array.T[:, 0:2]  # shape (N, 2)
     else:
         raise NotImplementedError(param)  # should never happen
     return dist
@@ -136,7 +123,12 @@ def get_distances(rupture, sites, param, dcache=None):
     """
     surf = rupture.surface
     if not surf:  # PointRupture
-        dist = rupture.hypocenter.distance_to_mesh(sites)
+        if param == 'clon_clat':
+            dist = numpy.empty((len(sites), 2))
+            dist[:, 0] = rupture.hypocenter.x
+            dist[:, 1] = rupture.hypocenter.y
+        else:
+            dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
         dist = _surf_param(surf, sites, 'rrup', dcache)
     elif param == 'rx':
@@ -153,9 +145,9 @@ def get_distances(rupture, sites, param, dcache=None):
         dist = rupture.get_cdppvalue(sites)
     elif param == 'azimuth':
         dist = surf.get_azimuth(sites)
-    elif param == 'azimuth_cp':
+    elif param == 'azimuthcp':
         dist = surf.get_azimuth_of_closest_point(sites)
-    elif param == 'closest_point' or param == 'clon' or param == 'clat':
+    elif param == 'clon_clat':
         dist = _surf_param(surf, sites, param, dcache)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero

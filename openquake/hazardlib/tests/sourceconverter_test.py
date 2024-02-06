@@ -503,7 +503,7 @@ class MultiFaultSourceModelTestCase(unittest.TestCase):
         ssm = nrml.to_python(src_xml, conv)
         self.assertIsInstance(ssm, nrml.SourceModel)
         sections = list(sec.values())
-        s2i = {suid: i for i, suid in enumerate(sec)}
+        s2i = {idx: i for i, idx in enumerate(sec)}
         src = ssm[0][0]
         src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
                             for idxs in src.rupture_idxs]

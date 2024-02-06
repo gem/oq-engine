@@ -115,8 +115,8 @@ class MultiSurface(BaseSurface):
             if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
                 # in classical/case_62 there are KiteSurfaces and
                 # PlanarSurfaces together in NonParametricSources
-                # the `suid` is used only in MultiFaultSources
-                srfc._set_tor(getattr(srfc, 'suid', None))
+                # the `idx` is used only in MultiFaultSources
+                # srfc.tor_line.idx = getattr(srfc, 'idx', None)
                 srfc.tor_line.keep_corners(self.tol)
                 tors.append(srfc.tor_line)
 
@@ -244,6 +244,7 @@ class MultiSurface(BaseSurface):
             lats.extend([north, south])
         return utils.get_spherical_bounding_box(np.array(lons), np.array(lats))
 
+    # NB: this is only called by CharacteristicSources, see logictree/case_20
     def get_middle_point(self):
         """
         If :class:`MultiSurface` is defined by a single surface, simply
@@ -316,7 +317,7 @@ class MultiSurface(BaseSurface):
         """
         if self.tor is None:
             self._set_tor()
-        uut, tut = self.tor.get_tu(mesh)
+        uut, tut = self.tor.get_uts(mesh)
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
@@ -328,4 +329,10 @@ class MultiSurface(BaseSurface):
         """
         if self.tor is None:
             self._set_tor()
-        return self.tor.get_ry0_distance(mesh)
+
+        uut, tut = self.tor.get_uts(mesh)
+        ry0 = np.zeros_like(uut)
+        ry0[uut < 0] = np.abs(uut[uut < 0])
+        condition = uut > self.tor.u_max
+        ry0[condition] = uut[condition] - self.tor.u_max
+        return ry0
