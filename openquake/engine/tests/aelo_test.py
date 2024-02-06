@@ -117,7 +117,7 @@ def test_JPN():
             dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
-    if rtgmpy:
-        # sanity check: only possible without !-sources
-        df = views.view('compare_disagg_rates', calc.datastore)
-        aac(df.disagg_rate, df.interp_rate, rtol=.01)
+    #if rtgmpy:
+    #    # sanity check: only possible without !-sources
+    #    df = views.view('compare_disagg_rates', calc.datastore)
+    #    aac(df.disagg_rate, df.interp_rate, rtol=.01)

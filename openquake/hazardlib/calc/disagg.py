@@ -472,7 +472,7 @@ class Disaggregator(object):
                                 self.cmaker.oq.infer_occur_rates,
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
-        poes = numpy.einsum('i,i...', self.weights, mat)
+        poes = numpy.einsum('i,i...', self.weights, mats)
         return poes
 
     def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
