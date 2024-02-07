@@ -349,7 +349,8 @@ def fix_geometry_sections(smdict, dstore):
                     if dstore:
                         src.hdf5path = dstore.tempname
                     rupture_idxs = [U16([s2i[idx] for idx in idxs])
-                                    for idxs in src.rupture_idxs]
+                                    for idxs in src._rupture_idxs]
+                    delattr(src, '_rupture_idxs')  # set by the SourceConverter
                     with hdf5.File(dstore.tempname, 'r+') as h5:
                         for srcid, block in src.gen_blocks(rupture_idxs):
                             h5.save_vlen(f'rupture_idxs/{srcid}', block)

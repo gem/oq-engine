@@ -539,7 +539,7 @@ class ClassicalTestCase(CalculatorTestCase):
         csm = self.calc.datastore['_csm']
         tmpname = general.gettemp()
         [src] = csm.src_groups[0].sources
-        src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
+        src._rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
         out = write_source_model(tmpname, csm.src_groups)
         self.assertEqual(out[0], tmpname)
         self.assertEqual(out[1], tmpname + '.hdf5')

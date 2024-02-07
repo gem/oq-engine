@@ -87,6 +87,17 @@ class MultiFaultSource(BaseSeismicSource):
             self.temporal_occurrence_model = PoissonTOM(investigation_time)
         super().__init__(source_id, name, tectonic_region_type)
 
+    @property
+    def rupture_idxs(self):
+        """
+        Read a list of U16 arrays from hdf5path if set
+        """
+        if hasattr(self, '_rupture_idxs'):
+            # set by the SourceConverter or by the tests
+            return self._rupture_idxs
+        with hdf5.File(self.hdf5path, 'r') as f:
+            return f[f'rupture_idxs/{self.source_id}'][:]
+        
     def is_gridded(self):
         return True  # convertible to HDF5
 
@@ -109,7 +120,6 @@ class MultiFaultSource(BaseSeismicSource):
             return self.sections  # empty hdf5path
         with hdf5.File(self.hdf5path, 'r') as f:
             geoms = f['multi_fault_sections'][:]  # small
-            self.rupture_idxs = f[f'rupture_idxs/{self.source_id}'][:]
         sections = [geom_to_kite(geom) for geom in geoms]
         for idx, sec in enumerate(sections):
             sec.idx = idx
@@ -133,7 +143,7 @@ class MultiFaultSource(BaseSeismicSource):
             for idx in rupture_idxs[i]:
                 sections[idx]
         self.sections = sections
-        self.rupture_idxs = rupture_idxs
+        self._rupture_idxs = rupture_idxs
 
     def iter_ruptures(self, **kwargs):
         """
@@ -147,8 +157,9 @@ class MultiFaultSource(BaseSeismicSource):
         step = kwargs.get('step', 1)
         n = len(self.mags)
         sec = self.get_sections()  # KiteSurfaces
+        rupture_idxs = self.rupture_idxs
         for i in range(0, n, step**2):
-            idxs = self.rupture_idxs[i]
+            idxs = rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = sec[idxs[0]]
             else:
@@ -262,7 +273,7 @@ def load(hdf5path):
             probs = data['probs_occur'][:]
             src = MultiFaultSource(key, name, trt, probs, mags, rakes,
                                    itime, infer)
-            src.rupture_idxs = data['rupture_idxs'][:]
+            src._rupture_idxs = data['rupture_idxs'][:]
             src.hdf5path = hdf5path
             srcs.append(src)
     return srcs

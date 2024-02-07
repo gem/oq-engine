@@ -1153,7 +1153,7 @@ class SourceConverter(RuptureConverter):
                                    dic['mag'], dic['rake'],
                                    self.investigation_time,
                                    self.infer_occur_rates)
-            mfs.rupture_idxs = idxs
+            mfs._rupture_idxs = idxs
             return mfs
         probs = []
         mags = []
@@ -1184,7 +1184,7 @@ class SourceConverter(RuptureConverter):
         mfs = MultiFaultSource(sid, name, trt, probs, mags, rakes,
                                self.investigation_time,
                                self.infer_occur_rates)
-        mfs.rupture_idxs = idxs
+        mfs._rupture_idxs = idxs
         return mfs
 
     def convert_sourceModel(self, node):
