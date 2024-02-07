@@ -75,13 +75,6 @@ class MultiLine(object):
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
         self.u_max = np.abs(self.get_uts(ep)[0]).max()
 
-    @property
-    def coos(self):
-        """
-        :returns: array of shape (L, 2, 3)
-        """
-        return np.concatenate([line.coo for line in self.lines])
-
     def get_uts(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline

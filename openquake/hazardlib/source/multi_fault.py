@@ -112,14 +112,9 @@ class MultiFaultSource(BaseSeismicSource):
             multilines = [MultiLine.from_(coos, shift, umax)
                           for coos, shift, umax in zip(cooss, shifts, umaxs)]
         else:
-            multilines = []
             sec = self.get_sections()
-            for i, idxs in enumerate(self.rupture_idxs):
-                tors = []
-                if len(idxs) == 1:
-                    sfc = sec[idxs[0]].tor_line
-                else:
-                    sfcs = [sec[idx].tor_line for idx in idxs]
+            multilines = [MultiLine([sec[idx].tor_line for idx in idxs])
+                          for idxs in self.rupture_idxs]
         return multilines
 
     def is_gridded(self):
