@@ -461,11 +461,12 @@ def _get_csm(full_lt, groups, event_based, set_wkt):
                        'of {:_d} points!')
                 for src in sources:
                     # check on MultiFaultSources and NonParametricSources
-                    mesh_size = getattr(src, 'mesh_size', 0)
-                    if mesh_size > 1E6:
-                        logging.warning(msg.format(
-                            src.source_id, src.count_ruptures(), mesh_size))
-                    src._wkt = src.wkt()
+                    #mesh_size = getattr(src, 'mesh_size', 0)
+                    #if mesh_size > 1E6:
+                    #    logging.warning(msg.format(
+                    #        src.source_id, src.count_ruptures(), mesh_size))
+                    #src._wkt = src.wkt()
+                    pass
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     if set_wkt:
         for ag in atomic:
