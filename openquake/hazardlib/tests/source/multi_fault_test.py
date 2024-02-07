@@ -150,17 +150,6 @@ def main():
     sitecol._set('z1pt0', 100.)
     sitecol._set('z2pt5', 5.)
 
-    print('Computing u, t, u2 values for the sections')
-    with performance.Monitor() as mon:
-        lines = [sec.tor_line for sec in src.get_sections()]
-        L = len(lines)
-        N = len(sitecol)
-        us = numpy.zeros((L, N))
-        ts = numpy.zeros((L, N))
-        for i, line in enumerate(lines):
-            ts[i], us[i], _w = line.get_tuw(sitecol)
-    print(mon)
-
     rups = list(src.iter_ruptures())
     lines = []
     data = []
@@ -176,7 +165,7 @@ def main():
     [ctxt] = cmaker.from_srcs([src], sitecol)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
-    print(mon)
+
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
     ctx = ctxt[::50]

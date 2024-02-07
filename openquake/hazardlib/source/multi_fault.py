@@ -55,11 +55,13 @@ def reshape(coos, sizes):
     [array([[100,  10,   0],
            [110,  10,   0]])]
     """
+    coos = coos.reshape(-1, 3)
+    assert len(coos) == sum(sizes), (len(coos), sum(sizes))
     start = 0
     lst = []
     for size in sizes:
-        lst.append(coos[start:start + 3 * size].reshape(-1, 3))
-        start += 3 * size
+        lst.append(coos[start:start + size])
+        start += size
     return lst
 
 
