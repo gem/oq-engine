@@ -230,8 +230,8 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             plt.show()
 
         # Note that method is executed when the object is initialized
-        for es, expct in zip(self.msrf.tor.lines, expected):
-            np.testing.assert_array_almost_equal(es.coo, expct, decimal=2)
+        for coo, expct in zip(self.msrf.tor.coos, expected):
+            np.testing.assert_array_almost_equal(coo, expct, decimal=2)
 
     def test_get_strike(self):
         # Since the two surfaces dip to the north, we expect the strike to
