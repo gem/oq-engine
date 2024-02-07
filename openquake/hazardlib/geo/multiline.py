@@ -51,10 +51,15 @@ class MultiLine(object):
     """
     @classmethod
     def from_(cls, coos, shift, umax):
+        """
+        :param coos: an array of shape (L, 2, 3)
+        :param shift: an array of shape L
+        :param umax: a scalar
+        """
         self = object.__new__(cls)
-        self.lines = [Line.from_coo(coo) for coo in coos]
+        self.coos = coos
         self.shift = shift
-        self.umax = umax
+        self.u_max = umax
         return self
 
     def __init__(self, lines):
@@ -79,7 +84,7 @@ class MultiLine(object):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        L = len(self.lines)
+        L = len(self.coos)
         N = len(mesh)
         tupps = np.zeros((L, N))
         uupps = np.zeros((L, N))

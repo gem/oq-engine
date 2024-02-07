@@ -102,20 +102,14 @@ class MultiFaultSource(BaseSeismicSource):
     @property
     def multilines(self):
         """
-        Build a list of MultiLines from hdf5path, if any
+        Build a list of MultiLines from hdf5path
         """
-        if self.hdf5path:
-            with hdf5.File(self.hdf5path, 'r') as f:
-                cooss = f[f'rupture_coos/{self.source_id}'][:]
-                shifts = f[f'rupture_shifts/{self.source_id}'][:]
-                umaxs = f[f'rupture_umax/{self.source_id}'][:]
-            multilines = [MultiLine.from_(coos, shift, umax)
-                          for coos, shift, umax in zip(cooss, shifts, umaxs)]
-        else:
-            sec = self.get_sections()
-            multilines = [MultiLine([sec[idx].tor_line for idx in idxs])
-                          for idxs in self.rupture_idxs]
-        return multilines
+        with hdf5.File(self.hdf5path, 'r') as f:
+            cooss = f[f'rupture_coos/{self.source_id}'][:]
+            shifts = f[f'rupture_shift/{self.source_id}'][:]
+            umaxs = f[f'rupture_umax/{self.source_id}'][:]
+        return [MultiLine.from_(coos.reshape(-1, 2, 3), shift, umax)
+                for coos, shift, umax in zip(cooss, shifts, umaxs)]
 
     def is_gridded(self):
         return True  # convertible to HDF5
@@ -180,7 +174,7 @@ class MultiFaultSource(BaseSeismicSource):
         multilines = self.multilines
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
-            sfc = MultiSurface([sec[idx] for idx in idxs], multilines)
+            sfc = MultiSurface([sec[idx] for idx in idxs], multilines[i])
             rake = self.rakes[i]
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]

@@ -29,6 +29,7 @@ from openquake.baselib import parallel, general, hdf5, python3compat
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 U16 = numpy.uint16
@@ -157,7 +158,13 @@ def build_multilines(mfsources, monitor):
     """
     :returns: a dictionary source_id -> multilines
     """
-    return {src.source_id: src.multilines for src in mfsources}
+    out = {}
+    sec = mfsources[0].get_sections()
+    for src in mfsources:
+        multilines = [MultiLine([sec[idx].tor_line for idx in idxs])
+                      for idxs in src.rupture_idxs]
+        out[src.source_id] = multilines
+    return out
 
 
 # NB: in classical this is called after reduce_sources, so ";" is not
@@ -370,13 +377,12 @@ def fix_geometry_sections(smdict, dstore):
     dic = parallel.Starmap.apply(build_multilines, mfsources).reduce()
     with hdf5.File(dstore.tempname, 'r+') as h5:
         for srcid, multilines in sorted(dic.items()):
-            coos = [ml.coos for ml in multilines]
+            coos = [numpy.concatenate(ml.coos).flatten() for ml in multilines]
             shift = [ml.shift for ml in multilines]
-            umax = [ml.umax for ml in multilines]
+            umax = numpy.array([ml.u_max for ml in multilines])
             h5.save_vlen(f'rupture_coos/{srcid}', coos)
             h5.save_vlen(f'rupture_shift/{srcid}', shift)
-            h5.save_vlen(f'rupture_umax/{srcid}', umax)
-    import pdb; pdb.set_trace()
+            h5.create_dataset(f'rupture_umax/{srcid}', data=umax)
     
     cnt = collections.Counter(section_idxs)
     if cnt:
