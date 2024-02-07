@@ -36,10 +36,32 @@ from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
+KNOWN_DATASETS = {'multi_fault_sections', 'rupture_coos', 'rupture_shift',
+                  'rupture_sizes', 'rupture_umax'}
 F32 = np.float32
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
+
+
+def reshape(coos, sizes):
+    """
+    Convert an array with lenght sum(sizes) * 3 into a list of arrays
+    of shape (size, 3). For instance
+
+    >>> coos = np.array([100, 10, 0, 110, 10, 0])
+    >>> sizes = [2]
+    >>> reshape(coos, sizes)
+    [array([[100,  10,   0],
+           [110,  10,   0]])]
+    """
+    start = 0
+    lst = []
+    for size in sizes:
+        lst.append(coos[start:start + 3 * size].reshape(-1, 3))
+        start += 3 * size
+    return lst
+
 
 class MultiFaultSource(BaseSeismicSource):
     """
@@ -106,10 +128,13 @@ class MultiFaultSource(BaseSeismicSource):
         """
         with hdf5.File(self.hdf5path, 'r') as f:
             cooss = f[f'rupture_coos/{self.source_id}'][:]
+            sizess = f[f'rupture_sizes/{self.source_id}'][:]
             shifts = f[f'rupture_shift/{self.source_id}'][:]
             umaxs = f[f'rupture_umax/{self.source_id}'][:]
-        return [MultiLine.from_(coos.reshape(-1, 2, 3), shift, umax)
-                for coos, shift, umax in zip(cooss, shifts, umaxs)]
+        mls = []
+        for coos, sizes, shift, umax in zip(cooss, sizess, shifts, umaxs):
+            mls.append(MultiLine.from_(reshape(coos, sizes), shift, umax))
+        return mls
 
     def is_gridded(self):
         return True  # convertible to HDF5
@@ -251,8 +276,10 @@ def save(sources, sections, hdf5path):
     """
     Debug utility to serialize MultiFaultSources
     """
+    from openquake.hazardlib.source_reader import save_multilines
     with hdf5.File(hdf5path, 'w') as h5:
         for src in sources:
+            src.hdf5path = hdf5path
             h5.save_vlen(f'{src.source_id}/rupture_idxs', src.rupture_idxs)
             h5[f'{src.source_id}/probs_occur'] = src.probs_occur
             h5[f'{src.source_id}/mags'] = src.mags
@@ -262,8 +289,10 @@ def save(sources, sections, hdf5path):
             attrs['tectonic_region_type'] = src.tectonic_region_type
             attrs['investigation_time'] = src.investigation_time
             attrs['infer_occur_rates'] = src.infer_occur_rates
-            h5.save_vlen('multi_fault_sections',
-                         [kite_to_geom(sec) for sec in sections])
+        h5.save_vlen('multi_fault_sections', [
+            kite_to_geom(sec) for sec in sections])
+        save_multilines(sources, sections, hdf5path)
+
 
 def load(hdf5path):
     """
@@ -272,7 +301,7 @@ def load(hdf5path):
     srcs = []
     with hdf5.File(hdf5path, 'r') as h5:
         for key in list(h5):
-            if key == 'multi_fault_sections':
+            if key in KNOWN_DATASETS:
                 continue
             data = h5[key]
             name = data.attrs['name']

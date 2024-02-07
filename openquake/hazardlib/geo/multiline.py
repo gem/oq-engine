@@ -52,7 +52,7 @@ class MultiLine(object):
     @classmethod
     def from_(cls, coos, shift, umax):
         """
-        :param coos: an array of shape (L, 2, 3)
+        :param coos: a list of arrays of shape (L, size, 3)
         :param shift: an array of shape L
         :param umax: a scalar
         """
@@ -79,6 +79,13 @@ class MultiLine(object):
         self.coos = [ln.coo for ln in lines]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
         self.u_max = np.abs(self.get_uts(ep)[0]).max()
+
+    @property
+    def sizes(self):
+        """
+        The sizes of the underlying lines
+        """
+        return np.uint8([len(coo) for coo in self.coos])
 
     def get_uts(self, mesh):
         """

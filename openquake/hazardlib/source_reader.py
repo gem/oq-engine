@@ -25,7 +25,8 @@ import gzip
 import zlib
 import numpy
 
-from openquake.baselib import parallel, general, hdf5, python3compat
+from openquake.baselib import (
+    parallel, performance, general, hdf5, python3compat)
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
@@ -154,18 +155,41 @@ def read_source_model(fname, branch, converter, monitor):
     return {fname: sm}
 
 
-def build_multilines(mfsources, monitor):
+def build_multilines(mfsources, torlines, monitor):
     """
     :returns: a dictionary source_id -> multilines
     """
     out = {}
-    sec = mfsources[0].get_sections()
     for src in mfsources:
-        print('Building multilines for %s', src)
-        multilines = [MultiLine([sec[idx].tor_line for idx in idxs])
+        multilines = [MultiLine([torlines[idx] for idx in idxs])
                       for idxs in src.rupture_idxs]
         out[src.source_id] = multilines
     return out
+
+
+def save_multilines(mfsources, sections, hdf5path, dstore=None):
+    # store multilines information
+    torlines = [sec.tor_line for sec in sections]
+    if dstore:
+        # regular case
+        dic = parallel.Starmap.apply(
+            build_multilines, (mfsources, torlines),
+            h5=dstore
+        ).reduce()
+    else:
+        # inside multi_fault.save
+        dic = build_multilines(mfsources, torlines, performance.Monitor())
+    logging.info('Storing multilines')
+    with hdf5.File(hdf5path, 'r+') as h5:
+        for srcid, multilines in sorted(dic.items()):
+            coos = [numpy.concatenate(ml.coos).flatten() for ml in multilines]
+            sizes = [ml.sizes for ml in multilines]
+            shift = [ml.shift for ml in multilines]
+            umax = numpy.array([ml.u_max for ml in multilines])
+            h5.save_vlen(f'rupture_coos/{srcid}', coos)
+            h5.save_vlen(f'rupture_sizes/{srcid}', sizes)
+            h5.save_vlen(f'rupture_shift/{srcid}', shift)
+            h5.create_dataset(f'rupture_umax/{srcid}', data=umax)
 
 
 # NB: in classical this is called after reduce_sources, so ";" is not
@@ -352,6 +376,8 @@ def fix_geometry_sections(smdict, dstore):
         with hdf5.File(dstore.tempname, 'w') as h5:
             h5.save_vlen('multi_fault_sections',
                          [kite_to_geom(sec) for sec in sections.values()])
+            h5.save_vlen('tor_lines', [sec.tor_line.coo.flatten()
+                                       for sec in sections.values()])
 
     # fix the MultiFaultSources
     section_idxs = []
@@ -374,20 +400,7 @@ def fix_geometry_sections(smdict, dstore):
                     for idxs in rupture_idxs:
                         section_idxs.extend(idxs)
 
-    # store multilines information
-    dic = parallel.Starmap.apply(
-        build_multilines, (mfsources,),
-        h5=dstore
-    ).reduce()
-    with hdf5.File(dstore.tempname, 'r+') as h5:
-        for srcid, multilines in sorted(dic.items()):
-            coos = [numpy.concatenate(ml.coos).flatten() for ml in multilines]
-            shift = [ml.shift for ml in multilines]
-            umax = numpy.array([ml.u_max for ml in multilines])
-            h5.save_vlen(f'rupture_coos/{srcid}', coos)
-            h5.save_vlen(f'rupture_shift/{srcid}', shift)
-            h5.create_dataset(f'rupture_umax/{srcid}', data=umax)
-    
+    save_multilines(mfsources, sections.values(), dstore.tempname, dstore)
     cnt = collections.Counter(section_idxs)
     if cnt:
         mean_counts = numpy.mean(list(cnt.values()))

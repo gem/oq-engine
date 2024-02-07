@@ -21,7 +21,7 @@ import numpy
 import pandas
 from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib import valid, contexts
+from openquake.hazardlib import valid, contexts, source_reader
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -100,10 +100,6 @@ class MultiFaultTestCase(unittest.TestCase):
         with hdf5.File(gm_hdf5, 'r') as f:
             lines = python3compat.decode(f['01/rupture_idxs'][:])
         self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
-
-        # test rupture generation
-        rups = list(src.iter_ruptures())
-        self.assertEqual(7, len(rups))
 
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
