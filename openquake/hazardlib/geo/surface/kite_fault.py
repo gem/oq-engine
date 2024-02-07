@@ -121,7 +121,8 @@ class KiteSurface(BaseSurface):
         """
         Provides longitude and latitude coordinates of the vertical surface
         projection of the top of rupture. This is used in the GC2 method to
-        compute the Rx and Ry0 distances.
+        compute the Rx and Ry0 distances. NB: keep_corners is used to reduce
+        the line, with a tolerance of 1 km.
 
         One important note here. The kite fault surface uses a rectangular
         mesh to describe the geometry of the rupture; some nodes can be NaN.
