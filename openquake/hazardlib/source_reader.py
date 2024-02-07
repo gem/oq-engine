@@ -153,6 +153,13 @@ def read_source_model(fname, branch, converter, monitor):
     return {fname: sm}
 
 
+def build_multilines(mfsources, monitor):
+    """
+    :returns: a dictionary source_id -> multilines
+    """
+    return {src.source_id: src.multilines for src in mfsources}
+
+
 # NB: in classical this is called after reduce_sources, so ";" is not
 # added if the same source appears multiple times, len(srcs) == 1
 def _fix_dupl_ids(src_groups):
@@ -340,6 +347,7 @@ def fix_geometry_sections(smdict, dstore):
 
     # fix the MultiFaultSources
     section_idxs = []
+    mfsources = []
     for smod in smodels:
         for sg in smod.src_groups:
             for src in sg:
@@ -351,11 +359,25 @@ def fix_geometry_sections(smdict, dstore):
                     rupture_idxs = [U16([s2i[idx] for idx in idxs])
                                     for idxs in src._rupture_idxs]
                     delattr(src, '_rupture_idxs')  # set by the SourceConverter
+                    mfsources.extend(calc.filters.split_source(src))
                     with hdf5.File(dstore.tempname, 'r+') as h5:
                         for srcid, block in src.gen_blocks(rupture_idxs):
                             h5.save_vlen(f'rupture_idxs/{srcid}', block)
                     for idxs in rupture_idxs:
                         section_idxs.extend(idxs)
+
+    # store multilines information
+    dic = parallel.Starmap.apply(build_multilines, mfsources).reduce()
+    with hdf5.File(dstore.tempname, 'r+') as h5:
+        for srcid, multilines in sorted(dic.items()):
+            coos = [ml.coos for ml in multilines]
+            shift = [ml.shift for ml in multilines]
+            umax = [ml.umax for ml in multilines]
+            h5.save_vlen(f'rupture_coos/{srcid}', coos)
+            h5.save_vlen(f'rupture_shift/{srcid}', shift)
+            h5.save_vlen(f'rupture_umax/{srcid}', umax)
+            
+    
     cnt = collections.Counter(section_idxs)
     if cnt:
         mean_counts = numpy.mean(list(cnt.values()))

@@ -31,6 +31,7 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -98,6 +99,22 @@ class MultiFaultSource(BaseSeismicSource):
         with hdf5.File(self.hdf5path, 'r') as f:
             return f[f'rupture_idxs/{self.source_id}'][:]
         
+    @property
+    def multilines(self):
+        """
+        Build a list of MultiLines from hdf5path, if any
+        """
+        if self.hdf5path:
+            with hdf5.File(self.hdf5path, 'r') as f:
+                cooss = f[f'rupture_coos/{self.source_id}'][:]
+                shifts = f[f'rupture_shifts/{self.source_id}'][:]
+                umaxs = f[f'rupture_umax/{self.source_id}'][:]
+            multilines = [MultiLine.from_(coos, shift, umax)
+                          for coos, shift, umax in zip(cooss, shifts, umaxs)]
+        else:
+            multilines = [None] * len(self.mags)
+        return multilines
+
     def is_gridded(self):
         return True  # convertible to HDF5
 
@@ -158,12 +175,13 @@ class MultiFaultSource(BaseSeismicSource):
         n = len(self.mags)
         sec = self.get_sections()  # KiteSurfaces
         rupture_idxs = self.rupture_idxs
+        multilines = self.multilines
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
             if len(idxs) == 1:
                 sfc = sec[idxs[0]]
             else:
-                sfc = MultiSurface([sec[idx] for idx in idxs])
+                sfc = MultiSurface([sec[idx] for idx in idxs], multilines[i])
             rake = self.rakes[i]
             hypo = sec[idxs[0]].get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]

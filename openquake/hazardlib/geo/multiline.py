@@ -24,7 +24,7 @@ import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import get_average_azimuth
+from openquake.hazardlib.geo.line import Line, get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
@@ -49,6 +49,14 @@ class MultiLine(object):
     most part, these are used to compute distances according to the GC2
     method.
     """
+    @classmethod
+    def from_(cls, coos, shift, umax):
+        self = object.__new__(cls)
+        self.lines = [Line.from_coo(coo) for coo in coos]
+        self.shift = shift
+        self.umax = umax
+        return self
+
     def __init__(self, lines):
         # compute the overall strike and the origin of the multiline
         # get lenghts and average azimuths
@@ -65,6 +73,13 @@ class MultiLine(object):
         self.lines = [self.lines[i] for i in soidx]
         self.shift = get_coordinate_shift(self.lines, olon, olat, avg_azim)
         self.u_max = np.abs(self.get_uts(ep)[0]).max()
+
+    @property
+    def coos(self):
+        """
+        :returns: array of shape (L, 2, 3)
+        """
+        return np.concatenate([line.coo for line in self.lines])
 
     def get_uts(self, mesh):
         """

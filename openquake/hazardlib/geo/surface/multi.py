@@ -84,7 +84,7 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces: list, tol: float = 1):
+    def __init__(self, surfaces, tor=None, tol=1.):
         """
         Intialize a multi surface object from a list of surfaces
 
@@ -97,7 +97,7 @@ class MultiSurface(BaseSurface):
         """
         self.surfaces = surfaces
         self.tol = tol
-        self.tor = None
+        self.tor = tor
         self.areas = None
 
     # called at each instantiation
