@@ -161,6 +161,7 @@ def build_multilines(mfsources, monitor):
     out = {}
     sec = mfsources[0].get_sections()
     for src in mfsources:
+        print('Building multilines for %s', src)
         multilines = [MultiLine([sec[idx].tor_line for idx in idxs])
                       for idxs in src.rupture_idxs]
         out[src.source_id] = multilines
@@ -374,7 +375,10 @@ def fix_geometry_sections(smdict, dstore):
                         section_idxs.extend(idxs)
 
     # store multilines information
-    dic = parallel.Starmap.apply(build_multilines, mfsources).reduce()
+    dic = parallel.Starmap.apply(
+        build_multilines, (mfsources,),
+        h5=dstore
+    ).reduce()
     with hdf5.File(dstore.tempname, 'r+') as h5:
         for srcid, multilines in sorted(dic.items()):
             coos = [numpy.concatenate(ml.coos).flatten() for ml in multilines]
