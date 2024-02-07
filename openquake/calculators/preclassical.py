@@ -191,11 +191,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                 cmakers[grp_id].set_weight(sg, sites)
                 atomic_sources.extend(sg)
             else:
-                for src in sg:
-                    if hasattr(src, 'rupture_idxs'):  # multiFault
-                        normal_sources.extend(split_source(src))
-                    else:
-                        normal_sources.append(src)
+                normal_sources.extend(sg)
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
@@ -210,10 +206,10 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointsources.append(src)
                 elif hasattr(src, 'nodal_plane_distribution'):
                     pointlike.append(src)
-                elif src.code == b'F':  # split multi fault sources
-                    for split in src:
+                elif src.code == b'F':  # multi fault source
+                    for split in split_source(src):
                         smap.submit(([split], sites, cmaker))
-                elif src.code in b'CN':  # send the heavy sources
+                elif src.code in b'CN':  # other heavy sources
                     smap.submit(([src], sites, cmaker))
                 else:
                     others.append(src)
