@@ -84,7 +84,7 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces, tor=None, tol=1.):
+    def __init__(self, surfaces, u_max=None, tol=1.):
         """
         Intialize a multi surface object from a list of surfaces
 
@@ -97,7 +97,8 @@ class MultiSurface(BaseSurface):
         """
         self.surfaces = surfaces
         self.tol = tol
-        self.tor = tor
+        self.u_max = u_max
+        self.tor = None
         self.areas = None
 
     # called at each instantiation
@@ -117,7 +118,7 @@ class MultiSurface(BaseSurface):
                 # PlanarSurfaces together in NonParametricSources
                 # the `idx` is used only in MultiFaultSources
                 # srfc.tor_line.idx = getattr(srfc, 'idx', None)
-                tors.append(srfc.tor_line.keep_corners(self.tol))
+                tors.append(srfc.tor_line)
 
             elif isinstance(srfc, PlanarSurface):
                 lo = []
@@ -139,7 +140,7 @@ class MultiSurface(BaseSurface):
 
         # Set the multiline representing the rupture traces i.e. vertical
         # projections at the surface of the top of ruptures
-        self.tor = geo.MultiLine(tors)
+        self.tor = geo.MultiLine(tors, self.u_max)
 
     def get_min_distance(self, mesh):
         """

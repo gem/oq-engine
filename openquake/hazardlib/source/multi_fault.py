@@ -157,10 +157,15 @@ class MultiFaultSource(BaseSeismicSource):
         step = kwargs.get('step', 1)
         n = len(self.mags)
         sec = self.get_sections()  # KiteSurfaces
+        if step > 1:  # in preclassical
+            u_max = [None] * n
+        else:
+            with hdf5.File(self.hdf5path, 'r') as h5:
+                u_max = h5[f'rupture_umax/{self.source_id}'][:]
         rupture_idxs = self.rupture_idxs
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
-            sfc = MultiSurface([sec[idx] for idx in idxs])
+            sfc = MultiSurface([sec[idx] for idx in idxs], u_max[i])
             rake = self.rakes[i]
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
