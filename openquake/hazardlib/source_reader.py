@@ -376,7 +376,7 @@ def fix_geometry_sections(smdict, dstore):
             h5.save_vlen(f'rupture_coos/{srcid}', coos)
             h5.save_vlen(f'rupture_shift/{srcid}', shift)
             h5.save_vlen(f'rupture_umax/{srcid}', umax)
-            
+    import pdb; pdb.set_trace()
     
     cnt = collections.Counter(section_idxs)
     if cnt:
