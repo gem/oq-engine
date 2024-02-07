@@ -207,5 +207,22 @@ def main():
                 breakpoint()
 
 
+def main100sites():
+    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    lons = numpy.arange(-122, -121, .01)
+    lats = numpy.full_like(lons, 27)
+    sitecol = SiteCollection.from_points(lons, lats)
+    sitecol._set('vs30', 760.)
+    sitecol._set('vs30measured', 1)
+    sitecol._set('z1pt0', 100.)
+    sitecol._set('z2pt5', 5.)
+    gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1,
+                                    max_sites_disagg=100)
+    [ctxt] = cmaker.from_srcs([src], sitecol)
+    print(cmaker.ir_mon)
+    print(cmaker.ctx_mon)
+
+
 if __name__ == '__main__':
     main()
