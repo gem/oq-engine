@@ -117,8 +117,7 @@ class MultiSurface(BaseSurface):
                 # PlanarSurfaces together in NonParametricSources
                 # the `idx` is used only in MultiFaultSources
                 # srfc.tor_line.idx = getattr(srfc, 'idx', None)
-                srfc.tor_line.keep_corners(self.tol)
-                tors.append(srfc.tor_line)
+                tors.append(srfc.tor_line.keep_corners(self.tol))
 
             elif isinstance(srfc, PlanarSurface):
                 lo = []
@@ -133,8 +132,7 @@ class MultiSurface(BaseSurface):
                 lats = srfc.mesh.lats[0, :]
                 coo = np.array([[lo, la] for lo, la in zip(lons, lats)])
                 line = geo.line.Line.from_vectors(coo[:, 0], coo[:, 1])
-                line.keep_corners(self.tol)
-                tors.append(line)
+                tors.append(line.keep_corners(self.tol))
 
             else:
                 raise ValueError(f"Surface {str(srfc)} not supported")

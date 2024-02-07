@@ -166,6 +166,8 @@ class MultiFaultSource(BaseSeismicSource):
                 sfc = MultiSurface([sec[idx] for idx in idxs])
             rake = self.rakes[i]
             hypo = sec[idxs[0]].get_middle_point()
+            #if len(idxs) == 1:
+            #    import pdb; pdb.set_trace()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
             if self.infer_occur_rates:
                 yield ParametricProbabilisticRupture(
