@@ -24,6 +24,7 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -32,6 +33,15 @@ from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
+
+
+def store_umax(src):
+    torlines = [sec.tor_line for sec in src.get_sections()]
+    u_max = [MultiLine([torlines[idx] for idx in idxs]).u_max
+             for idxs in src.rupture_idxs]
+    with hdf5.File(src.hdf5path, 'r+') as h5:
+        h5.create_dataset(f'{src.source_id}/u_max', data=numpy.array(u_max))
+
 
 class MultiFaultTestCase(unittest.TestCase):
     """
@@ -101,10 +111,6 @@ class MultiFaultTestCase(unittest.TestCase):
             lines = python3compat.decode(f['01/rupture_idxs'][:])
         self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
 
-        # test rupture generation
-        rups = list(src.iter_ruptures())
-        self.assertEqual(7, len(rups))
-
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
         save([src], self.sections, fname)
@@ -123,7 +129,8 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
-        [ctx] = cmaker.from_srcs([src], sitecol)
+        store_umax(got)
+        [ctx] = cmaker.from_srcs([got], sitecol)
         assert len(ctx) == src.count_ruptures()
 
         # compare with the expected distances computed without cache
@@ -148,6 +155,7 @@ class MultiFaultTestCase(unittest.TestCase):
 def main():
     # run a performance test with a reduced UCERF source
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    # store_umax(src)
     sitecol = SiteCollection.from_points([-122, -121], [37, 27])
     sitecol._set('vs30', 760.)
     sitecol._set('vs30measured', 1)

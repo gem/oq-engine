@@ -104,8 +104,8 @@ def store_umax(mfsources, dstore):
         h5=dstore
     ).reduce()
     with hdf5.File(src.hdf5path, 'r+') as h5:
-        for srcid, umax in sorted(dic.items()):
-            h5.create_dataset(f'rupture_umax/{srcid}', data=umax)
+        for srcid, u_max in sorted(dic.items()):
+            h5.create_dataset(f'{srcid}/u_max', data=u_max)
 
 
 class Set(set):

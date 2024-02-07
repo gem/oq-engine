@@ -161,7 +161,7 @@ class MultiFaultSource(BaseSeismicSource):
             u_max = [None] * n
         else:
             with hdf5.File(self.hdf5path, 'r') as h5:
-                u_max = h5[f'rupture_umax/{self.source_id}'][:]
+                u_max = h5[f'{self.source_id}/u_max'][:]
         rupture_idxs = self.rupture_idxs
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
