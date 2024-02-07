@@ -505,9 +505,9 @@ class MultiFaultSourceModelTestCase(unittest.TestCase):
         sections = list(sec.values())
         s2i = {idx: i for i, idx in enumerate(sec)}
         src = ssm[0][0]
-        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                            for idxs in src.rupture_idxs]
-        src.set_sections(sections)   # fix sections
+        rupture_idxs = [tuple(s2i[idx] for idx in idxs)
+                        for idxs in src.rupture_idxs]
+        src.set_sections(sections, rupture_idxs)   # fix sections
         rups = list(ssm[0][0].iter_ruptures())
 
         # Check data for the second rupture

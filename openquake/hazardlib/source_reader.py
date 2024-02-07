@@ -335,15 +335,6 @@ def fix_geometry_sections(smdict, dstore):
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
         with hdf5.File(dstore.tempname, 'w') as h5:
-            '''
-            mesh = dstore['sitecol'].mesh
-            # this is absurdly fast
-            logging.info('Computing distances sections->points')
-            dists = numpy.array([sec.get_min_distance(mesh)
-                                 for sec in sections.values()])
-            h5.create_dataset('dists', data=dists)  # shape (Ns, N)
-            logging.info(f'Stored {general.humansize(dists.nbytes)}')
-            '''
             h5.save_vlen('multi_fault_sections',
                          [kite_to_geom(sec) for sec in sections.values()])
 
@@ -357,9 +348,13 @@ def fix_geometry_sections(smdict, dstore):
                         raise RuntimeError('Missing geometryModel files!')
                     if dstore:
                         src.hdf5path = dstore.tempname
-                    src.rupture_idxs = [U16([s2i[idx] for idx in idxs])
-                                        for idxs in src.rupture_idxs]
-                    for idxs in src.rupture_idxs:
+                    rupture_idxs = [U16([s2i[idx] for idx in idxs])
+                                    for idxs in src._rupture_idxs]
+                    delattr(src, '_rupture_idxs')  # set by the SourceConverter
+                    with hdf5.File(dstore.tempname, 'r+') as h5:
+                        for srcid, block in src.gen_blocks(rupture_idxs):
+                            h5.save_vlen(f'rupture_idxs/{srcid}', block)
+                    for idxs in rupture_idxs:
                         section_idxs.extend(idxs)
     cnt = collections.Counter(section_idxs)
     if cnt:
@@ -467,11 +462,12 @@ def _get_csm(full_lt, groups, event_based, set_wkt):
                        'of {:_d} points!')
                 for src in sources:
                     # check on MultiFaultSources and NonParametricSources
-                    mesh_size = getattr(src, 'mesh_size', 0)
-                    if mesh_size > 1E6:
-                        logging.warning(msg.format(
-                            src.source_id, src.count_ruptures(), mesh_size))
-                    src._wkt = src.wkt()
+                    #mesh_size = getattr(src, 'mesh_size', 0)
+                    #if mesh_size > 1E6:
+                    #    logging.warning(msg.format(
+                    #        src.source_id, src.count_ruptures(), mesh_size))
+                    #src._wkt = src.wkt()
+                    pass
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     if set_wkt:
         for ag in atomic:
