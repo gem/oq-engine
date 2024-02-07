@@ -137,7 +137,7 @@ class KiteSurface(BaseSurface):
         iro = iro[iro <= 1]
         # top_left, top_right coordinates
         lo, la = self.mesh.lons[iro, ico], self.mesh.lats[iro, ico]
-        return Line.from_vectors(lo, la)
+        return Line.from_vectors(lo, la).keep_corners(delta=1.)
 
     def is_vertical(self):
         """ True if all the profiles, and hence the surface, are vertical """
