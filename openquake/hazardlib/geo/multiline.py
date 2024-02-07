@@ -24,7 +24,7 @@ import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import get_average_azimuth
+from openquake.hazardlib.geo.line import Line, get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
@@ -62,8 +62,9 @@ class MultiLine(object):
         olon, olat, soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
-        self.lines = [self.lines[i] for i in soidx]
-        self.shift = get_coordinate_shift(self.lines, olon, olat, avg_azim)
+        lines = [self.lines[i] for i in soidx]
+        self.coos = [ln.coo for ln in lines]
+        self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
         self.u_max = np.abs(self.get_uts(ep)[0]).max()
 
     def get_uts(self, mesh):
@@ -75,8 +76,8 @@ class MultiLine(object):
         tupps = np.zeros((L, N))
         uupps = np.zeros((L, N))
         weis = np.zeros((L, N))
-        for i, line in enumerate(self.lines):
-            tu, uu, we = line.get_tuw(mesh)
+        for i, coo in enumerate(self.coos):
+            tu, uu, we = Line.from_coo(coo).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)

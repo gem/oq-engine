@@ -341,6 +341,7 @@ class Line(object):
         idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
         pidx = sorted(pidx.union(set(idx + 1)))
         self.coo = coo[pidx]
+        return self
 
     def resample_to_num_points(self, num_points):
         """

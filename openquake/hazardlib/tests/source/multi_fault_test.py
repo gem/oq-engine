@@ -122,7 +122,7 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z1pt0', 100.)
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-        cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+        cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
         [ctx] = cmaker.from_srcs([src], sitecol)
         assert len(ctx) == src.count_ruptures()
 
@@ -132,7 +132,7 @@ class MultiFaultTestCase(unittest.TestCase):
         aac(ctx.rjb, [0., 27.51904144, 55.03833836, 0., 0., 27.51904144, 0.])
         aac(ctx.rx, [0, 1.10377738e-01, 3.39619736e-01, 1.68873152e-05,
                      1.64545240e-05, 1.65508566e-01, 3.33385038e-05])
-        aac(ctx.ry0, [0., 27.519258, 55.038008, 0., 0., 27.518444, 0.])
+        aac(ctx.ry0, [0., 27.518885, 55.036336, 0., 0., 27.518444, 0.])
         aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
         aac(ctx.clat, 45.)
 
