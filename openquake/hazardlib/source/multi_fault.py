@@ -182,7 +182,7 @@ class MultiFaultSource(BaseSeismicSource):
             yield self.source_id, lst
             return
         for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
-            yield '%s:%d' % (self.source_id, i), lst[slc]
+            yield '%s.%d' % (self.source_id, i), lst[slc]
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
@@ -191,7 +191,7 @@ class MultiFaultSource(BaseSeismicSource):
         # split in blocks of BLOCKSIZE ruptures each
         for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
             src = self.__class__(
-                '%s:%d' % (self.source_id, i),
+                '%s.%d' % (self.source_id, i),
                 self.name,
                 self.tectonic_region_type,
                 self.probs_occur[slc],
