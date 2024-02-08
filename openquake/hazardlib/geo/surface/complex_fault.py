@@ -93,6 +93,17 @@ class ComplexFaultSurface(BaseSurface):
                              "Check the geometry definition of the "
                              "fault source")
 
+    @property
+    def tor(self):
+        """
+        :returns: top of rupture line
+        """
+        lons = self.mesh.lons[0, :]
+        lats = self.mesh.lats[0, :]
+        coo = numpy.array([[lo, la] for lo, la in zip(lons, lats)])
+        line = Line.from_vectors(coo[:, 0], coo[:, 1])
+        return line.keep_corners(1.)
+
     def get_dip(self):
         """
         Return the fault dip as the average dip over the mesh.

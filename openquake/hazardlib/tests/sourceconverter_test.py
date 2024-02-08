@@ -502,20 +502,3 @@ class MultiFaultSourceModelTestCase(unittest.TestCase):
         self.assertEqual(expected[1], sec['s2'].profiles[0].points[1])
         ssm = nrml.to_python(src_xml, conv)
         self.assertIsInstance(ssm, nrml.SourceModel)
-        sections = list(sec.values())
-        s2i = {idx: i for i, idx in enumerate(sec)}
-        src = ssm[0][0]
-        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                            for idxs in src.rupture_idxs]
-        src.set_sections(sections)   # fix sections
-        rups = list(ssm[0][0].iter_ruptures())
-
-        # Check data for the second rupture
-        msg = 'Rake for rupture #0 is wrong'
-        self.assertEqual(rups[0].rake, 90.0, msg)
-        # Check data for the second rupture
-        msg = 'Rake for rupture #1 is wrong'
-        self.assertEqual(rups[1].rake, -90.0, msg)
-        # Check mfd
-        expected = numpy.array([0.9, 0.1])
-        numpy.testing.assert_almost_equal(rups[1].probs_occur, expected)

@@ -528,7 +528,10 @@ class ClassicalTestCase(CalculatorTestCase):
 
     def test_case_65(self):
         # multiFaultSource with infer_occur_rates=true
-        self.run_calc(case_65.__file__, 'job.ini')
+        self.run_calc(case_65.__file__, 'job.ini',
+                      calculation_mode='preclassical')
+        hc_id = str(self.calc.datastore.calc_id)
+        self.run_calc(case_65.__file__, 'job.ini', hazard_calculation_id=hc_id)
         rates = self.calc.datastore['rup/occurrence_rate'][:]
         aac(rates, [0.356675, 0.105361], atol=5e-7)
 
@@ -539,7 +542,8 @@ class ClassicalTestCase(CalculatorTestCase):
         csm = self.calc.datastore['_csm']
         tmpname = general.gettemp()
         [src] = csm.src_groups[0].sources
-        src.rupture_idxs = [tuple(map(str, idxs)) for idxs in src.rupture_idxs]
+        src._rupture_idxs = [
+            tuple(map(str, idxs)) for idxs in src.rupture_idxs]
         out = write_source_model(tmpname, csm.src_groups)
         self.assertEqual(out[0], tmpname)
         self.assertEqual(out[1], tmpname + '.hdf5')
