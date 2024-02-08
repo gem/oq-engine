@@ -98,7 +98,7 @@ def store_umax(mfsources, dstore):
     # store multilines information
     src = mfsources[0]
     sections = src.get_sections()
-    torlines = [sec.tor_line for sec in sections]
+    torlines = [sec.tor for sec in sections]
     dic = parallel.Starmap.apply(
         build_umax, (mfsources, torlines),
         h5=dstore

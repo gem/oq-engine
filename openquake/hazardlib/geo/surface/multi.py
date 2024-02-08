@@ -67,7 +67,7 @@ class MultiSurface(BaseSurface):
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
-    # NB: without a cache, get_closest_points calls it
+    # NB: called in event_based calculations
     @property
     def mesh(self):
         """
@@ -84,19 +84,15 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces, u_max=None, tol=1.):
+    def __init__(self, surfaces, u_max=None):
         """
         Intialize a multi surface object from a list of surfaces
 
         :param surfaces:
             A list of instances of subclasses of
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
-        :param tol:
-            A float in decimal degrees representing the tolerance admitted in
-            representing the rupture trace.
         """
         self.surfaces = surfaces
-        self.tol = tol
         self.u_max = u_max
         self.tor = None
         self.areas = None
@@ -109,37 +105,10 @@ class MultiSurface(BaseSurface):
         We represent the surface projection of each top of rupture with an
         instance of a :class:`openquake.hazardlib.geo.multiline.Multiline`
         """
-        tors = []
-
-        for srfc in self.surfaces:
-
-            if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
-                # in classical/case_62 there are KiteSurfaces and
-                # PlanarSurfaces together in NonParametricSources
-                # the `idx` is used only in MultiFaultSources
-                # srfc.tor_line.idx = getattr(srfc, 'idx', None)
-                tors.append(srfc.tor_line)
-
-            elif isinstance(srfc, PlanarSurface):
-                lo = []
-                la = []
-                for pnt in [srfc.top_left, srfc.top_right]:
-                    lo.append(pnt.longitude)
-                    la.append(pnt.latitude)
-                tors.append(geo.line.Line.from_vectors(lo, la))
-
-            elif isinstance(srfc, (ComplexFaultSurface, SimpleFaultSurface)):
-                lons = srfc.mesh.lons[0, :]
-                lats = srfc.mesh.lats[0, :]
-                coo = np.array([[lo, la] for lo, la in zip(lons, lats)])
-                line = geo.line.Line.from_vectors(coo[:, 0], coo[:, 1])
-                tors.append(line.keep_corners(self.tol))
-
-            else:
-                raise ValueError(f"Surface {str(srfc)} not supported")
-
-        # Set the multiline representing the rupture traces i.e. vertical
-        # projections at the surface of the top of ruptures
+        # set the multiline representing the rupture traces, i.e. vertical
+        # projections of the top of ruptures; this is expensive unless u_max
+        # is known
+        tors = [surf.tor for surf in self.surfaces]
         self.tor = geo.MultiLine(tors, self.u_max)
 
     def get_min_distance(self, mesh):

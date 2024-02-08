@@ -337,6 +337,7 @@ def split_source(src):
     splits = list(src)
     if len(splits) == 1:
         return [src]
+    has_hdf5 = hasattr(src, 'hdf5path')
     has_samples = hasattr(src, 'samples')
     has_smweight = hasattr(src, 'smweight')
     has_scaling_rate = hasattr(src, 'scaling_rate')
@@ -349,6 +350,8 @@ def split_source(src):
         split.trt_smr = src.trt_smr
         split.grp_id = grp_id
         split.id = src.id
+        if has_hdf5:
+            split.hdf5path = src.hdf5path
         if has_samples:
             split.samples = src.samples
         if has_smweight:

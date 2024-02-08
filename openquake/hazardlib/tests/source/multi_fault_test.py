@@ -24,7 +24,6 @@ from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
-from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -33,14 +32,6 @@ from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
-
-
-def store_umax(src):
-    torlines = [sec.tor_line for sec in src.get_sections()]
-    u_max = [MultiLine([torlines[idx] for idx in idxs]).u_max
-             for idxs in src.rupture_idxs]
-    with hdf5.File(src.hdf5path, 'r+') as h5:
-        h5.create_dataset(f'{src.source_id}/u_max', data=numpy.array(u_max))
 
 
 class MultiFaultTestCase(unittest.TestCase):
@@ -67,8 +58,8 @@ class MultiFaultTestCase(unittest.TestCase):
         prf, _ = kst._read_profiles(path)
         sfc_c = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
-        # Sections list
-        sections = [sfc_a, sfc_b, sfc_c]
+        # Sections
+        sections = {0: sfc_a, 1: sfc_b, 2: sfc_c}
 
         # Rupture indexes
         rup_idxs = [numpy.uint16(x) for x in [[0], [1], [2], [0, 1], [0, 2],
@@ -96,30 +87,35 @@ class MultiFaultTestCase(unittest.TestCase):
         # test instantiation
         src = MultiFaultSource("01", "test", "Moon Crust",
                                self.pmfs, self.mags, self.rakes)
-        src.set_sections(self.sections, self.rup_idxs)
+        src._rupture_idxs = self.rup_idxs
         src.mutex_weight = 1.
 
-        # test conversion to XML
+        # test conversion into XML
+        src.sections = self.sections.values()
         smodel = SourceModel([SourceGroup("Moon Crust", [src], "test_group",
                                           src_interdep='mutex')])
         fd, tmp = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
             sm_xml, gm_hdf5, gm_xml = write_source_model(tmp, smodel)
 
-        # check the stored section indices
-        with hdf5.File(gm_hdf5, 'r') as f:
-            lines = python3compat.decode(f['01/rupture_idxs'][:])
-        self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
-
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
-        save([src], self.sections, fname)
+        save([src], self.sections, fname, umax=True)
         [got] = load(fname)
         for name in 'mags rakes probs_occur'.split():
             numpy.testing.assert_almost_equal(
                 getattr(src, name), getattr(got, name))
         for a, b in zip(src.rupture_idxs, got.rupture_idxs):
             numpy.testing.assert_almost_equal(a, b)
+
+        # check the stored section indices
+        with hdf5.File(gm_hdf5, 'r') as f:
+            lines = python3compat.decode(f['01/rupture_idxs'][:])
+        self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
+
+        # test rupture generation
+        rups = list(src.iter_ruptures())
+        self.assertEqual(7, len(rups))
 
         # compute distances for the 7 underlying ruptures
         sitecol = SiteCollection.from_points([10.], [45.])
@@ -129,33 +125,35 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
-        store_umax(got)
         [ctx] = cmaker.from_srcs([got], sitecol)
         assert len(ctx) == src.count_ruptures()
 
         # compare with the expected distances computed without cache
-        aac(ctx.rrup, [0., 27.51929754, 55.03833836, 0., 0., 27.51929754,
-                       0.])
-        aac(ctx.rjb, [0., 27.51904144, 55.03833836, 0., 0., 27.51904144, 0.])
-        aac(ctx.rx, [0, 1.10377738e-01, 3.39619736e-01, 1.68873152e-05,
-                     1.64545240e-05, 1.65508566e-01, 3.33385038e-05])
-        aac(ctx.ry0, [0., 27.518885, 55.036336, 0., 0., 27.518444, 0.])
+        tol = 1e-4
+        aac(ctx.rrup, [0., 27.51933, 55.03832,  0., 0., 27.51933, 0.], atol=tol)
+        aac(ctx.rjb, [0., 27.51907, 55.03832,  0., 0., 27.51907, 0.], atol=tol)
+        aac(ctx.rx, [0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
+                     1.643886e-05, 1.653083e-01, 3.3298e-05], atol=tol)
+        aac(ctx.ry0, [0., 27.518915, 55.03632, 0., 0., 27.5184749,0.],
+            atol=tol)
         aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
         aac(ctx.clat, 45.)
 
     def test_ko(self):
-        # test set_sections, 3 is not a known section ID
+        # test invalid section IDs
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust",
                                self.pmfs, self.mags, self.rakes)
-        with self.assertRaises(IndexError):
-            mfs.set_sections(self.sections, rup_idxs)
+        mfs._rupture_idxs = rup_idxs
+        with self.assertRaises(IndexError) as ctx:
+            save([mfs], self.sections, 'dummy.hdf5', umax=True)
+        self.assertEqual(str(ctx.exception),
+                         "The section index 3 in source '01' is invalid")
 
 
 def main():
     # run a performance test with a reduced UCERF source
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
-    # store_umax(src)
     sitecol = SiteCollection.from_points([-122, -121], [37, 27])
     sitecol._set('vs30', 760.)
     sitecol._set('vs30measured', 1)
@@ -164,7 +162,7 @@ def main():
 
     print('Computing u, t, u2 values for the sections')
     with performance.Monitor() as mon:
-        lines = [sec.tor_line for sec in src.get_sections()]
+        lines = [sec.tor for sec in src.get_sections()]
         L = len(lines)
         N = len(sitecol)
         us = numpy.zeros((L, N))
@@ -178,8 +176,8 @@ def main():
     data = []
     for rup in rups:
         for surf in rup.surface.surfaces:
-            lines.append(surf.tor_line)
-            data.append(surf.tor_line.coo.tobytes())
+            lines.append(surf.tor)
+            data.append(surf.tor.coo.tobytes())
     uni, inv = numpy.unique(data, return_inverse=True)
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 

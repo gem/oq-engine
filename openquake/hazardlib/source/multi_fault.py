@@ -31,14 +31,17 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
 
+U16 = np.uint16
 F32 = np.float32
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
+
 
 class MultiFaultSource(BaseSeismicSource):
     """
@@ -76,9 +79,9 @@ class MultiFaultSource(BaseSeismicSource):
                  infer_occur_rates=False):
         nrups = len(magnitudes)
         assert len(occurrence_probs) == len(rakes) == nrups
-        self.probs_occur = occurrence_probs
-        self.mags = magnitudes
-        self.rakes = rakes
+        self.probs_occur = F32(occurrence_probs)
+        self.mags = F32(magnitudes)
+        self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
         self.investigation_time = investigation_time
         if infer_occur_rates:
@@ -90,13 +93,11 @@ class MultiFaultSource(BaseSeismicSource):
     @property
     def rupture_idxs(self):
         """
-        Read a list of U16 arrays from hdf5path if set
+        Read a list of U16 arrays from hdf5path
         """
-        if hasattr(self, '_rupture_idxs'):
-            # set by the SourceConverter or by the tests
-            return self._rupture_idxs
-        with hdf5.File(self.hdf5path, 'r') as f:
-            return f[f'rupture_idxs/{self.source_id}'][:]
+        assert self.hdf5path
+        with hdf5.File(self.hdf5path, 'r') as h5:
+            return h5[f'{self.source_id}/rupture_idxs'][:]
         
     def is_gridded(self):
         return True  # convertible to HDF5
@@ -106,7 +107,7 @@ class MultiFaultSource(BaseSeismicSource):
         :returns: dictionary of array, called when converting to HDF5
         """
         ridxs = []
-        for rupture_idxs in self.rupture_idxs:
+        for rupture_idxs in self._rupture_idxs:
             ridxs.append(' '.join(map(str, rupture_idxs)))
         # each pmf has the form [(prob0, 0), (prob1, 1), ...]
         return dict(mag=self.mags, rake=self.rakes,
@@ -116,8 +117,6 @@ class MultiFaultSource(BaseSeismicSource):
         """
         :returns: the underlying sections as KiteSurfaces
         """
-        if self.hdf5path == '':  # in the tests
-            return self.sections  # empty hdf5path
         with hdf5.File(self.hdf5path, 'r') as f:
             geoms = f['multi_fault_sections'][:]  # small
         sections = [geom_to_kite(geom) for geom in geoms]
@@ -125,38 +124,18 @@ class MultiFaultSource(BaseSeismicSource):
             sec.idx = idx
         return sections
 
-    # used in the tests, where the sections are manually given and not
-    # read from the HDF5 file
-    def set_sections(self, sections, rupture_idxs):
-        """
-        :param sections: a list of N surfaces
-        """
-        assert sections
-        # this is fundamental for the distance cache.
-        for idx, sec in enumerate(sections):
-            sec.idx = idx
-
-        # `i` is the index of the rupture of the `n` admitted by this source.
-        # In this loop we check that all the IDs of the sections composing one
-        # rupture have a object in the section list describing their geometry.
-        for i in range(len(self.mags)):
-            for idx in rupture_idxs[i]:
-                sections[idx]
-        self.sections = sections
-        self._rupture_idxs = rupture_idxs
-
     def iter_ruptures(self, **kwargs):
         """
         An iterator for the ruptures.
         """
         # Check
-        if not self.hdf5path and 'sections' not in self.__dict__:
-            raise RuntimeError('You forgot to call set_sections in %s!' % self)
+        if not self.hdf5path:
+            raise RuntimeError('You forgot to save the multifault sources')
 
         # iter on the ruptures
         step = kwargs.get('step', 1)
         n = len(self.mags)
-        sec = self.get_sections()  # KiteSurfaces
+        sec = self.get_sections()  # read KiteSurfaces
         if step > 1:  # in preclassical
             u_max = [None] * n
         else:
@@ -179,21 +158,21 @@ class MultiFaultSource(BaseSeismicSource):
                     self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                     PMF(data))
 
-    def gen_blocks(self, lst):
+    def gen_slices(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
-            yield self.source_id, lst
+            yield self.source_id, slice(None)
             return
         for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
-            yield '%s.%d' % (self.source_id, i), lst[slc]
+            yield '%s.%d' % (self.source_id, i), slc
 
     def __iter__(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
             yield self
             return
         # split in blocks of BLOCKSIZE ruptures each
-        for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
+        for srcid, slc in self.gen_slices():
             src = self.__class__(
-                '%s.%d' % (self.source_id, i),
+                srcid,
                 self.name,
                 self.tectonic_region_type,
                 self.probs_occur[slc],
@@ -238,23 +217,48 @@ class MultiFaultSource(BaseSeismicSource):
         return west - a2, south - a1, east + a2, north + a1
 
 
-def save(sources, sections, hdf5path):
+# NB: as side effect delete _rupture_idxs and add .hdf5path
+def save(mfsources, sectiondict, hdf5path, umax=False):
     """
-    Debug utility to serialize MultiFaultSources
+    Utility to serialize MultiFaultSources
     """
+    s2i = {idx: i for i, idx in enumerate(sectiondict)}
+    all_ridxs = []
+    for src in mfsources:
+        try:
+            rids = [U16([s2i[idx] for idx in idxs])
+                    for idxs in src._rupture_idxs]
+        except KeyError as exc:
+            raise IndexError('The section index %s in source %r is invalid'
+                             % (exc.args[0], src.source_id))
+        all_ridxs.append(rids)
+        delattr(src, '_rupture_idxs')  # was set by the SourceConverter
+        src.hdf5path = hdf5path
+        if umax:
+            tors = [sec.tor for sec in sectiondict.values()]
+            mls = [MultiLine([tors[i] for i in idxs]) for idxs in rids]
+            u_max = F32([ml.u_max for ml in mls])
+
+    # store data
     with hdf5.File(hdf5path, 'w') as h5:
-        for src in sources:
-            h5.save_vlen(f'{src.source_id}/rupture_idxs', src.rupture_idxs)
-            h5[f'{src.source_id}/probs_occur'] = src.probs_occur
-            h5[f'{src.source_id}/mags'] = src.mags
-            h5[f'{src.source_id}/rakes'] = src.rakes
-            attrs = h5[f'{src.source_id}'].attrs
-            attrs['name'] = src.name
-            attrs['tectonic_region_type'] = src.tectonic_region_type
-            attrs['investigation_time'] = src.investigation_time
-            attrs['infer_occur_rates'] = src.infer_occur_rates
-            h5.save_vlen('multi_fault_sections',
-                         [kite_to_geom(sec) for sec in sections])
+        for src, rupture_idxs in zip(mfsources, all_ridxs):
+            for srcid, slc in src.gen_slices():
+                h5.save_vlen(f'{srcid}/rupture_idxs', rupture_idxs[slc])
+                h5[f'{srcid}/probs_occur'] = src.probs_occur[slc]
+                h5[f'{srcid}/mags'] = src.mags[slc]
+                h5[f'{srcid}/rakes'] = src.rakes[slc]
+                if umax:
+                    h5[f'{srcid}/u_max'] = u_max[slc]
+
+                # save attributes
+                attrs = h5[f'{srcid}'].attrs
+                attrs['name'] = src.name
+                attrs['tectonic_region_type'] = src.tectonic_region_type
+                attrs['investigation_time'] = src.investigation_time
+                attrs['infer_occur_rates'] = src.infer_occur_rates
+        h5.save_vlen('multi_fault_sections',
+                     [kite_to_geom(sec) for sec in sectiondict.values()])
+
 
 def load(hdf5path):
     """
