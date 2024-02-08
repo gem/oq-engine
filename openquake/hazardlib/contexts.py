@@ -863,6 +863,7 @@ class ContextMaker(object):
             elif param == 'in_cshm':
                 # used in McVerry and Bradley GMPEs
                 if rup.surface:
+                    # this is really expensive
                     lons = rup.surface.mesh.lons.flatten()
                     lats = rup.surface.mesh.lats.flatten()
                     points_in_polygon = (
@@ -873,7 +874,9 @@ class ContextMaker(object):
                     value = False
             elif param == 'zbot':
                 # needed for width estimation in CampbellBozorgnia2014
-                if rup.surface:
+                if rup.surface and hasattr(rup, 'surfaces'):
+                    value = rup.surface.zbot
+                elif rup.surface:
                     value = rup.surface.mesh.depths.max()
                 else:
                     value = rup.hypocenter.depth
