@@ -129,20 +129,39 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
         plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
                    label=lab, linewidth=3, zorder=1)
         # plot the label only once but it must be at the end of the legend
-        if imt == imts[-1]:
-            plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                       label='Probabilistic MCE',  linewidth=2,
-                       markersize=10, zorder=3)
-        else:
-            plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                       linewidth=2, markersize=10, zorder=3)
-        plt.loglog([numpy.min(imls[i]), rtgm_probmce[i]],
-                   [afe_RTGM[i], afe_RTGM[i]],
-                   'darkgray', linestyle='--', linewidth=1)
-        plt.loglog([rtgm_probmce[i], rtgm_probmce[i]],
-                   [0, afe_RTGM[i]], 'darkgray',
-                   linestyle='--', linewidth=1)
-    plt.grid('both')
+        #if imt == imts[-1]:
+        #    plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+        #               label='Probabilistic MCE',  linewidth=2,
+        #               markersize=10, zorder=3)
+        #else:
+        #    plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+        #               linewidth=2, markersize=10, zorder=3)
+        #plt.loglog([numpy.min(imls[i]), rtgm_probmce[i]],
+        #           [afe_RTGM[i], afe_RTGM[i]],
+        #           color='black', alpha=0.5, linestyle='--', linewidth=1.3)
+        
+       # plt.loglog([rtgm_probmce[i], rtgm_probmce[i]],
+       #            [0, afe_RTGM[i]], color='black', alpha=0.5,
+       #            linestyle='--', linewidth=1.3)
+    # add the ASCE 41-23 RPs
+    plt.axhline(0.000404, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.002105, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.001025, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.004453, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.013767, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+
+    plt.text(0.0105, 0.000404*0.9, '2475 yr', fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.0105, 0.002105*0.9, '475 yr', fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.0105, 0.001025*0.9, '975 yr', fontsize='small', color='black', alpha=0.85)
+    plt.text(0.0105, 0.004453*0.9, '225 yr', fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.0105, 0.013767*0.9, '72 yr', fontsize='small', color='black', alpha=0.85)
+
+    # add note to see manual
+    message = 'See WebUI User Guide for complete explanation of plot contents.'
+    plt.text(0.0275, 0.00000186, message, fontsize='small', color='black', alpha=0.85 )
+
+    # format plot
+    plt.grid('both', alpha=0.6)
     plt.legend(fontsize=13)
     plt.xlabel('Acceleration (g)', fontsize=20)
     plt.ylabel('Annual frequency of exceedance', fontsize=20)
@@ -203,6 +222,12 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     plt.xlabel('Period (s)', fontsize=20)
     plt.legend(loc="upper right", fontsize='13')
     plt.xlim([-0.02, 1.2])
+
+    # add user guide message
+    upperlim = max([rtgm_probmce[1], 1.5, MCEr_det[1]])
+    message = 'See WebUI User Guide for complete explanation of plot contents.'
+    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85 )
+
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
@@ -318,6 +343,11 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax[m].set_ylim([10E-6, 1.1])
         ax[m].set_xlim([0.01, 4])
+
+        # add user guide message
+        if m==2:
+            message = 'See WebUI User Guide for complete explanation of plot contents.'
+            ax[m].text(0.0105, 0.000000506, message, fontsize='small', color='black', alpha=0.85 ) 
 
         # populate single imt plots - geometric mean
         ax1.grid('both')
