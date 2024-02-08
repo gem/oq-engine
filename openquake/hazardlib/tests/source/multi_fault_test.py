@@ -21,7 +21,7 @@ import numpy
 import pandas
 from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib import valid, contexts, calc
+from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -171,16 +171,6 @@ def main():
             ts[i], us[i], _w = line.get_tuw(sitecol)
     print(mon)
 
-    rups = list(src.iter_ruptures())
-    lines = []
-    data = []
-    for rup in rups:
-        for surf in rup.surface.surfaces:
-            lines.append(surf.tor)
-            data.append(surf.tor.coo.tobytes())
-    uni, inv = numpy.unique(data, return_inverse=True)
-    print('Found %d/%d unique segments' % (len(uni), len(data)))
-
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     [ctxt] = cmaker.from_srcs([src], sitecol, src.get_sections())
@@ -203,6 +193,17 @@ def main():
                 aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
             except Exception:
                 breakpoint()
+
+    # determine unique tors
+    rups = list(src.iter_ruptures())
+    lines = []
+    data = []
+    for rup in rups:
+        for surf in rup.surface.surfaces:
+            lines.append(surf.tor)
+            data.append(surf.tor.coo.tobytes())
+    uni, inv = numpy.unique(data, return_inverse=True)
+    print('Found %d/%d unique segments' % (len(uni), len(data)))
 
 
 def main100sites():

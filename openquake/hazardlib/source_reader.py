@@ -29,7 +29,6 @@ from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
-from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
@@ -330,6 +329,8 @@ def fix_geometry_sections(smdict, dstore):
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
 
     if sections:
+        for sec in sections.values():
+            print(sec.tor.coo.shape)
         # save in the temporary file
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')

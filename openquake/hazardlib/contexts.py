@@ -816,7 +816,7 @@ class ContextMaker(object):
         rctxs = self.gen_contexts([[[rup], sitecol]], src_id=0)
         return self.recarray(list(rctxs))
 
-    def from_srcs(self, srcs, sitecol, sections=()):
+    def from_srcs(self, srcs, sitecol, secparams=()):
         # used in disagg.disaggregation
         """
         :param srcs: a list of Source objects
@@ -825,8 +825,8 @@ class ContextMaker(object):
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
-        if sections:
-            self.set_weight(srcs, srcfilter, sections)
+        if len(secparams):
+            self.set_weight(srcs, srcfilter, secparams)
         for i, src in enumerate(srcs):
             if src.id == -1:  # not set yet
                 src.id = i
@@ -1230,7 +1230,7 @@ class ContextMaker(object):
         weight = esites / N  # the weight is the effective number of ruptures
         return weight, int(esites)
 
-    def set_weight(self, sources, srcfilter, sections=(), multiplier=1,
+    def set_weight(self, sources, srcfilter, secparams=(), multiplier=1,
                    mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source
@@ -1245,10 +1245,9 @@ class ContextMaker(object):
             else:
                 with mon:
                     if src.code == b'F':
-                        # set .sparam, expensive operation
-                        all_surfaces = [[sections[i] for i in idxs]
-                                        for idxs in src.rupture_idxs]
-                        src.sparams = build_sparams(all_surfaces)
+                        # expensive operation
+                        src.sparams = build_sparams(
+                            src.rupture_idxs, secparams)
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
                     if src.weight == 0:
