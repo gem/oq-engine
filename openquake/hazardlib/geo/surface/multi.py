@@ -25,8 +25,7 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
-from openquake.hazardlib.geo.surface import (
-    PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
+from openquake.hazardlib.geo.surface import PlanarSurface
 
 
 class MultiSurface(BaseSurface):
@@ -84,7 +83,7 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces, tor=None):
+    def __init__(self, surfaces, u_max=None):
         """
         Intialize a multi surface object from a list of surfaces
 
@@ -93,7 +92,8 @@ class MultiSurface(BaseSurface):
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
         """
         self.surfaces = surfaces
-        self.tor = tor
+        self.u_max = u_max
+        self.tor = None
         self.areas = None
 
     def _set_tor(self):
@@ -104,9 +104,10 @@ class MultiSurface(BaseSurface):
         instance of a :class:`openquake.hazardlib.geo.multiline.Multiline`
         """
         # set the multiline representing the rupture traces, i.e. vertical
-        # projections of the top of ruptures; this is expensive and should
-        # be done only if you want to compute rx or ry0 distances
-        self.tor = geo.MultiLine([surf.tor for surf in self.surfaces])
+        # projections of the top of ruptures; this is expensive unless u_max
+        # is known
+        tors = [surf.tor for surf in self.surfaces]
+        self.tor = geo.MultiLine(tors, self.u_max)
 
     def get_min_distance(self, mesh):
         """

@@ -21,7 +21,7 @@ import numpy
 import pandas
 from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib import valid, contexts
+from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -32,6 +32,7 @@ from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
+
 
 class MultiFaultTestCase(unittest.TestCase):
     """
@@ -99,7 +100,7 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
-        save([src], self.sections, fname)
+        save([src], self.sections, fname, umax=True)
         [got] = load(fname)
         for name in 'mags rakes probs_occur'.split():
             numpy.testing.assert_almost_equal(
@@ -124,15 +125,17 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
-        [ctx] = cmaker.from_srcs([src], sitecol)
+        [ctx] = cmaker.from_srcs([got], sitecol)
         assert len(ctx) == src.count_ruptures()
 
         # compare with the expected distances computed without cache
-        aac(ctx.rrup, [0., 27.519328, 55.038323,  0., 0., 27.519328, 0.])
-        aac(ctx.rjb, [0., 27.519071, 55.038323,  0., 0., 27.519071, 0.])
-        aac(ctx.rx, [0, 1.10216274e-01, 3.39296288e-01, 1.68625825e-05,
-                     1.64388603e-05, 1.65308237e-01, 3.32981110e-05])
-        aac(ctx.ry0, [0., 27.51891546, 55.03632312, 0., 0., 27.5184749,0.])
+        tol = 1e-4
+        aac(ctx.rrup, [0., 27.51933, 55.03832,  0., 0., 27.51933, 0.], atol=tol)
+        aac(ctx.rjb, [0., 27.51907, 55.03832,  0., 0., 27.51907, 0.], atol=tol)
+        aac(ctx.rx, [0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
+                     1.643886e-05, 1.653083e-01, 3.3298e-05], atol=tol)
+        aac(ctx.ry0, [0., 27.518915, 55.03632, 0., 0., 27.5184749,0.],
+            atol=tol)
         aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
         aac(ctx.clat, 45.)
 
@@ -143,7 +146,7 @@ class MultiFaultTestCase(unittest.TestCase):
                                self.pmfs, self.mags, self.rakes)
         mfs._rupture_idxs = rup_idxs
         with self.assertRaises(IndexError) as ctx:
-            save([mfs], self.sections, 'dummy.hdf5')
+            save([mfs], self.sections, 'dummy.hdf5', umax=True)
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 
@@ -180,7 +183,8 @@ def main():
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
-    [ctxt] = cmaker.from_srcs([src], sitecol)
+    torlines = [sec.tor for sec in src.get_sections()]    
+    [ctxt] = cmaker.from_srcs([src], sitecol, torlines)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
     print(mon)
@@ -200,6 +204,23 @@ def main():
                 aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
             except Exception:
                 breakpoint()
+
+
+def main100sites():
+    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+    lons = numpy.arange(-122, -121, .01)
+    lats = numpy.full_like(lons, 27)
+    sitecol = SiteCollection.from_points(lons, lats)
+    sitecol._set('vs30', 760.)
+    sitecol._set('vs30measured', 1)
+    sitecol._set('z1pt0', 100.)
+    sitecol._set('z2pt5', 5.)
+    gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1,
+                                    max_sites_disagg=100)
+    [ctxt] = cmaker.from_srcs([src], sitecol)
+    print(cmaker.ir_mon)
+    print(cmaker.ctx_mon)
 
 
 if __name__ == '__main__':

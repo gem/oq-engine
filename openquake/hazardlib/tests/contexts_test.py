@@ -399,7 +399,7 @@ class GetCtxs01TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'), umax=True)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
@@ -451,7 +451,7 @@ class GetCtxs02TestCase(unittest.TestCase):
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
         self.src = ssm[0][0]
-        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'), umax=True)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
