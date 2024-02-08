@@ -1246,8 +1246,7 @@ class ContextMaker(object):
                 with mon:
                     if src.code == b'F':
                         # expensive operation
-                        src.sparams = build_sparams(
-                            src.rupture_idxs, secparams)
+                        src.sparams = build_sparams(src.rupture_idxs, secparams)
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
                     if src.weight == 0:

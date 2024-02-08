@@ -41,6 +41,26 @@ F64 = numpy.float64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
 
+SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
+             'tl0', 'tl1', 'tr0', 'tr1']
+SECDT = [(p, numpy.float32) for p in SECPARAMS]
+
+
+def build_secparams(sections):
+    sparams = numpy.zeros(len(sections), SECDT)
+    for sparam, sec in zip(sparams, sections):
+        sparam['area'] = sec.get_area()
+        sparam['dip'] = sec.get_dip()
+        sparam['strike'] = sec.get_strike()
+        sparam['width'] = sec.get_width()
+        sparam['ztor'] = sec.get_top_edge_depth()
+        sparam['zbot'] = sec.mesh.depths.max()
+        sparam['tl0'] = sec.tor.coo[0, 0]
+        sparam['tl1'] = sec.tor.coo[0, 1]
+        sparam['tr0'] = sec.tor.coo[-1, 0]
+        sparam['tr1'] = sec.tor.coo[-1, 1]
+    return sparams
+
 
 def source_data(sources):
     data = AccumDict(accum=[])
@@ -91,7 +111,7 @@ def _filter(srcs, min_mag):
     return out
 
 
-def preclassical(srcs, sites, cmaker, sections, monitor):
+def preclassical(srcs, sites, cmaker, secparams, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -124,7 +144,7 @@ def preclassical(srcs, sites, cmaker, sections, monitor):
             for src in splits:
                 src.weight = .01
         else:
-            cmaker.set_weight(splits, sf, sections, multiplier, mon)
+            cmaker.set_weight(splits, sf, secparams, multiplier, mon)
         dic = {grp_id: splits}
         dic['before'] = len(srcs)
         dic['after'] = len(splits)
@@ -137,7 +157,7 @@ def preclassical(srcs, sites, cmaker, sections, monitor):
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, sections, multiplier, mon)
+            cmaker.set_weight(dic[grp_id], sf, secparams, multiplier, mon)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])
@@ -199,11 +219,11 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifault:
-            sections = multifault.get_sections()
             logging.warning('There are multiFaultSources, the preclassical '
                             'phase will be slow')
+            secparams = build_secparams(multifault.get_sections())
         else:
-            sections = []
+            secparams = ()
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
@@ -221,9 +241,9 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointlike.append(src)
                 elif src.code == b'F':  # multi fault source
                     for split in split_source(src):
-                        smap.submit(([split], sites, cmaker, sections))
+                        smap.submit(([split], sites, cmaker, secparams))
                 elif src.code in b'CN':  # other heavy sources
-                    smap.submit(([src], sites, cmaker, sections))
+                    smap.submit(([src], sites, cmaker, secparams))
                 else:
                     others.append(src)
             check_maxmag(pointlike)
@@ -231,13 +251,13 @@ class PreClassicalCalculator(base.HazardCalculator):
                 if oq.ps_grid_spacing:
                     # do not split the pointsources
                     smap.submit((pointsources + pointlike,
-                                 sites, cmaker, sections))
+                                 sites, cmaker, secparams))
                 else:
                     for block in block_splitter(pointsources, 2000):
-                        smap.submit((block, sites, cmaker, sections))
+                        smap.submit((block, sites, cmaker, secparams))
                     others.extend(pointlike)
             for block in block_splitter(others, 40):
-                smap.submit((block, sites, cmaker, sections))
+                smap.submit((block, sites, cmaker, secparams))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)

@@ -28,26 +28,7 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 SPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor']
-SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
-             'tl0', 'tl1', 'tr0', 'tr1']
 SDT = [(p, np.float32) for p in SPARAMS]
-SECDT = [(p, np.float32) for p in SECPARAMS]
-
-
-def build_secparams(sections):
-    sparams = np.zeros(len(sections), SDT)
-    for sparam, sec in zip(sparams, sections):
-        sparam['area'] = sec.get_area()
-        sparam['dip'] = sec.get_dip()
-        sparam['strike'] = sec.get_strike()
-        sparam['width'] = sec.get_width()
-        sparam['ztor'] = sec.get_top_edge_depth()
-        sparam['zbot'] = sec.mesh.depths.max()
-        sparam['tl0'] = sec.tor.coo[0, 0]
-        sparam['tl1'] = sec.tor.coo[0, 1]
-        sparam['tr0'] = sec.tor.coo[-1, 0]
-        sparam['tr1'] = sec.tor.coo[-1, 1]
-    return sparams
 
     
 def build_sparams(rupture_idxs, secparams):
@@ -56,7 +37,7 @@ def build_sparams(rupture_idxs, secparams):
     :returns: a record with the multisurface parameters
     """
     U = len(rupture_idxs)  # number of ruptures
-    sparams = np.zeros(U, SECDT)
+    sparams = np.zeros(U, SDT)
     for sparam, idxs in zip(sparams, rupture_idxs):
         secparam = secparams[idxs]
         areas = secparam['area']
@@ -72,34 +53,28 @@ def build_sparams(rupture_idxs, secparams):
         sparam['zbot'] = ws @ secparam['zbot']
         tors = []
         for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-            coo = np.array([[tl0, tl1], [tr0, tr1]])
+            coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
             tors.append(geo.line.Line.from_coo(coo))
         sparam['u_max'] = geo.multiline.MultiLine(tors).u_max
     return sparams
 
 
-def build_sparams_slow(all_surfaces, known_tor=None):
-    """
-    :param surfaces: simple surfaces composing a MultiSurface
-    :returns: a record with the multisurface parameters
-    """
-    U = len(all_surfaces)  # number of ruptures
-    sparams = np.zeros(U, SDT)
-    for sparam, surfaces in zip(sparams, all_surfaces):
-        tor = known_tor or geo.MultiLine([surf.tor for surf in surfaces])
-        areas = np.array([s.get_area() for s in surfaces])
-        sparam['area'] = areas.sum()
-        ws = areas / sparam['area']  # weights
-        sparam['dip'] = ws @ [s.get_dip() for s in surfaces]
-        strikes = np.radians([s.get_strike() for s in surfaces])
-        v1 = ws @ np.sin(strikes)
-        v2 = ws @ np.cos(strikes)
-        sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-        sparam['u_max'] = tor.u_max
-        sparam['width'] = ws @ [s.get_width() for s in surfaces]
-        sparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
-        sparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
-    return sparams
+def _build_sparam(surfaces, tor):
+    # slow version
+    sparam = np.zeros(1, SDT)[0]
+    areas = np.array([s.get_area() for s in surfaces])
+    sparam['area'] = areas.sum()
+    ws = areas / sparam['area']  # weights
+    sparam['dip'] = ws @ [s.get_dip() for s in surfaces]
+    strikes = np.radians([s.get_strike() for s in surfaces])
+    v1 = ws @ np.sin(strikes)
+    v2 = ws @ np.cos(strikes)
+    sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+    sparam['u_max'] = tor.u_max
+    sparam['width'] = ws @ [s.get_width() for s in surfaces]
+    sparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
+    sparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
+    return sparam
 
 
 class MultiSurface(BaseSurface):
@@ -157,7 +132,7 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces, sparam_tor=None):
+    def __init__(self, surfaces, sparam=None):
         """
         Intialize a multi surface object from a list of surfaces
 
@@ -166,12 +141,17 @@ class MultiSurface(BaseSurface):
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
         """
         self.surfaces = surfaces
+        self.sparam = sparam
+        self._set_tor()
+
+    def _set_tor(self):
         # setting .tor is expensive unless u_max is given
-        if sparam_tor is None:
-            self.sparam = build_sparams_slow([surfaces], self.tor)[0]
+        if self.sparam is None:
             self.tor = geo.MultiLine([s.tor for s in self.surfaces])
+            self.sparam = _build_sparam(self.surfaces, self.tor)
         else:
-            self.sparam, self.tor = sparam_tor
+            self.tor = geo.MultiLine([s.tor for s in self.surfaces],
+                                     self.sparam['u_max'])
 
     def get_min_distance(self, mesh):
         """
