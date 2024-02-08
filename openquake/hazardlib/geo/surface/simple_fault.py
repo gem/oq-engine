@@ -27,8 +27,7 @@ import numpy
 from openquake.baselib.node import Node
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh, RectangularMesh
-from openquake.hazardlib.geo import utils as geo_utils
-from openquake.hazardlib.geo.point import Point
+from openquake.hazardlib.geo import Point, Line, utils as geo_utils
 from openquake.hazardlib.near_fault import get_plane_equation
 
 
@@ -68,6 +67,17 @@ class SimpleFaultSurface(BaseSurface):
         assert 1 not in self.mesh.shape, (
             "Mesh must have at least 2 nodes along both length and width.")
         self.strike = self.dip = None
+
+    @property
+    def tor(self):
+        """
+        :returns: top of rupture line
+        """
+        lons = self.mesh.lons[0, :]
+        lats = self.mesh.lats[0, :]
+        coo = numpy.array([[lo, la] for lo, la in zip(lons, lats)])
+        line = Line.from_vectors(coo[:, 0], coo[:, 1])
+        return line.keep_corners(1.)
 
     def get_dip(self):
         """

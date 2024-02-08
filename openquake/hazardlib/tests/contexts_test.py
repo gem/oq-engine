@@ -20,7 +20,7 @@ import os
 import unittest
 import numpy
 
-from openquake.baselib.general import DictArray
+from openquake.baselib.general import DictArray, gettemp
 from openquake.hazardlib import read_input, calc, site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
@@ -29,6 +29,7 @@ from openquake.hazardlib.contexts import (
     Effect, ContextMaker, Collapser, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
+from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.source.rupture import \
     get_planar, NonParametricProbabilisticRupture as NPPR
 from openquake.hazardlib.geo import Line, Point
@@ -397,13 +398,8 @@ class GetCtxs01TestCase(unittest.TestCase):
         sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
-        src = ssm[0][0]
-        sections = list(geom.sections.values())
-        s2i = {idx: i for i, idx in enumerate(geom.sections)}
-        rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                        for idxs in src.rupture_idxs]
-        src.set_sections(sections, rupture_idxs)
-        self.src = src
+        self.src = ssm[0][0]
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
@@ -454,13 +450,8 @@ class GetCtxs02TestCase(unittest.TestCase):
         sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
-        src = ssm[0][0]
-        sections = list(geom.sections.values())
-        s2i = {idx: i for i, idx in enumerate(geom.sections)}
-        rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                        for idxs in src.rupture_idxs]
-        src.set_sections(sections, rupture_idxs)
-        self.src = src
+        self.src = ssm[0][0]
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'))
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
