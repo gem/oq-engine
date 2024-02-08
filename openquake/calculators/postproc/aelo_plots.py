@@ -222,7 +222,12 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     # get the IML for the 2475 RP
     rtgm_probmce = rtgm_df['ProbMCE']
     # get hazard curves, put into rates
+    AFE = []
     mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
+    window = dinfo['investigation_time']
+    for m, hcurve in enumerate(mean_hcurve):
+        AFE.append(to_rates(hcurve, window))
+
     plt = import_plt()
     fig, ax = plt.subplots(3, figsize=(8, 15))
 
@@ -242,11 +247,11 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         # have to compute everything for max comp. and for geom. mean
         RTGM = rtgm_probmce[m]
         RTGM_o = rtgm_probmce[m] / f
-        afe_target = _find_afe_target(imls, mean_hcurve[m], RTGM)
-        afe_target_o = _find_afe_target(imls_o, mean_hcurve[m], RTGM_o)
+        afe_target = _find_afe_target(imls, AFE[m], RTGM)
+        afe_target_o = _find_afe_target(imls_o, AFE[m], RTGM_o)
 
         # populate 3-panel plot
-        ax[m].loglog(imls, mean_hcurve[m], 'k', label=_get_label(imt),
+        ax[m].loglog(imls, AFE[m], 'k', label=_get_label(imt),
                      linewidth=2, zorder=3)
         ax[m].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',
                      linewidth=2, zorder=3)
@@ -255,7 +260,7 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
                      linewidth=2, zorder=3)
         # populate individual plots
-        ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean',
+        ax1.loglog(imls_o, AFE[m], 'k', label=imt + ' - Geom. mean',
                    linewidth=2, zorder=3)
         ax1.loglog([numpy.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
                    'k--', linewidth=2, zorder=3)
