@@ -49,7 +49,7 @@ class MultiLine(object):
     most part, these are used to compute distances according to the GC2
     method.
     """
-    def __init__(self, lines):
+    def __init__(self, lines, u_max=None):
         # compute the overall strike and the origin of the multiline
         # get lenghts and average azimuths
         llenghts = np.array([ln.get_length() for ln in lines])
@@ -65,7 +65,12 @@ class MultiLine(object):
         lines = [self.lines[i] for i in soidx]
         self.coos = [ln.coo for ln in lines]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
-        self.u_max = np.abs(self.get_uts(ep)[0]).max()
+    
+        if u_max is None:
+            # this is the expensive operation
+            self.u_max = np.abs(self.get_uts(ep)[0]).max()
+        else:
+            self.u_max = u_max
 
     def get_uts(self, mesh):
         """

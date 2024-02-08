@@ -31,6 +31,7 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.multi import MultiSurface
 from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -94,6 +95,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Read a list of U16 arrays from hdf5path
         """
+        assert self.hdf5path
         with hdf5.File(self.hdf5path, 'r') as h5:
             return h5[f'{self.source_id}/rupture_idxs'][:]
         
@@ -135,9 +137,11 @@ class MultiFaultSource(BaseSeismicSource):
         n = len(self.mags)
         sec = self.get_sections()  # read KiteSurfaces, very fast
         rupture_idxs = self.rupture_idxs
+        u_max = getattr(self, 'u_max', [None]*n)
+        # in preclassical u_max will be None and in classical will be reused
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
-            sfc = MultiSurface([sec[idx] for idx in idxs])
+            sfc = MultiSurface([sec[idx] for idx in idxs], u_max[i])
             rake = self.rakes[i]
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
@@ -211,9 +215,9 @@ class MultiFaultSource(BaseSeismicSource):
 
 
 # NB: as side effect delete _rupture_idxs and add .hdf5path
-def save(mfsources, sectiondict, hdf5path):
+def save(mfsources, sectiondict, hdf5path, umax=False):
     """
-    Utility to serialize MultiFaultSources
+    Utility to serialize MultiFaultSources and optionally computing u_max
     """
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_ridxs = []
@@ -227,6 +231,12 @@ def save(mfsources, sectiondict, hdf5path):
         all_ridxs.append(rids)
         delattr(src, '_rupture_idxs')  # was set by the SourceConverter
         src.hdf5path = hdf5path
+        if umax:
+            tors = [sec.tor for sec in sectiondict.values()]
+            mls = [MultiLine([tors[i] for i in idxs]) for idxs in rids]
+            src.u_max = F32([ml.u_max for ml in mls])
+
+    # store data
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rupture_idxs in zip(mfsources, all_ridxs):
             for srcid, slc in src.gen_slices():
@@ -234,6 +244,8 @@ def save(mfsources, sectiondict, hdf5path):
                 h5[f'{srcid}/probs_occur'] = src.probs_occur[slc]
                 h5[f'{srcid}/mags'] = src.mags[slc]
                 h5[f'{srcid}/rakes'] = src.rakes[slc]
+
+                # save attributes
                 attrs = h5[f'{srcid}'].attrs
                 attrs['name'] = src.name
                 attrs['tectonic_region_type'] = src.tectonic_region_type

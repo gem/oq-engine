@@ -91,7 +91,7 @@ def _filter(srcs, min_mag):
     return out
 
 
-def preclassical(srcs, sites, cmaker, monitor):
+def preclassical(srcs, sites, cmaker, torlines, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -101,6 +101,9 @@ def preclassical(srcs, sites, cmaker, monitor):
     if sites:
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
+    else:
+        multiplier = 1
+        sf = None
     splits = []
     for src in srcs:
         if sites:
@@ -121,7 +124,7 @@ def preclassical(srcs, sites, cmaker, monitor):
             for src in splits:
                 src.weight = .01
         else:
-            cmaker.set_weight(splits, sf, multiplier, mon)
+            cmaker.set_weight(splits, sf, torlines, multiplier, mon)
         dic = {grp_id: splits}
         dic['before'] = len(srcs)
         dic['after'] = len(splits)
@@ -134,7 +137,7 @@ def preclassical(srcs, sites, cmaker, monitor):
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
+            cmaker.set_weight(dic[grp_id], sf, torlines, multiplier, mon)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])
@@ -181,9 +184,12 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
+        multifault = None
         for sg in csm.src_groups:
-            if reqv and sg.trt in oq.inputs['reqv']:
-                for src in sg:
+            for src in sg:
+                if src.code == b'F':
+                    multifault = src
+                if reqv and sg.trt in oq.inputs['reqv']:
                     if src.source_id not in oq.reqv_ignore_sources:
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
@@ -192,11 +198,18 @@ class PreClassicalCalculator(base.HazardCalculator):
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
+        if multifault:
+            torlines = [sec.tor for sec in multifault.get_sections()]
+            logging.warning('There are multiFaultSources, the preclassical '
+                            'phase will be slow')
+        else:
+            torlines = []
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
+        self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             cmaker = cmakers[grp_id]
@@ -208,22 +221,23 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointlike.append(src)
                 elif src.code == b'F':  # multi fault source
                     for split in split_source(src):
-                        smap.submit(([split], sites, cmaker))
+                        smap.submit(([split], sites, cmaker, torlines))
                 elif src.code in b'CN':  # other heavy sources
-                    smap.submit(([src], sites, cmaker))
+                    smap.submit(([src], sites, cmaker, torlines))
                 else:
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
                 if oq.ps_grid_spacing:
                     # do not split the pointsources
-                    smap.submit((pointsources + pointlike, sites, cmaker))
+                    smap.submit((pointsources + pointlike,
+                                 sites, cmaker, torlines))
                 else:
                     for block in block_splitter(pointsources, 2000):
-                        smap.submit((block, sites, cmaker))
+                        smap.submit((block, sites, cmaker, torlines))
                     others.extend(pointlike)
             for block in block_splitter(others, 40):
-                smap.submit((block, sites, cmaker))
+                smap.submit((block, sites, cmaker, torlines))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)
