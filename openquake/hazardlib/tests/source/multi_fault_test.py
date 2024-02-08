@@ -21,7 +21,7 @@ import numpy
 import pandas
 from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib import valid, contexts
+from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -183,7 +183,8 @@ def main():
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
-    [ctxt] = cmaker.from_srcs([src], sitecol)
+    torlines = [sec.tor for sec in src.get_sections()]    
+    [ctxt] = cmaker.from_srcs([src], sitecol, torlines)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
     print(mon)

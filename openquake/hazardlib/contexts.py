@@ -816,7 +816,8 @@ class ContextMaker(object):
         rctxs = self.gen_contexts([[[rup], sitecol]], src_id=0)
         return self.recarray(list(rctxs))
 
-    def from_srcs(self, srcs, sitecol):  # used in disagg.disaggregation
+    def from_srcs(self, srcs, sitecol, torlines=()):
+        # used in disagg.disaggregation
         """
         :param srcs: a list of Source objects
         :param sitecol: a SiteCollection instance
@@ -824,6 +825,8 @@ class ContextMaker(object):
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
+        if torlines:
+            self.set_weight(srcs, srcfilter, torlines)
         for i, src in enumerate(srcs):
             if src.id == -1:  # not set yet
                 src.id = i
@@ -1224,7 +1227,7 @@ class ContextMaker(object):
         weight = esites / N  # the weight is the effective number of ruptures
         return weight, int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1, torlines=(),
+    def set_weight(self, sources, srcfilter, torlines=(), multiplier=1,
                    mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source

@@ -101,6 +101,9 @@ def preclassical(srcs, sites, cmaker, torlines, monitor):
     if sites:
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
+    else:
+        multiplier = 1
+        sf = None
     splits = []
     for src in srcs:
         if sites:
@@ -121,7 +124,7 @@ def preclassical(srcs, sites, cmaker, torlines, monitor):
             for src in splits:
                 src.weight = .01
         else:
-            cmaker.set_weight(splits, sf, multiplier, torlines, mon)
+            cmaker.set_weight(splits, sf, torlines, multiplier, mon)
         dic = {grp_id: splits}
         dic['before'] = len(srcs)
         dic['after'] = len(splits)
@@ -134,7 +137,7 @@ def preclassical(srcs, sites, cmaker, torlines, monitor):
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, multiplier, torlines, mon)
+            cmaker.set_weight(dic[grp_id], sf, torlines, multiplier, mon)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])
