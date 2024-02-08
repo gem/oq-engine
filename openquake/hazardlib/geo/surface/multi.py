@@ -25,8 +25,7 @@ from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
-from openquake.hazardlib.geo.surface import (
-    PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
+from openquake.hazardlib.geo.surface import PlanarSurface
 
 
 class MultiSurface(BaseSurface):
