@@ -190,7 +190,7 @@ def get_eps4(eps_edges, truncation_level):
 
 
 # NB: this function is the crucial bit for performance!
-def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
+def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar, gp,
                   infer_occur_rates, mon1, mon2, mon3):
     # ctx: a recarray of size U for a single site and magnitude bin
     # mea: array of shape (G, M, U)
@@ -201,6 +201,7 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
     # eps_bands: an array of E elements obtained from the E+1 eps_edges
     # bin_edges: a tuple of 5 bin edges (mag, dist, lon, lat, eps)
     # epsstar: a boolean. When True, disaggregation contains eps* results
+    # gp: group_probability relevant for mutex sources, otherwise 1
     # returns a 7D-array of shape (D, Lo, La, E, M, P, Z)
 
     with mon1:
@@ -230,9 +231,9 @@ def _disaggregate(ctx, mea, std, cmaker, g, iml2, bin_edges, epsstar,
             if epsstar:
                 ok = (lvls >= min_eps) & (lvls < max_eps)
                 # The leftmost indexes are ruptures and epsilons
-                poes[ok, idxs[ok] - 1, m, p] = truncnorm_sf(phi_b, lvls[ok])
+                poes[ok, idxs[ok] - 1, m, p] = gp*truncnorm_sf(phi_b, lvls[ok])
             else:
-                poes[:, :, m, p] = _disagg_eps(
+                poes[:, :, m, p] = gp * _disagg_eps(
                     truncnorm_sf(phi_b, lvls), idxs, eps_bands, cum_bands)
 
     with mon2:
@@ -452,9 +453,10 @@ class Disaggregator(object):
         for m, imt in enumerate(imts):
             imlog2[m] = to_distribution_values(iml2[m], imt)
         mea, std = self.mea[self.magi], self.std[self.magi]
+        gp = self.src_mutex.get('grp_probability', 1.)
         if not self.src_mutex:
             poes = _disaggregate(self.ctx, mea, std, self.cmaker,
-                                 g, imlog2, self.bin_edges, self.epsstar,
+                                 g, imlog2, self.bin_edges, self.epsstar, gp,
                                  self.cmaker.oq.infer_occur_rates,
                                  self.mon1, self.mon2, self.mon3)
             return to_rates(poes)
@@ -466,11 +468,11 @@ class Disaggregator(object):
             mea = self.mea[self.magi][:, :, s1:s2]  # shape (G, M, U)
             std = self.std[self.magi][:, :, s1:s2]  # shape (G, M, U)
             mat = _disaggregate(ctx, mea, std, self.cmaker, g, imlog2,
-                                self.bin_edges, self.epsstar,
+                                self.bin_edges, self.epsstar, gp,
                                 self.cmaker.oq.infer_occur_rates,
                                 self.mon1, self.mon2, self.mon3)
             mats.append(mat)
-        poes = numpy.average(mats, weights=self.weights, axis=0)
+        poes = numpy.einsum('i,i...', self.weights, mats)
         return poes
 
     def disagg_by_magi(self, imtls, rlzs, rwdic, src_mutex,
@@ -748,10 +750,11 @@ def disagg_source(groups, site, reduced_lt, edges_shapedic,
     ws = reduced_lt.rlzs['weight']
     disaggs = []
     if any(grp.src_interdep == 'mutex' for grp in groups):
-        assert len(groups) == 1, 'There can be only one mutex group'
+        [grp] = groups  # There can be only one mutex group
         src_mutex = {
-            'src_id': get_ints(src.source_id for src in groups[0]),
-            'weight': [src.mutex_weight for src in groups[0]]}
+            'grp_probability': grp.grp_probability,
+            'src_id': get_ints(src.source_id for src in grp),
+            'weight': [src.mutex_weight for src in grp]}
     else:
         src_mutex = {}
     for ctx, cmaker in zip(ctxs, cmakers):

@@ -994,7 +994,7 @@ def view_mean_disagg(token, dstore):
 @view.add('disagg')
 def view_disagg(token, dstore):
     """
-    Example: $ oq show disagg Mag
+    Example: $ oq show disagg:Mag
     Returns a table poe, imt, mag, contribution for the first site
     """
     kind = token.split(':')[1]
