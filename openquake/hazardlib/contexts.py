@@ -44,12 +44,14 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
 I32 = numpy.int32
 U32 = numpy.uint32
 F16 = numpy.float16
+F32 = numpy.float32
 F64 = numpy.float64
 TWO20 = 2**20  # used when collapsing
 TWO16 = 2**16
@@ -1222,7 +1224,8 @@ class ContextMaker(object):
         weight = esites / N  # the weight is the effective number of ruptures
         return weight, int(esites)
 
-    def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
+    def set_weight(self, sources, srcfilter, multiplier=1, torlines=(),
+                   mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -1235,6 +1238,11 @@ class ContextMaker(object):
                 src.weight = .01
             else:
                 with mon:
+                    if src.code == b'F':
+                        # set .u_max, expensive operation
+                        mls = [MultiLine([torlines[idx] for idx in idxs])
+                               for idxs in src.rupture_idxs]
+                        src.u_max = F32([ml.u_max for ml in mls])
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
                     if src.weight == 0:

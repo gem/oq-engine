@@ -136,12 +136,9 @@ class MultiFaultSource(BaseSeismicSource):
         step = kwargs.get('step', 1)
         n = len(self.mags)
         sec = self.get_sections()  # read KiteSurfaces
-        if step > 1:  # in preclassical
-            u_max = [None] * n
-        else:
-            with hdf5.File(self.hdf5path, 'r') as h5:
-                u_max = h5[f'{self.source_id}/u_max'][:]
         rupture_idxs = self.rupture_idxs
+        u_max = getattr(self, 'u_max', [None]*n)
+        # in preclassical u_max will be None and in classical will be reused
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
             sfc = MultiSurface([sec[idx] for idx in idxs], u_max[i])
@@ -220,7 +217,7 @@ class MultiFaultSource(BaseSeismicSource):
 # NB: as side effect delete _rupture_idxs and add .hdf5path
 def save(mfsources, sectiondict, hdf5path, umax=False):
     """
-    Utility to serialize MultiFaultSources
+    Utility to serialize MultiFaultSources and optionally computing u_max
     """
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_ridxs = []
@@ -237,7 +234,7 @@ def save(mfsources, sectiondict, hdf5path, umax=False):
         if umax:
             tors = [sec.tor for sec in sectiondict.values()]
             mls = [MultiLine([tors[i] for i in idxs]) for idxs in rids]
-            u_max = F32([ml.u_max for ml in mls])
+            src.u_max = F32([ml.u_max for ml in mls])
 
     # store data
     with hdf5.File(hdf5path, 'w') as h5:
@@ -247,8 +244,6 @@ def save(mfsources, sectiondict, hdf5path, umax=False):
                 h5[f'{srcid}/probs_occur'] = src.probs_occur[slc]
                 h5[f'{srcid}/mags'] = src.mags[slc]
                 h5[f'{srcid}/rakes'] = src.rakes[slc]
-                if umax:
-                    h5[f'{srcid}/u_max'] = u_max[slc]
 
                 # save attributes
                 attrs = h5[f'{srcid}'].attrs

@@ -35,7 +35,6 @@ from openquake.baselib import (
 from openquake.baselib.general import (
     AccumDict, DictArray, block_splitter, groupby, humansize)
 from openquake.hazardlib import valid, InvalidFile
-from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.contexts import read_cmakers, get_maxsize
 from openquake.hazardlib.calc.hazard_curve import classical as hazclassical
 from openquake.hazardlib.calc import disagg
@@ -80,32 +79,6 @@ def build_slice_by_sid(sids, offset=0):
     sbs['start'] = arr[:, 1] + offset
     sbs['stop'] = arr[:, 2] + offset
     return sbs
-
-
-def build_umax(mfsources, torlines, monitor):
-    """
-    :returns: a dictionary source_id -> multilines
-    """
-    out = {}
-    for src in mfsources:
-        u_max = [MultiLine([torlines[idx] for idx in idxs]).u_max
-                 for idxs in src.rupture_idxs]
-        out[src.source_id] = numpy.array(u_max)
-    return out
-
-
-def store_umax(mfsources, dstore):
-    # store multilines information
-    src = mfsources[0]
-    sections = src.get_sections()
-    torlines = [sec.tor for sec in sections]
-    dic = parallel.Starmap.apply(
-        build_umax, (mfsources, torlines),
-        h5=dstore
-    ).reduce()
-    with hdf5.File(src.hdf5path, 'r+') as h5:
-        for srcid, u_max in sorted(dic.items()):
-            h5.create_dataset(f'{srcid}/u_max', data=u_max)
 
 
 class Set(set):
@@ -481,9 +454,6 @@ class ClassicalCalculator(base.HazardCalculator):
                 return {}
         else:
             maxw = self.max_weight
-        mfsources = [src for src in self.csm.get_sources() if src.code==b'F']
-        if mfsources:
-            store_umax(mfsources, self.datastore)
         self.init_poes()
         req_gb, self.trt_rlzs, self.gids = get_pmaps_gb(self.datastore)
         weig = numpy.array([w['weight'] for w in self.full_lt.g_weights(
