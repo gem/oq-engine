@@ -253,9 +253,11 @@ class DisaggregationCalculator(base.HazardCalculator):
         cmakers = read_cmakers(dstore)
         if 'src_mutex' in dstore:
             gb = dstore.read_df('src_mutex').groupby('grp_id')
+            gp = dict(dstore['grp_probability'])  # grp_id -> probability
             src_mutex_by_grp = {
                 grp_id: {'src_id': disagg.get_ints(df.src_id),
-                         'weight': df.mutex_weight.to_numpy()}
+                         'weight': df.mutex_weight.to_numpy(),
+                         'grp_probability': gp[grp_id]}
                 for grp_id, df in gb}
         else:
             src_mutex_by_grp = {}
