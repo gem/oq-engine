@@ -96,7 +96,6 @@ class MultiSurface(BaseSurface):
         self.tor = None
         self.areas = None
 
-    # called at each instantiation
     def _set_tor(self):
         """
         Computes the list of the vertical surface projections of the top of

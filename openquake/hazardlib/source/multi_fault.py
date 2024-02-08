@@ -129,8 +129,8 @@ class MultiFaultSource(BaseSeismicSource):
         An iterator for the ruptures.
         """
         # Check
-        if not self.hdf5path:
-            raise RuntimeError('You forgot to save the multifault sources')
+        if not self.hdf5path and 'sections' not in self.__dict__:
+            raise RuntimeError('You forgot to call set_sections in %s!' % self)
 
         # iter on the ruptures
         step = kwargs.get('step', 1)
