@@ -137,11 +137,11 @@ class MultiFaultSource(BaseSeismicSource):
         n = len(self.mags)
         sec = self.get_sections()  # read KiteSurfaces, very fast
         rupture_idxs = self.rupture_idxs
-        u_max = getattr(self, 'u_max', [None]*n)
+        sparams = getattr(self, 'sparams', [None]*n)
         # in preclassical u_max will be None and in classical will be reused
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
-            sfc = MultiSurface([sec[idx] for idx in idxs], u_max[i])
+            sfc = MultiSurface([sec[idx] for idx in idxs], sparams[i])
             rake = self.rakes[i]
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]

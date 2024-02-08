@@ -27,6 +27,33 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
+SPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor']
+DT = [(p, np.float32) for p in SPARAMS]
+
+
+def build_sparams(all_surfaces, known_tor=None):
+    """
+    :param surfaces: simple surfaces composing a MultiSurface
+    :returns: a record with the multisurface parameters
+    """
+    U = len(all_surfaces)  # number of ruptures
+    sparams = np.zeros(U, DT)
+    for sparam, surfaces in zip(sparams, all_surfaces):
+        tor = known_tor or geo.MultiLine([surf.tor for surf in surfaces])
+        areas = np.array([s.get_area() for s in surfaces])
+        sparam['area'] = areas.sum()
+        ws = areas / sparam['area']  # weights
+        sparam['dip'] = ws @ [s.get_dip() for s in surfaces]
+        strikes = np.radians([s.get_strike() for s in surfaces])
+        v1 = ws @ np.sin(strikes)
+        v2 = ws @ np.cos(strikes)
+        sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+        sparam['u_max'] = tor.u_max
+        sparam['width'] = ws @ [s.get_width() for s in surfaces]
+        sparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
+        sparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
+    return sparams
+
 
 class MultiSurface(BaseSurface):
     """
@@ -83,7 +110,7 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces, u_max=None):
+    def __init__(self, surfaces, sparam=None):
         """
         Intialize a multi surface object from a list of surfaces
 
@@ -94,21 +121,12 @@ class MultiSurface(BaseSurface):
         self.surfaces = surfaces
         # setting .tor is expensive unless u_max is given
         tors = [surf.tor for surf in self.surfaces]
-        if u_max is None:
+        if sparam is None:
             self.tor = geo.MultiLine(tors)
+            self.sparam = build_sparams([surfaces], self.tor)[0]
         else:
-            self.tor = geo.MultiLine(tors, u_max)
-        areas = np.array([s.get_area() for s in self.surfaces])
-        self.area = areas.sum()
-        w = areas / self.area
-        self.dip = w @ [s.get_dip() for s in self.surfaces]
-        strikes = np.radians([s.get_strike() for s in self.surfaces])
-        v1 = w @ np.sin(strikes)
-        v2 = w @ np.cos(strikes)
-        self.strike = np.degrees(np.arctan2(v1, v2)) % 360
-        self.width = w @ [s.get_width() for s in self.surfaces]
-        self.ztor = w @ [s.get_top_edge_depth() for s in self.surfaces]
-        self.zbot = w @ [s.mesh.depths.max() for s in self.surfaces]
+            self.tor = geo.MultiLine(tors, sparam['u_max'])
+            self.sparam = sparam
 
     def get_min_distance(self, mesh):
         """
@@ -140,7 +158,7 @@ class MultiSurface(BaseSurface):
         Compute top edge depth of each surface element and return area-weighted
         average value (in km).
         """
-        return self.ztor
+        return self.sparam['ztor']
 
     def get_strike(self):
         """
@@ -150,7 +168,7 @@ class MultiSurface(BaseSurface):
         Note that the original formula has been adapted to compute a weighted
         rather than arithmetic mean.
         """
-        return self.strike
+        return self.sparam['strike']
 
     def get_dip(self):
         """
@@ -159,20 +177,20 @@ class MultiSurface(BaseSurface):
         Given that dip values are constrained in the range (0, 90], the simple
         formula for weighted mean is used.
         """
-        return self.dip
+        return self.sparam['dip']
 
     def get_width(self):
         """
         Compute width of each surface element, and return area-weighted
         average value (in km).
         """
-        return self.width
+        return self.sparam['width']
 
     def get_area(self):
         """
         Return sum of surface elements areas (in squared km).
         """
-        return self.area
+        return self.sparam['area']
 
     def get_bounding_box(self):
         """

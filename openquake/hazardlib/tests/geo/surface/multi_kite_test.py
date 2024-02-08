@@ -244,7 +244,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         a1 = self.msrf.surfaces[0].get_area()
         a2 = self.msrf.surfaces[1].get_area()
         area = self.msrf.get_area()
-        aae(a1 + a2, area)
+        aae(a1 + a2, area, decimal=4)
 
     def test_get_bounding_box(self):
         west, east, north, south = self.msrf.get_bounding_box()

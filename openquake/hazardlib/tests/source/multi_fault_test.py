@@ -183,8 +183,7 @@ def main():
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
-    torlines = [sec.tor for sec in src.get_sections()]    
-    [ctxt] = cmaker.from_srcs([src], sitecol, torlines)
+    [ctxt] = cmaker.from_srcs([src], sitecol, src.get_sections())
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
     print(mon)

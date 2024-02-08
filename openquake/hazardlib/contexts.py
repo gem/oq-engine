@@ -44,7 +44,7 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.multiline import MultiLine
+from openquake.hazardlib.geo.surface.multi import build_sparams
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
@@ -816,7 +816,7 @@ class ContextMaker(object):
         rctxs = self.gen_contexts([[[rup], sitecol]], src_id=0)
         return self.recarray(list(rctxs))
 
-    def from_srcs(self, srcs, sitecol, torlines=()):
+    def from_srcs(self, srcs, sitecol, sections=()):
         # used in disagg.disaggregation
         """
         :param srcs: a list of Source objects
@@ -825,8 +825,8 @@ class ContextMaker(object):
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
-        if torlines:
-            self.set_weight(srcs, srcfilter, torlines)
+        if sections:
+            self.set_weight(srcs, srcfilter, sections)
         for i, src in enumerate(srcs):
             if src.id == -1:  # not set yet
                 src.id = i
@@ -1230,7 +1230,7 @@ class ContextMaker(object):
         weight = esites / N  # the weight is the effective number of ruptures
         return weight, int(esites)
 
-    def set_weight(self, sources, srcfilter, torlines=(), multiplier=1,
+    def set_weight(self, sources, srcfilter, sections=(), multiplier=1,
                    mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source
@@ -1245,10 +1245,10 @@ class ContextMaker(object):
             else:
                 with mon:
                     if src.code == b'F':
-                        # set .u_max, expensive operation
-                        mls = [MultiLine([torlines[idx] for idx in idxs])
-                               for idxs in src.rupture_idxs]
-                        src.u_max = F32([ml.u_max for ml in mls])
+                        # set .sparam, expensive operation
+                        all_surfaces = [[sections[i] for i in idxs]
+                                        for idxs in src.rupture_idxs]
+                        src.sparams = build_sparams(all_surfaces)
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
                     if src.weight == 0:
