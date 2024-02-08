@@ -26,6 +26,7 @@ from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
+from openquake.hazardlib.source.multi_fault import build_secparams
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import (
@@ -40,26 +41,6 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
-
-SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
-             'tl0', 'tl1', 'tr0', 'tr1']
-SECDT = [(p, numpy.float32) for p in SECPARAMS]
-
-
-def build_secparams(sections):
-    sparams = numpy.zeros(len(sections), SECDT)
-    for sparam, sec in zip(sparams, sections):
-        sparam['area'] = sec.get_area()
-        sparam['dip'] = sec.get_dip()
-        sparam['strike'] = sec.get_strike()
-        sparam['width'] = sec.get_width()
-        sparam['ztor'] = sec.get_top_edge_depth()
-        sparam['zbot'] = sec.mesh.depths.max()
-        sparam['tl0'] = sec.tor.coo[0, 0]
-        sparam['tl1'] = sec.tor.coo[0, 1]
-        sparam['tr0'] = sec.tor.coo[-1, 0]
-        sparam['tr1'] = sec.tor.coo[-1, 1]
-    return sparams
 
 
 def source_data(sources):

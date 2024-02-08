@@ -19,6 +19,7 @@
 Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 :class:`MultiSurface`.
 """
+from functools import cached_property
 import numpy as np
 from shapely.geometry import Polygon
 from openquake.hazardlib.geo.surface.base import BaseSurface
@@ -142,16 +143,17 @@ class MultiSurface(BaseSurface):
         """
         self.surfaces = surfaces
         self.sparam = sparam
-        self._set_tor()
 
-    def _set_tor(self):
+    @cached_property
+    def tor(self):
         # setting .tor is expensive unless u_max is given
         if self.sparam is None:
-            self.tor = geo.MultiLine([s.tor for s in self.surfaces])
-            self.sparam = _build_sparam(self.surfaces, self.tor)
+            tor = geo.MultiLine([s.tor for s in self.surfaces])
+            self.sparam = _build_sparam(self.surfaces, tor)
         else:
-            self.tor = geo.MultiLine([s.tor for s in self.surfaces],
-                                     self.sparam['u_max'])
+            tor = geo.MultiLine([s.tor for s in self.surfaces],
+                                self.sparam['u_max'])
+        return tor
 
     def get_min_distance(self, mesh):
         """
@@ -183,6 +185,7 @@ class MultiSurface(BaseSurface):
         Compute top edge depth of each surface element and return area-weighted
         average value (in km).
         """
+        self.tor
         return self.sparam['ztor']
 
     def get_strike(self):
@@ -193,6 +196,7 @@ class MultiSurface(BaseSurface):
         Note that the original formula has been adapted to compute a weighted
         rather than arithmetic mean.
         """
+        self.tor
         return self.sparam['strike']
 
     def get_dip(self):
@@ -202,6 +206,7 @@ class MultiSurface(BaseSurface):
         Given that dip values are constrained in the range (0, 90], the simple
         formula for weighted mean is used.
         """
+        self.tor
         return self.sparam['dip']
 
     def get_width(self):
@@ -209,12 +214,14 @@ class MultiSurface(BaseSurface):
         Compute width of each surface element, and return area-weighted
         average value (in km).
         """
+        self.tor
         return self.sparam['width']
 
     def get_area(self):
         """
         Return sum of surface elements areas (in squared km).
         """
+        self.tor
         return self.sparam['area']
 
     def get_bounding_box(self):

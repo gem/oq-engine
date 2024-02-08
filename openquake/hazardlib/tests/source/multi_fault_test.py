@@ -23,7 +23,7 @@ from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts
 from openquake.hazardlib.source.multi_fault import (
-    MultiFaultSource, save, load)
+    MultiFaultSource, build_secparams, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -125,7 +125,8 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
-        [ctx] = cmaker.from_srcs([got], sitecol)
+        secparams = build_secparams(src.get_sections())
+        [ctx] = cmaker.from_srcs([got], sitecol, secparams)
         assert len(ctx) == src.count_ruptures()
 
         # compare with the expected distances computed without cache
@@ -173,7 +174,8 @@ def main():
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
-    [ctxt] = cmaker.from_srcs([src], sitecol, src.get_sections())
+    secparams = build_secparams(src.get_sections())
+    [ctxt] = cmaker.from_srcs([src], sitecol, secparams)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
     print(mon)
