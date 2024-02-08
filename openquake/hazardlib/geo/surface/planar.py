@@ -671,7 +671,7 @@ class PlanarSurface(BaseSurface):
         return self.array.corners[2]
 
     @property
-    def tor_line(self):
+    def tor(self):
         """
         :returns: top of rupture line
         """

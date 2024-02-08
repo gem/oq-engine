@@ -107,7 +107,7 @@ def appendrow(row, rows, chatty, sections=(), s2i={}):
                         for idxs in row.coords._rupture_idxs]
         row.coords = []
         for idxs in rupture_idxs:
-            coos = [sections[idx].tor_line.coo[:, 0:2] for idx in idxs]
+            coos = [sections[idx].tor.coo[:, 0:2] for idx in idxs]
             row.coords.append(numpy.concatenate(coos))
     row.wkt = wkt = to_wkt(row.geom, row.coords)
     if wkt.startswith('POINT'):

@@ -225,8 +225,8 @@ class KiteSurfaceFromMeshTest(unittest.TestCase):
 
     def test_get_tor(self):
         # test calculation of trace (i.e. surface projection of tor)
-        # notice that .tor_line also does a .keep_corners
-        coo = self.ksfc.tor_line.coo
+        # notice that .tor also does a .keep_corners
+        coo = self.ksfc.tor.coo
         aae(coo[:, 0], [0.2 , 0.05, 0.])
         aae(coo[:, 1], [0.0, 0.0, 0.05])
 
@@ -276,7 +276,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
         self.mesh = Mesh(lons=self.mlons.flatten(), lats=self.mlats.flatten())
 
     def test_get_tor(self):
-        coo = self.srfc.tor_line.coo
+        coo = self.srfc.tor.coo
 
         # Expected results extracted manually from the mesh
         elo = np.array([10.01100473, 10.04737998, 10.2])
@@ -307,7 +307,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
-            coo = self.srfc.tor_line.coo
+            coo = self.srfc.tor.coo
             ax.plot(coo[:, 0], coo[:, 1], '-g', lw=4, label='tor')
             plt.title(f'{self.NAME} - Rjb')
             plt.legend()
@@ -329,7 +329,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
-            coo = self.srfc.tor_line.coo
+            coo = self.srfc.tor.coo
             ax.plot(coo[:, 0], coo[:, 1], '-g', lw=4)
             plt.title(f'{self.NAME} - Rrup')
             plt.show()
@@ -346,7 +346,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             _ = plt.clabel(cs)
-            coo = self.srfc.tor_line
+            coo = self.srfc.tor
             ax.plot(coo[:, 0], coo[:, 1], '-g', lw=4)
             plt.title(f'{self.NAME} - Rx')
             plt.show()
@@ -363,7 +363,7 @@ class KiteSurfaceWithNaNs(unittest.TestCase):
             z = np.reshape(dst, self.mlons.shape)
             cs = plt.contour(self.mlons, self.mlats, z, 10, colors='k')
             plt.clabel(cs)
-            coo = self.srfc.tor_line.coo
+            coo = self.srfc.tor.coo
             ax.plot(coo[:, 0], coo[:, 1], '-g', lw=4)
             plt.title(f'{self.NAME} - Ry0')
             plt.show()

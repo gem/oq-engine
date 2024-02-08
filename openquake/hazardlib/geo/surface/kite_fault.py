@@ -119,7 +119,7 @@ class KiteSurface(BaseSurface):
     @cached_property
     # this is cached since it can be called multiple times for the same
     # surface (in multi fault sources)
-    def tor_line(self):
+    def tor(self):
         """
         Provides longitude and latitude coordinates of the vertical surface
         projection of the top of rupture. This is used in the GC2 method to

@@ -94,7 +94,7 @@ class ComplexFaultSurface(BaseSurface):
                              "fault source")
 
     @property
-    def tor_line(self):
+    def tor(self):
         """
         :returns: top of rupture line
         """

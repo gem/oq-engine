@@ -67,7 +67,7 @@ class MultiSurface(BaseSurface):
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
-    # NB: without a cache, get_closest_points calls it
+    # NB: called in event_based calculations
     @property
     def mesh(self):
         """
@@ -103,9 +103,10 @@ class MultiSurface(BaseSurface):
         We represent the surface projection of each top of rupture with an
         instance of a :class:`openquake.hazardlib.geo.multiline.Multiline`
         """
-        # Set the multiline representing the rupture traces i.e. vertical
-        # projections at the surface of the top of ruptures
-        self.tor = geo.MultiLine([surf.tor_line for surf in self.surfaces])
+        # set the multiline representing the rupture traces, i.e. vertical
+        # projections of the top of ruptures; this is expensive and should
+        # be done only if you want to compute rx or ry0 distances
+        self.tor = geo.MultiLine([surf.tor for surf in self.surfaces])
 
     def get_min_distance(self, mesh):
         """

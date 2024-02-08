@@ -69,7 +69,7 @@ class SimpleFaultSurface(BaseSurface):
         self.strike = self.dip = None
 
     @property
-    def tor_line(self):
+    def tor(self):
         """
         :returns: top of rupture line
         """

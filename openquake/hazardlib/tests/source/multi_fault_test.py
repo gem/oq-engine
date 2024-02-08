@@ -159,7 +159,7 @@ def main():
 
     print('Computing u, t, u2 values for the sections')
     with performance.Monitor() as mon:
-        lines = [sec.tor_line for sec in src.get_sections()]
+        lines = [sec.tor for sec in src.get_sections()]
         L = len(lines)
         N = len(sitecol)
         us = numpy.zeros((L, N))
@@ -173,8 +173,8 @@ def main():
     data = []
     for rup in rups:
         for surf in rup.surface.surfaces:
-            lines.append(surf.tor_line)
-            data.append(surf.tor_line.coo.tobytes())
+            lines.append(surf.tor)
+            data.append(surf.tor.coo.tobytes())
     uni, inv = numpy.unique(data, return_inverse=True)
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 
