@@ -41,6 +41,25 @@ F32 = np.float32
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
+SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
+             'tl0', 'tl1', 'tr0', 'tr1']
+SECDT = [(p, np.float32) for p in SECPARAMS]
+
+
+def build_secparams(sections):
+    sparams = np.zeros(len(sections), SECDT)
+    for sparam, sec in zip(sparams, sections):
+        sparam['area'] = sec.get_area()
+        sparam['dip'] = sec.get_dip()
+        sparam['strike'] = sec.get_strike()
+        sparam['width'] = sec.get_width()
+        sparam['ztor'] = sec.get_top_edge_depth()
+        sparam['zbot'] = sec.mesh.depths.max()
+        sparam['tl0'] = sec.tor.coo[0, 0]
+        sparam['tl1'] = sec.tor.coo[0, 1]
+        sparam['tr0'] = sec.tor.coo[-1, 0]
+        sparam['tr1'] = sec.tor.coo[-1, 1]
+    return sparams
 
 
 class MultiFaultSource(BaseSeismicSource):
@@ -137,11 +156,11 @@ class MultiFaultSource(BaseSeismicSource):
         n = len(self.mags)
         sec = self.get_sections()  # read KiteSurfaces, very fast
         rupture_idxs = self.rupture_idxs
-        u_max = getattr(self, 'u_max', [None]*n)
+        sparams = getattr(self, 'sparams', [None]*n)
         # in preclassical u_max will be None and in classical will be reused
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
-            sfc = MultiSurface([sec[idx] for idx in idxs], u_max[i])
+            sfc = MultiSurface([sec[idx] for idx in idxs], sparams[i])
             rake = self.rakes[i]
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]

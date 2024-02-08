@@ -29,7 +29,6 @@ from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
 from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
-from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
 
 U16 = numpy.uint16
 TWO16 = 2 ** 16  # 65,536
