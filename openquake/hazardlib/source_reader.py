@@ -20,13 +20,13 @@ import os.path
 import pickle
 import operator
 import logging
-import collections
 import gzip
 import zlib
 import numpy
 
 from openquake.baselib import parallel, general, hdf5, python3compat
 from openquake.hazardlib import nrml, sourceconverter, InvalidFile, calc
+from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.valid import basename, fragmentno
 from openquake.hazardlib.lt import apply_uncertainties
 from openquake.hazardlib.geo.surface.kite_fault import kite_to_geom
@@ -328,38 +328,18 @@ def fix_geometry_sections(smdict, dstore):
         sec_ids.extend(gmod.sections)
         sections.update(gmod.sections)
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
-    s2i = {idx: i for i, idx in enumerate(sections)}
-    for idx, sec in enumerate(sections.values()):
-        sec.idx = idx
+
     if sections:
+        # save in the temporary file
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
-        with hdf5.File(dstore.tempname, 'w') as h5:
-            h5.save_vlen('multi_fault_sections',
-                         [kite_to_geom(sec) for sec in sections.values()])
-
-    # fix the MultiFaultSources
-    section_idxs = []
-    for smod in smodels:
-        for sg in smod.src_groups:
-            for src in sg:
-                if hasattr(src, 'set_sections'):
-                    if not sections:
-                        raise RuntimeError('Missing geometryModel files!')
-                    if dstore:
-                        src.hdf5path = dstore.tempname
-                    rupture_idxs = [U16([s2i[idx] for idx in idxs])
-                                    for idxs in src._rupture_idxs]
-                    delattr(src, '_rupture_idxs')  # set by the SourceConverter
-                    with hdf5.File(dstore.tempname, 'r+') as h5:
-                        for srcid, block in src.gen_blocks(rupture_idxs):
-                            h5.save_vlen(f'rupture_idxs/{srcid}', block)
-                    for idxs in rupture_idxs:
-                        section_idxs.extend(idxs)
-    cnt = collections.Counter(section_idxs)
-    if cnt:
-        mean_counts = numpy.mean(list(cnt.values()))
-        logging.info('Section multiplicity = %.1f', mean_counts)
+        mfsources = []
+        for smod in smodels:
+            for sg in smod.src_groups:
+                for src in sg:
+                    if src.code == b'F':
+                        mfsources.append(src)
+        save(mfsources, sections, dstore.tempname)
 
 
 def _groups_ids(smlt_dir, smdict, fnames):

@@ -137,7 +137,7 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
         sfc2 = ffd(trace, usd, lsd, dip, mspc)
 
         # Multi surface
-        self.msfc = MultiSurface([sfc1, sfc2], tol=2.)
+        self.msfc = MultiSurface([sfc1, sfc2])
         self.msfc._set_tor()
 
     def test_get_tor(self):

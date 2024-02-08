@@ -57,8 +57,8 @@ class MultiFaultTestCase(unittest.TestCase):
         prf, _ = kst._read_profiles(path)
         sfc_c = KiteSurface.from_profiles(prf, vsmpl, hsmpl, idl, alg)
 
-        # Sections list
-        sections = [sfc_a, sfc_b, sfc_c]
+        # Sections
+        sections = {0: sfc_a, 1: sfc_b, 2: sfc_c}
 
         # Rupture indexes
         rup_idxs = [numpy.uint16(x) for x in [[0], [1], [2], [0, 1], [0, 2],
@@ -86,24 +86,16 @@ class MultiFaultTestCase(unittest.TestCase):
         # test instantiation
         src = MultiFaultSource("01", "test", "Moon Crust",
                                self.pmfs, self.mags, self.rakes)
-        src.set_sections(self.sections, self.rup_idxs)
+        src._rupture_idxs = self.rup_idxs
         src.mutex_weight = 1.
 
-        # test conversion to XML
+        # test conversion into XML
+        src.sections = self.sections.values()
         smodel = SourceModel([SourceGroup("Moon Crust", [src], "test_group",
                                           src_interdep='mutex')])
         fd, tmp = tempfile.mkstemp(suffix='.xml')
         with os.fdopen(fd, 'wb'):
             sm_xml, gm_hdf5, gm_xml = write_source_model(tmp, smodel)
-
-        # check the stored section indices
-        with hdf5.File(gm_hdf5, 'r') as f:
-            lines = python3compat.decode(f['01/rupture_idxs'][:])
-        self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
-
-        # test rupture generation
-        rups = list(src.iter_ruptures())
-        self.assertEqual(7, len(rups))
 
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
@@ -114,6 +106,15 @@ class MultiFaultTestCase(unittest.TestCase):
                 getattr(src, name), getattr(got, name))
         for a, b in zip(src.rupture_idxs, got.rupture_idxs):
             numpy.testing.assert_almost_equal(a, b)
+
+        # check the stored section indices
+        with hdf5.File(gm_hdf5, 'r') as f:
+            lines = python3compat.decode(f['01/rupture_idxs'][:])
+        self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
+
+        # test rupture generation
+        rups = list(src.iter_ruptures())
+        self.assertEqual(7, len(rups))
 
         # compute distances for the 7 underlying ruptures
         sitecol = SiteCollection.from_points([10.], [45.])
@@ -127,22 +128,24 @@ class MultiFaultTestCase(unittest.TestCase):
         assert len(ctx) == src.count_ruptures()
 
         # compare with the expected distances computed without cache
-        aac(ctx.rrup, [0., 27.51929754, 55.03833836, 0., 0., 27.51929754,
-                       0.])
-        aac(ctx.rjb, [0., 27.51904144, 55.03833836, 0., 0., 27.51904144, 0.])
-        aac(ctx.rx, [0, 1.10377738e-01, 3.39619736e-01, 1.68873152e-05,
-                     1.64545240e-05, 1.65508566e-01, 3.33385038e-05])
-        aac(ctx.ry0, [0., 27.518885, 55.036336, 0., 0., 27.518444, 0.])
+        aac(ctx.rrup, [0., 27.519328, 55.038323,  0., 0., 27.519328, 0.])
+        aac(ctx.rjb, [0., 27.519071, 55.038323,  0., 0., 27.519071, 0.])
+        aac(ctx.rx, [0, 1.10216274e-01, 3.39296288e-01, 1.68625825e-05,
+                     1.64388603e-05, 1.65308237e-01, 3.32981110e-05])
+        aac(ctx.ry0, [0., 27.51891546, 55.03632312, 0., 0., 27.5184749,0.])
         aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
         aac(ctx.clat, 45.)
 
     def test_ko(self):
-        # test set_sections, 3 is not a known section ID
+        # test invalid section IDs
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust",
                                self.pmfs, self.mags, self.rakes)
-        with self.assertRaises(IndexError):
-            mfs.set_sections(self.sections, rup_idxs)
+        mfs._rupture_idxs = rup_idxs
+        with self.assertRaises(IndexError) as ctx:
+            save([mfs], self.sections, 'dummy.hdf5')
+        self.assertEqual(str(ctx.exception),
+                         "The section index 3 in source '01' is invalid")
 
 
 def main():

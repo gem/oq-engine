@@ -117,6 +117,8 @@ class KiteSurface(BaseSurface):
         return self._get_external_boundary()
 
     @cached_property
+    # this is cached since it can be called multiple times for the same
+    # surface (in multi fault sources)
     def tor_line(self):
         """
         Provides longitude and latitude coordinates of the vertical surface
