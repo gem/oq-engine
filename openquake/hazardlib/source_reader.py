@@ -335,8 +335,6 @@ def fix_geometry_sections(smdict, dstore):
     check_unique(sec_ids, 'section ID in files ' + ' '.join(gfiles))
 
     if sections:
-        for sec in sections.values():
-            print(sec.tor.coo.shape)
         # save in the temporary file
         assert dstore, ('You forgot to pass the dstore to '
                         'get_composite_source_model')
