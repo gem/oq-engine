@@ -58,10 +58,22 @@ def check_unique(ids, msg='', strict=True):
     """
     Raise a DuplicatedID exception if there are duplicated IDs
     """
+    if isinstance(ids, dict):  # ids by key
+        all_ids = sum(ids.values(), [])
+        unique, counts = numpy.unique(all_ids, return_counts=True)
+        for dupl in unique[counts > 1]:
+            keys = [k for k in ids if dupl in ids[k]]
+            if keys:
+                errmsg = '%r appears in %s %s' % (dupl, keys, msg)
+                if strict:
+                    raise nrml.DuplicatedID(errmsg)
+                else:
+                    logging.info('*' * 60 + ' DuplicatedID:\n' + errmsg)
+        return
     unique, counts = numpy.unique(ids, return_counts=True)
     for u, c in zip(unique, counts):
         if c > 1:
-            errmsg = '%s %s' % (u, msg)
+            errmsg = '%r appears %d times %s' % (u, c, msg)
             if strict:
                 raise nrml.DuplicatedID(errmsg)
             else:
@@ -216,15 +228,20 @@ def get_csm(oq, full_lt, dstore=None):
         check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
 
     # check duplicates in different files but in the same branch
+    # the problem was discovered in the DOM model
     for branch, sms in general.groupby(smdict.values(), bybranch).items():
-        srcids = []
+        srcids = general.AccumDict(accum=[])
         fnames = []
         for sm in sms:
+            if isinstance(sm, nrml.GeometryModel):
+                # the section IDs are not checked since they not count
+                # as real sources
+                continue
             for sg in sm.src_groups:
-                srcids.extend(src.source_id for src in sg)
-            fnames.append(sm.fname)    
-        check_unique(srcids, 'in %s' % fnames, strict=True)
-        
+                srcids[sm.fname].extend(src.source_id for src in sg)
+            fnames.append(sm.fname)
+        check_unique(srcids, 'in branch %s' % branch, strict=True)
+
     found = find_false_duplicates(smdict)
     if found:
         logging.warning('Found different sources with same ID %s',
