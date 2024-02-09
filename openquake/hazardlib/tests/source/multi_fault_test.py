@@ -101,7 +101,7 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
-        save([src], self.sections, fname, umax=True)
+        save([src], self.sections, fname)
         [got] = load(fname)
         for name in 'mags rakes probs_occur'.split():
             numpy.testing.assert_almost_equal(
@@ -149,7 +149,7 @@ class MultiFaultTestCase(unittest.TestCase):
                                self.pmfs, self.mags, self.rakes)
         mfs._rupture_idxs = rup_idxs
         with self.assertRaises(IndexError) as ctx:
-            save([mfs], self.sections, 'dummy.hdf5', umax=True)
+            save([mfs], self.sections, 'dummy.hdf5')
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 

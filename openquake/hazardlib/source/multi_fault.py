@@ -268,9 +268,9 @@ class MultiFaultSource(BaseSeismicSource):
 
 
 # NB: as side effect delete _rupture_idxs and add .hdf5path
-def save(mfsources, sectiondict, hdf5path, umax=False):
+def save(mfsources, sectiondict, hdf5path, msparams=False):
     """
-    Utility to serialize MultiFaultSources and optionally computing u_max
+    Utility to serialize MultiFaultSources and optionally computing msparams
     """
     s2i = {idx: i for i, idx in enumerate(sectiondict)}
     all_ridxs = []
@@ -284,10 +284,6 @@ def save(mfsources, sectiondict, hdf5path, umax=False):
         all_ridxs.append(rids)
         delattr(src, '_rupture_idxs')  # was set by the SourceConverter
         src.hdf5path = hdf5path
-        if umax:
-            tors = [sec.tor for sec in sectiondict.values()]
-            mls = [MultiLine([tors[i] for i in idxs]) for idxs in rids]
-            src.u_max = F32([ml.u_max for ml in mls])
 
     # store data
     with hdf5.File(hdf5path, 'w') as h5:
@@ -306,6 +302,12 @@ def save(mfsources, sectiondict, hdf5path, umax=False):
                 attrs['infer_occur_rates'] = src.infer_occur_rates
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
+
+    # optionally set .msparams
+    if msparams:
+        secparams = build_secparams(sectiondict.values())
+        for src in mfsources:
+            src.set_msparams(secparams)
 
 
 def load(hdf5path):
