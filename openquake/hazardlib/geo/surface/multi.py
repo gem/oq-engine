@@ -28,36 +28,9 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-SPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor']
+SPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
+           'west', 'east', 'north', 'south']
 SDT = [(p, np.float32) for p in SPARAMS]
-
-    
-def build_sparams(rupture_idxs, secparams):
-    """
-    :param surfaces: simple surfaces composing a MultiSurface
-    :returns: a record with the multisurface parameters
-    """
-    U = len(rupture_idxs)  # number of ruptures
-    sparams = np.zeros(U, SDT)
-    for sparam, idxs in zip(sparams, rupture_idxs):
-        secparam = secparams[idxs]
-        areas = secparam['area']
-        sparam['area'] = areas.sum()
-        ws = areas / sparam['area']  # weights
-        sparam['dip'] = ws @ secparam['dip']
-        strikes = np.radians(secparam['strike'])
-        v1 = ws @ np.sin(strikes)
-        v2 = ws @ np.cos(strikes)
-        sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-        sparam['width'] = ws @ secparam['width']
-        sparam['ztor'] = ws @ secparam['ztor']
-        sparam['zbot'] = ws @ secparam['zbot']
-        tors = []
-        for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-            coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
-            tors.append(geo.line.Line.from_coo(coo))
-        sparam['u_max'] = geo.multiline.MultiLine(tors).u_max
-    return sparams
 
 
 def _build_sparam(surfaces, tor):

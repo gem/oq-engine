@@ -31,9 +31,12 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
+from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.multiline import MultiLine
-from openquake.hazardlib.geo.surface.multi import MultiSurface
-from openquake.hazardlib.geo.utils import angular_distance, KM_TO_DEGREES
+from openquake.hazardlib.geo.surface.multi import (
+    MultiSurface, SDT)
+from openquake.hazardlib.geo.utils import (
+    angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 U16 = np.uint16
@@ -41,6 +44,7 @@ F32 = np.float32
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
+
 SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
              'tl0', 'tl1', 'tr0', 'tr1']
 SECDT = [(p, np.float32) for p in SECPARAMS]
@@ -117,6 +121,40 @@ class MultiFaultSource(BaseSeismicSource):
         assert self.hdf5path
         with hdf5.File(self.hdf5path, 'r') as h5:
             return h5[f'{self.source_id}/rupture_idxs'][:]
+
+    def set_sparams(self, secparams):
+        """
+        :returns: a cached structured array of parameters
+        """
+        U = len(self.rupture_idxs)
+        sparams = np.zeros(U, SDT)
+        for sparam, idxs in zip(sparams, self.rupture_idxs):
+            secparam = secparams[idxs]
+            areas = secparam['area']
+            sparam['area'] = areas.sum()
+            ws = areas / sparam['area']  # weights
+            sparam['dip'] = ws @ secparam['dip']
+            strikes = np.radians(secparam['strike'])
+            v1 = ws @ np.sin(strikes)
+            v2 = ws @ np.cos(strikes)
+            sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+            sparam['width'] = ws @ secparam['width']
+            sparam['ztor'] = ws @ secparam['ztor']
+            sparam['zbot'] = ws @ secparam['zbot']
+            tors = []
+            for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
+                coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
+                tors.append(Line.from_coo(coo))
+
+            lons = np.concatenate([secparam['tl0'], secparam['tr0']])
+            lats = np.concatenate([secparam['tl1'], secparam['tr1']])
+            bb = get_spherical_bounding_box(lons, lats)
+            sparam['west'] = bb[0]
+            sparam['east'] = bb[1]
+            sparam['north'] = bb[2]
+            sparam['south'] = bb[3]
+            sparam['u_max'] = MultiLine(tors).u_max
+        self.sparams = sparams
         
     def is_gridded(self):
         return True  # convertible to HDF5
@@ -156,7 +194,7 @@ class MultiFaultSource(BaseSeismicSource):
         n = len(self.mags)
         sec = self.get_sections()  # read KiteSurfaces, very fast
         rupture_idxs = self.rupture_idxs
-        sparams = getattr(self, 'sparams', [None]*n)
+        sparams = self.sparams
         # in preclassical u_max will be None and in classical will be reused
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
@@ -220,14 +258,10 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        surfaces = []
-        for sec in self.get_sections():
-            if isinstance(sec, MultiSurface):
-                surfaces.extend(sec.surfaces)
-            else:
-                surfaces.append(sec)
-        multi_surf = MultiSurface(surfaces)
-        west, east, north, south = multi_surf.get_bounding_box()
+        p = self.sparams
+        lons = np.concatenate([p['west'], p['east']])
+        lats = np.concatenate([p['north'], p['south']])
+        west, east, north, south = get_spherical_bounding_box(lons, lats)
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
         return west - a2, south - a1, east + a2, north + a1

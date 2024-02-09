@@ -115,6 +115,8 @@ class MultiFaultTestCase(unittest.TestCase):
         self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
 
         # test rupture generation
+        secparams = build_secparams(src.get_sections())
+        src.set_sparams(secparams)
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
 
@@ -126,8 +128,7 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
-        secparams = build_secparams(src.get_sections())
-        [ctx] = cmaker.from_srcs([got], sitecol, secparams)
+        [ctx] = cmaker.from_srcs([src], sitecol)
         assert len(ctx) == src.count_ruptures()
 
         # compare with the expected distances computed without cache
@@ -176,10 +177,11 @@ def main():
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     secparams = build_secparams(src.get_sections())
-    [ctxt] = cmaker.from_srcs([src], sitecol, secparams)
+    src.set_sparams(secparams)
+    [ctxt] = cmaker.from_srcs([src], sitecol)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
-    print(mon)
+
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
     ctx = ctxt[::50]
@@ -221,7 +223,7 @@ def main100sites():
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     secparams = build_secparams(src.get_sections())
     srcfilter = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
-    cmaker.set_weight([src], srcfilter, secparams)
+    src.set_sparams(secparams)
     sites = srcfilter.get_close_sites(src)
     with cProfile.Profile() as prof:
         list(cmaker.get_ctx_iter(src, sites))
@@ -230,4 +232,5 @@ def main100sites():
     print(cmaker.ctx_mon)
 
 if __name__ == '__main__':
-    main100sites()
+    main()
+    # main100sites()

@@ -44,7 +44,6 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
-from openquake.hazardlib.geo.surface.multi import build_sparams
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
@@ -816,7 +815,7 @@ class ContextMaker(object):
         rctxs = self.gen_contexts([[[rup], sitecol]], src_id=0)
         return self.recarray(list(rctxs))
 
-    def from_srcs(self, srcs, sitecol, secparams=()):
+    def from_srcs(self, srcs, sitecol):
         # used in disagg.disaggregation
         """
         :param srcs: a list of Source objects
@@ -825,8 +824,6 @@ class ContextMaker(object):
         """
         ctxs = []
         srcfilter = SourceFilter(sitecol, self.maximum_distance)
-        if len(secparams):
-            self.set_weight(srcs, srcfilter, secparams)
         for i, src in enumerate(srcs):
             if src.id == -1:  # not set yet
                 src.id = i
@@ -1230,8 +1227,7 @@ class ContextMaker(object):
         weight = esites / N  # the weight is the effective number of ruptures
         return weight, int(esites)
 
-    def set_weight(self, sources, srcfilter, secparams=(), multiplier=1,
-                   mon=Monitor()):
+    def set_weight(self, sources, srcfilter, multiplier=1, mon=Monitor()):
         """
         Set the weight attribute on each prefiltered source
         """
@@ -1244,9 +1240,6 @@ class ContextMaker(object):
                 src.weight = .01
             else:
                 with mon:
-                    if src.code == b'F':
-                        # expensive operation
-                        src.sparams = build_sparams(src.rupture_idxs, secparams)
                     src.weight, src.esites = self.estimate_weight(
                         src, srcfilter, multiplier)
                     if src.weight == 0:
