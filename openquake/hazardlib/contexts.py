@@ -506,7 +506,7 @@ def genctxs_F(src, sitecol, cmaker):
             dist = get_distances(rup, sitecol, 'rrup')
             mask = dist <= cmaker.maximum_distance(rup.mag)
             if mask.any():
-                rctx = cmaker.get_legacy_ctx(rup, sitecol, dist, dcache)
+                rctx = cmaker.get_ctx(rup, sitecol, dist, dcache)
                 # copy the correct slice of distances and site_params
                 for key in cmaker.defaultdict:
                     arr = getattr(rctx, key)
@@ -898,7 +898,7 @@ class ContextMaker(object):
 
         return dic
 
-    def get_legacy_ctx(self, rup, sites, distances, dcache=None):
+    def get_ctx(self, rup, sites, distances, dcache=None):
         """
         :returns: a legacy RuptureContext (or None if filtered away)
         """
@@ -950,7 +950,7 @@ class ContextMaker(object):
                 mask = dist <= magdist
                 if mask.any():
                     r_sites = sites.filter(mask)
-                    rctx = self.get_legacy_ctx(rup, r_sites, dist[mask])
+                    rctx = self.get_ctx(rup, r_sites, dist[mask])
                     rctx.src_id = src_id
                     if src_id >= 0:
                         rctx.rup_id = rup.rup_id
