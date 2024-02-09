@@ -832,11 +832,11 @@ class ContextMaker(object):
                 ctxs.extend(self.get_ctx_iter(src, sites))
         return concat(ctxs)
 
-    def make_legacy_ctx(self, rup):
+    def get_rparams(self, rup):
         """
-        Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
+        :returns: a dictionary with the rupture parameters
         """
-        ctx = RuptureContext()
+        dic = {}
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = numpy.round(rup.mag, 3)
@@ -879,22 +879,22 @@ class ContextMaker(object):
             else:
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
-            setattr(ctx, param, value)
-        ctx.occurrence_rate = getattr(rup, 'occurrence_rate', numpy.nan)
+            dic[param] = value
+        dic['occurrence_rate'] = getattr(rup, 'occurrence_rate', numpy.nan)
         if hasattr(rup, 'temporal_occurrence_model'):
             if isinstance(rup.temporal_occurrence_model, NegativeBinomialTOM):
-                ctx.probs_occur = rup.temporal_occurrence_model.get_pmf(
-                    ctx.occurrence_rate)
+                dic['probs_occur'] = rup.temporal_occurrence_model.get_pmf(
+                    rup.occurrence_rate)
         elif hasattr(rup, 'probs_occur'):
-            ctx.probs_occur = rup.probs_occur
+            dic['probs_occur'] = rup.probs_occur
 
-        return ctx
+        return dic
 
     def get_legacy_ctx(self, rup, sites, distances, dcache=None):
         """
         :returns: a legacy RuptureContext (or None if filtered away)
         """
-        ctx = self.make_legacy_ctx(rup)
+        ctx = RuptureContext(self.get_rparams(rup).items())
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
 
