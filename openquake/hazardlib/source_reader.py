@@ -203,7 +203,7 @@ def get_csm(oq, full_lt, dstore=None):
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
 
-    # check_duplicates
+    # check_duplicates in the same file
     for sm in smdict.values():
         srcids = []
         for sg in sm.src_groups:
