@@ -837,7 +837,6 @@ class ContextMaker(object):
         Add .REQUIRES_RUPTURE_PARAMETERS to the rupture
         """
         ctx = RuptureContext()
-        vars(ctx).update(vars(rup))
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = numpy.round(rup.mag, 3)
@@ -881,12 +880,13 @@ class ContextMaker(object):
                 raise ValueError('%s requires unknown rupture parameter %r' %
                                  (type(self).__name__, param))
             setattr(ctx, param, value)
-        if not hasattr(ctx, 'occurrence_rate'):
-            ctx.occurrence_rate = numpy.nan
-        if hasattr(ctx, 'temporal_occurrence_model'):
-            if isinstance(ctx.temporal_occurrence_model, NegativeBinomialTOM):
-                ctx.probs_occur = ctx.temporal_occurrence_model.get_pmf(
+        ctx.occurrence_rate = getattr(rup, 'occurrence_rate', numpy.nan)
+        if hasattr(rup, 'temporal_occurrence_model'):
+            if isinstance(rup.temporal_occurrence_model, NegativeBinomialTOM):
+                ctx.probs_occur = rup.temporal_occurrence_model.get_pmf(
                     ctx.occurrence_rate)
+        elif hasattr(rup, 'probs_occur'):
+            ctx.probs_occur = rup.probs_occur
 
         return ctx
 
