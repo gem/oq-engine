@@ -51,8 +51,8 @@ SECDT = [(p, np.float32) for p in SECPARAMS]
 
 
 def build_secparams(sections):
-    sparams = np.zeros(len(sections), SECDT)
-    for sparam, sec in zip(sparams, sections):
+    msparams = np.zeros(len(sections), SECDT)
+    for sparam, sec in zip(msparams, sections):
         sparam['area'] = sec.get_area()
         sparam['dip'] = sec.get_dip()
         sparam['strike'] = sec.get_strike()
@@ -63,7 +63,7 @@ def build_secparams(sections):
         sparam['tl1'] = sec.tor.coo[0, 1]
         sparam['tr0'] = sec.tor.coo[-1, 0]
         sparam['tr1'] = sec.tor.coo[-1, 1]
-    return sparams
+    return msparams
 
 
 class MultiFaultSource(BaseSeismicSource):
@@ -122,13 +122,13 @@ class MultiFaultSource(BaseSeismicSource):
         with hdf5.File(self.hdf5path, 'r') as h5:
             return h5[f'{self.source_id}/rupture_idxs'][:]
 
-    def set_sparams(self, secparams):
+    def set_msparams(self, secparams):
         """
         :returns: a cached structured array of parameters
         """
         U = len(self.rupture_idxs)
-        sparams = np.zeros(U, SDT)
-        for sparam, idxs in zip(sparams, self.rupture_idxs):
+        msparams = np.zeros(U, SDT)
+        for sparam, idxs in zip(msparams, self.rupture_idxs):
             secparam = secparams[idxs]
             areas = secparam['area']
             sparam['area'] = areas.sum()
@@ -154,7 +154,7 @@ class MultiFaultSource(BaseSeismicSource):
             sparam['north'] = bb[2]
             sparam['south'] = bb[3]
             sparam['u_max'] = MultiLine(tors).u_max
-        self.sparams = sparams
+        self.msparams = msparams
         
     def is_gridded(self):
         return True  # convertible to HDF5
@@ -194,11 +194,11 @@ class MultiFaultSource(BaseSeismicSource):
         n = len(self.mags)
         sec = self.get_sections()  # read KiteSurfaces, very fast
         rupture_idxs = self.rupture_idxs
-        sparams = self.sparams
+        msparams = self.msparams
         # in preclassical u_max will be None and in classical will be reused
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
-            sfc = MultiSurface([sec[idx] for idx in idxs], sparams[i])
+            sfc = MultiSurface([sec[idx] for idx in idxs], msparams[i])
             rake = self.rakes[i]
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
@@ -258,7 +258,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        p = self.sparams
+        p = self.msparams
         lons = np.concatenate([p['west'], p['east']])
         lats = np.concatenate([p['north'], p['south']])
         west, east, north, south = get_spherical_bounding_box(lons, lats)

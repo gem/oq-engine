@@ -109,7 +109,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     for src in srcs:
         if src.code == b'F':
             # expensive operation
-            src.set_sparams(secparams)
+            src.set_msparams(secparams)
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0

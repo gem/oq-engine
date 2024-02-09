@@ -116,7 +116,7 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # test rupture generation
         secparams = build_secparams(src.get_sections())
-        src.set_sparams(secparams)
+        src.set_msparams(secparams)
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
 
@@ -177,7 +177,7 @@ def main():
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     secparams = build_secparams(src.get_sections())
-    src.set_sparams(secparams)
+    src.set_msparams(secparams)
     [ctxt] = cmaker.from_srcs([src], sitecol)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
@@ -223,7 +223,7 @@ def main100sites():
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
     secparams = build_secparams(src.get_sections())
     srcfilter = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
-    src.set_sparams(secparams)
+    src.set_msparams(secparams)
     sites = srcfilter.get_close_sites(src)
     with cProfile.Profile() as prof:
         list(cmaker.get_ctx_iter(src, sites))
