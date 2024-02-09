@@ -965,9 +965,9 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(genctxs(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
-            if src.code == b'F' and self.fewsites and step == 1:
-                # multifault source with cache
-                return genctxs(src, sitecol, self)
+            #if src.code == b'F' and self.fewsites and step == 1:
+            #    # multifault source with cache
+            #    return genctxs(src, sitecol, self)
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
