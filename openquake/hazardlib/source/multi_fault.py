@@ -44,15 +44,17 @@ F32 = np.float32
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
-
 SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
              'tl0', 'tl1', 'tr0', 'tr1']
 SECDT = [(p, np.float32) for p in SECPARAMS]
 
 
 def build_secparams(sections):
-    msparams = np.zeros(len(sections), SECDT)
-    for sparam, sec in zip(msparams, sections):
+    """
+    :returns: an array of section parameters
+    """
+    secparams = np.zeros(len(sections), SECDT)
+    for sparam, sec in zip(secparams, sections):
         sparam['area'] = sec.get_area()
         sparam['dip'] = sec.get_dip()
         sparam['strike'] = sec.get_strike()
@@ -63,7 +65,7 @@ def build_secparams(sections):
         sparam['tl1'] = sec.tor.coo[0, 1]
         sparam['tr0'] = sec.tor.coo[-1, 0]
         sparam['tr1'] = sec.tor.coo[-1, 1]
-    return msparams
+    return secparams
 
 
 class MultiFaultSource(BaseSeismicSource):
