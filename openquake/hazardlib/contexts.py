@@ -317,9 +317,9 @@ def simple_cmaker(gsims, imts, **params):
     return ContextMaker('*', gsims, dic)
 
 
-# ############################ build_ctx ################################## #
+# ############################ genctxs ################################## #
 
-build_ctx = CallableDict(keyfunc=operator.attrgetter('code'))
+genctxs = CallableDict(keyfunc=operator.attrgetter('code'))
 
 # generator of quartets (rup_index, mag, planar_array, sites)
 def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
@@ -421,8 +421,8 @@ def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
     return zeroctx.flatten()  # shape N*U
 
 
-@build_ctx.add(b'P', b'p')
-def build_ctx_Pp(src, sitecol, cmaker):
+@genctxs.add(b'P', b'p')
+def genctxs_Pp(src, sitecol, cmaker):
     """
     Context generator for point sources and collapsed point sources
     """
@@ -484,8 +484,8 @@ def build_ctx_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
-@build_ctx.add(b'F')
-def build_ctx_F(src, sitecol, cmaker):
+@genctxs.add(b'F')
+def genctxs_F(src, sitecol, cmaker):
     """
     Context generator for multifault sources
     """
@@ -963,11 +963,11 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None) and step == 1:
-            return self.pla_mon.iter(build_ctx(src, sitecol, self))
+            return self.pla_mon.iter(genctxs(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and self.fewsites and step == 1:
                 # multifault source with cache
-                return build_ctx(src, sitecol, self)
+                return genctxs(src, sitecol, self)
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
