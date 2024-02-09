@@ -86,7 +86,8 @@ def _get_label(imt):
     return imtlab + ' - ' + comp
 
 
-def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
+def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False, 
+                           update_dstore=False):
     """
     :param dstore: the datastore
     :returns: figure of hazard curves
@@ -128,21 +129,23 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
         lab = _get_label(imt)
         plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
                    label=lab, linewidth=3, zorder=1)
-        # plot the label only once but it must be at the end of the legend
-        #if imt == imts[-1]:
-        #    plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-        #               label='Probabilistic MCE',  linewidth=2,
-        #               markersize=10, zorder=3)
-        #else:
-        #    plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-        #               linewidth=2, markersize=10, zorder=3)
-        #plt.loglog([numpy.min(imls[i]), rtgm_probmce[i]],
-        #           [afe_RTGM[i], afe_RTGM[i]],
-        #           color='black', alpha=0.5, linestyle='--', linewidth=1.3)
         
-       # plt.loglog([rtgm_probmce[i], rtgm_probmce[i]],
-       #            [0, afe_RTGM[i]], color='black', alpha=0.5,
-       #            linestyle='--', linewidth=1.3)
+        if plot_mce==True:
+        # plot the label only once but it must be at the end of the legend
+            if imt == imts[-1]:
+                plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+                           label='Probabilistic MCE',  linewidth=2,
+                           markersize=10, zorder=3)
+            else:
+                plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+                           linewidth=2, markersize=10, zorder=3)
+            plt.loglog([numpy.min(imls[i]), rtgm_probmce[i]],
+                       [afe_RTGM[i], afe_RTGM[i]],
+                       color='black', alpha=0.5, linestyle='--', linewidth=1.3)
+        
+            plt.loglog([rtgm_probmce[i], rtgm_probmce[i]],
+                       [0, afe_RTGM[i]], color='black', alpha=0.5,
+                       linestyle='--', linewidth=1.3)
     # add the ASCE 41-23 RPs
     plt.axhline(0.000404, color='red', linewidth=1.7, alpha=0.2, zorder=0)
     plt.axhline(0.002105, color='red', linewidth=1.7, alpha=0.2, zorder=0)
