@@ -773,7 +773,15 @@ class ContextMaker(object):
         ra = RecordBuilder(**dd).zeros(C)
         start = 0
         for ctx in ctxs:
-            ctx = ctx.roundup(self.minimum_distance)
+            if self.minimum_distance:
+                for name in self.REQUIRES_DISTANCES:
+                    array = ctx[name]
+                    small_distances = array < self.minimum_distance
+                    if small_distances.any():
+                        array = numpy.array(array)  # make a copy first
+                        array[small_distances] = self.minimum_distance
+                        array.flags.writeable = False
+                        ctx[name] = array
             slc = slice(start, start + len(ctx))
             for par in dd:
                 if par == 'rup_id':
@@ -894,14 +902,16 @@ class ContextMaker(object):
         """
         :returns: a legacy RuptureContext (or None if filtered away)
         """
-        ctx = RuptureContext(self.get_rparams(rup).items())
-        for name in sites.array.dtype.names:
-            setattr(ctx, name, sites[name])
+        rparams = self.get_rparams(rup)
+        dd = self.defaultdict.copy()
+        np = len(rparams.get('probs_occur', []))
+        dd['probs_occur'] = numpy.zeros(np)
+        ctx = RecordBuilder(**dd).zeros(len(sites))
+        for par, val in rparams.items():
+            ctx[par] = val
 
-        if distances is None:
-            distances = rup.surface.get_min_distance(sites.mesh)
         ctx.rrup = distances
-        ctx.sites = sites
+        ctx.sids = sites.sids
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
             if param == 'clon':
                 set_distances(ctx, rup, sites, 'clon_clat', dcache)
@@ -922,6 +932,8 @@ class ContextMaker(object):
         if self.fewsites:
             set_distances(ctx, rup, sites, 'clon_clat', dcache)
 
+        for name in sites.array.dtype.names:
+            setattr(ctx, name, sites[name])
         return ctx
 
     # this is called for non-point sources (or point sources in preclassical)
@@ -1536,26 +1548,8 @@ class DistancesContext(BaseContext):
         for param, dist in param_dist_pairs:
             setattr(self, param, dist)
 
-    def roundup(self, minimum_distance):
-        """
-        If the minimum_distance is nonzero, returns a copy of the
-        DistancesContext with updated distances, i.e. the ones below
-        minimum_distance are rounded up to the minimum_distance. Otherwise,
-        returns the original DistancesContext unchanged.
-        """
-        if not minimum_distance:
-            return self
-        ctx = DistancesContext()
-        for dist, array in vars(self).items():
-            small_distances = array < minimum_distance
-            if small_distances.any():
-                array = numpy.array(array)  # make a copy first
-                array[small_distances] = minimum_distance
-                array.flags.writeable = False
-            setattr(ctx, dist, array)
-        return ctx
 
-
+# used in boore_atkinson_2008
 def get_dists(ctx):
     """
     Extract the distance parameters from a context.
@@ -1644,26 +1638,6 @@ class RuptureContext(BaseContext):
     # used in acme_2019
     def __len__(self):
         return len(self.sids)
-
-    def roundup(self, minimum_distance):
-        """
-        If the minimum_distance is nonzero, returns a copy of the
-        RuptureContext with updated distances, i.e. the ones below
-        minimum_distance are rounded up to the minimum_distance. Otherwise,
-        returns the original.
-        """
-        if not minimum_distance:
-            return self
-        ctx = copy.copy(self)
-        for dist, array in vars(self).items():
-            if dist in KNOWN_DISTANCES:
-                small_distances = array < minimum_distance
-                if small_distances.any():
-                    array = numpy.array(array)  # make a copy first
-                    array[small_distances] = minimum_distance
-                    array.flags.writeable = False
-                setattr(ctx, dist, array)
-        return ctx
 
 
 class Effect(object):
