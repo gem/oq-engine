@@ -15,13 +15,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import cProfile
 import tempfile
 import unittest
 import numpy
 import pandas
 from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
-from openquake.hazardlib import valid, contexts
+from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
     MultiFaultSource, build_secparams, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
@@ -207,7 +208,6 @@ def main():
     uni, inv = numpy.unique(data, return_inverse=True)
     print('Found %d/%d unique segments' % (len(uni), len(data)))
 
-
 def main100sites():
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
     lons = numpy.arange(-122, -121, .01)
@@ -218,12 +218,16 @@ def main100sites():
     sitecol._set('z1pt0', 100.)
     sitecol._set('z2pt5', 5.)
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1,
-                                    max_sites_disagg=100)
-    [ctxt] = cmaker.from_srcs([src], sitecol)
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+    secparams = build_secparams(src.get_sections())
+    srcfilter = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
+    cmaker.set_weight([src], srcfilter, secparams)
+    sites = srcfilter.get_close_sites(src)
+    with cProfile.Profile() as prof:
+        list(cmaker.get_ctx_iter(src, sites))
+    prof.print_stats('cumulative')
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
 
-
 if __name__ == '__main__':
-    main()
+    main100sites()

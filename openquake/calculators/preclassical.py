@@ -21,7 +21,7 @@ import logging
 import operator
 import numpy
 import h5py
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
@@ -200,9 +200,10 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifault:
-            logging.warning('There are multiFaultSources, the preclassical '
-                            'phase will be slow')
             secparams = build_secparams(multifault.get_sections())
+            logging.warning('There are multiFaultSources, the preclassical '
+                            'phase will be slow (secparams=%s)',
+                            general.humansize(secparams.nbytes))
         else:
             secparams = ()
 
