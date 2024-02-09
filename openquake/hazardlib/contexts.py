@@ -881,8 +881,8 @@ class ContextMaker(object):
             rup, point='TC', toward_azimuth=90,
             direction='positive', hdist=hdist, step=5.,
             req_site_params=self.REQUIRES_SITES_PARAMETERS)
-        rctxs = self.gen_contexts([[[rup], sitecol]], src_id=0)
-        return self.recarray(list(rctxs))
+        ctxs = list(self.genctxs([rup], sitecol, src_id=0))
+        return self.recarray(ctxs)
 
     def from_srcs(self, srcs, sitecol):
         # used in disagg.disaggregation
