@@ -72,12 +72,12 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
 
-def set_distances(ctx, rup, sites, param, dcache):
+def set_distances(ctx, rup, sites, param):
     """
     Set the distance attributes on the context; also manages paired
     attributes like clon_lat and rx_ry0
     """
-    dists = get_distances(rup, sites, param, dcache)
+    dists = get_distances(rup, sites, param)
     if '_' in param:
         p0, p1 = param.split('_')  # rx_ry0
         setattr(ctx, p0, dists[:, 0])
@@ -959,7 +959,7 @@ class ContextMaker(object):
 
         return dic
 
-    def get_ctx(self, rup, sites, distances, dcache=None):
+    def get_ctx(self, rup, sites, distances):
         """
         :returns: a legacy RuptureContext (or None if filtered away)
         """
@@ -975,11 +975,11 @@ class ContextMaker(object):
         ctx.sids = sites.sids
         for param in self.REQUIRES_DISTANCES - {'rrup'}:
             if param == 'clon':
-                set_distances(ctx, rup, sites, 'clon_clat', dcache)
+                set_distances(ctx, rup, sites, 'clon_clat')
             elif param == 'clat':
                 pass
             else:
-                set_distances(ctx, rup, sites, param, dcache)
+                set_distances(ctx, rup, sites, param)
 
         # Equivalent distances
         reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
@@ -991,7 +991,7 @@ class ContextMaker(object):
                 ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
         if self.fewsites:
-            set_distances(ctx, rup, sites, 'clon_clat', dcache)
+            set_distances(ctx, rup, sites, 'clon_clat')
 
         for name in sites.array.dtype.names:
             setattr(ctx, name, sites[name])
