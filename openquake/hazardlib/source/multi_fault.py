@@ -177,14 +177,23 @@ class MultiFaultSource(BaseSeismicSource):
         return dict(mag=self.mags, rake=self.rakes,
                     probs_occur=self.probs_occur, rupture_idxs=ridxs)
 
-    def get_sections(self):
+    def get_unique_idxs(self):
         """
+        :returns: indices of the underlying surfaces
+        """
+        return np.unique(np.concatenate(self.rupture_idxs))
+
+    def get_sections(self, idxs=None):
+        """
+        :param idxs: indices of the surfaces to return (default all)
         :returns: the underlying sections as KiteSurfaces
         """
         with hdf5.File(self.hdf5path, 'r') as f:
             geoms = f['multi_fault_sections'][:]  # small
+        if idxs is None:
+            idxs = range(len(geoms))
         sections = [geom_to_kite(geom) for geom in geoms]
-        for idx, sec in enumerate(sections):
+        for sec, idx in zip(sections, idxs):
             sec.idx = idx
         return sections
 
