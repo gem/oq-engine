@@ -35,7 +35,7 @@ TWO16 = 2 ** 16  # 65,536
 TWO24 = 2 ** 24  # 16,777,216
 TWO30 = 2 ** 30  # 1,073,741,24
 TWO32 = 2 ** 32  # 4,294,967,296
-by_id = operator.attrgetter('source_id')
+bybranch = operator.attrgetter('branch')
 
 CALC_TIME, NUM_SITES, NUM_RUPTURES, WEIGHT, MUTEX = 3, 4, 5, 6, 7
 
@@ -202,7 +202,6 @@ def get_csm(oq, full_lt, dstore=None):
                               h5=dstore if dstore else None).reduce()
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
-    fix_geometry_sections(smdict, dstore)
 
     # check_duplicates
     for sm in smdict.values():
@@ -216,11 +215,22 @@ def get_csm(oq, full_lt, dstore=None):
                 assert len(basenames) == 1, basenames
         check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
 
+    # check duplicates in different files but in the same branch
+    for branch, sms in general.groupby(smdict.values(), bybranch).items():
+        srcids = []
+        fnames = []
+        for sm in sms:
+            for sg in sm.src_groups:
+                srcids.extend(src.source_id for src in sg)
+            fnames.append(sm.fname)    
+        check_unique(srcids, 'in %s' % fnames, strict=True)
+        
     found = find_false_duplicates(smdict)
     if found:
         logging.warning('Found different sources with same ID %s',
                         general.shortlist(found))
 
+    fix_geometry_sections(smdict, dstore)
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
