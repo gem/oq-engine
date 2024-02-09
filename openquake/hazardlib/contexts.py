@@ -959,43 +959,57 @@ class ContextMaker(object):
 
         return dic
 
-    def get_ctx(self, rup, sites, distances):
+    def genctxs(self, rups, sites, src_id):
         """
-        :returns: a legacy RuptureContext (or None if filtered away)
+        :params rups: a list of ruptures
+        :param sites: a (filtered) site collection
+        :yields: a context array for each rupture
         """
-        rparams = self.get_rparams(rup)
-        dd = self.defaultdict.copy()
-        np = len(rparams.get('probs_occur', []))
-        dd['probs_occur'] = numpy.zeros(np)
-        ctx = RecordBuilder(**dd).zeros(len(sites))
-        for par, val in rparams.items():
-            ctx[par] = val
+        magdist = self.maximum_distance(rups[0].mag)
+        for rup in rups:
+            dist = get_distances(rup, sites, 'rrup')
+            mask = dist <= magdist
+            if not mask.any():
+                continue
 
-        ctx.rrup = distances
-        ctx.sids = sites.sids
-        for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            if param == 'clon':
-                set_distances(ctx, rup, sites, 'clon_clat')
-            elif param == 'clat':
-                pass
-            else:
-                set_distances(ctx, rup, sites, param)
+            r_sites = sites.filter(mask)
+            rparams = self.get_rparams(rup)
+            dd = self.defaultdict.copy()
+            np = len(rparams.get('probs_occur', []))
+            dd['probs_occur'] = numpy.zeros(np)
+            ctx = RecordBuilder(**dd).zeros(len(r_sites))
+            for par, val in rparams.items():
+                ctx[par] = val
 
-        # Equivalent distances
-        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-        if reqv_obj and not rup.surface:  # PointRuptures have no surface
-            reqv = reqv_obj.get(ctx.repi, rup.mag)
-            if 'rjb' in self.REQUIRES_DISTANCES:
-                ctx.rjb = reqv
-            if 'rrup' in self.REQUIRES_DISTANCES:
-                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+            ctx.rrup = dist[mask]
+            ctx.sids = r_sites.sids
+            for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                if param == 'clon':
+                    set_distances(ctx, rup, r_sites, 'clon_clat')
+                elif param == 'clat':
+                    pass
+                else:
+                    set_distances(ctx, rup, r_sites, param)
 
-        if self.fewsites:
-            set_distances(ctx, rup, sites, 'clon_clat')
+            # Equivalent distances
+            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+            if reqv_obj and not rup.surface:  # PointRuptures have no surface
+                reqv = reqv_obj.get(ctx.repi, rup.mag)
+                if 'rjb' in self.REQUIRES_DISTANCES:
+                    ctx.rjb = reqv
+                if 'rrup' in self.REQUIRES_DISTANCES:
+                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
-        for name in sites.array.dtype.names:
-            setattr(ctx, name, sites[name])
-        return ctx
+            if self.fewsites:
+                set_distances(ctx, rup, r_sites, 'clon_clat')
+
+            for name in r_sites.array.dtype.names:
+                setattr(ctx, name, r_sites[name])
+
+            ctx.src_id = src_id
+            if src_id >= 0:
+                ctx.rup_id = rup.rup_id
+            yield ctx
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
@@ -1005,17 +1019,7 @@ class ContextMaker(object):
         for rups, sites in rups_sites:  # ruptures with the same magnitude
             if len(rups) == 0:  # may happen in case of min_mag/max_mag
                 continue
-            magdist = self.maximum_distance(rups[0].mag)
-            for u, rup in enumerate(rups):
-                dist = get_distances(rup, sites, 'rrup')
-                mask = dist <= magdist
-                if mask.any():
-                    r_sites = sites.filter(mask)
-                    rctx = self.get_ctx(rup, r_sites, dist[mask])
-                    rctx.src_id = src_id
-                    if src_id >= 0:
-                        rctx.rup_id = rup.rup_id
-                    yield rctx
+            yield from self.genctxs(rups, sites, src_id)
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
         """
