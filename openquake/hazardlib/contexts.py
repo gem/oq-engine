@@ -32,7 +32,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale, Cache, CallableDict)
+    sqrscale, CallableDict)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -44,6 +44,7 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
@@ -484,41 +485,101 @@ def genctxs_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
+def _build_secdists(src, sitecol, cmaker):
+    maxdist = cmaker.maximum_distance[src.tectonic_region_type][-1][1]
+    dparams = cmaker.REQUIRES_DISTANCES - {'rrup'}
+    sections = src.get_sections(src.get_unique_idxs())
+    out = {}
+    for sec in sections:
+        rrup = get_distances(sec, sitecol, 'rrup')
+        mask = rrup <= maxdist
+        sites = sitecol.filter(mask)
+        if sites is None:
+            continue
+        out[sec.idx, 'rrup'] = rrup[mask]
+        for param in dparams:
+            out[sec.idx, param] = get_distances(sec, sites, param)
+    return out
+
+
+# compute closest points from secdists
+def _closest_points(sections, sites, secdists):
+
+    dists = numpy.array([secdists[sec.idx, 'rrup'] for sec in sections])
+
+    # find for each site the index of the closest surface
+    idx = (dists == dists.min(axis=0))  # shape (num_sections, num_sites)
+
+    # compute the closest point mesh one site at the time
+    lons = numpy.empty_like(sites.lons)
+    lats = numpy.empty_like(sites.lats)
+    for jdx in idx.T:
+        i = numpy.where(jdx)[0][0]
+        clon = secdists[i, 'clon']
+        clat = secdists[i, 'clat']
+        idx_i = idx[i, :]
+        lons[idx_i] = clon[idx_i]
+        lats[idx_i] = clat[idx_i]
+    return Mesh(lons, lats)
+
+
 @genctxs.add(b'F')
 def genctxs_F(src, sitecol, cmaker):
     """
     Context generator for multifault sources
     """
-    if cmaker.cache_distances:
-        dcache = Cache()
-    else:
-        dcache = None
-    minmag = cmaker.maximum_distance.x[0]
-    maxmag = cmaker.maximum_distance.x[-1]
-    rctxs = []
+    dparams = cmaker.REQUIRES_DISTANCES
+    rparams = cmaker.REQUIRES_RUPTURE_PARAMETERS
+    secdists = _build_secdists(src, sitecol, cmaker)
     with cmaker.ir_mon:
         rups = list(src.iter_ruptures())
-    with cmaker.ctx_mon:
-        for i, rup in enumerate(rups):
-            if rup.mag > maxmag or rup.mag < minmag:
-                continue
-            rup.rup_id = src.offset + i
-            dist = get_distances(rup, sitecol, 'rrup')
-            mask = dist <= cmaker.maximum_distance(rup.mag)
-            if mask.any():
-                rctx = cmaker.get_legacy_ctx(rup, sitecol, dist, dcache)
-                # copy the correct slice of distances and site_params
-                for key in cmaker.defaultdict:
-                    arr = getattr(rctx, key)
-                    if isinstance(arr, numpy.ndarray):
-                        setattr(rctx, key, arr[mask])
-                rctx.src_id = src.id
-                rctxs.append(rctx)
-    if cmaker.cache_distances:
-        dcache.clear()
-    if len(rctxs):
-        yield cmaker.recarray(rctxs)
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    for i, rup in enumerate(rups):
+        if rup.mag > maxmag or rup.mag < minmag:
+            continue
+        rup.rup_id = src.offset + i
+        magdist = cmaker.maximum_distance(rup.mag)
+        idxs = [surf.idx for surf in rup.surface.surfaces]
+        rrup = numpy.min([secdists[idx, 'rrup'] for idx in idxs], axis=0)
+        mask = rrup <= magdist
+        sites = sitecol.filter(mask)
+        if sites is None:
+            continue
+        ctx = cmaker.new_ctx(len(rrup))
+        ctx['sids'] = sites.sids
+        if 'rx' in dparams:
+            ctx['rx'] = rup.surface.get_rx_distance(sites)
+        if 'ry' in dparams:
+            ctx['ry0'] = rup.surface.get_ry0_distance(sites)
+        if 'rjb' in dparams:
+            ctx['rjb'] = numpy.min(
+                [secdists[idx, 'rjb'][mask] for idx in idxs], axis=0)
+        if 'clon_clat' in dparams:
+            t = _closest_points(rup.surface.surfaces, sites, secdists)
+            ctx['clon'] = t.array[0][mask]
+            ctx['clat'] = t.array[1][mask]
 
+        ctx['mag'] = numpy.round(rup.mag, 3)
+        msp = src.msparams[i]
+        if 'strike' in rparams:
+            ctx['strike'] = msp['strike']
+        if 'dip' in rparams:
+            ctx['dip'] = msp['strike']
+        if 'rake' in rparams:
+            ctx['rake'] = rup.rake
+        if 'width' in rparams:
+            ctx['width'] = msp['width']
+        if 'ztor' in rparams:
+            ctx['ztor'] = msp['ztor']
+        if 'zbot' in rparams:
+            ctx['zbot'] = msp['zbot']
+        # TODO: McVerry
+
+        for par in cmaker.siteparams:
+            ctx[par] = sites.array[par]
+
+        yield ctx
     
 # ############################ ContextMaker ############################### #
 
@@ -965,9 +1026,8 @@ class ContextMaker(object):
         if getattr(src, 'location', None) and step == 1:
             return self.pla_mon.iter(genctxs(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
-            #if src.code == b'F' and self.fewsites and step == 1:
-            #    # multifault source with cache
-            #    return genctxs(src, sitecol, self)
+            if src.code == b'F' and step == 1:  # multifault source
+                return self.ctx_mon.iter(genctxs(src, sitecol, self))
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:

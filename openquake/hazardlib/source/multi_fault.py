@@ -162,7 +162,7 @@ class MultiFaultSource(BaseSeismicSource):
             msparam['north'] = bb[2]
             msparam['south'] = bb[3]
         self.msparams = msparams
-        
+
     def is_gridded(self):
         return True  # convertible to HDF5
 
