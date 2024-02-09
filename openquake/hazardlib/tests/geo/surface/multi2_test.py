@@ -39,7 +39,6 @@ class Ry0TestCase(unittest.TestCase):
 
     def _test_ry0(self, sfc):
         msurf = MultiSurface([sfc])
-        msurf._set_tor()
         mesh, mlons, mlats = get_mesh(-0.2, 0.6, -0.2, 0.3, 0.0025)
         ry0 = msurf.get_ry0_distance(mesh)
 
@@ -138,7 +137,6 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
 
         # Multi surface
         self.msfc = MultiSurface([sfc1, sfc2])
-        self.msfc._set_tor()
 
     def test_get_tor(self):
         # Testing, coo1 and coo2 are inverted due to the origin inversion

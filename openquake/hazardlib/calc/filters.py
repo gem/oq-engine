@@ -99,8 +99,6 @@ def _surf_param(surface, sites, param, dcache):
     if param in ('rrup', 'rjb'):
         dist = numpy.min([dcache[idx, param] for idx in idxs], axis=0)
     elif param in ('rx', 'ry0'):
-        if surface.tor is None:
-            surface._set_tor()
         if param == 'rx':
             dist = surface.get_rx_distance(sites)
         elif param == 'ry0':

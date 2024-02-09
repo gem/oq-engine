@@ -475,7 +475,7 @@ def get_average_azimuth(azimuths, distances) -> float:
     return azimuth
 
 
-@compile('(float64[:,:],float64[:,:],float64[:], float64[:,:])')
+@compile('(f8[:,:],f8[:,:],f8[:], f8[:,:])')
 def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
@@ -507,7 +507,7 @@ def get_tuw(ui, ti, sl, weights):
     return t_upp, u_upp
 
 
-@compile('(float64[:,:],float64[:,:],float64[:])')
+@compile('(f8[:,:],f8[:,:],f8[:])')
 def get_ti_weights(ui, ti, segments_len):
     """
     Compute the weights
@@ -556,7 +556,7 @@ def get_versor(arr):
     return (arr.T / np.linalg.norm(arr, axis=1)).T
 
 
-@compile("(float64[:],float64[:],float64[:],float64)")
+@compile("(f8[:],f8[:],f8[:],f8)")
 def find_t(pnt0, pnt1, ref_pnt, distance):
     """
     Find the point on the segment within `pnt0` and `pnt1` at `distance` from

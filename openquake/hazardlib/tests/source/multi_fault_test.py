@@ -15,6 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import cProfile
 import tempfile
 import unittest
 import numpy
@@ -23,7 +24,7 @@ from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
-    MultiFaultSource, save, load)
+    MultiFaultSource, build_secparams, save, load)
 from openquake.hazardlib.geo.surface import KiteSurface
 from openquake.hazardlib.tests.geo.surface import kite_fault_test as kst
 from openquake.hazardlib.sourcewriter import write_source_model
@@ -125,7 +126,8 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
-        [ctx] = cmaker.from_srcs([got], sitecol)
+        secparams = build_secparams(src.get_sections())
+        [ctx] = cmaker.from_srcs([got], sitecol, secparams)
         assert len(ctx) == src.count_ruptures()
 
         # compare with the expected distances computed without cache
@@ -171,20 +173,10 @@ def main():
             ts[i], us[i], _w = line.get_tuw(sitecol)
     print(mon)
 
-    rups = list(src.iter_ruptures())
-    lines = []
-    data = []
-    for rup in rups:
-        for surf in rup.surface.surfaces:
-            lines.append(surf.tor)
-            data.append(surf.tor.coo.tobytes())
-    uni, inv = numpy.unique(data, return_inverse=True)
-    print('Found %d/%d unique segments' % (len(uni), len(data)))
-
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
     cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
-    torlines = [sec.tor for sec in src.get_sections()]    
-    [ctxt] = cmaker.from_srcs([src], sitecol, torlines)
+    secparams = build_secparams(src.get_sections())
+    [ctxt] = cmaker.from_srcs([src], sitecol, secparams)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
     print(mon)
@@ -205,6 +197,16 @@ def main():
             except Exception:
                 breakpoint()
 
+    # determine unique tors
+    rups = list(src.iter_ruptures())
+    lines = []
+    data = []
+    for rup in rups:
+        for surf in rup.surface.surfaces:
+            lines.append(surf.tor)
+            data.append(surf.tor.coo.tobytes())
+    uni, inv = numpy.unique(data, return_inverse=True)
+    print('Found %d/%d unique segments' % (len(uni), len(data)))
 
 def main100sites():
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
@@ -216,12 +218,16 @@ def main100sites():
     sitecol._set('z1pt0', 100.)
     sitecol._set('z2pt5', 5.)
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1,
-                                    max_sites_disagg=100)
-    [ctxt] = cmaker.from_srcs([src], sitecol)
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+    secparams = build_secparams(src.get_sections())
+    srcfilter = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
+    cmaker.set_weight([src], srcfilter, secparams)
+    sites = srcfilter.get_close_sites(src)
+    with cProfile.Profile() as prof:
+        list(cmaker.get_ctx_iter(src, sites))
+    prof.print_stats('cumulative')
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
 
-
 if __name__ == '__main__':
-    main()
+    main100sites()

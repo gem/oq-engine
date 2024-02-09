@@ -69,7 +69,6 @@ class MultiSurfaceOneTestCase(unittest.TestCase):
         prf3 = Line([Point(0.3, 0, 0), Point(0.3, -0.00001, 20.)])
         sfca = KiteSurface.from_profiles([prf1, prf2, prf3], 1., 1.)
         self.msrf = MultiSurface([sfca])
-        self.msrf._set_tor()
 
     def test_get_width(self):
         # Surface is almost vertical. The width must be equal to the depth
@@ -137,18 +136,8 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
 
         # Create the surface and mesh needed for the test
         self.msrf = MultiSurface([sfca, sfcb])
-        self.msrf._set_tor()
         self.coo = np.array([[-0.1, 0.0], [0.0, 0.1]])
         self.mesh = Mesh(self.coo[:, 0], self.coo[:, 1])
-
-    def test_areas(self):
-        """ Compute the areas of surfaces """
-        length = geodetic_distance(0.0, 0.0, 0.3, 0.0)
-        expected = np.array([length * 20.0, 10 * 14.14])
-        computed = self.msrf._get_areas()
-        msg = 'Multi fault surface: areas are wrong'
-        np.testing.assert_almost_equal(expected, computed, err_msg=msg,
-                                       decimal=-1)
 
     def test_width(self):
         """ Compute the width of a multifault surface with 2 sections"""
@@ -156,8 +145,7 @@ class MultiSurfaceTwoTestCase(unittest.TestCase):
         # The width of the first surface is about 20 km while the second one
         # is about 14 km. The total width is the weighted mean of the width of
         # each section (weight proportional to the area)
-        smm = np.sum(self.msrf.areas)
-        expected = (20.0*self.msrf.areas[0] + 14.14*self.msrf.areas[1]) / smm
+        expected = 18.9624446256761
         perc_diff = abs(computed - expected) / computed * 100
         msg = f'Multi fault surface: width is wrong. % diff {perc_diff}'
         self.assertTrue(perc_diff < 0.2, msg=msg)
@@ -194,7 +182,6 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         self.srfc50 = srfc50
         self.srfc51 = srfc51
         self.msrf = MultiSurface([srfc50, srfc51])
-        self.msrf._set_tor()
         self.mesh = mesh
         self.los = [self.msrf.surfaces[0].mesh.lons,
                     self.msrf.surfaces[1].mesh.lons]
@@ -257,7 +244,7 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
         a1 = self.msrf.surfaces[0].get_area()
         a2 = self.msrf.surfaces[1].get_area()
         area = self.msrf.get_area()
-        aae(a1 + a2, area)
+        aae(a1 + a2, area, decimal=4)
 
     def test_get_bounding_box(self):
         west, east, north, south = self.msrf.get_bounding_box()
@@ -382,7 +369,6 @@ class NZLTestCase(unittest.TestCase):
         for sec in gmodel.sections:
             sfcs.append(gmodel.sections[sec])
         self.msrf = MultiSurface(sfcs)
-        self.msrf._set_tor()
 
         # Create second surface
         keys = list(gmodel.sections)
