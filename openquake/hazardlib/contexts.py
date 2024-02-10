@@ -44,6 +44,7 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
@@ -72,7 +73,8 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
 
 
 def get_secdists(rup, param, secdists):
-    return [secdists[sec.idx, param] for sec in rup.surface.surfaces]
+    return numpy.array([secdists[sec.idx, param]
+                        for sec in rup.surface.surfaces])
 
 
 def set_distances(ctx, rup, r_sites, param, secdists, mask):
@@ -83,16 +85,22 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
     if secdists is None:
         dists = get_distances(rup, r_sites, param)
         if '_' in param:
-            p0, p1 = param.split('_')  # rx_ry0
+            p0, p1 = param.split('_')  # clon_clat
             setattr(ctx, p0, dists[:, 0])
             setattr(ctx, p1, dists[:, 1])
         else:
             setattr(ctx, param, dists)
     else:
-        if param == 'rx':
-            ctx['rx'] = rup.surface.get_rx_distance(r_sites)
-        elif param == 'ry0':
-            ctx['ry0'] = rup.surface.get_ry0_distance(r_sites)
+        tor = rup.surface.tor  # MultiLine object
+        if param == 'tuw':
+            tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
+            ts, us, ws = tuw[:, :, 0], tuw[:, :, 1], tuw[:, :, 2]
+            uut, tut = multiline._get_uts(tor.shift, ts, us, ws)
+            print(uut, tut, tor.u_max)
+            ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
+            ctx.ry0[uut < 0] = numpy.abs(uut[uut < 0])
+            big = uut > tor.u_max
+            ctx.ry0[big] = uut[big] - tor.u_max
         elif param == 'rjb' :
             rjbs = get_secdists(rup, 'rjb', secdists)
             ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
@@ -505,7 +513,7 @@ def genctxs_Pp(src, sitecol, cmaker):
 
 
 def _build_secdists(src, sitecol, cmaker):
-    dparams = {'rjb', 'rx', 'ry0'}
+    dparams = {'rjb', 'tuw'}
     if cmaker.fewsites:
         dparams |= {'clon_clat'}
     sections = src.get_sections(src.get_unique_idxs())
@@ -950,6 +958,11 @@ class ContextMaker(object):
                     set_distances(ctx, rup, r_sites, 'clon_clat',
                                   secdists, mask)
                 elif param == 'clat':
+                    pass
+                elif param == 'ry0':
+                    set_distances(ctx, rup, r_sites, 'tuw',
+                                  secdists, mask)
+                elif param == 'rx':
                     pass
                 else:
                     set_distances(ctx, rup, r_sites, param,

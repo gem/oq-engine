@@ -48,10 +48,9 @@ def get_dparam(surface, sites, param):
     # compute distances without any cache
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
-    elif param == 'rx':
-        dist = surface.get_rx_distance(sites)
-    elif param == 'ry0':
-        dist = surface.get_ry0_distance(sites)
+    elif param == 'tuw':
+        t, u, w = surface.tor.get_tuw(sites)
+        dist = numpy.array([t, u, w.sum(axis=0)]).T  # shape (N, 3)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
     elif param == 'clon_clat':
