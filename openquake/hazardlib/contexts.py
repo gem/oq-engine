@@ -72,15 +72,7 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
 
 
 def get_secdists(rup, param, secdists):
-    dists = []
-    for sec in rup.surface.surfaces:
-        try:
-            dist = secdists[sec.idx, param]
-        except KeyError:  # section too distant
-            pass
-        else:
-            dists.append(dist)
-    return dists
+    return [secdists[sec.idx, param] for sec in rup.surface.surfaces]
 
 
 def set_distances(ctx, rup, sites, param, secdists, mask):
@@ -933,13 +925,7 @@ class ContextMaker(object):
         for rup in same_mag_rups:
             if self.secdists:
                 rrups = get_secdists(rup, 'rrup', self.secdists)
-                if not rrups:
-                    # all sections are too distant
-                    continue
-                try:
-                    rrup = numpy.min(rrups, axis=0)
-                except:
-                    import pdb; pdb.set_trace()
+                rrup = numpy.min(rrups, axis=0)
             else:
                 rrup = get_distances(rup, sites, 'rrup')
             mask = rrup <= magdist
