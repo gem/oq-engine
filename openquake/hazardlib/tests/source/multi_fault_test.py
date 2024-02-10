@@ -20,6 +20,7 @@ import tempfile
 import unittest
 import numpy
 import pandas
+import matplotlib.pyplot as plt
 from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
@@ -33,6 +34,7 @@ from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
+PLOTTING = False
 
 
 class MultiFaultTestCase(unittest.TestCase):
@@ -142,6 +144,20 @@ class MultiFaultTestCase(unittest.TestCase):
         aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
         aac(ctx.clat, 45.)
 
+        if PLOTTING:
+            # plotting the 3 sections and then the multisurface
+            # corresponding to the 6-th rupture, with idxs=[1, 2];
+            # the closest point to the site has longitude 10.35
+            for sec in src.get_sections():
+                lons = sec.mesh.lons
+                lats = sec.mesh.lats
+                plt.scatter(lons, lats, alpha=.1)
+            plt.scatter(sitecol.lons, sitecol.lats, marker='+')
+            mesh5 = rups[5].surface.mesh
+            plt.scatter(mesh5.lons, mesh5.lats, marker='.')
+            plt.scatter(ctx.clon[5], ctx.clat[5], marker='o')
+            plt.show()
+            
     def test_ko(self):
         # test invalid section IDs
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
