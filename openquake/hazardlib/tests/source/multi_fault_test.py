@@ -34,7 +34,7 @@ from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
-PLOTTING = True
+PLOTTING = False
 
 
 class MultiFaultTestCase(unittest.TestCase):

@@ -819,7 +819,7 @@ class ContextMaker(object):
             rup, point='TC', toward_azimuth=90,
             direction='positive', hdist=hdist, step=5.,
             req_site_params=self.REQUIRES_SITES_PARAMETERS)
-        ctxs = self.genctxs([rup], sitecol, src_id=0)
+        ctxs = list(self.genctxs([rup], sitecol, src_id=0))
         return self.recarray(ctxs)
 
     def from_srcs(self, srcs, sitecol):
@@ -923,9 +923,10 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
+        secdists = getattr(self, 'secdists', None)
         for rup in same_mag_rups:
-            if self.secdists:
-                rrups = get_secdists(rup, 'rrup', self.secdists)
+            if secdists:
+                rrups = get_secdists(rup, 'rrup', secdists)
                 rrup = numpy.min(rrups, axis=0)
             else:
                 rrup = get_distances(rup, sites, 'rrup')
@@ -947,15 +948,15 @@ class ContextMaker(object):
             for param in self.REQUIRES_DISTANCES - {'rrup'}:
                 if param == 'clon':
                     set_distances(ctx, rup, r_sites, 'clon_clat',
-                                  self.secdists, mask)
+                                  secdists, mask)
                 elif param == 'clat':
                     pass
                 else:
                     set_distances(ctx, rup, r_sites, param,
-                                  self.secdists, mask)
+                                  secdists, mask)
             if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
                 set_distances(ctx, rup, r_sites, 'clon_clat',
-                              self.secdists, mask)
+                              secdists, mask)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
