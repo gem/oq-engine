@@ -959,18 +959,14 @@ class ContextMaker(object):
 
         return dic
 
-    def genctxs(self, rups, sites, src_id):
+    def genctxs(self, same_mag_rups, sites, src_id):
         """
-        :params rups: a list of ruptures
+        :params same_mag_rups: a list of ruptures
         :param sites: a (filtered) site collection
         :yields: a context array for each rupture
         """
-        minmag = self.maximum_distance.x[0]
-        maxmag = self.maximum_distance.x[-1]
-        magdist = self.maximum_distance(rups[0].mag)
-        for rup in rups:
-            if rup.mag > maxmag or rup.mag < minmag:
-                continue
+        magdist = self.maximum_distance(same_mag_rups[0].mag)
+        for rup in same_mag_rups:
             dist = get_distances(rup, sites, 'rrup')
             mask = dist <= magdist
             if not mask.any():
@@ -1055,6 +1051,8 @@ class ContextMaker(object):
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 allrups = [rup for rup in allrups if minmag < rup.mag < maxmag]
+                if not allrups:
+                    return iter([])
                 self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
