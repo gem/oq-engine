@@ -75,13 +75,13 @@ def get_secdists(rup, param, secdists):
     return [secdists[sec.idx, param] for sec in rup.surface.surfaces]
 
 
-def set_distances(ctx, rup, sites, param, secdists, mask):
+def set_distances(ctx, rup, r_sites, param, secdists, mask):
     """
     Set the distance attributes on the context; also manages paired
     attributes like clon_lat and rx_ry0.
     """
     if secdists is None:
-        dists = get_distances(rup, sites, param)
+        dists = get_distances(rup, r_sites, param)
         if '_' in param:
             p0, p1 = param.split('_')  # rx_ry0
             setattr(ctx, p0, dists[:, 0])
@@ -90,16 +90,16 @@ def set_distances(ctx, rup, sites, param, secdists, mask):
             setattr(ctx, param, dists)
     else:
         if param == 'rx':
-            ctx['rx'] = rup.surface.get_rx_distance(sites)
+            ctx['rx'] = rup.surface.get_rx_distance(r_sites)
         elif param == 'ry0':
-            ctx['ry0'] = rup.surface.get_ry0_distance(sites)
+            ctx['ry0'] = rup.surface.get_ry0_distance(r_sites)
         elif param == 'rjb' :
             rjbs = get_secdists(rup, 'rjb', secdists)
             ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
         elif param == 'clon_clat':
             coos = numpy.array(get_secdists(rup, 'clon_clat', secdists))
             # shape (numsections, numsites, 3)
-            m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(sites)
+            m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(r_sites)
             # shape (numsites, 3)
             ctx['clon'] = m.lons
             ctx['clat'] = m.lats
@@ -1029,7 +1029,7 @@ class ContextMaker(object):
             rups_sites = [(src, sitecol)]
             self.secdists = None
             src_id = -1
-        ctxs = list(self.gen_contexts(rups_sites, src_id))
+        ctxs = self.gen_contexts(rups_sites, src_id)
         blocks = block_splitter(ctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
         return self.ctx_mon.iter(map(self.recarray, blocks))
