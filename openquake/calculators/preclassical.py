@@ -106,7 +106,11 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         multiplier = 1
         sf = None
     splits = []
+    mon = monitor('setting msparams', measuremem=False)
     for src in srcs:
+        if src.code == b'F':
+            with mon:
+                src.set_msparams(secparams)
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -125,7 +129,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             for src in splits:
                 src.weight = .01
         else:
-            cmaker.set_weight(splits, sf, secparams, multiplier, mon)
+            cmaker.set_weight(splits, sf, multiplier, mon)
         dic = {grp_id: splits}
         dic['before'] = len(srcs)
         dic['after'] = len(splits)
@@ -138,7 +142,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, secparams, multiplier, mon)
+            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])

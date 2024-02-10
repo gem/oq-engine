@@ -1293,8 +1293,8 @@ class RuptureData(object):
         for proxy in proxies:
             ebr = proxy.to_ebr(self.trt)
             rup = ebr.rupture
-            ctx = self.cmaker.make_legacy_ctx(rup)
-            ruptparams = tuple(getattr(ctx, param) for param in self.params)
+            dic = self.cmaker.get_rparams(rup)
+            ruptparams = tuple(dic[param] for param in self.params)
             point = rup.surface.get_middle_point()
             boundaries = rup.surface.get_surface_boundaries_3d()
             try:
