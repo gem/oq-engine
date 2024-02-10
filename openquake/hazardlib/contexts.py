@@ -65,17 +65,22 @@ DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
-
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
-# compute closest points from secdists
-def _closest_points(sections, sites, secdists):
-    coo = numpy.array([secdists[sec.idx, 'clon_clat'] for sec in sections])
-    # shape (numsections, numsites, 3)
-    return Mesh(coo[:, :, 0], coo[:, :, 1]).get_closest_points(sites)
+
+def get_secdists(rup, param, secdists):
+    dists = []
+    for sec in rup.surface.surfaces:
+        try:
+            dist = secdists[sec.idx, param]
+        except KeyError:  # section too distant
+            pass
+        else:
+            dists.append(dist)
+    return dists
 
 
 def set_distances(ctx, rup, sites, param, secdists, mask):
@@ -92,18 +97,20 @@ def set_distances(ctx, rup, sites, param, secdists, mask):
         else:
             setattr(ctx, param, dists)
     else:
-        idxs = [sec.idx for sec in rup.surface.surfaces]
         if param == 'rx':
             ctx['rx'] = rup.surface.get_rx_distance(sites)[mask]
         elif param == 'ry0':
             ctx['ry0'] = rup.surface.get_ry0_distance(sites)[mask]
         elif param == 'rjb' :
-            ctx['rjb'] = numpy.min(
-                [secdists[idx, 'rjb'][mask] for idx in idxs], axis=0)
+            rjbs = get_secdists(rup, 'rjb', secdists)
+            ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
         elif param == 'clon_clat':
-            t = _closest_points(rup.surface.surfaces, sites, secdists)
-            ctx['clon'] = t.array[0]
-            ctx['clat'] = t.array[1]
+            coos = numpy.array(get_secdists(rup, 'clon_clat', secdists))
+            # shape (numsections, numsites, 3)
+            m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(sites)
+            # shape (numsites, 3)
+            ctx['clon'] = m.lons[mask]
+            ctx['clat'] = m.lats[mask]
 
 
 def round_dist(dst):
@@ -525,7 +532,7 @@ def _build_secdists(src, sitecol, cmaker):
     # use multi_fault_test to debug this
     return out
 
-    
+
 # ############################ ContextMaker ############################### #
 
 class ContextMaker(object):
@@ -932,8 +939,10 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         for rup in same_mag_rups:
             if self.secdists:
-                rrups = [self.secdists.get((sec.idx, 'rrup'), 9999.)
-                         for sec in rup.surface.surfaces]
+                rrups = get_secdists(rup, 'rrup', self.secdists)
+                if not rrups:
+                    # all sections are too distant
+                    continue
                 rrup = numpy.min(rrups, axis=0)
             else:
                 rrup = get_distances(rup, sites, 'rrup')
