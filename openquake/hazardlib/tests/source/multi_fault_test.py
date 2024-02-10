@@ -34,7 +34,7 @@ from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
-PLOTTING = False
+PLOTTING = True
 
 
 class MultiFaultTestCase(unittest.TestCase):
@@ -133,17 +133,6 @@ class MultiFaultTestCase(unittest.TestCase):
         [ctx] = cmaker.from_srcs([src], sitecol)
         assert len(ctx) == src.count_ruptures()
 
-        # compare with the expected distances
-        tol = 1e-4
-        aac(ctx.rrup, [0., 27.51933, 55.03832,  0., 0., 27.51933, 0.], atol=tol)
-        aac(ctx.rjb, [0., 27.51907, 55.03832,  0., 0., 27.51907, 0.], atol=tol)
-        aac(ctx.rx, [0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
-                     1.643886e-05, 1.653083e-01, 3.3298e-05], atol=tol)
-        aac(ctx.ry0, [0., 27.518915, 55.03632, 0., 0., 27.5184749,0.],
-            atol=tol)
-        aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
-        aac(ctx.clat, 45.)
-
         if PLOTTING:
             # plotting the 3 sections and then the multisurface
             # corresponding to the 6-th rupture, with idxs=[1, 2];
@@ -157,6 +146,17 @@ class MultiFaultTestCase(unittest.TestCase):
             plt.scatter(mesh5.lons, mesh5.lats, marker='.')
             plt.scatter(ctx.clon[5], ctx.clat[5], marker='o')
             plt.show()
+
+        # compare with the expected distances
+        tol = 1e-4
+        aac(ctx.rrup, [0., 27.51933, 55.03832,  0., 0., 27.51933, 0.], atol=tol)
+        aac(ctx.rjb, [0., 27.51907, 55.03832,  0., 0., 27.51907, 0.], atol=tol)
+        aac(ctx.rx, [0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
+                     1.643886e-05, 1.653083e-01, 3.3298e-05], atol=tol)
+        aac(ctx.ry0, [0., 27.518915, 55.03632, 0., 0., 27.5184749,0.],
+            atol=tol)
+        aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
+        aac(ctx.clat, 45.)
             
     def test_ko(self):
         # test invalid section IDs

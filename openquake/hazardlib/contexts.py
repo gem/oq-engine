@@ -72,23 +72,10 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
 # compute closest points from secdists
-def _closest_points(sections, sites, secdists, mask):
-
-    dists = numpy.array([secdists[sec.idx, 'rrup'] for sec in sections])
-
-    # find for each site the index of the closest surface
-    idx = (dists == dists.min(axis=0))  # shape (num_sections, num_sites)
-
-    # compute the closest point mesh one site at the time
-    lons = numpy.empty_like(sites.lons)
-    lats = numpy.empty_like(sites.lats)
-    for jdx in idx.T:
-        i = numpy.where(jdx)[0][0]
-        cll = secdists[i, 'clon_clat']
-        idx_i = idx[i, :]
-        lons[idx_i] = cll[idx_i, 0][mask]
-        lats[idx_i] = cll[idx_i, 1][mask]
-    return Mesh(lons, lats)
+def _closest_points(sections, sites, secdists):
+    coo = numpy.array([secdists[sec.idx, 'clon_clat'] for sec in sections])
+    # shape (numsections, numsites, 3)
+    return Mesh(coo[:, :, 0], coo[:, :, 1]).get_closest_points(sites)
 
 
 def set_distances(ctx, rup, sites, param, secdists, mask):
@@ -114,7 +101,7 @@ def set_distances(ctx, rup, sites, param, secdists, mask):
             ctx['rjb'] = numpy.min(
                 [secdists[idx, 'rjb'][mask] for idx in idxs], axis=0)
         elif param == 'clon_clat':
-            t = _closest_points(rup.surface.surfaces, sites, secdists, mask)
+            t = _closest_points(rup.surface.surfaces, sites, secdists)
             ctx['clon'] = t.array[0]
             ctx['clat'] = t.array[1]
 
