@@ -219,14 +219,15 @@ class MultiFaultSource(BaseSeismicSource):
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
             if self.infer_occur_rates:
-                yield ParametricProbabilisticRupture(
+                rup = ParametricProbabilisticRupture(
                     self.mags[i], rake, self.tectonic_region_type,
                     hypo, sfc, self.occur_rates[i],
                     self.temporal_occurrence_model)
             else:
-                yield NonParametricProbabilisticRupture(
+                rup = NonParametricProbabilisticRupture(
                     self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
                     PMF(data))
+            yield rup
 
     def gen_slices(self):
         if len(self.mags) <= BLOCKSIZE:  # already split

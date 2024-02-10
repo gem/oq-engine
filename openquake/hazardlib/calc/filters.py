@@ -26,7 +26,6 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -45,7 +44,7 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
-def _surf_param(surface, sites, param):
+def get_dparam(surface, sites, param):
     # compute distances without any cache
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
@@ -80,13 +79,13 @@ def get_distances(rupture, sites, param):
         else:
             dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
-        dist = _surf_param(surf, sites, 'rrup')
+        dist = get_dparam(surf, sites, 'rrup')
     elif param == 'rx':
-        dist = _surf_param(surf, sites, 'rx')
+        dist = get_dparam(surf, sites, 'rx')
     elif param == 'ry0':
-        dist = _surf_param(surf, sites, 'ry0')
+        dist = get_dparam(surf, sites, 'ry0')
     elif param == 'rjb':
-        dist = _surf_param(surf, sites, 'rjb')
+        dist = get_dparam(surf, sites, 'rjb')
     elif param == 'rhypo':
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'repi':
@@ -98,7 +97,7 @@ def get_distances(rupture, sites, param):
     elif param == 'azimuthcp':
         dist = surf.get_azimuth_of_closest_point(sites)
     elif param == 'clon_clat':
-        dist = _surf_param(surf, sites, param)
+        dist = get_dparam(surf, sites, param)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)

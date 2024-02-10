@@ -41,8 +41,8 @@ from openquake.hazardlib.tom import FatedTOM, NegativeBinomialTOM, PoissonTOM
 from openquake.hazardlib.stats import ndtr
 from openquake.hazardlib.site import SiteCollection, site_param_dt
 from openquake.hazardlib.calc.filters import (
-    SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
-    MINMAG, MAXMAG)
+    SourceFilter, IntegrationDistance, magdepdist,
+    get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
@@ -71,19 +71,52 @@ STD = 1
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
+# compute closest points from secdists
+def _closest_points(sections, sites, secdists):
 
-def set_distances(ctx, rup, sites, param, secdists):
+    dists = numpy.array([secdists[sec.idx, 'rrup'] for sec in sections])
+
+    # find for each site the index of the closest surface
+    idx = (dists == dists.min(axis=0))  # shape (num_sections, num_sites)
+
+    # compute the closest point mesh one site at the time
+    lons = numpy.empty_like(sites.lons)
+    lats = numpy.empty_like(sites.lats)
+    for jdx in idx.T:
+        i = numpy.where(jdx)[0][0]
+        cll = secdists[i, 'clon_clat']
+        idx_i = idx[i, :]
+        lons[idx_i] = cll[idx_i, 0]
+        lats[idx_i] = cll[idx_i, 1]
+    return Mesh(lons, lats)
+
+
+def set_distances(ctx, rup, sites, param, secdists, mask):
     """
     Set the distance attributes on the context; also manages paired
     attributes like clon_lat and rx_ry0.
     """
-    dists = get_distances(rup, sites, param)
-    if '_' in param:
-        p0, p1 = param.split('_')  # rx_ry0
-        setattr(ctx, p0, dists[:, 0])
-        setattr(ctx, p1, dists[:, 1])
+    if secdists is None:
+        dists = get_distances(rup, sites, param)
+        if '_' in param:
+            p0, p1 = param.split('_')  # rx_ry0
+            setattr(ctx, p0, dists[:, 0])
+            setattr(ctx, p1, dists[:, 1])
+        else:
+            setattr(ctx, param, dists)
     else:
-        setattr(ctx, param, dists)
+        idxs = [sec.idx for sec in rup.surface.surfaces]
+        if param == 'rx':
+            ctx['rx'] = rup.surface.get_rx_distance(sites)[mask]
+        if param == 'ry':
+            ctx['ry0'] = rup.surface.get_ry0_distance(sites)[mask]
+        if param == 'rjb' :
+            ctx['rjb'] = numpy.min(
+                [secdists[idx, 'rjb'][mask] for idx in idxs], axis=0)
+        if param == 'clon_clat':
+            t = _closest_points(rup.surface.surfaces, sites, secdists)
+            ctx['clon'] = t.array[0][mask]
+            ctx['clat'] = t.array[1][mask]
 
 
 def round_dist(dst):
@@ -486,41 +519,24 @@ def genctxs_Pp(src, sitecol, cmaker):
 
 
 def _build_secdists(src, sitecol, cmaker):
-    maxdist = cmaker.maximum_distance[src.tectonic_region_type][-1][1]
+    maxmag = src.get_min_max_mag()[1]
+    maxdist = cmaker.maximum_distance(maxmag)
     dparams = cmaker.REQUIRES_DISTANCES - {'rrup'}
+    if cmaker.fewsites:
+        dparams |= {'clon_clat'}
     sections = src.get_sections(src.get_unique_idxs())
     out = {}
     for sec in sections:
-        rrup = get_distances(sec, sitecol, 'rrup')
+        rrup = get_dparam(sec, sitecol, 'rrup')
         mask = rrup <= maxdist
         sites = sitecol.filter(mask)
         if sites is None:
             continue
         out[sec.idx, 'rrup'] = rrup[mask]
         for param in dparams:
-            out[sec.idx, param] = get_distances(sec, sites, param)
+            out[sec.idx, param] = get_dparam(sec, sites, param)
+    # use case_65 to debug this
     return out
-
-
-# compute closest points from secdists
-def _closest_points(sections, sites, secdists):
-
-    dists = numpy.array([secdists[sec.idx, 'rrup'] for sec in sections])
-
-    # find for each site the index of the closest surface
-    idx = (dists == dists.min(axis=0))  # shape (num_sections, num_sites)
-
-    # compute the closest point mesh one site at the time
-    lons = numpy.empty_like(sites.lons)
-    lats = numpy.empty_like(sites.lats)
-    for jdx in idx.T:
-        i = numpy.where(jdx)[0][0]
-        clon = secdists[i, 'clon']
-        clat = secdists[i, 'clat']
-        idx_i = idx[i, :]
-        lons[idx_i] = clon[idx_i]
-        lats[idx_i] = clat[idx_i]
-    return Mesh(lons, lats)
 
     
 # ############################ ContextMaker ############################### #
@@ -848,17 +864,30 @@ class ContextMaker(object):
         :returns: a dictionary with the rupture parameters
         """
         dic = {}
+        if self.secdists:
+            msparam = rup.surface.msparam
+        else:
+            msparam = None
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             if param == 'mag':
                 value = numpy.round(rup.mag, 3)
             elif param == 'strike':
-                value = rup.surface.get_strike()
+                if msparam:
+                    value = msparam['strike']
+                else:
+                    value = rup.surface.get_strike()
             elif param == 'dip':
-                value = rup.surface.get_dip()
+                if msparam:
+                    value = msparam['dip']
+                else:
+                    value = rup.surface.get_dip()
             elif param == 'rake':
                 value = rup.rake
             elif param == 'ztor':
-                value = rup.surface.get_top_edge_depth()
+                if msparam:
+                    value = msparam['ztor']
+                else:
+                    value = rup.surface.get_top_edge_depth()
             elif param == 'hypo_lon':
                 value = rup.hypocenter.longitude
             elif param == 'hypo_lat':
@@ -866,7 +895,10 @@ class ContextMaker(object):
             elif param == 'hypo_depth':
                 value = rup.hypocenter.depth
             elif param == 'width':
-                value = rup.surface.get_width()
+                if msparam:
+                    value = msparam['width']
+                else:
+                    value = rup.surface.get_width()
             elif param == 'in_cshm':
                 # used in McVerry and Bradley GMPEs
                 if rup.surface:
@@ -881,7 +913,9 @@ class ContextMaker(object):
                     value = False
             elif param == 'zbot':
                 # needed for width estimation in CampbellBozorgnia2014
-                if rup.surface and hasattr(rup, 'surfaces'):
+                if msparam:
+                    value = msparam['zbot']
+                elif rup.surface and hasattr(rup, 'surfaces'):
                     value = rup.surface.zbot
                 elif rup.surface:
                     value = rup.surface.mesh.depths.max()
@@ -901,7 +935,7 @@ class ContextMaker(object):
 
         return dic
 
-    def genctxs(self, same_mag_rups, sites, src_id, secdists=None):
+    def genctxs(self, same_mag_rups, sites, src_id):
         """
         :params same_mag_rups: a list of ruptures
         :param sites: a (filtered) site collection
@@ -910,9 +944,9 @@ class ContextMaker(object):
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         for rup in same_mag_rups:
-            if secdists:
+            if self.secdists:
                 idxs = [sec.idx for sec in rup.surface.surfaces]
-                rrup = numpy.min([secdists[idx, 'rrup'] for idx in idxs],
+                rrup = numpy.min([self.secdists[idx, 'rrup'] for idx in idxs],
                                  axis=0)
             else:
                 rrup = get_distances(rup, sites, 'rrup')
@@ -933,13 +967,16 @@ class ContextMaker(object):
             ctx.sids = r_sites.sids
             for param in self.REQUIRES_DISTANCES - {'rrup'}:
                 if param == 'clon':
-                    set_distances(ctx, rup, r_sites, 'clon_clat', secdists)
+                    set_distances(ctx, rup, r_sites, 'clon_clat',
+                                  self.secdists, mask)
                 elif param == 'clat':
                     pass
                 else:
-                    set_distances(ctx, rup, r_sites, param, secdists)
+                    set_distances(ctx, rup, r_sites, param,
+                                  self.secdists, mask)
             if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
-                set_distances(ctx, rup, r_sites, 'clon_clat', secdists)
+                set_distances(ctx, rup, r_sites, 'clon_clat',
+                              self.secdists, mask)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
@@ -959,12 +996,12 @@ class ContextMaker(object):
             yield ctx
 
     # this is called for non-point sources (or point sources in preclassical)
-    def gen_contexts(self, rups_sites, src_id, secdists):
+    def gen_contexts(self, rups_sites, src_id):
         """
         :yields: the old-style RuptureContexts generated by the source
         """
         for rups, sites in rups_sites:  # ruptures with the same magnitude
-            yield from self.genctxs(rups, sites, src_id, secdists)
+            yield from self.genctxs(rups, sites, src_id)
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
         """
@@ -988,9 +1025,9 @@ class ContextMaker(object):
             return self.pla_mon.iter(genctxs(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
-                secdists = None # _build_secdists(src, sitecol, self)
+                self.secdists = _build_secdists(src, sitecol, self)
             else:
-                secdists = None
+                self.secdists = None
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
@@ -1009,9 +1046,9 @@ class ContextMaker(object):
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
-            secdists = None
+            self.secdists = None
             src_id = -1
-        ctxs = self.gen_contexts(rups_sites, src_id, secdists)
+        ctxs = self.gen_contexts(rups_sites, src_id)
         blocks = block_splitter(ctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
         return self.ctx_mon.iter(map(self.recarray, blocks))
@@ -1244,6 +1281,8 @@ class ContextMaker(object):
                 self.pointsource_distance < 1000):
             # cps or pointsource with nontrivial nphc
             esites = self.estimate_sites(src, sites) * multiplier
+        elif src.code == b'F':  # multifault
+            esites = len(sites) * src.num_ruptures
         else:
             ctxs = list(self.get_ctx_iter(src, sites, step=10))  # reduced
             if not ctxs:
