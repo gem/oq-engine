@@ -674,6 +674,7 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=True)
+        self.sec_mon = monitor('building secdists', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
@@ -1003,7 +1004,8 @@ class ContextMaker(object):
             return self.pla_mon.iter(genctxs(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
-                self.secdists = _build_secdists(src, sitecol, self)
+                with self.sec_mon:
+                    self.secdists = _build_secdists(src, sitecol, self)
             else:
                 self.secdists = None
             minmag = self.maximum_distance.x[0]
