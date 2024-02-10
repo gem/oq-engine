@@ -75,7 +75,7 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
 def set_distances(ctx, rup, sites, param):
     """
     Set the distance attributes on the context; also manages paired
-    attributes like clon_lat and rx_ry0
+    attributes like clon_lat and rx_ry0.
     """
     dists = get_distances(rup, sites, param)
     if '_' in param:
@@ -990,6 +990,8 @@ class ContextMaker(object):
                     pass
                 else:
                     set_distances(ctx, rup, r_sites, param)
+            if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
+                set_distances(ctx, rup, r_sites, 'clon_clat')
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
@@ -999,9 +1001,6 @@ class ContextMaker(object):
                     ctx.rjb = reqv
                 if 'rrup' in self.REQUIRES_DISTANCES:
                     ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
-
-            if self.fewsites:
-                set_distances(ctx, rup, r_sites, 'clon_clat')
 
             for name in r_sites.array.dtype.names:
                 setattr(ctx, name, r_sites[name])
