@@ -247,7 +247,9 @@ class MultiFaultSource(BaseSeismicSource):
                 self.tectonic_region_type,
                 self.probs_occur[slc],
                 self.mags[slc],
-                self.rakes[slc])
+                self.rakes[slc],
+                self.investigation_time,
+                self.infer_occur_rates)
             src.hdf5path = self.hdf5path
             src.num_ruptures = src.count_ruptures()
             yield src
