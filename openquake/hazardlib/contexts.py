@@ -98,9 +98,9 @@ def set_distances(ctx, rup, sites, param, secdists, mask):
             setattr(ctx, param, dists)
     else:
         if param == 'rx':
-            ctx['rx'] = rup.surface.get_rx_distance(sites)[mask]
+            ctx['rx'] = rup.surface.get_rx_distance(sites)
         elif param == 'ry0':
-            ctx['ry0'] = rup.surface.get_ry0_distance(sites)[mask]
+            ctx['ry0'] = rup.surface.get_ry0_distance(sites)
         elif param == 'rjb' :
             rjbs = get_secdists(rup, 'rjb', secdists)
             ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
@@ -109,8 +109,8 @@ def set_distances(ctx, rup, sites, param, secdists, mask):
             # shape (numsections, numsites, 3)
             m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(sites)
             # shape (numsites, 3)
-            ctx['clon'] = m.lons[mask]
-            ctx['clat'] = m.lats[mask]
+            ctx['clon'] = m.lons
+            ctx['clat'] = m.lats
 
 
 def round_dist(dst):
@@ -513,22 +513,15 @@ def genctxs_Pp(src, sitecol, cmaker):
 
 
 def _build_secdists(src, sitecol, cmaker):
-    maxmag = src.get_min_max_mag()[1]
-    maxdist = cmaker.maximum_distance(maxmag)
-    dparams = cmaker.REQUIRES_DISTANCES - {'rrup'}
+    dparams = {'rjb', 'rx', 'ry0'}
     if cmaker.fewsites:
         dparams |= {'clon_clat'}
     sections = src.get_sections(src.get_unique_idxs())
     out = {}
     for sec in sections:
-        rrup = get_dparam(sec, sitecol, 'rrup')
-        mask = rrup <= maxdist
-        sites = sitecol.filter(mask)
-        if sites is None:
-            continue
-        out[sec.idx, 'rrup'] = rrup[mask]
+        out[sec.idx, 'rrup'] = get_dparam(sec, sitecol, 'rrup')
         for param in dparams:
-            out[sec.idx, param] = get_dparam(sec, sites, param)
+            out[sec.idx, param] = get_dparam(sec, sitecol, param)
     # use multi_fault_test to debug this
     return out
 
@@ -943,7 +936,10 @@ class ContextMaker(object):
                 if not rrups:
                     # all sections are too distant
                     continue
-                rrup = numpy.min(rrups, axis=0)
+                try:
+                    rrup = numpy.min(rrups, axis=0)
+                except:
+                    import pdb; pdb.set_trace()
             else:
                 rrup = get_distances(rup, sites, 'rrup')
             mask = rrup <= magdist
