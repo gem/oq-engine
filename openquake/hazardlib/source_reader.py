@@ -178,6 +178,40 @@ def _fix_dupl_ids(src_groups):
                 src.source_id = '%s;%d' % (src.source_id, i)
 
 
+def check_duplicates(smdict, strict):
+    # check_duplicates in the same file
+    for sm in smdict.values():
+        srcids = []
+        for sg in sm.src_groups:
+            srcids.extend(src.source_id for src in sg)
+            if sg.src_interdep == 'mutex':
+                # mutex sources in the same group must have all the same
+                # basename, i.e. the colon convention must be used
+                basenames = set(map(basename, sg))
+                assert len(basenames) == 1, basenames
+        check_unique(srcids, 'in ' + sm.fname, strict)
+
+    # check duplicates in different files but in the same branch
+    # the problem was discovered in the DOM model
+    for branch, sms in general.groupby(smdict.values(), bybranch).items():
+        srcids = general.AccumDict(accum=[])
+        fnames = []
+        for sm in sms:
+            if isinstance(sm, nrml.GeometryModel):
+                # the section IDs are not checked since they not count
+                # as real sources
+                continue
+            for sg in sm.src_groups:
+                srcids[sm.fname].extend(src.source_id for src in sg)
+            fnames.append(sm.fname)
+        check_unique(srcids, 'in branch %s' % branch, strict=True)
+
+    found = find_false_duplicates(smdict)
+    if found:
+        logging.warning('Found different sources with same ID %s',
+                        general.shortlist(found))
+    
+
 def get_csm(oq, full_lt, dstore=None):
     """
     Build source models from the logic tree and to store
@@ -214,40 +248,9 @@ def get_csm(oq, full_lt, dstore=None):
                               h5=dstore if dstore else None).reduce()
     smdict = {k: smdict[k] for k in sorted(smdict)}
     parallel.Starmap.shutdown()  # save memory
-
-    # check_duplicates in the same file
-    for sm in smdict.values():
-        srcids = []
-        for sg in sm.src_groups:
-            srcids.extend(src.source_id for src in sg)
-            if sg.src_interdep == 'mutex':
-                # mutex sources in the same group must have all the same
-                # basename, i.e. the colon convention must be used
-                basenames = set(map(basename, sg))
-                assert len(basenames) == 1, basenames
-        check_unique(srcids, 'in ' + sm.fname, strict=oq.disagg_by_src)
-
-    # check duplicates in different files but in the same branch
-    # the problem was discovered in the DOM model
-    for branch, sms in general.groupby(smdict.values(), bybranch).items():
-        srcids = general.AccumDict(accum=[])
-        fnames = []
-        for sm in sms:
-            if isinstance(sm, nrml.GeometryModel):
-                # the section IDs are not checked since they not count
-                # as real sources
-                continue
-            for sg in sm.src_groups:
-                srcids[sm.fname].extend(src.source_id for src in sg)
-            fnames.append(sm.fname)
-        check_unique(srcids, 'in branch %s' % branch, strict=True)
-
-    found = find_false_duplicates(smdict)
-    if found:
-        logging.warning('Found different sources with same ID %s',
-                        general.shortlist(found))
-
+    check_duplicates(smdict, strict=oq.disagg_by_src)
     fix_geometry_sections(smdict, dstore)
+
     logging.info('Applying uncertainties')
     groups = _build_groups(full_lt, smdict)
 
