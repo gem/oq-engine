@@ -32,7 +32,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale, Cache, CallableDict)
+    sqrscale, CallableDict)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -44,6 +44,7 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist, get_distances, getdefault,
     MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
@@ -71,12 +72,12 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
 
-def set_distances(ctx, rup, sites, param, dcache):
+def set_distances(ctx, rup, sites, param):
     """
     Set the distance attributes on the context; also manages paired
-    attributes like clon_lat and rx_ry0
+    attributes like clon_lat and rx_ry0.
     """
-    dists = get_distances(rup, sites, param, dcache)
+    dists = get_distances(rup, sites, param)
     if '_' in param:
         p0, p1 = param.split('_')  # rx_ry0
         setattr(ctx, p0, dists[:, 0])
@@ -484,41 +485,101 @@ def genctxs_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
+def _build_secdists(src, sitecol, cmaker):
+    maxdist = cmaker.maximum_distance[src.tectonic_region_type][-1][1]
+    dparams = cmaker.REQUIRES_DISTANCES - {'rrup'}
+    sections = src.get_sections(src.get_unique_idxs())
+    out = {}
+    for sec in sections:
+        rrup = get_distances(sec, sitecol, 'rrup')
+        mask = rrup <= maxdist
+        sites = sitecol.filter(mask)
+        if sites is None:
+            continue
+        out[sec.idx, 'rrup'] = rrup[mask]
+        for param in dparams:
+            out[sec.idx, param] = get_distances(sec, sites, param)
+    return out
+
+
+# compute closest points from secdists
+def _closest_points(sections, sites, secdists):
+
+    dists = numpy.array([secdists[sec.idx, 'rrup'] for sec in sections])
+
+    # find for each site the index of the closest surface
+    idx = (dists == dists.min(axis=0))  # shape (num_sections, num_sites)
+
+    # compute the closest point mesh one site at the time
+    lons = numpy.empty_like(sites.lons)
+    lats = numpy.empty_like(sites.lats)
+    for jdx in idx.T:
+        i = numpy.where(jdx)[0][0]
+        clon = secdists[i, 'clon']
+        clat = secdists[i, 'clat']
+        idx_i = idx[i, :]
+        lons[idx_i] = clon[idx_i]
+        lats[idx_i] = clat[idx_i]
+    return Mesh(lons, lats)
+
+
 @genctxs.add(b'F')
 def genctxs_F(src, sitecol, cmaker):
     """
     Context generator for multifault sources
     """
-    if cmaker.cache_distances:
-        dcache = Cache()
-    else:
-        dcache = None
-    minmag = cmaker.maximum_distance.x[0]
-    maxmag = cmaker.maximum_distance.x[-1]
-    rctxs = []
+    dparams = cmaker.REQUIRES_DISTANCES
+    rparams = cmaker.REQUIRES_RUPTURE_PARAMETERS
+    secdists = _build_secdists(src, sitecol, cmaker)
     with cmaker.ir_mon:
         rups = list(src.iter_ruptures())
-    with cmaker.ctx_mon:
-        for i, rup in enumerate(rups):
-            if rup.mag > maxmag or rup.mag < minmag:
-                continue
-            rup.rup_id = src.offset + i
-            dist = get_distances(rup, sitecol, 'rrup')
-            mask = dist <= cmaker.maximum_distance(rup.mag)
-            if mask.any():
-                rctx = cmaker.get_ctx(rup, sitecol, dist, dcache)
-                # copy the correct slice of distances and site_params
-                for key in cmaker.defaultdict:
-                    arr = getattr(rctx, key)
-                    if isinstance(arr, numpy.ndarray):
-                        setattr(rctx, key, arr[mask])
-                rctx.src_id = src.id
-                rctxs.append(rctx)
-    if cmaker.cache_distances:
-        dcache.clear()
-    if len(rctxs):
-        yield cmaker.recarray(rctxs)
+    minmag = cmaker.maximum_distance.x[0]
+    maxmag = cmaker.maximum_distance.x[-1]
+    for i, rup in enumerate(rups):
+        if rup.mag > maxmag or rup.mag < minmag:
+            continue
+        rup.rup_id = src.offset + i
+        magdist = cmaker.maximum_distance(rup.mag)
+        idxs = [surf.idx for surf in rup.surface.surfaces]
+        rrup = numpy.min([secdists[idx, 'rrup'] for idx in idxs], axis=0)
+        mask = rrup <= magdist
+        sites = sitecol.filter(mask)
+        if sites is None:
+            continue
+        ctx = cmaker.new_ctx(len(rrup))
+        ctx['sids'] = sites.sids
+        if 'rx' in dparams:
+            ctx['rx'] = rup.surface.get_rx_distance(sites)
+        if 'ry' in dparams:
+            ctx['ry0'] = rup.surface.get_ry0_distance(sites)
+        if 'rjb' in dparams:
+            ctx['rjb'] = numpy.min(
+                [secdists[idx, 'rjb'][mask] for idx in idxs], axis=0)
+        if 'clon_clat' in dparams:
+            t = _closest_points(rup.surface.surfaces, sites, secdists)
+            ctx['clon'] = t.array[0][mask]
+            ctx['clat'] = t.array[1][mask]
 
+        ctx['mag'] = numpy.round(rup.mag, 3)
+        msp = src.msparams[i]
+        if 'strike' in rparams:
+            ctx['strike'] = msp['strike']
+        if 'dip' in rparams:
+            ctx['dip'] = msp['strike']
+        if 'rake' in rparams:
+            ctx['rake'] = rup.rake
+        if 'width' in rparams:
+            ctx['width'] = msp['width']
+        if 'ztor' in rparams:
+            ctx['ztor'] = msp['ztor']
+        if 'zbot' in rparams:
+            ctx['zbot'] = msp['zbot']
+        # TODO: McVerry
+
+        for par in cmaker.siteparams:
+            ctx[par] = sites.array[par]
+
+        yield ctx
     
 # ############################ ContextMaker ############################### #
 
@@ -820,8 +881,8 @@ class ContextMaker(object):
             rup, point='TC', toward_azimuth=90,
             direction='positive', hdist=hdist, step=5.,
             req_site_params=self.REQUIRES_SITES_PARAMETERS)
-        rctxs = self.gen_contexts([[[rup], sitecol]], src_id=0)
-        return self.recarray(list(rctxs))
+        ctxs = list(self.genctxs([rup], sitecol, src_id=0))
+        return self.recarray(ctxs)
 
     def from_srcs(self, srcs, sitecol):
         # used in disagg.disaggregation
@@ -898,43 +959,56 @@ class ContextMaker(object):
 
         return dic
 
-    def get_ctx(self, rup, sites, distances, dcache=None):
+    def genctxs(self, same_mag_rups, sites, src_id):
         """
-        :returns: a legacy RuptureContext (or None if filtered away)
+        :params same_mag_rups: a list of ruptures
+        :param sites: a (filtered) site collection
+        :yields: a context array for each rupture
         """
-        rparams = self.get_rparams(rup)
-        dd = self.defaultdict.copy()
-        np = len(rparams.get('probs_occur', []))
-        dd['probs_occur'] = numpy.zeros(np)
-        ctx = RecordBuilder(**dd).zeros(len(sites))
-        for par, val in rparams.items():
-            ctx[par] = val
+        magdist = self.maximum_distance(same_mag_rups[0].mag)
+        for rup in same_mag_rups:
+            dist = get_distances(rup, sites, 'rrup')
+            mask = dist <= magdist
+            if not mask.any():
+                continue
 
-        ctx.rrup = distances
-        ctx.sids = sites.sids
-        for param in self.REQUIRES_DISTANCES - {'rrup'}:
-            if param == 'clon':
-                set_distances(ctx, rup, sites, 'clon_clat', dcache)
-            elif param == 'clat':
-                pass
-            else:
-                set_distances(ctx, rup, sites, param, dcache)
+            r_sites = sites.filter(mask)
+            rparams = self.get_rparams(rup)
+            dd = self.defaultdict.copy()
+            np = len(rparams.get('probs_occur', []))
+            dd['probs_occur'] = numpy.zeros(np)
+            ctx = RecordBuilder(**dd).zeros(len(r_sites))
+            for par, val in rparams.items():
+                ctx[par] = val
 
-        # Equivalent distances
-        reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
-        if reqv_obj and not rup.surface:  # PointRuptures have no surface
-            reqv = reqv_obj.get(ctx.repi, rup.mag)
-            if 'rjb' in self.REQUIRES_DISTANCES:
-                ctx.rjb = reqv
-            if 'rrup' in self.REQUIRES_DISTANCES:
-                ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
+            ctx.rrup = dist[mask]
+            ctx.sids = r_sites.sids
+            for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                if param == 'clon':
+                    set_distances(ctx, rup, r_sites, 'clon_clat')
+                elif param == 'clat':
+                    pass
+                else:
+                    set_distances(ctx, rup, r_sites, param)
+            if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
+                set_distances(ctx, rup, r_sites, 'clon_clat')
 
-        if self.fewsites:
-            set_distances(ctx, rup, sites, 'clon_clat', dcache)
+            # Equivalent distances
+            reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
+            if reqv_obj and not rup.surface:  # PointRuptures have no surface
+                reqv = reqv_obj.get(ctx.repi, rup.mag)
+                if 'rjb' in self.REQUIRES_DISTANCES:
+                    ctx.rjb = reqv
+                if 'rrup' in self.REQUIRES_DISTANCES:
+                    ctx.rrup = numpy.sqrt(reqv**2 + rup.hypocenter.depth**2)
 
-        for name in sites.array.dtype.names:
-            setattr(ctx, name, sites[name])
-        return ctx
+            for name in r_sites.array.dtype.names:
+                setattr(ctx, name, r_sites[name])
+
+            ctx.src_id = src_id
+            if src_id >= 0:
+                ctx.rup_id = rup.rup_id
+            yield ctx
 
     # this is called for non-point sources (or point sources in preclassical)
     def gen_contexts(self, rups_sites, src_id):
@@ -942,19 +1016,7 @@ class ContextMaker(object):
         :yields: the old-style RuptureContexts generated by the source
         """
         for rups, sites in rups_sites:  # ruptures with the same magnitude
-            if len(rups) == 0:  # may happen in case of min_mag/max_mag
-                continue
-            magdist = self.maximum_distance(rups[0].mag)
-            for u, rup in enumerate(rups):
-                dist = get_distances(rup, sites, 'rrup')
-                mask = dist <= magdist
-                if mask.any():
-                    r_sites = sites.filter(mask)
-                    rctx = self.get_ctx(rup, r_sites, dist[mask])
-                    rctx.src_id = src_id
-                    if src_id >= 0:
-                        rctx.rup_id = rup.rup_id
-                    yield rctx
+            yield from self.genctxs(rups, sites, src_id)
 
     def get_ctx_iter(self, src, sitecol, src_id=0, step=1):
         """
@@ -988,6 +1050,8 @@ class ContextMaker(object):
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
                 allrups = [rup for rup in allrups if minmag < rup.mag < maxmag]
+                if not allrups:
+                    return iter([])
                 self.num_rups = len(allrups)
                 # sorted by mag by construction
                 u32mags = U32([rup.mag * 100 for rup in allrups])
@@ -997,8 +1061,8 @@ class ContextMaker(object):
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
             src_id = -1
-        rctxs = self.gen_contexts(rups_sites, src_id)
-        blocks = block_splitter(rctxs, 10_000, weight=len)
+        ctxs = self.gen_contexts(rups_sites, src_id)
+        blocks = block_splitter(ctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
         return self.ctx_mon.iter(map(self.recarray, blocks))
 
