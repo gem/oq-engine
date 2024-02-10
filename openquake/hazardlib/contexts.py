@@ -945,7 +945,7 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         for rup in same_mag_rups:
             if self.secdists:
-                rrups = [self.secdists[sec.idx, 'rrup']
+                rrups = [self.secdists.get((sec.idx, 'rrup'), 9999.)
                          for sec in rup.surface.surfaces]
                 rrup = numpy.min(rrups, axis=0)
             else:

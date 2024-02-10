@@ -57,7 +57,6 @@ def get_dparam(surface, sites, param):
     elif param == 'clon_clat':
         t = surface.get_closest_points(sites)  # tested in classical/case_83
         dist = t.array.T[:, 0:2]  # shape (N, 2)
-        print(surface.idx, dist)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
