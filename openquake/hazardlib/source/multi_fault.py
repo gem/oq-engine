@@ -192,7 +192,7 @@ class MultiFaultSource(BaseSeismicSource):
             geoms = f['multi_fault_sections'][:]  # small
         if idxs is None:
             idxs = range(len(geoms))
-        sections = [geom_to_kite(geom) for geom in geoms]
+        sections = [geom_to_kite(geom) for geom in geoms[idxs]]
         for sec, idx in zip(sections, idxs):
             sec.idx = idx
         return sections
