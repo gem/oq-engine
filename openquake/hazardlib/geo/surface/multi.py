@@ -291,3 +291,35 @@ class MultiSurface(BaseSurface):
         condition = uut > self.tor.u_max
         ry0[condition] = uut[condition] - self.tor.u_max
         return ry0
+'''
+    def get_closest_points(self, mesh):
+        dists = np.array(
+            [surf.get_min_distance(mesh).flatten() for surf in self.surfaces])
+
+        # find for each point in mesh the index of closest surface
+        idx = dists == np.min(dists, axis=0)
+
+        # loop again over surfaces. For each surface compute the closest
+        # points, and associate them to the mesh points for which the surface
+        # is the closest. Note that if a surface is not the closest to any of
+        # the mesh points then the calculation is skipped
+        lons = np.empty_like(mesh.lons)
+        lats = np.empty_like(mesh.lats)
+        deps = np.empty_like(mesh.depths)
+        # the centroid info for the sites must be evaluated and populated
+        # one site at a time
+        # in the multi_fault_test there are 2 sites and 7 ruptures with
+        # the following surface indices:
+        # [[0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2]]
+        # for the sixth surface
+        for jdx in idx.T:
+            i = np.where(jdx)[0][0]
+            surf = self.surfaces[i]
+            cps = surf.get_closest_points(mesh)
+            idx_i = idx[i, :]
+            lons[idx_i] = cps.lons[idx_i]
+            lats[idx_i] = cps.lats[idx_i]
+            deps[idx_i] = cps.depths[idx_i]
+
+        return Mesh(lons, lats, deps)
+'''
