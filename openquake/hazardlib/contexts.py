@@ -851,7 +851,7 @@ class ContextMaker(object):
         :returns: a dictionary with the rupture parameters
         """
         dic = {}
-        if self.secdists:
+        if hasattr(self, 'secdists') and self.secdists:
             msparam = rup.surface.msparam
         else:
             msparam = None
