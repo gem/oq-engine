@@ -72,7 +72,7 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
 # compute closest points from secdists
-def _closest_points(sections, sites, secdists):
+def _closest_points(sections, sites, secdists, mask):
 
     dists = numpy.array([secdists[sec.idx, 'rrup'] for sec in sections])
 
@@ -86,8 +86,8 @@ def _closest_points(sections, sites, secdists):
         i = numpy.where(jdx)[0][0]
         cll = secdists[i, 'clon_clat']
         idx_i = idx[i, :]
-        lons[idx_i] = cll[idx_i, 0]
-        lats[idx_i] = cll[idx_i, 1]
+        lons[idx_i] = cll[idx_i, 0][mask]
+        lats[idx_i] = cll[idx_i, 1][mask]
     return Mesh(lons, lats)
 
 
@@ -108,15 +108,15 @@ def set_distances(ctx, rup, sites, param, secdists, mask):
         idxs = [sec.idx for sec in rup.surface.surfaces]
         if param == 'rx':
             ctx['rx'] = rup.surface.get_rx_distance(sites)[mask]
-        if param == 'ry':
+        elif param == 'ry0':
             ctx['ry0'] = rup.surface.get_ry0_distance(sites)[mask]
-        if param == 'rjb' :
+        elif param == 'rjb' :
             ctx['rjb'] = numpy.min(
                 [secdists[idx, 'rjb'][mask] for idx in idxs], axis=0)
-        if param == 'clon_clat':
-            t = _closest_points(rup.surface.surfaces, sites, secdists)
-            ctx['clon'] = t.array[0][mask]
-            ctx['clat'] = t.array[1][mask]
+        elif param == 'clon_clat':
+            t = _closest_points(rup.surface.surfaces, sites, secdists, mask)
+            ctx['clon'] = t.array[0]
+            ctx['clat'] = t.array[1]
 
 
 def round_dist(dst):
@@ -839,7 +839,7 @@ class ContextMaker(object):
             rup, point='TC', toward_azimuth=90,
             direction='positive', hdist=hdist, step=5.,
             req_site_params=self.REQUIRES_SITES_PARAMETERS)
-        ctxs = list(self.genctxs([rup], sitecol, src_id=0))
+        ctxs = self.genctxs([rup], sitecol, src_id=0)
         return self.recarray(ctxs)
 
     def from_srcs(self, srcs, sitecol):
@@ -945,9 +945,9 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         for rup in same_mag_rups:
             if self.secdists:
-                idxs = [sec.idx for sec in rup.surface.surfaces]
-                rrup = numpy.min([self.secdists[idx, 'rrup'] for idx in idxs],
-                                 axis=0)
+                rrups = [self.secdists[sec.idx, 'rrup']
+                         for sec in rup.surface.surfaces]
+                rrup = numpy.min(rrups, axis=0)
             else:
                 rrup = get_distances(rup, sites, 'rrup')
             mask = rrup <= magdist
@@ -1048,7 +1048,7 @@ class ContextMaker(object):
             rups_sites = [(src, sitecol)]
             self.secdists = None
             src_id = -1
-        ctxs = self.gen_contexts(rups_sites, src_id)
+        ctxs = list(self.gen_contexts(rups_sites, src_id))
         blocks = block_splitter(ctxs, 10_000, weight=len)
         # the weight of 10_000 ensure less than 1MB per block (recarray)
         return self.ctx_mon.iter(map(self.recarray, blocks))
