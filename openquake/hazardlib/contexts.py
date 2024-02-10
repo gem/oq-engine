@@ -673,7 +673,7 @@ class ContextMaker(object):
         self.gmf_mon = monitor('computing mean_std', measuremem=False)
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
-        self.ir_mon = monitor('iter_ruptures', measuremem=True)
+        self.ir_mon = monitor('iter_ruptures', measuremem=False)
         self.sec_mon = monitor('building secdists', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
