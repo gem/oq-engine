@@ -127,11 +127,11 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z1pt0', 100.)
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-        cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
+        cmaker = contexts.simple_cmaker([gsim], ['PGA'])
         [ctx] = cmaker.from_srcs([src], sitecol)
         assert len(ctx) == src.count_ruptures()
 
-        # compare with the expected distances computed without cache
+        # compare with the expected distances
         tol = 1e-4
         aac(ctx.rrup, [0., 27.51933, 55.03832,  0., 0., 27.51933, 0.], atol=tol)
         aac(ctx.rjb, [0., 27.51907, 55.03832,  0., 0., 27.51907, 0.], atol=tol)
@@ -175,7 +175,7 @@ def main():
     print(mon)
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
     secparams = build_secparams(src.get_sections())
     src.set_msparams(secparams)
     [ctxt] = cmaker.from_srcs([src], sitecol)
@@ -220,7 +220,7 @@ def main100sites():
     sitecol._set('z1pt0', 100.)
     sitecol._set('z2pt5', 5.)
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
     secparams = build_secparams(src.get_sections())
     srcfilter = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
     src.set_msparams(secparams)

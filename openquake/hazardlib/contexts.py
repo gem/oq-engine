@@ -535,7 +535,7 @@ def _build_secdists(src, sitecol, cmaker):
         out[sec.idx, 'rrup'] = rrup[mask]
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sites, param)
-    # use case_65 to debug this
+    # use multi_fault_test to debug this
     return out
 
     
