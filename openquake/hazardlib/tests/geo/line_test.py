@@ -194,7 +194,7 @@ class RevertPointsTest(unittest.TestCase):
         lats = np.array([3.0, 4.0, 5.])
         deps = np.array([6.0, 7.0, 8.])
         line = geo.Line.from_vectors(lons, lats, deps)
-        line.flip()
+        line = line.flip()
         computed = [p.longitude for p in line.points]
         expected = [3., 2., 1.]
         self.assertEqual(computed, expected)
