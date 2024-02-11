@@ -106,7 +106,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         multiplier = 1
         sf = None
     splits = []
-    mon = monitor('setting msparams', measuremem=False)
+    mon = monitor('building msparams', measuremem=False)
     for src in srcs:
         if src.code == b'F':
             with mon:
