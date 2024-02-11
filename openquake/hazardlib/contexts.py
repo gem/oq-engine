@@ -965,10 +965,10 @@ class ContextMaker(object):
                                   secdists, mask)
                 elif param == 'clat':
                     pass
-                elif param == 'ry0':
+                elif secdists and param == 'ry0':
                     set_distances(ctx, rup, r_sites, 'tuw',
                                   secdists, mask)
-                elif param == 'rx':
+                elif secdists and param == 'rx':
                     pass
                 else:
                     set_distances(ctx, rup, r_sites, param,
