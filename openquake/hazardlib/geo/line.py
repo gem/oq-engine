@@ -213,9 +213,9 @@ class Line(object):
 
     def flip(self):
         """
-        Inverts the order of the points composing the line
+        Returns a new line with the points flipped
         """
-        self.coo = np.flip(self.coo, axis=0)
+        return self.from_coo(np.flip(self.coo, axis=0))
 
     @classmethod
     def from_vectors(cls, lons, lats, deps=None):
