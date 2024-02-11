@@ -28,27 +28,27 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-SPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
+MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
            'west', 'east', 'north', 'south']
-SDT = [(p, np.float32) for p in SPARAMS]
+SDT = [(p, np.float32) for p in MSPARAMS]
 
 
-def _build_sparam(surfaces, tor):
+def _build_msparam(surfaces, tor):
     # slow version
-    sparam = np.zeros(1, SDT)[0]
+    msparam = np.zeros(1, SDT)[0]
     areas = np.array([s.get_area() for s in surfaces])
-    sparam['area'] = areas.sum()
-    ws = areas / sparam['area']  # weights
-    sparam['dip'] = ws @ [s.get_dip() for s in surfaces]
+    msparam['area'] = areas.sum()
+    ws = areas / msparam['area']  # weights
+    msparam['dip'] = ws @ [s.get_dip() for s in surfaces]
     strikes = np.radians([s.get_strike() for s in surfaces])
     v1 = ws @ np.sin(strikes)
     v2 = ws @ np.cos(strikes)
-    sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-    sparam['u_max'] = tor.u_max
-    sparam['width'] = ws @ [s.get_width() for s in surfaces]
-    sparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
-    sparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
-    return sparam
+    msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+    msparam['u_max'] = tor.u_max
+    msparam['width'] = ws @ [s.get_width() for s in surfaces]
+    msparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
+    msparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
+    return msparam
 
 
 class MultiSurface(BaseSurface):
@@ -106,7 +106,7 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces, sparam=None):
+    def __init__(self, surfaces, msparam=None):
         """
         Intialize a multi surface object from a list of surfaces
 
@@ -115,17 +115,17 @@ class MultiSurface(BaseSurface):
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
         """
         self.surfaces = surfaces
-        self.sparam = sparam
+        self.msparam = msparam
 
     @cached_property
     def tor(self):
         # setting .tor is expensive unless u_max is given
-        if self.sparam is None:
+        if self.msparam is None:
             tor = geo.MultiLine([s.tor for s in self.surfaces])
-            self.sparam = _build_sparam(self.surfaces, tor)
+            self.msparam = _build_msparam(self.surfaces, tor)
         else:
             tor = geo.MultiLine([s.tor for s in self.surfaces],
-                                self.sparam['u_max'])
+                                self.msparam['u_max'])
         return tor
 
     def get_min_distance(self, mesh):
@@ -159,7 +159,7 @@ class MultiSurface(BaseSurface):
         average value (in km).
         """
         self.tor
-        return self.sparam['ztor']
+        return self.msparam['ztor']
 
     def get_strike(self):
         """
@@ -170,7 +170,7 @@ class MultiSurface(BaseSurface):
         rather than arithmetic mean.
         """
         self.tor
-        return self.sparam['strike']
+        return self.msparam['strike']
 
     def get_dip(self):
         """
@@ -180,7 +180,7 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         self.tor
-        return self.sparam['dip']
+        return self.msparam['dip']
 
     def get_width(self):
         """
@@ -188,14 +188,14 @@ class MultiSurface(BaseSurface):
         average value (in km).
         """
         self.tor
-        return self.sparam['width']
+        return self.msparam['width']
 
     def get_area(self):
         """
         Return sum of surface elements areas (in squared km).
         """
         self.tor
-        return self.sparam['area']
+        return self.msparam['area']
 
     def get_bounding_box(self):
         """
