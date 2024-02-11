@@ -55,9 +55,18 @@ class MultiLine(object):
         llenghts = np.array([ln.get_length() for ln in lines])
         avgaz = np.array([line.average_azimuth() for line in lines])
 
-        # set strike
-        revert, strike_east, avg_azim, self.lines = get_overall_strike(
-            lines, llenghts, avgaz)
+        # determine the flipped lines
+        revert = get_flipped(lines, llenghts, avgaz)
+
+        # Compute the prevalent azimuth
+        avgazims_corr = copy.copy(avgaz)
+        for i in np.nonzero(revert)[0]:
+            lines[i] = lines[i].flip()
+            avgazims_corr[i] = lines[i].average_azimuth()
+        avg_azim = get_average_azimuth(avgazims_corr, llenghts)
+        strike_east = (avg_azim > 0) & (avg_azim <= 180)
+
+        self.lines = lines
         ep = get_endpoints(self.lines)
         olon, olat, soidx = get_origin(ep, strike_east, avg_azim)
 
@@ -89,12 +98,9 @@ class MultiLine(object):
         return _get_uts(self.shift, tupps, uupps, weis)
 
 
-def get_overall_strike(lines, llens, avgaz):
+def get_flipped(lines, llens, avgaz):
     """
-    Computes the overall strike direction for the multiline
-
-    :param lines:
-        A list of :class:`openquake.hazardlib.geo.line.Line` instances
+    :returns: a boolean array with the flipped lines
     """
     # Find general azimuth trend
     ave = get_average_azimuth(avgaz, llens)
@@ -120,16 +126,7 @@ def get_overall_strike(lines, llens, avgaz):
     else:
         revert[idx] = True
 
-    # Compute the prevalent azimuth
-    avgazims_corr = copy.copy(avgaz)
-    for i in np.nonzero(revert)[0]:
-        lines[i] = lines[i].flip()
-        avgazims_corr[i] = lines[i].average_azimuth()
-    avg_azim = get_average_azimuth(avgazims_corr, llens)
-
-    strike_to_east = (avg_azim > 0) & (avg_azim <= 180)
-
-    return revert, strike_to_east, avg_azim, lines
+    return revert
 
 
 def get_origin(ep, strike_to_east: bool, avg_strike: float):
