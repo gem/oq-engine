@@ -56,11 +56,11 @@ class MultiLine(object):
         avgaz = np.array([line.average_azimuth() for line in lines])
 
         # determine the flipped lines
-        flipped = get_flipped(lines, llenghts, avgaz)
+        self.flipped = get_flipped(lines, llenghts, avgaz)
 
         # Compute the prevalent azimuth
         avgazims_corr = copy.copy(avgaz)
-        for i in np.nonzero(flipped)[0]:
+        for i in np.nonzero(self.flipped)[0]:
             lines[i] = lines[i].flip()
             avgazims_corr[i] = lines[i].average_azimuth()
         avg_azim = get_average_azimuth(avgazims_corr, llenghts)

@@ -49,6 +49,7 @@ from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
+U8 = numpy.uint8
 I32 = numpy.int32
 U32 = numpy.uint32
 F16 = numpy.float16
@@ -75,8 +76,11 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
 def get_secdists(rup, param, secdists):
     arr = numpy.array([secdists[sec.idx, param]
                        for sec in rup.surface.surfaces])
-    if param == 'tuw':  # reorder the surface indices
-        return arr[rup.surface.tor.soidx]
+    if param == 'tuw':
+        # reorder the surface indices and keep the flipped values
+        # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
+        flip = U8(rup.surface.tor.flipped)
+        return arr[rup.surface.tor.soidx, :, flip]  # shape (S, N, 3)
     return arr
 
 
