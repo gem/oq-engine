@@ -73,8 +73,11 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
 
 
 def get_secdists(rup, param, secdists):
-    return numpy.array([secdists[sec.idx, param]
-                        for sec in rup.surface.surfaces])
+    arr = numpy.array([secdists[sec.idx, param]
+                       for sec in rup.surface.surfaces])
+    if param == 'tuw':  # reorder the surface indices
+        return arr[rup.surface.tor.soidx]
+    return arr
 
 
 def set_distances(ctx, rup, r_sites, param, secdists, mask):
@@ -96,7 +99,6 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
             ts, us, ws = tuw[:, :, 0], tuw[:, :, 1], tuw[:, :, 2]
             uut, tut = multiline._get_uts(tor.shift, ts, us, ws)
-            print(uut, tut, tor.u_max)
             ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
             ctx.ry0[uut < 0] = numpy.abs(uut[uut < 0])
             big = uut > tor.u_max

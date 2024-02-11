@@ -59,10 +59,10 @@ class MultiLine(object):
         revert, strike_east, avg_azim, self.lines = get_overall_strike(
             lines, llenghts, avgaz)
         ep = get_endpoints(self.lines)
-        olon, olat, soidx = get_origin(ep, strike_east, avg_azim)
+        olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
-        lines = [self.lines[i] for i in soidx]
+        lines = [self.lines[i] for i in self.soidx]
         self.coos = [ln.coo for ln in lines]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
     
