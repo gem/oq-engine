@@ -89,22 +89,13 @@ class MultiLine(object):
         return _get_uts(self.shift, tupps, uupps, weis)
 
 
-def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
+def get_overall_strike(lines, llens, avgaz):
     """
     Computes the overall strike direction for the multiline
 
     :param lines:
         A list of :class:`openquake.hazardlib.geo.line.Line` instances
     """
-    # copying the lines to avoid flipping the originals
-    lines = [copy.copy(ln) for ln in lines]
-
-    # Get lenghts and average azimuths
-    if llens is None:
-        llens = np.array([ln.get_length() for ln in lines])
-    if avgaz is None:
-        avgaz = np.array([line.average_azimuth() for line in lines])
-
     # Find general azimuth trend
     ave = get_average_azimuth(avgaz, llens)
 
@@ -132,7 +123,7 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
     # Compute the prevalent azimuth
     avgazims_corr = copy.copy(avgaz)
     for i in np.nonzero(revert)[0]:
-        lines[i].flip()
+        lines[i] = lines[i].flip()
         avgazims_corr[i] = lines[i].average_azimuth()
     avg_azim = get_average_azimuth(avgazims_corr, llens)
 
