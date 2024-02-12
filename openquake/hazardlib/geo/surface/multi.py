@@ -28,54 +28,27 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-SPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor']
-SDT = [(p, np.float32) for p in SPARAMS]
-
-    
-def build_sparams(rupture_idxs, secparams):
-    """
-    :param surfaces: simple surfaces composing a MultiSurface
-    :returns: a record with the multisurface parameters
-    """
-    U = len(rupture_idxs)  # number of ruptures
-    sparams = np.zeros(U, SDT)
-    for sparam, idxs in zip(sparams, rupture_idxs):
-        secparam = secparams[idxs]
-        areas = secparam['area']
-        sparam['area'] = areas.sum()
-        ws = areas / sparam['area']  # weights
-        sparam['dip'] = ws @ secparam['dip']
-        strikes = np.radians(secparam['strike'])
-        v1 = ws @ np.sin(strikes)
-        v2 = ws @ np.cos(strikes)
-        sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-        sparam['width'] = ws @ secparam['width']
-        sparam['ztor'] = ws @ secparam['ztor']
-        sparam['zbot'] = ws @ secparam['zbot']
-        tors = []
-        for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-            coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
-            tors.append(geo.line.Line.from_coo(coo))
-        sparam['u_max'] = geo.multiline.MultiLine(tors).u_max
-    return sparams
+MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
+           'west', 'east', 'north', 'south']
+SDT = [(p, np.float32) for p in MSPARAMS]
 
 
-def _build_sparam(surfaces, tor):
+def _build_msparam(surfaces, tor):
     # slow version
-    sparam = np.zeros(1, SDT)[0]
+    msparam = np.zeros(1, SDT)[0]
     areas = np.array([s.get_area() for s in surfaces])
-    sparam['area'] = areas.sum()
-    ws = areas / sparam['area']  # weights
-    sparam['dip'] = ws @ [s.get_dip() for s in surfaces]
+    msparam['area'] = areas.sum()
+    ws = areas / msparam['area']  # weights
+    msparam['dip'] = ws @ [s.get_dip() for s in surfaces]
     strikes = np.radians([s.get_strike() for s in surfaces])
     v1 = ws @ np.sin(strikes)
     v2 = ws @ np.cos(strikes)
-    sparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-    sparam['u_max'] = tor.u_max
-    sparam['width'] = ws @ [s.get_width() for s in surfaces]
-    sparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
-    sparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
-    return sparam
+    msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+    msparam['u_max'] = tor.u_max
+    msparam['width'] = ws @ [s.get_width() for s in surfaces]
+    msparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
+    msparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
+    return msparam
 
 
 class MultiSurface(BaseSurface):
@@ -133,7 +106,7 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces, sparam=None):
+    def __init__(self, surfaces, msparam=None):
         """
         Intialize a multi surface object from a list of surfaces
 
@@ -142,17 +115,17 @@ class MultiSurface(BaseSurface):
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
         """
         self.surfaces = surfaces
-        self.sparam = sparam
+        self.msparam = msparam
 
     @cached_property
     def tor(self):
         # setting .tor is expensive unless u_max is given
-        if self.sparam is None:
+        if self.msparam is None:
             tor = geo.MultiLine([s.tor for s in self.surfaces])
-            self.sparam = _build_sparam(self.surfaces, tor)
+            self.msparam = _build_msparam(self.surfaces, tor)
         else:
             tor = geo.MultiLine([s.tor for s in self.surfaces],
-                                self.sparam['u_max'])
+                                self.msparam['u_max'])
         return tor
 
     def get_min_distance(self, mesh):
@@ -186,7 +159,7 @@ class MultiSurface(BaseSurface):
         average value (in km).
         """
         self.tor
-        return self.sparam['ztor']
+        return self.msparam['ztor']
 
     def get_strike(self):
         """
@@ -197,7 +170,7 @@ class MultiSurface(BaseSurface):
         rather than arithmetic mean.
         """
         self.tor
-        return self.sparam['strike']
+        return self.msparam['strike']
 
     def get_dip(self):
         """
@@ -207,7 +180,7 @@ class MultiSurface(BaseSurface):
         formula for weighted mean is used.
         """
         self.tor
-        return self.sparam['dip']
+        return self.msparam['dip']
 
     def get_width(self):
         """
@@ -215,14 +188,14 @@ class MultiSurface(BaseSurface):
         average value (in km).
         """
         self.tor
-        return self.sparam['width']
+        return self.msparam['width']
 
     def get_area(self):
         """
         Return sum of surface elements areas (in squared km).
         """
         self.tor
-        return self.sparam['area']
+        return self.msparam['area']
 
     def get_bounding_box(self):
         """
@@ -318,3 +291,35 @@ class MultiSurface(BaseSurface):
         condition = uut > self.tor.u_max
         ry0[condition] = uut[condition] - self.tor.u_max
         return ry0
+'''
+    def get_closest_points(self, mesh):
+        dists = np.array(
+            [surf.get_min_distance(mesh).flatten() for surf in self.surfaces])
+
+        # find for each point in mesh the index of closest surface
+        idx = dists == np.min(dists, axis=0)
+
+        # loop again over surfaces. For each surface compute the closest
+        # points, and associate them to the mesh points for which the surface
+        # is the closest. Note that if a surface is not the closest to any of
+        # the mesh points then the calculation is skipped
+        lons = np.empty_like(mesh.lons)
+        lats = np.empty_like(mesh.lats)
+        deps = np.empty_like(mesh.depths)
+        # the centroid info for the sites must be evaluated and populated
+        # one site at a time
+        # in the multi_fault_test there are 2 sites and 7 ruptures with
+        # the following surface indices:
+        # [[0], [1], [2], [0, 1], [0, 2], [1, 2], [0, 1, 2]]
+        # for the sixth surface
+        for jdx in idx.T:
+            i = np.where(jdx)[0][0]
+            surf = self.surfaces[i]
+            cps = surf.get_closest_points(mesh)
+            idx_i = idx[i, :]
+            lons[idx_i] = cps.lons[idx_i]
+            lats[idx_i] = cps.lats[idx_i]
+            deps[idx_i] = cps.depths[idx_i]
+
+        return Mesh(lons, lats, deps)
+'''

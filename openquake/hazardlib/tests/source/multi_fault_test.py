@@ -20,6 +20,7 @@ import tempfile
 import unittest
 import numpy
 import pandas
+import matplotlib.pyplot as plt
 from openquake.baselib import hdf5, python3compat, general, performance, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
@@ -33,6 +34,7 @@ from openquake.hazardlib.nrml import SourceModel
 
 BASE_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data')
 aac = numpy.testing.assert_allclose
+PLOTTING = False
 
 
 class MultiFaultTestCase(unittest.TestCase):
@@ -63,21 +65,15 @@ class MultiFaultTestCase(unittest.TestCase):
         sections = {0: sfc_a, 1: sfc_b, 2: sfc_c}
 
         # Rupture indexes
-        rup_idxs = [numpy.uint16(x) for x in [[0], [1], [2], [0, 1], [0, 2],
-                                              [1, 2], [0, 1, 2]]]
+        rup_idxs = [numpy.uint16(x) for x in [[1, 2], [0], [1], [2],
+                                              [0, 1], [0, 2], [0, 1, 2]]]
 
         # Magnitudes
         rup_mags = [5.8, 5.8, 5.8, 6.2, 6.2, 6.2, 6.5]
         rakes = [90.0, 90.0, 90.0, 90.0, 90.0, 90.0, 90.0]
 
         # Occurrence probabilities of occurrence
-        pmfs = [[0.90, 0.10],
-                [0.90, 0.10],
-                [0.90, 0.10],
-                [0.90, 0.10],
-                [0.90, 0.10],
-                [0.90, 0.10],
-                [0.90, 0.10]]
+        pmfs = [[0.90, 0.10]] * 7
         self.sections = sections
         self.rup_idxs = rup_idxs
         self.pmfs = numpy.array(pmfs)
@@ -101,7 +97,7 @@ class MultiFaultTestCase(unittest.TestCase):
 
         # test save and load
         fname = general.gettemp(suffix='.hdf5')
-        save([src], self.sections, fname, umax=True)
+        save([src], self.sections, fname)
         [got] = load(fname)
         for name in 'mags rakes probs_occur'.split():
             numpy.testing.assert_almost_equal(
@@ -112,9 +108,11 @@ class MultiFaultTestCase(unittest.TestCase):
         # check the stored section indices
         with hdf5.File(gm_hdf5, 'r') as f:
             lines = python3compat.decode(f['01/rupture_idxs'][:])
-        self.assertEqual(lines, ['0', '1', '2', '0 1', '0 2', '1 2', '0 1 2'])
+        self.assertEqual(lines, ['1 2', '0', '1', '2', '0 1', '0 2', '0 1 2'])
 
         # test rupture generation
+        secparams = build_secparams(src.get_sections())
+        src.set_msparams(secparams)
         rups = list(src.iter_ruptures())
         self.assertEqual(7, len(rups))
 
@@ -125,22 +123,35 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('z1pt0', 100.)
         sitecol._set('z2pt5', 5.)
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-        cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=0)
-        secparams = build_secparams(src.get_sections())
-        [ctx] = cmaker.from_srcs([got], sitecol, secparams)
+        cmaker = contexts.simple_cmaker([gsim], ['PGA'])
+        [ctx] = cmaker.from_srcs([src], sitecol)
         assert len(ctx) == src.count_ruptures()
 
-        # compare with the expected distances computed without cache
-        tol = 1e-4
-        aac(ctx.rrup, [0., 27.51933, 55.03832,  0., 0., 27.51933, 0.], atol=tol)
-        aac(ctx.rjb, [0., 27.51907, 55.03832,  0., 0., 27.51907, 0.], atol=tol)
-        aac(ctx.rx, [0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
-                     1.643886e-05, 1.653083e-01, 3.3298e-05], atol=tol)
-        aac(ctx.ry0, [0., 27.518915, 55.03632, 0., 0., 27.5184749,0.],
-            atol=tol)
-        aac(ctx.clon, [10., 10.35, 10.7, 10., 10., 10.35, 10.])
-        aac(ctx.clat, 45.)
+        if PLOTTING:
+            # plotting the 3 sections and then the multisurface
+            # corresponding to the first rupture, with idxs=[1, 2];
+            # the closest point to the site has longitude 10.35
+            for sec in src.get_sections():
+                lons = sec.mesh.lons
+                lats = sec.mesh.lats
+                plt.scatter(lons, lats, alpha=.1)
+            plt.scatter(sitecol.lons, sitecol.lats, marker='+')
+            mesh0 = rups[0].surface.mesh
+            plt.scatter(mesh0.lons, mesh0.lats, marker='.')
+            plt.scatter(ctx.clon[0], ctx.clat[0], marker='o')
+            plt.show()
 
+        # compare with the expected distances
+        tol = 1e-4
+        aac(ctx.rrup, [27.51933, 0., 27.51933, 55.03832,  0., 0., 0.], atol=tol)
+        aac(ctx.rjb, [27.51907, 0., 27.51907, 55.03832,  0., 0., 0.], atol=tol)
+        aac(ctx.rx, [1.653083e-01, 0, 1.102163e-01, 3.392963e-01, 1.686259e-05,
+                     1.643886e-05, 3.3298e-05], atol=tol)
+        aac(ctx.ry0, [27.5184749, 0., 27.518915, 55.03632, 0., 0., 0.],
+            atol=tol)
+        aac(ctx.clon, [10.35, 10., 10.35, 10.7, 10., 10., 10.])
+        aac(ctx.clat, 45.)
+            
     def test_ko(self):
         # test invalid section IDs
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
@@ -148,7 +159,7 @@ class MultiFaultTestCase(unittest.TestCase):
                                self.pmfs, self.mags, self.rakes)
         mfs._rupture_idxs = rup_idxs
         with self.assertRaises(IndexError) as ctx:
-            save([mfs], self.sections, 'dummy.hdf5', umax=True)
+            save([mfs], self.sections, 'dummy.hdf5')
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 
@@ -174,12 +185,13 @@ def main():
     print(mon)
 
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
     secparams = build_secparams(src.get_sections())
-    [ctxt] = cmaker.from_srcs([src], sitecol, secparams)
+    src.set_msparams(secparams)
+    [ctxt] = cmaker.from_srcs([src], sitecol)
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
-    print(mon)
+
     inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
     out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
     ctx = ctxt[::50]
@@ -218,10 +230,10 @@ def main100sites():
     sitecol._set('z1pt0', 100.)
     sitecol._set('z2pt5', 5.)
     gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'], cache_distances=1)
+    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
     secparams = build_secparams(src.get_sections())
     srcfilter = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
-    cmaker.set_weight([src], srcfilter, secparams)
+    src.set_msparams(secparams)
     sites = srcfilter.get_close_sites(src)
     with cProfile.Profile() as prof:
         list(cmaker.get_ctx_iter(src, sites))
@@ -230,4 +242,5 @@ def main100sites():
     print(cmaker.ctx_mon)
 
 if __name__ == '__main__':
-    main100sites()
+    main()
+    # main100sites()
