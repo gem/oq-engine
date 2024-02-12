@@ -328,7 +328,7 @@ class Line(object):
     def keep_corners(self, delta):
         """
         Removes the points where the change in direction is lower than a
-        tolerance value.
+        tolerance value and returns a new line.
 
         :param delta:
             An angle in decimal degrees
@@ -337,11 +337,10 @@ class Line(object):
         # Compute the azimuth of all the segments
         azim = geodetic.azimuth(coo[:-1, 0], coo[:-1, 1],
                                 coo[1:, 0], coo[1:, 1])
-        pidx = set([0, coo.shape[0] - 1])
-        idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
-        pidx = sorted(pidx.union(set(idx + 1)))
-        self.coo = coo[pidx]
-        return self
+        pidx = {0, coo.shape[0] - 1}
+        idx, = np.nonzero(np.abs(np.diff(azim)) > delta)
+        pidx = sorted(pidx | set(idx + 1))
+        return self.from_coo(coo[pidx])
 
     def resample_to_num_points(self, num_points):
         """
