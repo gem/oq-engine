@@ -104,7 +104,7 @@ class MultiFaultSource(BaseSeismicSource):
                  infer_occur_rates=False):
         nrups = len(magnitudes)
         assert len(occurrence_probs) == len(rakes) == nrups
-        self.probs_occur = F32(occurrence_probs)
+        self.probs_occur = occurrence_probs
         self.mags = F32(magnitudes)
         self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
