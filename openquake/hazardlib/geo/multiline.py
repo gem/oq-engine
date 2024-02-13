@@ -88,9 +88,8 @@ class MultiLine(object):
         S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
         tuw = np.zeros((3, S, N))
-        for i, (soid, flip) in enumerate(zip(self.soidx, self.flipped)):
-            coo = self.coos[soid]
-            tuw[:, i] = Line.from_coo(coo, flip).get_tuw(mesh)
+        for soid, flip, coo in zip(self.soidx, self.flipped, self.coos):
+            tuw[:, soid] = Line.from_coo(coo, flip).get_tuw(mesh)
         return _get_tu(self.shift, tuw)
 
 
