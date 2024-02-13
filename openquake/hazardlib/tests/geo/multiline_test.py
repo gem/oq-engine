@@ -77,16 +77,16 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        uupp, tupp = ml.get_uts(mesh)
+        ts, us = ml.get_tus(mesh)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_get_ut - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_get_ut - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
@@ -100,16 +100,16 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_uts(mesh)
+        ts, us = ml.get_tus(mesh)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_tu_figure09 - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_tu_figure09 - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
@@ -123,16 +123,16 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_uts(mesh)
+        ts, us = ml.get_tus(mesh)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_tu_figure08 - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_tu_figure08 - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 

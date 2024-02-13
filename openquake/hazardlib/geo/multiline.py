@@ -76,14 +76,14 @@ class MultiLine(object):
     
         if u_max is None:
             # this is the expensive operation
-            us, ts = self.get_uts(get_endpoints(lines))
+            ts, us = self.get_tus(get_endpoints(lines))
             self.u_max = np.abs(us).max()
         else:
             self.u_max = u_max
 
-    def get_uts(self, mesh):
+    def get_tus(self, mesh):
         """
-        Given a mesh, computes the U and T coordinates for the multiline
+        Given a mesh, computes the T and U coordinates for the multiline
         """
         S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
@@ -91,7 +91,7 @@ class MultiLine(object):
         for i, (soid, flip) in enumerate(zip(self.soidx, self.flipped)):
             coo = self.coos[soid]
             tuw[:, i] = Line.from_coo(coo, flip).get_tuw(mesh)
-        return _get_uts(self.shift, tuw)
+        return _get_tus(self.shift, tuw)
 
 
 def get_flipped(lines, llens, avgaz):
@@ -190,10 +190,9 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
 
 
 @compile('f8[:],f8[:, :,:]')
-def _get_uts(shifts, tuw):
-    # shifts has shape S and tuw shape (3, S, N)
-    for i, (shift, t, u, w) in enumerate(
-            zip(shifts, tuw[0], tuw[1], tuw[2])):
+def _get_tus(shifts, tuw):
+    # `shifts` has shape S and `tuw` shape (3, S, N)
+    for i, (shift, t, u, w) in enumerate(zip(shifts, tuw[0], tuw[1], tuw[2])):
         if i == 0:  # initialize
             uut = (u + shift) * w
             tut = t * w
@@ -207,4 +206,4 @@ def _get_uts(shifts, tuw):
     uut /= wet
     tut /= wet
 
-    return uut, tut
+    return tut, uut
