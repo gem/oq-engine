@@ -313,3 +313,15 @@ class MultiSurface(BaseSurface):
                 fs.append(flip)
         dic = dict(sec=idxs, sid=sids, flip=fs, t=ts, u=us, w=ws)
         return pandas.DataFrame(dic)
+
+    def get_tuw(self, sites):
+        ts = []
+        us = []
+        ws = []
+        for coo, soid, flip in zip(
+                self.tor.coos, self.tor.soidx, self.tor.flipped):
+            tu, uu, we = geo.Line.from_coo(coo, flip).get_tuw(sites)
+            ts.append(tu)
+            us.append(uu)
+            ws.append(we.sum(axis=0))
+        return np.array([ts, us, ws]).transpose(1, 2, 0)  # (S, N, 3)
