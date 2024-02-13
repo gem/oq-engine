@@ -81,11 +81,10 @@ def get_secdists(rup, param, secdists):
         # keep the flipped values and then reorder the surface indices
         # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
         out = numpy.zeros((S, N, 3))
-        for flip in rup.surface.tor.flipped:
-            out[:, :, :] = arr[rup.surface.tor.soidx, :, int(flip), :]
+        for soid, flip in zip(rup.surface.tor.soidx, rup.surface.tor.flipped):
+            out[:, :, :] = arr[soid, :, int(flip), :]
         if S == 1:
-            print(rup.surface.tor.soidx, rup.surface.tor.flipped,
-                  rup.surface.tor.shift)
+            print(rup.surface.tor.soidx, rup.surface.tor.flipped)
             print(out)
         return out
     return arr
