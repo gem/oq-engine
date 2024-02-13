@@ -50,6 +50,8 @@ class MultiLine(object):
     method.
     """
     def __init__(self, lines, u_max=None):
+        self.coos = [ln.coo for ln in lines]
+
         # compute the overall strike and the origin of the multiline
         # get lenghts and average azimuths
         llenghts = np.array([ln.get_length() for ln in lines])
@@ -70,7 +72,6 @@ class MultiLine(object):
         olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
-        self.coos = [ln.coo for ln in lines]
         lines = [lines[i] for i in self.soidx]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
     
@@ -90,8 +91,8 @@ class MultiLine(object):
         tupps = np.zeros((S, N))
         uupps = np.zeros((S, N))
         weis = np.zeros((S, N))
-        for i, coo in zip(self.soidx, self.coos):
-            tu, uu, we = Line.from_coo(coo).get_tuw(mesh)
+        for i, flip, coo in zip(self.soidx, self.flipped, self.coos):
+            tu, uu, we = Line.from_coo(coo, flip).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
