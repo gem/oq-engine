@@ -56,21 +56,21 @@ class MultiLine(object):
         avgaz = np.array([line.average_azimuth() for line in lines])
 
         # determine the flipped lines
-        flipped = get_flipped(lines, llenghts, avgaz)
+        self.flipped = get_flipped(lines, llenghts, avgaz)
 
         # Compute the prevalent azimuth
         avgazims_corr = copy.copy(avgaz)
-        for i in np.nonzero(flipped)[0]:
+        for i in np.nonzero(self.flipped)[0]:
             lines[i] = lines[i].flip()
             avgazims_corr[i] = lines[i].average_azimuth()
         avg_azim = get_average_azimuth(avgazims_corr, llenghts)
         strike_east = (avg_azim > 0) & (avg_azim <= 180)
 
         ep = get_endpoints(lines)
-        olon, olat, soidx = get_origin(ep, strike_east, avg_azim)
+        olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
-        lines = [lines[i] for i in soidx]
+        lines = [lines[i] for i in self.soidx]
         self.coos = [ln.coo for ln in lines]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
     
@@ -85,16 +85,20 @@ class MultiLine(object):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        L = len(self.coos)
+        S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
-        tupps = np.zeros((L, N))
-        uupps = np.zeros((L, N))
-        weis = np.zeros((L, N))
+        tupps = np.zeros((S, N))
+        uupps = np.zeros((S, N))
+        weis = np.zeros((S, N))
         for i, coo in enumerate(self.coos):
             tu, uu, we = Line.from_coo(coo).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
+        #if len(mesh) == 2:  # there are 2 sites
+        #    print(self.soidx, self.flipped)
+        #    print(np.array([tupps, uupps, weis]).T)
+        #    import pdb; pdb.set_trace()
         return _get_uts(self.shift, tupps, uupps, weis)
 
 
