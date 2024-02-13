@@ -83,7 +83,7 @@ def get_secdists(rup, param, secdists):
         # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
         out = numpy.zeros((S, N, 3))
         for i, (soid, flip) in enumerate(sf):
-            out[i, :, :] = arr[soid, :, int(flip), :]
+            out[soid, :, :] = arr[i, :, int(flip), :]
         return out
     return arr
 
@@ -113,8 +113,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             except:
                 import pdb; pdb.set_trace()
             '''
-            ts, us, ws = tuw[:, :, 0], tuw[:, :, 1], tuw[:, :, 2]
-            uut, tut = multiline._get_uts(tor.shift, ts, us, ws)
+            tut, uut = multiline._get_tu(tor.shift, tuw.transpose(2, 0, 1))
             ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
             neg = uut < 0
             ctx.ry0[neg] = numpy.abs(uut[neg])
