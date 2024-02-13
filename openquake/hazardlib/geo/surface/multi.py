@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 """
 from functools import cached_property
 import numpy as np
+import pandas
 from shapely.geometry import Polygon
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
@@ -291,3 +292,24 @@ class MultiSurface(BaseSurface):
         condition = uut > self.tor.u_max
         ry0[condition] = uut[condition] - self.tor.u_max
         return ry0
+
+    def get_tuw_df(self, sites):
+        # debug method to be called in genctxs
+        idxs = []
+        sids = []
+        ts = []
+        us = []
+        ws = []
+        fs = []
+        for coo, soid, flip in zip(
+                self.tor.coos, self.tor.soidx, self.tor.flipped):
+            tu, uu, we = geo.Line.from_coo(coo, flip).get_tuw(sites)
+            for s, sid in enumerate(sites.sids):
+                idxs.append(soid)
+                sids.append(sid)
+                ts.append(tu[s])
+                us.append(uu[s])
+                ws.append(we[:, s].sum())
+                fs.append(flip)
+        dic = dict(sec=idxs, sid=sids, flip=fs, t=ts, u=us, w=ws)
+        return pandas.DataFrame(dic)
