@@ -44,10 +44,12 @@ from openquake.hazardlib.calc.filters import (
     SourceFilter, IntegrationDistance, magdepdist,
     get_dparam, get_distances, getdefault, MINMAG, MAXMAG)
 from openquake.hazardlib.probability_map import ProbabilityMap
+from openquake.hazardlib.geo import multiline
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.surface.planar import (
     project, project_back, get_distances_planar)
 
+U8 = numpy.uint8
 I32 = numpy.int32
 U32 = numpy.uint32
 F16 = numpy.float16
@@ -72,7 +74,18 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
 
 
 def get_secdists(rup, param, secdists):
-    return [secdists[sec.idx, param] for sec in rup.surface.surfaces]
+    arr = numpy.array([secdists[sec.idx, param]
+                       for sec in rup.surface.surfaces])
+    if param == 'tuw':
+        S, N = arr.shape[:2]
+        sf = zip(rup.surface.tor.soidx, rup.surface.tor.flipped)
+        # keep the flipped values and then reorder the surface indices
+        # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
+        out = numpy.zeros((S, N, 3))
+        for i, (soid, flip) in enumerate(sf):
+            out[soid, :, :] = arr[i, :, int(flip), :]
+        return out
+    return arr
 
 
 def set_distances(ctx, rup, r_sites, param, secdists, mask):
@@ -83,16 +96,21 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
     if secdists is None:
         dists = get_distances(rup, r_sites, param)
         if '_' in param:
-            p0, p1 = param.split('_')  # rx_ry0
+            p0, p1 = param.split('_')  # clon_clat
             setattr(ctx, p0, dists[:, 0])
             setattr(ctx, p1, dists[:, 1])
         else:
             setattr(ctx, param, dists)
     else:
-        if param == 'rx':
-            ctx['rx'] = rup.surface.get_rx_distance(r_sites)
-        elif param == 'ry0':
-            ctx['ry0'] = rup.surface.get_ry0_distance(r_sites)
+        tor = rup.surface.tor  # MultiLine object
+        if param == 'tuw':
+            tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
+            tut, uut = multiline._get_tu(tor.shift, tuw.transpose(2, 0, 1))
+            ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
+            neg = uut < 0
+            ctx.ry0[neg] = numpy.abs(uut[neg])
+            big = uut > tor.u_max
+            ctx.ry0[big] = uut[big] - tor.u_max
         elif param == 'rjb' :
             rjbs = get_secdists(rup, 'rjb', secdists)
             ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
@@ -505,7 +523,7 @@ def genctxs_Pp(src, sitecol, cmaker):
 
 
 def _build_secdists(src, sitecol, cmaker):
-    dparams = {'rjb', 'rx', 'ry0'}
+    dparams = {'rjb', 'tuw'}
     if cmaker.fewsites:
         dparams |= {'clon_clat'}
     sections = src.get_sections(src.get_unique_idxs())
@@ -925,9 +943,8 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         secdists = getattr(self, 'secdists', None)
         for rup in same_mag_rups:
-            #if hasattr(rup.surface, 'get_tuw_df'):  # multifault
-            #    print('------------------------------------------', rup.rup_id)
-            #    print(rup.surface.get_tuw_df(sites))
+            # to debug you can insert here a
+            # print(rup.surface.get_tuw_df(sites))
             if secdists:
                 rrups = get_secdists(rup, 'rrup', secdists)
                 rrup = numpy.min(rrups, axis=0)
@@ -953,6 +970,11 @@ class ContextMaker(object):
                     set_distances(ctx, rup, r_sites, 'clon_clat',
                                   secdists, mask)
                 elif param == 'clat':
+                    pass
+                elif secdists and param == 'ry0':
+                    set_distances(ctx, rup, r_sites, 'tuw',
+                                  secdists, mask)
+                elif secdists and param == 'rx':
                     pass
                 else:
                     set_distances(ctx, rup, r_sites, param,
