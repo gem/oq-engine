@@ -925,6 +925,9 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         secdists = getattr(self, 'secdists', None)
         for rup in same_mag_rups:
+            #if hasattr(rup.surface, 'get_tuw_df'):  # multifault
+            #    print('------------------------------------------', rup.rup_id)
+            #    print(rup.surface.get_tuw_df(sites))
             if secdists:
                 rrups = get_secdists(rup, 'rrup', secdists)
                 rrup = numpy.min(rrups, axis=0)

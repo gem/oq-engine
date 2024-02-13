@@ -217,7 +217,8 @@ class MultiSurfaceWithNaNsTestCase(unittest.TestCase):
             plt.show()
 
         # Note that method is executed when the object is initialized
-        for coo, expct in zip(self.msrf.tor.coos, expected):
+        for idx, expct in zip(self.msrf.tor.soidx, expected):
+            coo = self.msrf.tor.coos[idx]
             np.testing.assert_array_almost_equal(coo, expct, decimal=2)
 
     def test_get_strike(self):
