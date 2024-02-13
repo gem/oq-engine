@@ -85,16 +85,20 @@ class MultiLine(object):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        L = len(self.coos)
+        S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
-        tupps = np.zeros((L, N))
-        uupps = np.zeros((L, N))
-        weis = np.zeros((L, N))
+        tupps = np.zeros((S, N))
+        uupps = np.zeros((S, N))
+        weis = np.zeros((S, N))
         for i, coo in enumerate(self.coos):
             tu, uu, we = Line.from_coo(coo).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
+        #if len(mesh) == 2:  # there are 2 sites
+        #    print(self.soidx, self.flipped)
+        #    print(np.array([tupps, uupps, weis]).T)
+        #    import pdb; pdb.set_trace()
         return _get_uts(self.shift, tupps, uupps, weis)
 
 
