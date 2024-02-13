@@ -70,8 +70,8 @@ class MultiLine(object):
         olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
-        lines = [lines[i] for i in self.soidx]
         self.coos = [ln.coo for ln in lines]
+        lines = [lines[i] for i in self.soidx]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
     
         if u_max is None:
@@ -90,14 +90,11 @@ class MultiLine(object):
         tupps = np.zeros((S, N))
         uupps = np.zeros((S, N))
         weis = np.zeros((S, N))
-        for i, coo in enumerate(self.coos):
+        for i, coo in zip(self.soidx, self.coos):
             tu, uu, we = Line.from_coo(coo).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
-        #if S == 1 and N == 2:  # there are 2 sites
-        #    print(self.soidx, self.flipped)
-        #    print(np.array([tupps, uupps, weis]).T)  # (N, S, 3)
         return _get_uts(self.shift, tupps, uupps, weis)
 
 
