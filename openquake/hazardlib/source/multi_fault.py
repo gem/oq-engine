@@ -41,6 +41,7 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 
 U16 = np.uint16
 F32 = np.float32
+F64 = np.float64
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
@@ -106,12 +107,16 @@ class MultiFaultSource(BaseSeismicSource):
         assert len(occurrence_probs) == len(rakes) == nrups
         # NB: using 32 bits for the occurrence_probs would be a disaster:
         # the results are STRONGLY dependent on the precision,
-        # in particular the AELO tests for CHN would break    
-        self.probs_occur = occurrence_probs  # 64 bit!
+        # in particular the AELO tests for CHN would break
+        self.probs_occur = F64(occurrence_probs)  # 64 bit!
         self.mags = F32(magnitudes)
         self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
         self.investigation_time = investigation_time
+        if infer_occur_rates:
+            self.occur_rates = -np.log([p[0] for p in occurrence_probs])
+            self.occur_rates[self.occur_rates <= 0] = 1E-30
+            self.temporal_occurrence_model = PoissonTOM(investigation_time)
         super().__init__(source_id, name, tectonic_region_type)
 
     @property
@@ -210,10 +215,7 @@ class MultiFaultSource(BaseSeismicSource):
         sec = self.get_sections()  # read KiteSurfaces, very fast
         rupture_idxs = self.rupture_idxs
         msparams = self.msparams
-        if self.infer_occur_rates:
-            occur_rates = -np.log([p[0] for p in self.probs_occur])
-            occur_rates[occur_rates <= 0] = 1E-30
-            tom = PoissonTOM(self.investigation_time)
+        # in preclassical u_max will be None and in classical will be reused
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
             sfc = MultiSurface([sec[idx] for idx in idxs], msparams[i])
@@ -223,11 +225,12 @@ class MultiFaultSource(BaseSeismicSource):
             if self.infer_occur_rates:
                 rup = ParametricProbabilisticRupture(
                     self.mags[i], rake, self.tectonic_region_type,
-                    hypo, sfc, occur_rates[i], tom)
+                    hypo, sfc, self.occur_rates[i],
+                    self.temporal_occurrence_model)
             else:
                 rup = NonParametricProbabilisticRupture(
-                    self.mags[i], rake, self.tectonic_region_type,
-                    hypo, sfc, PMF(data))
+                    self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
+                    PMF(data))
             yield rup
 
     def gen_slices(self):
