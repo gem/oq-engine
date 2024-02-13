@@ -83,19 +83,15 @@ class MultiLine(object):
 
     def get_uts(self, mesh):
         """
-        Given a mesh, computes the T and U coordinates for the multiline
+        Given a mesh, computes the U and T coordinates for the multiline
         """
         S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
-        tupps = np.zeros((S, N))
-        uupps = np.zeros((S, N))
-        weis = np.zeros((S, N))
-        for i, flip, coo in zip(self.soidx, self.flipped, self.coos):
-            tu, uu, we = Line.from_coo(coo, flip).get_tuw(mesh)
-            tupps[i] = tu
-            uupps[i] = uu
-            weis[i] = we.sum(axis=0)
-        return _get_uts(self.shift, tupps, uupps, weis)
+        tuw = np.zeros((3, S, N))
+        for i, (soid, flip) in enumerate(zip(self.soidx, self.flipped)):
+            coo = self.coos[soid]
+            tuw[:, i] = Line.from_coo(coo, flip).get_tuw(mesh)
+        return _get_uts(self.shift, tuw)
 
 
 def get_flipped(lines, llens, avgaz):
@@ -193,18 +189,19 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
-@compile('float64[:],float64[:,:],float64[:,:],float64[:,:]')
-def _get_uts(shifts, tupps, uupps, weis):
-    for i, (shift, tupp, uupp, wei) in enumerate(
-            zip(shifts, tupps, uupps, weis)):
+@compile('f8[:],f8[:, :,:]')
+def _get_uts(shifts, tuw):
+    # shifts has shape S and tuw shape (3, S, N)
+    for i, (shift, t, u, w) in enumerate(
+            zip(shifts, tuw[0], tuw[1], tuw[2])):
         if i == 0:  # initialize
-            uut = (uupp + shift) * wei
-            tut = tupp * wei
-            wet = wei.copy()
+            uut = (u + shift) * w
+            tut = t * w
+            wet = w.copy()
         else:  # update the values
-            uut += (uupp + shift) * wei
-            tut += tupp * wei
-            wet += wei
+            uut += (u + shift) * w
+            tut += t * w
+            wet += w
 
     # Normalize by the sum of weights
     uut /= wet
