@@ -49,10 +49,9 @@ def get_dparam(surface, sites, param):
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
     elif param == 'tuw':
-        t0, u0, w0 = surface.tor.get_tuw(sites)
-        t1, u1, w1 = surface.tor.flip().get_tuw(sites)
-        arr = numpy.array([[t0, u0, w0.sum(axis=0)],
-                           [t1, u1, w1.sum(axis=0)]])  # shape (2, 3, N)
+        tuw0 = surface.tor.get_tuw(sites)
+        tuw1 = surface.tor.flip().get_tuw(sites)
+        arr = numpy.array([tuw0, tuw1])  # shape (2, 3, N)
         dist = arr.transpose(2, 0, 1)  # shape (N, 2, 3)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)

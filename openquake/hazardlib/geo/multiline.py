@@ -94,7 +94,7 @@ class MultiLine(object):
             tu, uu, we = Line.from_coo(coo, flip).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
-            weis[i] = we.sum(axis=0)
+            weis[i] = we
         return _get_uts(self.shift, tupps, uupps, weis)
 
 

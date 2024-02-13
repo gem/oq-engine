@@ -318,10 +318,10 @@ class MultiSurface(BaseSurface):
         ts = []
         us = []
         ws = []
-        for coo, soid, flip in zip(
-                self.tor.coos, self.tor.soidx, self.tor.flipped):
+        for soid, flip in zip(self.tor.soidx, self.tor.flipped):
+            coo = self.tor.coos[soid]
             tu, uu, we = geo.Line.from_coo(coo, flip).get_tuw(sites)
             ts.append(tu)
             us.append(uu)
-            ws.append(we.sum(axis=0))
+            ws.append(we)
         return np.array([ts, us, ws]).transpose(1, 2, 0)  # (S, N, 3)
