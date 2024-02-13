@@ -105,18 +105,19 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
         tor = rup.surface.tor  # MultiLine object
         if param == 'tuw':
             tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
+            '''
             exp = rup.surface.get_tuw(r_sites)
             S, N = tuw.shape[:2]
             try:
-                for s in range(S):
-                    for n in range(N):
-                        numpy.testing.assert_allclose(tuw[s, n], exp[s, n])
+                numpy.testing.assert_allclose(tuw, exp)
             except:
                 import pdb; pdb.set_trace()
+            '''
             ts, us, ws = tuw[:, :, 0], tuw[:, :, 1], tuw[:, :, 2]
             uut, tut = multiline._get_uts(tor.shift, ts, us, ws)
             ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
-            ctx.ry0[uut < 0] = numpy.abs(uut[uut < 0])
+            neg = uut < 0
+            ctx.ry0[neg] = numpy.abs(uut[neg])
             big = uut > tor.u_max
             ctx.ry0[big] = uut[big] - tor.u_max
         elif param == 'rjb' :
