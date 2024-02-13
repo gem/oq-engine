@@ -90,7 +90,8 @@ class MultiLine(object):
         tupps = np.zeros((S, N))
         uupps = np.zeros((S, N))
         weis = np.zeros((S, N))
-        for i, flip, coo in zip(self.soidx, self.flipped, self.coos):
+        for i, (soid, flip) in enumerate(zip(self.soidx, self.flipped)):
+            coo = self.coos[soid]
             tu, uu, we = Line.from_coo(coo, flip).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
