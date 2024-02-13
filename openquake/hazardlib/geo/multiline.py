@@ -102,15 +102,6 @@ def get_flipped(lines, llens, avgaz):
     """
     :returns: a boolean array with the flipped lines
     """
-    # copying the lines to avoid flipping the originals
-    lines = [copy.copy(ln) for ln in lines]
-
-    # Get lenghts and average azimuths
-    if llens is None:
-        llens = np.array([ln.get_length() for ln in lines])
-    if avgaz is None:
-        avgaz = np.array([line.average_azimuth() for line in lines])
-
     # Find general azimuth trend
     ave = get_average_azimuth(avgaz, llens)
 
