@@ -78,14 +78,12 @@ def get_secdists(rup, param, secdists):
                        for sec in rup.surface.surfaces])
     if param == 'tuw':
         S, N = arr.shape[:2]
+        sf = zip(rup.surface.tor.soidx, rup.surface.tor.flipped)
         # keep the flipped values and then reorder the surface indices
         # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
         out = numpy.zeros((S, N, 3))
-        for soid, flip in zip(rup.surface.tor.soidx, rup.surface.tor.flipped):
-            out[:, :, :] = arr[soid, :, int(flip), :]
-        if S == 1:
-            print(rup.surface.tor.soidx, rup.surface.tor.flipped)
-            print(out)
+        for i, (soid, flip) in enumerate(sf):
+            out[i, :, :] = arr[soid, :, int(flip), :]
         return out
     return arr
 
