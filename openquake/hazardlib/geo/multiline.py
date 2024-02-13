@@ -95,10 +95,9 @@ class MultiLine(object):
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
-        #if len(mesh) == 2:  # there are 2 sites
+        #if S == 1 and N == 2:  # there are 2 sites
         #    print(self.soidx, self.flipped)
-        #    print(np.array([tupps, uupps, weis]).T)
-        #    import pdb; pdb.set_trace()
+        #    print(np.array([tupps, uupps, weis]).T)  # (N, S, 3)
         return _get_uts(self.shift, tupps, uupps, weis)
 
 
