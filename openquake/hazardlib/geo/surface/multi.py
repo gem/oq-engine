@@ -294,15 +294,15 @@ class MultiSurface(BaseSurface):
         return ry0
 
     def get_tuw_df(self, sites):
-        # debug method
+        # debug method to be called in genctxs
         idxs = []
         sids = []
         ts = []
         us = []
         ws = []
         fs = []
-        for coo, soid, flip, sec in zip(
-                self.tor.coos, self.soidx, self.tor.flipped, self.surfaces):
+        for coo, soid, flip in zip(
+                self.tor.coos, self.tor.soidx, self.tor.flipped):
             tu, uu, we = geo.Line.from_coo(coo, flip).get_tuw(sites)
             for s, sid in enumerate(sites.sids):
                 idxs.append(soid)

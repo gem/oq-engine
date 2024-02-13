@@ -19,7 +19,6 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 :class:`openquake.hazardlib.geo.multiline.Multiline`.
 """
 
-import copy
 import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
@@ -61,7 +60,7 @@ class MultiLine(object):
         self.flipped = get_flipped(lines, llenghts, avgaz)
 
         # Compute the prevalent azimuth
-        avgazims_corr = copy.copy(avgaz)
+        avgazims_corr = np.copy(avgaz)
         for i in np.nonzero(self.flipped)[0]:
             lines[i] = lines[i].flip()
             avgazims_corr[i] = lines[i].average_azimuth()

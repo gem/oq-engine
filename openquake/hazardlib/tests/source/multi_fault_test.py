@@ -80,6 +80,7 @@ class MultiFaultTestCase(unittest.TestCase):
         self.mags = numpy.array(rup_mags)
         self.rakes = numpy.array(rakes)
 
+    # NB: there are no flips in this test; see case_75 for that
     def test_ok(self):
         # test instantiation
         src = MultiFaultSource("01", "test", "Moon Crust",
