@@ -83,7 +83,10 @@ def get_secdists(rup, param, secdists):
         out = numpy.zeros((S, N, 3))
         for flip in rup.surface.tor.flipped:
             out[:, :, :] = arr[rup.surface.tor.soidx, :, int(flip), :]
-        print(out.shape, rup.surface.tor.soidx, rup.surface.tor.flipped)
+        if S == 1:
+            print(rup.surface.tor.soidx, rup.surface.tor.flipped,
+                  rup.surface.tor.shift)
+            print(out)
         return out
     return arr
 
