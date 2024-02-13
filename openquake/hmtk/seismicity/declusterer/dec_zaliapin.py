@@ -1,5 +1,48 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# LICENSE
+#
+# Copyright (C) 2010-2024 GEM Foundation, G. Weatherill, M. Pagani,
+# D. Monelli.
+#
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+#
+# DISCLAIMER
+#
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
+#
+# It is distributed for the purpose of open collaboration and in the
+# hope that it will be useful to the scientific, engineering, disaster
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (https://www.globalquakemodel.org/tools-products) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
 
 """
 Module :mod:`openquake.hmtk.seismicity.declusterer.dec_zaliapin`
@@ -22,13 +65,19 @@ from sklearn import mixture
     fractal_dim=float,  # spatial weighting factor
     b_value=float,      # magnitude weighting factor
 )
+
+
 class Zaliapin(BaseCatalogueDecluster):
     """
-    Implements the declustering method of Zaliapin and Ben-Zion (2013), based on a nearest-neighbour distance metric.
+    Implements the declustering method of Zaliapin and Ben-Zion (2013), 
+     based on a nearest-neighbour (space-time-magnitude) distance metric.
     
     Implemented in Python by CG Reyes.
-    Modified to return mainshocks (largest event per cluster) and to give the option for
-    stochastic declustering (defaults to this when no threshold is specified). 
+    Modified to:
+     - return mainshocks (largest event per cluster) rather than first event
+       (NB: this increases computational time because we need to reconstruct clusters
+       but is more useful for PSHA and more comparable to alternative methods)
+     - give the option for stochastic declustering. 
      
     """
 
@@ -39,42 +88,61 @@ class Zaliapin(BaseCatalogueDecluster):
         """Zaliapin's declustering code
 
         :param catalogue:
-            Earthquake catalog to examine
+            Earthquake catalogue
         :param config:
-            Dictionary containing 
+            Dictionary containing: 
             1. values for fractal dimension `fractal_dim` and Gutenberg-Richter `b-value`
-            2. Method used to choose which events to keep. Use `Threshold = ` to specify a float value for probability at which to keep an event.
-               If `Stochastic = True` (or no threshold is provided) a stochastic declustering will be implemented.
-               A seed for the stochastic method can be specified with the `stoch_seed` parameter (will default to 5 if not included)
-            3. Optional flag to use depths when calculating event distances. Note that the fractal dimension should correspond to the number of dimensions in the model.
-               (Zaliapin and Ben-Zion defaults are 1.6 for 2D and 2.4 for 3D distances and these values are generally used in the literature).
+            2. Method used to choose which events to keep.
+               Use `Threshold = ` to specify a float value for probability 
+                at which to keep an event.
+               If `Stochastic = True` (or no threshold is provided)
+                a stochastic declustering will be implemented.
+               A seed for the stochastic method can be specified with the `stoch_seed` parameter
+                (will default to 5 if not included)
+            3. Optional flag to use depths when calculating event distances. 
+               Note that the fractal dimension should correspond to the number of dimensions 
+                in the model. (Zaliapin and Ben-Zion defaults are 1.6 for 2D and 2.4 for 3D 
+                distances and these values are generally used in the literature).
             
         :return:
-            probability [0..1] that each event is a member of a cluster, and optionally (if
-            config['nearest_neighbor_dist'] is true) return the nearest neighbor distances, mainshock flag, root (first) event in cluster and leaf depth of cluster.
+            probability [0..1] that each event is a member of a cluster,
+            optionally if config['nearest_neighbor_dist'] is true:
+             - return the nearest neighbor distances, mainshock flag, 
+                 root (first) event in cluster and leaf depth of cluster.
         """
 
         if 'depth' in config and 'depth' == True:
-            nnd, nni = self.getnnd(catalogue, config['fractal_dim'], config['b_value'], depth = True)
+            nnd, nni = self.getnnd(catalogue, 
+                                   config['fractal_dim'], 
+                                   config['b_value'], 
+                                   depth = True)
             
         else:
-            nnd, nni = self.getnnd(catalogue, config['fractal_dim'], config['b_value'], depth = False)
+            nnd, nni = self.getnnd(catalogue, 
+                                   config['fractal_dim'], 
+                                   config['b_value'], 
+                                   depth = False)
         
         probability_of_independence = self.gaussianmixturefit(nnd)
         
         if 'threshold' in config and config['threshold'] == 'stochastic':
-            root, ld, ms_flag = cluster_number(catalogue, nni, probability_of_independence,  stochastic = True)
+            root, ld, ms_flag = cluster_number(catalogue, 
+                                               nni, 
+                                               probability_of_independence,  
+                                               stochastic = True)
                        
         else:
         	if 'threshold' in config:
         	    threshold = config['threshold']
         	else:
         	    threshold = 0.5
-        	root, ld, ms_flag = cluster_number(catalogue, nni, probability_of_independence, threshold = threshold, stochastic = False)
+        	root, ld, ms_flag = cluster_number(catalogue, 
+                                               nni, 
+                                               probability_of_independence, 
+                                               threshold = threshold, 
+                                               stochastic = False)
 
-                 
-
-        if 'output_nearest_neighbor_distances' in config and config['output_nearest_neighbor_distances']:
+        if 'output_nearest_neighbor_distances' in config and config['output_nearest_neighbor_distances'] == True:
             return probability_of_independence, nnd, nni, ms_flag, root, ld
         cluster_index = 1 - ms_flag
         return root, cluster_index
@@ -108,31 +176,39 @@ class Zaliapin(BaseCatalogueDecluster):
             depth[np.isnan(depth)] = 0
         else: depth = np.zeros(len(catalogue.data['latitude']))
         
-        # Is there a faster/better way to do this? Probably yes
-        # TODO: Figure it out!
         time=[0]*len(catalogue.data['latitude']) 
         # Change date and time data into one list of datetimes in years (ie 1980.25)       
         for i in range(len(time)):
-            time[i]=datetime.datetime(catalogue.data['year'][i], catalogue.data['month'][i], catalogue.data['day'][i],catalogue.data['hour'][i], catalogue.data['minute'][i], int(catalogue.data['second'][i]))
+            time[i]=datetime.datetime(catalogue.data['year'][i], 
+                                      catalogue.data['month'][i], 
+                                      catalogue.data['day'][i],
+                                      catalogue.data['hour'][i], 
+                                      catalogue.data['minute'][i], 
+                                      int(catalogue.data['second'][i]))
             time[i]=mdates.date2num(time[i])
             # date2num gives days, change to years
             time[i]= (time[i] -1)/365.25
         
-
         for j in range(1, len(catalogue.data['latitude'])):
             # Calculate spatial distance between events
-            dist = distance(catalogue.data['latitude'][j], catalogue.data['longitude'][j], depth[j], catalogue.data['latitude'][:j], catalogue.data['longitude'][:j], depth[:j])      
+            dist = distance(catalogue.data['latitude'][j],
+                            catalogue.data['longitude'][j], 
+                            depth[j], 
+                            catalogue.data['latitude'][:j], 
+                            catalogue.data['longitude'][:j], 
+                            depth[:j])      
             time_diff= time[j]-time[:j]
             # If time difference is zero, set to very small value
             time_diff[time_diff == 0] = 0.0000001
             # Similarly with spatial distances = 0
             dist[dist < 0.1] = 0.1
-            # ZBZ interevent distance is product of time_diff*(10^(b*Mi))*spat_dist^(d_f)
-            interevent_distance = time_diff*(10**(-b*catalogue.data['magnitude'][:j]))*(dist**d_f)
-            # Record index of nearest neighbour (needed to reconstruct the clusters) and the nnd (smallest nnd)
+            # ZBZ interevent distance = time_diff*(10^(b*Mi))*spat_dist^(d_f)
+            interevent_distance = time_diff*(
+                    10**(-b*catalogue.data['magnitude'][:j]))*(dist**d_f)
+            # Record index of nearest neighbour (needed to reconstruct the clusters) 
+            # and the distance to closest neighbour (smallest nnd)
             nearest_index[j] = np.argmin(interevent_distance)
             nearest_distance[j] = np.min(interevent_distance)
-            
             
         ## Set zeroth event to mean NND (doesn't really matter what we do with this)  
         nearest_distance[0]= np.mean(nearest_distance)
@@ -142,7 +218,9 @@ class Zaliapin(BaseCatalogueDecluster):
     @staticmethod
     def gaussianmixturefit(nnd):
         """
-        fit Gaussian mixture distribution to nearest neighbour distances (Zaliapin and Ben-Zion 2013) and calculate probability of independence from mixture fit.
+        fit Gaussian mixture distribution to nearest neighbour distances 
+        (Zaliapin and Ben-Zion 2013) and calculate probability of 
+        independence from mixture fit.
         
         :param nnd:
             nearest neighbour distances for each event
@@ -158,13 +236,14 @@ class Zaliapin(BaseCatalogueDecluster):
         clf = mixture.GaussianMixture(n_components=2, covariance_type='full')
         clf.fit(samples)
         
-
         probability_of_independence = np.zeros_like(log_nearest_neighbor_dist)
 
-        # calculate the probabilities that it belongs to each of the gaussian curves (2 columns of probabilities)
+        # calculate the probabilities that it belongs to each of the gaussian curves 
+        # (2 columns of probabilities)
         prediction = clf.predict_proba(samples)
 
-        # keep only the chance that this is a background event (the column matching the gaussian model's largest mean)
+        # keep only the chance that this is a background event 
+        #(the column matching the gaussian model's largest mean)
         probability_of_independence[np.isfinite(log_nearest_neighbor_dist)] = prediction[:, np.argmax(clf.means_)]
 
         probability_of_independence[0] = 1  # first event, by definition, cannot depend upon prior events
@@ -172,13 +251,10 @@ class Zaliapin(BaseCatalogueDecluster):
         
         return probability_of_independence
 
-
-# TODO: Option to skip the reconstruction phase - then this should be directly comparable to the original version
-
-## function to reconstruct clusters - need this to identify mainshocks rather than earliest events
-
 def cluster_number(catalogue, nearest_index, prob_ind, threshold = 0.5, stochastic = True, stoch_seed = 5):
     """
+    function to reconstruct clusters 
+        - need this to identify mainshocks rather than earliest independent events
     Identifies head node (first event in cluster) and number of iterations of while loop to get to it
     (ie how deep in cluster event is; 1st, 2nd, 3rd generation etc). 
     
@@ -192,13 +268,15 @@ def cluster_number(catalogue, nearest_index, prob_ind, threshold = 0.5, stochast
         Probability event is independent (output of gaussianmixturefit)
         
     :param threshold:
-        Threshold of independence probability at which to consider an event independent. Specified in config file or default to 0.5.
+        Threshold of independence probability at which to consider an event independent.
+        Specified in config file or default to 0.5.
     
     :param stochastic:
         Instead of using a fixed threshold, use a stochastic method to thin clustered events
         
     :param stoch_seed:
-        Seed value for stochastic thinning to assure reproducibility. Set by default if not specified.
+        Seed value for stochastic thinning to assure reproducibility. 
+        Set by default if not specified.
         
     :return:
         arrays of root, event depth, mainshock flag
@@ -222,7 +300,6 @@ def cluster_number(catalogue, nearest_index, prob_ind, threshold = 0.5, stochast
     parent = nearest_index*(1-indep_flag)     
 
     for i in range(len(catalogue.data['latitude'])):
-        
         p = parent[i]
         if(p == 0):
             root[i] = i
@@ -233,6 +310,7 @@ def cluster_number(catalogue, nearest_index, prob_ind, threshold = 0.5, stochast
                 ld[i] = ld[i] +1
                 p = parent[p]
     
+    # Collect all unique cluster roots
     clust_heads = np.unique(root)
     MS = clust_heads.astype(int)
     

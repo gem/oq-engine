@@ -1,6 +1,54 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+#
+# LICENSE
+#
+# Copyright (C) 2010-2024 GEM Foundation, G. Weatherill, M. Pagani,
+# D. Monelli.
+#
+# The Hazard Modeller's Toolkit is free software: you can redistribute
+# it and/or modify it under the terms of the GNU Affero General Public
+# License as published by the Free Software Foundation, either version
+# 3 of the License, or (at your option) any later version.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake. If not, see <http://www.gnu.org/licenses/>
+#
+# DISCLAIMER
+#
+# The software Hazard Modeller's Toolkit (openquake.hmtk) provided herein
+# is released as a prototype implementation on behalf of
+# scientists and engineers working within the GEM Foundation (Global
+# Earthquake Model).
+#
+# It is distributed for the purpose of open collaboration and in the
+# hope that it will be useful to the scientific, engineering, disaster
+# risk and software design communities.
+#
+# The software is NOT distributed as part of GEM’s OpenQuake suite
+# (https://www.globalquakemodel.org/tools-products) and must be considered as a
+# separate entity. The software provided herein is designed and implemented
+# by scientific staff. It is not developed to the design standards, nor
+# subject to same level of critical review by professional software
+# developers, as GEM’s OpenQuake software suite.
+#
+# Feedback and contribution to the software is welcome, and can be
+# directed to the hazard scientific staff of the GEM Model Facility
+# (hazard@globalquakemodel.org).
+#
+# The Hazard Modeller's Toolkit (openquake.hmtk) is therefore distributed
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# The GEM Foundation, and the authors of the software, assume no
+# liability for use of the software.
+
+
 """
 Module :mod:`openquake.hmtk.seismicity.declusterer.dec_reasenberg`
 defines the Reasenberg declustering algorithm
@@ -16,7 +64,6 @@ from openquake.hmtk.seismicity.declusterer.base import (BaseCatalogueDecluster, 
 from openquake.hmtk.seismicity.utils import haversine
 
 
-
 @DECLUSTERER_METHODS.add(
     "decluster",
     taumin=1.0,  # look ahead time for not clustered events, days
@@ -30,6 +77,7 @@ from openquake.hmtk.seismicity.utils import haversine
     interaction_formula='Reasenberg1985',  # either `Reasenberg1985` or `WellsCoppersmith1994`
     max_interaction_dist=np.inf  # km, some studies limit to crustal thickness (ex. 30)
 )
+
 class Reasenberg(BaseCatalogueDecluster):
     """
     This class implements the Reasenberg algorithm as described in
@@ -40,31 +88,24 @@ class Reasenberg(BaseCatalogueDecluster):
     90(B7), pp.5479-5495.
 
     Declustering code originally converted to MATLAB by A. Allman.
-    Then, highly modified and converted to Python by CG Reyes. 
-
-
-    # default_config = dict(taumin=1.0,  # tau(t==0)
-    #                       taumax=10.,  # tau(t -> inf), computational simplification should be scaled to local bg rate
-    #                       P=0.95,
-    #                       xk=0.5,
-    #                       xmeff=1.5,
-    #                       rfact=10.,
-    #                       horiz_error=1.5,
-    #                       depth_error=2.,
-    #                       dmethod='gc', ## REMOVED
-    #                       interaction_formula='Reasenberg1985',
-    #                       max_interaction_dist=30  # km, limit to crustal distance
-    #                       )
+    Then, highly modified and converted to Python by CG Reyes.
+    This implementation is similar to that in Zmap (https://github.com/CelsoReyes/zmap7) 
 
     """
 
     def __init__(self):
         self.verbose = False
         self.interaction_formulas = {'Reasenberg1985': lambda m: 0.011 * 10 ** (0.4 * m),
-                                     'WellsCoppersmith1994': lambda m: 0.01 * 10 ** (0.5 * m)}  # Helmstetter (SRL) 2007
+                                     # Helmstetter (SRL) 2007:
+                                     'WellsCoppersmith1994': lambda m: 0.01 * 10 ** (0.5 * m)}  
 
     @staticmethod
-    def clust_look_ahead_time(mag_big: float, dt_big: np.ndarray, xk: float, xmeff: float, p: float) -> np.ndarray:
+    def clust_look_ahead_time(
+                mag_big: float, 
+                dt_big: np.ndarray, 
+                xk: float, 
+                xmeff: float, 
+                p: float) -> np.ndarray:
         """ CLUSTLOOKAHEAD calculate look ahead time for clustered events
 
         :param mag_big:
@@ -72,7 +113,8 @@ class Reasenberg(BaseCatalogueDecluster):
         :param dt_big:
             days difference between biggest event and this one
         :param xk:
-            factor used with xmeff to define magnitude cutoff - increases effective magnitude during clusters
+            factor used with xmeff to define magnitude cutoff 
+                - increases effective magnitude during clusters
         :param xmeff:
             magnitude effective, used with xk to define magnitude cutoff
         :param p:
@@ -112,7 +154,6 @@ class Reasenberg(BaseCatalogueDecluster):
 
         self.verbose = config.get('verbose', self.verbose)
         # Get relevant parameters
-        #neq = catalogue.get_number_events()  # Number of earthquakes
         neq = len(catalogue.data['latitude'])
         min_lookahead_days = config['taumin']
         max_lookahead_days = config['taumax']
@@ -128,8 +169,10 @@ class Reasenberg(BaseCatalogueDecluster):
         else: 
             depth = np.array([0]*neq)
 
-        # Errors are determined 1st by the config. If this value doesn't exist or is None, then get the
-        # error values from the catalog.  If errors do not exist within the catalog, then set the errors to 0.
+        # Errors are determined 1st by the config. 
+        # If this value doesn't exist or is None, then get the error values from the catalog.  
+        # If errors do not exist within the catalog, then set the errors to 0.
+
         if config.get('horiz_error', None) is None:
             horiz_error = catalogue.data.get('horizError', np.zeros(1))
         else:
@@ -143,10 +186,9 @@ class Reasenberg(BaseCatalogueDecluster):
         # Pre-allocate cluster index vectors
         vcl = np.zeros(neq, dtype=int).flatten()
         msi = np.zeros(neq, dtype=int).flatten()
-        #ev_id = np.zeros(neq, dtype=int).flatten()
         ev_id = np.arange(0, neq)
         # set the interaction zones, in km
-        # Reasenberg 1987 or alternate version: Wells & Coppersmith 1994 / Helmstetter (SRL) 2007q
+        # Reasenberg 1987 or alternate version: Wells & Coppersmith 1994 / Helmstetter (SRL) 2007
         zone_noclust, zone_clust = self.get_zone_distances_per_mag(
             mags=mags,
             rfact=config['rfact'],
@@ -176,11 +218,12 @@ class Reasenberg(BaseCatalogueDecluster):
 
             elif my_mag >= clusmaxmag[my_cluster]:
                 # this is the biggest event  in this cluster, so far (or equal to it).
-                # note, if this is now the biggest, then the cluster range collapses into its radius
+                # note, if this is now the biggest event, then the cluster range collapses to its radius
                 clusmaxmag[my_cluster] = my_mag
                 clus_biggest_idx[my_cluster] = i
                 look_ahead_days = min_lookahead_days
-                # time between largest event in cluster and this event is 0, so use min_lookahead_days (rather than 0).
+                # time between largest event in cluster and this event is 0, 
+                # so use min_lookahead_days (rather than 0).
             else:
                 # this event is already tied to a cluster, but is not the largest event
                 idx_biggest = clus_biggest_idx[my_cluster]
@@ -199,7 +242,6 @@ class Reasenberg(BaseCatalogueDecluster):
             # extract eqs that fit interaction time window --------------
 
             max_elapsed = elapsed[i] + look_ahead_days
-            # i + 1 is returning i....
             next_event = i + 1
             # find location of last event between elapsed and max_elapsed
             last_event = bisect_left(elapsed, max_elapsed, lo=next_event)
@@ -221,8 +263,18 @@ class Reasenberg(BaseCatalogueDecluster):
             my_biggest_idx = clus_biggest_idx[my_cluster]
             bg_ev_for_dist = i if not_classified else my_biggest_idx
 
-            dist_to_recent = distance(catalogue.data['latitude'][i], catalogue.data['longitude'][i], depth[i], catalogue.data['latitude'][temporal_evs], catalogue.data['longitude'][temporal_evs], depth[temporal_evs])
-            dist_to_biggest = distance(catalogue.data['latitude'][bg_ev_for_dist], catalogue.data['longitude'][bg_ev_for_dist], depth[bg_ev_for_dist], catalogue.data['latitude'][temporal_evs], catalogue.data['longitude'][temporal_evs], depth[temporal_evs])
+            dist_to_recent = distance(catalogue.data['latitude'][i], 
+                                      catalogue.data['longitude'][i], 
+                                      depth[i], 
+                                      catalogue.data['latitude'][temporal_evs], 
+                                      catalogue.data['longitude'][temporal_evs], 
+                                      depth[temporal_evs])
+            dist_to_biggest = distance(catalogue.data['latitude'][bg_ev_for_dist],
+                                       catalogue.data['longitude'][bg_ev_for_dist], 
+                                       depth[bg_ev_for_dist], 
+                                       catalogue.data['latitude'][temporal_evs], 
+                                       catalogue.data['longitude'][temporal_evs], 
+                                       depth[temporal_evs])
 
             if look_ahead_days == min_lookahead_days:
                 l_big = dist_to_biggest == 0  # all false
@@ -247,14 +299,18 @@ class Reasenberg(BaseCatalogueDecluster):
             # spatial events only include events AFTER i, not i itself
             # so vcl[events_in_any_cluster] is independent from vcl[i]
 
-            candidates = temporal_evs[spatial_evs]  # eqs that fit spatial and temporal criterion
-            events_in_any_cluster = candidates[vcl[candidates] != 0]  # eqs which are already related with a cluster
-            events_in_no_cluster = candidates[vcl[candidates] == 0]  # eqs that are not already in a cluster
+            # eqs that fit spatial and temporal criterion
+            candidates = temporal_evs[spatial_evs]  
+            # eqs which are already related with a cluster
+            events_in_any_cluster = candidates[vcl[candidates] != 0] 
+            # eqs that are not already in a cluster
+            events_in_no_cluster = candidates[vcl[candidates] == 0]  
 
             # if this cluster overlaps with any other cluster, then merge them
             # assign every event in all related clusters to the same (lowest) cluster number
-            # set this cluster's maximum magnitude "clusmaxmag" to the largest magnitude of all combined events
-            # set this cluster's clus_biggest_idx to the largest event of all combined events
+            # set this cluster's maximum magnitude "clusmaxmag" to the largest magnitude of 
+            # all combined events set this cluster's clus_biggest_idx to the largest event 
+            # of all combined events
             # Flag largest event in each cluster
 
             if len(events_in_any_cluster) > 0:
@@ -275,7 +331,8 @@ class Reasenberg(BaseCatalogueDecluster):
                 events_in_my_cluster = vcl == my_cluster
                 biggest_mag = np.max(mags[events_in_my_cluster])
 
-                biggest_mag_idx = np.flatnonzero(np.logical_and(mags == biggest_mag, events_in_my_cluster))[-1]
+                biggest_mag_idx = np.flatnonzero(
+                            np.logical_and(mags == biggest_mag, events_in_my_cluster))[-1]
 
                 # reset values for other clusters
                 clusmaxmag[related_clust_nums] = -np.inf
@@ -300,15 +357,14 @@ class Reasenberg(BaseCatalogueDecluster):
         # i.e. an independent event counts as a mainshock
         msi[vcl == 0] = 1
             
-        # for each cluster, identify mainshock
+        # for each cluster, identify mainshock (largest event)
         clusters = np.unique(vcl[vcl != 0])
         for cluster_no in clusters:
             cluster_ids = ev_id[vcl == cluster_no]
             biggest_mag_idx = np.where(np.max(mags[vcl == cluster_no]))
             ms_id = cluster_ids[biggest_mag_idx]
             msi[ms_id] = 1
-            
-        msi = 1 - msi    
+                
         return vcl, msi
 
 
@@ -347,7 +403,15 @@ class Reasenberg(BaseCatalogueDecluster):
         return zone_noclust, zone_clust
 
 
-def relative_time(years, months, days, hours=None, minutes=None, seconds=None, datetime_unit ='D', reference_date=None):
+def relative_time(
+                  years, 
+                  months, 
+                  days, 
+                  hours=None, 
+                  minutes=None, 
+                  seconds=None, 
+                  datetime_unit ='D', 
+                  reference_date=None):
     """ Get elapsed days since first event in catalog
 
     :param reference_date
@@ -386,25 +450,5 @@ def days_from_first_event(catalog) -> relative_time:
                          catalog['hour'], catalog['minute'],
                          catalog['second'].astype(int),
                          datetime_unit='D')
-
-
-def get_distance_errors(directional_error, src_idx, targ_idxs) -> Tuple[float, np.ndarray]:
-    """
-
-    :param directional_error:
-    :param src_idx:
-    :param targ_idxs:
-    :return:
-    """
-    if directional_error is None:
-        directional_error = 0.
-
-    if isinstance(directional_error, (np.ndarray,)):
-        src_err = directional_error[src_idx]
-        targ_err = directional_error[targ_idxs]
-    else:
-        src_err = directional_error
-        targ_err = directional_error
-    return src_err, targ_err
     
 
