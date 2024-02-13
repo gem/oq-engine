@@ -19,7 +19,6 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 :class:`openquake.hazardlib.geo.multiline.Multiline`.
 """
 
-import copy
 import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
@@ -50,6 +49,8 @@ class MultiLine(object):
     method.
     """
     def __init__(self, lines, u_max=None):
+        self.coos = [ln.coo for ln in lines]
+
         # compute the overall strike and the origin of the multiline
         # get lenghts and average azimuths
         llenghts = np.array([ln.get_length() for ln in lines])
@@ -59,7 +60,7 @@ class MultiLine(object):
         self.flipped = get_flipped(lines, llenghts, avgaz)
 
         # Compute the prevalent azimuth
-        avgazims_corr = copy.copy(avgaz)
+        avgazims_corr = np.copy(avgaz)
         for i in np.nonzero(self.flipped)[0]:
             lines[i] = lines[i].flip()
             avgazims_corr[i] = lines[i].average_azimuth()
@@ -71,7 +72,6 @@ class MultiLine(object):
 
         # Reorder the lines according to the origin and compute the shift
         lines = [lines[i] for i in self.soidx]
-        self.coos = [ln.coo for ln in lines]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
     
         if u_max is None:
@@ -90,14 +90,11 @@ class MultiLine(object):
         tupps = np.zeros((S, N))
         uupps = np.zeros((S, N))
         weis = np.zeros((S, N))
-        for i, coo in enumerate(self.coos):
-            tu, uu, we = Line.from_coo(coo).get_tuw(mesh)
+        for i, flip, coo in zip(self.soidx, self.flipped, self.coos):
+            tu, uu, we = Line.from_coo(coo, flip).get_tuw(mesh)
             tupps[i] = tu
             uupps[i] = uu
             weis[i] = we.sum(axis=0)
-        #if S == 1 and N == 2:  # there are 2 sites
-        #    print(self.soidx, self.flipped)
-        #    print(np.array([tupps, uupps, weis]).T)  # (N, S, 3)
         return _get_uts(self.shift, tupps, uupps, weis)
 
 
