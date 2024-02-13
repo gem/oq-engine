@@ -403,7 +403,7 @@ class Line(object):
         # Now compute T and U
         t_upp, u_upp = get_tuw(ui, ti, slen, weights)
         t_upp[iot] = 0.0
-        return t_upp, u_upp, weights
+        return np.array([t_upp, u_upp, weights.sum(axis=0)])
 
     def get_ui_ti(self, mesh, uhat, that):
         """

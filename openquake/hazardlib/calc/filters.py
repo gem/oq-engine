@@ -45,18 +45,22 @@ def magstr(mag):
 
 
 def get_dparam(surface, sites, param):
-    # compute distances without any cache
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
-    elif param == 'rx':
-        dist = surface.get_rx_distance(sites)
-    elif param == 'ry0':
-        dist = surface.get_ry0_distance(sites)
+    elif param == 'tuw':
+        tuw0 = surface.tor.get_tuw(sites)
+        tuw1 = surface.tor.flip().get_tuw(sites)
+        arr = numpy.array([tuw0, tuw1])  # shape (2, 3, N)
+        dist = arr.transpose(2, 0, 1)  # shape (N, 2, 3)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
     elif param == 'clon_clat':
         t = surface.get_closest_points(sites)  # tested in classical/case_83
         dist = t.array.T[:, 0:2]  # shape (N, 2)
+    elif param == 'rx':
+        dist = surface.get_rx_distance(sites)
+    elif param == 'ry0':
+        dist = surface.get_ry0_distance(sites)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist

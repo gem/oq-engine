@@ -164,62 +164,41 @@ class MultiFaultTestCase(unittest.TestCase):
         self.assertEqual(str(ctx.exception),
                          "The section index 3 in source '01' is invalid")
 
+    def test_slow(self):
+        # performance test with a reduced UCERF source
+        [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
+        sitecol = SiteCollection.from_points([-122, -121], [37, 27])
+        sitecol._set('vs30', 760.)
+        sitecol._set('vs30measured', 1)
+        sitecol._set('z1pt0', 100.)
+        sitecol._set('z2pt5', 5.)
 
-def main():
-    # run a performance test with a reduced UCERF source
-    [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
-    sitecol = SiteCollection.from_points([-122, -121], [37, 27])
-    sitecol._set('vs30', 760.)
-    sitecol._set('vs30measured', 1)
-    sitecol._set('z1pt0', 100.)
-    sitecol._set('z2pt5', 5.)
+        gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
+        cmaker = contexts.simple_cmaker([gsim], ['PGA'])
+        secparams = build_secparams(src.get_sections())
+        src.set_msparams(secparams)
+        [ctxt] = cmaker.from_srcs([src], sitecol)
+        print(cmaker.ir_mon)
+        print(cmaker.ctx_mon)
 
-    print('Computing u, t, u2 values for the sections')
-    with performance.Monitor() as mon:
-        lines = [sec.tor for sec in src.get_sections()]
-        L = len(lines)
-        N = len(sitecol)
-        us = numpy.zeros((L, N))
-        ts = numpy.zeros((L, N))
-        for i, line in enumerate(lines):
-            ts[i], us[i], _w = line.get_tuw(sitecol)
-    print(mon)
+        inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
+        out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
+        ctx = ctxt[::50]
+        if os.environ.get('OQ_OVERWRITE'):
+            writers.write_csv(inp, ctx)
+        else:
+            writers.write_csv(out, ctx)
+            df = pandas.read_csv(inp, na_values=['NAN'])
+            aac = numpy.testing.assert_allclose
+            for col in df.columns:
+                if col == 'probs_occur:2':
+                    continue
+                try:
+                    aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
+                except Exception:
+                    print('Look at col')
+                    # breakpoint()
 
-    gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
-    cmaker = contexts.simple_cmaker([gsim], ['PGA'])
-    secparams = build_secparams(src.get_sections())
-    src.set_msparams(secparams)
-    [ctxt] = cmaker.from_srcs([src], sitecol)
-    print(cmaker.ir_mon)
-    print(cmaker.ctx_mon)
-
-    inp = os.path.join(BASE_DATA_PATH, 'ctxt.csv')
-    out = os.path.join(BASE_DATA_PATH, 'ctxt-got.csv')
-    ctx = ctxt[::50]
-    if os.environ.get('OQ_OVERWRITE'):
-        writers.write_csv(inp, ctx)
-    else:
-        writers.write_csv(out, ctx)
-        df = pandas.read_csv(inp, na_values=['NAN'])
-        aac = numpy.testing.assert_allclose
-        for col in df.columns:
-            if col == 'probs_occur:2':
-                continue
-            try:
-                aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
-            except Exception:
-                breakpoint()
-
-    # determine unique tors
-    rups = list(src.iter_ruptures())
-    lines = []
-    data = []
-    for rup in rups:
-        for surf in rup.surface.surfaces:
-            lines.append(surf.tor)
-            data.append(surf.tor.coo.tobytes())
-    uni, inv = numpy.unique(data, return_inverse=True)
-    print('Found %d/%d unique segments' % (len(uni), len(data)))
 
 def main100sites():
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
@@ -241,7 +220,17 @@ def main100sites():
     prof.print_stats('cumulative')
     print(cmaker.ir_mon)
     print(cmaker.ctx_mon)
+    # determine unique tors
+    rups = list(src.iter_ruptures())
+    lines = []
+    data = []
+    for rup in rups:
+        for surf in rup.surface.surfaces:
+            lines.append(surf.tor)
+            data.append(surf.tor.coo.tobytes())
+    uni, inv = numpy.unique(data, return_inverse=True)
+    print('Found %d/%d unique segments' % (len(uni), len(data)))
+
 
 if __name__ == '__main__':
-    main()
-    # main100sites()
+    main100sites()

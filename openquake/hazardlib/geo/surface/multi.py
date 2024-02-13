@@ -276,7 +276,7 @@ class MultiSurface(BaseSurface):
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        uut, tut = self.tor.get_uts(mesh)
+        tut, uut = self.tor.get_tu(mesh)
         rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
@@ -286,7 +286,7 @@ class MultiSurface(BaseSurface):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
             coordinates of the sites.
         """
-        uut, tut = self.tor.get_uts(mesh)
+        tut, uut = self.tor.get_tu(mesh)
         ry0 = np.zeros_like(uut)
         ry0[uut < 0] = np.abs(uut[uut < 0])
         condition = uut > self.tor.u_max
