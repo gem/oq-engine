@@ -41,6 +41,7 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 
 U16 = np.uint16
 F32 = np.float32
+F64 = np.float64
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
@@ -104,7 +105,10 @@ class MultiFaultSource(BaseSeismicSource):
                  infer_occur_rates=False):
         nrups = len(magnitudes)
         assert len(occurrence_probs) == len(rakes) == nrups
-        self.probs_occur = F32(occurrence_probs)
+        # NB: using 32 bits for the occurrence_probs would be a disaster:
+        # the results are STRONGLY dependent on the precision,
+        # in particular the AELO tests for CHN would break
+        self.probs_occur = F64(occurrence_probs)  # 64 bit!
         self.mags = F32(magnitudes)
         self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
