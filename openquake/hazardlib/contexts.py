@@ -105,14 +105,6 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
         tor = rup.surface.tor  # MultiLine object
         if param == 'tuw':
             tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
-            '''
-            exp = rup.surface.get_tuw(r_sites)
-            S, N = tuw.shape[:2]
-            try:
-                numpy.testing.assert_allclose(tuw, exp)
-            except:
-                import pdb; pdb.set_trace()
-            '''
             tut, uut = multiline._get_tu(tor.shift, tuw.transpose(2, 0, 1))
             ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
             neg = uut < 0
@@ -951,9 +943,8 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         secdists = getattr(self, 'secdists', None)
         for rup in same_mag_rups:
-            #if hasattr(rup.surface, 'get_tuw_df'):  # multifault
-            #    print('------------------------------------------', rup.rup_id)
-            #    print(rup.surface.get_tuw_df(sites))
+            # to debug you can insert here a
+            # print(rup.surface.get_tuw_df(sites))
             if secdists:
                 rrups = get_secdists(rup, 'rrup', secdists)
                 rrup = numpy.min(rrups, axis=0)
