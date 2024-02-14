@@ -216,7 +216,15 @@ class Line(object):
 
     def flip(self):
         """
-        Returns a new line with the points flipped
+        Returns a new line with the points flipped. Here is an example,
+        taking advantage of the string representation of Lines in terms
+        of geohashes of 5 letters (~2 km of precision):
+
+        >>> line = Line([Point(1, 2), Point(1, 3)])
+        >>> print(line)
+        s02eq_s089n
+        >>> print(line.flip())
+        s089n_s02eq
         """
         return self.from_coo(np.flip(self.coo, axis=0))
 
