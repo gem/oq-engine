@@ -176,15 +176,17 @@ def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     """
     Compare the ruptures affecting the given site ID as pandas DataFrames
     """
+    sort = ['src_id', 'rup_id']
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup', sel={'sids': site_id})
-        df2 = ds2.read_df('rup', sel={'sids': site_id})
+        df1 = ds1.read_df('rup', sel={'sids': site_id}).sort_values(sort)
+        df2 = ds2.read_df('rup', sel={'sids': site_id}).sort_values(sort)
     del df1['probs_occur']
     del df2['probs_occur']
     lens = len(df1), len(df2)
     if lens[0] != lens[1]:
         print('%d != %d ruptures' % lens)
         return
+    df2.index = df1.index
     print(df1.compare(df2))
 
 

@@ -301,15 +301,16 @@ class MultiSurface(BaseSurface):
         us = []
         ws = []
         fs = []
-        for coo, soid, flip in zip(
-                self.tor.coos, self.tor.soidx, self.tor.flipped):
+        for idx in self.tor.soidx:
+            coo = self.tor.coos[idx]
+            flip = self.tor.flipped[idx]
             tu, uu, we = geo.Line.from_coo(coo, flip).get_tuw(sites)
             for s, sid in enumerate(sites.sids):
-                idxs.append(soid)
+                idxs.append(idx)
                 sids.append(sid)
                 ts.append(tu[s])
                 us.append(uu[s])
-                ws.append(we[:, s].sum())
+                ws.append(we[s])
                 fs.append(flip)
         dic = dict(sec=idxs, sid=sids, flip=fs, t=ts, u=us, w=ws)
         return pandas.DataFrame(dic)
