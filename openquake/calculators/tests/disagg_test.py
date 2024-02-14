@@ -233,7 +233,7 @@ class DisaggregationTestCase(CalculatorTestCase):
         self.run_calc(case_14.__file__, 'job.ini')
 
     def test_case_15(self):
-        # check that mean_rates_by_src are always annual 
+        # check that mean_rates_by_src are always annual
         self.run_calc(case_15.__file__, 'job_50yr.ini')
         mrs50 = self.calc.datastore['mean_rates_by_src']
         self.run_calc(case_15.__file__, 'job_1yr.ini')
