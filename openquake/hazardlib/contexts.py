@@ -112,7 +112,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             numpy.testing.assert_allclose(tut, t)
             numpy.testing.assert_allclose(uut, u)
             '''
-            ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
+            ctx.rx = tut
             neg = uut < 0
             ctx.ry0[neg] = numpy.abs(uut[neg])
             big = uut > tor.u_max
