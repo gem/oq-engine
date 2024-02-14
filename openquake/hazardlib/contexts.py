@@ -32,7 +32,7 @@ from scipy.interpolate import interp1d
 from openquake.baselib import config
 from openquake.baselib.general import (
     AccumDict, DictArray, RecordBuilder, split_in_slices, block_splitter,
-    sqrscale, CallableDict)
+    sqrscale)
 from openquake.baselib.performance import Monitor, split_array, kround0
 from openquake.baselib.python3compat import decode
 from openquake.hazardlib import valid, imt as imt_module
@@ -366,8 +366,6 @@ def simple_cmaker(gsims, imts, **params):
 
 # ############################ genctxs ################################## #
 
-genctxs = CallableDict(keyfunc=operator.attrgetter('code'))
-
 # generator of quartets (rup_index, mag, planar_array, sites)
 def _quartets(cmaker, src, sitecol, cdist, magdist, planardict):
     minmag = cmaker.maximum_distance.x[0]
@@ -468,7 +466,6 @@ def _get_ctx_planar(cmaker, zeroctx, mag, planar, sites, src_id, tom):
     return zeroctx.flatten()  # shape N*U
 
 
-@genctxs.add(b'P', b'p')
 def genctxs_Pp(src, sitecol, cmaker):
     """
     Context generator for point sources and collapsed point sources
@@ -1041,7 +1038,7 @@ class ContextMaker(object):
             self.defaultdict['clat'] = F64(0.)
 
         if getattr(src, 'location', None) and step == 1:
-            return self.pla_mon.iter(genctxs(src, sitecol, self))
+            return self.pla_mon.iter(genctxs_Pp(src, sitecol, self))
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
