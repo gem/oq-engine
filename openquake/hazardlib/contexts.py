@@ -96,12 +96,13 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
         if param == 'tuw':
             arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
             S, N = arr.shape[:2]
-            sf = zip(rup.surface.tor.soidx, rup.surface.tor.flipped)
             # keep the flipped values and then reorder the surface indices
             # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
             tuw = numpy.zeros((3, S, N))
-            for i, (soid, flip) in enumerate(sf):
-                tuw[:, soid, :] = arr[i, :, int(flip), :].T  # shape (3, N)
+            for s in range(S):
+                idx = rup.surface.tor.soidx[s]
+                flip = int(rup.surface.tor.flipped[idx])
+                tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
             tut, uut = multiline._get_tu(tor.shift, tuw)
             '''
             # sanity check with the right parameters t, u
