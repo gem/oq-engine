@@ -21,7 +21,6 @@ import copy
 import time
 import logging
 import warnings
-import operator
 import itertools
 import collections
 from unittest.mock import patch
@@ -949,8 +948,6 @@ class ContextMaker(object):
         magdist = self.maximum_distance(same_mag_rups[0].mag)
         secdists = getattr(self, 'secdists', None)
         for rup in same_mag_rups:
-            # to debug you can insert here a
-            # print(rup.surface.get_tuw_df(sites))
             if secdists:
                 rrups = _get(rup.surface.surfaces, 'rrup', secdists)
                 rrup = numpy.min(rrups, axis=0)
@@ -961,6 +958,10 @@ class ContextMaker(object):
                 continue
 
             r_sites = sites.filter(mask)
+            # to debug you can insert here
+            # if rup.rup_id == 0:
+            #     print(rup.surface.get_tuw_df(r_sites))
+            #     import pdb; pdb.set_trace()
 
             ''' # sanity check
             true_rrup = rup.surface.get_min_distance(r_sites)
