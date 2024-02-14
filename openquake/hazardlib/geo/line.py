@@ -453,6 +453,9 @@ class Line(object):
         that = get_versor(np.cross(sg, np.array([0, 0, 1])))
         return slen, uhat, that
 
+    def __str__(self):
+        return utils.geohash5(self.coo)
+
 
 def get_average_azimuth(azimuths, distances) -> float:
     """

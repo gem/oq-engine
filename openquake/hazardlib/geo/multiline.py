@@ -92,6 +92,9 @@ class MultiLine(object):
             tuw[:, soid] = Line.from_coo(coo, flip).get_tuw(mesh)
         return _get_tu(self.shift, tuw)
 
+    def __str__(self):
+        return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
+
 
 def get_flipped(lines, llens, avgaz):
     """

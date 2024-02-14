@@ -845,6 +845,18 @@ def geohash(lons, lats, length):
     return chars
 
 
+def geohash5(coords):
+    """
+    :returns: a geohash of length 5*len(points) as a string
+
+    >>> coords = numpy.array([[10., 45.], [11., 45.]])
+    >>> geohash5(coords)
+    'spzpg_spzzf'
+    """
+    arr = CODE32[geohash(coords[:, 0], coords[:, 1], 5)]
+    return b'_'.join(row.tobytes() for row in arr).decode('ascii')
+
+
 def geohash3(lons, lats):
     """
     :returns: a geohash of length 3 as a 16 bit integer
