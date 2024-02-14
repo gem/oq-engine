@@ -136,6 +136,11 @@ class MultiLineTestCase(unittest.TestCase):
             label = 'test_tu_figure08 - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
+    def test_string_representation(self):
+        # there is a line with 4 points and then one with 2 points
+        self.assertEqual(str(MultiLine(self.lines)),
+                         '7zzzz_kpbpf_kpbpu_s000m;s003p_s0030')
+
 
 def get_lines_figure09():
     """
