@@ -116,7 +116,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
-            if DEBUG: print(src.source_id, src.nsites)
+            if DEBUG: print(f'{src.source_id=}, {src.nsites=}')
         else:
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
