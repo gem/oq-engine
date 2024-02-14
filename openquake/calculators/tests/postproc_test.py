@@ -192,7 +192,6 @@ class PostProcTestCase(CalculatorTestCase):
             return
         asce07 = self.calc.datastore['asce07'][0].decode('ascii')
         dic07 = json.loads(asce07)
-        breakpoint()
         assert dic07 == {'PGA': 1.02582, 'PGA_2_50': 1.5654,
                          'PGA_84th': 1.02582, 'PGA_det': 1.02582,
                          'Ss': 2.50789, 'Ss_RT': 3.92357,
