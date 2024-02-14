@@ -73,8 +73,8 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
 
-def get_secdists(rup, param, secdists):
-    arr = numpy.array([secdists[sec.idx, param]
+def get_secdists(rup, param, secdists, mask=slice(None)):
+    arr = numpy.array([secdists[sec.idx, param][mask]
                        for sec in rup.surface.surfaces])
     if param == 'tuw':
         S, N = arr.shape[:2]
@@ -104,7 +104,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
     else:
         tor = rup.surface.tor  # MultiLine object
         if param == 'tuw':
-            tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
+            tuw = get_secdists(rup, 'tuw', secdists, mask)  # (S, N, 3)
             tut, uut = multiline._get_tu(tor.shift, tuw.transpose(2, 0, 1))
             '''
             # sanity check with the right parameters t, u
@@ -118,15 +118,15 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             big = uut > tor.u_max
             ctx.ry0[big] = uut[big] - tor.u_max
         elif param == 'rjb' :
-            rjbs = get_secdists(rup, 'rjb', secdists)
-            ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
+            rjbs = get_secdists(rup, 'rjb', secdists, mask)
+            ctx['rjb'] = numpy.min(rjbs, axis=0)
             '''
             # sanity check with the right rjb
             rjb = rup.surface.get_joyner_boore_distance(r_sites)
             numpy.testing.assert_allclose(ctx.rjb, rjb)
             '''
         elif param == 'clon_clat':
-            coos = numpy.array(get_secdists(rup, 'clon_clat', secdists))
+            coos = numpy.array(get_secdists(rup, 'clon_clat', secdists, mask))
             # shape (numsections, numsites, 3)
             m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(r_sites)
             # shape (numsites, 3)
