@@ -276,7 +276,7 @@ class Hazard:
         """
         gids = self.gids[pmap.grp_id]
         itime = self.datastore['oqparam'].investigation_time
-        rates = disagg.to_rates(pmap.array, itime=itime) @ self.weig[gids]  # shape (N, L)
+        rates = disagg.to_rates(pmap.array, itime) @ self.weig[gids]  # shape (N, L)
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap, the_sids, gid=0):

@@ -195,7 +195,7 @@ class PostProcTestCase(CalculatorTestCase):
         dic07 = json.loads(asce07)
         
         # check float results
-        lk = list(dic07.keys())
+        lk = list(dic07)
         lk.remove('Ss_seismicity')
         lk.remove('S1_seismicity')
         dic07_float = [dic07[k] for k in lk]
