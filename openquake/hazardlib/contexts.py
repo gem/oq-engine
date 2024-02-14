@@ -73,19 +73,9 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
 
-def get_secdists(rup, param, secdists):
-    arr = numpy.array([secdists[sec.idx, param]
-                       for sec in rup.surface.surfaces])
-    if param == 'tuw':
-        S, N = arr.shape[:2]
-        sf = zip(rup.surface.tor.soidx, rup.surface.tor.flipped)
-        # keep the flipped values and then reorder the surface indices
-        # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
-        out = numpy.zeros((S, N, 3))
-        for i, (soid, flip) in enumerate(sf):
-            out[soid, :, :] = arr[i, :, int(flip), :]
-        return out
-    return arr
+def _get(surfaces, param, secdists, mask=slice(None)):
+    arr = numpy.array([secdists[sec.idx, param][mask] for sec in surfaces])
+    return arr  # shape (S, N, ...)
 
 
 def set_distances(ctx, rup, r_sites, param, secdists, mask):
@@ -104,8 +94,16 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
     else:
         tor = rup.surface.tor  # MultiLine object
         if param == 'tuw':
-            tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
-            tut, uut = multiline._get_tu(tor.shift, tuw.transpose(2, 0, 1))
+            arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
+            S, N = arr.shape[:2]
+            # keep the flipped values and then reorder the surface indices
+            # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
+            tuw = numpy.zeros((3, S, N))
+            for s in range(S):
+                idx = rup.surface.tor.soidx[s]
+                flip = int(rup.surface.tor.flipped[idx])
+                tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
+            tut, uut = multiline._get_tu(tor.shift, tuw)
             '''
             # sanity check with the right parameters t, u
             t, u = rup.surface.tor.get_tu(r_sites)
@@ -118,15 +116,15 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             big = uut > tor.u_max
             ctx.ry0[big] = uut[big] - tor.u_max
         elif param == 'rjb' :
-            rjbs = get_secdists(rup, 'rjb', secdists)
-            ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
+            rjbs = _get(rup.surface.surfaces, 'rjb', secdists, mask)
+            ctx['rjb'] = numpy.min(rjbs, axis=0)
             '''
             # sanity check with the right rjb
             rjb = rup.surface.get_joyner_boore_distance(r_sites)
             numpy.testing.assert_allclose(ctx.rjb, rjb)
             '''
         elif param == 'clon_clat':
-            coos = numpy.array(get_secdists(rup, 'clon_clat', secdists))
+            coos = _get(rup.surface.surfaces, 'clon_clat', secdists, mask)
             # shape (numsections, numsites, 3)
             m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(r_sites)
             # shape (numsites, 3)
@@ -957,7 +955,7 @@ class ContextMaker(object):
             # to debug you can insert here a
             # print(rup.surface.get_tuw_df(sites))
             if secdists:
-                rrups = get_secdists(rup, 'rrup', secdists)
+                rrups = _get(rup.surface.surfaces, 'rrup', secdists)
                 rrup = numpy.min(rrups, axis=0)
             else:
                 rrup = get_distances(rup, sites, 'rrup')

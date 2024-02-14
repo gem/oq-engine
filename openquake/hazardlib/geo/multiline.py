@@ -88,9 +88,15 @@ class MultiLine(object):
         S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
         tuw = np.zeros((3, S, N))
-        for soid, flip, coo in zip(self.soidx, self.flipped, self.coos):
-            tuw[:, soid] = Line.from_coo(coo, flip).get_tuw(mesh)
+        for s in range(S):
+            idx = self.soidx[s]
+            coo = self.coos[idx]
+            flip = self.flipped[idx]
+            tuw[:, s] = Line.from_coo(coo, flip).get_tuw(mesh)
         return _get_tu(self.shift, tuw)
+
+    def __str__(self):
+        return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
 
 
 def get_flipped(lines, llens, avgaz):
