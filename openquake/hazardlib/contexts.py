@@ -92,7 +92,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             setattr(ctx, param, dists)
     else:
         tor = rup.surface.tor  # MultiLine object
-        if param == 'tuw':
+        if param in ('rx', 'ry0'):
             arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
             S, N = arr.shape[:2]
             # keep the flipped values and then reorder the surface indices
@@ -109,11 +109,13 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             numpy.testing.assert_allclose(tut, t)
             numpy.testing.assert_allclose(uut, u)
             '''
-            ctx.rx = tut
-            neg = uut < 0
-            ctx.ry0[neg] = numpy.abs(uut[neg])
-            big = uut > tor.u_max
-            ctx.ry0[big] = uut[big] - tor.u_max
+            if param == 'rx':
+                ctx.rx = tut
+            elif param == 'ry0':
+                neg = uut < 0
+                ctx.ry0[neg] = numpy.abs(uut[neg])
+                big = uut > tor.u_max
+                ctx.ry0[big] = uut[big] - tor.u_max
         elif param == 'rjb' :
             rjbs = _get(rup.surface.surfaces, 'rjb', secdists, mask)
             ctx['rjb'] = numpy.min(rjbs, axis=0)
@@ -982,11 +984,6 @@ class ContextMaker(object):
                     set_distances(ctx, rup, r_sites, 'clon_clat',
                                   secdists, mask)
                 elif param == 'clat':
-                    pass
-                elif secdists and param == 'ry0':
-                    set_distances(ctx, rup, r_sites, 'tuw',
-                                  secdists, mask)
-                elif secdists and param == 'rx':
                     pass
                 else:
                     set_distances(ctx, rup, r_sites, param,
