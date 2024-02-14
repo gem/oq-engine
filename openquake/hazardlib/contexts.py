@@ -106,7 +106,13 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
         if param == 'tuw':
             tuw = get_secdists(rup, 'tuw', secdists)[:, mask]  # (S, N, 3)
             tut, uut = multiline._get_tu(tor.shift, tuw.transpose(2, 0, 1))
-            ctx.rx = tut[0] if len(tut[0].shape) > 1 else tut
+            '''
+            # sanity check with the right parameters t, u
+            t, u = rup.surface.tor.get_tu(r_sites)
+            numpy.testing.assert_allclose(tut, t)
+            numpy.testing.assert_allclose(uut, u)
+            '''
+            ctx.rx = tut
             neg = uut < 0
             ctx.ry0[neg] = numpy.abs(uut[neg])
             big = uut > tor.u_max
@@ -114,6 +120,11 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
         elif param == 'rjb' :
             rjbs = get_secdists(rup, 'rjb', secdists)
             ctx['rjb'] = numpy.min([rjb[mask] for rjb in rjbs], axis=0)
+            '''
+            # sanity check with the right rjb
+            rjb = rup.surface.get_joyner_boore_distance(r_sites)
+            numpy.testing.assert_allclose(ctx.rjb, rjb)
+            '''
         elif param == 'clon_clat':
             coos = numpy.array(get_secdists(rup, 'clon_clat', secdists))
             # shape (numsections, numsites, 3)
@@ -955,6 +966,11 @@ class ContextMaker(object):
                 continue
 
             r_sites = sites.filter(mask)
+
+            ''' # sanity check
+            true_rrup = rup.surface.get_min_distance(r_sites)
+            numpy.testing.assert_allclose(true_rrup, rrup[mask])
+            '''
             rparams = self.get_rparams(rup)
             dd = self.defaultdict.copy()
             np = len(rparams.get('probs_occur', []))
