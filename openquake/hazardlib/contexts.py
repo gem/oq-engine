@@ -76,15 +76,6 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
 def get_secdists(rup, param, secdists, mask=slice(None)):
     arr = numpy.array([secdists[sec.idx, param][mask]
                        for sec in rup.surface.surfaces])
-    if param == 'tuw':
-        S, N = arr.shape[:2]
-        sf = zip(rup.surface.tor.soidx, rup.surface.tor.flipped)
-        # keep the flipped values and then reorder the surface indices
-        # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
-        out = numpy.zeros((S, N, 3))
-        for i, (soid, flip) in enumerate(sf):
-            out[soid, :, :] = arr[i, :, int(flip), :]
-        return out
     return arr
 
 
@@ -104,8 +95,15 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
     else:
         tor = rup.surface.tor  # MultiLine object
         if param == 'tuw':
-            tuw = get_secdists(rup, 'tuw', secdists, mask)  # (S, N, 3)
-            tut, uut = multiline._get_tu(tor.shift, tuw.transpose(2, 0, 1))
+            arr = get_secdists(rup, 'tuw', secdists, mask)
+            S, N = arr.shape[:2]
+            sf = zip(rup.surface.tor.soidx, rup.surface.tor.flipped)
+            # keep the flipped values and then reorder the surface indices
+            # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
+            tuw = numpy.zeros((3, S, N))
+            for i, (soid, flip) in enumerate(sf):
+                tuw[:, soid, :] = arr[i, :, int(flip), :].T  # shape (3, N)
+            tut, uut = multiline._get_tu(tor.shift, tuw)
             '''
             # sanity check with the right parameters t, u
             t, u = rup.surface.tor.get_tu(r_sites)
