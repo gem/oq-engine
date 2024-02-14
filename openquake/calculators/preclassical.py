@@ -17,15 +17,17 @@
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import logging
 import operator
 import numpy
 import h5py
-from openquake.baselib import parallel, hdf5
+from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
 from openquake.hazardlib.contexts import read_cmakers
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
+from openquake.hazardlib.source.multi_fault import build_secparams
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import (
@@ -40,6 +42,7 @@ F32 = numpy.float32
 F64 = numpy.float64
 TWO24 = 2 ** 24
 TWO32 = 2 ** 32
+DEBUG = os.environ.get('OQ_SAMPLE_SITES') or os.environ.get('OQ_SAMPLE_SOURCES')
 
 
 def source_data(sources):
@@ -91,7 +94,7 @@ def _filter(srcs, min_mag):
     return out
 
 
-def preclassical(srcs, sites, cmaker, torlines, monitor):
+def preclassical(srcs, sites, cmaker, secparams, monitor):
     """
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
@@ -105,10 +108,15 @@ def preclassical(srcs, sites, cmaker, torlines, monitor):
         multiplier = 1
         sf = None
     splits = []
+    mon = monitor('building msparams', measuremem=False)
     for src in srcs:
+        if src.code == b'F':
+            with mon:
+                src.set_msparams(secparams)
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
+            if DEBUG: print(f'{src.source_id=}, {src.nsites=}')
         else:
             src.nsites = 1
         # NB: it is crucial to split only the close sources, for
@@ -124,7 +132,7 @@ def preclassical(srcs, sites, cmaker, torlines, monitor):
             for src in splits:
                 src.weight = .01
         else:
-            cmaker.set_weight(splits, sf, torlines, multiplier, mon)
+            cmaker.set_weight(splits, sf, multiplier, mon)
         dic = {grp_id: splits}
         dic['before'] = len(srcs)
         dic['after'] = len(splits)
@@ -137,7 +145,7 @@ def preclassical(srcs, sites, cmaker, torlines, monitor):
             for src in dic[grp_id]:
                 src.num_ruptures = src.count_ruptures()
             # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, torlines, multiplier, mon)
+            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
             # print(f'{mon.task_no=}, {mon.duration=}')
             dic['before'] = len(block)
             dic['after'] = len(dic[grp_id])
@@ -199,17 +207,20 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifault:
-            torlines = [sec.tor for sec in multifault.get_sections()]
+            secparams = build_secparams(multifault.get_sections())
             logging.warning('There are multiFaultSources, the preclassical '
-                            'phase will be slow')
+                            'phase will be slow (secparams=%s)',
+                            general.humansize(secparams.nbytes))
         else:
-            torlines = []
+            secparams = ()
 
         # run preclassical for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
-        self.datastore.swmr_on()
+        if sys.platform != 'darwin':
+            # avoid a segfault in macOS
+            self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
             cmaker = cmakers[grp_id]
@@ -221,9 +232,9 @@ class PreClassicalCalculator(base.HazardCalculator):
                     pointlike.append(src)
                 elif src.code == b'F':  # multi fault source
                     for split in split_source(src):
-                        smap.submit(([split], sites, cmaker, torlines))
+                        smap.submit(([split], sites, cmaker, secparams))
                 elif src.code in b'CN':  # other heavy sources
-                    smap.submit(([src], sites, cmaker, torlines))
+                    smap.submit(([src], sites, cmaker, secparams))
                 else:
                     others.append(src)
             check_maxmag(pointlike)
@@ -231,13 +242,13 @@ class PreClassicalCalculator(base.HazardCalculator):
                 if oq.ps_grid_spacing:
                     # do not split the pointsources
                     smap.submit((pointsources + pointlike,
-                                 sites, cmaker, torlines))
+                                 sites, cmaker, secparams))
                 else:
                     for block in block_splitter(pointsources, 2000):
-                        smap.submit((block, sites, cmaker, torlines))
+                        smap.submit((block, sites, cmaker, secparams))
                     others.extend(pointlike)
             for block in block_splitter(others, 40):
-                smap.submit((block, sites, cmaker, torlines))
+                smap.submit((block, sites, cmaker, secparams))
         normal = smap.reduce()
         if atomic_sources:  # case_35
             n = len(atomic_sources)

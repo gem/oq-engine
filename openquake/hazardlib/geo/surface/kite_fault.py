@@ -551,6 +551,13 @@ class KiteSurface(BaseSurface):
         # width (size along column of points) in km and the area in km2.
         return None, None, None, area
 
+    def __str__(self):
+        if hasattr(self, 'idx'):  # multisurface index
+            idx = ' idx=%d' % self.idx
+        else:
+            idx = ''
+        return '<%s%s>' % (self.__class__.__name__, idx)
+
 
 def geom_to_kite(geom):
     """

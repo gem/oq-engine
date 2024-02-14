@@ -163,13 +163,16 @@ class Line(object):
     """
 
     @classmethod
-    def from_coo(cls, coo):
+    def from_coo(cls, coo, flip=False):
         """
         Build a Line object for an array of coordinates, assuming they have
         e been cleaned already, i.e. there are no adjacent duplicate points
         """
         self = cls.__new__(cls)
-        self.coo = coo
+        if flip:
+            self.coo = np.flip(coo, axis=0)
+        else:
+            self.coo = coo
         return self
 
     def __init__(self, points):
@@ -213,9 +216,17 @@ class Line(object):
 
     def flip(self):
         """
-        Inverts the order of the points composing the line
+        Returns a new line with the points flipped. Here is an example,
+        taking advantage of the string representation of Lines in terms
+        of geohashes of 5 letters (~2 km of precision):
+
+        >>> line = Line([Point(1, 2), Point(1, 3)])
+        >>> print(line)
+        s02eq_s089n
+        >>> print(line.flip())
+        s089n_s02eq
         """
-        self.coo = np.flip(self.coo, axis=0)
+        return self.from_coo(np.flip(self.coo, axis=0))
 
     @classmethod
     def from_vectors(cls, lons, lats, deps=None):
@@ -328,7 +339,7 @@ class Line(object):
     def keep_corners(self, delta):
         """
         Removes the points where the change in direction is lower than a
-        tolerance value.
+        tolerance value and returns a new line.
 
         :param delta:
             An angle in decimal degrees
@@ -337,11 +348,10 @@ class Line(object):
         # Compute the azimuth of all the segments
         azim = geodetic.azimuth(coo[:-1, 0], coo[:-1, 1],
                                 coo[1:, 0], coo[1:, 1])
-        pidx = set([0, coo.shape[0] - 1])
-        idx = np.nonzero(np.abs(np.diff(azim)) > delta)[0]
-        pidx = sorted(pidx.union(set(idx + 1)))
-        self.coo = coo[pidx]
-        return self
+        pidx = {0, coo.shape[0] - 1}
+        idx, = np.nonzero(np.abs(np.diff(azim)) > delta)
+        pidx = sorted(pidx | set(idx + 1))
+        return self.from_coo(coo[pidx])
 
     def resample_to_num_points(self, num_points):
         """
@@ -401,7 +411,7 @@ class Line(object):
         # Now compute T and U
         t_upp, u_upp = get_tuw(ui, ti, slen, weights)
         t_upp[iot] = 0.0
-        return t_upp, u_upp, weights
+        return np.array([t_upp, u_upp, weights.sum(axis=0)])
 
     def get_ui_ti(self, mesh, uhat, that):
         """
@@ -451,6 +461,9 @@ class Line(object):
         that = get_versor(np.cross(sg, np.array([0, 0, 1])))
         return slen, uhat, that
 
+    def __str__(self):
+        return utils.geohash5(self.coo)
+
 
 def get_average_azimuth(azimuths, distances) -> float:
     """
@@ -475,7 +488,7 @@ def get_average_azimuth(azimuths, distances) -> float:
     return azimuth
 
 
-@compile('(float64[:,:],float64[:,:],float64[:], float64[:,:])')
+@compile('(f8[:,:],f8[:,:],f8[:], f8[:,:])')
 def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
@@ -507,7 +520,7 @@ def get_tuw(ui, ti, sl, weights):
     return t_upp, u_upp
 
 
-@compile('(float64[:,:],float64[:,:],float64[:])')
+@compile('(f8[:,:],f8[:,:],f8[:])')
 def get_ti_weights(ui, ti, segments_len):
     """
     Compute the weights
@@ -556,7 +569,7 @@ def get_versor(arr):
     return (arr.T / np.linalg.norm(arr, axis=1)).T
 
 
-@compile("(float64[:],float64[:],float64[:],float64)")
+@compile("(f8[:],f8[:],f8[:],f8)")
 def find_t(pnt0, pnt1, ref_pnt, distance):
     """
     Find the point on the segment within `pnt0` and `pnt1` at `distance` from

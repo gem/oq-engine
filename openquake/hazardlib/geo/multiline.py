@@ -19,7 +19,6 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 :class:`openquake.hazardlib.geo.multiline.Multiline`.
 """
 
-import copy
 import numpy as np
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
@@ -50,67 +49,66 @@ class MultiLine(object):
     method.
     """
     def __init__(self, lines, u_max=None):
+        self.coos = [ln.coo for ln in lines]
+
         # compute the overall strike and the origin of the multiline
         # get lenghts and average azimuths
         llenghts = np.array([ln.get_length() for ln in lines])
         avgaz = np.array([line.average_azimuth() for line in lines])
 
-        # set strike
-        revert, strike_east, avg_azim, self.lines = get_overall_strike(
-            lines, llenghts, avgaz)
-        ep = get_endpoints(self.lines)
-        olon, olat, soidx = get_origin(ep, strike_east, avg_azim)
+        # determine the flipped lines
+        self.flipped = get_flipped(lines, llenghts, avgaz)
+
+        # Compute the prevalent azimuth
+        avgazims_corr = np.copy(avgaz)
+        for i in np.nonzero(self.flipped)[0]:
+            lines[i] = lines[i].flip()
+            avgazims_corr[i] = lines[i].average_azimuth()
+        avg_azim = get_average_azimuth(avgazims_corr, llenghts)
+        strike_east = (avg_azim > 0) & (avg_azim <= 180)
+
+        ep = get_endpoints(lines)
+        olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
-        lines = [self.lines[i] for i in soidx]
-        self.coos = [ln.coo for ln in lines]
+        lines = [lines[i] for i in self.soidx]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
     
         if u_max is None:
             # this is the expensive operation
-            self.u_max = np.abs(self.get_uts(ep)[0]).max()
+            ts, us = self.get_tu(get_endpoints(lines))
+            self.u_max = np.abs(us).max()
         else:
             self.u_max = u_max
 
-    def get_uts(self, mesh):
+    def get_tu(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        L = len(self.lines)
+        S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
-        tupps = np.zeros((L, N))
-        uupps = np.zeros((L, N))
-        weis = np.zeros((L, N))
-        for i, coo in enumerate(self.coos):
-            tu, uu, we = Line.from_coo(coo).get_tuw(mesh)
-            tupps[i] = tu
-            uupps[i] = uu
-            weis[i] = we.sum(axis=0)
-        return _get_uts(self.shift, tupps, uupps, weis)
+        tuw = np.zeros((3, S, N))
+        for s in range(S):
+            idx = self.soidx[s]
+            coo = self.coos[idx]
+            flip = self.flipped[idx]
+            tuw[:, s] = Line.from_coo(coo, flip).get_tuw(mesh)
+        return _get_tu(self.shift, tuw)
+
+    def __str__(self):
+        return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
 
 
-def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
+def get_flipped(lines, llens, avgaz):
     """
-    Computes the overall strike direction for the multiline
-
-    :param lines:
-        A list of :class:`openquake.hazardlib.geo.line.Line` instances
+    :returns: a boolean array with the flipped lines
     """
-    # copying the lines to avoid flipping the originals
-    lines = [copy.copy(ln) for ln in lines]
-
-    # Get lenghts and average azimuths
-    if llens is None:
-        llens = np.array([ln.get_length() for ln in lines])
-    if avgaz is None:
-        avgaz = np.array([line.average_azimuth() for line in lines])
-
     # Find general azimuth trend
     ave = get_average_azimuth(avgaz, llens)
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
-    revert = np.zeros((len(avgaz)), dtype=bool)
+    flipped = np.zeros((len(avgaz)), dtype=bool)
     if (ave >= 90) & (ave <= 270):
         # This is the case where the average azimuth in the second or third
         # quadrant
@@ -125,20 +123,11 @@ def get_overall_strike(lines: list, llens: list = None, avgaz: list = None):
 
     strike_to_east = ratio > 0.5
     if strike_to_east:
-        revert[np.invert(idx)] = True
+        flipped[~idx] = True
     else:
-        revert[idx] = True
+        flipped[idx] = True
 
-    # Compute the prevalent azimuth
-    avgazims_corr = copy.copy(avgaz)
-    for i in np.nonzero(revert)[0]:
-        lines[i].flip()
-        avgazims_corr[i] = lines[i].average_azimuth()
-    avg_azim = get_average_azimuth(avgazims_corr, llens)
-
-    strike_to_east = (avg_azim > 0) & (avg_azim <= 180)
-
-    return revert, strike_to_east, avg_azim, lines
+    return flipped
 
 
 def get_origin(ep, strike_to_east: bool, avg_strike: float):
@@ -205,21 +194,21 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
-@compile('float64[:],float64[:,:],float64[:,:],float64[:,:]')
-def _get_uts(shifts, tupps, uupps, weis):
-    for i, (shift, tupp, uupp, wei) in enumerate(
-            zip(shifts, tupps, uupps, weis)):
+@compile('f8[:],f8[:, :,:]')
+def _get_tu(shifts, tuw):
+    # `shifts` has shape S and `tuw` shape (3, S, N)
+    for i, (shift, t, u, w) in enumerate(zip(shifts, tuw[0], tuw[1], tuw[2])):
         if i == 0:  # initialize
-            uut = (uupp + shift) * wei
-            tut = tupp * wei
-            wet = wei.copy()
+            uut = (u + shift) * w
+            tut = t * w
+            wet = w.copy()
         else:  # update the values
-            uut += (uupp + shift) * wei
-            tut += tupp * wei
-            wet += wei
+            uut += (u + shift) * w
+            tut += t * w
+            wet += w
 
     # Normalize by the sum of weights
     uut /= wet
     tut /= wet
 
-    return uut, tut
+    return tut, uut

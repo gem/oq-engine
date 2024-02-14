@@ -26,7 +26,6 @@ from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
 from openquake.hazardlib import site
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.utils import (
     KM_TO_DEGREES, angular_distance, get_bounding_box,
     get_longitudinal_extent, BBoxError, spherical_to_cartesian)
@@ -45,75 +44,29 @@ def magstr(mag):
     return '%.2f' % numpy.float32(mag)
 
 
-# compute closest points from surfaces with a cache
-def _closest_points(surfaces, sites, dcache):
-
-    # build a matrix of shape (num_surfaces, num_sites)
-    dists = numpy.array([_surf_param(surf, sites, 'rrup', dcache)
-                         for surf in surfaces])
-
-    # find for each site the index of the closest surface
-    idx = (dists == dists.min(axis=0))  # shape (num_surfaces, num_sites)
-
-    # compute the closest point mesh one site at the time
-    lons = numpy.empty_like(sites.lons)
-    lats = numpy.empty_like(sites.lats)
-    for jdx in idx.T:
-        i = numpy.where(jdx)[0][0]
-        cps = _surf_param(surfaces[i], sites, 'clon_clat', dcache)
-        idx_i = idx[i, :]
-        lons[idx_i] = cps[idx_i, 0]
-        lats[idx_i] = cps[idx_i, 1]
-    return Mesh(lons, lats)
-
-
-def _surf_param_nc(surface, sites, param):
-    # compute distances without any cache
+def get_dparam(surface, sites, param):
     if param == 'rrup':
         dist = surface.get_min_distance(sites)
-    elif param == 'rx':
-        dist = surface.get_rx_distance(sites)
-    elif param == 'ry0':
-        dist = surface.get_ry0_distance(sites)
+    elif param == 'tuw':
+        tuw0 = surface.tor.get_tuw(sites)
+        tuw1 = surface.tor.flip().get_tuw(sites)
+        arr = numpy.array([tuw0, tuw1])  # shape (2, 3, N)
+        dist = arr.transpose(2, 0, 1)  # shape (N, 2, 3)
     elif param == 'rjb':
         dist = surface.get_joyner_boore_distance(sites)
     elif param == 'clon_clat':
         t = surface.get_closest_points(sites)  # tested in classical/case_83
         dist = t.array.T[:, 0:2]  # shape (N, 2)
+    elif param == 'rx':
+        dist = surface.get_rx_distance(sites)
+    elif param == 'ry0':
+        dist = surface.get_ry0_distance(sites)
     else:
         raise ValueError('Unknown distance measure %r' % param)
     return dist
 
 
-def _surf_param(surface, sites, param, dcache):
-    # compute distances with a cache, but only for MultiSurfaces
-
-    if dcache is None or not hasattr(surface, 'surfaces'):
-        return _surf_param_nc(surface, sites, param)
-
-    # assume the underlying surfaces have .idx attributes
-    idxs = [s.idx for s in surface.surfaces]
-    for surf in surface.surfaces:
-        if (surf.idx, param) not in dcache:
-            dcache[surf.idx, param] = _surf_param_nc(surf, sites, param)
-    if param in ('rrup', 'rjb'):
-        dist = numpy.min([dcache[idx, param] for idx in idxs], axis=0)
-    elif param in ('rx', 'ry0'):
-        if surface.tor is None:
-            surface._set_tor()
-        if param == 'rx':
-            dist = surface.get_rx_distance(sites)
-        elif param == 'ry0':
-            dist = surface.get_ry0_distance(sites)
-    elif param == 'clon_clat':
-        t = _closest_points(surface.surfaces, sites, dcache)
-        dist = t.array.T[:, 0:2]  # shape (N, 2)
-    else:
-        raise NotImplementedError(param)  # should never happen
-    return dist
-
-
-def get_distances(rupture, sites, param, dcache=None):
+def get_distances(rupture, sites, param):
     """
     :param rupture: a rupture
     :param sites: a mesh of points or a site collection
@@ -130,13 +83,13 @@ def get_distances(rupture, sites, param, dcache=None):
         else:
             dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'rrup':
-        dist = _surf_param(surf, sites, 'rrup', dcache)
+        dist = get_dparam(surf, sites, 'rrup')
     elif param == 'rx':
-        dist = _surf_param(surf, sites, 'rx', dcache)
+        dist = get_dparam(surf, sites, 'rx')
     elif param == 'ry0':
-        dist = _surf_param(surf, sites, 'ry0', dcache)
+        dist = get_dparam(surf, sites, 'ry0')
     elif param == 'rjb':
-        dist = _surf_param(surf, sites, 'rjb', dcache)
+        dist = get_dparam(surf, sites, 'rjb')
     elif param == 'rhypo':
         dist = rupture.hypocenter.distance_to_mesh(sites)
     elif param == 'repi':
@@ -148,7 +101,7 @@ def get_distances(rupture, sites, param, dcache=None):
     elif param == 'azimuthcp':
         dist = surf.get_azimuth_of_closest_point(sites)
     elif param == 'clon_clat':
-        dist = _surf_param(surf, sites, param, dcache)
+        dist = get_dparam(surf, sites, param)
     elif param == "rvolc":
         # Volcanic distance not yet supported, defaulting to zero
         dist = numpy.zeros_like(sites.lons)
