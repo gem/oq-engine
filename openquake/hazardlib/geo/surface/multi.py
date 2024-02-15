@@ -96,24 +96,6 @@ def build_msparams(rupture_idxs, secparams):
     return msparams
 
 
-def _build_msparam(surfaces, tor):
-    # slow version
-    msparam = np.zeros(1, SDT)[0]
-    areas = np.array([s.get_area() for s in surfaces])
-    msparam['area'] = areas.sum()
-    ws = areas / msparam['area']  # weights
-    msparam['dip'] = ws @ [s.get_dip() for s in surfaces]
-    strikes = np.radians([s.get_strike() for s in surfaces])
-    v1 = ws @ np.sin(strikes)
-    v2 = ws @ np.cos(strikes)
-    msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-    msparam['u_max'] = tor.u_max
-    msparam['width'] = ws @ [s.get_width() for s in surfaces]
-    msparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
-    msparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
-    return msparam
-
-
 class MultiSurface(BaseSurface):
     """
     Represent a surface as a collection of independent surface elements.
@@ -182,11 +164,14 @@ class MultiSurface(BaseSurface):
 
     @cached_property
     def tor(self):
-        # setting .tor is expensive unless u_max is given
         if self.msparam is None:
+            # slow lane
+            secparams = build_secparams(self.surfaces)
+            idxs = range(len(self.surfaces))
+            self.msparam = build_msparams([idxs], secparams)[0]
             tor = geo.MultiLine([s.tor for s in self.surfaces])
-            self.msparam = _build_msparam(self.surfaces, tor)
         else:
+            # fast lane
             tor = geo.MultiLine([s.tor for s in self.surfaces],
                                 self.msparam['u_max'])
         return tor
