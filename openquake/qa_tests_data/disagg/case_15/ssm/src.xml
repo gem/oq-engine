@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.4">
+  <sourceModel>
+    <areaSource id="1" name="5" tectonicRegion="Active Shallow Crust">
+      <areaGeometry>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>67.15366 44.79889 68.36708 44.08158 69.59584 43.3552 69.48025 43.25187 69.04962 42.86692 68.53657 42.22252 67.97181 41.45599 67.58698 40.72505 67.3657 40.1617 67.11143 39.74327 65.45603 40.20691 64.07913 40.60764 63.42063 40.87398 60.64965 42.10502 62.02968 42.7833 67.15366 44.79889 67.15366 44.79889 67.15366 44.79889 67.15366 44.79889</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+        <upperSeismoDepth>0.0</upperSeismoDepth>
+        <lowerSeismoDepth>50.0</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1.0</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="7.4" bValue="1.06" minMag="6.0" maxMag="7.3"/>
+      <nodalPlaneDist>
+        <nodalPlane probability="0.9" strike="250.0" dip="45.0" rake="100.0"/>
+        <nodalPlane probability="0.1" strike="0.0" dip="45.0" rake="152.0"/>
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1.0" depth="15.0"/>
+      </hypoDepthDist>
+    </areaSource>
+   </sourceModel>
+</nrml>
