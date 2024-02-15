@@ -67,6 +67,9 @@ class NathEtAl2012Lower(GMPE):
     Verification of mean value data was done by digitizing Figure 11 using
     http://arohatgi.info/WebPlotDigitizer/app/. Note that this independent
     verification did not include magnitude dependence or standard deviations.
+    
+    PGV is not provided in this gsim class because the coefficients within the
+    paper provide physically unrealistic values.
 
     **Reference**
 
