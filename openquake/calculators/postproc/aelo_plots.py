@@ -86,7 +86,8 @@ def _get_label(imt):
     return imtlab + ' - ' + comp
 
 
-def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
+def plot_mean_hcurves_rtgm(dstore, site_idx=0, plot_mce=False, 
+                           update_dstore=False):
     """
     :param dstore: the datastore
     :returns: figure of hazard curves
@@ -128,21 +129,42 @@ def plot_mean_hcurves_rtgm(dstore, site_idx=0, update_dstore=False):
         lab = _get_label(imt)
         plt.loglog(imls[i], AFE[i], color=colors(i), linestyle=patterns[i],
                    label=lab, linewidth=3, zorder=1)
+        
+        if plot_mce==True:
         # plot the label only once but it must be at the end of the legend
-        if imt == imts[-1]:
-            plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                       label='Probabilistic MCE',  linewidth=2,
-                       markersize=10, zorder=3)
-        else:
-            plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
-                       linewidth=2, markersize=10, zorder=3)
-        plt.loglog([numpy.min(imls[i]), rtgm_probmce[i]],
-                   [afe_RTGM[i], afe_RTGM[i]],
-                   'darkgray', linestyle='--', linewidth=1)
-        plt.loglog([rtgm_probmce[i], rtgm_probmce[i]],
-                   [0, afe_RTGM[i]], 'darkgray',
-                   linestyle='--', linewidth=1)
-    plt.grid('both')
+            if imt == imts[-1]:
+                plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+                           label='Probabilistic MCE',  linewidth=2,
+                           markersize=10, zorder=3)
+            else:
+                plt.loglog([rtgm_probmce[i]], [afe_RTGM[i]], 'ko',
+                           linewidth=2, markersize=10, zorder=3)
+            plt.loglog([numpy.min(imls[i]), rtgm_probmce[i]],
+                       [afe_RTGM[i], afe_RTGM[i]],
+                       color='black', alpha=0.5, linestyle='--', linewidth=1.3)
+        
+            plt.loglog([rtgm_probmce[i], rtgm_probmce[i]],
+                       [0, afe_RTGM[i]], color='black', alpha=0.5,
+                       linestyle='--', linewidth=1.3)
+    # add the ASCE 41-23 RPs
+    plt.axhline(0.000404, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.002105, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.001025, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.004453, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+    plt.axhline(0.013767, color='red', linewidth=1.7, alpha=0.2, zorder=0)
+
+    plt.text(0.0105, 0.000404*0.9, '2475 yr', fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.0105, 0.002105*0.9, '475 yr', fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.0105, 0.001025*0.9, '975 yr', fontsize='small', color='black', alpha=0.85)
+    plt.text(0.0105, 0.004453*0.9, '225 yr', fontsize='small', color='black', alpha=0.85 )
+    plt.text(0.0105, 0.013767*0.9, '72 yr', fontsize='small', color='black', alpha=0.85)
+
+    # add note to see manual
+    message = 'See WebUI User Guide for complete explanation of plot contents.'
+    plt.text(0.0275, 0.00000186, message, fontsize='small', color='black', alpha=0.85 )
+
+    # format plot
+    plt.grid('both', alpha=0.6)
     plt.legend(fontsize=13)
     plt.xlabel('Acceleration (g)', fontsize=20)
     plt.ylabel('Annual frequency of exceedance', fontsize=20)
@@ -203,6 +225,12 @@ def plot_governing_mce(dstore, site_idx=0, update_dstore=False):
     plt.xlabel('Period (s)', fontsize=20)
     plt.legend(loc="upper right", fontsize='13')
     plt.xlim([-0.02, 1.2])
+
+    # add user guide message
+    upperlim = max([rtgm_probmce[1], 1.5, MCEr_det[1]])
+    message = 'See WebUI User Guide for complete explanation of plot contents.'
+    plt.text(0.03, -upperlim*0.22, message, fontsize='small', color='black', alpha=0.85 )
+
     if update_dstore:
         bio = io.BytesIO()
         plt.savefig(bio, format='png', bbox_inches='tight')
@@ -222,7 +250,12 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
     # get the IML for the 2475 RP
     rtgm_probmce = rtgm_df['ProbMCE']
     # get hazard curves, put into rates
+    AFE = []
     mean_hcurve = dstore['hcurves-stats'][site_idx, 0]  # shape(M, L1)
+    window = dinfo['investigation_time']
+    for m, hcurve in enumerate(mean_hcurve):
+        AFE.append(to_rates(hcurve, window))
+
     plt = import_plt()
     fig, ax = plt.subplots(3, figsize=(8, 15))
 
@@ -242,11 +275,11 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         # have to compute everything for max comp. and for geom. mean
         RTGM = rtgm_probmce[m]
         RTGM_o = rtgm_probmce[m] / f
-        afe_target = _find_afe_target(imls, mean_hcurve[m], RTGM)
-        afe_target_o = _find_afe_target(imls_o, mean_hcurve[m], RTGM_o)
+        afe_target = _find_afe_target(imls, AFE[m], RTGM)
+        afe_target_o = _find_afe_target(imls_o, AFE[m], RTGM_o)
 
         # populate 3-panel plot
-        ax[m].loglog(imls, mean_hcurve[m], 'k', label=_get_label(imt),
+        ax[m].loglog(imls, AFE[m], 'k', label=_get_label(imt),
                      linewidth=2, zorder=3)
         ax[m].loglog([numpy.min(imls), RTGM], [afe_target, afe_target], 'k--',
                      linewidth=2, zorder=3)
@@ -255,7 +288,7 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         ax[m].loglog([RTGM], [afe_target], 'ko', label='Probabilistic MCE',
                      linewidth=2, zorder=3)
         # populate individual plots
-        ax1.loglog(imls_o, mean_hcurve[m], 'k', label=imt + ' - Geom. mean',
+        ax1.loglog(imls_o, AFE[m], 'k', label=imt + ' - Geom. mean',
                    linewidth=2, zorder=3)
         ax1.loglog([numpy.min(imls_o), RTGM_o], [afe_target_o, afe_target_o],
                    'k--', linewidth=2, zorder=3)
@@ -313,6 +346,11 @@ def plot_disagg_by_src(dstore, site_idx=0, update_dstore=False):
         ax[m].legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize='13')
         ax[m].set_ylim([10E-6, 1.1])
         ax[m].set_xlim([0.01, 4])
+
+        # add user guide message
+        if m==2:
+            message = 'See WebUI User Guide for complete explanation of plot contents.'
+            ax[m].text(0.0105, 0.000000506, message, fontsize='small', color='black', alpha=0.85 ) 
 
         # populate single imt plots - geometric mean
         ax1.grid('both')
