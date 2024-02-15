@@ -56,6 +56,46 @@ def build_secparams(sections):
     return secparams
 
 
+def build_msparams(rupture_idxs, secparams):
+    """
+    :returns: a structured array of parameters
+    """
+    U = len(rupture_idxs)
+    msparams = np.zeros(U, SDT)
+    for msparam, idxs in zip(msparams, rupture_idxs):
+        secparam = secparams[idxs]
+
+        # building simple multisurface params
+        areas = secparam['area']
+        msparam['area'] = areas.sum()
+        ws = areas / msparam['area']  # weights
+        msparam['dip'] = ws @ secparam['dip']
+        strikes = np.radians(secparam['strike'])
+        v1 = ws @ np.sin(strikes)
+        v2 = ws @ np.cos(strikes)
+        msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+        msparam['width'] = ws @ secparam['width']
+        msparam['ztor'] = ws @ secparam['ztor']
+        msparam['zbot'] = ws @ secparam['zbot']
+
+        # building u_max
+        tors = []
+        for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
+            coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
+            tors.append(geo.Line.from_coo(coo))
+        msparam['u_max'] = geo.MultiLine(tors).u_max
+
+        # building bounding box
+        lons = np.concatenate([secparam['tl0'], secparam['tr0']])
+        lats = np.concatenate([secparam['tl1'], secparam['tr1']])
+        bb = utils.get_spherical_bounding_box(lons, lats)
+        msparam['west'] = bb[0]
+        msparam['east'] = bb[1]
+        msparam['north'] = bb[2]
+        msparam['south'] = bb[3]
+    return msparams
+
+
 def _build_msparam(surfaces, tor):
     # slow version
     msparam = np.zeros(1, SDT)[0]

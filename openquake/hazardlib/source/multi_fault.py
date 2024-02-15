@@ -31,10 +31,8 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.multi import (
-    MultiSurface, build_secparams, SDT)
+    MultiSurface, build_secparams, build_msparams)
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -110,40 +108,9 @@ class MultiFaultSource(BaseSeismicSource):
         """
         :returns: a cached structured array of parameters
         """
-        U = len(self.rupture_idxs)
-        msparams = np.zeros(U, SDT)
-        for msparam, idxs in zip(msparams, self.rupture_idxs):
-            secparam = secparams[idxs]
-
-            # building simple multisurface params
-            areas = secparam['area']
-            msparam['area'] = areas.sum()
-            ws = areas / msparam['area']  # weights
-            msparam['dip'] = ws @ secparam['dip']
-            strikes = np.radians(secparam['strike'])
-            v1 = ws @ np.sin(strikes)
-            v2 = ws @ np.cos(strikes)
-            msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-            msparam['width'] = ws @ secparam['width']
-            msparam['ztor'] = ws @ secparam['ztor']
-            msparam['zbot'] = ws @ secparam['zbot']
-
-            # building u_max
-            tors = []
-            for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-                coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
-                tors.append(Line.from_coo(coo))
-            msparam['u_max'] = MultiLine(tors).u_max
-
-            # building bounding box
-            lons = np.concatenate([secparam['tl0'], secparam['tr0']])
-            lats = np.concatenate([secparam['tl1'], secparam['tr1']])
-            bb = get_spherical_bounding_box(lons, lats)
-            msparam['west'] = bb[0]
-            msparam['east'] = bb[1]
-            msparam['north'] = bb[2]
-            msparam['south'] = bb[3]
-        self.msparams = msparams
+        rids = self.rupture_idxs
+        U = len(rids)
+        self.msparams = build_msparams(rids, secparams)
 
     def is_gridded(self):
         return True  # convertible to HDF5
