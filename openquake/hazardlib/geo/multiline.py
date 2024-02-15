@@ -194,21 +194,14 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
-@compile('f8[:],f8[:, :,:]')
-def _get_tu(shifts, tuw):
-    # `shifts` has shape S and `tuw` shape (3, S, N)
-    for i, (shift, t, u, w) in enumerate(zip(shifts, tuw[0], tuw[1], tuw[2])):
-        if i == 0:  # initialize
-            uut = (u + shift) * w
-            tut = t * w
-            wet = w.copy()
-        else:  # update the values
-            uut += (u + shift) * w
-            tut += t * w
-            wet += w
-
-    # Normalize by the sum of weights
-    uut /= wet
-    tut /= wet
-
-    return tut, uut
+@compile('f8[:],f8[:,:,:]')
+def _get_tu(shift, tuw):
+    # `shift` has shape S and `tuw` shape (3, S, N)
+    S, N = tuw.shape[1:]
+    tu = np.zeros((2, N))
+    for n in range(N):
+        t, u, w = tuw[:, :, n]
+        W = w.sum()
+        tu[0, n] = t @ w / W
+        tu[1, n] = (u + shift) @ w / W
+    return tu

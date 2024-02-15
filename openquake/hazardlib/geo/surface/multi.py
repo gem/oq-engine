@@ -32,24 +32,68 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
            'west', 'east', 'north', 'south']
 SDT = [(p, np.float32) for p in MSPARAMS]
+SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
+             'tl0', 'tl1', 'tr0', 'tr1']
+SECDT = [(p, np.float32) for p in SECPARAMS]
 
 
-def _build_msparam(surfaces, tor):
-    # slow version
-    msparam = np.zeros(1, SDT)[0]
-    areas = np.array([s.get_area() for s in surfaces])
-    msparam['area'] = areas.sum()
-    ws = areas / msparam['area']  # weights
-    msparam['dip'] = ws @ [s.get_dip() for s in surfaces]
-    strikes = np.radians([s.get_strike() for s in surfaces])
-    v1 = ws @ np.sin(strikes)
-    v2 = ws @ np.cos(strikes)
-    msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-    msparam['u_max'] = tor.u_max
-    msparam['width'] = ws @ [s.get_width() for s in surfaces]
-    msparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
-    msparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
-    return msparam
+def build_secparams(sections):
+    """
+    :returns: an array of section parameters
+    """
+    secparams = np.zeros(len(sections), SECDT)
+    for sparam, sec in zip(secparams, sections):
+        sparam['area'] = sec.get_area()
+        sparam['dip'] = sec.get_dip()
+        sparam['strike'] = sec.get_strike()
+        sparam['width'] = sec.get_width()
+        sparam['ztor'] = sec.get_top_edge_depth()
+        sparam['zbot'] = sec.mesh.depths.max()
+        sparam['tl0'] = sec.tor.coo[0, 0]
+        sparam['tl1'] = sec.tor.coo[0, 1]
+        sparam['tr0'] = sec.tor.coo[-1, 0]
+        sparam['tr1'] = sec.tor.coo[-1, 1]
+    return secparams
+
+
+def build_msparams(rupture_idxs, secparams):
+    """
+    :returns: a structured array of parameters
+    """
+    U = len(rupture_idxs)
+    msparams = np.zeros(U, SDT)
+    for msparam, idxs in zip(msparams, rupture_idxs):
+        secparam = secparams[idxs]
+
+        # building simple multisurface params
+        areas = secparam['area']
+        msparam['area'] = areas.sum()
+        ws = areas / msparam['area']  # weights
+        msparam['dip'] = ws @ secparam['dip']
+        strikes = np.radians(secparam['strike'])
+        v1 = ws @ np.sin(strikes)
+        v2 = ws @ np.cos(strikes)
+        msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+        msparam['width'] = ws @ secparam['width']
+        msparam['ztor'] = ws @ secparam['ztor']
+        msparam['zbot'] = ws @ secparam['zbot']
+
+        # building u_max
+        tors = []
+        for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
+            coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
+            tors.append(geo.Line.from_coo(coo))
+        msparam['u_max'] = geo.MultiLine(tors).u_max
+
+        # building bounding box
+        lons = np.concatenate([secparam['tl0'], secparam['tr0']])
+        lats = np.concatenate([secparam['tl1'], secparam['tr1']])
+        bb = utils.get_spherical_bounding_box(lons, lats)
+        msparam['west'] = bb[0]
+        msparam['east'] = bb[1]
+        msparam['north'] = bb[2]
+        msparam['south'] = bb[3]
+    return msparams
 
 
 class MultiSurface(BaseSurface):
@@ -120,13 +164,19 @@ class MultiSurface(BaseSurface):
 
     @cached_property
     def tor(self):
-        # setting .tor is expensive unless u_max is given
         if self.msparam is None:
-            tor = geo.MultiLine([s.tor for s in self.surfaces])
-            self.msparam = _build_msparam(self.surfaces, tor)
-        else:
+            # slow operation: happens only in hazardlib, NOT in the engine
+            secparams = build_secparams(self.surfaces)
+            idxs = range(len(self.surfaces))
+            self.msparam = build_msparams([idxs], secparams)[0]
+        allsegments = all(len(s.tor) == 2 for s in self.surfaces)
+        if allsegments:
+            # this is the fast case, always happening for multiFaultSources
+            # because for KiteFaultSurfaces the top of rupture is a segment
             tor = geo.MultiLine([s.tor for s in self.surfaces],
                                 self.msparam['u_max'])
+        else:
+            tor = geo.MultiLine([s.tor for s in self.surfaces])
         return tor
 
     def get_min_distance(self, mesh):

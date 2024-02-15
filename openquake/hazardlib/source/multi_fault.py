@@ -31,10 +31,8 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.multi import (
-    MultiSurface, SDT)
+    MultiSurface, build_secparams, build_msparams)
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -45,28 +43,6 @@ F64 = np.float64
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
-SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
-             'tl0', 'tl1', 'tr0', 'tr1']
-SECDT = [(p, np.float32) for p in SECPARAMS]
-
-
-def build_secparams(sections):
-    """
-    :returns: an array of section parameters
-    """
-    secparams = np.zeros(len(sections), SECDT)
-    for sparam, sec in zip(secparams, sections):
-        sparam['area'] = sec.get_area()
-        sparam['dip'] = sec.get_dip()
-        sparam['strike'] = sec.get_strike()
-        sparam['width'] = sec.get_width()
-        sparam['ztor'] = sec.get_top_edge_depth()
-        sparam['zbot'] = sec.mesh.depths.max()
-        sparam['tl0'] = sec.tor.coo[0, 0]
-        sparam['tl1'] = sec.tor.coo[0, 1]
-        sparam['tr0'] = sec.tor.coo[-1, 0]
-        sparam['tr1'] = sec.tor.coo[-1, 1]
-    return secparams
 
 
 class MultiFaultSource(BaseSeismicSource):
@@ -129,43 +105,7 @@ class MultiFaultSource(BaseSeismicSource):
             return h5[f'{self.source_id}/rupture_idxs'][:]
 
     def set_msparams(self, secparams):
-        """
-        :returns: a cached structured array of parameters
-        """
-        U = len(self.rupture_idxs)
-        msparams = np.zeros(U, SDT)
-        for msparam, idxs in zip(msparams, self.rupture_idxs):
-            secparam = secparams[idxs]
-
-            # building simple multisurface params
-            areas = secparam['area']
-            msparam['area'] = areas.sum()
-            ws = areas / msparam['area']  # weights
-            msparam['dip'] = ws @ secparam['dip']
-            strikes = np.radians(secparam['strike'])
-            v1 = ws @ np.sin(strikes)
-            v2 = ws @ np.cos(strikes)
-            msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-            msparam['width'] = ws @ secparam['width']
-            msparam['ztor'] = ws @ secparam['ztor']
-            msparam['zbot'] = ws @ secparam['zbot']
-
-            # building u_max
-            tors = []
-            for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-                coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
-                tors.append(Line.from_coo(coo))
-            msparam['u_max'] = MultiLine(tors).u_max
-
-            # building bounding box
-            lons = np.concatenate([secparam['tl0'], secparam['tr0']])
-            lats = np.concatenate([secparam['tl1'], secparam['tr1']])
-            bb = get_spherical_bounding_box(lons, lats)
-            msparam['west'] = bb[0]
-            msparam['east'] = bb[1]
-            msparam['north'] = bb[2]
-            msparam['south'] = bb[3]
-        self.msparams = msparams
+        self.msparams = build_msparams(self.rupture_idxs, secparams)
 
     def is_gridded(self):
         return True  # convertible to HDF5
