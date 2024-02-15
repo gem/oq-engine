@@ -107,7 +107,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         multiplier = 1
         sf = None
     splits = []
-    mon = monitor('building msparams', measuremem=False)
+    mon = monitor('setting msparams', measuremem=False)
     for src in srcs:
         if src.code == b'F':
             with mon:
@@ -174,10 +174,14 @@ class PreClassicalCalculator(base.HazardCalculator):
              for sg in self.csm.src_groups], hdf5.vstr)
 
     def populate_csm(self):
+        """
+        Update the CompositeSourceModel by splitting and weighting the
+        sources; save the source_info table.
+        """
         oq = self.oqparam
         csm = self.csm
         self.store()
-        self.cmakers = cmakers = read_cmakers(self.datastore, csm)
+        self.cmakers = read_cmakers(self.datastore, csm)
         trt_smrs = [U32(sg[0].trt_smrs) for sg in csm.src_groups]
         self.datastore.hdf5.save_vlen('trt_smrs', trt_smrs)
         self.sitecol = sites = csm.sitecol if csm.sitecol else None
@@ -191,29 +195,33 @@ class PreClassicalCalculator(base.HazardCalculator):
             logging.warning(
                 'Using equivalent distance approximation and '
                 'collapsing hypocenters and nodal planes')
-        multifault = None
+        multifaults = []
         for sg in csm.src_groups:
             for src in sg:
                 if src.code == b'F':
-                    multifault = src
+                    multifaults.extend(split_source(src))
                 if reqv and sg.trt in oq.inputs['reqv']:
                     if src.source_id not in oq.reqv_ignore_sources:
                         collapse_nphc(src)
             grp_id = sg.sources[0].grp_id
             if sg.atomic:
-                cmakers[grp_id].set_weight(sg, sites)
+                self.cmakers[grp_id].set_weight(sg, sites)
                 atomic_sources.extend(sg)
             else:
                 normal_sources.extend(sg)
-        if multifault:
-            secparams = build_secparams(multifault.get_sections())
-            logging.warning('There are multiFaultSources, the preclassical '
+        if multifaults:
+            secparams = build_secparams(multifaults[0].get_sections())
+            logging.warning('There are %d multiFaultSources, the preclassical '
                             'phase will be slow (secparams=%s)',
+                            len(multifaults),
                             general.humansize(secparams.nbytes))
         else:
             secparams = ()
+        self.process(atomic_sources, normal_sources, sites, secparams)
+        self.store_source_info(source_data(csm.get_sources()))
 
-        # run preclassical for non-atomic sources
+    def process(self, atomic_sources, normal_sources, sites, secparams):
+        # run preclassical in parallel for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',
                      len(sources_by_key))
@@ -222,7 +230,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             self.datastore.swmr_on()
         smap = parallel.Starmap(preclassical, h5=self.datastore.hdf5)
         for grp_id, srcs in sources_by_key.items():
-            cmaker = cmakers[grp_id]
+            cmaker = self.cmakers[grp_id]
             pointsources, pointlike, others = [], [], []
             for src in srcs:
                 if hasattr(src, 'location'):
@@ -238,7 +246,7 @@ class PreClassicalCalculator(base.HazardCalculator):
                     others.append(src)
             check_maxmag(pointlike)
             if pointsources or pointlike:
-                if oq.ps_grid_spacing:
+                if self.oqparam.ps_grid_spacing:
                     # do not split the pointsources
                     smap.submit((pointsources + pointlike,
                                  sites, cmaker, secparams))
@@ -273,17 +281,15 @@ class PreClassicalCalculator(base.HazardCalculator):
             if srcs and not isinstance(grp_id, str) and grp_id not in atomic:
                 newsg = SourceGroup(srcs[0].tectonic_region_type)
                 newsg.sources = srcs
-                csm.src_groups[grp_id] = newsg
+                self.csm.src_groups[grp_id] = newsg
                 for src in srcs:
                     assert src.weight, src
                     assert src.num_ruptures, src
                     acc[src.code] += int(src.num_ruptures)
-        csm.fix_src_offset()
+        self.csm.fix_src_offset()
         for val, key in sorted((val, key) for key, val in acc.items()):
             cls = code2cls[key].__name__
             logging.info('{} ruptures: {:_d}'.format(cls, val))
-        self.store_source_info(source_data(csm.get_sources()))
-        return res
 
     def execute(self):
         """
