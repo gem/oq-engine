@@ -217,10 +217,10 @@ class PreClassicalCalculator(base.HazardCalculator):
                             general.humansize(secparams.nbytes))
         else:
             secparams = ()
-        self.process(atomic_sources, normal_sources, sites, secparams)
+        self._process(atomic_sources, normal_sources, sites, secparams)
         self.store_source_info(source_data(csm.get_sources()))
 
-    def process(self, atomic_sources, normal_sources, sites, secparams):
+    def _process(self, atomic_sources, normal_sources, sites, secparams):
         # run preclassical in parallel for non-atomic sources
         sources_by_key = groupby(normal_sources, operator.attrgetter('grp_id'))
         logging.info('Starting preclassical with %d source groups',

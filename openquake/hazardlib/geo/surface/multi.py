@@ -32,6 +32,28 @@ from openquake.hazardlib.geo.surface import PlanarSurface
 MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
            'west', 'east', 'north', 'south']
 SDT = [(p, np.float32) for p in MSPARAMS]
+SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
+             'tl0', 'tl1', 'tr0', 'tr1']
+SECDT = [(p, np.float32) for p in SECPARAMS]
+
+
+def build_secparams(sections):
+    """
+    :returns: an array of section parameters
+    """
+    secparams = np.zeros(len(sections), SECDT)
+    for sparam, sec in zip(secparams, sections):
+        sparam['area'] = sec.get_area()
+        sparam['dip'] = sec.get_dip()
+        sparam['strike'] = sec.get_strike()
+        sparam['width'] = sec.get_width()
+        sparam['ztor'] = sec.get_top_edge_depth()
+        sparam['zbot'] = sec.mesh.depths.max()
+        sparam['tl0'] = sec.tor.coo[0, 0]
+        sparam['tl1'] = sec.tor.coo[0, 1]
+        sparam['tr0'] = sec.tor.coo[-1, 0]
+        sparam['tr1'] = sec.tor.coo[-1, 1]
+    return secparams
 
 
 def _build_msparam(surfaces, tor):

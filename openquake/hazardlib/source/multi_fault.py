@@ -34,7 +34,7 @@ from openquake.hazardlib.geo.surface.kite_fault import (
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.multi import (
-    MultiSurface, SDT)
+    MultiSurface, build_secparams, SDT)
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
@@ -45,28 +45,6 @@ F64 = np.float64
 BLOCKSIZE = 2000
 # NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
 # however it uses a lot of RAM in classical when reading the sources
-SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
-             'tl0', 'tl1', 'tr0', 'tr1']
-SECDT = [(p, np.float32) for p in SECPARAMS]
-
-
-def build_secparams(sections):
-    """
-    :returns: an array of section parameters
-    """
-    secparams = np.zeros(len(sections), SECDT)
-    for sparam, sec in zip(secparams, sections):
-        sparam['area'] = sec.get_area()
-        sparam['dip'] = sec.get_dip()
-        sparam['strike'] = sec.get_strike()
-        sparam['width'] = sec.get_width()
-        sparam['ztor'] = sec.get_top_edge_depth()
-        sparam['zbot'] = sec.mesh.depths.max()
-        sparam['tl0'] = sec.tor.coo[0, 0]
-        sparam['tl1'] = sec.tor.coo[0, 1]
-        sparam['tr0'] = sec.tor.coo[-1, 0]
-        sparam['tr1'] = sec.tor.coo[-1, 1]
-    return secparams
 
 
 class MultiFaultSource(BaseSeismicSource):
