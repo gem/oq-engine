@@ -24,8 +24,6 @@ from openquake.hazardlib import valid, nrml, sourceconverter, sourcewriter
 from openquake.baselib import general
 from openquake.commonlib import logictree
 
-conv = sourceconverter.SourceConverter(area_source_discretization=20.)
-
 
 def save_bak(fname, node, num_nodes, total):
     shutil.copy(fname, fname + '.bak')
@@ -35,11 +33,13 @@ def save_bak(fname, node, num_nodes, total):
     print('Extracted %d nodes out of %d' % (num_nodes, total))
 
 
-def reduce_source_model(fname, reduction_factor):
+def reduce_source_model(fname, reduction_factor, itime):
     """
     Reduce the source model by sampling the sources; as a special case,
     multiPointSources are split in pointSources and then sampled.
     """
+    conv = sourceconverter.SourceConverter(area_source_discretization=20.,
+                                           investigation_time=itime)
     [smodel] = nrml.read_source_models([fname], conv)
     grp = smodel.src_groups[0]
     if any(src.code == b'M' for src in grp):  # multiPoint
@@ -48,6 +48,18 @@ def reduce_source_model(fname, reduction_factor):
                 grp.sources = general.random_filter(src, reduction_factor)
                 print('Extracted %d point sources out of %d' %
                       (len(grp), len(src)))
+                break
+    elif any(src.code == b'F' for src in grp):  # multiFault
+        for src in grp:
+            if src.code == b'F':
+                rids = numpy.arange(src.count_ruptures())
+                ok = general.random_filter(rids, reduction_factor)
+                src.mags = src.mags[ok]
+                src.rakes = src.rakes[ok]
+                src.probs_occur = src.probs_occur[ok]
+                src._rupture_idxs = [src._rupture_idxs[o] for o in ok]
+                print('Extracted %d ruptures out of %d' %
+                      (len(ok), len(rids)))
                 break
     else:
         total = len(grp)
@@ -59,7 +71,8 @@ def reduce_source_model(fname, reduction_factor):
     sourcewriter.write_source_model(fname, smodel)
 
 
-def main(fname, reduction_factor: valid.probability):
+def main(fname, reduction_factor: valid.probability,
+         investigation_time: valid.positivefloat = 50.):
     """
     Produce a submodel from `fname` by sampling the nodes randomly.
     Supports source models, site models and exposure models. As a special
@@ -95,11 +108,11 @@ def main(fname, reduction_factor: valid.probability):
         model.nodes = general.random_filter(model, reduction_factor)
         num_nodes = len(model)
     elif model.tag.endswith('sourceModel'):
-        reduce_source_model(fname, reduction_factor)
+        reduce_source_model(fname, reduction_factor, investigation_time)
         return
     elif model.tag.endswith('logicTree'):
         for smpath in logictree.collect_info(fname).smpaths:
-            reduce_source_model(smpath, reduction_factor)
+            reduce_source_model(smpath, reduction_factor, investigation_time)
         return
     else:
         raise RuntimeError('Unknown model tag: %s' % model.tag)
@@ -108,3 +121,4 @@ def main(fname, reduction_factor: valid.probability):
 
 main.fname = 'path to the model file'
 main.reduction_factor = 'reduction factor in the range 0..1'
+main.investigation_time = 'investigation_time used in read_source_models'
