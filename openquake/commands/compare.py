@@ -271,7 +271,7 @@ def compare_med_gmv(imt, calc_ids: int, *,
         # arrays of shape (G, M, N) => (G, N)
         aw1 = ex1.get(f'med_gmv/{src}')
         aw2 = ex2.get(f'med_gmv/{src}')
-        aac(aw1.gsims, aw2.gsims, rtol, atol)
+        assert list(aw1.gsims) == list(aw2.gsims), (aw1.gsims, aw2.gsims)
         arr1 = aw1[:, m]
         arr2 = aw2[:, m]
         aac(arr1.shape, arr2.shape, rtol, atol)
