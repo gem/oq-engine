@@ -332,7 +332,8 @@ hazard_uhs-std.csv
 
         # checking the mean rates
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
-        mean_rates = to_rates(mean_poes)
+        window = self.calc.datastore['oqparam'].investigation_time
+        mean_rates = to_rates(mean_poes, window)
         rates_by_source = self.calc.datastore[
             'mean_rates_by_src'][0]  # (M, L1, Ns)
         aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)

@@ -26,7 +26,7 @@ except ImportError:
     rtgmpy = None
 from openquake.qa_tests_data import mosaic
 from openquake.commonlib import logs
-from openquake.calculators import base, views
+from openquake.calculators import base
 from openquake.calculators.export import export
 from openquake.engine.aelo import get_params_from
 
@@ -54,13 +54,13 @@ def test_PAC():
     r0, r1 = calc.datastore['hcurves-rlzs'][0, :, 0, 0]  # 2 rlzs
     if rtgmpy:
         a7 = json.loads(calc.datastore['asce07'][0].decode('ascii'))
-        aac([r0, r1, a7['PGA']], [0.0327251, 0.04031283, 0.83427], atol=1E-6)
+        aac([r0, r1, a7['PGA']], [0.03272511, 0.040312827, 0.83427], atol=1E-6)
 
     # site (160, -9.4), first level of PGA
     r0, r1 = calc.datastore['hcurves-rlzs'][1, :, 0, 0]  # 2 rlzs
     if rtgmpy:
         a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
-        aac([r0, r1, a7['PGA']], [0.03272051, 0.04030216, 0.79588], atol=1E-6)
+        aac([r0, r1, a7['PGA']], [0.032720476, 0.040302116, 0.7959], atol=1E-6)
 
 
 def test_KOR():

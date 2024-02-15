@@ -275,7 +275,8 @@ class Hazard:
         :returns: an array of rates of shape (N, M, L1)
         """
         gids = self.gids[pmap.grp_id]
-        rates = disagg.to_rates(pmap.array) @ self.weig[gids]  # shape (N, L)
+        itime = self.datastore['oqparam'].investigation_time
+        rates = disagg.to_rates(pmap.array, itime) @ self.weig[gids]  # shape (N, L)
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap, the_sids, gid=0):
