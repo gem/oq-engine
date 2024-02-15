@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Fixed `oq compare`: the tolerance parameters were ignored
   * Fixed a numerical precision error affecting the hazard curves at
     very high intensities
   * Optimized multi fault sources by moving surface calculations in the
