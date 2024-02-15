@@ -105,12 +105,7 @@ class MultiFaultSource(BaseSeismicSource):
             return h5[f'{self.source_id}/rupture_idxs'][:]
 
     def set_msparams(self, secparams):
-        """
-        :returns: a cached structured array of parameters
-        """
-        rids = self.rupture_idxs
-        U = len(rids)
-        self.msparams = build_msparams(rids, secparams)
+        self.msparams = build_msparams(self.rupture_idxs, secparams)
 
     def is_gridded(self):
         return True  # convertible to HDF5

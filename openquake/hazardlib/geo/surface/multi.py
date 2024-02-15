@@ -165,15 +165,18 @@ class MultiSurface(BaseSurface):
     @cached_property
     def tor(self):
         if self.msparam is None:
-            # slow lane
+            # slow operation: happens only in hazardlib, NOT in the engine
             secparams = build_secparams(self.surfaces)
             idxs = range(len(self.surfaces))
             self.msparam = build_msparams([idxs], secparams)[0]
-            tor = geo.MultiLine([s.tor for s in self.surfaces])
-        else:
-            # fast lane
+        allsegments = all(len(s.tor) == 2 for s in self.surfaces)
+        if allsegments:
+            # this is the fast case, always happening for multiFaultSources
+            # because for KiteFaultSurfaces the top of rupture is a segment
             tor = geo.MultiLine([s.tor for s in self.surfaces],
                                 self.msparam['u_max'])
+        else:
+            tor = geo.MultiLine([s.tor for s in self.surfaces])
         return tor
 
     def get_min_distance(self, mesh):

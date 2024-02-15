@@ -194,7 +194,7 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     return np.cos(np.radians(overall_strike - azimuths))*distances
 
 
-@compile('f8[:],f8[:, :,:]')
+@compile('f8[:],f8[:,:,:]')
 def _get_tu(shift, tuw):
     # `shift` has shape S and `tuw` shape (3, S, N)
     S, N = tuw.shape[1:]
