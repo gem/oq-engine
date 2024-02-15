@@ -215,8 +215,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         # MDE results use same values as test_case_9
         self.run_calc(case_11.__file__, 'job.ini')
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
-        #if platform.machine() == 'arm64':
-        #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
     def test_case_12(self):
