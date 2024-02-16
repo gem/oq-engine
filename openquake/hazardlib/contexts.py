@@ -77,6 +77,20 @@ def _get(surfaces, param, secdists, mask=slice(None)):
     return arr  # shape (S, N, ...)
 
 
+def _get_tu(rup, secdists, mask):
+    tor = rup.surface.tor
+    arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
+    S, N = arr.shape[:2]
+    # keep the flipped values and then reorder the surface indices
+    # arr has shape (S, N, 2, 3) where 2 refer to the flipping
+    tuw = numpy.zeros((3, S, N))
+    for s in range(S):
+        idx = tor.soidx[s]
+        flip = int(tor.flipped[idx])
+        tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
+    return multiline._get_tu(tor.shift, tuw)
+
+
 def set_distances(ctx, rup, r_sites, param, secdists, mask):
     """
     Set the distance attributes on the context; also manages paired
@@ -93,16 +107,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
     else:
         tor = rup.surface.tor  # MultiLine object
         if param in ('rx', 'ry0'):
-            arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
-            S, N = arr.shape[:2]
-            # keep the flipped values and then reorder the surface indices
-            # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
-            tuw = numpy.zeros((3, S, N))
-            for s in range(S):
-                idx = rup.surface.tor.soidx[s]
-                flip = int(rup.surface.tor.flipped[idx])
-                tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
-            tut, uut = multiline._get_tu(tor.shift, tuw)
+            tut, uut = _get_tu(rup, secdists, mask)
             '''
             # sanity check with the right parameters t, u
             t, u = rup.surface.tor.get_tu(r_sites)
