@@ -77,41 +77,43 @@ def _get(surfaces, param, secdists, mask=slice(None)):
     return arr  # shape (S, N, ...)
 
 
-def set_distances(ctx, rup, r_sites, params, secdists, mask):
+def _get_tu(rup, secdists, mask):
+    tor = rup.surface.tor
+    arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
+    S, N = arr.shape[:2]
+    # keep the flipped values and then reorder the surface indices
+    # arr has shape (S, N, 2, 3) where 2 refer to the flipping
+    tuw = numpy.zeros((3, S, N))
+    for s in range(S):
+        idx = tor.soidx[s]
+        flip = int(tor.flipped[idx])
+        tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
+    return multiline._get_tu(tor.shift, tuw)
+
+
+def set_distances(ctx, rup, r_sites, param, secdists, mask):
     """
-    Set the distance attributes on the context; also manages paired
-    attributes like clon_lat.
+    Set the distance attributes on the context
     """
     if secdists is None:
-        for param in params:
-            dists = get_distances(rup, r_sites, param)
-            if '_' in param:
-                p0, p1 = param.split('_')  # clon_clat
-                setattr(ctx, p0, dists[:, 0])
-                setattr(ctx, p1, dists[:, 1])
-            else:
-                setattr(ctx, param, dists)
+        dists = get_distances(rup, r_sites, param)
+        if '_' in param:
+            p0, p1 = param.split('_')  # clon_clat
+            setattr(ctx, p0, dists[:, 0])
+            setattr(ctx, p1, dists[:, 1])
+        else:
+            setattr(ctx, param, dists)
     else:
         # fast lane for multifault sources
         tor = rup.surface.tor  # MultiLine object
-        if 'rx' in params or 'ry0' in params:
-            arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
-            S, N = arr.shape[:2]
-            # keep the flipped values and then reorder the surface indices
-            # arr has shape (S, N, 2, 3) where 2 refer to the flipping
-            tuw = numpy.zeros((3, S, N))
-            for s in range(S):
-                idx = tor.soidx[s]
-                flip = int(tor.flipped[idx])
-                tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
-            tut, uut = multiline._get_tu(tor.shift, tuw)
+        if param in ('rx', 'ry0'):
+            tut, uut = _get_tu(rup, secdists, mask)
             '''
             # sanity check with the right parameters t, u
             t, u = rup.surface.tor.get_tu(r_sites)
             numpy.testing.assert_allclose(tut, t)
             numpy.testing.assert_allclose(uut, u)
             '''
-        for param in params:
             if param == 'rx':
                 ctx.rx = tut
             elif param == 'ry0':
@@ -119,22 +121,21 @@ def set_distances(ctx, rup, r_sites, params, secdists, mask):
                 ctx.ry0[neg] = numpy.abs(uut[neg])
                 big = uut > tor.u_max
                 ctx.ry0[big] = uut[big] - tor.u_max
-            elif param == 'rjb' :
-                rjbs = _get(rup.surface.surfaces, 'rjb', secdists, mask)
-                ctx['rjb'] = numpy.min(rjbs, axis=0)
-                '''
-                # sanity check with the right rjb
-                rjb = rup.surface.get_joyner_boore_distance(r_sites)
-                numpy.testing.assert_allclose(ctx.rjb, rjb)
-                '''
-            elif param == 'clon_clat':
-                coos = _get(rup.surface.surfaces, 'clon_clat', secdists, mask)
-                # shape (numsections, numsites, 3)
-                msh = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(
-                    r_sites)
-                # shape (numsites, 3)
-                ctx['clon'] = msh.lons
-                ctx['clat'] = msh.lats
+        elif param == 'rjb' :
+            rjbs = _get(rup.surface.surfaces, 'rjb', secdists, mask)
+            ctx['rjb'] = numpy.min(rjbs, axis=0)
+            '''
+            # sanity check with the right rjb
+            rjb = rup.surface.get_joyner_boore_distance(r_sites)
+            numpy.testing.assert_allclose(ctx.rjb, rjb)
+            '''
+        elif param == 'clon_clat':
+            coos = _get(rup.surface.surfaces, 'clon_clat', secdists, mask)
+            # shape (numsections, numsites, 3)
+            m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(r_sites)
+            # shape (numsites, 3)
+            ctx['clon'] = m.lons
+            ctx['clat'] = m.lats
 
 
 def round_dist(dst):
@@ -983,10 +984,18 @@ class ContextMaker(object):
 
             ctx.rrup = rrup[mask]
             ctx.sids = r_sites.sids
-            params = self.REQUIRES_DISTANCES - {'rrup'}
-            if self.fewsites:
-                params.add('clon_clat')
-            set_distances(ctx, rup, r_sites, params, secdists, mask)
+            for param in self.REQUIRES_DISTANCES - {'rrup'}:
+                if param == 'clon':
+                    set_distances(ctx, rup, r_sites, 'clon_clat',
+                                  secdists, mask)
+                elif param == 'clat':
+                    pass
+                else:
+                    set_distances(ctx, rup, r_sites, param,
+                                  secdists, mask)
+            if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
+                set_distances(ctx, rup, r_sites, 'clon_clat',
+                              secdists, mask)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
