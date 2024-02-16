@@ -81,6 +81,7 @@ class MultiLine(object):
         else:
             self.u_max = u_max
 
+    # used in event based too
     def get_tu(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline
