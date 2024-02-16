@@ -100,8 +100,8 @@ def set_distances(ctx, rup, r_sites, params, secdists, mask):
             # arr has shape (S, N, 2, 3) where 2 refer to the flipping
             tuw = numpy.zeros((3, S, N))
             for s in range(S):
-                idx = rup.surface.tor.soidx[s]
-                flip = int(rup.surface.tor.flipped[idx])
+                idx = tor.soidx[s]
+                flip = int(tor.flipped[idx])
                 tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
             tut, uut = multiline._get_tu(tor.shift, tuw)
             '''
