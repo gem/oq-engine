@@ -59,7 +59,7 @@ TWO16 = 2**16
 TWO24 = 2**24
 TWO32 = 2**32
 STD_TYPES = (StdDev.TOTAL, StdDev.INTER_EVENT, StdDev.INTRA_EVENT)
-KNOWN_DISTANCES = frozenset('''rrup rx_ry0 rx ry0 rjb rhypo repi rcdpp azimuth
+KNOWN_DISTANCES = frozenset('''rrup rx ry0 rjb rhypo repi rcdpp azimuth
 azimuthcp rvolc clon_clat clon clat'''.split())
 NUM_BINS = 256
 DIST_BINS = sqrscale(80, 1000, NUM_BINS)
@@ -80,7 +80,7 @@ def _get(surfaces, param, secdists, mask=slice(None)):
 def set_distances(ctx, rup, r_sites, param, secdists, mask):
     """
     Set the distance attributes on the context; also manages paired
-    attributes like clon_lat and rx_ry0.
+    attributes like clon_lat.
     """
     if secdists is None:
         dists = get_distances(rup, r_sites, param)
