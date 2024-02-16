@@ -91,7 +91,7 @@ def _get_tu(rup, secdists, mask):
     return multiline._get_tu(tor.shift, tuw)
 
 
-def set_distances(ctx, rup, r_sites, param, secdists, mask):
+def set_distances(ctx, rup, r_sites, param, secdists, mask, tu):
     """
     Set the distance attributes on the context; also manages paired
     attributes like clon_lat and rx_ry0.
@@ -107,7 +107,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
     else:
         tor = rup.surface.tor  # MultiLine object
         if param in ('rx', 'ry0'):
-            tut, uut = _get_tu(rup, secdists, mask)
+            tut, uut = tu
             '''
             # sanity check with the right parameters t, u
             t, u = rup.surface.tor.get_tu(r_sites)
@@ -987,8 +987,12 @@ class ContextMaker(object):
             params = self.REQUIRES_DISTANCES - {'rrup', 'clon', 'clat'}
             if self.fewsites:
                 params.add('clon_clat')
+            if secdists and ('rx' in params or 'ry0' in params):
+                tu = _get_tu(rup, secdists, mask)
+            else:
+                tu = None
             for param in params:
-                set_distances(ctx, rup, r_sites, param, secdists, mask)
+                set_distances(ctx, rup, r_sites, param, secdists, mask, tu)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
