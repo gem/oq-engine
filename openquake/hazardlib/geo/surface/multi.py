@@ -100,6 +100,11 @@ def build_msparams(rupture_idxs, secparams):
         msparam['north'] = bb[2]
         msparam['south'] = bb[3]
 
+        # building mid point
+        msparam['hp0'] = utils.angular_mean(secparam['hp0'], ws)
+        msparam['hp1'] = utils.angular_mean(secparam['hp1'], ws)
+        msparam['hp2'] = ws @ secparam['hp2']
+
     return msparams
 
 
@@ -283,13 +288,8 @@ class MultiSurface(BaseSurface):
         hypocenter locations are not explicitly defined, and therefore an
         automated way to define them is required.
         """
-        if len(self.surfaces) == 1:
-            return self.surfaces[0].get_middle_point()
-        west, east, north, south = self.get_bounding_box()
-        midlon, midlat = utils.get_middle_point(west, north, east, south)
-        m = Mesh(np.array([midlon]), np.array([midlat]))
-        dists = [surf.get_min_distance(m) for surf in self.surfaces]
-        return self.surfaces[np.argmin(dists)].get_middle_point()
+        self.tor
+        return geo.Point(*self.msparam[['hp0', 'hp1', 'hp2']])
 
     def get_surface_boundaries(self):
         los, las = self.surfaces[0].get_surface_boundaries()
