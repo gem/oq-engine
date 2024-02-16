@@ -77,26 +77,27 @@ def _get(surfaces, param, secdists, mask=slice(None)):
     return arr  # shape (S, N, ...)
 
 
-def set_distances(ctx, rup, r_sites, param, secdists, mask):
+def set_distances(ctx, rup, r_sites, params, secdists, mask):
     """
-    Set the distance attributes on the context; also manages paired
-    attributes like clon_lat and rx_ry0.
+    Set the distance attributes on the context
     """
     if secdists is None:
-        dists = get_distances(rup, r_sites, param)
-        if '_' in param:
-            p0, p1 = param.split('_')  # clon_clat
-            setattr(ctx, p0, dists[:, 0])
-            setattr(ctx, p1, dists[:, 1])
-        else:
-            setattr(ctx, param, dists)
+        for param in sorted(params):
+            dists = get_distances(rup, r_sites, param)
+            if '_' in param:
+                p0, p1 = param.split('_')  # clon_clat
+                setattr(ctx, p0, dists[:, 0])
+                setattr(ctx, p1, dists[:, 1])
+            else:
+                setattr(ctx, param, dists)
     else:
+        # fast lane for multifault sources
         tor = rup.surface.tor  # MultiLine object
-        if param in ('rx', 'ry0'):
+        if 'rx' in params or 'ry0' in params:
             arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
             S, N = arr.shape[:2]
             # keep the flipped values and then reorder the surface indices
-            # arr has shape (S, N, 2, 3) where 2 refer to the flipping direction
+            # arr has shape (S, N, 2, 3) where 2 refer to the flipping
             tuw = numpy.zeros((3, S, N))
             for s in range(S):
                 idx = rup.surface.tor.soidx[s]
@@ -109,6 +110,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             numpy.testing.assert_allclose(tut, t)
             numpy.testing.assert_allclose(uut, u)
             '''
+        for param in sorted(params):
             if param == 'rx':
                 ctx.rx = tut
             elif param == 'ry0':
@@ -116,21 +118,22 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
                 ctx.ry0[neg] = numpy.abs(uut[neg])
                 big = uut > tor.u_max
                 ctx.ry0[big] = uut[big] - tor.u_max
-        elif param == 'rjb' :
-            rjbs = _get(rup.surface.surfaces, 'rjb', secdists, mask)
-            ctx['rjb'] = numpy.min(rjbs, axis=0)
-            '''
-            # sanity check with the right rjb
-            rjb = rup.surface.get_joyner_boore_distance(r_sites)
-            numpy.testing.assert_allclose(ctx.rjb, rjb)
-            '''
-        elif param == 'clon_clat':
-            coos = _get(rup.surface.surfaces, 'clon_clat', secdists, mask)
-            # shape (numsections, numsites, 3)
-            m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(r_sites)
-            # shape (numsites, 3)
-            ctx['clon'] = m.lons
-            ctx['clat'] = m.lats
+            elif param == 'rjb' :
+                rjbs = _get(rup.surface.surfaces, 'rjb', secdists, mask)
+                ctx['rjb'] = numpy.min(rjbs, axis=0)
+                '''
+                # sanity check with the right rjb
+                rjb = rup.surface.get_joyner_boore_distance(r_sites)
+                numpy.testing.assert_allclose(ctx.rjb, rjb)
+                '''
+            elif param == 'clon_clat':
+                coos = _get(rup.surface.surfaces, 'clon_clat', secdists, mask)
+                # shape (numsections, numsites, 3)
+                msh = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(
+                    r_sites)
+                # shape (numsites, 3)
+                ctx['clon'] = msh.lons
+                ctx['clat'] = msh.lats
 
 
 def round_dist(dst):
@@ -979,18 +982,10 @@ class ContextMaker(object):
 
             ctx.rrup = rrup[mask]
             ctx.sids = r_sites.sids
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                if param == 'clon':
-                    set_distances(ctx, rup, r_sites, 'clon_clat',
-                                  secdists, mask)
-                elif param == 'clat':
-                    pass
-                else:
-                    set_distances(ctx, rup, r_sites, param,
-                                  secdists, mask)
-            if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
-                set_distances(ctx, rup, r_sites, 'clon_clat',
-                              secdists, mask)
+            params = self.REQUIRES_DISTANCES - {'rrup'}
+            if self.fewsites:
+                params.add('clon_clat')
+            set_distances(ctx, rup, r_sites, params, secdists, mask)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
