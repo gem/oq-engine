@@ -120,15 +120,21 @@ def angular_mean(degrees, weights=None):
     """
     Given an array of angles in degrees, returns its angular mean.
     If weights are passed, assume sum(weights) == 1.
+
+    >>> angular_mean([179, -179])
+    180.0
+    >>> angular_mean([-179, 179])
+    180.0
+    >>> angular_mean([-179, 179], [.75, .25])
+    -179.4999619199226
     """
-    n = len(degrees)
     rads = numpy.radians(degrees)
     sin = numpy.sin(rads)
     cos = numpy.cos(rads)
     if weights is None:
-        mean = numpy.arctan2(sin / n, cos / n)
+        mean = numpy.arctan2(sin.mean(), cos.mean())
     else:
-        assert len(weights) == n, (len(weights), n)
+        assert len(weights) == len(degrees), (len(weights), len(degrees))
         mean = numpy.arctan2(sin @ weights, cos @ weights)
     return numpy.degrees(mean)
 
