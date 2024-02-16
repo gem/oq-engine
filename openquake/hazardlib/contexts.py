@@ -83,7 +83,7 @@ def set_distances(ctx, rup, r_sites, params, secdists, mask):
     attributes like clon_lat.
     """
     if secdists is None:
-        for param in sorted(params):
+        for param in params:
             dists = get_distances(rup, r_sites, param)
             if '_' in param:
                 p0, p1 = param.split('_')  # clon_clat
@@ -111,7 +111,7 @@ def set_distances(ctx, rup, r_sites, params, secdists, mask):
             numpy.testing.assert_allclose(tut, t)
             numpy.testing.assert_allclose(uut, u)
             '''
-        for param in sorted(params):
+        for param in params:
             if param == 'rx':
                 ctx.rx = tut
             elif param == 'ry0':
