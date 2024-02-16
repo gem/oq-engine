@@ -338,28 +338,3 @@ class MultiSurface(BaseSurface):
         condition = uut > self.tor.u_max
         ry0[condition] = uut[condition] - self.tor.u_max
         return ry0
-
-    def get_tuw_df(self, sites):
-        # debug method to be called in genctxs
-        idxs = []
-        sids = []
-        ts = []
-        us = []
-        ws = []
-        ls = []
-        for idx in self.tor.soidx:
-            coo = self.tor.coos[idx]
-            if self.tor.flipped[idx]:
-                coo = np.flipud(coo)
-            line = geo.Line.from_coo(coo)
-            sline = str(line)
-            tu, uu, we = line.get_tuw(sites)
-            for s, sid in enumerate(sites.sids):
-                idxs.append(idx)
-                sids.append(sid)
-                ts.append(tu[s])
-                us.append(uu[s])
-                ws.append(we[s])
-                ls.append(sline)
-        dic = dict(sec=idxs, sid=sids, line=ls, t=ts, u=us, w=ws)
-        return pandas.DataFrame(dic)

@@ -20,6 +20,7 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 """
 
 import numpy as np
+import pandas as pd
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
@@ -96,6 +97,31 @@ class MultiLine(object):
                 coo = np.flipud(coo)
             tuw[:, s] = Line.from_coo(coo).get_tuw(mesh)
         return _get_tu(self.shift, tuw)
+
+    def get_tuw_df(self, sites):
+        # debug method to be called in genctxs
+        idxs = []
+        sids = []
+        ts = []
+        us = []
+        ws = []
+        ls = []
+        for idx in self.soidx:
+            coo = self.coos[idx]
+            if self.flipped[idx]:
+                coo = np.flipud(coo)
+            line = Line.from_coo(coo)
+            sline = str(line)
+            tu, uu, we = line.get_tuw(sites)
+            for s, sid in enumerate(sites.sids):
+                idxs.append(idx)
+                sids.append(sid)
+                ts.append(tu[s])
+                us.append(uu[s])
+                ws.append(we[s])
+                ls.append(sline)
+        dic = dict(sec=idxs, sid=sids, line=ls, t=ts, u=us, w=ws)
+        return pd.DataFrame(dic)
 
     def __str__(self):
         return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
