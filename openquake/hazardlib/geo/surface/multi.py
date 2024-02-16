@@ -30,18 +30,16 @@ from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
 MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
-           'west', 'east', 'north', 'south']
-SDT = [(p, np.float32) for p in MSPARAMS]
-SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
-             'tl0', 'tl1', 'tr0', 'tr1']
-SECDT = [(p, np.float32) for p in SECPARAMS]
+           'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south',
+            'hp0', 'hp1', 'hp2']
+MS_DT = [(p, np.float32) for p in MSPARAMS]
 
 
 def build_secparams(sections):
     """
     :returns: an array of section parameters
     """
-    secparams = np.zeros(len(sections), SECDT)
+    secparams = np.zeros(len(sections), MS_DT)
     for sparam, sec in zip(secparams, sections):
         sparam['area'] = sec.get_area()
         sparam['dip'] = sec.get_dip()
@@ -53,6 +51,17 @@ def build_secparams(sections):
         sparam['tl1'] = sec.tor.coo[0, 1]
         sparam['tr0'] = sec.tor.coo[-1, 0]
         sparam['tr1'] = sec.tor.coo[-1, 1]
+
+        bb = sec.get_bounding_box()
+        sparam['west'] = bb[0]
+        sparam['east'] = bb[1]
+        sparam['north'] = bb[2]
+        sparam['south'] = bb[3]
+
+        mid = sec.get_middle_point()
+        sparam['hp0'] = mid.x
+        sparam['hp1'] = mid.y
+        sparam['hp2'] = mid.z
     return secparams
 
 
@@ -61,7 +70,7 @@ def build_msparams(rupture_idxs, secparams):
     :returns: a structured array of parameters
     """
     U = len(rupture_idxs)
-    msparams = np.zeros(U, SDT)
+    msparams = np.zeros(U, MS_DT)
     for msparam, idxs in zip(msparams, rupture_idxs):
         secparam = secparams[idxs]
 
@@ -86,13 +95,14 @@ def build_msparams(rupture_idxs, secparams):
         msparam['u_max'] = geo.MultiLine(tors).u_max
 
         # building bounding box
-        lons = np.concatenate([secparam['tl0'], secparam['tr0']])
-        lats = np.concatenate([secparam['tl1'], secparam['tr1']])
+        lons = np.concatenate([secparam['west'], secparam['east']])
+        lats = np.concatenate([secparam['north'], secparam['south']])
         bb = utils.get_spherical_bounding_box(lons, lats)
         msparam['west'] = bb[0]
         msparam['east'] = bb[1]
         msparam['north'] = bb[2]
         msparam['south'] = bb[3]
+
     return msparams
 
 
@@ -258,15 +268,9 @@ class MultiSurface(BaseSurface):
            northern and southern borders of the bounding box respectively.
            Values are floats in decimal degrees.
         """
-        lons = []
-        lats = []
-        for surf in self.surfaces:
-            west, east, north, south = surf.get_bounding_box()
-            lons.extend([west, east])
-            lats.extend([north, south])
-        return utils.get_spherical_bounding_box(np.array(lons), np.array(lats))
+        self.tor
+        return self.msparam[['west', 'east', 'north', 'south']]
 
-    # NB: this is only called by CharacteristicSources, see logictree/case_20
     def get_middle_point(self):
         """
         If :class:`MultiSurface` is defined by a single surface, simply
