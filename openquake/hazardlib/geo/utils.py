@@ -116,6 +116,23 @@ def angular_distance(km, lat=0, lat2=None):
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
+def angular_mean(degrees, weights=None):
+    """
+    Given an array of angles in degrees, returns its angular mean.
+    If weights are passed, assume sum(weights) == 1.
+    """
+    n = len(degrees)
+    rads = numpy.radians(degrees)
+    sin = numpy.sin(rads)
+    cos = numpy.cos(rads)
+    if weights is None:
+        mean = numpy.arctan2(sin / n, cos / n)
+    else:
+        assert len(weights) == n, (len(weights), n)
+        mean = numpy.arctan2(sin @ weights, cos @ weights)
+    return numpy.degrees(mean)
+
+
 class SiteAssociationError(Exception):
     """Raised when there are no sites close enough"""
 

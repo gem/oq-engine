@@ -79,10 +79,7 @@ def build_msparams(rupture_idxs, secparams):
         msparam['area'] = areas.sum()
         ws = areas / msparam['area']  # weights
         msparam['dip'] = ws @ secparam['dip']
-        strikes = np.radians(secparam['strike'])
-        v1 = ws @ np.sin(strikes)
-        v2 = ws @ np.cos(strikes)
-        msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+        msparam['strike'] = utils.angular_mean(secparam['strike'], ws) % 360
         msparam['width'] = ws @ secparam['width']
         msparam['ztor'] = ws @ secparam['ztor']
         msparam['zbot'] = ws @ secparam['zbot']
