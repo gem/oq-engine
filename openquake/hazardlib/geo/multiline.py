@@ -199,10 +199,10 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
 def _get_tu(shift, tuw):
     # `shift` has shape S and `tuw` shape (3, S, N)
     S, N = tuw.shape[1:]
-    tu = np.zeros((2, N))
-    for n in range(N):
-        t, u, w = tuw[:, :, n]
-        W = w.sum()
-        tu[0, n] = t @ w / W
-        tu[1, n] = (u + shift) @ w / W
-    return tu
+    tN, uN = np.zeros(N), np.zeros(N)
+    W = tuw[2].sum(axis=0)  # shape N
+    for s in range(S):
+        t, u, w = tuw[:, s]  # shape N
+        tN += t * w
+        uN += (u + shift[s]) * w
+    return tN / W, uN / W
