@@ -984,18 +984,11 @@ class ContextMaker(object):
 
             ctx.rrup = rrup[mask]
             ctx.sids = r_sites.sids
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                if param == 'clon':
-                    set_distances(ctx, rup, r_sites, 'clon_clat',
-                                  secdists, mask)
-                elif param == 'clat':
-                    pass
-                else:
-                    set_distances(ctx, rup, r_sites, param,
-                                  secdists, mask)
-            if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
-                set_distances(ctx, rup, r_sites, 'clon_clat',
-                              secdists, mask)
+            params = self.REQUIRES_DISTANCES - {'rrup', 'clon', 'clat'}
+            if self.fewsites:
+                params.add('clon_clat')
+            for param in params:
+                set_distances(ctx, rup, r_sites, param, secdists, mask)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
