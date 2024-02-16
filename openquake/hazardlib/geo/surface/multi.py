@@ -289,15 +289,10 @@ class MultiSurface(BaseSurface):
         if len(self.surfaces) == 1:
             return self.surfaces[0].get_middle_point()
         west, east, north, south = self.get_bounding_box()
-        longitude, latitude = utils.get_middle_point(west, north, east, south)
-        dists = []
-        for surf in self.surfaces:
-            dists.append(
-               surf.get_min_distance(Mesh(np.array([longitude]),
-                                          np.array([latitude]))))
-        dists = np.array(dists).flatten()
-        idx = dists == np.min(dists)
-        return np.array(self.surfaces)[idx][0].get_middle_point()
+        midlon, midlat = utils.get_middle_point(west, north, east, south)
+        m = Mesh(np.array([midlon]), np.array([midlat]))
+        dists = [surf.get_min_distance(m) for surf in self.surfaces]
+        return self.surfaces[np.argmin(dists)].get_middle_point()
 
     def get_surface_boundaries(self):
         los, las = self.surfaces[0].get_surface_boundaries()
