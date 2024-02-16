@@ -21,7 +21,7 @@ import unittest
 import numpy
 import pandas
 import matplotlib.pyplot as plt
-from openquake.baselib import hdf5, python3compat, general, performance, writers
+from openquake.baselib import hdf5, python3compat, general, writers
 from openquake.hazardlib.site import SiteCollection
 from openquake.hazardlib import valid, contexts, calc
 from openquake.hazardlib.source.multi_fault import (
@@ -202,8 +202,8 @@ class MultiFaultTestCase(unittest.TestCase):
 
 def main100sites():
     [src] = load(os.path.join(BASE_DATA_PATH, 'ucerf.hdf5'))
-    lons = numpy.arange(-122, -121, .01)
-    lats = numpy.full_like(lons, 27)
+    lons = [-122.]
+    lats = [27.]
     sitecol = SiteCollection.from_points(lons, lats)
     sitecol._set('vs30', 760.)
     sitecol._set('vs30measured', 1)

@@ -92,8 +92,9 @@ class MultiLine(object):
         for s in range(S):
             idx = self.soidx[s]
             coo = self.coos[idx]
-            flip = self.flipped[idx]
-            tuw[:, s] = Line.from_coo(coo, flip).get_tuw(mesh)
+            if self.flipped[idx]:
+                coo = np.flipud(coo)
+            tuw[:, s] = Line.from_coo(coo).get_tuw(mesh)
         return _get_tu(self.shift, tuw)
 
     def __str__(self):

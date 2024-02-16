@@ -346,17 +346,20 @@ class MultiSurface(BaseSurface):
         ts = []
         us = []
         ws = []
-        fs = []
+        ls = []
         for idx in self.tor.soidx:
             coo = self.tor.coos[idx]
-            flip = self.tor.flipped[idx]
-            tu, uu, we = geo.Line.from_coo(coo, flip).get_tuw(sites)
+            if self.tor.flipped[idx]:
+                coo = np.flipud(coo)
+            line = geo.Line.from_coo(coo)
+            sline = str(line)
+            tu, uu, we = line.get_tuw(sites)
             for s, sid in enumerate(sites.sids):
                 idxs.append(idx)
                 sids.append(sid)
                 ts.append(tu[s])
                 us.append(uu[s])
                 ws.append(we[s])
-                fs.append(flip)
-        dic = dict(sec=idxs, sid=sids, flip=fs, t=ts, u=us, w=ws)
+                ls.append(sline)
+        dic = dict(sec=idxs, sid=sids, line=ls, t=ts, u=us, w=ws)
         return pandas.DataFrame(dic)

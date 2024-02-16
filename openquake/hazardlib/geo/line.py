@@ -163,16 +163,13 @@ class Line(object):
     """
 
     @classmethod
-    def from_coo(cls, coo, flip=False):
+    def from_coo(cls, coo):
         """
         Build a Line object for an array of coordinates, assuming they have
         e been cleaned already, i.e. there are no adjacent duplicate points
         """
         self = cls.__new__(cls)
-        if flip:
-            self.coo = np.flip(coo, axis=0)
-        else:
-            self.coo = coo
+        self.coo = coo
         return self
 
     def __init__(self, points):

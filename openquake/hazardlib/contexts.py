@@ -966,9 +966,8 @@ class ContextMaker(object):
 
             r_sites = sites.filter(mask)
             # to debug you can insert here
-            # if rup.rup_id == 0:
-            #     print(rup.surface.get_tuw_df(r_sites))
-            #     import pdb; pdb.set_trace()
+            # print(rup.surface.get_tuw_df(r_sites))
+            # import pdb; pdb.set_trace()
 
             ''' # sanity check
             true_rrup = rup.surface.get_min_distance(r_sites)
