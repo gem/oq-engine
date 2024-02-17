@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 """
 from functools import cached_property
 import numpy as np
-import pandas
 from shapely.geometry import Polygon
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
