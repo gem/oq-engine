@@ -72,7 +72,7 @@ class MultiLine(object):
         olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
         # compute the shift with respect to the origins
-        origins = np.array([lines[i].coo[0, 0:2] for i in self.soidx])
+        origins = np.array([lines[i].coo[0] for i in self.soidx])
         self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
     
         if u_max is None:
