@@ -68,13 +68,16 @@ class MultiLine(object):
         # Reorder the lines according to the origin and compute the shift
         lines = [lines[i] for i in self.soidx]
         self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
-    
-        if u_max is None:
-            # this is the expensive operation
-            ts, us = self.get_tu(ep)
+        self.u_max = u_max
+
+    def set_u_max(self):
+        """
+        If not already computed, compute .u_max, set it and return it.
+        """
+        if self.u_max is None:
+            _, us = self.get_tu(get_endpoints(self.coos))
             self.u_max = np.abs(us).max()
-        else:
-            self.u_max = u_max
+        return self.u_max
 
     # used in event based too
     def get_tu(self, mesh):
