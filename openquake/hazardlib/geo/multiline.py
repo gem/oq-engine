@@ -41,7 +41,7 @@ def get_avg_azim_flipped(lines):
     # compute the overall strike and the origin of the multiline
     # get lenghts and average azimuths
     llenghts = np.array([ln.get_length() for ln in lines])
-    if (llenghts == 2).all():
+    if all(len(ln) == 2 for ln in lines):
         # fast lane for the engine
         coos = np.array([ln.coo for ln in lines])
         avgaz = geodetic.azimuths(coos) 
@@ -50,7 +50,7 @@ def get_avg_azim_flipped(lines):
         avgaz = np.array([line.average_azimuth() for line in lines])
 
     # determine the flipped lines
-    flipped = get_flipped(lines, llenghts, avgaz)
+    flipped = get_flipped(llenghts, avgaz)
     
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
@@ -135,7 +135,7 @@ class MultiLine(object):
         return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
 
 
-def get_flipped(lines, llens, avgaz):
+def get_flipped(llens, avgaz):
     """
     :returns: a boolean array with the flipped lines
     """
