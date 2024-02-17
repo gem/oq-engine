@@ -24,7 +24,7 @@ import pandas as pd
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import Line, get_average_azimuth
+from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
@@ -59,7 +59,7 @@ class MultiLine(object):
         for i in np.nonzero(self.flipped)[0]:
             lines[i] = lines[i].flip()
             avgazims_corr[i] = lines[i].average_azimuth()
-        avg_azim = get_average_azimuth(avgazims_corr, llenghts)
+        avg_azim = utils.angular_mean(avgazims_corr, llenghts) % 360
         strike_east = (avg_azim > 0) & (avg_azim <= 180)
 
         ep = get_endpoints(self.coos)
@@ -129,7 +129,7 @@ def get_flipped(lines, llens, avgaz):
     :returns: a boolean array with the flipped lines
     """
     # Find general azimuth trend
-    ave = get_average_azimuth(avgaz, llens)
+    ave = utils.angular_mean(avgaz, llens) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
