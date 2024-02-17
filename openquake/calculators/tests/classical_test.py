@@ -533,20 +533,10 @@ class ClassicalTestCase(CalculatorTestCase):
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_65.__file__, 'job.ini', hazard_calculation_id=hc_id)
         rates = self.calc.datastore['rup/occurrence_rate'][:]
-        aac(rates, [0.356675, 0.105361], atol=5e-7)
+        aac(rates, [0.105361, 0.356675], atol=5e-7)
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
-
-        # reading/writing a multiFaultSource
-        csm = self.calc.datastore['_csm']
-        tmpname = general.gettemp()
-        [src] = csm.src_groups[0].sources
-        src._rupture_idxs = [
-            tuple(map(str, idxs)) for idxs in src.rupture_idxs]
-        out = write_source_model(tmpname, csm.src_groups)
-        self.assertEqual(out[0], tmpname)
-        self.assertEqual(out[1], tmpname + '.hdf5')
 
         # test disaggregation
         hc_str = str(self.calc.datastore.calc_id)

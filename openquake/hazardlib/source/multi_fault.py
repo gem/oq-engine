@@ -180,26 +180,21 @@ class MultiFaultSource(BaseSeismicSource):
                     hypo, sfc, PMF(data))
             yield rup
 
-    def gen_slices(self):
-        if len(self.mags) <= BLOCKSIZE:  # already split
-            yield self.source_id, slice(None)
-            return
-        for i, slc in enumerate(gen_slices(0, len(self.mags), BLOCKSIZE)):
-            yield '%s.%d' % (self.source_id, i), slc
+    def gen_fragments(self):
+        u16mags = U16(self.mags * 100)
+        for i, umag in enumerate(np.unique(u16mags)):
+            yield '%s.%d' % (self.source_id, i), u16mags == umag
 
     def __iter__(self):
-        if len(self.mags) <= BLOCKSIZE:  # already split
-            yield self
-            return
-        # split in blocks of BLOCKSIZE ruptures each
-        for srcid, slc in self.gen_slices():
+        # split in blocks of ruptures with the same magnitude
+        for srcid, mask in self.gen_fragments():
             src = self.__class__(
                 srcid,
                 self.name,
                 self.tectonic_region_type,
-                self.probs_occur[slc],
-                self.mags[slc],
-                self.rakes[slc],
+                self.probs_occur[mask],
+                self.mags[mask],
+                self.rakes[mask],
                 self.investigation_time,
                 self.infer_occur_rates)
             src.hdf5path = self.hdf5path
@@ -251,18 +246,18 @@ def save(mfsources, sectiondict, hdf5path, msparams=False):
         except KeyError as exc:
             raise IndexError('The section index %s in source %r is invalid'
                              % (exc.args[0], src.source_id))
-        all_ridxs.append(rids)
+        all_ridxs.append(np.array(rids, dtype=object))
         delattr(src, '_rupture_idxs')  # was set by the SourceConverter
         src.hdf5path = hdf5path
 
     # store data
     with hdf5.File(hdf5path, 'w') as h5:
         for src, rupture_idxs in zip(mfsources, all_ridxs):
-            for srcid, slc in src.gen_slices():
-                h5.save_vlen(f'{srcid}/rupture_idxs', rupture_idxs[slc])
-                h5[f'{srcid}/probs_occur'] = src.probs_occur[slc]
-                h5[f'{srcid}/mags'] = src.mags[slc]
-                h5[f'{srcid}/rakes'] = src.rakes[slc]
+            for srcid, mask in src.gen_fragments():
+                h5.save_vlen(f'{srcid}/rupture_idxs', list(rupture_idxs[mask]))
+                h5[f'{srcid}/probs_occur'] = src.probs_occur[mask]
+                h5[f'{srcid}/mags'] = src.mags[mask]
+                h5[f'{srcid}/rakes'] = src.rakes[mask]
 
                 # save attributes
                 attrs = h5[f'{srcid}'].attrs
