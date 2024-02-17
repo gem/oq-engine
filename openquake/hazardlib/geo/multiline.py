@@ -60,10 +60,9 @@ class MultiLine(object):
             lines[i] = lines[i].flip()
             avgazims_corr[i] = lines[i].average_azimuth()
         avg_azim = utils.angular_mean(avgazims_corr, llenghts) % 360
-        strike_east = (avg_azim > 0) & (avg_azim <= 180)
 
         ep = get_endpoints(self.coos)
-        olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
+        olon, olat, self.soidx = get_origin(ep, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
         lines = [lines[i] for i in self.soidx]
@@ -155,7 +154,7 @@ def get_flipped(lines, llens, avgaz):
     return flipped
 
 
-def get_origin(ep, strike_to_east: bool, avg_strike: float):
+def get_origin(ep: Mesh, avg_strike: float):
     """
     Compute the origin necessary to calculate the coordinate shift
 
@@ -171,6 +170,7 @@ def get_origin(ep, strike_to_east: bool, avg_strike: float):
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
     DELTA = 0.1
+    strike_to_east = (avg_strike > 0) & (avg_strike <= 180)
     if strike_to_east or abs(avg_strike) < DELTA:
         idx = np.argmin(px)
     else:
