@@ -172,7 +172,6 @@ class MultiSurface(BaseSurface):
             self.msparam = build_msparams([idxs], secparams)[0]
             self.tor = geo.MultiLine([s.tor for s in self.surfaces])
         else:
-            # fast lane
             self.msparam = msparam
             self.tor = geo.MultiLine([s.tor for s in self.surfaces],
                                      self.msparam['u_max'])
