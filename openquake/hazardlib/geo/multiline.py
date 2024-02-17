@@ -50,7 +50,7 @@ def get_azim_flipped(lines):
     avgazims_corr = np.copy(avgaz)
     for i in np.nonzero(flipped)[0]:
         lines[i] = lines[i].flip()
-        avgazims_corr[i] = lines[i].average_azimuth()
+        avgazims_corr[i] = (avgaz[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean(avgazims_corr, llenghts) % 360
     return avg_azim, flipped
 
