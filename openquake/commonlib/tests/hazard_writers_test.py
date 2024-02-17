@@ -34,12 +34,12 @@ GmfNode = namedtuple('GmfNode', 'gmv, location')
 path = None
 
 
-def setUpModule():
+def setup_module():
     global path
     path = tempfile.NamedTemporaryFile().name
 
 
-def tearDownModule():
+def teardown_module():
     if sys.exc_info()[0] is None and os.path.exists(path):  # remove TMP
         os.remove(path)
 
