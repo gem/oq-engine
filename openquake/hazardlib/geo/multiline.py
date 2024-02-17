@@ -37,6 +37,57 @@ def get_endpoints(coos):
     return Mesh(lons, lats)
 
 
+def get_flipped(llens, avgaz):
+    """
+    :returns: a boolean array with the flipped lines
+    """
+    # Find general azimuth trend
+    ave = utils.angular_mean(avgaz, llens) % 360
+
+    # Find the sections whose azimuth direction is not consistent with the
+    # average one
+    flipped = np.zeros((len(avgaz)), dtype=bool)
+    if (ave >= 90) & (ave <= 270):
+        # This is the case where the average azimuth in the second or third
+        # quadrant
+        idx = (avgaz >= (ave - 90) % 360) & (avgaz < (ave + 90) % 360)
+    else:
+        # In this case the average azimuth points toward the northern emisphere
+        idx = (avgaz >= (ave - 90) % 360) | (avgaz < (ave + 90) % 360)
+
+    delta = abs(avgaz - ave)
+    scale = np.abs(np.cos(np.radians(delta)))
+    ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
+
+    strike_to_east = ratio > 0.5
+    if strike_to_east:
+        flipped[~idx] = True
+    else:
+        flipped[idx] = True
+
+    return flipped
+
+
+def get_avg_azim_flipped(lines):
+    """
+    :returns: average azimuth and boolean array
+    """
+    # compute the overall strike and the origin of the multiline
+    # get lenghts and average azimuths
+    llenghts = np.array([len(line) for line in lines])
+    avgaz = np.array([line.average_azimuth() for line in lines])
+
+    # determine the flipped lines
+    flipped = get_flipped(llenghts, avgaz)
+
+    # Compute the mean azimuth
+    for i in np.nonzero(flipped)[0]:
+        lines[i] = lines[i].flip()
+        avgaz[i] = (avgaz[i] + 180) % 360  # opposite azimuth
+    avg_azim = utils.angular_mean(avgaz, llenghts) % 360
+    return avg_azim, flipped
+
+
 class MultiLine(object):
     """
     A collection of polylines with associated methods and attributes. For the
@@ -45,21 +96,7 @@ class MultiLine(object):
     """
     def __init__(self, lines, u_max=None):
         self.coos = [ln.coo for ln in lines]
-
-        # compute the overall strike and the origin of the multiline
-        # get lenghts and average azimuths
-        llenghts = np.array([ln.get_length() for ln in lines])
-        avgaz = np.array([line.average_azimuth() for line in lines])
-
-        # determine the flipped lines
-        self.flipped = get_flipped(lines, llenghts, avgaz)
-
-        # Compute the prevalent azimuth
-        avgazims_corr = np.copy(avgaz)
-        for i in np.nonzero(self.flipped)[0]:
-            lines[i] = lines[i].flip()
-            avgazims_corr[i] = lines[i].average_azimuth()
-        avg_azim = utils.angular_mean(avgazims_corr, llenghts) % 360
+        avg_azim, self.flipped = get_avg_azim_flipped(lines)
 
         ep = get_endpoints(self.coos)
         olon, olat, self.soidx = get_origin(ep, avg_azim)
@@ -68,7 +105,7 @@ class MultiLine(object):
         origins = np.array([lines[i].coo[0] for i in self.soidx])
         self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
         self.u_max = u_max
-
+        
     def set_u_max(self):
         """
         If not already computed, compute .u_max, set it and return it.
@@ -121,37 +158,6 @@ class MultiLine(object):
 
     def __str__(self):
         return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
-
-
-def get_flipped(lines, llens, avgaz):
-    """
-    :returns: a boolean array with the flipped lines
-    """
-    # Find general azimuth trend
-    ave = utils.angular_mean(avgaz, llens) % 360
-
-    # Find the sections whose azimuth direction is not consistent with the
-    # average one
-    flipped = np.zeros((len(avgaz)), dtype=bool)
-    if (ave >= 90) & (ave <= 270):
-        # This is the case where the average azimuth in the second or third
-        # quadrant
-        idx = (avgaz >= (ave - 90) % 360) & (avgaz < (ave + 90) % 360)
-    else:
-        # In this case the average azimuth points toward the northern emisphere
-        idx = (avgaz >= (ave - 90) % 360) | (avgaz < (ave + 90) % 360)
-
-    delta = abs(avgaz - ave)
-    scale = np.abs(np.cos(np.radians(delta)))
-    ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
-
-    strike_to_east = ratio > 0.5
-    if strike_to_east:
-        flipped[~idx] = True
-    else:
-        flipped[idx] = True
-
-    return flipped
 
 
 def get_origin(ep: Mesh, avg_strike: float):
