@@ -258,7 +258,7 @@ class Line(object):
 
     def get_azimuths(self):
         """
-        Return the azimuths of all the segments omposing the polyline
+        Return the azimuths of all the segments composing the polyline
         """
         if len(self.coo) == 2:
             return [self[0].azimuth(self[1])]
