@@ -46,12 +46,11 @@ def get_azim_flipped(lines):
     # determine the flipped lines
     flipped = get_flipped(lines, llenghts, avgaz)
     
-    # Compute the prevalent azimuth
-    avgazims_corr = np.copy(avgaz)
+    # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
         lines[i] = lines[i].flip()
-        avgazims_corr[i] = (avgaz[i] + 180) % 360  # opposite azimuth
-    avg_azim = utils.angular_mean(avgazims_corr, llenghts) % 360
+        avgaz[i] = (avgaz[i] + 180) % 360  # opposite azimuth
+    avg_azim = utils.angular_mean(avgaz, llenghts) % 360
     return avg_azim, flipped
 
 
