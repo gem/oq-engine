@@ -71,9 +71,9 @@ class MultiLine(object):
         ep = get_endpoints(lines)
         olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
-        # Reorder the lines according to the origin and compute the shift
-        lines = [lines[i] for i in self.soidx]
-        self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
+        # compute the shift
+        coos = [lines[i].coo for i in self.soidx]
+        self.shift = get_coordinate_shift(coos, olon, olat, avg_azim)
     
         if u_max is None:
             # this is the expensive operation
@@ -199,7 +199,7 @@ def get_origin(ep, strike_to_east: bool, avg_strike: float):
     return olon[0], olat[0], sort_idxs
 
 
-def get_coordinate_shift(lines: list, olon: float, olat: float,
+def get_coordinate_shift(coos: list, olon: float, olat: float,
                          overall_strike: float) -> np.ndarray:
     """
     Computes the coordinate shift for each line in the multiline. This is
@@ -211,7 +211,7 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     """
     # For each line in the multi line, get the distance along the average
     # strike between the origin of the multiline and the first endnode
-    origins = np.array([[lin.coo[0, 0], lin.coo[0, 1]] for lin in lines])
+    origins = np.array([[coo[0, 0], coo[0, 1]] for coo in coos])
 
     # Distances and azimuths between the origin of the multiline and the
     # first endpoint
@@ -219,10 +219,10 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
     azimuths = azimuth(olon, olat, origins[:, 0], origins[:, 1])
 
     # Calculate the shift along the average strike direction
-    return np.cos(np.radians(overall_strike - azimuths))*distances
+    return np.float32(np.cos(np.radians(overall_strike - azimuths)) * distances)
 
 
-@compile('f8[:],f4[:,:,:]')
+@compile('f4[:],f4[:,:,:]')
 def _get_tu(shift, tuw):
     # `shift` has shape S and `tuw` shape (3, S, N)
     S, N = tuw.shape[1:]
