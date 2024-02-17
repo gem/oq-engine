@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 import numpy as np
 import pandas as pd
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo import utils, geodetic
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
@@ -75,7 +75,13 @@ def get_avg_azim_flipped(lines):
     # compute the overall strike and the origin of the multiline
     # get lenghts and average azimuths
     llenghts = np.array([len(line) for line in lines])
-    avgaz = np.array([line.average_azimuth() for line in lines])
+    if (llenghts == 2).all():
+        # fast lane, always in the engine
+        avgaz = geodetic.azimuths(np.array([ln.coo for ln in lines]))
+    else:
+        # slow lane, only in hazardlib tests
+        import pdb; pdb.set_trace()
+        avgaz = np.array([line.average_azimuth() for line in lines])
 
     # determine the flipped lines
     flipped = get_flipped(llenghts, avgaz)
@@ -94,7 +100,7 @@ class MultiLine(object):
     method.
     """
     def __init__(self, lines, u_max=None):
-        self.coos = [ln.coo for ln in lines]
+        self.coos = np.array([ln.coo for ln in lines])
         avg_azim, self.flipped = get_avg_azim_flipped(lines)
 
         ep = get_endpoints(self.coos)
