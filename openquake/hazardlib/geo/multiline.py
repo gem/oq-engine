@@ -71,9 +71,9 @@ class MultiLine(object):
         ep = get_endpoints(lines)
         olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
-        # compute the shift
-        coos = [lines[i].coo for i in self.soidx]
-        self.shift = get_coordinate_shift(coos, olon, olat, avg_azim)
+        # compute the shift with respect to the origins
+        origins = np.array([lines[i].coo[0, 0:2] for i in self.soidx])
+        self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
     
         if u_max is None:
             # this is the expensive operation
@@ -199,7 +199,7 @@ def get_origin(ep, strike_to_east: bool, avg_strike: float):
     return olon[0], olat[0], sort_idxs
 
 
-def get_coordinate_shift(coos: list, olon: float, olat: float,
+def get_coordinate_shift(origins: list, olon: float, olat: float,
                          overall_strike: float) -> np.ndarray:
     """
     Computes the coordinate shift for each line in the multiline. This is
@@ -209,10 +209,6 @@ def get_coordinate_shift(coos: list, olon: float, olat: float,
         A :class:`np.ndarray`instance with cardinality equal to the number of
         sections (i.e. the length of the lines list in input)
     """
-    # For each line in the multi line, get the distance along the average
-    # strike between the origin of the multiline and the first endnode
-    origins = np.array([[coo[0, 0], coo[0, 1]] for coo in coos])
-
     # Distances and azimuths between the origin of the multiline and the
     # first endpoint
     distances = geodetic_distance(olon, olat, origins[:, 0], origins[:, 1])
