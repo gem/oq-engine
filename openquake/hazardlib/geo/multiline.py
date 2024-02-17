@@ -82,7 +82,6 @@ def get_avg_azim_flipped(lines):
 
     # Compute the mean azimuth
     for i in np.nonzero(flipped)[0]:
-        lines[i] = lines[i].flip()
         avgaz[i] = (avgaz[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean(avgaz, llenghts) % 360
     return avg_azim, flipped
@@ -102,7 +101,9 @@ class MultiLine(object):
         olon, olat, self.soidx = get_origin(ep, avg_azim)
 
         # compute the shift with respect to the origins
-        origins = np.array([lines[i].coo[0] for i in self.soidx])
+        # NB: the origin is the first point (0) unless the line is flipped (1)
+        origins = np.array([lines[i].coo[int(f)]
+                            for i, f in zip(self.soidx, self.flipped)])
         self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
         self.u_max = u_max
         
