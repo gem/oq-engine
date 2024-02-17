@@ -28,18 +28,12 @@ from openquake.hazardlib.geo.line import Line, get_average_azimuth
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
-def get_endpoints(lines):
+def get_endpoints(coos):
     """
     :returns a mesh of shape 2L
     """
-    L = len(lines)
-    lons = np.zeros(2*L)
-    lats = np.zeros(2*L)
-    for i, line in enumerate(lines):
-        lons[2*i] = line.coo[0, 0]
-        lons[2*i + 1] = line.coo[-1, 0]
-        lats[2*i] = line.coo[0, 1]
-        lats[2*i + 1] = line.coo[-1, 1]
+    lons = np.concatenate([coo[[0, -1], 0] for coo in coos])  # shape 2L
+    lats = np.concatenate([coo[[0, -1], 1] for coo in coos])  # shape 2L
     return Mesh(lons, lats)
 
 
@@ -68,7 +62,7 @@ class MultiLine(object):
         avg_azim = get_average_azimuth(avgazims_corr, llenghts)
         strike_east = (avg_azim > 0) & (avg_azim <= 180)
 
-        ep = get_endpoints(lines)
+        ep = get_endpoints(self.coos)
         olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
 
         # Reorder the lines according to the origin and compute the shift
@@ -77,7 +71,7 @@ class MultiLine(object):
     
         if u_max is None:
             # this is the expensive operation
-            ts, us = self.get_tu(get_endpoints(lines))
+            ts, us = self.get_tu(ep)
             self.u_max = np.abs(us).max()
         else:
             self.u_max = u_max
