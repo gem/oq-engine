@@ -24,22 +24,16 @@ import pandas as pd
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import Line, get_average_azimuth
+from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
-def get_endpoints(lines):
+def get_endpoints(coos):
     """
     :returns a mesh of shape 2L
     """
-    L = len(lines)
-    lons = np.zeros(2*L)
-    lats = np.zeros(2*L)
-    for i, line in enumerate(lines):
-        lons[2*i] = line.coo[0, 0]
-        lons[2*i + 1] = line.coo[-1, 0]
-        lats[2*i] = line.coo[0, 1]
-        lats[2*i + 1] = line.coo[-1, 1]
+    lons = np.concatenate([coo[[0, -1], 0] for coo in coos])  # shape 2L
+    lats = np.concatenate([coo[[0, -1], 1] for coo in coos])  # shape 2L
     return Mesh(lons, lats)
 
 
@@ -65,22 +59,24 @@ class MultiLine(object):
         for i in np.nonzero(self.flipped)[0]:
             lines[i] = lines[i].flip()
             avgazims_corr[i] = lines[i].average_azimuth()
-        avg_azim = get_average_azimuth(avgazims_corr, llenghts)
-        strike_east = (avg_azim > 0) & (avg_azim <= 180)
+        avg_azim = utils.angular_mean(avgazims_corr, llenghts) % 360
 
-        ep = get_endpoints(lines)
-        olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
+        ep = get_endpoints(self.coos)
+        olon, olat, self.soidx = get_origin(ep, avg_azim)
 
         # compute the shift with respect to the origins
         origins = np.array([lines[i].coo[0] for i in self.soidx])
         self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
-    
-        if u_max is None:
-            # this is the expensive operation
-            ts, us = self.get_tu(ep)
+        self.u_max = u_max
+
+    def set_u_max(self):
+        """
+        If not already computed, compute .u_max, set it and return it.
+        """
+        if self.u_max is None:
+            _, us = self.get_tu(get_endpoints(self.coos))
             self.u_max = np.abs(us).max()
-        else:
-            self.u_max = u_max
+        return self.u_max
 
     # used in event based too
     def get_tu(self, mesh):
@@ -132,7 +128,7 @@ def get_flipped(lines, llens, avgaz):
     :returns: a boolean array with the flipped lines
     """
     # Find general azimuth trend
-    ave = get_average_azimuth(avgaz, llens)
+    ave = utils.angular_mean(avgaz, llens) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
@@ -158,7 +154,7 @@ def get_flipped(lines, llens, avgaz):
     return flipped
 
 
-def get_origin(ep, strike_to_east: bool, avg_strike: float):
+def get_origin(ep: Mesh, avg_strike: float):
     """
     Compute the origin necessary to calculate the coordinate shift
 
@@ -174,6 +170,7 @@ def get_origin(ep, strike_to_east: bool, avg_strike: float):
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
     DELTA = 0.1
+    strike_to_east = (avg_strike > 0) & (avg_strike <= 180)
     if strike_to_east or abs(avg_strike) < DELTA:
         idx = np.argmin(px)
     else:

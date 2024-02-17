@@ -261,7 +261,7 @@ class Line(object):
         Return the azimuths of all the segments omposing the polyline
         """
         if len(self.coo) == 2:
-            return self[0].azimuth(self[1])
+            return [self[0].azimuth(self[1])]
         lons = self.coo[:, 0]
         lats = self.coo[:, 1]
         return geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
@@ -287,7 +287,7 @@ class Line(object):
         lats = self.coo[:, 1]
         distances = geodetic.geodetic_distance(lons[:-1], lats[:-1],
                                                lons[1:], lats[1:])
-        return get_average_azimuth(azimuths, distances)
+        return utils.angular_mean(azimuths, distances) % 360
 
     def resample(self, sect_len: float, orig_extremes=False):
         """
@@ -460,29 +460,6 @@ class Line(object):
 
     def __str__(self):
         return utils.geohash5(self.coo)
-
-
-def get_average_azimuth(azimuths, distances) -> float:
-    """
-    Computes the average azimuth.
-
-    :param azimuths:
-        A :class:`numpy.ndarray` instance
-    :param distances:
-        A :class:`numpy.ndarray` instance
-    :return:
-        A float with the mean azimuth in decimal degrees
-    """
-    azimuths = np.radians(azimuths)
-    # convert polar coordinates to Cartesian ones and calculate
-    # the average coordinate of each component
-    avg_x = np.mean(distances * np.sin(azimuths))
-    avg_y = np.mean(distances * np.cos(azimuths))
-    # find the mean azimuth from that mean vector
-    azimuth = np.degrees(np.arctan2(avg_x, avg_y))
-    if azimuth < 0:
-        azimuth += 360
-    return azimuth
 
 
 @compile('(f8[:,:],f8[:,:],f8[:], f8[:,:])')
