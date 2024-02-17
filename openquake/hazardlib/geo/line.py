@@ -222,6 +222,15 @@ class Line(object):
         s02eq_s089n
         >>> print(line.flip())
         s089n_s02eq
+        >>> line.get_azimuths()
+        [0.0]
+        >>> line.flip().get_azimuths()
+        [180.0]
+        >>> line = Line([Point(1, 0), Point(2, 0)])
+        >>> line.get_azimuths()
+        [90.0]
+        >>> line.flip().get_azimuths()
+        [270.0]
         """
         return self.from_coo(np.flip(self.coo, axis=0))
 
@@ -258,7 +267,7 @@ class Line(object):
 
     def get_azimuths(self):
         """
-        Return the azimuths of all the segments omposing the polyline
+        Return the azimuths of all the segments composing the polyline
         """
         if len(self.coo) == 2:
             return [self[0].azimuth(self[1])]

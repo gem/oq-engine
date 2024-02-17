@@ -126,6 +126,13 @@ def azimuth(lons1, lats1, lons2, lats2):
     return (360 - true_course) % 360
 
 
+def azimuths(coos):
+    """
+    Compute the azimuths from an array of lines with shape (L, 2, 3)
+    """
+    return azimuth(coos[:, 0, 0], coos[:, 0, 1], coos[:, 1, 0], coos[:, 1, 1])
+
+
 def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     """
     Calculate a distance between two points (or collections of points)

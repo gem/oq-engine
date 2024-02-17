@@ -39,7 +39,6 @@ class Ry0TestCase(unittest.TestCase):
 
     def _test_ry0(self, sfc):
         msurf = MultiSurface([sfc])
-        msurf.tor.set_u_max()
         mesh, mlons, mlats = get_mesh(-0.2, 0.6, -0.2, 0.3, 0.0025)
         ry0 = msurf.get_ry0_distance(mesh)
 
