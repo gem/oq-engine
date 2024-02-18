@@ -123,7 +123,7 @@ class MultiLine(object):
         tuw = np.zeros((3, L, N), np.float32)
         for li, (u, w) in enumerate(self.gen_uw(mesh)):
             tuw[1, li] = u
-            tuw[2, li] = u
+            tuw[2, li] = w
         return _get_tu(self.shift, tuw)
 
     def get_uw_df(self, sites):
