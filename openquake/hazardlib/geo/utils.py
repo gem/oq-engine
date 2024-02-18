@@ -523,7 +523,7 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
-#@compile(['(f8[:],f8,f8)', '(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
+@compile('(f8[:],f8[:],f8[:])')
 def project_reverse(params, lons, lats):
     lambda0, phi0, sin_phi0, cos_phi0 = params
     # "reverse" mode, arguments are actually abscissae
