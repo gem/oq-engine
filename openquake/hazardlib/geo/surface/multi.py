@@ -74,23 +74,16 @@ def build_msparams(rupture_idxs, secparams):
     :returns: a structured array of parameters
     """
     U = len(rupture_idxs)  # number of ruptures
-    S = len(secparams)  # total number of sections
     msparams = np.zeros(U, MS_DT)
 
-    # building tuws
-    tl_mesh = Mesh(secparams['tl0'], secparams['tl1'])
-    tr_mesh = Mesh(secparams['tr0'], secparams['tr1'])
-    tuws = np.zeros((S, 2, 2, 3, S), F32)  # (S, TLR, flip, tuw, S)
+    # building lines
     lines = []
-    TL, TR = 0, 1
-    for s in range(S):
-        tl0, tl1, tr0, tr1 = secparams[s][['tl0', 'tl1', 'tr0', 'tr1']]
+    for secparam in secparams:
+        tl0, tl1, tr0, tr1 = secparam[['tl0', 'tl1', 'tr0', 'tr1']]
         line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
+        line.flipped = line.flip()
+        line.tu_hat, line.flipped.tu_hat  # precompute properties
         lines.append(line)
-        tuws[s, TL, 0] = line.get_tuw(tl_mesh)
-        tuws[s, TL, 1] = line.flip().get_tuw(tl_mesh)
-        tuws[s, TR, 0] = line.get_tuw(tr_mesh)
-        tuws[s, TR, 1] = line.flip().get_tuw(tr_mesh)
 
     for msparam, idxs in zip(msparams, rupture_idxs):
         secparam = secparams[idxs]
@@ -107,7 +100,7 @@ def build_msparams(rupture_idxs, secparams):
 
         # building u_max
         msparam['u_max'] = geo.MultiLine(
-            [lines[idx] for idx in idxs]).set_u_max(tuws[idxs, :, :, :, idxs])
+            [lines[idx] for idx in idxs]).set_u_max()
 
         # building bounding box
         lons = np.concatenate([secparam['west'], secparam['east']])

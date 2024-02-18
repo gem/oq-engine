@@ -24,126 +24,16 @@ import pandas as pd
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils, geodetic
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
-def get_endpoints(coos):
+def get_endpoints(lines):
     """
     :returns a mesh of shape 2L
     """
-    lons = np.concatenate([coo[[0, -1], 0] for coo in coos])  # shape 2L
-    lats = np.concatenate([coo[[0, -1], 1] for coo in coos])  # shape 2L
+    lons = np.concatenate([ln.coo[[0, -1], 0] for ln in lines])  # shape 2L
+    lats = np.concatenate([ln.coo[[0, -1], 1] for ln in lines])  # shape 2L
     return Mesh(lons, lats)
-
-
-def get_avg_azim_flipped(lines):
-    # compute the overall strike and the origin of the multiline
-    # get lenghts and average azimuths
-    llenghts = np.array([ln.get_length() for ln in lines])
-    if all(len(ln) == 2 for ln in lines):
-        # fast lane for the engine
-        coos = np.array([ln.coo for ln in lines])
-        azimuths = geodetic.azimuths(coos) 
-    else:
-        # slow lane, only for some tests in hazardlib
-        azimuths = np.array([line.average_azimuth() for line in lines])
-
-    # determine the flipped lines
-    flipped = get_flipped(llenghts, azimuths)
-    
-    # Compute the average azimuth
-    for i in np.nonzero(flipped)[0]:
-        azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
-    avg_azim = utils.angular_mean(azimuths, llenghts) % 360
-    return avg_azim, flipped
-
-
-class MultiLine(object):
-    """
-    A collection of polylines with associated methods and attributes. For the
-    most part, these are used to compute distances according to the GC2
-    method.
-    """
-    def __init__(self, lines, u_max=None):
-        self.coos = [ln.coo for ln in lines]
-        avg_azim, self.flipped = get_avg_azim_flipped(lines)
-        ep = get_endpoints(self.coos)
-        olon, olat, self.soidx = get_origin(ep, avg_azim)
-
-        # compute the shift with respect to the origins
-        origins = []
-        for idx in self.soidx:
-            flip = int(self.flipped[idx])
-            # if the line is flipped take the point 1 instead of 0
-            origins.append(lines[idx].coo[flip])
-        self.shift = get_coordinate_shift(
-            np.array(origins), olon, olat, avg_azim)
-        self.u_max = u_max
-
-    def set_u_max(self, tuwL2=None):
-        """
-        If not already computed, compute .u_max, set it and return it.
-        """
-        if self.u_max is None:
-            mesh = get_endpoints(self.coos)
-            N = len(mesh)  # 2 * number of lines
-            us = np.zeros(N, np.float32)
-            ws = np.zeros(N, np.float32)
-            for i, (t, u, w) in self.gen_tuw(mesh, tuwL2):
-                us += (u + self.shift[i]) * w
-                ws += w
-            self.u_max = np.abs(us / ws).max()
-        return self.u_max
-
-    def gen_tuw(self, mesh, tuwL2=None):
-        """
-        :yields: tuw arrays
-        """
-        for i, idx in enumerate(self.soidx):
-            flip = int(self.flipped[idx])
-            if tuwL2 is None:
-                # slow lane                
-                coo = self.coos[idx]
-                if flip:
-                    coo = np.flipud(coo)
-                yield i, Line.from_coo(coo).get_tuw(mesh)
-            else:
-                # fast lane for precomputed parameters
-                yield i, tuwL2[idx, 0, flip]  # top left
-                yield i, tuwL2[idx, 1, flip]  # top right
-
-    # used in event based too
-    def get_tu(self, mesh):
-        """
-        Given a mesh, computes the T and U coordinates for the multiline
-        """
-        L = len(self.coos)  # number of lines == number of surfaces
-        N = len(mesh)
-        tuw = np.zeros((3, L, N), np.float32)
-        for i, tuw_i in self.gen_tuw(mesh):
-            tuw[:, i] = tuw_i
-        return _get_tu(self.shift, tuw)
-
-    def get_tuw_df(self, sites):
-        # debug method to be called in genctxs
-        sids = []
-        ls = []
-        ts = []
-        us = []
-        ws = []
-        for li, (t, u, w) in self.gen_tuw():
-            for s, sid in enumerate(sites.sids):
-                sids.append(sid)
-                ls.append(li)
-                ts.append(t[s])
-                us.append(u[s])
-                ws.append(w[s])
-        dic = dict(sid=sids, li=ls, t=ts, u=us, w=ws)
-        return pd.DataFrame(dic)
-
-    def __str__(self):
-        return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
 
 
 def get_flipped(llens, avgaz):
@@ -173,8 +63,111 @@ def get_flipped(llens, avgaz):
         flipped[~idx] = True
     else:
         flipped[idx] = True
-
     return flipped
+
+
+def get_avg_azim_flipped(lines):
+    # compute the overall strike and the origin of the multiline
+    # get lenghts and average azimuths
+    llenghts = np.array([ln.get_length() for ln in lines])
+    if all(len(ln) == 2 for ln in lines):
+        # fast lane for the engine
+        coos = np.array([ln.coo for ln in lines])
+        azimuths = geodetic.azimuths(coos) 
+    else:
+        # slow lane, only for some tests in hazardlib
+        azimuths = np.array([line.average_azimuth() for line in lines])
+
+    # determine the flipped lines
+    flipped = get_flipped(llenghts, azimuths)
+    
+    # Compute the average azimuth
+    for i in np.nonzero(flipped)[0]:
+        if not hasattr(lines[i], 'flipped'):
+            lines[i].flipped = lines[i].flip()
+        azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
+    avg_azim = utils.angular_mean(azimuths, llenghts) % 360
+    return avg_azim, flipped
+
+
+class MultiLine(object):
+    """
+    A collection of polylines with associated methods and attributes. For the
+    most part, these are used to compute distances according to the GC2
+    method.
+    """
+    def __init__(self, lines, u_max=None):
+        self.lines = lines
+        avg_azim, self.flipped = get_avg_azim_flipped(lines)
+        ep = get_endpoints(lines)
+        olon, olat, self.soidx = get_origin(ep, avg_azim)
+
+        # compute the shift with respect to the origins
+        origins = []
+        for idx in self.soidx:
+            flip = int(self.flipped[idx])
+            # if the line is flipped take the point 1 instead of 0
+            origins.append(lines[idx].coo[flip])
+        self.shift = get_coordinate_shift(
+            np.array(origins), olon, olat, avg_azim)
+        self.u_max = u_max
+
+    def set_u_max(self):
+        """
+        If not already computed, compute .u_max, set it and return it.
+        """
+        if self.u_max is None:
+            mesh = get_endpoints(self.lines)
+            N = len(mesh)  # 2 * number of lines
+            us = np.zeros(N, np.float32)
+            ws = np.zeros(N, np.float32)
+            for i, (t, u, w) in self.gen_tuw(mesh):
+                us += (u + self.shift[i]) * w
+                ws += w
+            self.u_max = np.abs(us / ws).max()
+        return self.u_max
+
+    def gen_tuw(self, mesh):
+        """
+        :yields: tuw arrays
+        """
+        for i, idx in enumerate(self.soidx):
+            line = self.lines[idx]
+            if self.flipped[idx]:
+                line = line.flipped
+            yield i, line.get_tuw(mesh)
+
+    # used in event based too
+    def get_tu(self, mesh):
+        """
+        Given a mesh, computes the T and U coordinates for the multiline
+        """
+        L = len(self.lines)  # number of lines
+        N = len(mesh)
+        tuw = np.zeros((3, L, N), np.float32)
+        for i, tuw_i in self.gen_tuw(mesh):
+            tuw[:, i] = tuw_i
+        return _get_tu(self.shift, tuw)
+
+    def get_tuw_df(self, sites):
+        # debug method to be called in genctxs
+        sids = []
+        ls = []
+        ts = []
+        us = []
+        ws = []
+        for li, (t, u, w) in self.gen_tuw():
+            for s, sid in enumerate(sites.sids):
+                sids.append(sid)
+                ls.append(li)
+                ts.append(t[s])
+                us.append(u[s])
+                ws.append(w[s])
+        dic = dict(sid=sids, li=ls, t=ts, u=us, w=ws)
+        return pd.DataFrame(dic)
+
+    def __str__(self):
+        return ';'.join(str(ln) for ln in self.lines)
 
 
 def get_origin(ep: Mesh, avg_strike: float):
