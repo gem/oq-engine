@@ -98,7 +98,7 @@ class MultiLine(object):
 
     def gen_tuw(self, mesh, tuwL2=None):
         """
-        :yields: t, u and w arrays
+        :yields: tuw arrays
         """
         for idx in self.soidx:
             flip = int(self.flipped[idx])
@@ -107,11 +107,11 @@ class MultiLine(object):
                 coo = self.coos[idx]
                 if flip:
                     coo = np.flipud(coo)
-                t, u, w = Line.from_coo(coo).get_tuw(mesh)
+                tuw = Line.from_coo(coo).get_tuw(mesh)
             else:
-                # fast lane
-                t, u, w = tuwL2[:, idx, flip]
-            yield t, u, w
+                # fast lane, for precomputed parameters
+                tuw = tuwL2[:, idx, flip]
+            yield tuw
 
     # used in event based too
     def get_tu(self, mesh):
