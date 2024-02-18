@@ -90,8 +90,8 @@ class MultiLine(object):
             N = len(mesh)  # 2 * number of lines
             us = np.zeros(N, np.float32)
             ws = np.zeros(N, np.float32)
-            for li, (t, u, w) in enumerate(self.gen_tuw(mesh, tuwL2)):
-                us += (u + self.shift[li]) * w
+            for i, (t, u, w) in self.gen_tuw(mesh, tuwL2):
+                us += (u + self.shift[i]) * w
                 ws += w
             self.u_max = np.abs(us / ws).max()
         return self.u_max
@@ -100,18 +100,18 @@ class MultiLine(object):
         """
         :yields: tuw arrays
         """
-        for idx in self.soidx:
+        for i, idx in enumerate(self.soidx):
             flip = int(self.flipped[idx])
             if tuwL2 is None:
                 # slow lane                
                 coo = self.coos[idx]
                 if flip:
                     coo = np.flipud(coo)
-                tuw = Line.from_coo(coo).get_tuw(mesh)
+                yield i, Line.from_coo(coo).get_tuw(mesh)
             else:
-                # fast lane, for precomputed parameters
-                tuw = tuwL2[:, idx, flip]
-            yield tuw
+                # fast lane for precomputed parameters
+                yield i, tuwL2[idx, 0, flip]  # top left
+                yield i, tuwL2[idx, 1, flip]  # top right
 
     # used in event based too
     def get_tu(self, mesh):
@@ -121,8 +121,8 @@ class MultiLine(object):
         L = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
         tuw = np.zeros((3, L, N), np.float32)
-        for li, tuw_li in enumerate(self.gen_tuw(mesh)):
-            tuw[:, li] = tuw_li
+        for i, tuw_i in self.gen_tuw(mesh):
+            tuw[:, i] = tuw_i
         return _get_tu(self.shift, tuw)
 
     def get_tuw_df(self, sites):
@@ -132,7 +132,7 @@ class MultiLine(object):
         ts = []
         us = []
         ws = []
-        for li, (t, u, w) in enumerate(self.gen_tuw()):
+        for li, (t, u, w) in self.gen_tuw():
             for s, sid in enumerate(sites.sids):
                 sids.append(sid)
                 ls.append(li)

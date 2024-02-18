@@ -31,6 +31,7 @@ MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
            'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south',
             'hp0', 'hp1', 'hp2']
 MS_DT = [(p, np.float32) for p in MSPARAMS]
+F32 = np.float32
 
 
 def build_secparams(sections):
@@ -63,12 +64,34 @@ def build_secparams(sections):
     return secparams
 
 
+def genlines(secparams):
+    for tl0, tl1, tr0, tr1 in secparams[['tl0', 'tl1', 'tr0', 'tr1']]:
+        yield geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]]))
+
+
 def build_msparams(rupture_idxs, secparams):
     """
     :returns: a structured array of parameters
     """
-    U = len(rupture_idxs)
+    U = len(rupture_idxs)  # number of ruptures
+    S = len(secparams)  # total number of sections
     msparams = np.zeros(U, MS_DT)
+
+    # building tuws
+    tl_mesh = Mesh(secparams['tl0'], secparams['tl1'])
+    tr_mesh = Mesh(secparams['tr0'], secparams['tr1'])
+    tuws = np.zeros((S, 2, 2, 3, S), F32)  # (S, TLR, flip, tuw, S)
+    lines = []
+    TL, TR = 0, 1
+    for s in range(S):
+        tl0, tl1, tr0, tr1 = secparams[s][['tl0', 'tl1', 'tr0', 'tr1']]
+        line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
+        lines.append(line)
+        tuws[s, TL, 0] = line.get_tuw(tl_mesh)
+        tuws[s, TL, 1] = line.flip().get_tuw(tl_mesh)
+        tuws[s, TR, 0] = line.get_tuw(tr_mesh)
+        tuws[s, TR, 1] = line.flip().get_tuw(tr_mesh)
+
     for msparam, idxs in zip(msparams, rupture_idxs):
         secparam = secparams[idxs]
 
@@ -83,11 +106,8 @@ def build_msparams(rupture_idxs, secparams):
         msparam['zbot'] = ws @ secparam['zbot']
 
         # building u_max
-        tors = []
-        for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-            coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
-            tors.append(geo.Line.from_coo(coo))
-        msparam['u_max'] = geo.MultiLine(tors).set_u_max()
+        msparam['u_max'] = geo.MultiLine(
+            [lines[idx] for idx in idxs]).set_u_max(tuws[idxs, :, :, :, idxs])
 
         # building bounding box
         lons = np.concatenate([secparam['west'], secparam['east']])

@@ -471,7 +471,7 @@ class Line(object):
         return utils.geohash5(self.coo)
 
 
-@compile('(f8[:,:],f8[:,:],f8[:], f8[:,:])')
+@compile('(f8[:,:],f8[:,:],f8[:],f8[:,:])')
 def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
