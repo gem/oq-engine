@@ -64,12 +64,7 @@ def build_secparams(sections):
     return secparams
 
 
-def genlines(secparams):
-    for tl0, tl1, tr0, tr1 in secparams[['tl0', 'tl1', 'tr0', 'tr1']]:
-        yield geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]]))
-
-
-def build_msparams(rupture_idxs, secparams):
+def build_msparams(rupture_idxs, secparams, mon1, mon2):
     """
     :returns: a structured array of parameters
     """
@@ -77,39 +72,39 @@ def build_msparams(rupture_idxs, secparams):
     msparams = np.zeros(U, MS_DT)
 
     # building lines
-    lines = []
-    for secparam in secparams:
-        tl0, tl1, tr0, tr1 = secparam[['tl0', 'tl1', 'tr0', 'tr1']]
-        line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
-        line.flipped = line.flip()
-        line.tu_hat, line.flipped.tu_hat  # precompute properties
-        lines.append(line)
+    with mon1:
+        lines = []
+        for secparam in secparams:
+            tl0, tl1, tr0, tr1 = secparam[['tl0', 'tl1', 'tr0', 'tr1']]
+            line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
+            lines.append(line)
 
-    for msparam, idxs in zip(msparams, rupture_idxs):
-        secparam = secparams[idxs]
+    with mon2:
+        for msparam, idxs in zip(msparams, rupture_idxs):
+            secparam = secparams[idxs]
 
-        # building simple multisurface params
-        areas = secparam['area']
-        msparam['area'] = areas.sum()
-        ws = areas / msparam['area']  # weights
-        msparam['dip'] = ws @ secparam['dip']
-        msparam['strike'] = utils.angular_mean(secparam['strike'], ws) % 360
-        msparam['width'] = ws @ secparam['width']
-        msparam['ztor'] = ws @ secparam['ztor']
-        msparam['zbot'] = ws @ secparam['zbot']
+            # building simple multisurface params
+            areas = secparam['area']
+            msparam['area'] = areas.sum()
+            ws = areas / msparam['area']  # weights
+            msparam['dip'] = ws @ secparam['dip']
+            msparam['strike'] = utils.angular_mean(secparam['strike'], ws) % 360
+            msparam['width'] = ws @ secparam['width']
+            msparam['ztor'] = ws @ secparam['ztor']
+            msparam['zbot'] = ws @ secparam['zbot']
 
-        # building u_max
-        msparam['u_max'] = geo.MultiLine(
-            [lines[idx] for idx in idxs]).set_u_max()
+            # building u_max
+            msparam['u_max'] = geo.MultiLine(
+                [lines[idx] for idx in idxs]).set_u_max()
 
-        # building bounding box
-        lons = np.concatenate([secparam['west'], secparam['east']])
-        lats = np.concatenate([secparam['north'], secparam['south']])
-        bb = utils.get_spherical_bounding_box(lons, lats)
-        msparam['west'] = bb[0]
-        msparam['east'] = bb[1]
-        msparam['north'] = bb[2]
-        msparam['south'] = bb[3]
+            # building bounding box
+            lons = np.concatenate([secparam['west'], secparam['east']])
+            lats = np.concatenate([secparam['north'], secparam['south']])
+            bb = utils.get_spherical_bounding_box(lons, lats)
+            msparam['west'] = bb[0]
+            msparam['east'] = bb[1]
+            msparam['north'] = bb[2]
+            msparam['south'] = bb[3]
 
     return msparams
 
