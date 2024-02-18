@@ -523,7 +523,7 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
-#@compile(['(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
+#@compile(['(f8[:],f8,f8)', '(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
 def project_reverse(params, lons, lats):
     lambda0, phi0, sin_phi0, cos_phi0 = params
     # "reverse" mode, arguments are actually abscissae
@@ -544,19 +544,20 @@ def project_reverse(params, lons, lats):
     return xx, yy
 
 
-#@compile(['(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
+@compile(['(f8[:],f8,f8)', '(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
 def project_direct(params, lons, lats):
+    #assert len(lons.shape) == 1, lons.shape
     lambda0, phi0, sin_phi0, cos_phi0 = params
     lambdas, phis = numpy.radians(lons), numpy.radians(lats)
     cos_phis = numpy.cos(phis)
     lambdas -= lambda0
     # calculate the sin of the distance between projection center
     # and each of the points to project
-    sin_dist = numpy.sqrt(
-        numpy.sin((phi0 - phis) / 2.0) ** 2.0
-        + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
-    if (sin_dist > SQRT).any():
-        raise ValueError('some points are too far from the projection')
+    #sin_dist = numpy.sqrt(
+    #    numpy.sin((phi0 - phis) / 2.0) ** 2.0
+    #    + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
+    #if (sin_dist > SQRT).any():
+    #    raise ValueError('some points are too far from the projection')
     xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
     yy = (cos_phi0 * numpy.sin(phis) - sin_phi0 * cos_phis
           * numpy.cos(lambdas)) * EARTH_RADIUS
@@ -616,10 +617,6 @@ class OrthographicProjection(object):
         self.params = numpy.array([lam0, phi0, math.sin(phi0), math.cos(phi0)])
 
     def __call__(self, lons, lats, deps=None, reverse=False):
-        #if not isinstance(lons, numpy.ndarray):  # if scalar
-        #    lons = numpy.array([lons])
-        #if not isinstance(lats, numpy.ndarray):  # if scalar
-        #    lats = numpy.array([lats])
         if reverse:
             xx, yy = project_reverse(self.params, lons, lats)
         else:

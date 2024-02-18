@@ -416,7 +416,7 @@ class Mesh(object):
 
         # project all the points and create a shapely multipoint object.
         # need to copy an array because otherwise shapely misinterprets it
-        coords = numpy.transpose(proj(self.lons.flat, self.lats.flat)).copy()
+        coords = numpy.transpose(proj(self.lons.flatten(), self.lats.flatten()))
         multipoint = shapely.geometry.MultiPoint(coords)
         # create a 2d polygon from a convex hull around that multipoint
         return proj, multipoint.convex_hull
