@@ -81,31 +81,37 @@ class MultiLine(object):
             np.array(origins), olon, olat, avg_azim)
         self.u_max = u_max
 
-    def set_u_max(self):
+    def set_u_max(self, uL2=None, wL2=None):
         """
         If not already computed, compute .u_max, set it and return it.
         """
         if self.u_max is None:
             mesh = get_endpoints(self.coos)
-            L = len(self.coos)  # number of lines
-            us = np.zeros(2*L, np.float32)
-            ws = np.zeros(2*L, np.float32)
-            for li, line in enumerate(self.gen_lines()):
-                _, u, w = line.get_tuw(mesh)
+            N = len(mesh)  # 2 * number of lines
+            us = np.zeros(N, np.float32)
+            ws = np.zeros(N, np.float32)
+            for li, (u, w) in enumerate(self.gen_uw(mesh, uL2, wL2)):
                 us += (u + self.shift[li]) * w
                 ws += w
             self.u_max = np.abs(us / ws).max()
         return self.u_max
 
-    def gen_lines(self):
+    def gen_uw(self, mesh, uL2=None, wL2=None):
         """
-        :yields: (flipped) lines in the right order
+        :yields: u and w arrays
         """
         for idx in self.soidx:
-            coo = self.coos[idx]
-            if self.flipped[idx]:
-                coo = np.flipud(coo)
-            yield Line.from_coo(coo)
+            flip = int(self.flipped[idx])
+            if uL2 is None:
+                # slow lane                
+                coo = self.coos[idx]
+                if flip:
+                    coo = np.flipud(coo)
+                _, u, w = Line.from_coo(coo).get_tuw(mesh)
+            else:
+                # fast lane
+                u, w = uL2[idx, flip], wL2[idx, flip]
+            yield u, w
 
     # used in event based too
     def get_tu(self, mesh):
@@ -115,27 +121,24 @@ class MultiLine(object):
         L = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
         tuw = np.zeros((3, L, N), np.float32)
-        for li, line in enumerate(self.gen_lines()):
-            tuw[:, li] = line.get_tuw(mesh)
+        for li, (u, w) in enumerate(self.gen_uw(mesh)):
+            tuw[1, li] = u
+            tuw[2, li] = u
         return _get_tu(self.shift, tuw)
 
-    def get_tuw_df(self, sites):
+    def get_uw_df(self, sites):
         # debug method to be called in genctxs
         sids = []
-        ts = []
+        ls = []
         us = []
         ws = []
-        ls = []
-        for line in self.gen_lines():
-            sline = str(line)
-            tu, uu, we = line.get_tuw(sites)
+        for li, (u, w) in enumerate(self.gen_uw()):
             for s, sid in enumerate(sites.sids):
                 sids.append(sid)
-                ts.append(tu[s])
-                us.append(uu[s])
-                ws.append(we[s])
-                ls.append(sline)
-        dic = dict(sid=sids, line=ls, t=ts, u=us, w=ws)
+                ls.append(li)
+                us.append(u[s])
+                ws.append(w[s])
+        dic = dict(sid=sids, li=ls, u=us, w=ws)
         return pd.DataFrame(dic)
 
     def __str__(self):
