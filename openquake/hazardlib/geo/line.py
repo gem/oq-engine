@@ -19,7 +19,6 @@
  Module :mod:`openquake.hazardlib.geo.line` defines :class:`Line`.
 """
 import numpy as np
-from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic, utils, Point
 
@@ -170,16 +169,17 @@ class Line(object):
         """
         self = cls.__new__(cls)
         self.coo = coo
+        self.proj = utils.OrthographicProjection.from_lons_lats(
+            self.coo[:, 0], self.coo[:, 1])
+        self.tu_hat = self._get_tu_hat()
         return self
 
     def __init__(self, points):
         points = utils.clean_points(points)  # can remove points!
         self.coo = np.array([[p.x, p.y, p.z] for p in points])
-
-    @cached_property
-    def proj(self):
-        return utils.OrthographicProjection.from_lons_lats(
+        self.proj = utils.OrthographicProjection.from_lons_lats(
             self.coo[:, 0], self.coo[:, 1])
+        self.tu_hat = self._get_tu_hat()
 
     @property
     def points(self):
@@ -443,8 +443,7 @@ class Line(object):
             ti[i, :] = tmp @ that[i, 0:2]
         return ui, ti
 
-    @cached_property
-    def tu_hat(self):
+    def _get_tu_hat(self):
         """
         Return the unit vectors defining the local origin for each segment of
         the trace.
