@@ -966,7 +966,7 @@ class ContextMaker(object):
 
             r_sites = sites.filter(mask)
             # to debug you can insert here
-            # print(rup.surface.tor.get_uw_df(r_sites))
+            # print(rup.surface.tor.get_tuw_df(r_sites))
             # import pdb; pdb.set_trace()
 
             ''' # sanity check
