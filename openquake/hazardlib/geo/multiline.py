@@ -86,8 +86,15 @@ class MultiLine(object):
         If not already computed, compute .u_max, set it and return it.
         """
         if self.u_max is None:
-            _, us = self.get_tu(get_endpoints(self.coos))
-            self.u_max = np.abs(us).max()
+            mesh = get_endpoints(self.coos)
+            L = len(self.coos)  # number of lines
+            us = np.zeros(2*L, np.float32)
+            ws = np.zeros(2*L, np.float32)
+            for li, line in enumerate(self.gen_lines()):
+                _, u, w = line.get_tuw(mesh)
+                us += (u + self.shift[li]) * w
+                ws += w
+            self.u_max = np.abs(us / ws).max()
         return self.u_max
 
     def gen_lines(self):
@@ -105,11 +112,11 @@ class MultiLine(object):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        S = len(self.coos)  # number of lines == number of surfaces
+        L = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
-        tuw = np.zeros((3, S, N), np.float32)
-        for s, line in enumerate(self.gen_lines()):
-            tuw[:, s] = line.get_tuw(mesh)
+        tuw = np.zeros((3, L, N), np.float32)
+        for li, line in enumerate(self.gen_lines()):
+            tuw[:, li] = line.get_tuw(mesh)
         return _get_tu(self.shift, tuw)
 
     def get_tuw_df(self, sites):
@@ -229,11 +236,11 @@ def get_coordinate_shift(origins: list, olon: float, olat: float,
 
 @compile('f4[:],f4[:,:,:]')
 def _get_tu(shift, tuw):
-    # `shift` has shape S and `tuw` shape (3, S, N)
-    S, N = tuw.shape[1:]
+    # `shift` has shape L and `tuw` shape (3, L, N)
+    L, N = tuw.shape[1:]
     tN, uN = np.zeros(N), np.zeros(N)
     W = tuw[2].sum(axis=0)  # shape N
-    for s in range(S):
+    for s in range(L):
         t, u, w = tuw[:, s]  # shape N
         tN += t * w
         uN += (u + shift[s]) * w
