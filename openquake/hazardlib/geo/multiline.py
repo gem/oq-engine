@@ -44,18 +44,18 @@ def get_avg_azim_flipped(lines):
     if all(len(ln) == 2 for ln in lines):
         # fast lane for the engine
         coos = np.array([ln.coo for ln in lines])
-        avgaz = geodetic.azimuths(coos) 
+        azimuths = geodetic.azimuths(coos) 
     else:
         # slow lane, only for some tests in hazardlib
-        avgaz = np.array([line.average_azimuth() for line in lines])
+        azimuths = np.array([line.average_azimuth() for line in lines])
 
     # determine the flipped lines
-    flipped = get_flipped(llenghts, avgaz)
+    flipped = get_flipped(llenghts, azimuths)
     
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
-        avgaz[i] = (avgaz[i] + 180) % 360  # opposite azimuth
-    avg_azim = utils.angular_mean(avgaz, llenghts) % 360
+        azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
+    avg_azim = utils.angular_mean(azimuths, llenghts) % 360
     return avg_azim, flipped
 
 
@@ -90,6 +90,16 @@ class MultiLine(object):
             self.u_max = np.abs(us).max()
         return self.u_max
 
+    def gen_lines(self):
+        """
+        :yields: (flipped) lines in the right order
+        """
+        for idx in self.soidx:
+            coo = self.coos[idx]
+            if self.flipped[idx]:
+                coo = np.flipud(coo)
+            yield Line.from_coo(coo)
+
     # used in event based too
     def get_tu(self, mesh):
         """
@@ -98,37 +108,27 @@ class MultiLine(object):
         S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
         tuw = np.zeros((3, S, N), np.float32)
-        for s in range(S):
-            idx = self.soidx[s]
-            coo = self.coos[idx]
-            if self.flipped[idx]:
-                coo = np.flipud(coo)
-            tuw[:, s] = Line.from_coo(coo).get_tuw(mesh)
+        for s, line in enumerate(self.gen_lines()):
+            tuw[:, s] = line.get_tuw(mesh)
         return _get_tu(self.shift, tuw)
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
-        idxs = []
         sids = []
         ts = []
         us = []
         ws = []
         ls = []
-        for idx in self.soidx:
-            coo = self.coos[idx]
-            if self.flipped[idx]:
-                coo = np.flipud(coo)
-            line = Line.from_coo(coo)
+        for line in self.gen_lines():
             sline = str(line)
             tu, uu, we = line.get_tuw(sites)
             for s, sid in enumerate(sites.sids):
-                idxs.append(idx)
                 sids.append(sid)
                 ts.append(tu[s])
                 us.append(uu[s])
                 ws.append(we[s])
                 ls.append(sline)
-        dic = dict(sec=idxs, sid=sids, line=ls, t=ts, u=us, w=ws)
+        dic = dict(sid=sids, line=ls, t=ts, u=us, w=ws)
         return pd.DataFrame(dic)
 
     def __str__(self):
