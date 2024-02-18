@@ -47,6 +47,7 @@ spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
+SQRT = math.sqrt(2) / 2
 
 
 def get_dist(array, point):
@@ -522,6 +523,46 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
+#@compile(['(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
+def project_reverse(params, lons, lats):
+    lambda0, phi0, sin_phi0, cos_phi0 = params
+    # "reverse" mode, arguments are actually abscissae
+    # and ordinates in 2d space
+    xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
+    cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
+    phis = numpy.arcsin(cos_c * sin_phi0 + yy * cos_phi0)
+    lambdas = numpy.arctan2(xx, cos_phi0 * cos_c - yy * sin_phi0)
+    xx = numpy.degrees(lambda0 + lambdas)
+    yy = numpy.degrees(phis)
+    # shift longitudes greater than 180 back into the western
+    # hemisphere, that is in range [0, -180], and longitudes
+    # smaller than -180, to the heastern emisphere [0, 180]
+    idx = xx >= 180.
+    xx[idx] = xx[idx] - 360.
+    idx = xx <= -180.
+    xx[idx] = xx[idx] + 360.
+    return xx, yy
+
+
+#@compile(['(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
+def project_direct(params, lons, lats):
+    lambda0, phi0, sin_phi0, cos_phi0 = params
+    lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+    cos_phis = numpy.cos(phis)
+    lambdas -= lambda0
+    # calculate the sin of the distance between projection center
+    # and each of the points to project
+    sin_dist = numpy.sqrt(
+        numpy.sin((phi0 - phis) / 2.0) ** 2.0
+        + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
+    if (sin_dist > SQRT).any():
+        raise ValueError('some points are too far from the projection')
+    xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
+    yy = (cos_phi0 * numpy.sin(phis) - sin_phi0 * cos_phis
+          * numpy.cos(lambdas)) * EARTH_RADIUS
+    return xx, yy
+
+
 class OrthographicProjection(object):
     """
     Callable OrthographicProjection object that can perform both forward
@@ -571,49 +612,18 @@ class OrthographicProjection(object):
         self.east = east
         self.north = north
         self.south = south
-        self.lambda0, self.phi0 = numpy.radians(
-            get_middle_point(west, north, east, south))
-        self.cos_phi0 = numpy.cos(self.phi0)
-        self.sin_phi0 = numpy.sin(self.phi0)
-        self.sin_pi_over_4 = (2 ** 0.5) / 2
+        lam0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
+        self.params = numpy.array([lam0, phi0, math.sin(phi0), math.cos(phi0)])
 
     def __call__(self, lons, lats, deps=None, reverse=False):
-        assert not numpy.isnan(lons).any(), lons
-        if not reverse:
-            lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-            cos_phis = numpy.cos(phis)
-            lambdas -= self.lambda0
-            # calculate the sine of the distance between projection center
-            # and each of the points to project
-            sin_dist = numpy.sqrt(
-                numpy.sin((self.phi0 - phis) / 2.0) ** 2.0
-                + self.cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
-            )
-            if (sin_dist > self.sin_pi_over_4).any():
-                raise ValueError('some points are too far from the projection '
-                                 'center lon=%s lat=%s' %
-                                 (numpy.degrees(self.lambda0),
-                                  numpy.degrees(self.phi0)))
-            xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
-            yy = (self.cos_phi0 * numpy.sin(phis) - self.sin_phi0 * cos_phis
-                  * numpy.cos(lambdas)) * EARTH_RADIUS
+        #if not isinstance(lons, numpy.ndarray):  # if scalar
+        #    lons = numpy.array([lons])
+        #if not isinstance(lats, numpy.ndarray):  # if scalar
+        #    lats = numpy.array([lats])
+        if reverse:
+            xx, yy = project_reverse(self.params, lons, lats)
         else:
-            # "reverse" mode, arguments are actually abscissae
-            # and ordinates in 2d space
-            xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
-            cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
-            phis = numpy.arcsin(cos_c * self.sin_phi0 + yy * self.cos_phi0)
-            lambdas = numpy.arctan2(
-                xx, self.cos_phi0 * cos_c - yy * self.sin_phi0)
-            xx = numpy.degrees(self.lambda0 + lambdas)
-            yy = numpy.degrees(phis)
-            # shift longitudes greater than 180 back into the western
-            # hemisphere, that is in range [0, -180], and longitudes
-            # smaller than -180, to the heastern emisphere [0, 180]
-            idx = xx >= 180.
-            xx[idx] = xx[idx] - 360.
-            idx = xx <= -180.
-            xx[idx] = xx[idx] + 360.
+            xx, yy = project_direct(self.params, lons, lats)
         if deps is None:
             return numpy.array([xx, yy])
         else:

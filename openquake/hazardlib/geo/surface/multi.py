@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 """
 import numpy as np
 from shapely.geometry import Polygon
+from openquake.baselib import performance
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
@@ -64,7 +65,9 @@ def build_secparams(sections):
     return secparams
 
 
-def build_msparams(rupture_idxs, secparams, mon1, mon2):
+def build_msparams(rupture_idxs, secparams,
+                   mon1=performance.Monitor(),
+                   mon2=performance.Monitor()):
     """
     :returns: a structured array of parameters
     """
