@@ -523,13 +523,13 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
-@compile('(f8[:],f8[:],f8[:])')
-def project_reverse(params, lons, lats):
-    lambda0, phi0, sin_phi0, cos_phi0 = params
+@compile('(f8,f8,f8[:],f8[:])')
+def project_reverse(lambda0, phi0, lons, lats):
+    sin_phi0, cos_phi0 = math.sin(phi0), math.cos(phi0)
     # "reverse" mode, arguments are actually abscissae
     # and ordinates in 2d space
     xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
-    cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
+    cos_c = numpy.sqrt(1. - (xx ** 2 + yy ** 2))
     phis = numpy.arcsin(cos_c * sin_phi0 + yy * cos_phi0)
     lambdas = numpy.arctan2(xx, cos_phi0 * cos_c - yy * sin_phi0)
     xx = numpy.degrees(lambda0 + lambdas)
@@ -544,10 +544,8 @@ def project_reverse(params, lons, lats):
     return xx, yy
 
 
-@compile(['(f8[:],f8,f8)', '(f8[:],f8[:],f8[:])', '(f8[:],f8[:,:],f8[:,:])'])
-def project_direct(params, lons, lats):
-    #assert len(lons.shape) == 1, lons.shape
-    lambda0, phi0, sin_phi0, cos_phi0 = params
+@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])'])
+def project_direct(lambda0, phi0, lons, lats):
     lambdas, phis = numpy.radians(lons), numpy.radians(lats)
     cos_phis = numpy.cos(phis)
     lambdas -= lambda0
@@ -559,7 +557,7 @@ def project_direct(params, lons, lats):
     #if (sin_dist > SQRT).any():
     #    raise ValueError('some points are too far from the projection')
     xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
-    yy = (cos_phi0 * numpy.sin(phis) - sin_phi0 * cos_phis
+    yy = (math.cos(phi0) * numpy.sin(phis) - math.sin(phi0) * cos_phis
           * numpy.cos(lambdas)) * EARTH_RADIUS
     return xx, yy
 
@@ -613,14 +611,14 @@ class OrthographicProjection(object):
         self.east = east
         self.north = north
         self.south = south
-        lam0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
-        self.params = numpy.array([lam0, phi0, math.sin(phi0), math.cos(phi0)])
+        self.lam0, self.phi0 = numpy.radians(
+            get_middle_point(west, north, east, south))
 
     def __call__(self, lons, lats, deps=None, reverse=False):
         if reverse:
-            xx, yy = project_reverse(self.params, lons, lats)
+            xx, yy = project_reverse(self.lam0, self.phi0, lons, lats)
         else:
-            xx, yy = project_direct(self.params, lons, lats)
+            xx, yy = project_direct(self.lam0, self.phi0, lons, lats)
         if deps is None:
             return numpy.array([xx, yy])
         else:
