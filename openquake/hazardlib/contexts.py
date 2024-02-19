@@ -22,6 +22,7 @@ import time
 import logging
 import warnings
 import itertools
+import operator
 import collections
 from unittest.mock import patch
 import numpy
@@ -66,6 +67,7 @@ DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
+bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
@@ -1053,7 +1055,9 @@ class ContextMaker(object):
                     shift_hypo=self.shift_hypo, step=step))
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
-                allrups = [rup for rup in allrups if minmag < rup.mag < maxmag]
+                allrups = sorted([rup for rup in allrups
+                                  if minmag < rup.mag < maxmag],
+                                 key=bymag)
                 if not allrups:
                     return iter([])
                 self.num_rups = len(allrups)
