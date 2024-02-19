@@ -178,15 +178,6 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         aac(blons, lons)
         aac(blats, lats)
 
-    def test_points_too_far(self):
-        proj = utils.OrthographicProjection(180., 180., 45., 45.)
-        lons = numpy.array([90.])
-        lats = numpy.array([-45.])
-        with self.assertRaises(ValueError) as ar:
-            proj(lons, lats, check=True)
-        self.assertEqual(str(ar.exception),
-                         'some points are too far from the projection')
-
     def test_projection_across_international_date_line(self):
         # tests that given a polygon crossing the internation date line,
         # projecting its coordinates from spherical to cartesian and then back

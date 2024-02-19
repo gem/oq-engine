@@ -556,21 +556,6 @@ def project_direct(lambda0, phi0, lons, lats):
     return xx, yy
 
 
-def project_check(lambda0, phi0, lons, lats):
-    lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-    cos_phis = numpy.cos(phis)
-    cos_phi0 = math.cos(phi0)
-    lambdas -= lambda0
-    # calculate the sin of the distance between projection center
-    # and each of the points to project
-    sin_dist = numpy.sqrt(
-        numpy.sin((phi0 - phis) / 2.0) ** 2.0
-        + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
-    if (sin_dist > SQRT).any():
-        raise ValueError('some points are too far from the projection')
-    return project_direct(lambda0, phi0, lons, lats)
-
-
 class OrthographicProjection(object):
     """
     Callable OrthographicProjection object that can perform both forward
@@ -621,11 +606,9 @@ class OrthographicProjection(object):
         self.lam0, self.phi0 = numpy.radians(
             get_middle_point(west, north, east, south))
 
-    def __call__(self, lons, lats, deps=None, reverse=False, check=False):
+    def __call__(self, lons, lats, deps=None, reverse=False):
         if reverse:
             xx, yy = project_reverse(self.lam0, self.phi0, lons, lats)
-        elif check:
-            xx, yy = project_check(self.lam0, self.phi0, lons, lats)
         else:  # fast lane
             xx, yy = project_direct(self.lam0, self.phi0, lons, lats)
         if deps is None:
