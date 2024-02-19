@@ -180,11 +180,16 @@ class Line(object):
         self.proj = utils.OrthographicProjection.from_lons_lats(
             self.coo[:, 0], self.coo[:, 1])
         self.tu_hat = self._get_tu_hat()
-        azimuths = self.get_azimuths()
-        distances = geodetic.geodetic_distance(
-            coo[:-1, 0], coo[:-1, 1], coo[1:, 0], coo[1:, 1])
-        self.azimuth = utils.angular_mean(azimuths, distances) % 360
-        self.length = np.sum(self.get_lengths())
+        if len(coo) == 2:  # segment
+            p0, p1 = self.points
+            self.length = p0.distance(p1)
+            self.azimuth = p0.azimuth(p1)
+        else:
+            self.length = np.sum(self.get_lengths())
+            azimuths = self.get_azimuths()
+            distances = geodetic.geodetic_distance(
+                coo[:-1, 0], coo[:-1, 1], coo[1:, 0], coo[1:, 1])
+            self.azimuth = utils.angular_mean(azimuths, distances) % 360
 
     @property
     def points(self):
