@@ -44,7 +44,8 @@ from openquake.baselib.general import (
 from openquake.baselib.python3compat import zip, decode
 from openquake.baselib.node import Node
 from openquake.hazardlib.const import StdDev
-from openquake.hazardlib.calc.filters import SourceFilter, getdefault
+from openquake.hazardlib.calc.filters import (
+    SourceFilter, getdefault, split_source)
 from openquake.hazardlib.calc.gmf import CorrelationButNoInterIntraStdDevs
 from openquake.hazardlib import (
     source, geo, site, imt, valid, sourceconverter, source_reader, nrml,
@@ -53,6 +54,7 @@ from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.utils import (
     BBoxError, cross_idl, spherical_to_cartesian, geohash3)
+from openquake.hazardlib.geo.surface.multi import build_secparams
 from openquake.risklib import asset, riskmodels, scientific, reinsurance
 from openquake.risklib.riskmodels import get_risk_functions
 from openquake.commonlib.oqvalidation import OqParam
@@ -842,6 +844,12 @@ def _check_csm(csm, oqparam, h5):
 
     if os.environ.get('OQ_CHECK_INPUT'):
         # slow checks
+        for src in srcs:
+            if src.code == b'F':
+                logging.info('Checking %s', src)
+                secparams = build_secparams(src.get_sections())
+                for split in split_source(src):
+                    split.set_msparams(secparams)
         source.check_complex_faults(srcs)
         srcfilter = SourceFilter(csm.sitecol, oqparam.maximum_distance)
         logging.info('Checking sources bounding box using %s', csm.sitecol)
