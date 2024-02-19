@@ -40,9 +40,9 @@ class StochasticEventSetTestCase(unittest.TestCase):
         param = dict(ses_per_logic_tree_path=10, ses_seed=42, imtls={})
         cmaker = contexts.ContextMaker('*', [SiMidorikawa1999SInter()], param)
         dic = sum(sample_ruptures(group, cmaker), {})
-        self.assertEqual(len(dic['rup_array']), 5)
+        self.assertEqual(len(dic['rup_array']), 7)
         self.assertEqual(len(dic['source_data']), 6)  # mutex sources
 
         # test no filtering
         ruptures = sum(sample_ruptures(group, cmaker), {})['rup_array']
-        self.assertEqual(len(ruptures), 5)
+        self.assertEqual(len(ruptures), 7)

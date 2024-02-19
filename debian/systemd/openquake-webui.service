@@ -12,7 +12,7 @@ WorkingDirectory=/usr/share/openquake/engine
 #in ExecStart use the folder of venv
 ExecStart=/opt/openquake/bin/python3 -m openquake.server.manage runserver 127.0.0.1:8800 --noreload
 # Using gunicorn (Nginx or another webserver is needed for static content)
-# ExecStart=/opt/openquake/bin/gunicorn --bind 127.0.0.1:8800 --workers 2 --timeout 1200 wsgi:application
+# ExecStart=/opt/openquake/bin/gunicorn --bind 127.0.0.1:8800 --workers 4 --timeout 1200 wsgi:application
 Restart=always
 RestartSec=30
 KillMode=control-group

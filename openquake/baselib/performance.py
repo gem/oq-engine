@@ -20,15 +20,19 @@ import os
 import time
 import pstats
 import pickle
+import signal
 import getpass
 import tempfile
 import operator
 import itertools
+import subprocess
 import collections
 from datetime import datetime
+from contextlib import contextmanager
 from decorator import decorator
 import psutil
 import numpy
+import pandas
 try:
     import numba
 except ImportError:
@@ -55,6 +59,17 @@ I64 = numpy.int64
 
 PStatData = collections.namedtuple(
     'PStatData', 'ncalls tottime percall cumtime percall2 path')
+
+
+@contextmanager
+def perf_stat():
+    """
+    Profile the current process by using the linux `perf` command
+    """
+    p = subprocess.Popen(["perf", "stat", "-p", str(os.getpid())])
+    time.sleep(0.5)
+    yield
+    p.send_signal(signal.SIGINT)
 
 
 def get_pstats(pstatfile, n):
@@ -203,6 +218,11 @@ class Monitor(object):
         self.task_no = -1  # overridden in parallel
 
     @property
+    def calc_dir(self):
+        """Calculation directory $HOME/oqdata/calc_XXX"""
+        return self.filename.rsplit('.', 1)[0]
+
+    @property
     def mem(self):
         """Mean memory allocation"""
         return self._mem / (self.counts or 1)
@@ -294,7 +314,7 @@ class Monitor(object):
             for child in self.children:
                 lst.append(child.get_data())
                 child.reset()
-            data = numpy.concatenate(lst)
+            data = numpy.concatenate(lst, dtype=perf_dt)
         if len(data) == 0:  # no information
             return
         hdf5.extend(h5['performance_data'], data)
@@ -333,24 +353,31 @@ class Monitor(object):
                 return False
             if isinstance(obj, numpy.ndarray):
                 f[key] = obj
+            elif isinstance(obj, pandas.DataFrame):
+                f.create_df(key, obj)
             else:
                 f[key] = pickle.dumps(obj, protocol=pickle.HIGHEST_PROTOCOL)
         return True
 
-    def read(self, key):
+    def read(self, key, slc=slice(None)):
         """
         :param key: key in the _tmp.hdf5 file
+        :param slc: slice to read (default all)
         :return: unpickled object
         """
         tmp = self.filename[:-5] + '_tmp.hdf5'
         with hdf5.File(tmp, 'r') as f:
-            data = f[key][()]
-            if data.shape:
-                return data
-            return pickle.loads(data)
+            dset = f[key]
+            if '__pdcolumns__' in dset.attrs:
+                return f.read_df(key, slc=slc)
+            elif dset.shape:
+                return dset[slc]
+            return pickle.loads(dset[()])
 
-    def iter(self, genobj):
+    def iter(self, genobj, atstop=lambda: None):
         """
+        :param genobj: a generator object
+        :param atstop: optional thunk to call at StopIteration
         :yields: the elements of the generator object
         """
         while True:
@@ -359,6 +386,7 @@ class Monitor(object):
                 with self:
                     obj = next(genobj)
             except StopIteration:
+                atstop()
                 return
             else:
                 yield obj
@@ -396,10 +424,11 @@ def vectorize_arg(idx):
 
 # numba helpers
 if numba:
+    # NB: without cache=True the tests would take hours!!
 
     def jittable(func):
         """Calls numba.njit with a cache"""
-        jitfunc = numba.njit(func, cache=True)
+        jitfunc = numba.njit(func, error_model='numpy', cache=True)
         jitfunc.jittable = True
         return jitfunc
 
@@ -407,7 +436,7 @@ if numba:
         """
         Compile a function Ahead-Of-Time using the given signature string
         """
-        return numba.njit(sigstr, cache=True)
+        return numba.njit(sigstr, error_model='numpy', cache=True)
 
 else:
 
@@ -421,10 +450,11 @@ else:
         return lambda func: func
 
 
-# used when reading _poes/sid
+# used when reading _rates/sid
 @compile(["int64[:, :](uint8[:])",
           "int64[:, :](uint16[:])",
           "int64[:, :](uint32[:])",
+          "int64[:, :](int32[:])",
           "int64[:, :](int64[:])"])
 def idx_start_stop(integers):
     # given an array of integers returns an array int64 of shape (n, 3)

@@ -20,8 +20,8 @@ import os
 import unittest
 import numpy
 
-from openquake.baselib.general import DictArray
-from openquake.hazardlib import read_input, calc
+from openquake.baselib.general import DictArray, gettemp
+from openquake.hazardlib import read_input, calc, site
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.const import TRT
 from openquake.hazardlib.tom import PoissonTOM
@@ -29,8 +29,9 @@ from openquake.hazardlib.contexts import (
     Effect, ContextMaker, Collapser, get_distances)
 from openquake.hazardlib import valid
 from openquake.hazardlib.geo.surface import SimpleFaultSurface as SFS
+from openquake.hazardlib.source.multi_fault import save
 from openquake.hazardlib.source.rupture import \
-    NonParametricProbabilisticRupture as NPPR
+    get_planar, NonParametricProbabilisticRupture as NPPR
 from openquake.hazardlib.geo import Line, Point
 from openquake.hazardlib.site import Site, SiteCollection
 from openquake.hazardlib.source import PointSource
@@ -91,7 +92,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc1, pmf)
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.25, -0.1, 0.0)),
                                 Site(Point(-0.1, 0.0, 0.0))])
         dsts = get_distances(rup, sites, param)
@@ -119,7 +120,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rup = NPPR(mag, rake, trt, hypoc, self.srfc2, pmf)
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.25, -0.6, 0.0))])
         dsts = get_distances(rup, sites, param)
 
@@ -149,7 +150,7 @@ class ClosestPointOnTheRuptureTestCase(unittest.TestCase):
         rups = [r for r in src.iter_ruptures()]
 
         # Compute distances
-        param = 'closest_point'
+        param = 'clon_clat'
         sites = SiteCollection([Site(Point(0.0, 0.0, 0.0)),
                                 Site(Point(-0.2, 0.0, 0.0))])
         dsts = get_distances(rups[0], sites, param)
@@ -232,11 +233,11 @@ class CollapseTestCase(unittest.TestCase):
         [srcs] = inp.groups  # a single area source
         # get the context
         ctxs = cmaker.from_srcs(srcs, inp.sitecol)
-        pcurve0 = cmaker.get_pmap(ctxs).array[0]
+        hcurve0 = cmaker.get_pmap(ctxs).array[0]
         cmaker.collapser.cfactor = numpy.zeros(3)
         cmaker.collapser.collapse_level = 1
-        pcurve1 = cmaker.get_pmap(ctxs).array[0]
-        self.assertLess(numpy.abs(pcurve0 - pcurve1).sum(), 1E-9)
+        hcurve1 = cmaker.get_pmap(ctxs).array[0]
+        self.assertLess(numpy.abs(hcurve0 - hcurve1).sum(), 1E-9)
         numpy.testing.assert_equal(cmaker.collapser.cfactor, [94, 11616, 2])
 
     def test_collapse_azimuth(self):
@@ -397,13 +398,8 @@ class GetCtxs01TestCase(unittest.TestCase):
         sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
-        src = ssm[0][0]
-        sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
-        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                            for idxs in src.rupture_idxs]
-        src.set_sections(sections)
-        self.src = src
+        self.src = ssm[0][0]
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'), msparams=True)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
@@ -454,13 +450,8 @@ class GetCtxs02TestCase(unittest.TestCase):
         sc = SourceConverter(investigation_time=1, rupture_mesh_spacing=2.5)
         ssm = to_python(rup_path, sc)
         geom = to_python(geom_path, sc)
-        src = ssm[0][0]
-        sections = list(geom.sections.values())
-        s2i = {suid: i for i, suid in enumerate(geom.sections)}
-        src.rupture_idxs = [tuple(s2i[idx] for idx in idxs)
-                            for idxs in src.rupture_idxs]
-        src.set_sections(sections)
-        self.src = src
+        self.src = ssm[0][0]
+        save([self.src], geom.sections, gettemp(suffix='.hdf5'), msparams=True)
 
         # Create site-collection
         site = Site(Point(0.05, 0.2), vs30=760, z1pt0=30, z2pt5=0.5,
@@ -542,3 +533,27 @@ class PlanarDistancesTestCase(unittest.TestCase):
         for par in ('rx', 'ry0', 'rjb', 'rhypo', 'repi'):
             dist = get_distances_planar(planar, sites, par)[0]
             aac(dist, ctx[par], err_msg=par)
+
+    def test_from_planar(self):
+        s = site.Site(Point(0, 0), vs30=760,
+                      vs30measured=False, z1pt0=20, z2pt5=30)
+        msr = WC1994()
+        mag = 5.0
+        aratio = 1.
+        strike = 0.
+        dip = 90.
+        rake = 45
+        trt = TRT.ACTIVE_SHALLOW_CRUST
+        rup = get_planar(s, msr, mag, aratio, strike, dip, rake, trt)
+        gsims = [AbrahamsonEtAl2014()]
+        cm = ContextMaker(trt, gsims, dict(imtls={'PGA': []}))
+        ctx = cm.from_planar(rup, hdist=100, step=5)
+        mea, sig, tau, phi = cm.get_mean_stds([ctx])
+        # in this example sig, tau, phi are constant on all sites
+        aac(sig, .79162428)
+        aac(tau, .47)
+        aac(phi, .637)
+
+        # test att_curves which are functions N-distances -> (G, M, N) arrays
+        mea, sig, tau, phi = cm.get_att_curves(s, msr, mag)
+        aac(mea([100., 200.]), [[[-6.21035514, -7.8108702]]])  # shp (1, 1, 2)

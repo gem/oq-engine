@@ -22,7 +22,6 @@ Module exports
 :class:`ZhaoEtAl2006AscSWISS03`,
 :class:`ZhaoEtAl2006AscSWISS08`.
 """
-import copy
 import numpy as np
 
 from openquake.hazardlib.gsim.base import CoeffsTable
@@ -59,9 +58,11 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
     Model implemented by laurentiu.danciu@gmail.com
     """
 
-    # Supported standard deviation type is only total, but reported as a
-    # combination of mean and magnitude/distance single station sigma
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    # Supported standard deviation type originally only total, but reported as a
+    # combination of mean and magnitude/distance single station sigma.
+    # updated to return inter and intra event component of st.dev (June 2023)                                                                         
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = {PGA, SA}
 
@@ -75,7 +76,7 @@ class ZhaoEtAl2006AscSWISS05(ZhaoEtAl2006Asc):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        ctx = copy.copy(ctx)
+        ctx = ctx.copy()
         ctx.vs30 = 700 * np.ones(len(ctx.vs30))
         super().compute(ctx, imts, mean, sig, tau, phi)
         tau_ss = 'tauC'

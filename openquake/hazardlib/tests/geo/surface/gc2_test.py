@@ -41,6 +41,8 @@ PNT5 = Point(-65.00000,  0.00000, 0.0)
 AS_ARRAY = numpy.array([[pnt.longitude, pnt.latitude, pnt.depth]
                         for pnt in [PNT1, PNT2, PNT3, PNT4, PNT5]])
 
+PLOTTING = False
+
 
 class CartesianTestingMultiSurface(MultiSurface):
     """
@@ -54,6 +56,67 @@ class CartesianTestingMultiSurface(MultiSurface):
 
     def _get_gc2_coordinates_for_rupture(self, edge_sets):
         pass
+
+
+def franken_fault1(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4):
+    frankel_planes = [
+        PlanarSurface.from_corner_points(
+            PNT1, PNT2,
+            PNT2.point_at(as_length, lsd, dipdir1),
+            PNT1.point_at(as_length, lsd, dipdir1)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT2, PNT3,
+            PNT3.point_at(as_length, lsd, dipdir2),
+            PNT2.point_at(as_length, lsd, dipdir2)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT3, PNT4,
+            PNT4.point_at(as_length, lsd, dipdir3),
+            PNT3.point_at(as_length, lsd, dipdir3)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT4, PNT5,
+            PNT5.point_at(as_length, lsd, dipdir4),
+            PNT4.point_at(as_length, lsd, dipdir4)
+            )
+        ]
+    return MultiSurface(frankel_planes)
+
+
+def franken_fault2(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4):
+    # Test the case of a discordant Frankel plane
+    # Swapping the strike of the second segment to change the dip direction
+    # Also increasing the dip from 60 degrees to 75 degrees
+    as_length_alt = lsd / numpy.tan(numpy.radians(75.0))
+
+    # As a set of planes describing a concordant "Frankel Fault"
+    # In the Frankel fault each segment is projected to the local dip direction
+    dipdir2b = (dipdir2 + 180.) % 360.0
+
+    frankel_discordant = [
+        PlanarSurface.from_corner_points(
+            PNT1, PNT2,
+            PNT2.point_at(as_length, lsd, dipdir1),
+            PNT1.point_at(as_length, lsd, dipdir1)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT3, PNT2,
+            PNT2.point_at(as_length_alt, lsd, dipdir2b),
+            PNT3.point_at(as_length_alt, lsd, dipdir2b)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT3, PNT4,
+            PNT4.point_at(as_length, lsd, dipdir3),
+            PNT3.point_at(as_length, lsd, dipdir3)
+            ),
+        PlanarSurface.from_corner_points(
+            PNT4, PNT5,
+            PNT5.point_at(as_length, lsd, dipdir4),
+            PNT4.point_at(as_length, lsd, dipdir4)
+            )
+        ]
+    return MultiSurface(frankel_discordant)
 
 
 def _setup_peer_test_bending_fault_config():
@@ -119,63 +182,11 @@ def _setup_peer_test_bending_fault_config():
         PlanarSurface.from_corner_points(PNT4, PNT5, PNT5b, PNT4b)
     ]
     stirling_fault1 = MultiSurface(stirling_planes)
+    return (simple_fault1,
+            stirling_fault1,
+            franken_fault1(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4),
+            franken_fault2(as_length, lsd, dipdir1, dipdir2, dipdir3, dipdir4))
 
-    # As a set of planes describing a concordant "Frankel Fault"
-    # In the Frankel fault each segment is projected to the local dip direction
-    dipdir2b = (dipdir2 + 180.) % 360.0
-
-    frankel_planes = [
-        PlanarSurface.from_corner_points(
-            PNT1, PNT2,
-            PNT2.point_at(as_length, lsd, dipdir1),
-            PNT1.point_at(as_length, lsd, dipdir1)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT2, PNT3,
-            PNT3.point_at(as_length, lsd, dipdir2),
-            PNT2.point_at(as_length, lsd, dipdir2)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT3, PNT4,
-            PNT4.point_at(as_length, lsd, dipdir3),
-            PNT3.point_at(as_length, lsd, dipdir3)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT4, PNT5,
-            PNT5.point_at(as_length, lsd, dipdir4),
-            PNT4.point_at(as_length, lsd, dipdir4)
-            )
-        ]
-    frankel_fault1 = MultiSurface(frankel_planes)
-
-    # Test the case of a discordant Frankel plane
-    # Swapping the strike of the second segment to change the dip direction
-    # Also increasing the dip from 60 degrees to 75 degrees
-    as_length_alt = lsd / numpy.tan(numpy.radians(75.0))
-    frankel_discordant = [
-        PlanarSurface.from_corner_points(
-            PNT1, PNT2,
-            PNT2.point_at(as_length, lsd, dipdir1),
-            PNT1.point_at(as_length, lsd, dipdir1)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT3, PNT2,
-            PNT2.point_at(as_length_alt, lsd, dipdir2b),
-            PNT3.point_at(as_length_alt, lsd, dipdir2b)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT3, PNT4,
-            PNT4.point_at(as_length, lsd, dipdir3),
-            PNT3.point_at(as_length, lsd, dipdir3)
-            ),
-        PlanarSurface.from_corner_points(
-            PNT4, PNT5,
-            PNT5.point_at(as_length, lsd, dipdir4),
-            PNT4.point_at(as_length, lsd, dipdir4)
-            )
-        ]
-    frankel_fault2 = MultiSurface(frankel_discordant)
-    return simple_fault1, stirling_fault1, frankel_fault1, frankel_fault2
 
 SFLT1, STIRFLT1, FRANK1, FRANK2 = _setup_peer_test_bending_fault_config()
 
@@ -187,8 +198,19 @@ class TraceDownSamplingTestCase(unittest.TestCase):
     def test_downsample_trace(self):
         # Use the simple fault case with a tolerance of 1.0 degree
         downsampled_trace = downsample_trace(SFLT1.mesh, 1.0)
+
+        if PLOTTING:
+            import matplotlib.pyplot as plt
+            plt.plot(SFLT1.mesh.lons[0, :], SFLT1.mesh.lats[0, :], '-')
+            ds = downsampled_trace
+            plt.plot(ds[:, 0], ds[:, 1], 'o')
+            for i_coo, coo in enumerate(zip(ds[:, 0], ds[:, 1])):
+                plt.text(coo[0], coo[1], f'{i_coo}')
+            plt.show()
+
         # Top edge of downsampled mesh should correspond to the five
         # points of the simple fault
+
         # Check longitudes
         numpy.testing.assert_array_almost_equal(downsampled_trace[:, 0],
                                                 AS_ARRAY[:, 0],

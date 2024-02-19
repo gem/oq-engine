@@ -64,7 +64,7 @@ def _get_ZR19_magnitude_term(C_ZR19, mag):
     FM = np.full_like(
         mag, C_ZR19["b0"] + C_ZR19["b1"] * (5.8 - Mb_) + C_ZR19["Cadj"])
     FM[mag < Mb_] = C_ZR19["b0"] + C_ZR19["Cadj"]
-    between = (mag > Mb_) & (mag < 5.8)
+    between = (mag >= Mb_) & (mag < 5.8)
     FM[between] = (C_ZR19["b0"] + C_ZR19["b1"] * (mag[between] - Mb_) +
                    C_ZR19["Cadj"])
     return FM

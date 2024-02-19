@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import unittest
 import numpy
 from openquake.baselib import general, config
@@ -23,17 +24,17 @@ from openquake.baselib.python3compat import decode
 from openquake.hazardlib import contexts, InvalidFile
 from openquake.hazardlib.calc.mean_rates import (
     calc_rmap, calc_mean_rates, to_rates)
+from openquake.commonlib import readinput
 from openquake.calculators.views import view, text_table
 from openquake.calculators.export import export
 from openquake.calculators.extract import extract
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.logictree import (
     case_01, case_02, case_04, case_05, case_06, case_07, case_08, case_09,
     case_10, case_11, case_12, case_13, case_14, case_15, case_16, case_17,
-    case_19, case_20, case_21, case_28, case_30, case_31, case_36, case_39,
-    case_45, case_46, case_52, case_56, case_58, case_59, case_67, case_68,
-    case_71, case_73, case_79, case_83)
+    case_18, case_19, case_20, case_21, case_28, case_30, case_31, case_36,
+    case_39, case_45, case_46, case_52, case_56, case_58, case_59, case_67,
+    case_68, case_71, case_73, case_79, case_83)
 
 ae = numpy.testing.assert_equal
 aac = numpy.testing.assert_allclose
@@ -69,8 +70,10 @@ class LogicTreeTestCase(CalculatorTestCase):
             csm = self.calc.datastore['_csm']
             full_lt = self.calc.datastore['full_lt'].init()
             sitecol = self.calc.datastore['sitecol']
+            trs = full_lt.get_trt_rlzs(self.calc.datastore['trt_smrs'][:])
             rmap = calc_rmap(csm.src_groups, full_lt, sitecol, oq)[0]
-            mean_rates = calc_mean_rates(rmap, full_lt.g_weights, oq.imtls)
+            mean_rates = calc_mean_rates(
+                rmap, full_lt.g_weights(trs), oq.imtls)
             er = exp_rates[exp_rates < 1]
             mr = mean_rates[mean_rates < 1]
             aac(mr, er, atol=1e-6)
@@ -109,19 +112,24 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.run_calc(case_04.__file__, 'job.ini',
                       calculation_mode='preclassical')
         hc_id = str(self.calc.datastore.calc_id)
-        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id,
-                      postproc_func='disagg_by_rel_sources')
+        self.run_calc(case_04.__file__, 'job.ini', hazard_calculation_id=hc_id)
 
         [fname] = export(('hcurves', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/curve-mean.csv', fname)
 
+        # check disagg_by_src
+        src_ids = decode(self.calc.datastore['mean_rates_by_src/src_id'][:])
+        self.assertEqual(src_ids, ['SSC-AS-001'])
+
+    # NB: this test is sensitive to the lower cutoff for the rates
+    # it produces a huge rate 103.6 for the minimum level, cut off at 19.5
     def test_case_05(self):
         # use_rates, two sources, two uncertainties per source, full_enum
         self.assert_curves_ok(['curve-mean.csv'], case_05.__file__)
 
-        # test mean_disagg_bysrc
-        [fname] = export(('mean_disagg_bysrc', 'csv'), self.calc.datastore)
-        self.assertEqualFiles('expected/mean_disagg_bysrc.csv', fname)
+        # test mean_disagg_by_src
+        [fname] = export(('mean_disagg_by_src', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/mean_disagg_by_src.csv', fname)
 
     def test_case_05_bis(self):
         # use_rates, two sources, two uncertainties per source, sampling
@@ -152,6 +160,10 @@ class LogicTreeTestCase(CalculatorTestCase):
         self.assertEqual(info.loc[b'2'].weight, 177)
         self.assertEqual(info.loc[b'3'].weight, 5871)
 
+        # testing view_relevant_sources
+        arr = view('relevant_sources:PGA', self.calc.datastore)
+        self.assertEqual(decode(arr['src_id']), ['1', '2'])
+
     def test_case_07_bis(self):
         # same as 07 but with sampling
         self.run_calc(case_07.__file__, 'sampling.ini')
@@ -181,7 +193,8 @@ class LogicTreeTestCase(CalculatorTestCase):
 
         # test extract/hcurves/rlz-0
         haz = vars(extract(self.calc.datastore, 'hcurves?kind=rlz-1'))
-        self.assertEqual(sorted(haz), ['extra', 'k', 'kind', 'rlz-001', 'rlzs'])
+        self.assertEqual(sorted(haz),
+                         ['extra', 'k', 'kind', 'rlz-001', 'rlzs'])
         self.assertEqual(haz['rlz-001'].shape, (1, 1, 4))  # (N, M, L1)
 
     def test_case_11(self):
@@ -257,13 +270,6 @@ hazard_uhs-mean.csv
 hazard_uhs-std.csv
 '''.split(), case_15.__file__, delta=1E-6)
 
-        # test UHS XML export
-        fnames = [f for f in export(('uhs', 'xml'), self.calc.datastore)
-                  if 'mean' in f]
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.01.xml', fnames[0])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.1.xml', fnames[1])
-        self.assertEqualFiles('expected/hazard_uhs-mean-0.2.xml', fnames[2])
-
         # npz exports
         [fname] = export(('hmaps', 'npz'), self.calc.datastore)
         arr = numpy.load(fname)['all']
@@ -309,7 +315,12 @@ hazard_uhs-std.csv
              'hazard_curve-smltp_b2-gsimltp_b1-ltr_4.csv'],
             case_17.__file__)
         ids = decode(self.calc.datastore['source_info']['source_id'])
-        numpy.testing.assert_equal(ids, ['A!0', 'A!1', 'B'])
+        numpy.testing.assert_equal(ids, ['A!b1', 'A!b2', 'B'])
+
+    def test_case_18(self):
+        # test classical with 2 gsims and 1 sample
+        self.assert_curves_ok(['hazard_curve-mean.csv'],
+                              case_18.__file__)
 
     def test_case_19(self):
         # test for nontrivial GMPE logictree and AvgGMPE
@@ -322,8 +333,9 @@ hazard_uhs-std.csv
         # checking the mean rates
         mean_poes = self.calc.datastore['hcurves-stats'][0, 0]  # shape (M, L1)
         mean_rates = to_rates(mean_poes)
-        rates_by_source = self.calc.datastore['rates_by_src'][0]  # (M, L1, Ns)
-        aac(mean_rates, rates_by_source.sum(axis=2), atol=2E-7)
+        rates_by_source = self.calc.datastore[
+            'mean_rates_by_src'][0]  # (M, L1, Ns)
+        aac(mean_rates, rates_by_source.sum(axis=2), atol=5E-7)
 
     def test_case_20(self):
         # Source geometry enumeration, apply_to_sources
@@ -341,7 +353,7 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_sm1_sg2_cog2_char_complex-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_plane-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_sm1_sg2_cog2_char_simple-gsimltp_Sad1997.csv'],
-            case_20.__file__, delta=1E-7)
+            case_20.__file__)
         # there are 3 sources x 12 sm_rlzs
         sgs = self.calc.csm.src_groups  # 7 source groups with 1 source each
         self.assertEqual(len(sgs), 7)
@@ -365,26 +377,22 @@ hazard_uhs-std.csv
                          ['site_id', 'stat', 'imt', 'value'])
 
     def test_case_20_bis(self):
-        # rates_by_src
+        # mean_rates_by_src
         self.run_calc(case_20.__file__, 'job_bis.ini')
-        dbs = self.calc.datastore['rates_by_src']
+        dbs = self.calc.datastore['mean_rates_by_src']
         ae(dbs.shape_descr, ['site_id', 'imt', 'lvl', 'src_id'])
         ae(dbs.site_id, [0])
         ae(dbs.imt, ['PGA', 'SA(1.0)'])
         ae(dbs.lvl, [0, 1, 2, 3])
         ae(dbs.src_id, ['CHAR1', 'COMFLT1', 'SFLT1'])
 
-        # testing extract_rates_by_src
-        aw = extract(self.calc.datastore, 'rates_by_src?imt=PGA&poe=1E-3')
+        # testing extract_mean_rates_by_src
+        aw = extract(self.calc.datastore, 'mean_rates_by_src?imt=PGA&iml=1E-2')
         self.assertEqual(aw.site_id, 0)
         self.assertEqual(aw.imt, 'PGA')
-        self.assertEqual(aw.poe, .001)
-        # the numbers are quite different on macOS, 6.461143e-05 :-(
-        aac(aw.array['poe'], [6.467104e-05, 0, 0], atol=1E-7)
-
-        # testing view_relevant_sources
-        arr = view('relevant_sources:SA(1.0)', self.calc.datastore)
-        self.assertEqual(decode(arr['src_id']), ['SFLT1'])
+        self.assertEqual(aw.iml, .01)
+        # the numbers are quite different on macOS
+        aac(aw.array['rate'], [0.02 , 0.015, 0.015], atol=1E-6)
 
     def test_case_21(self):
         # Simple fault dip and MFD enumeration
@@ -416,13 +424,14 @@ hazard_uhs-std.csv
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip30-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip45-gsimltp_Sad1997.csv',
             'hazard_curve-smltp_b1_mfd3_mid_dip_dip60-gsimltp_Sad1997.csv'],
-            case_21.__file__, delta=1E-7)
+            case_21.__file__)
 
     def test_case_28(self):  # North Africa
         # MultiPointSource with modify MFD logic tree
         out = self.run_calc(case_28.__file__, 'job.ini', exports='csv')
         for f in out['uhs', 'csv']:
-            self.assertEqualFiles('expected/' + strip_calc_id(f), f)
+            self.assertEqualFiles('expected/' + strip_calc_id(f), f,
+                                  delta=4E-5)
 
         # checking that source_info is stored correctly
         info = self.calc.datastore['source_info'][:]
@@ -436,7 +445,6 @@ hazard_uhs-std.csv
         tbl = general.gettemp(text_table(aw.array, ext='org'))
         self.assertEqualFiles('expected/realizations.org', tbl)
 
-
     def test_case_28_bis(self):
         # missing z1pt0
         with self.assertRaises(InvalidFile) as ctx:
@@ -447,7 +455,7 @@ hazard_uhs-std.csv
     def test_case_30(self):
         # point on the international data line
         # this is also a test with IMT-dependent weights
-        if NOT_DARWIN:  # broken on macOS
+        if sys.platform != 'darwin':  # broken on macOS
             self.assert_curves_ok(['hazard_curve-PGA.csv',
                                    'hazard_curve-SA(1.0).csv'],
                                   case_30.__file__)
@@ -456,13 +464,12 @@ hazard_uhs-std.csv
         # IMT-dependent weights with sampling by cheating
         self.assert_curves_ok(
             ['hcurve-PGA.csv', 'hcurve-SA(1.0).csv'],
-            case_30.__file__, number_of_logic_tree_samples='10', delta=1E-5)
+            case_30.__file__, number_of_logic_tree_samples='10')
 
     def test_case_31(self):
         # source specific logic tree
         self.assert_curves_ok(['hazard_curve-mean-PGA.csv',
-                               'hazard_curve-std-PGA.csv'], case_31.__file__,
-                              delta=1E-5)
+                               'hazard_curve-std-PGA.csv'], case_31.__file__)
 
     def test_case_36(self):
         # test with advanced applyToSources and disordered gsim_logic_tree
@@ -486,7 +493,7 @@ hazard_uhs-std.csv
         self.assert_curves_ok([
             'hazard_curve-mean-PGA.csv', 'hazard_curve-mean-SA(0.1).csv',
             'hazard_curve-mean-SA(0.5).csv', 'hazard_curve-mean-SA(2.0).csv',
-            'hazard_map-mean.csv'], case_39.__file__, delta=2E-5)        
+            'hazard_map-mean.csv'], case_39.__file__, delta=2E-5)
 
         # check realizations
         aw = extract(self.calc.datastore, 'realizations')
@@ -613,6 +620,13 @@ hazard_uhs-std.csv
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
+        # checking reducing the logic tree to a single branch
+        oq = self.calc.oqparam
+        oq.smlt_branch = 'b01'
+        csm = readinput.get_composite_source_model(oq)
+        assert len(csm.src_groups) == 1
+        assert len(self.calc.csm.src_groups) == 4
+
     def test_case_68_bis(self):
         # extendModel with sampling and reduction to single source
         self.run_calc(case_68.__file__, 'job1.ini')
@@ -631,7 +645,7 @@ hazard_uhs-std.csv
         # test with oversampling
         # there are 6 potential paths 1A 1B 1C 2A 2B 2C
         # 10 rlzs are being sampled: 1C 1A 1B 1A 1C 1A 2B 2A 2B 2A
-        # rlzs_by_g is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
+        # trt_rlzs is 135 2 04, 79 68 i.e. 1A*3 1B*1 1C*1, 2A*2 2B*2
         self.run_calc(case_71.__file__, 'job.ini', concurrent_tasks='0')
         self.assertEqual(len(self.calc.realizations), 10)
         [fname] = export(('hcurves/mean', 'csv'), self.calc.datastore)

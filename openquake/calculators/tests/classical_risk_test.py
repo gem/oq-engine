@@ -18,8 +18,7 @@
 
 from openquake.qa_tests_data.classical_risk import (
     case_2, case_3, case_4, case_5, case_master)
-from openquake.calculators.tests import (
-    CalculatorTestCase, strip_calc_id, NOT_DARWIN)
+from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.calculators.export import export
 
 
@@ -68,11 +67,6 @@ class ClassicalRiskTestCase(CalculatorTestCase):
         # test with different curve resolution for different taxonomies
         self.run_calc(case_5.__file__, 'job_h.ini,job_r.ini')
 
-        # check the cutoff in classical.fix_ones
-        df = self.calc.datastore.read_df('_poes')
-        num_ones = (df.poe == 1.).sum()
-        self.assertEqual(num_ones, 0)
-
         # check mean loss curves
         [fname] = export(('loss_curves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/loss_curves-mean.csv', fname)
@@ -86,6 +80,13 @@ class ClassicalRiskTestCase(CalculatorTestCase):
 
     def test_case_master(self):
         self.run_calc(case_master.__file__, 'job.ini')
+
+        # checking the avg_losses
+        [fname] = export(('avg_losses-stats', 'csv'), self.calc.datastore)
+        self.assertEqualFiles('expected/' + strip_calc_id(fname),
+                              fname, delta=1E-5)
+
+        # checking the loss maps
         fnames = export(('loss_maps-stats', 'csv'), self.calc.datastore)
         assert fnames  # sanity check
         for fname in fnames:

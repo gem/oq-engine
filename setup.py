@@ -21,8 +21,8 @@ import re
 import sys
 from setuptools import setup, find_packages
 
-if sys.version_info < (3, 6):
-    sys.exit('Sorry, Python < 3.6 is not supported')
+if sys.version_info < (3, 9):
+    sys.exit('Sorry, Python < 3.9 is not supported')
 
 
 def get_version():
@@ -70,19 +70,17 @@ install_requires = [
     'requests >=2.20',
     'toml >=0.10.2',
     'pyproj >=1.9',
+    'alpha_shapes >= 1.1.0'
 ]
 
 extras_require = {
-    'osgeo':  [
-        'GDAL >= 2.4',
-    ],
     'dev':  [
         'pytest >=4.5',
         'flake8 >=3.5',
         'pdbpp',
         'ipython',
         'silx',
-        'sphinx==4.4',
+        'sphinx==6.2',
         'sphinx-theme',
         'pydata-sphinx-theme',
     ]

@@ -43,7 +43,7 @@ def _cs_out(mean_stds, probs, rho, imti, imls, cs_poes,
     # exceedance) for the conditioning IMT. `cs_poes` are the probabilities of
     # exceedance characterising the values in `imls`. `phi_b` is float.
     # `invtime` is the investigation time [yr]. `c` has shape M x ? x ?
-    M, O, _ = c.shape
+    M, _, _ = c.shape
     mu = mean_stds[0]  # shape (M, U)
     sig = mean_stds[1]  # shape (M, U)
 
@@ -112,7 +112,7 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
     M = len(cmaker.imtls)
 
     # This is the output dictionary as explained above
-    out = outdict(M, N, P, cmaker.gidx.min(), cmaker.gidx.max() + 1)
+    out = outdict(M, N, P, cmaker.gid.min(), cmaker.gid.max() + 1)
     imt_ref = cmaker.imts[imti]
     rho = numpy.array([cmaker.cross_correl.get_correlation(imt_ref, imt)
                        for imt in cmaker.imts])
@@ -131,7 +131,7 @@ def get_cs_out(cmaker, ctxt, imti, imlsNP, tom, _c=None):
             probs = tom.get_probability_one_or_more_occurrences(
                 ctx.occurrence_rate)  # shape U
         # For every GMM
-        for c, g in enumerate(cmaker.gidx):
+        for c, g in enumerate(cmaker.gid):
             i = c % len(cmaker.gsims)
             _cs_out(mean_stds[:, i], probs, rho, imti, imls, cmaker.poes,
                     cmaker.phi_b, cmaker.investigation_time,

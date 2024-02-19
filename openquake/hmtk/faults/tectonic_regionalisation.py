@@ -45,41 +45,46 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 :mod:`openquake.hmtk.regionalisation.tectonic_regionalisation` implements
 :class:`openquake.hmtk.ancillary.tectonic_regionalisation.TectonicRegion`,
 defining the methods and attributes associated with a region, and the
 :class:`openquake.hmtk.ancillary.tectonic_regionalisation.TectonicRegionalisation` defining a regionalisation as a set of regions
-'''
+"""
 from math import fabs
 import numpy as np
 from openquake.hazardlib.scalerel.wc1994 import WC1994
 
 DEFAULT_SHEAR_MODULUS = [(30.0, 1.0)]
-DEFAULT_DLR = [(1.25E-5, 1.0)]
+DEFAULT_DLR = [(1.25e-5, 1.0)]
 DEFAULT_MSR = [(WC1994(), 1.0)]
 
 
 def _check_list_weights(parameter, name):
-    '''
+    """
     Checks that the weights in a list of tuples sums to 1.0
-    '''
+    """
     if not isinstance(parameter, list):
-        raise ValueError('%s must be formatted with a list of tuples' % name)
+        raise ValueError("%s must be formatted with a list of tuples" % name)
     weight = np.sum([val[1] for val in parameter])
-    if fabs(weight - 1.) > 1E-8:
-        raise ValueError('%s weights do not sum to 1.0!' % name)
+    if fabs(weight - 1.0) > 1e-8:
+        raise ValueError("%s weights do not sum to 1.0!" % name)
     return parameter
 
 
 class TectonicRegion(object):
-    '''
+    """
     Definition of the tectonic region
-    '''
+    """
 
-    def __init__(self, identifier, name, shear_modulus=None,
-                 disp_length_ratio=None, scaling_rel=None):
-
+    def __init__(
+        self,
+        identifier,
+        name,
+        shear_modulus=None,
+        disp_length_ratio=None,
+        scaling_rel=None,
+    ):
         shear_modulus = shear_modulus or DEFAULT_SHEAR_MODULUS
         disp_length_ratio = disp_length_ratio or DEFAULT_DLR
         scaling_rel = scaling_rel or DEFAULT_MSR
@@ -87,60 +92,66 @@ class TectonicRegion(object):
         self.id = identifier
         self.region_name = name
         self.shear_modulus = _check_list_weights(
-            shear_modulus, 'Shear Modulus ' + self.region_name)
+            shear_modulus, "Shear Modulus " + self.region_name
+        )
         self.disp_length_ratio = _check_list_weights(
             disp_length_ratio,
-            'Displacement to Length Ratio ' + self.region_name)
+            "Displacement to Length Ratio " + self.region_name,
+        )
 
         self.scaling_rel = _check_list_weights(
-            scaling_rel,
-            'Scaling Relation ' + self.region_name)
+            scaling_rel, "Scaling Relation " + self.region_name
+        )
 
 
 class TectonicRegionalisation(object):
-    '''
+    """
     Defines a set of regionalisations
-    '''
+    """
 
     def __init__(self):
-        '''
-        '''
+        """ """
         self.regionalisation = []
         self.key_list = []
 
     def populate_regions(self, tectonic_region_dict):
-        '''
+        """
         Populates the tectonic region from the list of dictionaries, where each
         region is a dictionary of with the following format::
 
          region = {'Shear_Modulus': [(val1, weight1), (val2, weight2), ...],
                    'Displacement_Length_Ratio': [(val1, weight1), ...],
                    'Magnitude_Scaling_Relation': [(val1, weight1), ...]}
-        '''
+        """
         for tect_reg in tectonic_region_dict:
-            if 'Shear_Modulus' in tect_reg.keys():
-                shear_modulus = tect_reg['Shear_Modulus']
+            if "Shear_Modulus" in tect_reg.keys():
+                shear_modulus = tect_reg["Shear_Modulus"]
             else:
                 shear_modulus = DEFAULT_SHEAR_MODULUS
 
-            if 'Displacement_Length_Ratio' in tect_reg.keys():
-                disp_length_ratio = tect_reg['Displacement_Length_Ratio']
+            if "Displacement_Length_Ratio" in tect_reg.keys():
+                disp_length_ratio = tect_reg["Displacement_Length_Ratio"]
             else:
                 disp_length_ratio = DEFAULT_DLR
 
-            if 'Magnitude_Scaling_Relation' in tect_reg.keys():
-                scaling_relation = tect_reg['Magnitude_Scaling_Relation']
+            if "Magnitude_Scaling_Relation" in tect_reg.keys():
+                scaling_relation = tect_reg["Magnitude_Scaling_Relation"]
             else:
                 scaling_relation = DEFAULT_MSR
 
             self.regionalisation.append(
                 TectonicRegion(
-                    tect_reg['Code'], tect_reg['Name'],
-                    shear_modulus, disp_length_ratio, scaling_relation))
-            self.key_list.append(tect_reg['Name'])
+                    tect_reg["Code"],
+                    tect_reg["Name"],
+                    shear_modulus,
+                    disp_length_ratio,
+                    scaling_relation,
+                )
+            )
+            self.key_list.append(tect_reg["Name"])
 
     def get_number_regions(self):
-        '''
+        """
         Returns the number of tectonic regions in a regionalisation
-        '''
+        """
         return len(self.key_list)

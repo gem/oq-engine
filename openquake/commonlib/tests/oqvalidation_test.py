@@ -56,6 +56,7 @@ class OqParamTestCase(unittest.TestCase):
                 hazard_calculation_id=None, hazard_output_id=None,
                 maximum_distance='10', sites='0.1 0.2',
                 reference_vs30_value='200',
+                truncation_level='3',
                 not_existing_param='XXX', export_dir=TMP,
                 intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
                 rupture_mesh_spacing='1.5').validate()
@@ -89,12 +90,14 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             OqParam(
                 calculation_mode='classical_risk',
+                truncation_level='3',
                 hazard_calculation_id=None, hazard_output_id=None,
                 inputs=fakeinputs, maximum_distance='10', sites='',
                 hazard_maps='true',  poes='').validate()
         with self.assertRaises(ValueError):
             OqParam(
                 calculation_mode='classical_risk',
+                truncation_level='3',
                 hazard_calculation_id=None, hazard_output_id=None,
                 inputs=fakeinputs, maximum_distance='10', sites='',
                 uniform_hazard_spectra='true',  poes='').validate()
@@ -113,13 +116,14 @@ class OqParamTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             OqParam(
                 calculation_mode='classical', inputs=fakeinputs,
-                sites='0.1 0.2').validate()
+                truncation_level='3', sites='0.1 0.2').validate()
 
         oq = OqParam(
             calculation_mode='event_based', inputs=GST,
             intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
             intensity_measure_types='PGV', sites='0.1 0.2',
             reference_vs30_value='200',
+            truncation_level='3',
             maximum_distance='{"wrong TRT": 200}')
         oq.inputs['source_model_logic_tree'] = 'something'
 
@@ -138,6 +142,7 @@ class OqParamTestCase(unittest.TestCase):
             calculation_mode='event_based', inputs=GST,
             intensity_measure_types_and_levels="{'PGA': [0.1, 0.2]}",
             intensity_measure_types='PGV', sites='0.1 0.2',
+            truncation_level='3',
             reference_vs30_value='200',
             maximum_distance='400')
         oq.validate()
@@ -173,17 +178,20 @@ class OqParamTestCase(unittest.TestCase):
                       'directory', str(ctx.exception))
 
     def test_invalid_imt(self):
+        imt = 'PGD'
+        imtls = '{"%s": [0.4, 0.5, 0.6]}' % imt
         with self.assertRaises(ValueError) as ctx:
             OqParam(
                 calculation_mode='event_based', inputs=fakeinputs,
                 sites='0.1 0.2',
                 maximum_distance='400',
+                truncation_level='3',
                 ground_motion_correlation_model='JB2009',
-                intensity_measure_types_and_levels='{"PGV": [0.4, 0.5, 0.6]}',
+                intensity_measure_types_and_levels=imtls,
             ).validate()
         self.assertEqual(
             str(ctx.exception),
-            'Correlation model JB2009 does not accept IMT=PGV')
+            f'Correlation model JB2009 does not accept IMT={imt}')
 
     def test_duplicated_levels(self):
         with self.assertRaises(ValueError) as ctx:
@@ -209,6 +217,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='classical', inputs=fakeinputs,
                 sites='0.1 0.2',
                 maximum_distance='400',
+                truncation_level='3',
                 intensity_measure_types='PGA',
             ).validate()
         self.assertIn('`intensity_measure_types_and_levels`',
@@ -220,6 +229,7 @@ class OqParamTestCase(unittest.TestCase):
                 calculation_mode='event_based', inputs=fakeinputs,
                 sites='0.1 0.2',
                 maximum_distance='400',
+                truncation_level='3',
                 intensity_measure_types='PGA',
                 hazard_curves_from_gmfs='true')
             oq.validate()
@@ -275,6 +285,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2, 0.3 0.4',
                 poes='0.2',
                 maximum_distance='400',
+                truncation_level='3',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
@@ -291,6 +302,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2, 0.3 0.4',
                 poes='0.2',
                 maximum_distance='400',
+                truncation_level='3',
                 intensity_measure_types_and_levels="{'PGA': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1',
                 inputs=fakeinputs,
@@ -317,6 +329,7 @@ class OqParamTestCase(unittest.TestCase):
                 reference_vs30_value='200',
                 sites='0.1 0.2',
                 maximum_distance='400',
+                truncation_level='3',
                 intensity_measure_types_and_levels="{'PGV': [0.1, 0.2, 0.3]}",
                 uniform_hazard_spectra='1')
         self.assertIn("poes_disagg or iml_disagg must be set",
@@ -331,6 +344,7 @@ class OqParamTestCase(unittest.TestCase):
                 sites='0.1 0.2',
                 poes='0.2',
                 maximum_distance='400',
+                truncation_level='3',
                 iml_disagg="{'PGV': 0.1}",
                 poes_disagg="0.1",
                 uniform_hazard_spectra='1')

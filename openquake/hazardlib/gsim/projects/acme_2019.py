@@ -306,7 +306,7 @@ class AlAtikSigmaModel(GMPE):
             self.KAPPATAB = CoeffsTable(table=data, sa_damping=5)
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
         for m, imt in enumerate(imts):
 
             cornerp = get_corner_period(mag)

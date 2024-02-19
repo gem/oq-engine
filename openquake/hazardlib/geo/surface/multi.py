@@ -19,15 +19,37 @@
 Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 :class:`MultiSurface`.
 """
+from functools import cached_property
 import numpy as np
+import pandas
 from shapely.geometry import Polygon
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
-from openquake.hazardlib.geo.surface import (
-    PlanarSurface, SimpleFaultSurface, ComplexFaultSurface)
-from openquake.hazardlib.geo.multiline import get_tu, MultiLine
+from openquake.hazardlib.geo.surface import PlanarSurface
+
+MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
+           'west', 'east', 'north', 'south']
+SDT = [(p, np.float32) for p in MSPARAMS]
+
+
+def _build_msparam(surfaces, tor):
+    # slow version
+    msparam = np.zeros(1, SDT)[0]
+    areas = np.array([s.get_area() for s in surfaces])
+    msparam['area'] = areas.sum()
+    ws = areas / msparam['area']  # weights
+    msparam['dip'] = ws @ [s.get_dip() for s in surfaces]
+    strikes = np.radians([s.get_strike() for s in surfaces])
+    v1 = ws @ np.sin(strikes)
+    v2 = ws @ np.cos(strikes)
+    msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
+    msparam['u_max'] = tor.u_max
+    msparam['width'] = ws @ [s.get_width() for s in surfaces]
+    msparam['ztor'] = ws @ [s.get_top_edge_depth() for s in surfaces]
+    msparam['zbot'] = ws @ [s.mesh.depths.max() for s in surfaces]
+    return msparam
 
 
 class MultiSurface(BaseSurface):
@@ -68,6 +90,7 @@ class MultiSurface(BaseSurface):
             surfaces.append(PlanarSurface.from_ucerf(arr))
         return cls(surfaces)
 
+    # NB: called in event_based calculations
     @property
     def mesh(self):
         """
@@ -84,64 +107,27 @@ class MultiSurface(BaseSurface):
         return Mesh(np.concatenate(lons), np.concatenate(lats),
                     np.concatenate(deps))
 
-    def __init__(self, surfaces: list, tol: float = 1):
+    def __init__(self, surfaces, msparam=None):
         """
         Intialize a multi surface object from a list of surfaces
-        :param list surfaces:
+
+        :param surfaces:
             A list of instances of subclasses of
             :class:`openquake.hazardlib.geo.surface.BaseSurface`
-        :param float tol:
-            A float in decimal degrees representing the tolerance admitted in
-            representing the rupture trace.
         """
         self.surfaces = surfaces
-        self.tol = tol
-        self._set_tor()
-        self.areas = None
-        self.tut = None
-        self.uut = None
-        self.site_mesh = None
+        self.msparam = msparam
 
-    def _set_tor(self):
-        """
-        Computes the list of the vertical surface projections of the top of
-        the ruptures from the set of surfaces defining the multi fault.
-        We represent the surface projection of each top of rupture with an
-        instance of a :class:`openquake.hazardlib.geo.multiline.Multiline`
-        """
-        tors = []
-        classes = (ComplexFaultSurface, SimpleFaultSurface)
-
-        for srfc in self.surfaces:
-
-            if isinstance(srfc, geo.surface.kite_fault.KiteSurface):
-                lo, la = srfc.get_tor()
-                line = geo.Line.from_vectors(lo, la)
-                line.keep_corners(self.tol)
-                tors.append(line)
-
-            elif isinstance(srfc, PlanarSurface):
-                lo = []
-                la = []
-                for pnt in [srfc.top_left, srfc.top_right]:
-                    lo.append(pnt.longitude)
-                    la.append(pnt.latitude)
-                tors.append(geo.line.Line.from_vectors(lo, la))
-
-            elif isinstance(srfc, classes):
-                lons = srfc.mesh.lons[0, :]
-                lats = srfc.mesh.lats[0, :]
-                coo = np.array([[lo, la] for lo, la in zip(lons, lats)])
-                line = geo.line.Line.from_vectors(coo[:, 0], coo[:, 1])
-                line.keep_corners(self.tol)
-                tors.append(line)
-
-            else:
-                raise ValueError(f"Surface {str(srfc)} not supported")
-
-        # Set the multiline representing the rupture traces i.e. vertical
-        # projections at the surface of the top of ruptures
-        self.tors = geo.MultiLine(tors)
+    @cached_property
+    def tor(self):
+        # setting .tor is expensive unless u_max is given
+        if self.msparam is None:
+            tor = geo.MultiLine([s.tor for s in self.surfaces])
+            self.msparam = _build_msparam(self.surfaces, tor)
+        else:
+            tor = geo.MultiLine([s.tor for s in self.surfaces],
+                                self.msparam['u_max'])
+        return tor
 
     def get_min_distance(self, mesh):
         """
@@ -153,51 +139,6 @@ class MultiSurface(BaseSurface):
         """
         dists = [surf.get_min_distance(mesh) for surf in self.surfaces]
         return np.min(dists, axis=0)
-
-    def get_closest_points(self, mesh):
-        """
-        For each point in ``mesh`` find the closest surface element, and return
-        the corresponding closest point.
-        See :meth:`superclass method
-        <.base.BaseSurface.get_closest_points>`
-        for spec of input and result values.
-        """
-        # first, for each point in mesh compute minimum distance to each
-        # surface. The distance matrix is flattend, because mesh can be of
-        # an arbitrary shape. By flattening we obtain a ``distances`` matrix
-        # for which the first dimension represents the different surfaces
-        # and the second dimension the mesh points.
-        dists = np.array(
-            [surf.get_min_distance(mesh).flatten() for surf in self.surfaces]
-        )
-
-        # find for each point in mesh the index of closest surface
-        idx = dists == np.min(dists, axis=0)
-
-        # loop again over surfaces. For each surface compute the closest
-        # points, and associate them to the mesh points for which the surface
-        # is the closest. Note that if a surface is not the closest to any of
-        # the mesh points then the calculation is skipped
-        lons = np.empty_like(mesh.lons.flatten())
-        lats = np.empty_like(mesh.lats.flatten())
-        depths = None if mesh.depths is None else \
-            np.empty_like(mesh.depths.flatten())
-        for ii, srf in enumerate(self.surfaces):
-            # tested in hazardlib.geo.surface.multi.test_get_closest_point
-            if not idx[ii, :].any():
-                continue
-            else:
-                surf, i = srf, ii
-        cps = surf.get_closest_points(mesh)
-        lons[idx[i, :]] = cps.lons.flatten()[idx[i, :]]
-        lats[idx[i, :]] = cps.lats.flatten()[idx[i, :]]
-        if depths is not None:
-            depths[idx[i, :]] = cps.depths.flatten()[idx[i, :]]
-        lons = lons.reshape(mesh.lons.shape)
-        lats = lats.reshape(mesh.lats.shape)
-        if depths is not None:
-            depths = depths.reshape(mesh.depths.shape)
-        return Mesh(lons, lats, depths)
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -218,12 +159,8 @@ class MultiSurface(BaseSurface):
         Compute top edge depth of each surface element and return area-weighted
         average value (in km).
         """
-        areas = self._get_areas()
-        depths = np.array([np.mean(surf.get_top_edge_depth()) for surf
-                           in self.surfaces])
-        ted = np.sum(areas * depths) / np.sum(areas)
-        assert np.isfinite(ted).all()
-        return ted
+        self.tor
+        return self.msparam['ztor']
 
     def get_strike(self):
         """
@@ -233,13 +170,8 @@ class MultiSurface(BaseSurface):
         Note that the original formula has been adapted to compute a weighted
         rather than arithmetic mean.
         """
-        areas = self._get_areas()
-        strikes = np.array([surf.get_strike() for surf in self.surfaces])
-        v1 = (np.sum(areas * np.sin(np.radians(strikes))) /
-              np.sum(areas))
-        v2 = (np.sum(areas * np.cos(np.radians(strikes))) /
-              np.sum(areas))
-        return np.degrees(np.arctan2(v1, v2)) % 360
+        self.tor
+        return self.msparam['strike']
 
     def get_dip(self):
         """
@@ -248,28 +180,23 @@ class MultiSurface(BaseSurface):
         Given that dip values are constrained in the range (0, 90], the simple
         formula for weighted mean is used.
         """
-        areas = self._get_areas()
-        dips = np.array([surf.get_dip() for surf in self.surfaces])
-        ok = np.logical_and(np.isfinite(dips), np.isfinite(areas))[0]
-        dips = dips[ok]
-        areas = areas[ok]
-        dip = np.sum(areas * dips) / np.sum(areas)
-        return dip
+        self.tor
+        return self.msparam['dip']
 
     def get_width(self):
         """
         Compute width of each surface element, and return area-weighted
         average value (in km).
         """
-        areas = self._get_areas()
-        widths = np.array([surf.get_width() for surf in self.surfaces])
-        return np.sum(areas * widths) / np.sum(areas)
+        self.tor
+        return self.msparam['width']
 
     def get_area(self):
         """
         Return sum of surface elements areas (in squared km).
         """
-        return np.sum(self._get_areas())
+        self.tor
+        return self.msparam['area']
 
     def get_bounding_box(self):
         """
@@ -287,8 +214,9 @@ class MultiSurface(BaseSurface):
             west, east, north, south = surf.get_bounding_box()
             lons.extend([west, east])
             lats.extend([north, south])
-        return utils.get_spherical_bounding_box(lons, lats)
+        return utils.get_spherical_bounding_box(np.array(lons), np.array(lats))
 
+    # NB: this is only called by CharacteristicSources, see logictree/case_20
     def get_middle_point(self):
         """
         If :class:`MultiSurface` is defined by a single surface, simply
@@ -312,8 +240,7 @@ class MultiSurface(BaseSurface):
         for surf in self.surfaces:
             dists.append(
                surf.get_min_distance(Mesh(np.array([longitude]),
-                                          np.array([latitude]),
-                                          None)))
+                                          np.array([latitude]))))
         dists = np.array(dists).flatten()
         idx = dists == np.min(dists)
         return np.array(self.surfaces)[idx][0].get_middle_point()
@@ -332,46 +259,13 @@ class MultiSurface(BaseSurface):
         lons = []
         lats = []
         deps = []
+        conc = np.concatenate
         for surf in self.surfaces:
-            lons_surf, lats_surf, deps_surf = surf.get_surface_boundaries_3d()
-            lons.extend(lons_surf)
-            lats.extend(lats_surf)
-            deps.extend(deps_surf)
-        return lons, lats, deps
-
-    def _get_areas(self):
-        """
-        Return surface elements area values in a numpy array.
-        """
-        if self.areas is None:
-            self.areas = []
-            for surf in self.surfaces:
-                self.areas.append(surf.get_area())
-            self.areas = np.array(self.areas)
-        return self.areas
-
-    def _set_tu(self, mesh: Mesh):
-        """
-        Set the values of T and U
-        """
-        if self.tors is None:
-            self._set_tor()
-        if self.tors.shift is None:
-            self.tors._set_coordinate_shift()
-        tupps = []
-        uupps = []
-        weis = []
-        for line in self.tors.lines:
-            tu, uu, we = line.get_tu(mesh)
-            tupps.append(tu)
-            uupps.append(uu)
-            weis.append(np.squeeze(np.sum(we, axis=0)))
-
-        # `get_tu` is a function in the multiline module
-        uut, tut = get_tu(self.tors.shift, tupps, uupps, weis)
-        self.uut = uut
-        self.tut = tut
-        self.site_mesh = mesh
+            coo = surf.get_surface_boundaries_3d()
+            lons.append(coo[0])
+            lats.append(coo[1])
+            deps.append(coo[2])
+        return conc(lons), conc(lats), conc(deps)
 
     def get_rx_distance(self, mesh):
         """
@@ -382,12 +276,8 @@ class MultiSurface(BaseSurface):
             A :class:`numpy.ndarray` instance with the Rx distance. Note that
             the Rx distance is directly taken from the GC2 t-coordinate.
         """
-        # This checks that the info stored is consistent with the mesh of
-        # points used
-        condition2 = (self.site_mesh is not None and self.site_mesh != mesh)
-        if (self.uut is None) or condition2:
-            self._set_tu(mesh)
-        rx = self.tut[0] if len(self.tut[0].shape) > 1 else self.tut
+        tut, uut = self.tor.get_tu(mesh)
+        rx = tut[0] if len(tut[0].shape) > 1 else tut
         return rx
 
     def get_ry0_distance(self, mesh):
@@ -396,80 +286,31 @@ class MultiSurface(BaseSurface):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh` with the
             coordinates of the sites.
         """
-        if self.tors is None:
-            self._set_tor()
-        return self.tors.get_ry0_distance(mesh)
+        tut, uut = self.tor.get_tu(mesh)
+        ry0 = np.zeros_like(uut)
+        ry0[uut < 0] = np.abs(uut[uut < 0])
+        condition = uut > self.tor.u_max
+        ry0[condition] = uut[condition] - self.tor.u_max
+        return ry0
 
-
-def _multi_distances(surface, sites, param):
-    if param == 'rrup':
-        dist = surface.get_min_distance(sites)
-    elif param == 'rjb':
-        dist = surface.get_joyner_boore_distance(sites)
-    elif param in ['rx', 'ry0']:
-        # In this case we compute the GC2 coordinates for the surface
-        tor_lo, tor_la = surface.get_tor()
-        tor = geo.line.Line.from_vectors(tor_lo, tor_la)
-        t_upp, u_upp, wei = tor.get_tu(sites)
-        wei_sum = np.squeeze(np.sum(wei, axis=0))
-        # Get the u-coordinate on the last vertex of the trace
-        mesh = Mesh(tor_lo[[0, -1]], tor_la[[0, -1]])
-        _, uu, _ = tor.get_tu(mesh)
-        # Save data
-        dists = {'tor': tor, 't_upp': t_upp, 'u_upp': u_upp, 'wei': wei_sum,
-                 'umax': max(uu)}
-    else:
-        raise ValueError(f'Unknown distance measure {param}')
-    if param in ['rrup', 'rjb']:
-        dists = {param: dist}
-    return dists
-
-
-def _multi_rx_ry0(dcache, suids, param):
-
-    # Get the multiline used to compute distances
-    multil = _get_multi_line(dcache, suids)
-
-    # Get GC coordinates
-    multil.set_tu()
-
-    # Get Rx and Ry0
-    if param == 'rx':
-        return multil.get_rx_distance()
-    elif param == 'ry0':
-        return multil.get_ry0_distance()
-    else:
-        raise ValueError('%s is not rx or ry0' % param)
-
-
-def _get_multi_line(dcache, suids):
-
-    # Retrieve info from the cache
-    lines = [dcache[key, 'tor'] for key in suids]
-
-    # Create the multiline
-    multil = MultiLine(lines)
-    revert = multil.set_overall_strike()
-    soidx = multil._set_origin()
-    revert = revert[soidx]
-
-    # Load data in cache
-    tupps = [dcache[suids[i], 't_upp'] for i in soidx]
-    uupps = [dcache[suids[i], 'u_upp'] for i in soidx]
-    weis = [dcache[suids[i], 'wei'] for i in soidx]
-    umax = [dcache[suids[i], 'umax'] for i in soidx]
-
-    # Change sign to the reverted surface traces
-    for i, flag in enumerate(revert):
-        if flag:
-            tupps[i] = -tupps[i]
-            uupps[i] = -(uupps[i] - umax[i])
-
-    # Fixing shift
-    multil._set_coordinate_shift()
-    multil.set_u_max()
-    multil.tupps = tupps
-    multil.uupps = uupps
-    multil.weis = np.array(weis)  # shape (N, 3)
-    multil.weis.flags.writeable = False  # nobody must change the weights
-    return multil
+    def get_tuw_df(self, sites):
+        # debug method to be called in genctxs
+        idxs = []
+        sids = []
+        ts = []
+        us = []
+        ws = []
+        fs = []
+        for idx in self.tor.soidx:
+            coo = self.tor.coos[idx]
+            flip = self.tor.flipped[idx]
+            tu, uu, we = geo.Line.from_coo(coo, flip).get_tuw(sites)
+            for s, sid in enumerate(sites.sids):
+                idxs.append(idx)
+                sids.append(sid)
+                ts.append(tu[s])
+                us.append(uu[s])
+                ws.append(we[s])
+                fs.append(flip)
+        dic = dict(sec=idxs, sid=sids, flip=fs, t=ts, u=us, w=ws)
+        return pandas.DataFrame(dic)

@@ -22,14 +22,13 @@ import socket
 import cProfile
 import warnings
 import getpass
-from pandas.core.common import SettingWithCopyWarning
+from pandas.errors import SettingWithCopyWarning
 
 from openquake.baselib import performance, general
 from openquake.hazardlib import valid
 from openquake.commonlib import logs, datastore, readinput
 from openquake.calculators import base, views
 from openquake.engine.engine import create_jobs, run_jobs
-from openquake.server import dbserver
 
 calc_path = None  # set only when the flag --slowest is given
 
@@ -41,7 +40,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
     if 'hazard_calculation_id' in params:
         hc_id = int(params['hazard_calculation_id'])
         if hc_id < 0:  # interpret negative calculation ids
-            calc_ids = datastore.get_calc_ids()
+            calc_ids = logs.get_calc_ids()
             try:
                 params['hazard_calculation_id'] = calc_ids[hc_id]
             except IndexError:
@@ -52,7 +51,7 @@ def _run(job_ini, concurrent_tasks, pdb, reuse_input, loglevel, exports,
             params['hazard_calculation_id'] = hc_id
     dic = readinput.get_params(job_ini, params)
     # set the logs first of all
-    log = logs.init("job", dic, getattr(logging, loglevel.upper()),
+    log = logs.init(dic, log_level=getattr(logging, loglevel.upper()),
                     user_name=user_name, host=host)
     logs.dbcmd('update_job', log.calc_id,
                {'status': 'executing', 'pid': os.getpid()})
@@ -84,8 +83,6 @@ def main(job_ini,
     """
     # os.environ['OQ_DISTRIBUTE'] = 'processpool'
     warnings.filterwarnings("error", category=SettingWithCopyWarning)
-    if not os.environ.get('OQ_DATABASE'):
-        dbserver.ensure_on()
     user_name = getpass.getuser()
     try:
         host = socket.gethostname()
@@ -117,6 +114,7 @@ def main(job_ini,
         job.params.update(params)
         job.params['exports'] = ','.join(exports)
     run_jobs(jobs)
+
 
 main.job_ini = dict(help='calculation configuration file '
                     '(or files, space-separated)', nargs='+')

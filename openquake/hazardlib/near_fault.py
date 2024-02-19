@@ -30,7 +30,7 @@ import scipy.spatial.distance as dst
 def get_xyz_from_ll(projected, reference):
     """
     This method computes the x, y and z coordinates of a set of points
-    provided a reference point
+    provided a reference point.
 
     :param projected:
         :class:`~openquake.hazardlib.geo.point.Point` object
@@ -38,11 +38,7 @@ def get_xyz_from_ll(projected, reference):
     :param reference:
         :class:`~openquake.hazardlib.geo.point.Point` object
         representing the coordinates of the reference point.
-
-    :returns:
-            x
-            y
-            z
+    :returns: a 3D vector
     """
 
     azims = geod.azimuth(reference.longitude, reference.latitude,
@@ -52,9 +48,9 @@ def get_xyz_from_ll(projected, reference):
                                    reference.latitude,
                                    projected.longitude,
                                    projected.latitude)
-    return (dists * math.sin(math.radians(azims)),
-            dists * math.cos(math.radians(azims)),
-            depths)
+    return np.array([dists * math.sin(math.radians(azims)),
+                     dists * math.cos(math.radians(azims)),
+                     depths])
 
 
 def get_plane_equation(p0, p1, p2, reference):
@@ -336,79 +332,16 @@ def _intersection(seg1_start, seg1_end, seg2_start, seg2_end):
 
 
 def directp(node0, node1, node2, node3, hypocenter, reference, pp):
-    """
-    Get the Direct Point and the corresponding E-path as described in
-    Spudich et al. (2013). This method also provides a logical variable
-    stating if the DPP calculation must consider the neighbouring patch.
-    To define the intersection point(Pd) of PpPh line segment and fault plane,
-    we obtain the intersection points(Pd) with each side of fault plan, and
-    check which intersection point(Pd) is the one fitting the definition in
-    the Chiou and Spudich(2014) directivity model.
-    Two possible locations for Pd, the first case, Pd locates on the side of
-    the fault patch when Pp is not inside the fault patch. The second case is
-    when Pp is inside the fault patch, then Pd=Pp.
-
-    For the first case, it follows three conditions:
-    1. the PpPh and PdPh line vector are the same,
-    2. PpPh >= PdPh,
-    3. Pd is not inside the fault patch.
-
-    If we can not find solution for all the four possible intersection points
-    for the first case, we check if the intersection point fit the second case
-    by checking if Pp is inside the fault patch.
-
-    Because of the coordinate system mapping(from geographic system to
-    Catestian system), we allow an error when we check the location. The allow
-    error will keep increasing after each loop when no solution in the two
-    cases are found, until the solution get obtained.
-
-    :param node0:
-        :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of one vertices on the target fault
-        segment.
-    :param node1:
-        :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of one vertices on the target fault
-        segment. Note, the order should be clockwise.
-    :param node2:
-        :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of one vertices on the target fault
-        segment. Note, the order should be clockwise.
-    :param node3:
-        :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of one vertices on the target fault
-        segment. Note, the order should be clockwise.
-    :param hypocenter:
-        :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of floating hypocenter on each segment
-        calculation. In the method, we take the direction point of the
-        previous fault patch as hypocentre for the current fault patch.
-    :param reference:
-        :class:`~openquake.hazardlib.geo.point.Point` object
-        representing the location of reference point for projection
-    :param pp:
-        the projection of the site onto the plane containing the fault
-        slipped area. A numpy array.
-    :returns:
-        Pd, a numpy array, representing the location of direction point
-        E, the distance from direction point to hypocentre.
-        go_next_patch, flag indicates if the calculation goes on the next
-        fault patch. 1: yes, 0: no.
-    """
-
     # Find the intersection point Pd, by checking if the PdPh share the
     # same vector with PpPh,  and PpPh >= PdPh
     # Transform to xyz coordinate
-
     node0_xyz = get_xyz_from_ll(node0, reference)
     node1_xyz = get_xyz_from_ll(node1, reference)
     node2_xyz = get_xyz_from_ll(node2, reference)
     node3_xyz = get_xyz_from_ll(node3, reference)
     hypocenter_xyz = get_xyz_from_ll(hypocenter, reference)
     hypocenter_xyz = np.array(hypocenter_xyz).flatten()
-
     pp_xyz = pp
-
     e = []
 
     # Loop each segments on the patch to find Pd
@@ -433,9 +366,9 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
                                 node3_xyz[1]])) + buf
         n_seg = 0
         exit_flag = False
-        for (seg_s, seg_e) in zip(segment_s, segment_e):
-            seg_s = np.array(seg_s).flatten()
-            seg_e = np.array(seg_e).flatten()
+        for seg_s, seg_e in zip(segment_s, segment_e):
+            seg_s = seg_s.flatten()
+            seg_e = seg_e.flatten()
             p_intersect, vector1, vector2, vector3, vector4 = _intersection(
                 seg_s, seg_e, pp_xyz, hypocenter_xyz)
 
@@ -447,8 +380,8 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
             # have are the same.
             if (np.allclose(vector1.flatten(), vector2,
                             atol=atol, rtol=0.)):
-                if ((np.allclose(vector3.flatten(), vector4, atol=atol,
-                                 rtol=0.))):
+                if (np.allclose(vector3.flatten(), vector4, atol=atol,
+                                rtol=0.)):
 
                     # Check if ppph >= pdph.
                     if (ppph >= pdph):
@@ -482,3 +415,63 @@ def directp(node0, node1, node2, node3, hypocenter, reference, pp):
         go_next_patch = False
 
     return pd, e, go_next_patch
+
+directp.__doc__ = """\
+Get the Direct Point and the corresponding E-path as described in
+Spudich et al. (2013). This method also provides a logical variable
+stating if the DPP calculation must consider the neighbouring patch.
+To define the intersection point(Pd) of PpPh line segment and fault plane,
+we obtain the intersection points(Pd) with each side of fault plan, and
+check which intersection point(Pd) is the one fitting the definition in
+the Chiou and Spudich(2014) directivity model.
+Two possible locations for Pd, the first case, Pd locates on the side of
+the fault patch when Pp is not inside the fault patch. The second case is
+when Pp is inside the fault patch, then Pd=Pp.
+
+For the first case, it follows three conditions:
+1. the PpPh and PdPh line vector are the same,
+2. PpPh >= PdPh,
+3. Pd is not inside the fault patch.
+
+If we can not find solution for all the four possible intersection points
+for the first case, we check if the intersection point fit the second case
+by checking if Pp is inside the fault patch.
+
+Because of the coordinate system mapping(from geographic system to
+Catestian system), we allow an error when we check the location. The allow
+error will keep increasing after each loop when no solution in the two
+cases are found, until the solution get obtained.
+
+:param node0:
+    :class:`~openquake.hazardlib.geo.point.Point` object
+    representing the location of one vertices on the target fault
+    segment.
+:param node1:
+    :class:`~openquake.hazardlib.geo.point.Point` object
+    representing the location of one vertices on the target fault
+    segment. Note, the order should be clockwise.
+:param node2:
+    :class:`~openquake.hazardlib.geo.point.Point` object
+    representing the location of one vertices on the target fault
+    segment. Note, the order should be clockwise.
+:param node3:
+    :class:`~openquake.hazardlib.geo.point.Point` object
+    representing the location of one vertices on the target fault
+    segment. Note, the order should be clockwise.
+:param hypocenter:
+    :class:`~openquake.hazardlib.geo.point.Point` object
+    representing the location of floating hypocenter on each segment
+    calculation. In the method, we take the direction point of the
+    previous fault patch as hypocentre for the current fault patch.
+:param reference:
+    :class:`~openquake.hazardlib.geo.point.Point` object
+    representing the location of reference point for projection
+:param pp:
+    the projection of the site onto the plane containing the fault
+    slipped area. A numpy array.
+:returns:
+    Pd, a numpy array, representing the location of direction point
+    E, the distance from direction point to hypocentre.
+    go_next_patch, flag indicates if the calculation goes on the next
+    fault patch. 1: yes, 0: no.
+"""

@@ -750,7 +750,7 @@ def read_nodes(fname, filter_elem, nodefactory=Node, remove_comments=True):
     except Exception:
         etype, exc, tb = sys.exc_info()
         msg = str(exc)
-        if not str(fname) in msg:
+        if str(fname) not in msg:
             msg = '%s in %s' % (msg, fname)
         raise_(etype, msg, tb)
 
@@ -793,7 +793,7 @@ def node_from_ini(ini_file, nodefactory=Node, root_name='ini'):
     :param ini_file: a filename or a file like object in read mode
     """
     fileobj = open(ini_file) if isinstance(ini_file, str) else ini_file
-    cfp = configparser.RawConfigParser()
+    cfp = configparser.ConfigParser(interpolation=None)
     cfp.read_file(fileobj)
     root = nodefactory(root_name)
     sections = cfp.sections()

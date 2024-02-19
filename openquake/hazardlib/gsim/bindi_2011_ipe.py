@@ -75,6 +75,7 @@ class BindiEtAl2011Repi(GMPE):
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             if self.fixedh:
+                ctx = ctx.copy()
                 ctx.hypo_depth = np.full_like(ctx.hypo_depth, self.fixedh)
             mean[m] = _compute_mean(C, ctx.mag, ctx.repi, ctx.hypo_depth)
             sig[m] = C['sigma']

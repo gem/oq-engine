@@ -261,11 +261,21 @@ class Amplifier(object):
         """
         for gsims in gsims_by_trt.values():
             for gsim in gsims:
+                if vs30_tolerance < 0:
+                    continue
+                elif not hasattr(gsim, 'DEFINED_FOR_REFERENCE_VELOCITY'):
+                    raise AttributeError(
+                        f'The attribute DEFINED_FOR_REFERENCE_VELOCITY is'
+                        f' missing in the gsim {gsim}. However, at your peril,'
+                        f' you can disable the vs30 consistency check by'
+                        f' setting vs30_tolerance = -1')
                 gsim_ref = gsim.DEFINED_FOR_REFERENCE_VELOCITY
                 if gsim_ref and gsim_ref < self.vs30_ref:
                     raise ValueError(
                         '%s.DEFINED_FOR_REFERENCE_VELOCITY=%s < %s'
                         % (gsim.__class__.__name__, gsim_ref, self.vs30_ref))
+        if vs30_tolerance < 0:
+            return
         if (numpy.abs(vs30 - self.vs30_ref) > vs30_tolerance).any():
             raise ValueError('Some vs30 in the site collection is different '
                              'from vs30_ref=%d over the tolerance of %d' %
@@ -338,13 +348,13 @@ class Amplifier(object):
                 ampl_poes[:, g] += (1.0-norm_cdf(logaf, numpy.log(a), s)) * p
         return ampl_poes
 
-    def amplify(self, ampl_code, pcurve):
+    def amplify(self, ampl_code, hcurve):
         """
         :param ampl_code: 2-letter code for the amplification function
-        :param pcurve: a ProbabilityCurve of shape (L*M, R)
+        :param hcurve: a ProbabilityCurve of shape (L*M, R)
         :returns: amplified ProbabilityCurve of shape (A*M, R)
         """
-        new = [self.amplify_one(ampl_code, imt, pcurve.array[self.imtls(imt)])
+        new = [self.amplify_one(ampl_code, imt, hcurve.array[self.imtls(imt)])
                for imt in self.imtls]
         return ProbabilityCurve(numpy.concatenate(new))
 
@@ -355,9 +365,9 @@ class Amplifier(object):
 
         if len(coeff) == 1:  # there is single coefficient for all levels
             ones = numpy.ones_like(imls)
-            ialpha = float(coeff[imt_str]) * ones
+            ialpha = coeff[imt_str].iloc[0] * ones
             try:
-                isigma = float(coeff['sigma_' + imt_str]) * ones
+                isigma = coeff['sigma_' + imt_str].iloc[0] * ones
             except KeyError:
                 isigma = numpy.zeros_like(imls)  # shape E
         else:
@@ -371,10 +381,10 @@ class Amplifier(object):
             ialpha = numpy.interp(imls, alpha.index, alpha)  # shape E
         return ialpha, isigma
 
-    def _amplify_gmvs(self, ampl_code, gmvs, imt_str):
+    def _amplify_gmvs(self, ampl_code, gmvs, imt_str, rng):
         # gmvs is an array of shape E
         ialpha, isigma = self._interp(ampl_code, imt_str, gmvs)
-        uncert = numpy.random.normal(numpy.zeros_like(gmvs), isigma)
+        uncert = rng.normal(numpy.zeros_like(gmvs), isigma)
         return numpy.exp(numpy.log(ialpha * gmvs) + uncert)
 
     def amplify_gmfs(self, ampcodes, gmvs, imts, seed=0):
@@ -386,10 +396,10 @@ class Amplifier(object):
         :param imts: intensity measure types
         :param seed: seed used when adding the uncertainty
         """
-        numpy.random.seed(seed)
+        rng = numpy.random.default_rng(seed)
         for m, imt in enumerate(imts):
             for i, (ampcode, arr) in enumerate(zip(ampcodes, gmvs[m])):
-                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt))
+                gmvs[m, i] = self._amplify_gmvs(ampcode, arr, str(imt), rng)
 
 
 def get_poes_site(mean_std, cmaker, ctx):

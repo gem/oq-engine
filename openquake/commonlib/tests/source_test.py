@@ -45,9 +45,6 @@ ALT_MFDS_SRC_MODEL = os.path.join(
 NONPARAMETRIC_SOURCE = os.path.join(
     NRML_DIR, 'source_model/nonparametric-source.xml')
 
-DUPLICATE_ID_SRC_MODEL = os.path.join(
-    os.path.dirname(__file__), 'data', 'invalid_source_model.xml')
-
 SIMPLE_FAULT_RUPTURE = os.path.join(
     os.path.dirname(__file__), 'data', 'simple-fault-rupture.xml')
 
@@ -331,20 +328,10 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
     def test_characteristic_complex(self):
         assert_close(self._expected_char_complex, self.char_complex)
 
-    #def test_characteristic_multi(self):
-    #    planar arrays break this test, even if they are equal :-(
-    #    assert_close(self._expected_char_multi, self.char_multi)
-
-    def test_duplicate_id(self):
-        conv = s.SourceConverter(
-            investigation_time=50.,
-            rupture_mesh_spacing=1,
-            complex_fault_mesh_spacing=1,
-            width_of_mfd_bin=0.1,
-            area_source_discretization=10,
-        )
-        with self.assertRaises(nrml.DuplicatedID):
-            nrml.to_python(DUPLICATE_ID_SRC_MODEL, conv)
+    def test_characteristic_multi(self):
+        # planar arrays break this test, even if they are equal :-(
+        raise unittest.SkipTest
+        assert_close(self._expected_char_multi, self.char_multi)
 
     def test_raises_useful_error_1(self):
         area_file = BytesIO(b"""\

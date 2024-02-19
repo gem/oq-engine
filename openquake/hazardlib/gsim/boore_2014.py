@@ -25,6 +25,7 @@ import numpy as np
 
 from openquake.baselib.general import CallableDict
 from openquake.hazardlib.gsim.base import GMPE, CoeffsTable, add_alias
+from openquake.hazardlib.gsim.abrahamson_2014 import get_epistemic_sigma
 from openquake.hazardlib import const
 from openquake.hazardlib.imt import PGA, PGV, SA
 
@@ -272,10 +273,11 @@ class BooreEtAl2014(GMPE):
 
     kind = "base"
 
-    def __init__(self, region='nobasin', sof=True, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, region='nobasin', sof=True, sigma_mu_epsilon=0.0, **kwargs):
+        super().__init__(sigma_mu_epsilon = sigma_mu_epsilon, **kwargs)
         self.region = region
         self.sof = sof
+        self.sigma_mu_epsilon = sigma_mu_epsilon
         if region != "nobasin":  # z1pt0 is used if period >= 0.65
             self.REQUIRES_SITES_PARAMETERS |= {'z1pt0'}
 
@@ -295,6 +297,8 @@ class BooreEtAl2014(GMPE):
                 _get_path_scaling(self.kind, self.region, C, ctx) +
                 _get_site_scaling(self.kind, self.region,
                                   C, pga_rock, ctx, imt.period, ctx.rjb))
+            if self.sigma_mu_epsilon:
+                mean[m] += (self.sigma_mu_epsilon*get_epistemic_sigma(ctx))
             sig[m], tau[m], phi[m] = _get_stddevs(self.kind, C, ctx)
 
     COEFFS = CoeffsTable(sa_damping=5, table="""\

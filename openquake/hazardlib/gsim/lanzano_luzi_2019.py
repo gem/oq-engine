@@ -141,7 +141,7 @@ class LanzanoLuzi2019shallow(GMPE):
                      _compute_distance(ctx.rhypo, C, self.kind) +
                      _get_site_amplification(ctx, C))
 
-            istddevs = [C['sigma'], C['phi'], C['tau']]
+            istddevs = [C['sigma'], C['tau'], C['phi']]
 
             # Convert units to g, but only for PGA and SA (not PGV)
             if imt.string.startswith(("SA", "PGA")):

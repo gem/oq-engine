@@ -298,7 +298,7 @@ class ESHM20Craton(GMPE):
 # Define the adjustment factors for the 3- and 5-pnt Gaussian approximation
 # according to Miller & Rice (1983)
 MILLER_RICE_GAUSS_3PNT = [-1.732051, 0.0, 1.732051]
-MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, -2.856970]
+MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, 2.856970]
 STRESS_BRANCHES = ["VLow", "Low", "Mid", "High", "VHigh"]
 SITE_BRANCHES = ["Low", "Mid", "High"]
 # Get the 15 branch set of aliases

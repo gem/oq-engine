@@ -48,8 +48,8 @@ def classical_bcr(riskinputs, param, monitor):
             haz = ri.hazard_getter.get_hazard()
         for taxo, assets in ri.asset_df.groupby('taxonomy'):
             for rlz in range(R):
-                pcurve = haz.extract(rlz)
-                out = crmodel.get_output(assets, pcurve)
+                hcurve = haz.extract(rlz)
+                out = crmodel.get_output(assets, hcurve)
                 for asset, (eal_orig, eal_retro, bcr) in zip(
                         assets.to_records(), out['structural']):
                     aval = asset['value-structural']
@@ -68,7 +68,7 @@ class ClassicalBCRCalculator(classical_risk.ClassicalRiskCalculator):
 
     def pre_execute(self):
         super().pre_execute()
-        for asset_ref, retrofitted in zip(self.assetcol.asset_refs,
+        for asset_ref, retrofitted in zip(self.assetcol['id'],
                                           self.assetcol.array['retrofitted']):
             if numpy.isnan(retrofitted):
                 raise ValueError('The asset %s has no retrofitted value!'

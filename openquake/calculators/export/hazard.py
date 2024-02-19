@@ -19,6 +19,7 @@
 import re
 import os
 import sys
+import json
 import itertools
 import collections
 import numpy
@@ -93,8 +94,12 @@ def export_hmaps_csv(key, dest, sitemesh, array, comment):
 
 def add_imt(fname, imt):
     """
-    >>> add_imt('/path/to/hcurve_23.csv', 'SA(0.1)')
-    '/path/to/hcurve-SA(0.1)_23.csv'
+    >>> orig_path = '/path/to/hcurve_23.csv'
+    >>> new_path = add_imt(orig_path, 'SA(0.1)')
+    >>> os.path.dirname(new_path) == os.path.dirname(orig_path)
+    True
+    >>> os.path.basename(new_path)
+    'hcurve-SA(0.1)_23.csv'
     """
     name = os.path.basename(fname)
     newname = re.sub(r'(_\d+\.)', '-%s\\1' % imt, name)
@@ -248,7 +253,6 @@ def get_metadata(rlzs, kind):
     return metadata
 
 
-@export.add(('uhs', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_uhs_xml(ekey, dstore):
     oq = dstore['oqparam']
@@ -276,7 +280,7 @@ def export_uhs_xml(ekey, dstore):
 
 class Location(object):
     def __init__(self, xyz):
-        self.x, self.y = tuple(xyz)[:2]
+        self.x, self.y = xyz['lon'], xyz['lat']
         self.wkt = 'POINT(%s %s)' % (self.x, self.y)
 
 
@@ -284,7 +288,6 @@ HazardCurve = collections.namedtuple('HazardCurve', 'location poes')
 HazardMap = collections.namedtuple('HazardMap', 'lon lat iml')
 
 
-@export.add(('hcurves', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hcurves_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -323,7 +326,6 @@ def export_hcurves_xml(ekey, dstore):
     return sorted(fnames)
 
 
-@export.add(('hmaps', 'xml'))
 @deprecated(msg='Use the CSV exporter instead')
 def export_hmaps_xml(ekey, dstore):
     key, kind, fmt = get_kkf(ekey)
@@ -407,6 +409,8 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting sitemesh
     f = dstore.build_fname('sitemesh', '', 'csv')
     sitecol = dstore['sitecol']
+    if 'complete' in dstore:
+        sitecol.complete = dstore['complete']
     names = sitecol.array.dtype.names
     arr = sitecol[['lon', 'lat']]
     if 'custom_site_id' in names:
@@ -419,14 +423,14 @@ def export_gmf_data_csv(ekey, dstore):
     # exporting gmfs
     df = dstore.read_df('gmf_data').sort_values(['eid', 'sid'])
     if 'custom_site_id' in names:
-        df['csi'] = decode(sitecol.custom_site_id[df.sid])
+        df['csi'] = decode(sitecol.complete.custom_site_id[df.sid])
         ren = {'csi': 'custom_site_id', 'eid': 'event_id'}
         del df['sid']
     else:
         ren = {'sid': 'site_id', 'eid': 'event_id'}
     for m, imt in enumerate(imts):
         ren[f'gmv_{m}'] = 'gmv_' + imt
-    for imt in oq.get_sec_imts():
+    for imt in oq.sec_imts:
         ren[imt] = f'sep_{imt}'
     df.rename(columns=ren, inplace=True)
     event_id = dstore['events']['id']
@@ -458,16 +462,39 @@ def export_gmf_data_hdf5(ekey, dstore):
     return [fname]
 
 
+@export.add(('relevant_gmfs', 'hdf5'))
+def export_relevant_gmfs(ekey, dstore):
+    oq = dstore['oqparam']
+    if oq.number_of_logic_tree_samples == 0:
+        raise NotImplementedError('Full enumeration')
+    attrs = dstore['gmf_data'].attrs
+    fname = dstore.build_fname('gmf', 'data', 'hdf5')
+    thr = os.environ.get('OQ_THRESHOLD', '1.')
+    with hdf5.File(fname, 'w') as f:
+        if dstore.parent:
+            f['sitecol'] = dstore.parent['sitecol']
+        else:
+            f['sitecol'] = dstore['sitecol']
+        df = extract(dstore, 'relevant_gmfs?threshold=' + thr)
+        f.create_df('gmf_data', df, effective_time=attrs['effective_time'],
+                    investigation_time=attrs['investigation_time'],
+                    num_events=len(df.eid.unique()),
+                    imts=' '.join(oq.imtls))
+    return [fname]
+
+
 @export.add(('avg_gmf', 'csv'))
 def export_avg_gmf_csv(ekey, dstore):
     oq = dstore['oqparam']
-    sitecol = dstore['sitecol'].complete
+    sitecol = dstore['sitecol']
+    if 'complete' in dstore.parent:
+        sitecol.complete = dstore.parent['complete']
     if 'custom_site_id' in sitecol.array.dtype.names:
-        dic = dict(custom_site_id=decode(sitecol.custom_site_id))
+        dic = dict(custom_site_id=decode(sitecol.complete.custom_site_id))
     else:
-        dic = dict(site_id=sitecol.sids)
-    dic['lon'] = sitecol.lons
-    dic['lat'] = sitecol.lats
+        dic = dict(site_id=sitecol.complete.sids)
+    dic['lon'] = sitecol.complete.lons
+    dic['lat'] = sitecol.complete.lats
     data = dstore['avg_gmf'][:]  # shape (2, N, M)
     for m, imt in enumerate(oq.imtls):
         dic['gmv_' + imt] = data[0, :, m]
@@ -523,34 +550,44 @@ def _add_iml(df, imtls):
     return pandas.concat(out)
 
 
-@export.add(('rates_by_src', 'csv'))
-def export_rates_by_src(ekey, dstore):
+@export.add(('mean_rates_by_src', 'csv'))
+def export_mean_rates_by_src(ekey, dstore):
     oq = dstore['oqparam']
     sitecol = dstore['sitecol']
-    rates_df = _add_iml(dstore['rates_by_src'].to_dframe(), oq.imtls)
+    rates_df = _add_iml(dstore['mean_rates_by_src'].to_dframe(), oq.imtls)
     fnames = []
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
-    header = ['src_id', 'imt', 'iml', 'value']
+    header = ['source_id', 'imt', 'iml', 'afoe']
     for site in sitecol:
         df = rates_df[rates_df.site_id == site.id]
         del df['site_id']
+        df = df[df.value > 0]  # don't export zeros
+        df.rename(columns={'src_id': 'source_id',
+                           'value': 'afoe'}, inplace=True)
         com = dstore.metadata.copy()
         com['lon'] = round(site.location.x, 5)
         com['lat'] = round(site.location.y, 5)
-        fname = dstore.export_path('rates_by_src-%d.csv' % site.id)
+        com['vs30'] = site.vs30
+        fname = dstore.export_path('mean_rates_by_src-%d.csv' % site.id)
         writer.save(df[header].sort_values(header), fname, comment=com)
         fnames.append(fname)
     return fnames
 
 
-@export.add(('mean_disagg_bysrc', 'csv'))
-def export_mean_disagg_bysrc(ekey, dstore):
+# this exports only the first site and it is okay
+@export.add(('mean_disagg_by_src', 'csv'))
+def export_mean_disagg_by_src(ekey, dstore):
     sitecol = dstore['sitecol']
-    df = dstore['mean_disagg_bysrc'].to_dframe()
+    aw = dstore['mean_disagg_by_src']
+    df = aw.to_dframe()
+    df = df[df.value > 0]  # don't export zeros
+    df.rename(columns={'value': 'afoe'}, inplace=True)
     fname = dstore.export_path('%s.%s' % ekey)
     com = dstore.metadata.copy()
     com['lon'] = sitecol.lons[0]
     com['lat'] = sitecol.lats[0]
+    com['vs30'] = sitecol.vs30[0]
+    com['iml_disagg'] = dict(zip(aw.imt, aw.iml))
     writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
     writer.save(df, fname, comment=com)
     return [fname]
@@ -598,9 +635,7 @@ def export_disagg_csv(ekey, dstore):
             weights /= weights.sum()  # normalize to 1
             md['weights'] = weights.tolist()
             md['rlz_ids'] = best_rlzs[s].tolist()
-            iml2 = None
-        else:  # for mean disaggregation
-            iml2 = dstore['hmaps-stats'][s, 0]  # shape (M, P)
+        iml2 = dstore['hmap3'][s]  # shape (M, P)
         metadata.update(md)
         for k in oq.disagg_outputs:
             aw = extract(dstore, ex % (k, s, spec))
@@ -609,26 +644,13 @@ def export_disagg_csv(ekey, dstore):
             df = aw.to_dframe(skip_zeros=False)
             # move the columns imt and poe at the beginning for backward compat
             cols = [col for col in df.columns if col not in ('imt', 'poe')]
-            if oq.iml_disagg:
-                cols = ['imt', 'iml', 'poe'] + cols
-                out = []
-                for imt, [iml] in oq.iml_disagg.items():
-                    dfr = df[df.imt == imt]
-                    dfr['iml'] = iml
-                    out.append(dfr)
-                df = pandas.concat(out)
-            elif iml2 is None or len(oq.poes) == 0:
-                # rlzs, don't add the IMLs
-                cols = ['imt', 'poe'] + cols
-            else:
-                # add the IMLs corresponding to the mean hazard maps
-                cols = ['imt', 'iml', 'poe'] + cols
-                imt2idx = {imt: m for m, imt in enumerate(oq.imtls)}
-                poe2idx = {poe: p for p, poe in enumerate(oq.poes)}
-                imt_idx = [imt2idx[imt] for imt in df.imt]
-                poe_idx = [poe2idx[poe] for poe in df.poe]
-                df['iml'] = iml2[imt_idx, poe_idx]
-
+            # add the IMLs corresponding to the mean hazard maps
+            cols = ['imt', 'iml', 'poe'] + cols
+            imt2idx = {imt: m for m, imt in enumerate(oq.imtls)}
+            poe2idx = {poe: p for p, poe in enumerate(df.poe.unique())}
+            imt_idx = [imt2idx[imt] for imt in df.imt]
+            poe_idx = [poe2idx[poe] for poe in df.poe]
+            df['iml'] = iml2[imt_idx, poe_idx]
             df = pandas.DataFrame(
                 {col: df[col] for col in cols}).sort_values(['imt', 'poe'])
             if len(df):
@@ -636,7 +658,8 @@ def export_disagg_csv(ekey, dstore):
                        if value is not None and key not in skip_keys}
                 com.update(metadata)
                 stat = '-mean' if name == 'disagg-stats' else ''
-                fname = dstore.export_path('%s%s%s-%d.csv' % (k, stat, trad, s))
+                fname = dstore.export_path(
+                    '%s%s%s-%d.csv' % (k, stat, trad, s))
                 writer.save(df, fname, comment=com)
                 fnames.append(fname)
             else:
@@ -663,6 +686,9 @@ def export_events(ekey, dstore):
 
 @export.add(('event_based_mfd', 'csv'))
 def export_event_based_mfd(ekey, dstore):
+    if dstore['oqparam'].investigation_time is None:
+        # there is no MFD in scenario calculation
+        return []
     aw = extract(dstore, 'event_based_mfd?')
     path = dstore.export_path('event_based_mfd.csv')
     magfreq = numpy.zeros(len(aw.mag), [('mag', float), ('freq', float)])
@@ -679,3 +705,47 @@ def export_fullreport(ekey, dstore):
     with open(dstore.export_path('report.rst'), 'w') as f:
         f.write(view('fullreport', dstore))
     return [f.name]
+
+
+@export.add(('rtgm', 'csv'))
+def export_rtgm(ekey, dstore):
+    df = dstore.read_df('rtgm')
+    writer = writers.CsvWriter(fmt=writers.FIVEDIGITS)
+    fname = dstore.export_path('rtgm.csv')
+    comment = dstore.metadata.copy()
+    writer.save(df, fname, comment=comment)
+    return [fname]
+
+
+# NB: this is exporting only the first site and it is okay
+@export.add(('asce07', 'csv'), ('asce41', 'csv'))
+def export_asce(ekey, dstore):
+    js = dstore[ekey[0]][0].decode('utf8')
+    sitecol = dstore['sitecol']
+    dic = json.loads(js)
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    comment['lon'] = sitecol.lons[0]
+    comment['lat'] = sitecol.lats[0]
+    comment['vs30'] = sitecol.vs30[0]
+    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
+    writer.save(dic.items(), fname, header=['parameter', 'value'],
+                comment=comment)
+    return [fname]
+
+
+# NB: exporting only the site #0; this is okay
+@export.add(('mag_dst_eps_sig', 'csv'))
+def export_mag_dst_eps_sig(ekey, dstore):
+    data = dstore[ekey[0] + '/0'][:]
+    sitecol = dstore['sitecol']
+    writer = writers.CsvWriter(fmt='%.5f')
+    fname = dstore.export_path('%s.csv' % ekey[0])
+    comment = dstore.metadata.copy()
+    comment['lon'] = sitecol.lons[0]
+    comment['lat'] = sitecol.lats[0]
+    comment['vs30'] = sitecol.vs30[0]
+    comment['site_name'] = dstore['oqparam'].description  # e.g. 'CCA example'
+    writer.save(data, fname, comment=comment)
+    return [fname]

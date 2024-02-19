@@ -101,8 +101,7 @@ class CanadaSHM6_ActiveCrust_BooreEtAl2014(BooreEtAl2014):
     """
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """
-        See :meth:`superclass method
-        <.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        See :meth:`superclass method <.base.GMPE.compute>`
         for spec of input and result values.
 
         CanadaSHM6 edits: limited to the period range of 0.05 - 10s
@@ -179,7 +178,6 @@ def get_mean_stddevs_cy14(name, C, ctx):
 
     # Get nonlinear amplification term
     f_nl, f_nl_scaling = CY14.get_nonlinear_site_term(C, ctx, y_ref)
-    f_nl = 0.0
 
     # Add on the site amplification
     mean = ln_y_ref + (f_lin + f_nl + f_z1pt0)
@@ -207,7 +205,7 @@ class CanadaSHM6_ActiveCrust_ChiouYoungs2014(ChiouYoungs2014):
     """
     #: Required site parameters are Vs30, Vs30 measured flag
     #: and Z1.0.
-    REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured'))
+    REQUIRES_SITES_PARAMETERS = {'vs30', 'vs30measured'}
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
         """

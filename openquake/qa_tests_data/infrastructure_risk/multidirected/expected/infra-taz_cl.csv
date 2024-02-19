@@ -1,0 +1,5 @@
+#,,"generated_by='OpenQuake engine 3.18.0-git438342e123', start_date='2023-07-14T12:29:34', checksum=2277227995"
+id,PCL_node,WCL_node
+A,0.00000E+00,0.00000E+00
+B,0.00000E+00,8.46154E-02
+C,0.00000E+00,1.85185E-02

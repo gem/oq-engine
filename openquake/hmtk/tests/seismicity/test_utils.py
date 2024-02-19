@@ -55,35 +55,42 @@ import numpy
 import unittest
 from openquake.hmtk.parsers.catalogue import CsvCatalogueParser
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
 
 class TestDecimaltime(unittest.TestCase):
-    '''
+    """
     Tests calculation of decimal time
-    '''
+    """
 
     def test_convert_to_decimal_1(self):
-        fname = os.path.join(DATA_DIR, 'test_cat_01.csv')
+        fname = os.path.join(DATA_DIR, "test_cat_01.csv")
         parser = CsvCatalogueParser(fname)
         cat = parser.read_file()
         with self.assertRaises(ValueError):
             _ = cat.get_decimal_time()
 
     def test_convert_to_decimal_2(self):
-        fname = os.path.join(DATA_DIR, 'test_cat_02.csv')
+        fname = os.path.join(DATA_DIR, "test_cat_02.csv")
         parser = CsvCatalogueParser(fname)
         cat = parser.read_file()
 
-        for lab in ['day', 'hour', 'minute', 'second']:
+        for lab in ["day", "hour", "minute", "second"]:
             idx = numpy.isnan(cat.data[lab])
-            if lab == 'day':
+            if lab == "day":
                 cat.data[lab][idx] = 1
-            elif lab == 'second':
+            elif lab == "second":
                 cat.data[lab][idx] = 0.0
             else:
                 cat.data[lab][idx] = 0
         computed = cat.get_decimal_time()
-        expected = numpy.array([2015., 1963.65205479, 1963.65217088,
-                                1963.58082192, 1999.62793753])
+        expected = numpy.array(
+            [
+                2015.0,
+                1963.65205479,
+                1963.65217088,
+                1963.58082192,
+                1999.62793753,
+            ]
+        )
         numpy.testing.assert_almost_equal(computed, expected)

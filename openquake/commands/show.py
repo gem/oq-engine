@@ -22,7 +22,7 @@ import logging
 import numpy
 
 from openquake.baselib import hdf5
-from openquake.commonlib import datastore
+from openquake.commonlib import datastore, logs
 from openquake.calculators.views import view, text_table
 from openquake.calculators.extract import extract
 
@@ -45,7 +45,11 @@ def print_(aw):
     if hasattr(aw, 'shape_descr'):
         print(text_table(aw.to_dframe(), ext='org'))
     elif hasattr(aw, 'array'):
-        print(text_table(aw.array, ext='org'))
+        if aw.array.dtype.name == 'object':  # array of objects
+            for el in aw.array:
+                print(el.decode('utf-8') if isinstance(el, bytes) else el)
+        else:  # structured array
+            print(text_table(aw.array, ext='org'))
     elif isinstance(aw, numpy.ndarray):
         print(text_table(aw, ext='org'))
     else:
@@ -61,7 +65,7 @@ def main(what='contents', calc_id: str_or_int = -1, extra=()):
         if not os.path.exists(datadir):
             return
         rows = []
-        for calc_id in datastore.get_calc_ids(datadir):
+        for calc_id in logs.get_calc_ids(datadir):
             try:
                 ds = datastore.read(calc_id)
                 oq = ds['oqparam']

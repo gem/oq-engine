@@ -16,7 +16,7 @@ xmlns:gml="http://www.opengis.net/gml"
         tectonicRegion="Subduction Interface"
         >
             <nonParametricSeismicSource
-            id="case_01"
+            id="case:01"
             name="Nankai Trough - CASE 1"
             tectonicRegion="Subduction Interface"
             >
@@ -38,7 +38,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_02"
+            id="case:02"
             name="Nankai Trough - CASE 2"
             tectonicRegion="Subduction Interface"
             >
@@ -60,7 +60,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_03"
+            id="case:03"
             name="Nankai Trough - CASE 3"
             tectonicRegion="Subduction Interface"
             >
@@ -82,7 +82,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_04"
+            id="case:04"
             name="Nankai Trough - CASE 4"
             tectonicRegion="Subduction Interface"
             >
@@ -104,7 +104,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_05"
+            id="case:05"
             name="Nankai Trough - CASE 5"
             tectonicRegion="Subduction Interface"
             >
@@ -126,7 +126,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_06"
+            id="case:06"
             name="Nankai Trough - CASE 6"
             tectonicRegion="Subduction Interface"
             >
@@ -148,7 +148,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_07"
+            id="case:07"
             name="Nankai Trough - CASE 7"
             tectonicRegion="Subduction Interface"
             >
@@ -170,7 +170,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_08"
+            id="case:08"
             name="Nankai Trough - CASE 8"
             tectonicRegion="Subduction Interface"
             >
@@ -192,7 +192,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_09"
+            id="case:09"
             name="Nankai Trough - CASE 9"
             tectonicRegion="Subduction Interface"
             >
@@ -214,7 +214,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_10"
+            id="case:10"
             name="Nankai Trough - CASE 10"
             tectonicRegion="Subduction Interface"
             >
@@ -236,7 +236,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_11"
+            id="case:11"
             name="Nankai Trough - CASE 11"
             tectonicRegion="Subduction Interface"
             >
@@ -258,7 +258,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_12"
+            id="case:12"
             name="Nankai Trough - CASE 12"
             tectonicRegion="Subduction Interface"
             >
@@ -296,7 +296,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_13"
+            id="case:13"
             name="Nankai Trough - CASE 13"
             tectonicRegion="Subduction Interface"
             >
@@ -334,7 +334,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_14"
+            id="case:14"
             name="Nankai Trough - CASE 14"
             tectonicRegion="Subduction Interface"
             >
@@ -372,7 +372,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 </griddedRupture>
             </nonParametricSeismicSource>
             <nonParametricSeismicSource
-            id="case_15"
+            id="case:15"
             name="Nankai Trough - CASE 15"
             tectonicRegion="Subduction Interface"
             >

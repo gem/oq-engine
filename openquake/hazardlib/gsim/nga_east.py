@@ -716,7 +716,7 @@ class NGAEastGMPE(GMPETable):
         """
         Returns the mean and standard deviations
         """
-        [mag] = np.unique(np.round(ctx.mag, 6))  # by construction
+        [mag] = np.unique(np.round(ctx.mag, 2))  # by construction
         for m, imt in enumerate(imts):
             mean[m], _, _ = get_mean_amp(self, mag, ctx, imt)
             # Get standard deviation model
@@ -912,7 +912,7 @@ def _get_total_sigma(self, imt, mag):
     Returns the estimated total standard deviation for a given intensity
     measure type and magnitude
     """
-    [mag] = np.unique(np.round(mag, 6))  # by construction
+    [mag] = np.unique(np.round(mag, 2))  # by construction
     C = self.SIGMA[imt]
     if mag <= self.magnitude_limits[0]:
         # The CENA constant model is always returned here

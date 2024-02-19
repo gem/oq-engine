@@ -5,7 +5,6 @@
 <exposureModel id="exp1" category="buildings">
   <description>Multiple assets example</description>
   <conversions>
-    <area type="per_asset" unit="SQM" />
     <costTypes>
       <costType name="structural" type="per_asset" unit="USD" />
       <costType name="nonstructural" type="per_asset" unit="USD" />

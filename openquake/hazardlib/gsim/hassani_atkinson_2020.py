@@ -73,32 +73,32 @@ def _fds_ha18(C, mag, dsigma):
     return eds0 + eds1 * np.log10(dsigma) + eds2 * np.log10(dsigma) ** 2
 
 
-def _ffpeak(C, imt, fpeak):
+def _ff0(C, imt, f0):
     """
     Fpeak factor.
     """
-    if imt.string[:2] != "SA" or max(fpeak) <= 0:
-        # pgv, pga or unknown fpeak
+    if imt.string[:2] != "SA" or max(f0) <= 0:
+        # pgv, pga or unknown f0
         return 0
 
     s = CONSTANTS
-    x = fpeak / 10 ** C['f']
+    x = f0 / 10 ** C['f']
 
-    ffpeak = np.where(fpeak <= 0, 0, s['cfp0'])
+    ff0 = np.where(f0 <= 0, 0, s['cfp0'])
 
     idx = np.where((s['x0'] < x) & (x <= s['x1']))
-    ffpeak[idx] = s['cfp0'] + s['cfp1'] * np.log10(x[idx] / s['x0'])
+    ff0[idx] = s['cfp0'] + s['cfp1'] * np.log10(x[idx] / s['x0'])
 
     idx = np.where((s['x1'] < x) & (x <= s['x2']))
-    ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+    ff0[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
         + s['cfp2'] * np.log10(x[idx] / s['x1'])
 
     idx = np.where(s['x2'] < x)
-    ffpeak[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
+    ff0[idx] = s['cfp0'] + s['cfp1'] * math.log10(s['x1'] / s['x0']) \
         + s['cfp2'] * math.log10(s['x2'] / s['x1']) \
         + s['cfp3'] * np.log10(x[idx] / s['x2'])
 
-    return ffpeak
+    return ff0
 
 
 def _fgamma(suffix, backarc, forearc_ne, forearc_sw, C, rrup):
@@ -243,7 +243,7 @@ class HassaniAtkinson2020SInter(GMPE):
 
     REQUIRES_RUPTURE_PARAMETERS = {'hypo_depth', 'mag'}
 
-    REQUIRES_SITES_PARAMETERS = {'fpeak', 'vs30', 'z2pt5'}
+    REQUIRES_SITES_PARAMETERS = {'f0', 'vs30', 'z2pt5'}
 
     REQUIRES_ATTRIBUTES = {'kappa', 'backarc', 'forearc_ne', 'forearc_sw'}
 
@@ -267,7 +267,7 @@ class HassaniAtkinson2020SInter(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        mag = np.unique(np.round(ctx.mag, 6))
+        mag = np.unique(np.round(ctx.mag, 2))
         C_PGA = self.COEFFS[PGA()]
         dsigma = _dsigma(self.CONST_REGION, ctx.hypo_depth)
         fm_pga = _fm_ha18(C_PGA, mag)
@@ -292,11 +292,11 @@ class HassaniAtkinson2020SInter(GMPE):
             fsnonlin = _fsnonlin_ss14(C, ctx.vs30, pga_rock)
             fvs30 = _fvs30(C, ctx.vs30)
             fz2pt5 = _fz2pt5(C, ctx.z2pt5)
-            ffpeak = _ffpeak(C, imt, ctx.fpeak)
+            ff0 = _ff0(C, imt, ctx.f0)
 
             mean[m] = 10 ** (fm + fdsigma + fz + fkappa + fgamma
                              + self.CONST_REGION['cc'] + clf + C['chf']
-                             + C['amp_cr'] + fvs30 + fz2pt5 + ffpeak +
+                             + C['amp_cr'] + fvs30 + fz2pt5 + ff0 +
                              fsnonlin)
             if imt.string != "PGV":
                 # pgv in cm/s

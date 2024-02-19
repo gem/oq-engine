@@ -94,9 +94,9 @@ def export_outputs(job_id, target_dir, export_types):
     # make it possible commands like `oq engine --eos -1 /tmp`
     datadir, dskeys = logs.dbcmd('get_results', job_id)
     if not dskeys:
-        yield('Found nothing to export for job %s' % job_id)
+        yield 'Found nothing to export for job %s' % job_id
     for dskey in dskeys:
-        yield('Exporting %s...' % dskey)
+        yield 'Exporting %s...' % dskey
         for line in export_output(
                 dskey, job_id, datadir, target_dir, export_types):
             yield line

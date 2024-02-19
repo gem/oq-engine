@@ -24,17 +24,17 @@ class Polygon(object):
     # Adapt Shapely or GeoJSON/geo_interface polygons to a common interface
     def __init__(self, context):
         if isinstance(context, dict):
-            self.context = context['coordinates']
+            self.context = context["coordinates"]
         else:
             self.context = context
 
     @property
     def exterior(self):
-        return (getattr(self.context, 'exterior', None) or self.context[0])
+        return getattr(self.context, "exterior", None) or self.context[0]
 
     @property
     def interiors(self):
-        value = getattr(self.context, 'interiors', None)
+        value = getattr(self.context, "interiors", None)
         if value is None:
             value = self.context[1:]
         return value
@@ -53,47 +53,57 @@ def PolygonPatch(polygon, **kwargs):
       >> patch = PolygonPatch(b, fc='blue', ec='blue', alpha=0.5)
       >> axis.add_patch(patch)
     """
+
     def coding(ob):
         # The codes will be all "LINETO" commands, except for "MOVETO"s at the
         # beginning of each subpath
-        n = len(getattr(ob, 'coords', None) or ob)
+        n = len(getattr(ob, "coords", None) or ob)
         vals = ones(n, dtype=Path.code_type) * Path.LINETO
         vals[0] = Path.MOVETO
         return vals
 
-    if hasattr(polygon, 'geom_type'):  # Shapely
+    if hasattr(polygon, "geom_type"):  # Shapely
         ptype = polygon.geom_type
-        if ptype == 'Polygon':
+        if ptype == "Polygon":
             polygon = [Polygon(polygon)]
-        elif ptype == 'MultiPolygon':
+        elif ptype == "MultiPolygon":
             polygon = [Polygon(p) for p in polygon]
         else:
             raise ValueError(
-                "A polygon or multi-polygon representation is required")
+                "A polygon or multi-polygon representation is required"
+            )
 
     else:  # GeoJSON
-        polygon = getattr(polygon, '__geo_interface__', polygon)
+        polygon = getattr(polygon, "__geo_interface__", polygon)
         ptype = polygon["type"]
-        if ptype == 'Polygon':
+        if ptype == "Polygon":
             polygon = [Polygon(polygon)]
-        elif ptype == 'MultiPolygon':
-            polygon = [Polygon(p) for p in polygon['coordinates']]
+        elif ptype == "MultiPolygon":
+            polygon = [Polygon(p) for p in polygon["coordinates"]]
         else:
             raise ValueError(
-                "A polygon or multi-polygon representation is required")
+                "A polygon or multi-polygon representation is required"
+            )
 
     vertices, codes = [], []
     for t in polygon:
-        vertices.append(concatenate([asarray(t.exterior.coords)[:, :2]] +
-                            [asarray(r.coords)[:, :2] for r in t.interiors]))
-        codes.append(concatenate([coding(t.exterior)] +
-                                 [coding(r) for r in t.interiors]))
-    return PathPatch(Path(concatenate(vertices), concatenate(codes)),
-                     **kwargs)
+        vertices.append(
+            concatenate(
+                [asarray(t.exterior.coords)[:, :2]]
+                + [asarray(r.coords)[:, :2] for r in t.interiors]
+            )
+        )
+        codes.append(
+            concatenate(
+                [coding(t.exterior)] + [coding(r) for r in t.interiors]
+            )
+        )
+    return PathPatch(Path(concatenate(vertices), concatenate(codes)), **kwargs)
 
 
 def debug_plot(*polygons):
     import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots()
     for polygon in polygons:
         pol = polygon._polygon2d

@@ -44,11 +44,11 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Defines the :class openquake.hmtk.sources.simple_fault_source.mtkSimpleFaultSource, which
 represents the openquake.hmtk defition of a simple fault source. This extends the :class:
 nrml.models.SimpleFaultSource
-'''
+"""
 import warnings
 import numpy as np
 from math import fabs
@@ -60,7 +60,7 @@ import openquake.hmtk.sources.source_conversion_utils as conv
 
 
 class mtkSimpleFaultSource(object):
-    '''
+    """
     New class to describe the mtk Simple fault source object
 
     :param str identifier:
@@ -90,15 +90,26 @@ class mtkSimpleFaultSource(object):
     :param catalogue:
         Earthquake catalogue associated to source as instance of
         openquake.hmtk.seismicity.catalogue.Catalogue object
-    '''
+    """
 
-    def __init__(self, identifier, name, trt=None, geometry=None, dip=None,
-                 upper_depth=None, lower_depth=None, mag_scale_rel=None,
-                 rupt_aspect_ratio=None, mfd=None, rake=None):
-        '''
+    def __init__(
+        self,
+        identifier,
+        name,
+        trt=None,
+        geometry=None,
+        dip=None,
+        upper_depth=None,
+        lower_depth=None,
+        mag_scale_rel=None,
+        rupt_aspect_ratio=None,
+        mfd=None,
+        rake=None,
+    ):
+        """
         Instantiate class with just the basic attributes identifier and name
-        '''
-        self.typology = 'SimpleFault'
+        """
+        self.typology = "SimpleFault"
         self.id = identifier
         self.name = name
         self.trt = trt
@@ -112,41 +123,48 @@ class mtkSimpleFaultSource(object):
         self.rake = rake
         # Check that input dip is between 0 and 90 degrees
         if dip:
-            assert((dip > 0.) and (dip <= 90.))
+            assert (dip > 0.0) and (dip <= 90.0)
         self.dip = dip
         self.catalogue = None
 
     def _check_seismogenic_depths(self, upper_depth, lower_depth):
-        '''
+        """
         Checks the seismic depths for physical consistency
         :param float upper_depth:
             Upper seismogenic depth (km)
 
         :param float lower_depth:
             Lower seismogenic depth (km)
-        '''
+        """
         # Simple check on depths
         if upper_depth:
-            if upper_depth < 0.:
-                raise ValueError('Upper seismogenic depth must be greater than'
-                                 ' or equal to 0.0!')
+            if upper_depth < 0.0:
+                raise ValueError(
+                    "Upper seismogenic depth must be greater than"
+                    " or equal to 0.0!"
+                )
             else:
                 self.upper_depth = upper_depth
         else:
             self.upper_depth = 0.0
 
         if not lower_depth:
-            raise ValueError('Lower seismogenic depth must be defined for '
-                             'simple fault source!')
+            raise ValueError(
+                "Lower seismogenic depth must be defined for "
+                "simple fault source!"
+            )
         if lower_depth < self.upper_depth:
-            raise ValueError('Lower seismogenic depth must take a greater'
-                             ' value than upper seismogenic depth')
+            raise ValueError(
+                "Lower seismogenic depth must take a greater"
+                " value than upper seismogenic depth"
+            )
 
         self.lower_depth = lower_depth
 
-    def create_geometry(self, input_geometry, dip, upper_depth, lower_depth,
-                        mesh_spacing=1.0):
-        '''
+    def create_geometry(
+        self, input_geometry, dip, upper_depth, lower_depth, mesh_spacing=1.0
+    ):
+        """
         If geometry is defined as a numpy array then create instance of
         nhlib.geo.line.Line class, otherwise if already instance of class
         accept class
@@ -167,31 +185,40 @@ class mtkSimpleFaultSource(object):
 
         :param float mesh_spacing:
             Spacing of the fault mesh (km) {default = 1.0}
-        '''
-        assert((dip > 0.) and (dip <= 90.))
+        """
+        assert (dip > 0.0) and (dip <= 90.0)
         self.dip = dip
         self._check_seismogenic_depths(upper_depth, lower_depth)
 
         if not isinstance(input_geometry, Line):
             if not isinstance(input_geometry, np.ndarray):
-                raise ValueError('Unrecognised or unsupported geometry '
-                                 'definition')
+                raise ValueError(
+                    "Unrecognised or unsupported geometry " "definition"
+                )
             else:
-                self.fault_trace = Line([Point(row[0], row[1]) for row in
-                                         input_geometry])
+                self.fault_trace = Line(
+                    [Point(row[0], row[1]) for row in input_geometry]
+                )
         else:
             self.fault_trace = input_geometry
         # Build fault surface
-        self.geometry = SimpleFaultSurface.from_fault_data(self.fault_trace,
-                                                           self.upper_depth,
-                                                           self.lower_depth,
-                                                           self.dip,
-                                                           mesh_spacing)
+        self.geometry = SimpleFaultSurface.from_fault_data(
+            self.fault_trace,
+            self.upper_depth,
+            self.lower_depth,
+            self.dip,
+            mesh_spacing,
+        )
 
-    def select_catalogue(self, selector, distance,
-                         distance_metric='joyner-boore', upper_eq_depth=None,
-                         lower_eq_depth=None):
-        '''
+    def select_catalogue(
+        self,
+        selector,
+        distance,
+        distance_metric="joyner-boore",
+        upper_eq_depth=None,
+        lower_eq_depth=None,
+    ):
+        """
         Selects earthquakes within a distance of the fault
 
         :param selector:
@@ -210,31 +237,34 @@ class mtkSimpleFaultSource(object):
         :param float lower_eq_depth:
             Lower hypocentral depth of hypocentres to be selected
 
-        '''
+        """
         if selector.catalogue.get_number_events() < 1:
-            raise ValueError('No events found in catalogue!')
+            raise ValueError("No events found in catalogue!")
 
         # rupture metric is selected and dip != 90 or 'rupture'
-        if ('rupture' in distance_metric) and (fabs(self.dip - 90) > 1E-5):
+        if ("rupture" in distance_metric) and (fabs(self.dip - 90) > 1e-5):
             # Use rupture distance
             self.catalogue = selector.within_rupture_distance(
                 self.geometry,
                 distance,
                 upper_depth=upper_eq_depth,
-                lower_depth=lower_eq_depth)
+                lower_depth=lower_eq_depth,
+            )
         else:
             # Use Joyner-Boore distance
             self.catalogue = selector.within_joyner_boore_distance(
                 self.geometry,
                 distance,
                 upper_depth=upper_eq_depth,
-                lower_depth=lower_eq_depth)
+                lower_depth=lower_eq_depth,
+            )
 
         if self.catalogue.get_number_events() < 5:
             # Throw a warning regarding the small number of earthquakes in
             # the source!
-            warnings.warn('Source %s (%s) has fewer than 5 events'
-                          % (self.id, self.name))
+            warnings.warn(
+                "Source %s (%s) has fewer than 5 events" % (self.id, self.name)
+            )
 
     def create_oqhazardlib_source(self, tom, mesh_spacing, use_defaults=False):
         """
@@ -261,4 +291,5 @@ class mtkSimpleFaultSource(object):
             self.lower_depth,
             self.fault_trace,
             self.dip,
-            self.rake)
+            self.rake,
+        )

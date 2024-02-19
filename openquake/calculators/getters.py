@@ -23,7 +23,7 @@ from openquake.baselib import general, hdf5
 from openquake.hazardlib import probability_map, stats
 from openquake.hazardlib.calc.disagg import to_rates, to_probs
 from openquake.hazardlib.source.rupture import (
-    BaseRupture, RuptureProxy, EBRupture, get_ebr)
+    BaseRupture, RuptureProxy, get_ebr)
 from openquake.commonlib import datastore
 
 U16 = numpy.uint16
@@ -40,11 +40,11 @@ class NotFound(Exception):
     pass
 
 
-def build_stat_curve(pcurve, imtls, stat, weights, use_rates=False):
+def build_stat_curve(hcurve, imtls, stat, weights, use_rates=False):
     """
     Build statistics by taking into account IMT-dependent weights
     """
-    poes = pcurve.array.T  # shape R, L
+    poes = hcurve.array.T  # shape R, L
     assert len(poes) == len(weights), (len(poes), len(weights))
     L = imtls.size
     array = numpy.zeros((L, 1))
@@ -99,11 +99,11 @@ class HcurvesGetter(object):
         assert ';' in src_id, src_id  # must be a realization specific src_id
         imt_slc = self.imtls(imt) if imt else slice(None)
         start, gsims, weights = self.bysrc[src_id]
-        dset = self.dstore['_poes']
+        dset = self.dstore['_rates']
         if gsim_idx is None:
             curves = dset[start:start + len(gsims), site_id, imt_slc]
             return weights @ curves
-        return dset[start + gsim_idx, site_id, imt_slc]
+        return to_probs(dset[start + gsim_idx, site_id, imt_slc])
 
     # NB: not used right now
     def get_hcurves(self, src, imt=None, site_id=0, gsim_idx=None):
@@ -150,7 +150,10 @@ class PmapGetter(object):
         self.use_rates = use_rates
         self.num_rlzs = len(full_lt.weights)
         self.eids = None
-        self.rlzs_by_g = full_lt.rlzs_by_g
+        if 'trt_smrs' not in dstore:  # starting from hazard_curves.csv
+            self.trt_rlzs = full_lt.get_trt_rlzs([[0]])
+        else:
+            self.trt_rlzs = full_lt.get_trt_rlzs(dstore['trt_smrs'][:])
         self.slices = slices
         self._pmap = {}
 
@@ -186,18 +189,18 @@ class PmapGetter(object):
         """
         if self._pmap:
             return self._pmap
-        G = len(self.rlzs_by_g)
+        G = len(self.trt_rlzs)
         with hdf5.File(self.filename) as dstore:
             for start, stop in self.slices:
-                poes_df = dstore.read_df('_poes', slc=slice(start, stop))
-                for sid, df in poes_df.groupby('sid'):
+                rates_df = dstore.read_df('_rates', slc=slice(start, stop))
+                for sid, df in rates_df.groupby('sid'):
                     try:
                         array = self._pmap[sid].array
                     except KeyError:
                         array = numpy.zeros((self.L, G))
                         self._pmap[sid] = probability_map.ProbabilityCurve(
                             array)
-                    array[df.lid, df.gid] = df.poe
+                    array[df.lid, df.gid] = to_probs(df.rate)
         return self._pmap
 
     # used in risk calculations where there is a single site per getter
@@ -212,20 +215,24 @@ class PmapGetter(object):
             # classical_risk/case_3 for the first site
             return probability_map.ProbabilityCurve(
                 numpy.zeros((self.L, self.num_rlzs)))
-        return self.get_pcurve(self.sids[0])
+        return self.get_hcurve(self.sids[0])
 
-    def get_pcurve(self, sid):  # used in classical
+    def get_hcurve(self, sid):  # used in classical
         """
-        :returns: a ProbabilityCurve of shape L, R
+        :param sid: a site ID
+        :returns: a ProbabilityCurve of shape L, R for the given site ID
         """
         pmap = self.init()
         pc0 = probability_map.ProbabilityCurve(
             numpy.zeros((self.L, self.num_rlzs)))
         if sid not in pmap:  # no hazard for sid
             return pc0
-        for g, rlzs in self.rlzs_by_g.items():
-            probability_map.combine_probs(
-                pc0.array, pmap[sid].array[:, g], rlzs)
+        for g, t_rlzs in enumerate(self.trt_rlzs):
+            rlzs = t_rlzs % TWO24
+            rates = to_rates(pmap[sid].array[:, g])
+            for rlz in rlzs:
+                pc0.array[:, rlz] += rates
+        pc0.array = to_probs(pc0.array)
         return pc0
 
     def get_mean(self):
@@ -240,25 +247,21 @@ class PmapGetter(object):
         if len(self.weights) == 1:  # one realization
             # the standard deviation is zero
             pmap = self.get(0)
-            for sid, pcurve in pmap.items():
-                array = numpy.zeros(pcurve.array.shape)
-                array[:, 0] = pcurve.array[:, 0]
-                pcurve.array = array
+            for sid, hcurve in pmap.items():
+                array = numpy.zeros(hcurve.array.shape)
+                array[:, 0] = hcurve.array[:, 0]
+                hcurve.array = array
             return pmap
         L = self.imtls.size
         pmap = probability_map.ProbabilityMap(self.sids, L, 1)
         for sid in self.sids:
             pmap[sid] = build_stat_curve(
-                self.get_pcurve(sid),
+                self.get_hcurve(sid),
                 self.imtls, stats.mean_curve, self.weights)
         return pmap
 
 
-time_dt = numpy.dtype(
-    [('rup_id', I64), ('nsites', U16), ('time', F32), ('task_no', U16)])
-
-
-def get_rupture_getters(dstore, ct=0, srcfilter=None):
+def get_rupture_getters(dstore, ct=0, srcfilter=None, rupids=None):
     """
     :param dstore: a :class:`openquake.commonlib.datastore.DataStore`
     :param ct: number of concurrent tasks
@@ -266,9 +269,10 @@ def get_rupture_getters(dstore, ct=0, srcfilter=None):
     """
     full_lt = dstore['full_lt'].init()
     rup_array = dstore['ruptures'][:]
+    if rupids is not None:
+        rup_array = rup_array[numpy.isin(rup_array['id'], rupids)]
     if len(rup_array) == 0:
         raise NotFound('There are no ruptures in %s' % dstore)
-    rup_array.sort(order=['trt_smr', 'n_occ', 'seed'])
     proxies = [RuptureProxy(rec) for rec in rup_array]
     maxweight = rup_array['n_occ'].sum() / (ct / 2 or 1)
     rgetters = []
@@ -369,6 +373,7 @@ class RuptureGetter(object):
             rupgeoms = dstore['rupgeoms']
             for proxy in self.proxies:
                 if proxy['mag'] < min_mag:
+                    # discard small magnitudes
                     continue
                 proxy.geom = rupgeoms[proxy['geom_id']]
                 proxies.append(proxy)

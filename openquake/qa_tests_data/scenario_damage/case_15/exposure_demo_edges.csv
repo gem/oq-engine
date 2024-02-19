@@ -1,4 +1,4 @@
-id,lon,lat,taxonomy,number,vulnerable,type,start_node,end_node,supply_or_demand,length,parent_id
+id,lon,lat,taxonomy,number,vulnerable,type,start_node,end_node,purpose,length,parent_id
 E1,22.95368809,40.62816584,CI_regdia_300,1,yes,edge,D1,D2,NA,300,E1
 E2,22.958415,40.62808573,CI_regdia_500,1,yes,edge,D2,P1,NA,500,E2
 E3,22.95381935,40.63266763,CI_regdia_300,1,yes,edge,D3,D4,NA,300,E3

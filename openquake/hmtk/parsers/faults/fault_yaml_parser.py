@@ -45,11 +45,11 @@
 # The GEM Foundation, and the authors of the software, assume no
 # liability for use of the software.
 
-'''
+"""
 Module: openquake.hmtk.parsers.fault.fault_yaml_parser implements parser of a fault
 model from the TOML format
 
-'''
+"""
 
 import toml
 import numpy as np
@@ -58,152 +58,164 @@ from openquake.hazardlib.geo.point import Point
 from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.scalerel import get_available_scalerel
 from openquake.hmtk.faults.fault_geometries import (
-    SimpleFaultGeometry, ComplexFaultGeometry)
+    SimpleFaultGeometry,
+    ComplexFaultGeometry,
+)
 from openquake.hmtk.faults.fault_models import mtkActiveFault
 from openquake.hmtk.faults.active_fault_model import mtkActiveFaultModel
 from openquake.hmtk.faults.tectonic_regionalisation import (
-    TectonicRegionalisation)
+    TectonicRegionalisation,
+)
 
 
 SCALE_REL_MAP = get_available_scalerel()
 
 
 def weight_list_to_tuple(data, attr_name):
-    '''
+    """
     Converts a list of values and corresponding weights to a tuple of values
-    '''
+    """
 
-    if len(data['Value']) != len(data['Weight']):
-        raise ValueError('Number of weights do not correspond to number of '
-                         'attributes in %s' % attr_name)
-    weight = np.array(data['Weight'])
-    if fabs(np.sum(weight) - 1.) > 1E-7:
-        raise ValueError('Weights do not sum to 1.0 in %s' % attr_name)
+    if len(data["Value"]) != len(data["Weight"]):
+        raise ValueError(
+            "Number of weights do not correspond to number of "
+            "attributes in %s" % attr_name
+        )
+    weight = np.array(data["Weight"])
+    if fabs(np.sum(weight) - 1.0) > 1e-7:
+        raise ValueError("Weights do not sum to 1.0 in %s" % attr_name)
 
     data_tuple = []
-    for iloc, value in enumerate(data['Value']):
+    for iloc, value in enumerate(data["Value"]):
         data_tuple.append((value, weight[iloc]))
     return data_tuple
 
 
 def parse_tect_region_dict_to_tuples(region_dict):
-    '''
+    """
     Parses the tectonic regionalisation dictionary attributes to tuples
-    '''
+    """
     output_region_dict = []
-    tuple_keys = ['Displacement_Length_Ratio', 'Shear_Modulus']
+    tuple_keys = ["Displacement_Length_Ratio", "Shear_Modulus"]
     # Convert MSR string name to openquake.hazardlib.scalerel object
     for region in region_dict:
         for val_name in tuple_keys:
-            region[val_name] = weight_list_to_tuple(region[val_name],
-                                                    val_name)
+            region[val_name] = weight_list_to_tuple(region[val_name], val_name)
         # MSR works differently - so call get_scaling_relation_tuple
-        region['Magnitude_Scaling_Relation'] = weight_list_to_tuple(
-            region['Magnitude_Scaling_Relation'],
-            'Magnitude Scaling Relation')
+        region["Magnitude_Scaling_Relation"] = weight_list_to_tuple(
+            region["Magnitude_Scaling_Relation"], "Magnitude Scaling Relation"
+        )
         output_region_dict.append(region)
     return output_region_dict
 
 
 def get_scaling_relation_tuple(msr_dict):
-    '''
+    """
     For a dictionary of scaling relation values convert string list to
     object list and then to tuple
-    '''
+    """
 
     # Convert MSR string name to openquake.hazardlib.scalerel object
-    for iloc, value in enumerate(msr_dict['Value']):
+    for iloc, value in enumerate(msr_dict["Value"]):
         if value not in SCALE_REL_MAP:
-            raise ValueError('Scaling relation %s not supported!' % value)
-        msr_dict['Value'][iloc] = SCALE_REL_MAP[value]()
-    return weight_list_to_tuple(msr_dict,
-                                'Magnitude Scaling Relation')
+            raise ValueError("Scaling relation %s not supported!" % value)
+        msr_dict["Value"][iloc] = SCALE_REL_MAP[value]()
+    return weight_list_to_tuple(msr_dict, "Magnitude Scaling Relation")
 
 
 class FaultYmltoSource(object):
-    '''
+    """
     Class to parse a fault model definition from TOML format to a fault model
     class
-    '''
+    """
 
     def __init__(self, filename):
-        '''
+        """
         :param str filename:
             Name of input file (in yml format)
-        '''
-        self.data = toml.load(open(filename, 'rt'))
-        if 'Fault_Model' not in self.data:
-            raise ValueError('Fault Model not defined in input file!')
+        """
+        self.data = toml.load(open(filename, "rt"))
+        if "Fault_Model" not in self.data:
+            raise ValueError("Fault Model not defined in input file!")
 
     def read_file(self, mesh_spacing=1.0):
-        '''
+        """
         Reads the file and returns an instance of the FaultSource class.
 
         :param float mesh_spacing:
             Fault mesh spacing (km)
-        '''
+        """
 
         # Process the tectonic regionalisation
         tectonic_reg = self.process_tectonic_regionalisation()
 
-        model = mtkActiveFaultModel(self.data['Fault_Model_ID'],
-                                    self.data['Fault_Model_Name'])
-        for fault in self.data['Fault_Model']:
-            fault_geometry = self.read_fault_geometry(fault['Fault_Geometry'],
-                                                      mesh_spacing)
-            if fault['Shear_Modulus']:
-                fault['Shear_Modulus'] = weight_list_to_tuple(
-                    fault['Shear_Modulus'], '%s Shear Modulus' % fault['ID'])
+        model = mtkActiveFaultModel(
+            self.data["Fault_Model_ID"], self.data["Fault_Model_Name"]
+        )
+        for fault in self.data["Fault_Model"]:
+            fault_geometry = self.read_fault_geometry(
+                fault["Fault_Geometry"], mesh_spacing
+            )
+            if fault["Shear_Modulus"]:
+                fault["Shear_Modulus"] = weight_list_to_tuple(
+                    fault["Shear_Modulus"], "%s Shear Modulus" % fault["ID"]
+                )
 
-            if fault['Displacement_Length_Ratio']:
-                fault['Displacement_Length_Ratio'] = weight_list_to_tuple(
-                    fault['Displacement_Length_Ratio'],
-                    '%s Displacement to Length Ratio' % fault['ID'])
+            if fault["Displacement_Length_Ratio"]:
+                fault["Displacement_Length_Ratio"] = weight_list_to_tuple(
+                    fault["Displacement_Length_Ratio"],
+                    "%s Displacement to Length Ratio" % fault["ID"],
+                )
 
             fault_source = mtkActiveFault(
-                fault['ID'],
-                fault['Fault_Name'],
+                fault["ID"],
+                fault["Fault_Name"],
                 fault_geometry,
-                weight_list_to_tuple(fault['Slip'], '%s - Slip' % fault['ID']),
-                float(fault['Rake']),
-                fault['Tectonic_Region'],
-                float(fault['Aseismic']),
+                weight_list_to_tuple(fault["Slip"], "%s - Slip" % fault["ID"]),
+                float(fault["Rake"]),
+                fault["Tectonic_Region"],
+                float(fault["Aseismic"]),
                 weight_list_to_tuple(
-                    fault['Scaling_Relation_Sigma'],
-                    '%s Scaling_Relation_Sigma' % fault['ID']),
+                    fault["Scaling_Relation_Sigma"],
+                    "%s Scaling_Relation_Sigma" % fault["ID"],
+                ),
                 neotectonic_fault=None,
                 scale_rel=get_scaling_relation_tuple(
-                    fault['Magnitude_Scaling_Relation']),
-                aspect_ratio=fault['Aspect_Ratio'],
-                shear_modulus=fault['Shear_Modulus'],
-                disp_length_ratio=fault['Displacement_Length_Ratio'])
+                    fault["Magnitude_Scaling_Relation"]
+                ),
+                aspect_ratio=fault["Aspect_Ratio"],
+                shear_modulus=fault["Shear_Modulus"],
+                disp_length_ratio=fault["Displacement_Length_Ratio"],
+            )
 
             if tectonic_reg:
                 fault_source.get_tectonic_regionalisation(
-                    tectonic_reg,
-                    fault['Tectonic_Region'])
-            assert isinstance(fault['MFD_Model'], list)
-            fault_source.generate_config_set(fault['MFD_Model'])
+                    tectonic_reg, fault["Tectonic_Region"]
+                )
+            assert isinstance(fault["MFD_Model"], list)
+            fault_source.generate_config_set(fault["MFD_Model"])
             model.faults.append(fault_source)
 
         return model, tectonic_reg
 
     def process_tectonic_regionalisation(self):
-        '''
+        """
         Processes the tectonic regionalisation from the TOML file
-        '''
+        """
 
-        if 'tectonic_regionalisation' in self.data:
+        if "tectonic_regionalisation" in self.data:
             tectonic_reg = TectonicRegionalisation()
             tectonic_reg.populate_regions(
                 parse_tect_region_dict_to_tuples(
-                    self.data['tectonic_regionalisation']))
+                    self.data["tectonic_regionalisation"]
+                )
+            )
         else:
             tectonic_reg = None
         return tectonic_reg
 
     def read_fault_geometry(self, geo_dict, mesh_spacing=1.0):
-        '''
+        """
         Creates the fault geometry from the parameters specified in the
         dictionary.
 
@@ -215,28 +227,40 @@ class FaultYmltoSource(object):
         :returns:
             Instance of SimpleFaultGeometry or ComplexFaultGeometry, depending
             on typology
-        '''
-        if geo_dict['Fault_Typology'] == 'Simple':
+        """
+        if geo_dict["Fault_Typology"] == "Simple":
             # Simple fault geometry
-            raw_trace = geo_dict['Fault_Trace']
-            trace = Line([Point(raw_trace[ival], raw_trace[ival + 1])
-                          for ival in range(0, len(raw_trace), 2)])
-            geometry = SimpleFaultGeometry(trace,
-                                           geo_dict['Dip'],
-                                           geo_dict['Upper_Depth'],
-                                           geo_dict['Lower_Depth'],
-                                           mesh_spacing)
+            raw_trace = geo_dict["Fault_Trace"]
+            trace = Line(
+                [
+                    Point(raw_trace[ival], raw_trace[ival + 1])
+                    for ival in range(0, len(raw_trace), 2)
+                ]
+            )
+            geometry = SimpleFaultGeometry(
+                trace,
+                geo_dict["Dip"],
+                geo_dict["Upper_Depth"],
+                geo_dict["Lower_Depth"],
+                mesh_spacing,
+            )
 
-        elif geo_dict['Fault_Typology'] == 'Complex':
+        elif geo_dict["Fault_Typology"] == "Complex":
             # Complex Fault Typology
             trace = []
-            for raw_trace in geo_dict['Fault_Trace']:
+            for raw_trace in geo_dict["Fault_Trace"]:
                 fault_edge = Line(
-                    [Point(raw_trace[ival], raw_trace[ival + 1],
-                           raw_trace[ival + 2]) for ival in range(0, len(raw_trace),
-                                                                  3)])
+                    [
+                        Point(
+                            raw_trace[ival],
+                            raw_trace[ival + 1],
+                            raw_trace[ival + 2],
+                        )
+                        for ival in range(0, len(raw_trace), 3)
+                    ]
+                )
                 trace.append(fault_edge)
             geometry = ComplexFaultGeometry(trace, mesh_spacing)
         else:
-            raise ValueError('Unrecognised or unsupported fault geometry!')
+            raise ValueError("Unrecognised or unsupported fault geometry!")
         return geometry

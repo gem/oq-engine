@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.5">
+	<fragilityModel id="1" assetCategory="Random" lossCategory="structural">
+		<description>random example, Warning: The values for fragility curves are random and not representative just for test purpose.
+</description>
+		<limitStates>slight moderate extensive complete</limitStates>
+		<fragilityFunction id="connection" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0</poes>
+			<poes ls="complete">0 0 0 0</poes>
+		</fragilityFunction>
+		<fragilityFunction id="link1" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0.01 0.011 0.0018</poes>
+			<poes ls="extensive">0 0.8 0.8 0.8</poes>
+			<poes ls="complete">0 0.9 0.9 0.9</poes>
+		</fragilityFunction>
+		<fragilityFunction id="link" format="discrete">
+			<imls imt="PGA" noDamageLimit="0">0 0.5 1 1.5</imls>
+			<poes ls="slight">0 0 0 0</poes>
+			<poes ls="moderate">0 0 0 0</poes>
+			<poes ls="extensive">0 0 0 0</poes>
+			<poes ls="complete">0 0 0 0</poes>
+		</fragilityFunction>
+	</fragilityModel>
+</nrml>

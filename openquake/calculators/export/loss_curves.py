@@ -43,11 +43,11 @@ class LossCurveExporter(object):
         self.dstore = dstore
         self.oq = dstore['oqparam']
         try:
-            self.builder = get_loss_builder(dstore)
+            self.builder = get_loss_builder(dstore, self.oq)
         except KeyError:  # no 'events' for non event_based_risk
             pass
         self.assetcol = dstore['assetcol']
-        arefs = [decode(aref) for aref in self.assetcol.asset_refs]
+        arefs = decode(self.assetcol['id'])
         self.str2asset = dict(zip(arefs, self.assetcol))
         self.asset_refs = arefs
         self.loss_types = dstore.get_attr('crm', 'loss_types')

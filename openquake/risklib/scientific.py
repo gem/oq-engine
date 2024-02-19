@@ -40,8 +40,9 @@ U16 = numpy.uint16
 U8 = numpy.uint8
 
 TWO32 = 2 ** 32
-KNOWN_CONSEQUENCES = ['loss', 'losses', 'collapsed', 'injured',
-                      'fatalities', 'homeless']
+KNOWN_CONSEQUENCES = ['loss', 'loss_aep', 'loss_oep', 'losses', 'collapsed',
+                      'injured', 'fatalities', 'homeless', 'non_operational']
+
 LOSSTYPE = numpy.array('''\
 business_interruption contents nonstructural structural
 occupants occupants_day occupants_night occupants_transit
@@ -50,7 +51,25 @@ structural+nonstructural+contents
 structural+nonstructural_ins structural+contents_ins nonstructural+contents_ins
 structural+nonstructural+contents_ins
 structural_ins nonstructural_ins
-reinsurance claim'''.split())
+reinsurance claim area number residents
+structural+business_interruption nonstructural+business_interruption
+contents+business_interruption
+structural+nonstructural+business_interruption
+structural+contents+business_interruption
+nonstructural+contents+business_interruption
+structural+nonstructural+contents+business_interruption
+contents_ins business_interruption_ins
+structural_ins+nonstructural_ins structural_ins+contents_ins
+structural_ins+business_interruption_ins nonstructural_ins+contents_ins
+nonstructural_ins+business_interruption_ins
+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins
+structural_ins+nonstructural_ins+business_interruption_ins
+structural_ins+contents_ins+business_interruption_ins
+nonstructural_ins+contents_ins+business_interruption_ins
+structural_ins+nonstructural_ins+contents_ins+business_interruption_ins
+'''.split())
+
 TOTLOSSES = [lt for lt in LOSSTYPE if '+' in lt]
 LOSSID = {lt: i for i, lt in enumerate(LOSSTYPE)}
 
@@ -1170,8 +1189,7 @@ def insurance_losses(asset_df, losses_by_lt, policy_df):
         lims = j.insurance_limit.to_numpy() * values
         ids_of_invalid_assets = aids[deds > lims]
         if len(ids_of_invalid_assets):
-            invalid_assets = set(asset_df['id'][aid].decode('utf8')
-                                 for aid in ids_of_invalid_assets)
+            invalid_assets = set(ids_of_invalid_assets)
             raise ValueError(
                 f"Please check deductible values. Values larger than the"
                 f" insurance limit were found for asset(s) {invalid_assets}.")
@@ -1448,9 +1466,7 @@ def losses_by_period(losses, return_periods, num_events=None, eff_time=None,
     if num_events is None:
         num_events = num_losses
     elif num_events < num_losses:
-        raise ValueError(
-            'There are not enough events (%d<%d) to compute the loss curve'
-            % (num_events, num_losses))
+        num_events = num_losses
     if eff_time is None:
         eff_time = return_periods[-1]
     if sorting_idxs is None:
@@ -1499,10 +1515,30 @@ class LossCurvesMapsBuilder(object):
             self.poes = 1. - numpy.exp(
                 - risk_investigation_time / return_periods)
 
-    # used in post_risk
-    def build_curve(self, losses, rlzi=0):
-        return losses_by_period(
-            losses, self.return_periods, self.num_events[rlzi], self.eff_time)
+    # used in post_risk, for normal loss curves and reinsurance curves
+    def build_curve(self, years, col, losses, agg_types, loss_type, rlzi=0):
+        """
+        Compute the requested curves
+        (AEP and OEP curves only if years is not None)
+        """
+        # NB: agg_types can be the string "ep, aep, oep"
+        periods = self.return_periods
+        ne = self.num_events[rlzi]
+        dic = {}
+        agg_types_list = agg_types.split(', ')
+        if 'ep' in agg_types_list:
+            dic[col] = losses_by_period(losses, periods, ne, self.eff_time)
+        if len(years):
+            gby = pandas.DataFrame(
+                dict(year=years, loss=losses)).groupby('year')
+            # see specs in https://github.com/gem/oq-engine/issues/8971
+            if 'aep' in agg_types_list:
+                dic[col + '_aep'] = losses_by_period(
+                    gby.loss.sum(), periods, ne, self.eff_time)
+            if 'oep' in agg_types_list:
+                dic[col + '_oep'] = losses_by_period(
+                    gby.loss.max(), periods, ne, self.eff_time)
+        return dic
 
 
 def _agg(loss_dfs, weights=None):
@@ -1512,7 +1548,7 @@ def _agg(loss_dfs, weights=None):
         for loss_df, w in zip(loss_dfs, weights):
             loss_df['variance'] *= w
             loss_df['loss'] *= w
-    return pandas.concat(loss_dfs).groupby(['eid', 'aid']).sum().reset_index()
+    return pandas.concat(loss_dfs).groupby(['aid', 'eid']).sum().reset_index()
 
 
 class RiskComputer(dict):
@@ -1614,7 +1650,7 @@ class RiskComputer(dict):
 
 # ####################### Consequences ##################################### #
 
-def consequence(consequence, coeffs, asset, dmgdist, loss_type):
+def consequence(consequence, coeffs, asset, dmgdist, loss_type, time_event):
     """
     :param consequence: kind of consequence
     :param coeffs: coefficients per damage state
@@ -1625,33 +1661,35 @@ def consequence(consequence, coeffs, asset, dmgdist, loss_type):
     """
     if consequence not in KNOWN_CONSEQUENCES:
         raise NotImplementedError(consequence)
-    elif consequence == 'losses':
+    if consequence.startswith(('loss', 'losses')):
         return dmgdist @ coeffs * asset['value-' + loss_type]
-    elif consequence == 'collapsed':
+    elif consequence in ['collapsed', 'non_operational']:
         return dmgdist @ coeffs * asset['value-number']
-    elif consequence == 'injured':
-        return dmgdist @ coeffs * asset['occupants_night']
-    elif consequence == 'fatalities':
-        return dmgdist @ coeffs * asset['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return dmgdist @ coeffs * asset[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return dmgdist @ coeffs * asset['occupants_night']
+        return dmgdist @ coeffs * asset['value-residents']
+    else:
+        raise NotImplementedError(consequence)
 
 
-def get_agg_value(consequence, agg_values, agg_id, xltype):
+def get_agg_value(consequence, agg_values, agg_id, xltype, time_event):
     """
     :returns:
         sum of the values corresponding to agg_id for the given consequence
     """
+    if consequence not in KNOWN_CONSEQUENCES:
+        raise NotImplementedError(consequence)
     aval = agg_values[agg_id]
-    if consequence == 'collapsed':
+    if consequence in ['collapsed', 'non_operational']:
         return aval['number']
-    elif consequence == 'injured':
-        return aval['occupants_night']
-    elif consequence == 'fatalities':
-        return aval['occupants_night']
+    elif consequence in ['injured', 'fatalities']:
+        # NOTE: time_event default is 'avg'
+        return aval[f'occupants_{time_event}']
     elif consequence == 'homeless':
-        return aval['occupants_night']
-    elif consequence in ('loss', 'losses'):
+        return aval['residents']
+    elif consequence.startswith(('loss', 'losses')):
         if xltype.endswith('_ins'):
             xltype = xltype[:-4]
         if '+' in xltype:  # total loss type

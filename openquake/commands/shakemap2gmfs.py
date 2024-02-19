@@ -1,18 +1,29 @@
 
 import os
 import logging
+import numpy
 from openquake.hazardlib.shakemap.maps import get_sitecol_shakemap
 from openquake.commonlib import logs, logictree
 from openquake.commonlib.readinput import get_site_collection
-from openquake.calculators.base import calculators, save_shakemap
+from openquake.calculators.base import calculators, store_shakemap
 
 
+# see qa_tests_data/scenario/case_21
 def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
-         site_effects: bool = 0, trunclevel: float = 3,
+         site_effects: str = 'no', trunclevel: float = 3,
          spatialcorr='yes', crosscorr='yes', cholesky_limit: int = 10_000):
     """
+    Given a shakemap ID and a path to a site_model.csv file build a
+    GMFs array corresponding to num_gmfs events. The user can pass
+    other parameters, the most important one being the string
+    `site_effects`, with default value "no", meaning do not amplify
+    the GMFs. site_effects = "shakemap" means amplify with the vs30
+    from the ShakeMap and sites_effects = "sitemodel" means amplify
+    with the user provided site model.
+
     Example of usage: oq shakemap2gmfs us2000ar20 site_model.csv -n 10
     """
+    assert os.path.exists(site_model)
     fname = '%s.npy' % id
     if os.path.exists(fname):
         dic = {'kind': 'file_npy', 'fname': fname}
@@ -24,14 +35,20 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                  truncation_level=str(trunclevel),
                  calculation_mode='scenario',
                  random_seed=str(random_seed),
-                 inputs={'site_model': [os.path.abspath(site_model)]})
+                 site_effects=site_effects,
+                 inputs={'job_ini': '<memory>',
+                         'site_model': [os.path.abspath(site_model)]})
     with logs.init("job", param) as log:
         oq = log.get_oqparam()
         calc = calculators(oq, log.calc_id)
-        sitecol, shakemap, discarded = get_sitecol_shakemap(
-            dic, imts, get_site_collection(oq))
-        if len(discarded):
-            logging.warning('%d sites discarded', len(discarded))
+        haz_sitecol = get_site_collection(oq)
+        sitecol, shakemap, disc = get_sitecol_shakemap(dic, imts, haz_sitecol)
+        if not os.path.exists(fname):
+            numpy.save(fname, shakemap)
+            logging.info('Saved %s', fname)
+        logging.info('Got %s', sitecol)
+        if len(disc):
+            logging.warning('%d sites discarded', len(disc))
         calc.datastore['sitecol'] = sitecol
         calc.datastore['full_lt'] = logictree.FullLogicTree.fake()
         if num_gmfs:
@@ -39,7 +56,9 @@ def main(id, site_model, *, num_gmfs: int = 0, random_seed: int = 42,
                       'spatialcorr': spatialcorr,
                       'crosscorr': crosscorr,
                       'cholesky_limit': cholesky_limit}
-            save_shakemap(calc, sitecol, shakemap, gmfdic)
+            store_shakemap(calc, sitecol, shakemap, gmfdic)
+    gmv_0 = calc.datastore.read_df('gmf_data').gmv_0.max()
+    print(f'Maximum {gmv_0=}')
     print('See the output with silx view %s' % calc.datastore.filename)
 
 

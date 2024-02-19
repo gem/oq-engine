@@ -31,7 +31,7 @@ from openquake.hazardlib.gsim.bchydro_2016_epistemic import\
     BCHydroESHM20SInter, BCHydroESHM20SSlab
 
 MILLER_RICE_GAUSS_3PNT = [-1.732051, 0.0, 1.732051]
-MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, -2.856970]
+MILLER_RICE_GAUSS_5PNT = [-2.856970, -1.355630, 0.0, 1.355630, 2.856970]
 STRESS_BRANCHES = ["VLow", "Low", "Mid", "High", "VHigh"]
 SITE_BRANCHES = ["Low", "Mid", "High"]
 ATTEN_BRANCHES = ["Fast", "Mid", "Slow"]
@@ -190,7 +190,7 @@ class ESHM20SubductionAliasesTestCase(unittest.TestCase):
                 alias = "ESHM20SInter{:s}Stress{:s}Atten".format(stress, atten)
                 alias_gmm = valid.gsim(alias)
                 gmm = BCHydroESHM20SInter(sigma_mu_epsilon=stress_adj,
-                                          theta_6_adjustment=theta6,
+                                          theta6_adjustment=theta6,
                                           faba_taper_model="SFunc",
                                           a=-100.0, b=100.0)
                 compare_gmms(alias_gmm, gmm, self.ctx, self.imts)
@@ -202,7 +202,7 @@ class ESHM20SubductionAliasesTestCase(unittest.TestCase):
                 alias = "ESHM20SSlab{:s}Stress{:s}Atten".format(stress, atten)
                 alias_gmm = valid.gsim(alias)
                 gmm = BCHydroESHM20SSlab(sigma_mu_epsilon=stress_adj,
-                                         theta_6_adjustment=theta6,
+                                         theta6_adjustment=theta6,
                                          faba_taper_model="SFunc",
                                          a=-100.0, b=100.0)
                 compare_gmms(alias_gmm, gmm, self.ctx, self.imts)

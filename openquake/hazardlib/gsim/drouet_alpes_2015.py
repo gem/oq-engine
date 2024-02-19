@@ -116,7 +116,7 @@ class DrouetAlpes2015Rjb(GMPE):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
-        [dist_type] = self.REQUIRES_DISTANCES
+        dist_type = _get_dist_type(gmpe=self)
         for m, imt in enumerate(imts):
             C = self.COEFFS[imt]
             mean[m] = _compute_mean(C, ctx.mag, getattr(ctx, dist_type))
@@ -669,3 +669,20 @@ class DrouetAlpes2015RrupHR_50bars(DrouetAlpes2015Rrup):
     3.000000 1.757597  0.032984 -0.336145 -1.818072 0.135737 4.056567 -0.001223 0.549067 0.331647
     pgv      0.541232 -0.175928 -0.222774 -2.408882 0.215679 3.713840 -0.002344 0.559330 0.382729
     """)
+    
+    
+def _get_dist_type(gmpe):
+    """
+    Get distance type required for the corresponding class of 
+    Drouet and Cotton (2015)
+    """
+    if 'Repi' in gmpe.__class__.__name__:
+        dist_type = 'repi'
+    elif 'Rjb' in gmpe.__class__.__name__:
+        dist_type = 'rjb'
+    elif 'Rrup' in gmpe.__class__.__name__:
+        dist_type = 'rrup'
+    else:
+        dist_type = 'rhypo' # Otherwise must be rhypo
+
+    return dist_type

@@ -15,10 +15,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
+
+import io
 import os
 import re
 import sys
 import unittest.mock as mock
+from contextlib import redirect_stdout
 import shutil
 import zipfile
 import tempfile
@@ -28,9 +31,10 @@ import numpy
 from pathlib import Path
 
 from openquake.baselib.python3compat import encode
-from openquake.baselib.general import gettemp
+from openquake.baselib.general import gettemp, chdir
 from openquake.baselib import parallel, sap
 from openquake.baselib.hdf5 import read_csv
+from openquake.baselib.tests.flake8_test import check_newlines
 from openquake.hazardlib import tests
 from openquake import commonlib
 from openquake.commonlib.datastore import read
@@ -38,14 +42,17 @@ from openquake.commonlib.readinput import get_params
 from openquake.engine.engine import create_jobs, run_jobs
 from openquake.commands.tests.data import to_reduce
 from openquake.calculators.views import view
+from openquake.qa_tests_data import mosaic
 from openquake.qa_tests_data.event_based_damage import case_15
 from openquake.qa_tests_data.logictree import case_09, case_13, case_56
 from openquake.qa_tests_data.classical import case_01, case_18
 from openquake.qa_tests_data.classical_risk import case_3
 from openquake.qa_tests_data.scenario import case_4
-from openquake.qa_tests_data.event_based import case_5, case_16, case_21
+from openquake.qa_tests_data.event_based import (
+    case_1 as eb_case_1, case_5, case_16, case_21)
 from openquake.qa_tests_data.event_based_risk import (
     case_master, case_1 as case_eb)
+from openquake.qa_tests_data.scenario import case_25
 from openquake.qa_tests_data.scenario_risk import case_shapefile, case_shakemap
 from openquake.qa_tests_data.gmf_ebrisk import case_1 as ebrisk
 from openquake.server.tests import data as test_data
@@ -86,6 +93,13 @@ class Print(object):
 
 
 class InfoTestCase(unittest.TestCase):
+
+    def test_shp(self):
+        mosaic_dir = os.path.dirname(mosaic.__file__)
+        path = os.path.join(mosaic_dir, 'ModelBoundaries.shp')
+        with Print.patch() as p:
+            sap.runline(f'openquake.commands info {path}')
+        self.assertIn('GLD', str(p))
 
     def test_zip(self):
         path = os.path.join(DATADIR, 'frenchbug.zip')
@@ -289,8 +303,8 @@ class RunShowExportTestCase(unittest.TestCase):
     def test_export_calc(self):
         tempdir = tempfile.mkdtemp()
         with Print.patch() as p:
-            sap.runline('openquake.commands export hcurves -e csv '
-                        f'--export-dir={tempdir}')
+            sap.runline(f'openquake.commands export hcurves {self.calc_id}'
+                        f' -e csv --export-dir={tempdir}')
         fnames = os.listdir(tempdir)
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
@@ -304,6 +318,26 @@ class RunShowExportTestCase(unittest.TestCase):
         self.assertIn(str(fnames[0]), str(p))
         shutil.rmtree(tempdir)
 
+    def test_extract_ruptures(self):
+        job_ini = os.path.join(
+            os.path.dirname(eb_case_1.__file__), 'job_ruptures.ini')
+        with Print.patch():
+            calc = sap.runline(f'openquake.commands run {job_ini} -c 0')
+        calc_id = calc.datastore.calc_id
+        tempdir = tempfile.mkdtemp()
+        with Print.patch():
+            sap.runline("openquake.commands extract ruptures "
+                        f"{calc_id} --extract-dir={tempdir}")
+        fnames = os.listdir(tempdir)
+        fname = os.path.join(tempdir, fnames[0])
+        error = check_newlines(open(fname, 'rb').read())
+        if error:
+            raise ValueError(
+                f'Invalid newlines in the exported ruptures file {fname}')
+        else:
+            shutil.rmtree(tempdir)
+
+
 class CompareTestCase(unittest.TestCase):
     def test_med_gmv(self):
         # testing the postprocessor med_gmv
@@ -312,8 +346,9 @@ class CompareTestCase(unittest.TestCase):
         id = job.calc_id
         with Print.patch() as p:
             sap.runline(f"openquake.commands compare med_gmv PGA {id} {id}")
-        self.assertIn('0_0!0: no differences within the tolerances', str(p))
-        
+        self.assertIn('0_0!aFault_aPriori_D2_1: no differences within '
+                      'the tolerances', str(p))
+
 
 class SampleSmTestCase(unittest.TestCase):
     TESTDIR = os.path.dirname(case_3.__file__)
@@ -325,6 +360,9 @@ class SampleSmTestCase(unittest.TestCase):
         with Print.patch() as p:
             sap.runline(f'openquake.commands sample {dest} 0.5')
         self.assertIn('Extracted 8 nodes out of 13', str(p))
+
+        # check the exposure is still valid
+        sap.runline(f'openquake.commands check_input {dest}')
         shutil.rmtree(tempdir)
 
     def test_source_model(self):
@@ -376,7 +414,11 @@ class UpgradeNRMLTestCase(unittest.TestCase):
     </vulnerabilityModel>
 </nrml>''')
         sap.runline(f'openquake.commands upgrade_nrml {tmpdir}')
-        shutil.rmtree(tmpdir)
+        if not sys.platform.startswith('win'):
+            # NOTE: on Windows it raises:
+            #       PermissionError: [WinError 32] The process cannot access
+            #       the file because it is being used by another process
+            shutil.rmtree(tmpdir)
 
 
 class ZipTestCase(unittest.TestCase):
@@ -503,9 +545,7 @@ class EngineRunJobTestCase(unittest.TestCase):
         # event based risk with post processing
         job_ini = os.path.join(
             os.path.dirname(case_master.__file__), 'job.ini')
-        with Print.patch() as p:
-            [log] = run_jobs(create_jobs([job_ini], 'error'))
-        self.assertIn('id | name', str(p))
+        [log] = run_jobs(create_jobs([job_ini], 'error'))
 
         # check the exported outputs
         expected = set('''\
@@ -558,6 +598,20 @@ Source Loss Table'''.splitlines())
         dic['calculation_mode'] = 'event_based_damage'
         run_jobs(create_jobs([dic], 'error', hc_id=job.id))
         shutil.rmtree(tempdir)
+
+    def test_shakemap2gmfs(self):
+        # test shakemap2gmfs with sitemodel with a filtered sitecol
+        # and three choices of site_effects
+        effects = ['no', 'shakemap', 'sitemodel']
+        expected = [0.2555, 0.31813407, 0.25332582]
+        with chdir(os.path.dirname(case_25.__file__)):
+            for eff, exp in zip(effects, expected):
+                with redirect_stdout(io.StringIO()) as out:
+                    sap.runline('openquake.commands shakemap2gmfs usp0006dv8 '
+                                'site_model_uniform_grid_rock.csv -n 1 -t 0 '
+                                f'--spatialcorr no -c no --site-effects={eff}')
+                got = out.getvalue()
+                assert f'gmv_0={exp}' in got
 
 
 class CheckInputTestCase(unittest.TestCase):

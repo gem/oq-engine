@@ -176,15 +176,17 @@ def compare_rups(calc_1: int, calc_2: int, site_id: int = 0):
     """
     Compare the ruptures affecting the given site ID as pandas DataFrames
     """
+    sort = ['src_id', 'rup_id']
     with datastore.read(calc_1) as ds1, datastore.read(calc_2) as ds2:
-        df1 = ds1.read_df('rup', sel={'sids': site_id})
-        df2 = ds2.read_df('rup', sel={'sids': site_id})
+        df1 = ds1.read_df('rup', sel={'sids': site_id}).sort_values(sort)
+        df2 = ds2.read_df('rup', sel={'sids': site_id}).sort_values(sort)
     del df1['probs_occur']
     del df2['probs_occur']
     lens = len(df1), len(df2)
     if lens[0] != lens[1]:
         print('%d != %d ruptures' % lens)
         return
+    df2.index = df1.index
     print(df1.compare(df2))
 
 
@@ -258,12 +260,14 @@ def compare_med_gmv(imt, calc_ids: int, *,
     c = Comparator(calc_ids)
     try:
         [m] = set(list(ex.oqparam.imtls).index(imt) for ex in c.extractors)
-    except:
+    except ValueError:
         sys.exit('The imt %s is not present in all calculations' % imt)
     ex1, ex2 = c.extractors
-    srcs = sorted(ex1.get('med_gmv'))
-    assert srcs == sorted(ex2.get('med_gmv'))
-    for src in srcs:
+    srcs1 = sorted(ex1.get('med_gmv'))
+    srcs2 = sorted(ex2.get('med_gmv'))
+    if srcs1 != srcs2:
+        raise ValueError(set(srcs1).symmetric_difference(srcs2))
+    for src in srcs1:
         # arrays of shape (G, M, N) => (G, N)
         aw1 = ex1.get(f'med_gmv/{src}')
         aw2 = ex2.get(f'med_gmv/{src}')
@@ -295,11 +299,38 @@ def compare_risk_by_event(event: int, calc_ids: int, *,
     df1 = ds1.read_df('gmf_data', 'sid', sel={'eid': event})
     df = df0.compare(df1)
     if len(df):
-        print('Not comparable GMFs: %s', df); return
+        print('Not comparable GMFs: %s', df)
+        return
     df0 = ds0.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
     df1 = ds1.read_df('risk_by_event', 'agg_id', sel={'event_id': event})
     print(df0)
     print(df1)
+
+
+def compare_sources(calc_ids: int):
+    """
+    Compare source_info DataFrames
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    header = ['source_id', 'grp_id', 'code', 'num_ruptures']
+    df0 = ds0.read_df('source_info')[header]
+    df1 = ds1.read_df('source_info')[header]
+    df = df0.compare(df1)
+    print(df)
+
+
+def compare_events(calc_ids: int):
+    """
+    Compare events DataFrames
+    """
+    ds0 = datastore.read(calc_ids[0])
+    ds1 = datastore.read(calc_ids[1])
+    df0 = ds0.read_df('events', 'rup_id')
+    df1 = ds1.read_df('events', 'rup_id')
+    df = df0.compare(df1)
+    print(df)
+
 
 
 main = dict(rups=compare_rups,
@@ -309,10 +340,13 @@ main = dict(rups=compare_rups,
             hcurves=compare_hcurves,
             avg_gmf=compare_avg_gmf,
             med_gmv=compare_med_gmv,
-            risk_by_event=compare_risk_by_event)
+            risk_by_event=compare_risk_by_event,
+            sources=compare_sources,
+            events=compare_events)
 
 for f in (compare_uhs, compare_hmaps, compare_hcurves, compare_avg_gmf,
-          compare_med_gmv, compare_risk_by_event):
+          compare_med_gmv, compare_risk_by_event, compare_sources,
+          compare_events):
     if f is compare_uhs:
         f.poe_id = 'index of the PoE (or return period)'
     elif f is compare_risk_by_event:

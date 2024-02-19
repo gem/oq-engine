@@ -25,18 +25,19 @@ import logging
 from dataclasses import dataclass
 import numpy
 
-from openquake.hazardlib.source.multi_fault import MultiFaultSource
 from openquake.baselib import hdf5
 from openquake.baselib.general import groupby, block_splitter
 from openquake.baselib.node import context, striptag, Node, node_to_dict
 from openquake.hazardlib import geo, mfd, pmf, source, tom, valid, InvalidFile
 from openquake.hazardlib.tom import PoissonTOM
+from openquake.hazardlib.calc.filters import split_source
 from openquake.hazardlib.source import NonParametricSeismicSource
-
+from openquake.hazardlib.source.multi_fault import MultiFaultSource
 
 U32 = numpy.uint32
 F32 = numpy.float32
 F64 = numpy.float64
+TWO16 = 2**16
 EPSILON = 1E-12
 source_dt = numpy.dtype([('source_id', U32), ('num_ruptures', U32),
                          ('pik', hdf5.vuint8)])
@@ -250,7 +251,6 @@ class SourceGroup(collections.abc.Sequence):
         """
         assert src.tectonic_region_type == self.trt, (
             src.tectonic_region_type, self.trt)
-        min_mag = self.min_mag.get(self.trt) or self.min_mag['default']
 
         # checking mutex ruptures
         if (not isinstance(src, NonParametricSeismicSource) and
@@ -281,6 +281,7 @@ class SourceGroup(collections.abc.Sequence):
             print(src.weight)
         return self
 
+    # used only in event_based, where weight = num_ruptures
     def split(self, maxweight):
         """
         Split the group in subgroups with weight <= maxweight, unless it
@@ -288,12 +289,24 @@ class SourceGroup(collections.abc.Sequence):
         """
         if self.atomic:
             return [self]
+
+        # split multipoint/multifault in advance
+        sources = []
+        for src in self:
+            if src.code in b'MF':
+                sources.extend(split_source(src))
+            else:
+                sources.append(src)
         out = []
-        for block in block_splitter(
-                self, maxweight, operator.attrgetter('weight')):
+        def weight(src):
+            if src.code == b'F':  # consider it much heavier
+                return src.num_ruptures * 25
+            return src.num_ruptures
+        for block in block_splitter(sources, maxweight, weight):
             sg = copy.copy(self)
             sg.sources = block
             out.append(sg)
+        logging.info('Produced %d subgroup(s) of %s', len(out), self)
         return out
 
     def get_tom_toml(self, time_span):
@@ -549,14 +562,12 @@ class RuptureConverter(object):
             surface = geo.GriddedSurface.from_points_list(points)
         elif surface_node.tag.endswith('kiteSurface'):
             # single or multiple kite surfaces
-            profs = []
-            for surface_node in surface_nodes:
-                profs.append(self.geo_lines(surface_node))
-            if len(profs) < 2:
+            profs = [self.geo_lines(node) for node in surface_nodes]
+            if len(profs) == 1:  # there is a single surface_node
                 surface = geo.KiteSurface.from_profiles(
                     profs[0], self.rupture_mesh_spacing,
                     self.rupture_mesh_spacing, sec_id=sec_id)
-            else:
+            else:  # normally found in sections.xml
                 surfaces = []
                 for prof in profs:
                     surfaces.append(geo.KiteSurface.from_profiles(
@@ -1134,12 +1145,15 @@ class SourceConverter(RuptureConverter):
             with context(self.fname, node):
                 idxs = [x.decode('utf8').split() for x in dic['rupture_idxs']]
                 mags = rounded_unique(dic['mag'], idxs)
+                for idx in idxs:
+                    assert U32(idx).max() < TWO16, idx
             # NB: the sections will be fixed later on, in source_reader
-            mfs = MultiFaultSource(sid, name, trt, idxs,
+            mfs = MultiFaultSource(sid, name, trt,
                                    dic['probs_occur'],
                                    dic['mag'], dic['rake'],
                                    self.investigation_time,
                                    self.infer_occur_rates)
+            mfs._rupture_idxs = idxs
             return mfs
         probs = []
         mags = []
@@ -1167,9 +1181,10 @@ class SourceConverter(RuptureConverter):
             mags = rounded_unique(mags, idxs)
         rakes = numpy.array(rakes)
         # NB: the sections will be fixed later on, in source_reader
-        mfs = MultiFaultSource(sid, name, trt, idxs, probs, mags, rakes,
+        mfs = MultiFaultSource(sid, name, trt, probs, mags, rakes,
                                self.investigation_time,
                                self.infer_occur_rates)
+        mfs._rupture_idxs = idxs
         return mfs
 
     def convert_sourceModel(self, node):
@@ -1238,10 +1253,13 @@ class SourceConverter(RuptureConverter):
                     'There are %d srcs_weights but %d source(s) in %s'
                     % (len(srcs_weights), len(node), self.fname))
             tot = 0
-            for src, sw in zip(sg, srcs_weights):
-                src.mutex_weight = sw
-                tot += sw
             with context(self.fname, node):
+                for src, sw in zip(sg, srcs_weights):
+                    if ':' not in src.source_id:
+                        raise NameError('You must use the colon convention '
+                                        'with mutex sources')
+                    src.mutex_weight = sw
+                    tot += sw
                 numpy.testing.assert_allclose(
                     tot, 1., err_msg='sum(srcs_weights)', atol=5E-6)
 

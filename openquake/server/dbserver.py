@@ -54,7 +54,6 @@ class DbServer(object):
                     sock.send(self.pid)
                     continue
                 elif cmd.startswith('workers_'):
-                    # call parallel.workers_start et similar routines
                     master = w.WorkerMaster(args[0])  # zworkers
                     msg = getattr(master, cmd[8:])()
                     sock.send(msg)
@@ -135,6 +134,10 @@ def ensure_on():
     """
     Start the DbServer if it is off
     """
+    if os.environ.get('OQ_DATABASE', config.dbserver.host) == 'local':
+        print('Using local database')
+        actions.upgrade_db(db)
+        return
     if get_status() == 'not-running':
         if config.multi_user and getpass.getuser() != 'openquake':
             sys.exit('Please start the DbServer: '

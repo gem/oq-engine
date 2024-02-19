@@ -426,6 +426,7 @@ class AtkinsonBoore2006(GMPE):
         for spec of input and result values.
         """
         if self.CUTOFF_RRUP:  # for SGS subclass
+            ctx = ctx.copy()
             ctx.rrup[ctx.rrup <= self.CUTOFF_RRUP] = self.CUTOFF_RRUP
         for m, imt in enumerate(imts):
             if self.mag_eq == "NA":

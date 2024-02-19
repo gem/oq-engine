@@ -239,7 +239,7 @@ class NGAEastUSGSGMPE(NGAEastGMPE):
         """
         Returns the mean and standard deviations
         """
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
         for m, imt in enumerate(imts):
             imean, site_amp, pga_r = get_mean_amp(self, mag, ctx, imt)
 

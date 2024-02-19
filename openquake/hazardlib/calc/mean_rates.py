@@ -23,8 +23,10 @@ from openquake.hazardlib.calc.hazard_curve import classical
 from openquake.hazardlib.probability_map import ProbabilityMap
 from openquake.hazardlib.contexts import get_cmakers
 
+CUTOFF = 1E-12
 
-def to_rates(probs):
+
+def to_rates(probs, itime=1, minrate=0.):
     """
     Convert an array of probabilities into an array of rates
 
@@ -32,29 +34,37 @@ def to_rates(probs):
     array([1.609438])
     """
     pnes = 1. - probs
-    pnes[pnes == 0] = 1E-45  # minimum float32
-    return - numpy.log(pnes)
+    pnes[pnes == 0] = 1E-45  # mininum 32 bit float
+    # NB: the test most sensitive to 1E-45 and 1E-12 is case_78
+    rates = - numpy.log(pnes) / itime
+    rates[rates < CUTOFF] = minrate
+    rates[rates > 100.] = 100.
+    return rates
 
 
-def to_probs(rates):
+def to_probs(rates, itime=1):
     """
     Convert an array of rates into an array of probabilities
 
     >>> numpy.round(to_probs(numpy.array([1.609438])), 6)
     array([0.8])
     """
-    return 1. - numpy.exp(- rates)
+    return 1. - numpy.exp(- rates * itime)
 
 
 def calc_rmap(src_groups, full_lt, sitecol, oq):
     """
-    :returns: a ProbabilityMap of shape (N, L, Gt)
+    :returns: a ProbabilityMap of rates with shape (N, L, Gt)
     """
     oq.use_rates = True
     oq.disagg_by_src = False
     L = oq.imtls.size
-    rmap = ProbabilityMap(sitecol.sids, L, full_lt.Gt).fill(0)
     cmakers = get_cmakers(src_groups, full_lt, oq)
+    gids = full_lt.get_gids([cm.trt_smrs for cm in cmakers])
+    Gt = sum(len(cm.gsims) for cm in cmakers)
+    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
+                 len(sitecol), oq.imtls.size, Gt)
+    rmap = ProbabilityMap(sitecol.sids, L, Gt).fill(0)
     ctxs = []
     for group, cmaker in zip(src_groups, cmakers):
         G = len(cmaker.gsims)
@@ -63,21 +73,23 @@ def calc_rmap(src_groups, full_lt, sitecol, oq):
             continue
         rates = to_rates(dic['pmap'].array)
         ctxs.append(numpy.concatenate(dic['rup_data']).view(numpy.recarray))
-        for i, g in enumerate(cmaker.gidx):
+        for i, gid in enumerate(gids[cmaker.grp_id]):
             # += tested in logictree/case_05
-            rmap.array[:, :, g] += rates[:, :, i % G]
+            rmap.array[:, :, gid] += rates[:, :, i % G]
     return rmap, ctxs, cmakers
 
 
-def calc_mean_rates(rmap, gweights, imtls):
+def calc_mean_rates(rmap, gweights, imtls, imts=None):
     """
     :returns: mean hazard rates as an array of shape (N, M, L1)
     """
-    M = len(imtls)
-    L1 = imtls.size // M
+    L1 = imtls.size // len(imtls)
     N = len(rmap.array)
+    if imts is None:
+        imts = imtls
+    M = len(imts)
     rates = numpy.zeros((N, M, L1))
-    for m, imt in enumerate(imtls):
+    for m, imt in enumerate(imts):
         rates[:, m, :] = rmap.array[:, imtls(imt), :] @ [
             gw[imt] for gw in gweights]
     return rates
@@ -99,8 +111,6 @@ def main(job_ini):
         assoc_dist = (oq.region_grid_spacing * 1.414
                       if oq.region_grid_spacing else 5)  # Graeme's 5km
         sitecol.assoc(readinput.get_site_model(oq), assoc_dist)
-    logging.info('Computing rate map with N=%d, L=%d, Gt=%d',
-                 len(sitecol), oq.imtls.size, csm.full_lt.Gt)
     rmap, ctxs, cmakers = calc_rmap(csm.src_groups, csm.full_lt, sitecol, oq)
     rates = calc_mean_rates(rmap, csm.full_lt.g_weights, oq.imtls)
     N, M, L1 = rates.shape
@@ -109,6 +119,7 @@ def main(job_ini):
         mrates[imt] = rates[:, m]
     print('Mean hazard rates for the first site')
     print(text_table(mrates[0], ext='org'))
+
 
 main.job_ini = 'path to a job.ini file'
 

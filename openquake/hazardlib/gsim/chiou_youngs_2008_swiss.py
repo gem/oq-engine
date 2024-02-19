@@ -74,13 +74,16 @@ class ChiouYoungs2008SWISS01(ChiouYoungs2008):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    #: Supported standard deviation type is total, inter-event and intra-event
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Vs30 value representing typical rock conditions in Switzerland.
     #: confirmed by the Swiss GMPE group
     DEFINED_FOR_REFERENCE_VELOCITY = 1105.
 
     def compute(self, ctx: np.recarray, imts, mean, sig, tau, phi):
+        ctx = ctx.copy()
         ctx.vs30 = 620 * np.ones(len(ctx.vs30))
         log_phi_ss = 1
         super().compute(ctx, imts, mean, sig, tau, phi)

@@ -7,9 +7,7 @@
             <logicTreeBranchSet uncertaintyType="sourceModel"
                                 branchSetID="bs1">
                 <logicTreeBranch branchID="b11">
-                    <uncertaintyModel>ssm/source_model_noEQTHR_2021.xml</uncertaintyModel>
-                    <!--uncertaintyModel>source_model.xml</uncertaintyModel-->
-                    <!--uncertaintyModel>source_model_CPHL_intra_gt7pt6.xml</uncertaintyModel-->
+                    <uncertaintyModel>ssm/ssm01.xml</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>

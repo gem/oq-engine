@@ -55,7 +55,11 @@
                   </li>
                   {% endif %}
                   <li class="actions">
-                      <a href="https://github.com/gem/oq-engine" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="{{ STATIC_URL }}img/oq-help.png"></a>
+                      {% if application_mode == 'AELO' %}
+                      <a href="https://docs.openquake.org/.aelo/latest" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="{{ STATIC_URL }}img/oq-help.png"></a>
+                      {% else %}
+                      <a href="https://docs.openquake.org/oq-engine/latest/manual/" id="help_url" rel="tooltip" target="_blank" title="Help"><img src="{{ STATIC_URL }}img/oq-help.png"></a>
+                      {% endif %}
                   </li>
                 </ul>
               </div>
@@ -72,6 +76,18 @@
   {% endblock header %}
 
   {% block main %}
+  {% if announcements %}
+  <div class="announcements-box">
+    {% for announcement in announcements %}
+      {% if announcement.show %}
+      <div class="announcement">
+        <h2>{{ announcement.title }}</h2>
+          {{ announcement.content }}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
   {% endblock main %}
   <div id="outdated"></div>
   {% block footer %}

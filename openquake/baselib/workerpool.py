@@ -232,10 +232,10 @@ def call(func, args, taskno, mon, executing):
 
 
 def errback(job_id, task_no, exc):
+    # NB: job_id can be None if the Starmap was invoked without h5
     from openquake.commonlib.logs import dbcmd
     dbcmd('log', job_id, datetime.utcnow(), 'ERROR',
           '%s/%s' % (job_id, task_no), str(exc))
-    raise exc
     e = exc.__class__('in job %d, task %d' % (job_id, task_no))
     raise e.with_traceback(exc.__traceback__)
 
@@ -287,9 +287,9 @@ class WorkerPool(object):
                         ctrlsock.send(' '.join(executing))
                     elif isinstance(cmd, tuple):
                         func, args, taskno, mon = cmd
-                        eback = functools.partial(errback, mon.calc_id, taskno)
-                        self.pool.apply_async(call, cmd + (self.executing,),
-                                              error_callback=eback)
+                        self.pool.apply_async(
+                            call, cmd + (self.executing,),
+                            error_callback=functools.partial(errback, mon.calc_id, taskno))
                         ctrlsock.send('submitted')
                     else:
                         ctrlsock.send('unknown command')

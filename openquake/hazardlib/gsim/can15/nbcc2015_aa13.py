@@ -126,7 +126,7 @@ class NBCC2015_AA13(GMPETable):
         """
         Returns the mean and standard deviations
         """
-        [mag] = np.unique(np.round(ctx.mag, 6))
+        [mag] = np.unique(np.round(ctx.mag, 2))
         # get distance vector for the given magnitude
         idx = np.searchsorted(self.m_w, mag)
         dists = self.distances[:, 0, idx - 1]

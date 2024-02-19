@@ -28,7 +28,7 @@ from openquake.baselib.general import gettemp, DictArray
 from openquake.hazardlib.site import ampcode_dt
 from openquake.hazardlib.site_amplification import Amplifier
 from openquake.hazardlib.probability_map import ProbabilityCurve
-from openquake.hazardlib.gsim.boore_atkinson_2008 import BooreAtkinson2008
+from openquake.hazardlib import valid
 
 aac = numpy.testing.assert_allclose
 
@@ -102,6 +102,25 @@ class AmplifierTestCase(unittest.TestCase):
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01],  # SA(0.2)
               [.999, .995, .99, .98, .95, .9, .8, .7, .1, .05, .01]]  # SA(0.5)
 
+    def test_missing_defined_for_reference_velocity(self):
+        fname = gettemp(trivial_ampl_func)
+        df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
+                      index='ampcode')
+        a = Amplifier(self.imtls, df, self.soil_levels)
+        gmm = valid.gsim('CanadaSHM6_ActiveCrust_BooreEtAl2014')
+        vs30_tolerance = -1
+        a.check(self.vs30, vs30_tolerance, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
+        vs30_tolerance = 0
+        with self.assertRaises(AttributeError) as ctx:
+            a.check(self.vs30, vs30_tolerance,
+                    {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
+        self.assertIn(
+            'The attribute DEFINED_FOR_REFERENCE_VELOCITY is missing in the'
+            ' gsim [CanadaSHM6_ActiveCrust_BooreEtAl2014]. However, at your'
+            ' peril, you can disable the vs30 consistency check by setting'
+            ' vs30_tolerance = -1',
+            str(ctx.exception))
+
     def test_trivial(self):
         # using the heaviside function, i.e. `amplify_one` has contributions
         # only for soil_intensity < a * mid_intensity with a=1
@@ -113,7 +132,7 @@ class AmplifierTestCase(unittest.TestCase):
         df = read_csv(fname, {'ampcode': ampcode_dt, None: numpy.float64},
                       index='ampcode')
         a = Amplifier(self.imtls, df, self.soil_levels)
-        gmm = BooreAtkinson2008()
+        gmm = valid.gsim('BooreAtkinson2008')
         a.check(self.vs30, 0, {TRT.ACTIVE_SHALLOW_CRUST: [gmm]})
         numpy.testing.assert_allclose(
             a.midlevels, [0.0015, 0.0035, 0.0075, 0.015, 0.035, 0.075,
@@ -153,9 +172,10 @@ class AmplifierTestCase(unittest.TestCase):
                    0.686047], atol=1e-6)
 
         # Amplify GMFs with sigmas
-        numpy.random.seed(42)
-        gmvs = a._amplify_gmvs(b'A', numpy.array([.005, .010, .015]), 'PGA')
-        numpy.testing.assert_allclose(gmvs, [0.005401, 0.010356, 0.016704],
+        rng = numpy.random.default_rng(42)
+        gmvs = a._amplify_gmvs(
+            b'A', numpy.array([.005, .010, .015]), 'PGA', rng)
+        numpy.testing.assert_allclose(gmvs, [0.005298, 0.009463, 0.016876],
                                       atol=1E-5)
 
     def test_double(self):
@@ -183,7 +203,8 @@ class AmplifierTestCase(unittest.TestCase):
         #    poes, [0.989, 0.985, 0.98, 0.97, 0.94, 0.89, 0.79], atol=1E-6)
 
         # amplify GMFs without sigmas
-        gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)')
+        rng = numpy.random.default_rng(42)
+        gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'SA(0.5)', rng)
         numpy.testing.assert_allclose(gmvs, [.2, .4, .6])
 
     def test_long_code(self):
@@ -200,7 +221,7 @@ class AmplifierTestCase(unittest.TestCase):
                       index='ampcode')
         with self.assertRaises(ValueError) as ctx:
             Amplifier(self.imtls, df, self.soil_levels)
-        self.assertEqual(str(ctx.exception), "Found duplicates for b'A'")
+        self.assertEqual(str(ctx.exception), "Found duplicates for (b'A',)")
 
     def test_resampling(self):
         path = os.path.dirname(os.path.abspath(__file__))
@@ -226,11 +247,11 @@ class AmplifierTestCase(unittest.TestCase):
         # Create a list with one ProbabilityCurve instance
         poes = numpy.squeeze(df_hc.iloc[0, 3:].to_numpy())
         tmp = numpy.expand_dims(poes, 1)
-        pcurve = ProbabilityCurve(tmp)
+        hcurve = ProbabilityCurve(tmp)
 
         soil_levels = numpy.array(list(numpy.geomspace(0.001, 2, 50)))
         a = Amplifier(imtls, df_af, soil_levels)
-        res = a.amplify(b'MQ15', pcurve)
+        res = a.amplify(b'MQ15', hcurve)
 
         tmp = 'hazard_curve_expected.csv'
         fname_expected = os.path.join(path, 'data', 'convolution', tmp)
@@ -246,9 +267,9 @@ class AmplifierTestCase(unittest.TestCase):
         a = Amplifier(imtls, df)
         res = []
         nsim = 10000
-        numpy.random.seed(42)  # must be fixed
+        rng = numpy.random.default_rng(42)
         for i in range(nsim):
-            gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'PGA')
+            gmvs = a._amplify_gmvs(b'A', numpy.array([.1, .2, .3]), 'PGA', rng)
             res.append(list(gmvs))
         res = numpy.array(res)
         dat = numpy.reshape(numpy.tile([.1, .2, .3], nsim), (nsim, 3))
@@ -264,14 +285,14 @@ class AmplifierTestCase(unittest.TestCase):
         imtls = DictArray({'PGA': [numpy.nan]})
         a = Amplifier(imtls, df)
 
-        numpy.random.seed(42)  # must be fixed
-        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs1, [0.217124, 0.399295, 0.602515], atol=1E-5)
-        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs2, [0.266652, 0.334187, 0.510845], atol=1E-5)
+        rng = numpy.random.default_rng(42)
+        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs1, [0.201073, 0.278387, 0.627798], atol=1E-5)
+        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs2, [0.211233, 0.168165, 0.333235], atol=1E-5)
 
-        numpy.random.seed(43)  # changing the seed the results change a lot
-        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs1, [0.197304, 0.293422, 0.399669], atol=1E-5)
-        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA')
-        aac(gmvs2, [0.117069, 0.517284, 0.475571], atol=1E-5)
+        rng = numpy.random.default_rng(43)  # new seed, big diff
+        gmvs1 = a._amplify_gmvs(b'z1', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs1, [0.196267, 0.553508, 0.367905], atol=1E-5)
+        gmvs2 = a._amplify_gmvs(b'z2', numpy.array([.1, .2, .3]), 'PGA', rng)
+        aac(gmvs2, [0.100813, 0.165443, 0.827468], atol=1E-5)

@@ -80,6 +80,18 @@ def from_string(imt, _damping=5.0):
     return IMT(*imt2tup(imt))
 
 
+def sort_by_imt(imtls):
+    """
+    :param imtls: a dictionary keyed by IMT string
+    :returns: a new dictionary with the keys sorted by period
+
+    >>> sort_by_imt({'SA(10.0)': 1, 'SA(2.0)': 2})
+    {'SA(2.0)': 2, 'SA(10.0)': 1}
+    """
+    imts = sorted(imtls, key=lambda imt: from_string(imt).period)
+    return {imt: imtls[imt] for imt in imts}
+
+
 def repr(self):
     if self.period and self.damping != 5.0:
         return 'SA(%s, %s)' % (self.period, self.damping)
@@ -256,6 +268,18 @@ def LiqProb():
     """
     return IMT('LiqProb')
 
+def LiqOccur():
+    """
+    Liquefaction occurrence class
+    """
+    return IMT('LiqOccur')
+
+def LSE():
+    """
+    Liquefaction spatial extent as percentage of a pixel area.
+    """
+    return IMT('LSE')
+
 
 def PGDMax(vert_settlement, lat_spread):
     """
@@ -268,8 +292,8 @@ def LSD():
     """
     Liquefaction-induced lateral spread displacements measured in units of ``m``.
     """
-    return IMT('LSD')    
-    
+    return IMT('LSD')   
+
 
 def PGDGeomMean(vert_settlement, lat_spread):
     """

@@ -131,9 +131,10 @@ class DppParameterTest(unittest.TestCase):
         fault_trace = Line([fault_trace_start, fault_trace_end])
 
         # E Plane Calculation
-        self.p0, self.p1, self.p2, self.p3 = SimpleFaultSurface.get_fault_patch_vertices(
-            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
-            dip=dip, index_patch=index_patch)
+        self.p0, self.p1, self.p2, self.p3 = \
+            SimpleFaultSurface.get_fault_patch_vertices(
+                fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+                dip=dip, index_patch=index_patch)
 
         [self.normal, self.dist_to_plane] = get_plane_equation(
             self.p0, self.p1, self.p2, self.origin)

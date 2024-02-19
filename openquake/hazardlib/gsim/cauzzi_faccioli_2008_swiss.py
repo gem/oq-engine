@@ -57,8 +57,9 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
 
     Model implemented by laurentiu.danciu@gmail.com
     """
-    #: Supported standard deviation type is only total
-    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {const.StdDev.TOTAL}
+    #: Supported standard deviation type is total, inter-event and intra-event
+    DEFINED_FOR_STANDARD_DEVIATION_TYPES = {
+        const.StdDev.TOTAL, const.StdDev.INTER_EVENT, const.StdDev.INTRA_EVENT}
 
     #: Supported intensity measure types are spectral acceleration, peak
     #: ground acceleration and peak ground velocity.
@@ -76,6 +77,7 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
         <.base.GroundShakingIntensityModel.compute>`
         for spec of input and result values.
         """
+        ctx = ctx.copy()
         ctx.vs30 = 700 * np.ones(len(ctx.vs30))
         super().compute(ctx, imts, mean, sig, tau, phi)
 
@@ -88,6 +90,8 @@ class CauzziFaccioli2008SWISS01(CauzziFaccioli2008):
                 mean[m], sig[m], tau[m], phi[m], ctx, ctx.rhypo, imt,
                 log_phi_ss)
             sig[m] = np.log(10 ** sig[m])
+            tau[m] = np.log(10 ** tau[m])
+            phi[m] = np.log(10 ** phi[m])
 
     COEFFS_FS_ROCK = COEFFS_FS_ROCK_SWISS01
 

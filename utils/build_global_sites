@@ -1,0 +1,61 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright (C) 2023, GEM Foundation
+#
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Build the site model for the world and store it into an HDF5 file.
+"""
+import os
+import numpy
+from openquake.baselib import performance, hdf5, sap
+from openquake.commonlib import readinput
+
+
+def main(mosaic_dir):
+    """
+    Build global site_model.hdf5
+    """
+    dic = {}
+    fields = {}
+    tot = 0
+    for cwd, dirs, files in os.walk(mosaic_dir):
+        for f in files:
+            if f == 'job_vs30.ini':
+                oq = readinput.get_oqparam(os.path.join(cwd, f))
+                sm = readinput.get_site_model(oq)
+                for row in sm:
+                    dic[row['lon'], row['lat']] = row
+                fields.update(sm.dtype.descr)
+                tot += len(sm)
+    fields['lon'] = numpy.float32
+    fields['lat'] = numpy.float32
+    smodel = numpy.zeros(len(dic), list(fields.items()))
+    for i, row in enumerate(dic.values()):
+        for n in row.dtype.names:
+            smodel[i][n] = row[n]
+    with hdf5.File('site_model.hdf5', 'w') as f:
+        f['site_model'] = smodel
+    print('Generated site_model.hdf5 with {:_d} sites'.format(len(smodel)))
+
+main.mosaic_dir = 'Directory containing the hazard mosaic'
+
+
+if __name__ == '__main__':
+    with performance.Monitor(measuremem=True) as mon:
+        sap.run(main)
+    print(mon)
+

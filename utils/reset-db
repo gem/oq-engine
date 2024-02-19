@@ -89,7 +89,6 @@ echo ''
 echo "!! ${BOLD}This script is going to remove the OpenQuake Engine data${NORMAL}"
 echo '!!'
 echo -e "!! \t*  Make sure no calculations are running"
-echo -e "!! \t*  Make sure Celery is stopped, if used"
 echo -e "!! \t*  The OpenQuake Engine datastores located in /home/[user]/oqdata will be removed"
 echo -e "!! \t*  The OpenQuake Engine database will be dropped"
 echo -e "!! \t   All the old data contained will be lost"

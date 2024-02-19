@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.4"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel
+    name="Central and Eastern US - Fault Sources"
+    >
+        <characteristicFaultSource
+        id="Cheraw_USGS_full_2330__0_0"
+        name="Cheraw USGS full 2330 'Cheraw Char f 1 2 wt (0) (0)"
+        tectonicRegion="Stable Shallow Crust"
+        >
+            <surface>
+                <simpleFaultGeometry>
+                    <gml:LineString>
+                        <gml:posList>
+                            -103.2241 38.4309 -103.2393 38.402 -103.2637 38.3694 -103.3046 38.3321 -103.3631 38.2979 -103.436 38.2692 -103.4967 38.22879999999999 -103.5699 38.1596 -103.5848 38.1508
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>
+                        60.0
+                    </dip>
+                    <upperSeismoDepth>
+                        0.0
+                    </upperSeismoDepth>
+                    <lowerSeismoDepth>
+                        15.0
+                    </lowerSeismoDepth>
+                </simpleFaultGeometry>
+            </surface>
+            <arbitraryMFD>
+                <magnitudes>
+                    6.56 6.608 6.656 6.704 6.752 6.8 6.848 6.896 6.944 6.992 7.04
+                </magnitudes>
+                <occurRates>
+                    2.36530157909473e-07 4.859354117280643e-07 8.507137622323855e-07 1.2691158011215963e-06 1.613362383835298e-06 1.747734605882021e-06 1.613362383835298e-06 1.2691158011215963e-06 8.507137622323855e-07 4.859354117280643e-07 2.36530157909473e-07
+                </occurRates>
+            </arbitraryMFD>
+            <rake>
+                -90.0
+            </rake>
+        </characteristicFaultSource>
+    </sourceModel>
+</nrml>

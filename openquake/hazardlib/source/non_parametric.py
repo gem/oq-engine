@@ -122,12 +122,15 @@ class NonParametricSeismicSource(BaseSeismicSource):
                 surfaces.extend(rup.surface.surfaces)
             else:
                 surfaces.append(rup.surface)
-        lons = []
-        lats = []
-        for surf in surfaces:
+        S = len(surfaces)
+        lons = numpy.zeros(2*S)
+        lats = numpy.zeros(2*S)
+        for i, surf in enumerate(surfaces):
             lo1, lo2, la1, la2 = surf.get_bounding_box()
-            lons.extend([lo1, lo2])
-            lats.extend([la1, la2])
+            lons[2*i] = lo1
+            lons[2*i + 1] = lo2
+            lats[2*i] = la1
+            lats[2*i + 1] = la2
         west, east, north, south = get_spherical_bounding_box(lons, lats)
         a1 = maxdist * KM_TO_DEGREES
         a2 = angular_distance(maxdist, north, south)
@@ -232,7 +235,6 @@ class NonParametricSeismicSource(BaseSeismicSource):
         points['lat'] = numpy.round(lats, 5)
         points = numpy.unique(points)
         mesh = Mesh(points['lon'], points['lat'])
-
         return mesh.get_convex_hull()
 
     def wkt(self):

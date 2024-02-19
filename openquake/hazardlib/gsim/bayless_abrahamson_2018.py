@@ -258,4 +258,5 @@ class BaylessAbrahamson2018(GMPE):
             mean[m] = (lin_component + nl_component)
             sigma[m], tau[m], phi[m] = _get_stddevs(C, ctx)
 
-    COEFFS = CoeffsTable(table=open(BA_COEFFS).read())
+    with open(BA_COEFFS) as f:
+        COEFFS = CoeffsTable(table=f.read())
