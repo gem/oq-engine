@@ -544,7 +544,7 @@ def project_reverse(lambda0, phi0, lons, lats):
     return xx, yy
 
 
-#@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])'])
+@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])'])
 def project_direct(lambda0, phi0, lons, lats):
     lambdas, phis = numpy.radians(lons), numpy.radians(lats)
     cos_phis = numpy.cos(phis)
