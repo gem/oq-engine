@@ -115,7 +115,7 @@ class MultiLine(object):
             N = len(mesh)  # 2 * number of lines
             us = np.zeros(N, np.float32)
             ws = np.zeros(N, np.float32)
-            for i, (t, u, w) in self.gen_tuw(mesh):
+            for i, (t, u, w) in enumerate(self.gen_tuw(mesh)):
                 us += (u + self.shift[i]) * w
                 ws += w
             self.u_max = np.abs(us / ws).max()
@@ -125,11 +125,11 @@ class MultiLine(object):
         """
         :yields: tuw arrays
         """
-        for i, idx in enumerate(self.soidx):
+        for idx in self.soidx:
             line = self.lines[idx]
             if self.flipped[idx]:
                 line = line.flipped
-            yield i, line.get_tuw(mesh)
+            yield line.get_tuw(mesh)
 
     # used in event based too
     def get_tu(self, mesh):
@@ -139,7 +139,7 @@ class MultiLine(object):
         L = len(self.lines)  # number of lines
         N = len(mesh)
         tuw = np.zeros((3, L, N), np.float32)
-        for i, tuw_i in self.gen_tuw(mesh):
+        for i, tuw_i in enumerate(self.gen_tuw(mesh)):
             tuw[:, i] = tuw_i
         return _get_tu(self.shift, tuw)
 
@@ -150,7 +150,7 @@ class MultiLine(object):
         ts = []
         us = []
         ws = []
-        for li, (t, u, w) in self.gen_tuw():
+        for li, (t, u, w) in enumerate(self.gen_tuw()):
             for s, sid in enumerate(sites.sids):
                 sids.append(sid)
                 ls.append(li)
