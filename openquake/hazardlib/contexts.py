@@ -22,6 +22,7 @@ import time
 import logging
 import warnings
 import itertools
+import operator
 import collections
 from unittest.mock import patch
 import numpy
@@ -66,6 +67,7 @@ DIST_BINS = sqrscale(80, 1000, NUM_BINS)
 MULTIPLIER = 150  # len(mean_stds arrays) / len(poes arrays)
 MEA = 0
 STD = 1
+bymag = operator.attrgetter('mag')
 # These coordinates were provided by M Gerstenberger (personal
 # communication, 10 August 2018)
 cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
@@ -83,7 +85,7 @@ def _get_tu(rup, secdists, mask):
     S, N = arr.shape[:2]
     # keep the flipped values and then reorder the surface indices
     # arr has shape (S, N, 2, 3) where 2 refer to the flipping
-    tuw = numpy.zeros((3, S, N))
+    tuw = numpy.zeros((3, S, N), F32)
     for s in range(S):
         idx = tor.soidx[s]
         flip = int(tor.flipped[idx])
@@ -966,9 +968,8 @@ class ContextMaker(object):
 
             r_sites = sites.filter(mask)
             # to debug you can insert here
-            # if rup.rup_id == 0:
-            #     print(rup.surface.get_tuw_df(r_sites))
-            #     import pdb; pdb.set_trace()
+            # print(rup.surface.tor.get_tuw_df(r_sites))
+            # import pdb; pdb.set_trace()
 
             ''' # sanity check
             true_rrup = rup.surface.get_min_distance(r_sites)
@@ -1054,7 +1055,9 @@ class ContextMaker(object):
                     shift_hypo=self.shift_hypo, step=step))
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
-                allrups = [rup for rup in allrups if minmag < rup.mag < maxmag]
+                allrups = sorted([rup for rup in allrups
+                                  if minmag < rup.mag < maxmag],
+                                 key=bymag)
                 if not allrups:
                     return iter([])
                 self.num_rups = len(allrups)

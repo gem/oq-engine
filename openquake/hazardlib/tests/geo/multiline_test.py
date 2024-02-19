@@ -31,12 +31,12 @@ class OneLineTestCase(unittest.TestCase):
         self.line = geo.Line([geo.Point(0.2, 0.05), geo.Point(0.0, 0.05)])
         self.ml = MultiLine([self.line])
 
-    def test_max_u(self):
+    def test_u_max(self):
         dst = geo.geodetic.geodetic_distance([self.line.points[0].longitude],
                                              [self.line.points[0].latitude],
                                              [self.line.points[1].longitude],
                                              [self.line.points[1].latitude])
-        np.testing.assert_allclose(self.ml.u_max, dst, atol=1e-4)
+        np.testing.assert_allclose(self.ml.set_u_max(), dst, atol=1e-4)
 
   
 class MultiLineTestCase(unittest.TestCase):
@@ -160,16 +160,16 @@ def get_lines_figure09():
     proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Section trace 1
-    px = np.array([8, -9])
-    py = np.array([-15, -11])
+    px = np.array([8, -9.])
+    py = np.array([-15, -11.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)
     lines.append(line)
 
     # Section trace 2
-    px = np.array([6, -9])
-    py = np.array([-10, -5])
+    px = np.array([6., -9.])
+    py = np.array([-10, -5.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)

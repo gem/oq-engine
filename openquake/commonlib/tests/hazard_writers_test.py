@@ -16,13 +16,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import os
 import io
-import tempfile
 import unittest
 from collections import namedtuple
-
+from openquake.baselib.general import gettemp
 from openquake.commonlib import hazard_writers as writers
 from openquake.commonlib.tests import _utils as utils, check_equal
 
@@ -30,18 +27,6 @@ HazardCurveData = namedtuple('HazardCurveData', 'location, poes')
 UHSData = namedtuple('UHSData', 'location, imls')
 Location = namedtuple('Location', 'x, y')
 GmfNode = namedtuple('GmfNode', 'gmv, location')
-
-path = None
-
-
-def setUpModule():
-    global path
-    path = tempfile.NamedTemporaryFile().name
-
-
-def tearDownModule():
-    if sys.exc_info()[0] is None and os.path.exists(path):  # remove TMP
-        os.remove(path)
 
 
 class SES(object):
@@ -229,6 +214,7 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
             sa_period=0.025, sa_damping=5.0, smlt_path='b1_b2_b4',
             gsimlt_path='b1_b4_b5'
         )
+        path = gettemp(suffix='.xml')
         writer = writers.HazardCurveXMLWriter(path, **metadata)
         writer.serialize(self.data)
         check_equal(__file__, 'expected_hazard_curves.xml', path)
@@ -240,6 +226,7 @@ class HazardCurveWriterSerializeTestCase(HazardCurveWriterTestCase):
             sa_period=0.025, sa_damping=5.0, statistics='quantile',
             quantile_value=0.15
         )
+        path = gettemp(suffix='.xml')
         writer = writers.HazardCurveXMLWriter(path, **metadata)
         writer.serialize(self.data)
         check_equal(__file__, 'expected_quantile_curves.xml', path)
@@ -260,6 +247,7 @@ class HazardMapWriterTestCase(HazardWriterTestCase):
             investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
             sa_damping=5.0, smlt_path='b1_b2_b4', gsimlt_path='b1_b4_b5'
         )
+        path = gettemp(suffix='.xml')
         writer = writers.HazardMapXMLWriter(path, **metadata)
         writer.serialize(self.data)
         check_equal(__file__, 'expected_hazard_map.xml',  path)
@@ -269,6 +257,7 @@ class HazardMapWriterTestCase(HazardWriterTestCase):
             investigation_time=50.0, imt='SA', poe=0.1, sa_period=0.025,
             sa_damping=5.0, statistics='quantile', quantile_value=0.85
         )
+        path = gettemp(suffix='.xml')
         writer = writers.HazardMapXMLWriter(path, **metadata)
         writer.serialize(self.data)
 
@@ -398,6 +387,7 @@ class UHSXMLWriterTestCase(unittest.TestCase):
         )
 
     def test_serialize(self):
+        path = gettemp(suffix='.xml')
         writer = writers.UHSXMLWriter(path, **self.metadata)
         writer.serialize(self.data)
         utils.assert_xml_equal(self.expected_xml, path)
@@ -407,6 +397,7 @@ class UHSXMLWriterTestCase(unittest.TestCase):
         del self.metadata['gsimlt_path']
         self.metadata['statistics'] = 'mean'
 
+        path = gettemp(suffix='.xml')
         writer = writers.UHSXMLWriter(path, **self.metadata)
         writer.serialize(self.data)
         utils.assert_xml_equal(self.expected_mean_xml, path)
@@ -417,6 +408,7 @@ class UHSXMLWriterTestCase(unittest.TestCase):
         self.metadata['statistics'] = 'quantile'
         self.metadata['quantile_value'] = 0.95
 
+        path = gettemp(suffix='.xml')
         writer = writers.UHSXMLWriter(path, **self.metadata)
         writer.serialize(self.data)
         utils.assert_xml_equal(self.expected_quantile_xml, path)

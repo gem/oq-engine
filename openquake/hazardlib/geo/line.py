@@ -163,26 +163,33 @@ class Line(object):
     """
 
     @classmethod
-    def from_coo(cls, coo, flip=False):
+    def from_coo(cls, coo):
         """
         Build a Line object for an array of coordinates, assuming they have
         e been cleaned already, i.e. there are no adjacent duplicate points
         """
         self = cls.__new__(cls)
-        if flip:
-            self.coo = np.flip(coo, axis=0)
-        else:
-            self.coo = coo
+        self.init(coo)
         return self
 
     def __init__(self, points):
         points = utils.clean_points(points)  # can remove points!
-        self.coo = np.array([[p.x, p.y, p.z] for p in points])
+        self.init(np.array([[p.x, p.y, p.z] for p in points]))
 
-    @cached_property
-    def proj(self):
-        return utils.OrthographicProjection.from_lons_lats(
+    def init(self, coo):
+        self.coo = coo
+        self.proj = utils.OrthographicProjection.from_lons_lats(
             self.coo[:, 0], self.coo[:, 1])
+        if len(coo) == 2:  # segment
+            p0, p1 = self.points
+            self.length = p0.distance(p1)
+            self.azimuth = p0.azimuth(p1)
+        else:
+            self.length = np.sum(self.get_lengths())
+            azimuths = self.get_azimuths()
+            distances = geodetic.geodetic_distance(
+                coo[:-1, 0], coo[:-1, 1], coo[1:, 0], coo[1:, 1])
+            self.azimuth = utils.angular_mean(azimuths, distances) % 360
 
     @property
     def points(self):
@@ -225,6 +232,15 @@ class Line(object):
         s02eq_s089n
         >>> print(line.flip())
         s089n_s02eq
+        >>> line.get_azimuths()
+        [0.0]
+        >>> line.flip().get_azimuths()
+        [180.0]
+        >>> line = Line([Point(1, 0), Point(2, 0)])
+        >>> line.get_azimuths()
+        [90.0]
+        >>> line.flip().get_azimuths()
+        [270.0]
         """
         return self.from_coo(np.flip(self.coo, axis=0))
 
@@ -261,10 +277,10 @@ class Line(object):
 
     def get_azimuths(self):
         """
-        Return the azimuths of all the segments omposing the polyline
+        Return the azimuths of all the segments composing the polyline
         """
         if len(self.coo) == 2:
-            return self[0].azimuth(self[1])
+            return [self[0].azimuth(self[1])]
         lons = self.coo[:, 0]
         lats = self.coo[:, 1]
         return geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
@@ -285,12 +301,7 @@ class Line(object):
         >>> '%.1f' % line.average_azimuth()
         '300.0'
         """
-        azimuths = self.get_azimuths()
-        lons = self.coo[:, 0]
-        lats = self.coo[:, 1]
-        distances = geodetic.geodetic_distance(lons[:-1], lats[:-1],
-                                               lons[1:], lats[1:])
-        return get_average_azimuth(azimuths, distances)
+        return self.azimuth
 
     def resample(self, sect_len: float, orig_extremes=False):
         """
@@ -334,7 +345,7 @@ class Line(object):
         :returns:
             Total length in km.
         """
-        return np.sum(self.get_lengths())
+        return self.length
 
     def keep_corners(self, delta):
         """
@@ -411,7 +422,7 @@ class Line(object):
         # Now compute T and U
         t_upp, u_upp = get_tuw(ui, ti, slen, weights)
         t_upp[iot] = 0.0
-        return np.array([t_upp, u_upp, weights.sum(axis=0)])
+        return np.array([t_upp, u_upp, weights.sum(axis=0)], np.float32)
 
     def get_ui_ti(self, mesh, uhat, that):
         """
@@ -465,30 +476,7 @@ class Line(object):
         return utils.geohash5(self.coo)
 
 
-def get_average_azimuth(azimuths, distances) -> float:
-    """
-    Computes the average azimuth.
-
-    :param azimuths:
-        A :class:`numpy.ndarray` instance
-    :param distances:
-        A :class:`numpy.ndarray` instance
-    :return:
-        A float with the mean azimuth in decimal degrees
-    """
-    azimuths = np.radians(azimuths)
-    # convert polar coordinates to Cartesian ones and calculate
-    # the average coordinate of each component
-    avg_x = np.mean(distances * np.sin(azimuths))
-    avg_y = np.mean(distances * np.cos(azimuths))
-    # find the mean azimuth from that mean vector
-    azimuth = np.degrees(np.arctan2(avg_x, avg_y))
-    if azimuth < 0:
-        azimuth += 360
-    return azimuth
-
-
-@compile('(f8[:,:],f8[:,:],f8[:], f8[:,:])')
+@compile('(f8[:,:],f8[:,:],f8[:],f8[:,:])')
 def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
@@ -566,7 +554,9 @@ def get_versor(arr):
     """
     Returns the versor (i.e. a unit vector) of a vector
     """
-    return (arr.T / np.linalg.norm(arr, axis=1)).T
+    norm = np.linalg.norm(arr, axis=1)
+    assert (norm > 0).all(), norm
+    return (arr.T / norm).T
 
 
 @compile("(f8[:],f8[:],f8[:],f8)")
