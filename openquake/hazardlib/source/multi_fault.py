@@ -40,9 +40,8 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 U16 = np.uint16
 F32 = np.float32
 F64 = np.float64
-BLOCKSIZE = 2000
-# NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
-# however it uses a lot of RAM in classical when reading the sources
+BLOCKSIZE = 10_000
+# NB: if too large, very few sources will be generated
 
 
 class MultiFaultSource(BaseSeismicSource):
