@@ -84,7 +84,7 @@ class MultiFaultSource(BaseSeismicSource):
         # the results are STRONGLY dependent on the precision,
         # in particular the AELO tests for CHN would break
         self.probs_occur = F64(occurrence_probs)  # 64 bit!
-        self.mags = np.round(F32(magnitudes))
+        self.mags = F32(magnitudes)
         self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
         self.investigation_time = investigation_time
