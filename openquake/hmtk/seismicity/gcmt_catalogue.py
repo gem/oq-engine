@@ -558,7 +558,7 @@ class GCMTCatalogue(Catalogue):
                     'rake1': tensor.nodal_planes.nodal_plane_1['rake'],
                     'str2': tensor.nodal_planes.nodal_plane_2['strike'],
                     'dip2': tensor.nodal_planes.nodal_plane_2['dip'],
-                    'rake2': tensor.nodal_planes.nodal_plane_2['rake']}
+                    'rake2': tensor.nodal_planes.nodal_plane_2['rake']
                 }
 
                 if centroid_location:
