@@ -69,7 +69,7 @@ def get_flipped(llens, avgaz):
 def get_avg_azim_flipped(lines):
     # compute the overall strike and the origin of the multiline
     # get lenghts and average azimuths
-    llenghts = np.array([ln.get_length() for ln in lines])
+    llenghts = np.array([ln.length for ln in lines])
     if all(len(ln) == 2 for ln in lines):
         # fast lane for the engine
         coos = np.array([ln.coo for ln in lines])
