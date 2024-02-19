@@ -83,7 +83,7 @@ def _get_tu(rup, secdists, mask):
     S, N = arr.shape[:2]
     # keep the flipped values and then reorder the surface indices
     # arr has shape (S, N, 2, 3) where 2 refer to the flipping
-    tuw = numpy.zeros((3, S, N))
+    tuw = numpy.zeros((3, S, N), F32)
     for s in range(S):
         idx = tor.soidx[s]
         flip = int(tor.flipped[idx])

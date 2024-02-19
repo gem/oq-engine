@@ -22,25 +22,41 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 import numpy as np
 import pandas as pd
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import utils
+from openquake.hazardlib.geo import utils, geodetic
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import Line, get_average_azimuth
+from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
-def get_endpoints(lines):
+def get_endpoints(coos):
     """
     :returns a mesh of shape 2L
     """
-    L = len(lines)
-    lons = np.zeros(2*L)
-    lats = np.zeros(2*L)
-    for i, line in enumerate(lines):
-        lons[2*i] = line.coo[0, 0]
-        lons[2*i + 1] = line.coo[-1, 0]
-        lats[2*i] = line.coo[0, 1]
-        lats[2*i + 1] = line.coo[-1, 1]
+    lons = np.concatenate([coo[[0, -1], 0] for coo in coos])  # shape 2L
+    lats = np.concatenate([coo[[0, -1], 1] for coo in coos])  # shape 2L
     return Mesh(lons, lats)
+
+
+def get_avg_azim_flipped(lines):
+    # compute the overall strike and the origin of the multiline
+    # get lenghts and average azimuths
+    llenghts = np.array([ln.get_length() for ln in lines])
+    if all(len(ln) == 2 for ln in lines):
+        # fast lane for the engine
+        coos = np.array([ln.coo for ln in lines])
+        avgaz = geodetic.azimuths(coos) 
+    else:
+        # slow lane, only for some tests in hazardlib
+        avgaz = np.array([line.average_azimuth() for line in lines])
+
+    # determine the flipped lines
+    flipped = get_flipped(llenghts, avgaz)
+    
+    # Compute the average azimuth
+    for i in np.nonzero(flipped)[0]:
+        avgaz[i] = (avgaz[i] + 180) % 360  # opposite azimuth
+    avg_azim = utils.angular_mean(avgaz, llenghts) % 360
+    return avg_azim, flipped
 
 
 class MultiLine(object):
@@ -51,36 +67,28 @@ class MultiLine(object):
     """
     def __init__(self, lines, u_max=None):
         self.coos = [ln.coo for ln in lines]
+        avg_azim, self.flipped = get_avg_azim_flipped(lines)
+        ep = get_endpoints(self.coos)
+        olon, olat, self.soidx = get_origin(ep, avg_azim)
 
-        # compute the overall strike and the origin of the multiline
-        # get lenghts and average azimuths
-        llenghts = np.array([ln.get_length() for ln in lines])
-        avgaz = np.array([line.average_azimuth() for line in lines])
+        # compute the shift with respect to the origins
+        origins = []
+        for idx in self.soidx:
+            flip = int(self.flipped[idx])
+            # if the line is flipped take the point 1 instead of 0
+            origins.append(lines[idx].coo[flip])
+        self.shift = get_coordinate_shift(
+            np.array(origins), olon, olat, avg_azim)
+        self.u_max = u_max
 
-        # determine the flipped lines
-        self.flipped = get_flipped(lines, llenghts, avgaz)
-
-        # Compute the prevalent azimuth
-        avgazims_corr = np.copy(avgaz)
-        for i in np.nonzero(self.flipped)[0]:
-            lines[i] = lines[i].flip()
-            avgazims_corr[i] = lines[i].average_azimuth()
-        avg_azim = get_average_azimuth(avgazims_corr, llenghts)
-        strike_east = (avg_azim > 0) & (avg_azim <= 180)
-
-        ep = get_endpoints(lines)
-        olon, olat, self.soidx = get_origin(ep, strike_east, avg_azim)
-
-        # Reorder the lines according to the origin and compute the shift
-        lines = [lines[i] for i in self.soidx]
-        self.shift = get_coordinate_shift(lines, olon, olat, avg_azim)
-    
-        if u_max is None:
-            # this is the expensive operation
-            ts, us = self.get_tu(get_endpoints(lines))
+    def set_u_max(self):
+        """
+        If not already computed, compute .u_max, set it and return it.
+        """
+        if self.u_max is None:
+            _, us = self.get_tu(get_endpoints(self.coos))
             self.u_max = np.abs(us).max()
-        else:
-            self.u_max = u_max
+        return self.u_max
 
     # used in event based too
     def get_tu(self, mesh):
@@ -89,7 +97,7 @@ class MultiLine(object):
         """
         S = len(self.coos)  # number of lines == number of surfaces
         N = len(mesh)
-        tuw = np.zeros((3, S, N))
+        tuw = np.zeros((3, S, N), np.float32)
         for s in range(S):
             idx = self.soidx[s]
             coo = self.coos[idx]
@@ -127,12 +135,12 @@ class MultiLine(object):
         return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
 
 
-def get_flipped(lines, llens, avgaz):
+def get_flipped(llens, avgaz):
     """
     :returns: a boolean array with the flipped lines
     """
     # Find general azimuth trend
-    ave = get_average_azimuth(avgaz, llens)
+    ave = utils.angular_mean(avgaz, llens) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
@@ -158,7 +166,7 @@ def get_flipped(lines, llens, avgaz):
     return flipped
 
 
-def get_origin(ep, strike_to_east: bool, avg_strike: float):
+def get_origin(ep: Mesh, avg_strike: float):
     """
     Compute the origin necessary to calculate the coordinate shift
 
@@ -174,6 +182,7 @@ def get_origin(ep, strike_to_east: bool, avg_strike: float):
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
     DELTA = 0.1
+    strike_to_east = (avg_strike > 0) & (avg_strike <= 180)
     if strike_to_east or abs(avg_strike) < DELTA:
         idx = np.argmin(px)
     else:
@@ -199,7 +208,7 @@ def get_origin(ep, strike_to_east: bool, avg_strike: float):
     return olon[0], olat[0], sort_idxs
 
 
-def get_coordinate_shift(lines: list, olon: float, olat: float,
+def get_coordinate_shift(origins: list, olon: float, olat: float,
                          overall_strike: float) -> np.ndarray:
     """
     Computes the coordinate shift for each line in the multiline. This is
@@ -209,20 +218,16 @@ def get_coordinate_shift(lines: list, olon: float, olat: float,
         A :class:`np.ndarray`instance with cardinality equal to the number of
         sections (i.e. the length of the lines list in input)
     """
-    # For each line in the multi line, get the distance along the average
-    # strike between the origin of the multiline and the first endnode
-    origins = np.array([[lin.coo[0, 0], lin.coo[0, 1]] for lin in lines])
-
     # Distances and azimuths between the origin of the multiline and the
     # first endpoint
     distances = geodetic_distance(olon, olat, origins[:, 0], origins[:, 1])
     azimuths = azimuth(olon, olat, origins[:, 0], origins[:, 1])
 
     # Calculate the shift along the average strike direction
-    return np.cos(np.radians(overall_strike - azimuths))*distances
+    return np.float32(np.cos(np.radians(overall_strike - azimuths)) * distances)
 
 
-@compile('f8[:],f8[:,:,:]')
+@compile('f4[:],f4[:,:,:]')
 def _get_tu(shift, tuw):
     # `shift` has shape S and `tuw` shape (3, S, N)
     S, N = tuw.shape[1:]
