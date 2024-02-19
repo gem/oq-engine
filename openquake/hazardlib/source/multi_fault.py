@@ -40,8 +40,9 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 U16 = np.uint16
 F32 = np.float32
 F64 = np.float64
-BLOCKSIZE = 10_000
-# NB: if too large, very few sources will be generated
+BLOCKSIZE = 2_000
+# NB: if too large, very few sources will be generated and a lot of
+# memory will be used
 
 
 class MultiFaultSource(BaseSeismicSource):
