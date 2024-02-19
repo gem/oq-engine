@@ -550,18 +550,25 @@ def project_direct(lambda0, phi0, lons, lats):
     cos_phis = numpy.cos(phis)
     cos_phi0 = math.cos(phi0)
     lambdas -= lambda0
-    # calculate the sin of the distance between projection center
-    # and each of the points to project
-    if hasattr(lons, '__len__'):
-        sin_dist = numpy.sqrt(
-            numpy.sin((phi0 - phis) / 2.0) ** 2.0
-            + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
-        if (sin_dist > SQRT).any():
-            raise ValueError('some points are too far from the projection')
     xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
     yy = (cos_phi0 * numpy.sin(phis) - math.sin(phi0) * cos_phis
           * numpy.cos(lambdas)) * EARTH_RADIUS
     return xx, yy
+
+
+def project_check(lambda0, phi0, lons, lats):
+    lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+    cos_phis = numpy.cos(phis)
+    cos_phi0 = math.cos(phi0)
+    lambdas -= lambda0
+    # calculate the sin of the distance between projection center
+    # and each of the points to project
+    sin_dist = numpy.sqrt(
+        numpy.sin((phi0 - phis) / 2.0) ** 2.0
+        + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
+    if (sin_dist > SQRT).any():
+        raise ValueError('some points are too far from the projection')
+    return project_direct(lambda0, phi0, lons, lats)
 
 
 class OrthographicProjection(object):
@@ -614,10 +621,12 @@ class OrthographicProjection(object):
         self.lam0, self.phi0 = numpy.radians(
             get_middle_point(west, north, east, south))
 
-    def __call__(self, lons, lats, deps=None, reverse=False):
+    def __call__(self, lons, lats, deps=None, reverse=False, check=False):
         if reverse:
             xx, yy = project_reverse(self.lam0, self.phi0, lons, lats)
-        else:
+        elif check:
+            xx, yy = project_check(self.lam0, self.phi0, lons, lats)
+        else:  # fast lane
             xx, yy = project_direct(self.lam0, self.phi0, lons, lats)
         if deps is None:
             return numpy.array([xx, yy])

@@ -183,7 +183,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         lons = numpy.array([90.])
         lats = numpy.array([-45.])
         with self.assertRaises(ValueError) as ar:
-            proj(lons, lats)
+            proj(lons, lats, check=True)
         self.assertEqual(str(ar.exception),
                          'some points are too far from the projection')
 
@@ -212,7 +212,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         south = -1
         proj = utils.OrthographicProjection(west, east, north, south)
         lons = numpy.array([179.0, -179.0])
-        lats = numpy.array([-1, 1])
+        lats = numpy.array([-1., 1])
         xx, yy = proj(lons, lats)
         comp_lons, comp_lats = proj(xx, yy, reverse=True)
         numpy.testing.assert_allclose(lons, comp_lons)
