@@ -230,7 +230,7 @@ class NonParametricSeismicSource(BaseSeismicSource):
         lons = numpy.extract(condition, lons)
         lats = numpy.extract(condition, lats)
 
-        points = numpy.zeros(len(lons), [('lon', F32), ('lat', F32)])
+        points = numpy.zeros(len(lons), [('lon', float), ('lat', float)])
         points['lon'] = numpy.round(lons, 5)
         points['lat'] = numpy.round(lats, 5)
         points = numpy.unique(points)

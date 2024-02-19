@@ -160,16 +160,16 @@ def get_lines_figure09():
     proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Section trace 1
-    px = np.array([8, -9])
-    py = np.array([-15, -11])
+    px = np.array([8, -9.])
+    py = np.array([-15, -11.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)
     lines.append(line)
 
     # Section trace 2
-    px = np.array([6, -9])
-    py = np.array([-10, -5])
+    px = np.array([6., -9.])
+    py = np.array([-10, -5.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)

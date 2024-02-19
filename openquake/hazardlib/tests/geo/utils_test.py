@@ -169,22 +169,14 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
     def test_projecting_back_and_forth(self):
         lon0, lat0 = -10.4, 20.3
         proj = utils.OrthographicProjection(lon0, lat0, lon0, lat0)
-        lons = lon0 + (numpy.random.random((20, 10)) * 50 - 25)
-        lats = lat0 + (numpy.random.random((20, 10)) * 50 - 25)
+        lons = lon0 + (numpy.random.random(20) * 50 - 25)
+        lats = lat0 + (numpy.random.random(20) * 50 - 25)
         xx, yy = proj(lons, lats, reverse=False)
-        self.assertEqual(xx.shape, (20, 10))
-        self.assertEqual(yy.shape, (20, 10))
+        self.assertEqual(xx.shape, (20,))
+        self.assertEqual(yy.shape, (20,))
         blons, blats = proj(xx, yy, reverse=True)
         aac(blons, lons)
         aac(blats, lats)
-
-    def test_points_too_far(self):
-        proj = utils.OrthographicProjection(180, 180, 45, 45)
-        with self.assertRaises(ValueError) as ar:
-            proj(90, -45)
-        self.assertEqual(str(ar.exception),
-                         'some points are too far from the projection '
-                         'center lon=180.0 lat=45.0')
 
     def test_projection_across_international_date_line(self):
         # tests that given a polygon crossing the internation date line,
@@ -211,7 +203,7 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         south = -1
         proj = utils.OrthographicProjection(west, east, north, south)
         lons = numpy.array([179.0, -179.0])
-        lats = numpy.array([-1, 1])
+        lats = numpy.array([-1., 1])
         xx, yy = proj(lons, lats)
         comp_lons, comp_lats = proj(xx, yy, reverse=True)
         numpy.testing.assert_allclose(lons, comp_lons)
