@@ -19,6 +19,7 @@
  Module :mod:`openquake.hazardlib.geo.line` defines :class:`Line`.
 """
 import numpy as np
+from openquake.baselib.general import cached_property
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import geodetic, utils, Point
 
@@ -179,7 +180,6 @@ class Line(object):
         self.coo = coo
         self.proj = utils.OrthographicProjection.from_lons_lats(
             self.coo[:, 0], self.coo[:, 1])
-        self.tu_hat = self._get_tu_hat()
         if len(coo) == 2:  # segment
             p0, p1 = self.points
             self.length = p0.distance(p1)
@@ -448,7 +448,8 @@ class Line(object):
             ti[i, :] = tmp @ that[i, 0:2]
         return ui, ti
 
-    def _get_tu_hat(self):
+    @cached_property
+    def tu_hat(self):
         """
         Return the unit vectors defining the local origin for each segment of
         the trace.
@@ -553,7 +554,9 @@ def get_versor(arr):
     """
     Returns the versor (i.e. a unit vector) of a vector
     """
-    return (arr.T / np.linalg.norm(arr, axis=1)).T
+    norm = np.linalg.norm(arr, axis=1)
+    assert (norm > 0).all(), norm
+    return (arr.T / norm).T
 
 
 @compile("(f8[:],f8[:],f8[:],f8)")
