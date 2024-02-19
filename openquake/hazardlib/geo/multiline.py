@@ -22,7 +22,7 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 import numpy as np
 import pandas as pd
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import utils, geodetic
+from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
@@ -36,25 +36,25 @@ def get_endpoints(lines):
     return Mesh(lons, lats)
 
 
-def get_flipped(llens, avgaz):
+def get_flipped(llens, azimuths):
     """
     :returns: a boolean array with the flipped lines
     """
     # Find general azimuth trend
-    ave = utils.angular_mean(avgaz, llens) % 360
+    ave = utils.angular_mean(azimuths, llens) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
-    flipped = np.zeros((len(avgaz)), dtype=bool)
+    flipped = np.zeros((len(azimuths)), dtype=bool)
     if (ave >= 90) & (ave <= 270):
         # This is the case where the average azimuth in the second or third
         # quadrant
-        idx = (avgaz >= (ave - 90) % 360) & (avgaz < (ave + 90) % 360)
+        idx = (azimuths >= (ave - 90) % 360) & (azimuths < (ave + 90) % 360)
     else:
         # In this case the average azimuth points toward the northern emisphere
-        idx = (avgaz >= (ave - 90) % 360) | (avgaz < (ave + 90) % 360)
+        idx = (azimuths >= (ave - 90) % 360) | (azimuths < (ave + 90) % 360)
 
-    delta = abs(avgaz - ave)
+    delta = abs(azimuths - ave)
     scale = np.abs(np.cos(np.radians(delta)))
     ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
 
@@ -69,14 +69,8 @@ def get_flipped(llens, avgaz):
 def get_avg_azim_flipped(lines):
     # compute the overall strike and the origin of the multiline
     # get lenghts and average azimuths
-    llenghts = np.array([ln.get_length() for ln in lines])
-    if all(len(ln) == 2 for ln in lines):
-        # fast lane for the engine
-        coos = np.array([ln.coo for ln in lines])
-        azimuths = geodetic.azimuths(coos) 
-    else:
-        # slow lane, only for some tests in hazardlib
-        azimuths = np.array([line.average_azimuth() for line in lines])
+    llenghts = np.array([ln.length for ln in lines])
+    azimuths = np.array([line.azimuth for line in lines])
 
     # determine the flipped lines
     flipped = get_flipped(llenghts, azimuths)
