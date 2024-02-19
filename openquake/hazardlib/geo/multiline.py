@@ -22,40 +22,65 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 import numpy as np
 import pandas as pd
 from openquake.baselib.performance import compile
-from openquake.hazardlib.geo import utils, geodetic
+from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import Line
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
-def get_endpoints(coos):
+def get_endpoints(lines):
     """
     :returns a mesh of shape 2L
     """
-    lons = np.concatenate([coo[[0, -1], 0] for coo in coos])  # shape 2L
-    lats = np.concatenate([coo[[0, -1], 1] for coo in coos])  # shape 2L
+    lons = np.concatenate([ln.coo[[0, -1], 0] for ln in lines])  # shape 2L
+    lats = np.concatenate([ln.coo[[0, -1], 1] for ln in lines])  # shape 2L
     return Mesh(lons, lats)
+
+
+def get_flipped(llens, azimuths):
+    """
+    :returns: a boolean array with the flipped lines
+    """
+    # Find general azimuth trend
+    ave = utils.angular_mean(azimuths, llens) % 360
+
+    # Find the sections whose azimuth direction is not consistent with the
+    # average one
+    flipped = np.zeros((len(azimuths)), dtype=bool)
+    if (ave >= 90) & (ave <= 270):
+        # This is the case where the average azimuth in the second or third
+        # quadrant
+        idx = (azimuths >= (ave - 90) % 360) & (azimuths < (ave + 90) % 360)
+    else:
+        # In this case the average azimuth points toward the northern emisphere
+        idx = (azimuths >= (ave - 90) % 360) | (azimuths < (ave + 90) % 360)
+
+    delta = abs(azimuths - ave)
+    scale = np.abs(np.cos(np.radians(delta)))
+    ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
+
+    strike_to_east = ratio > 0.5
+    if strike_to_east:
+        flipped[~idx] = True
+    else:
+        flipped[idx] = True
+    return flipped
 
 
 def get_avg_azim_flipped(lines):
     # compute the overall strike and the origin of the multiline
     # get lenghts and average azimuths
-    llenghts = np.array([ln.get_length() for ln in lines])
-    if all(len(ln) == 2 for ln in lines):
-        # fast lane for the engine
-        coos = np.array([ln.coo for ln in lines])
-        avgaz = geodetic.azimuths(coos) 
-    else:
-        # slow lane, only for some tests in hazardlib
-        avgaz = np.array([line.average_azimuth() for line in lines])
+    llenghts = np.array([ln.length for ln in lines])
+    azimuths = np.array([line.azimuth for line in lines])
 
     # determine the flipped lines
-    flipped = get_flipped(llenghts, avgaz)
+    flipped = get_flipped(llenghts, azimuths)
     
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
-        avgaz[i] = (avgaz[i] + 180) % 360  # opposite azimuth
-    avg_azim = utils.angular_mean(avgaz, llenghts) % 360
+        if not hasattr(lines[i], 'flipped'):
+            lines[i].flipped = lines[i].flip()
+        azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
+    avg_azim = utils.angular_mean(azimuths, llenghts) % 360
     return avg_azim, flipped
 
 
@@ -66,9 +91,9 @@ class MultiLine(object):
     method.
     """
     def __init__(self, lines, u_max=None):
-        self.coos = [ln.coo for ln in lines]
+        self.lines = lines
         avg_azim, self.flipped = get_avg_azim_flipped(lines)
-        ep = get_endpoints(self.coos)
+        ep = get_endpoints(lines)
         olon, olat, self.soidx = get_origin(ep, avg_azim)
 
         # compute the shift with respect to the origins
@@ -86,84 +111,57 @@ class MultiLine(object):
         If not already computed, compute .u_max, set it and return it.
         """
         if self.u_max is None:
-            _, us = self.get_tu(get_endpoints(self.coos))
-            self.u_max = np.abs(us).max()
+            mesh = get_endpoints(self.lines)
+            N = len(mesh)  # 2 * number of lines
+            us = np.zeros(N, np.float32)
+            ws = np.zeros(N, np.float32)
+            for i, (t, u, w) in enumerate(self.gen_tuw(mesh)):
+                us += (u + self.shift[i]) * w
+                ws += w
+            self.u_max = np.abs(us / ws).max()
         return self.u_max
+
+    def gen_tuw(self, mesh):
+        """
+        :yields: tuw arrays
+        """
+        for idx in self.soidx:
+            line = self.lines[idx]
+            if self.flipped[idx]:
+                line = line.flipped
+            yield line.get_tuw(mesh)
 
     # used in event based too
     def get_tu(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        S = len(self.coos)  # number of lines == number of surfaces
+        L = len(self.lines)  # number of lines
         N = len(mesh)
-        tuw = np.zeros((3, S, N), np.float32)
-        for s in range(S):
-            idx = self.soidx[s]
-            coo = self.coos[idx]
-            if self.flipped[idx]:
-                coo = np.flipud(coo)
-            tuw[:, s] = Line.from_coo(coo).get_tuw(mesh)
+        tuw = np.zeros((3, L, N), np.float32)
+        for i, tuw_i in enumerate(self.gen_tuw(mesh)):
+            tuw[:, i] = tuw_i
         return _get_tu(self.shift, tuw)
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
-        idxs = []
         sids = []
+        ls = []
         ts = []
         us = []
         ws = []
-        ls = []
-        for idx in self.soidx:
-            coo = self.coos[idx]
-            if self.flipped[idx]:
-                coo = np.flipud(coo)
-            line = Line.from_coo(coo)
-            sline = str(line)
-            tu, uu, we = line.get_tuw(sites)
+        for li, (t, u, w) in enumerate(self.gen_tuw()):
             for s, sid in enumerate(sites.sids):
-                idxs.append(idx)
                 sids.append(sid)
-                ts.append(tu[s])
-                us.append(uu[s])
-                ws.append(we[s])
-                ls.append(sline)
-        dic = dict(sec=idxs, sid=sids, line=ls, t=ts, u=us, w=ws)
+                ls.append(li)
+                ts.append(t[s])
+                us.append(u[s])
+                ws.append(w[s])
+        dic = dict(sid=sids, li=ls, t=ts, u=us, w=ws)
         return pd.DataFrame(dic)
 
     def __str__(self):
-        return ';'.join(str(Line.from_coo(coo)) for coo in self.coos)
-
-
-def get_flipped(llens, avgaz):
-    """
-    :returns: a boolean array with the flipped lines
-    """
-    # Find general azimuth trend
-    ave = utils.angular_mean(avgaz, llens) % 360
-
-    # Find the sections whose azimuth direction is not consistent with the
-    # average one
-    flipped = np.zeros((len(avgaz)), dtype=bool)
-    if (ave >= 90) & (ave <= 270):
-        # This is the case where the average azimuth in the second or third
-        # quadrant
-        idx = (avgaz >= (ave - 90) % 360) & (avgaz < (ave + 90) % 360)
-    else:
-        # In this case the average azimuth points toward the northern emisphere
-        idx = (avgaz >= (ave - 90) % 360) | (avgaz < (ave + 90) % 360)
-
-    delta = abs(avgaz - ave)
-    scale = np.abs(np.cos(np.radians(delta)))
-    ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
-
-    strike_to_east = ratio > 0.5
-    if strike_to_east:
-        flipped[~idx] = True
-    else:
-        flipped[idx] = True
-
-    return flipped
+        return ';'.join(str(ln) for ln in self.lines)
 
 
 def get_origin(ep: Mesh, avg_strike: float):
@@ -229,11 +227,11 @@ def get_coordinate_shift(origins: list, olon: float, olat: float,
 
 @compile('f4[:],f4[:,:,:]')
 def _get_tu(shift, tuw):
-    # `shift` has shape S and `tuw` shape (3, S, N)
-    S, N = tuw.shape[1:]
+    # `shift` has shape L and `tuw` shape (3, L, N)
+    L, N = tuw.shape[1:]
     tN, uN = np.zeros(N), np.zeros(N)
     W = tuw[2].sum(axis=0)  # shape N
-    for s in range(S):
+    for s in range(L):
         t, u, w = tuw[:, s]  # shape N
         tN += t * w
         uN += (u + shift[s]) * w

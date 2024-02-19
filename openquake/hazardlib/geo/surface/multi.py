@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.surface.multi` defines
 """
 import numpy as np
 from shapely.geometry import Polygon
+from openquake.baselib.performance import Monitor
 from openquake.hazardlib.geo.surface.base import BaseSurface
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo import utils
@@ -31,6 +32,7 @@ MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
            'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south',
             'hp0', 'hp1', 'hp2']
 MS_DT = [(p, np.float32) for p in MSPARAMS]
+F32 = np.float32
 
 
 def build_secparams(sections):
@@ -63,40 +65,47 @@ def build_secparams(sections):
     return secparams
 
 
-def build_msparams(rupture_idxs, secparams):
+def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
     """
     :returns: a structured array of parameters
     """
-    U = len(rupture_idxs)
+    U = len(rupture_idxs)  # number of ruptures
     msparams = np.zeros(U, MS_DT)
-    for msparam, idxs in zip(msparams, rupture_idxs):
-        secparam = secparams[idxs]
 
-        # building simple multisurface params
-        areas = secparam['area']
-        msparam['area'] = areas.sum()
-        ws = areas / msparam['area']  # weights
-        msparam['dip'] = ws @ secparam['dip']
-        msparam['strike'] = utils.angular_mean(secparam['strike'], ws) % 360
-        msparam['width'] = ws @ secparam['width']
-        msparam['ztor'] = ws @ secparam['ztor']
-        msparam['zbot'] = ws @ secparam['zbot']
+    # building lines
+    with mon1:
+        lines = []
+        for secparam in secparams:
+            tl0, tl1, tr0, tr1 = secparam[['tl0', 'tl1', 'tr0', 'tr1']]
+            line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
+            lines.append(line)
 
-        # building u_max
-        tors = []
-        for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-            coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
-            tors.append(geo.Line.from_coo(coo))
-        msparam['u_max'] = geo.MultiLine(tors).set_u_max()
+    with mon2:
+        for msparam, idxs in zip(msparams, rupture_idxs):
+            secparam = secparams[idxs]
 
-        # building bounding box
-        lons = np.concatenate([secparam['west'], secparam['east']])
-        lats = np.concatenate([secparam['north'], secparam['south']])
-        bb = utils.get_spherical_bounding_box(lons, lats)
-        msparam['west'] = bb[0]
-        msparam['east'] = bb[1]
-        msparam['north'] = bb[2]
-        msparam['south'] = bb[3]
+            # building simple multisurface params
+            areas = secparam['area']
+            msparam['area'] = areas.sum()
+            ws = areas / msparam['area']  # weights
+            msparam['dip'] = ws @ secparam['dip']
+            msparam['strike'] = utils.angular_mean(secparam['strike'], ws) % 360
+            msparam['width'] = ws @ secparam['width']
+            msparam['ztor'] = ws @ secparam['ztor']
+            msparam['zbot'] = ws @ secparam['zbot']
+
+            # building u_max
+            msparam['u_max'] = geo.MultiLine(
+                [lines[idx] for idx in idxs]).set_u_max()
+
+            # building bounding box
+            lons = np.concatenate([secparam['west'], secparam['east']])
+            lats = np.concatenate([secparam['north'], secparam['south']])
+            bb = utils.get_spherical_bounding_box(lons, lats)
+            msparam['west'] = bb[0]
+            msparam['east'] = bb[1]
+            msparam['north'] = bb[2]
+            msparam['south'] = bb[3]
 
     return msparams
 

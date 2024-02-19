@@ -169,17 +169,27 @@ class Line(object):
         e been cleaned already, i.e. there are no adjacent duplicate points
         """
         self = cls.__new__(cls)
-        self.coo = coo
+        self.init(coo)
         return self
 
     def __init__(self, points):
         points = utils.clean_points(points)  # can remove points!
-        self.coo = np.array([[p.x, p.y, p.z] for p in points])
+        self.init(np.array([[p.x, p.y, p.z] for p in points]))
 
-    @cached_property
-    def proj(self):
-        return utils.OrthographicProjection.from_lons_lats(
+    def init(self, coo):
+        self.coo = coo
+        self.proj = utils.OrthographicProjection.from_lons_lats(
             self.coo[:, 0], self.coo[:, 1])
+        if len(coo) == 2:  # segment
+            p0, p1 = self.points
+            self.length = p0.distance(p1)
+            self.azimuth = p0.azimuth(p1)
+        else:
+            self.length = np.sum(self.get_lengths())
+            azimuths = self.get_azimuths()
+            distances = geodetic.geodetic_distance(
+                coo[:-1, 0], coo[:-1, 1], coo[1:, 0], coo[1:, 1])
+            self.azimuth = utils.angular_mean(azimuths, distances) % 360
 
     @property
     def points(self):
@@ -291,12 +301,7 @@ class Line(object):
         >>> '%.1f' % line.average_azimuth()
         '300.0'
         """
-        azimuths = self.get_azimuths()
-        lons = self.coo[:, 0]
-        lats = self.coo[:, 1]
-        distances = geodetic.geodetic_distance(lons[:-1], lats[:-1],
-                                               lons[1:], lats[1:])
-        return utils.angular_mean(azimuths, distances) % 360
+        return self.azimuth
 
     def resample(self, sect_len: float, orig_extremes=False):
         """
@@ -340,7 +345,7 @@ class Line(object):
         :returns:
             Total length in km.
         """
-        return np.sum(self.get_lengths())
+        return self.length
 
     def keep_corners(self, delta):
         """
@@ -471,7 +476,7 @@ class Line(object):
         return utils.geohash5(self.coo)
 
 
-@compile('(f8[:,:],f8[:,:],f8[:], f8[:,:])')
+@compile('(f8[:,:],f8[:,:],f8[:],f8[:,:])')
 def get_tuw(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
@@ -549,7 +554,9 @@ def get_versor(arr):
     """
     Returns the versor (i.e. a unit vector) of a vector
     """
-    return (arr.T / np.linalg.norm(arr, axis=1)).T
+    norm = np.linalg.norm(arr, axis=1)
+    assert (norm > 0).all(), norm
+    return (arr.T / norm).T
 
 
 @compile("(f8[:],f8[:],f8[:],f8)")

@@ -21,7 +21,7 @@ defines :class:`MultiFaultSource`.
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, performance
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
@@ -109,8 +109,10 @@ class MultiFaultSource(BaseSeismicSource):
         with hdf5.File(self.hdf5path, 'r') as h5:
             return h5[f'{self.source_id}/rupture_idxs'][:]
 
-    def set_msparams(self, secparams):
-        self.msparams = build_msparams(self.rupture_idxs, secparams)
+    def set_msparams(self, secparams,
+                     mon1=performance.Monitor(),
+                     mon2=performance.Monitor()):
+        self.msparams = build_msparams(self.rupture_idxs, secparams, mon1, mon2)
 
     def is_gridded(self):
         return True  # convertible to HDF5
