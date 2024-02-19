@@ -70,13 +70,7 @@ def get_avg_azim_flipped(lines):
     # compute the overall strike and the origin of the multiline
     # get lenghts and average azimuths
     llenghts = np.array([ln.length for ln in lines])
-    if all(len(ln) == 2 for ln in lines):
-        # fast lane for the engine
-        coos = np.array([ln.coo for ln in lines])
-        azimuths = geodetic.azimuths(coos) 
-    else:
-        # slow lane, only for some tests in hazardlib
-        azimuths = np.array([line.average_azimuth() for line in lines])
+    azimuths = np.array([line.azimuth for line in lines])
 
     # determine the flipped lines
     flipped = get_flipped(llenghts, azimuths)
