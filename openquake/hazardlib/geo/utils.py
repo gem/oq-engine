@@ -544,20 +544,22 @@ def project_reverse(lambda0, phi0, lons, lats):
     return xx, yy
 
 
-@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])'])
+#@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])'])
 def project_direct(lambda0, phi0, lons, lats):
     lambdas, phis = numpy.radians(lons), numpy.radians(lats)
     cos_phis = numpy.cos(phis)
+    cos_phi0 = math.cos(phi0)
     lambdas -= lambda0
     # calculate the sin of the distance between projection center
     # and each of the points to project
-    #sin_dist = numpy.sqrt(
-    #    numpy.sin((phi0 - phis) / 2.0) ** 2.0
-    #    + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
-    #if (sin_dist > SQRT).any():
-    #    raise ValueError('some points are too far from the projection')
+    if hasattr(lons, '__len__'):
+        sin_dist = numpy.sqrt(
+            numpy.sin((phi0 - phis) / 2.0) ** 2.0
+            + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0)
+        if (sin_dist > SQRT).any():
+            raise ValueError('some points are too far from the projection')
     xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
-    yy = (math.cos(phi0) * numpy.sin(phis) - math.sin(phi0) * cos_phis
+    yy = (cos_phi0 * numpy.sin(phis) - math.sin(phi0) * cos_phis
           * numpy.cos(lambdas)) * EARTH_RADIUS
     return xx, yy
 
@@ -602,9 +604,7 @@ class OrthographicProjection(object):
     @classmethod
     def from_lons_lats(cls, lons, lats):
         idx = numpy.isfinite(lons)
-        lons = lons[idx]
-        lats = lats[idx]
-        return cls(*get_spherical_bounding_box(lons, lats))
+        return cls(*get_spherical_bounding_box(lons[idx], lats[idx]))
 
     def __init__(self, west, east, north, south):
         self.west = west
