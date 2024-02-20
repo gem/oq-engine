@@ -475,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw)
+            self.execute_big(maxw * .75)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
