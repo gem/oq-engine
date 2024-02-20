@@ -21,7 +21,7 @@ defines :class:`MultiFaultSource`.
 import numpy as np
 from typing import Union
 
-from openquake.baselib import hdf5
+from openquake.baselib import hdf5, performance
 from openquake.baselib.general import gen_slices
 from openquake.hazardlib.pmf import PMF
 from openquake.hazardlib.tom import PoissonTOM
@@ -31,41 +31,18 @@ from openquake.hazardlib.source.non_parametric import (
     NonParametricSeismicSource as NP)
 from openquake.hazardlib.geo.surface.kite_fault import (
     geom_to_kite, kite_to_geom)
-from openquake.hazardlib.geo.line import Line
-from openquake.hazardlib.geo.multiline import MultiLine
 from openquake.hazardlib.geo.surface.multi import (
-    MultiSurface, SDT)
+    MultiSurface, build_secparams, build_msparams)
 from openquake.hazardlib.geo.utils import (
     angular_distance, KM_TO_DEGREES, get_spherical_bounding_box)
 from openquake.hazardlib.source.base import BaseSeismicSource
 
 U16 = np.uint16
 F32 = np.float32
-BLOCKSIZE = 2000
-# NB: a large BLOCKSIZE uses a lot less memory and is faster in preclassical
-# however it uses a lot of RAM in classical when reading the sources
-SECPARAMS = ['area', 'dip', 'strike', 'width', 'zbot', 'ztor',
-             'tl0', 'tl1', 'tr0', 'tr1']
-SECDT = [(p, np.float32) for p in SECPARAMS]
-
-
-def build_secparams(sections):
-    """
-    :returns: an array of section parameters
-    """
-    secparams = np.zeros(len(sections), SECDT)
-    for sparam, sec in zip(secparams, sections):
-        sparam['area'] = sec.get_area()
-        sparam['dip'] = sec.get_dip()
-        sparam['strike'] = sec.get_strike()
-        sparam['width'] = sec.get_width()
-        sparam['ztor'] = sec.get_top_edge_depth()
-        sparam['zbot'] = sec.mesh.depths.max()
-        sparam['tl0'] = sec.tor.coo[0, 0]
-        sparam['tl1'] = sec.tor.coo[0, 1]
-        sparam['tr0'] = sec.tor.coo[-1, 0]
-        sparam['tr1'] = sec.tor.coo[-1, 1]
-    return secparams
+F64 = np.float64
+BLOCKSIZE = 5_000
+# NB: if too large, very few sources will be generated and a lot of
+# memory will be used
 
 
 class MultiFaultSource(BaseSeismicSource):
@@ -104,16 +81,25 @@ class MultiFaultSource(BaseSeismicSource):
                  infer_occur_rates=False):
         nrups = len(magnitudes)
         assert len(occurrence_probs) == len(rakes) == nrups
-        self.probs_occur = F32(occurrence_probs)
+        # NB: using 32 bits for the occurrence_probs would be a disaster:
+        # the results are STRONGLY dependent on the precision,
+        # in particular the AELO tests for CHN would break
+        self.probs_occur = F64(occurrence_probs)  # 64 bit!
         self.mags = F32(magnitudes)
         self.rakes = F32(rakes)
         self.infer_occur_rates = infer_occur_rates
         self.investigation_time = investigation_time
-        if infer_occur_rates:
-            self.occur_rates = -np.log([p[0] for p in occurrence_probs])
-            self.occur_rates[self.occur_rates <= 0] = 1E-30
-            self.temporal_occurrence_model = PoissonTOM(investigation_time)
         super().__init__(source_id, name, tectonic_region_type)
+
+    @property
+    def occur_rates(self):
+        """
+        :returns: poissonian occurrence rates, if infer_occur_rates is set
+        """
+        assert self.infer_occur_rates
+        rates =  -np.log([p[0] for p in self.probs_occur])
+        rates[rates <= 0] = 1E-30
+        return rates
 
     @property
     def rupture_idxs(self):
@@ -124,44 +110,10 @@ class MultiFaultSource(BaseSeismicSource):
         with hdf5.File(self.hdf5path, 'r') as h5:
             return h5[f'{self.source_id}/rupture_idxs'][:]
 
-    def set_msparams(self, secparams):
-        """
-        :returns: a cached structured array of parameters
-        """
-        U = len(self.rupture_idxs)
-        msparams = np.zeros(U, SDT)
-        for msparam, idxs in zip(msparams, self.rupture_idxs):
-            secparam = secparams[idxs]
-
-            # building simple multisurface params
-            areas = secparam['area']
-            msparam['area'] = areas.sum()
-            ws = areas / msparam['area']  # weights
-            msparam['dip'] = ws @ secparam['dip']
-            strikes = np.radians(secparam['strike'])
-            v1 = ws @ np.sin(strikes)
-            v2 = ws @ np.cos(strikes)
-            msparam['strike'] = np.degrees(np.arctan2(v1, v2)) % 360
-            msparam['width'] = ws @ secparam['width']
-            msparam['ztor'] = ws @ secparam['ztor']
-            msparam['zbot'] = ws @ secparam['zbot']
-
-            # building u_max
-            tors = []
-            for tl0, tl1, tr0, tr1 in secparam[['tl0', 'tl1', 'tr0', 'tr1']]:
-                coo = np.array([[tl0, tl1], [tr0, tr1]], np.float64)
-                tors.append(Line.from_coo(coo))
-            msparam['u_max'] = MultiLine(tors).u_max
-
-            # building bounding box
-            lons = np.concatenate([secparam['tl0'], secparam['tr0']])
-            lats = np.concatenate([secparam['tl1'], secparam['tr1']])
-            bb = get_spherical_bounding_box(lons, lats)
-            msparam['west'] = bb[0]
-            msparam['east'] = bb[1]
-            msparam['north'] = bb[2]
-            msparam['south'] = bb[3]
-        self.msparams = msparams
+    def set_msparams(self, secparams,
+                     mon1=performance.Monitor(),
+                     mon2=performance.Monitor()):
+        self.msparams = build_msparams(self.rupture_idxs, secparams, mon1, mon2)
 
     def is_gridded(self):
         return True  # convertible to HDF5
@@ -192,7 +144,7 @@ class MultiFaultSource(BaseSeismicSource):
             geoms = f['multi_fault_sections'][:]  # small
         if idxs is None:
             idxs = range(len(geoms))
-        sections = [geom_to_kite(geom) for geom in geoms]
+        sections = [geom_to_kite(geom) for geom in geoms[idxs]]
         for sec, idx in zip(sections, idxs):
             sec.idx = idx
         return sections
@@ -211,7 +163,9 @@ class MultiFaultSource(BaseSeismicSource):
         sec = self.get_sections()  # read KiteSurfaces, very fast
         rupture_idxs = self.rupture_idxs
         msparams = self.msparams
-        # in preclassical u_max will be None and in classical will be reused
+        if self.infer_occur_rates:
+            occur_rates = self.occur_rates
+            tom = PoissonTOM(self.investigation_time)
         for i in range(0, n, step**2):
             idxs = rupture_idxs[i]
             sfc = MultiSurface([sec[idx] for idx in idxs], msparams[i])
@@ -219,14 +173,14 @@ class MultiFaultSource(BaseSeismicSource):
             hypo = sfc.get_middle_point()
             data = [(p, o) for o, p in enumerate(self.probs_occur[i])]
             if self.infer_occur_rates:
-                yield ParametricProbabilisticRupture(
+                rup = ParametricProbabilisticRupture(
                     self.mags[i], rake, self.tectonic_region_type,
-                    hypo, sfc, self.occur_rates[i],
-                    self.temporal_occurrence_model)
+                    hypo, sfc, occur_rates[i], tom)
             else:
-                yield NonParametricProbabilisticRupture(
-                    self.mags[i], rake, self.tectonic_region_type, hypo, sfc,
-                    PMF(data))
+                rup = NonParametricProbabilisticRupture(
+                    self.mags[i], rake, self.tectonic_region_type,
+                    hypo, sfc, PMF(data))
+            yield rup
 
     def gen_slices(self):
         if len(self.mags) <= BLOCKSIZE:  # already split
@@ -247,7 +201,9 @@ class MultiFaultSource(BaseSeismicSource):
                 self.tectonic_region_type,
                 self.probs_occur[slc],
                 self.mags[slc],
-                self.rakes[slc])
+                self.rakes[slc],
+                self.investigation_time,
+                self.infer_occur_rates)
             src.hdf5path = self.hdf5path
             src.num_ruptures = src.count_ruptures()
             yield src

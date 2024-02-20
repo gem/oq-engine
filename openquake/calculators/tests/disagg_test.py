@@ -27,7 +27,7 @@ from openquake.calculators.extract import extract
 from openquake.calculators.tests import CalculatorTestCase, strip_calc_id
 from openquake.qa_tests_data.disagg import (
     case_1, case_2, case_3, case_4, case_5, case_6, case_7, case_8, case_9,
-    case_10, case_11, case_12, case_13, case_14, case_master)
+    case_10, case_11, case_12, case_13, case_14, case_15, case_master)
 
 aae = numpy.testing.assert_almost_equal
 
@@ -215,8 +215,6 @@ class DisaggregationTestCase(CalculatorTestCase):
         # MDE results use same values as test_case_9
         self.run_calc(case_11.__file__, 'job.ini')
         [fname] = export(('disagg-rlzs', 'csv'), self.calc.datastore)
-        #if platform.machine() == 'arm64':
-        #    raise unittest.SkipTest('Temporarily skipped')
         self.assertEqualFiles('expected/Mag_Dist_Eps-0.csv', fname)
 
     def test_case_12(self):
@@ -231,6 +229,14 @@ class DisaggregationTestCase(CalculatorTestCase):
         # check split_by_mag with NGAEastUSGS, see bug
         # https://github.com/gem/oq-engine/issues/8780
         self.run_calc(case_14.__file__, 'job.ini')
+
+    def test_case_15(self):
+        # check that mean_rates_by_src are always annual
+        self.run_calc(case_15.__file__, 'job_50yr.ini')
+        mrs50 = self.calc.datastore['mean_rates_by_src']
+        self.run_calc(case_15.__file__, 'job_1yr.ini')
+        mrs1 = self.calc.datastore['mean_rates_by_src']
+        aae(mrs1.array, mrs50.array)
 
     def test_case_master(self):
         # this tests exercise the case of a complex logic tree

@@ -47,6 +47,7 @@ spherical_to_cartesian = geo.geodetic.spherical_to_cartesian
 MAX_EXTENT = 5000  # km, decided by M. Simionato
 BASE32 = [ch.encode('ascii') for ch in '0123456789bcdefghjkmnpqrstuvwxyz']
 CODE32 = U8([ord(c) for c in '0123456789bcdefghjkmnpqrstuvwxyz'])
+SQRT = math.sqrt(2) / 2
 
 
 def get_dist(array, point):
@@ -114,6 +115,29 @@ def angular_distance(km, lat=0, lat2=None):
         # use the largest latitude to compute the angular distance
         lat = max(abs(lat), abs(lat2))
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
+
+
+def angular_mean(degrees, weights=None):
+    """
+    Given an array of angles in degrees, returns its angular mean.
+    If weights are passed, assume sum(weights) == 1.
+
+    >>> angular_mean([179, -179])
+    180.0
+    >>> angular_mean([-179, 179])
+    180.0
+    >>> angular_mean([-179, 179], [.75, .25])
+    -179.4999619199226
+    """
+    rads = numpy.radians(degrees)
+    sin = numpy.sin(rads)
+    cos = numpy.cos(rads)
+    if weights is None:
+        mean = numpy.arctan2(sin.mean(), cos.mean())
+    else:
+        assert len(weights) == len(degrees), (len(weights), len(degrees))
+        mean = numpy.arctan2(sin @ weights, cos @ weights)
+    return numpy.degrees(mean)
 
 
 class SiteAssociationError(Exception):
@@ -499,6 +523,39 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
+@compile('(f8,f8,f8[:],f8[:])')
+def project_reverse(lambda0, phi0, lons, lats):
+    sin_phi0, cos_phi0 = math.sin(phi0), math.cos(phi0)
+    # "reverse" mode, arguments are actually abscissae
+    # and ordinates in 2d space
+    xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
+    cos_c = numpy.sqrt(1. - (xx ** 2 + yy ** 2))
+    phis = numpy.arcsin(cos_c * sin_phi0 + yy * cos_phi0)
+    lambdas = numpy.arctan2(xx, cos_phi0 * cos_c - yy * sin_phi0)
+    xx = numpy.degrees(lambda0 + lambdas)
+    yy = numpy.degrees(phis)
+    # shift longitudes greater than 180 back into the western
+    # hemisphere, that is in range [0, -180], and longitudes
+    # smaller than -180, to the heastern emisphere [0, 180]
+    idx = xx >= 180.
+    xx[idx] = xx[idx] - 360.
+    idx = xx <= -180.
+    xx[idx] = xx[idx] + 360.
+    return xx, yy
+
+
+@compile(['(f8,f8,f8,f8)', '(f8,f8,f8[:],f8[:])', '(f8,f8,f8[:,:],f8[:,:])'])
+def project_direct(lambda0, phi0, lons, lats):
+    lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+    cos_phis = numpy.cos(phis)
+    cos_phi0 = math.cos(phi0)
+    lambdas -= lambda0
+    xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
+    yy = (cos_phi0 * numpy.sin(phis) - math.sin(phi0) * cos_phis
+          * numpy.cos(lambdas)) * EARTH_RADIUS
+    return xx, yy
+
+
 class OrthographicProjection(object):
     """
     Callable OrthographicProjection object that can perform both forward
@@ -539,58 +596,21 @@ class OrthographicProjection(object):
     @classmethod
     def from_lons_lats(cls, lons, lats):
         idx = numpy.isfinite(lons)
-        lons = lons[idx]
-        lats = lats[idx]
-        return cls(*get_spherical_bounding_box(lons, lats))
+        return cls(*get_spherical_bounding_box(lons[idx], lats[idx]))
 
     def __init__(self, west, east, north, south):
         self.west = west
         self.east = east
         self.north = north
         self.south = south
-        self.lambda0, self.phi0 = numpy.radians(
+        self.lam0, self.phi0 = numpy.radians(
             get_middle_point(west, north, east, south))
-        self.cos_phi0 = numpy.cos(self.phi0)
-        self.sin_phi0 = numpy.sin(self.phi0)
-        self.sin_pi_over_4 = (2 ** 0.5) / 2
 
     def __call__(self, lons, lats, deps=None, reverse=False):
-        assert not numpy.isnan(lons).any(), lons
-        if not reverse:
-            lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-            cos_phis = numpy.cos(phis)
-            lambdas -= self.lambda0
-            # calculate the sine of the distance between projection center
-            # and each of the points to project
-            sin_dist = numpy.sqrt(
-                numpy.sin((self.phi0 - phis) / 2.0) ** 2.0
-                + self.cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
-            )
-            if (sin_dist > self.sin_pi_over_4).any():
-                raise ValueError('some points are too far from the projection '
-                                 'center lon=%s lat=%s' %
-                                 (numpy.degrees(self.lambda0),
-                                  numpy.degrees(self.phi0)))
-            xx = numpy.cos(phis) * numpy.sin(lambdas) * EARTH_RADIUS
-            yy = (self.cos_phi0 * numpy.sin(phis) - self.sin_phi0 * cos_phis
-                  * numpy.cos(lambdas)) * EARTH_RADIUS
-        else:
-            # "reverse" mode, arguments are actually abscissae
-            # and ordinates in 2d space
-            xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
-            cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
-            phis = numpy.arcsin(cos_c * self.sin_phi0 + yy * self.cos_phi0)
-            lambdas = numpy.arctan2(
-                xx, self.cos_phi0 * cos_c - yy * self.sin_phi0)
-            xx = numpy.degrees(self.lambda0 + lambdas)
-            yy = numpy.degrees(phis)
-            # shift longitudes greater than 180 back into the western
-            # hemisphere, that is in range [0, -180], and longitudes
-            # smaller than -180, to the heastern emisphere [0, 180]
-            idx = xx >= 180.
-            xx[idx] = xx[idx] - 360.
-            idx = xx <= -180.
-            xx[idx] = xx[idx] + 360.
+        if reverse:
+            xx, yy = project_reverse(self.lam0, self.phi0, lons, lats)
+        else:  # fast lane
+            xx, yy = project_direct(self.lam0, self.phi0, lons, lats)
         if deps is None:
             return numpy.array([xx, yy])
         else:
@@ -843,6 +863,18 @@ def geohash(lons, lats, length):
                 ch = 0
                 i += 1
     return chars
+
+
+def geohash5(coords):
+    """
+    :returns: a geohash of length 5*len(points) as a string
+
+    >>> coords = numpy.array([[10., 45.], [11., 45.]])
+    >>> geohash5(coords)
+    'spzpg_spzzf'
+    """
+    arr = CODE32[geohash(coords[:, 0], coords[:, 1], 5)]
+    return b'_'.join(row.tobytes() for row in arr).decode('ascii')
 
 
 def geohash3(lons, lats):

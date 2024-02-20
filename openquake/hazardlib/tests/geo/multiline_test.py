@@ -31,12 +31,12 @@ class OneLineTestCase(unittest.TestCase):
         self.line = geo.Line([geo.Point(0.2, 0.05), geo.Point(0.0, 0.05)])
         self.ml = MultiLine([self.line])
 
-    def test_max_u(self):
+    def test_u_max(self):
         dst = geo.geodetic.geodetic_distance([self.line.points[0].longitude],
                                              [self.line.points[0].latitude],
                                              [self.line.points[1].longitude],
                                              [self.line.points[1].latitude])
-        np.testing.assert_allclose(self.ml.u_max, dst, atol=1e-4)
+        np.testing.assert_allclose(self.ml.set_u_max(), dst, atol=1e-4)
 
   
 class MultiLineTestCase(unittest.TestCase):
@@ -77,16 +77,16 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        uupp, tupp = ml.get_uts(mesh)
+        ts, us = ml.get_tu(mesh)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_get_ut - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_get_ut - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
@@ -100,16 +100,16 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_uts(mesh)
+        ts, us = ml.get_tu(mesh)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_tu_figure09 - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_tu_figure09 - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
@@ -123,18 +123,23 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        uupp, tupp = ml.get_uts(mesh)
+        ts, us = ml.get_tu(mesh)
 
         if PLOTTING:
             num = 10
             # U
-            z = np.reshape(uupp, plons.shape)
+            z = np.reshape(us, plons.shape)
             label = 'test_tu_figure08 - U'
             plot_pattern(lons, lats, z, plons, plats, label, num)
             # T
-            z = np.reshape(tupp, plons.shape)
+            z = np.reshape(ts, plons.shape)
             label = 'test_tu_figure08 - T'
             plot_pattern(lons, lats, z, plons, plats, label, num)
+
+    def test_string_representation(self):
+        # there is a line with 4 points and then one with 2 points
+        self.assertEqual(str(MultiLine(self.lines)),
+                         '7zzzz_kpbpf_kpbpu_s000m;s003p_s0030')
 
 
 def get_lines_figure09():
@@ -155,16 +160,16 @@ def get_lines_figure09():
     proj = oprj.from_lons_lats(np.array([-0.1, 0.1]), np.array([-0.1, 0.1]))
 
     # Section trace 1
-    px = np.array([8, -9])
-    py = np.array([-15, -11])
+    px = np.array([8, -9.])
+    py = np.array([-15, -11.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)
     lines.append(line)
 
     # Section trace 2
-    px = np.array([6, -9])
-    py = np.array([-10, -5])
+    px = np.array([6., -9.])
+    py = np.array([-10, -5.])
     los, las, line = _get_lola(px, py, proj)
     lons.append(los)
     lats.append(las)

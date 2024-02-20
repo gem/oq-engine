@@ -194,7 +194,7 @@ class RevertPointsTest(unittest.TestCase):
         lats = np.array([3.0, 4.0, 5.])
         deps = np.array([6.0, 7.0, 8.])
         line = geo.Line.from_vectors(lons, lats, deps)
-        line.flip()
+        line = line.flip()
         computed = [p.longitude for p in line.points]
         expected = [3., 2., 1.]
         self.assertEqual(computed, expected)
@@ -220,8 +220,7 @@ class LineKeepCornersTest(unittest.TestCase):
         lod, lad = geo.geodetic.point_at(loc, lac, 53., 10)  # 6
         lons = np.array([0.0, 0.1, 0.2, loa, lob, loc, lod])
         lats = np.array([0.0, 0.0, 0.0, laa, lab, lac, lad])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
         coo = np.array([[p.longitude, p.latitude, p.depth] for p in line])
         idxs = [0, 2, 3, 6]
         expected = lons[idxs]

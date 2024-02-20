@@ -317,8 +317,8 @@ def _plotting(surf, dst, mlons, mlats, lons=[], lats=[], label=''):
     lons = surf.surfaces[0].mesh.lons
     lats = surf.surfaces[0].mesh.lats
     for line in surf.tor.lines:
-        ax.plot(line.coo[:, 0], line.coo[:, 1], '-r')
-        ax.plot(line.coo[0, 0], line.coo[0, 1], 'g', marker="$s$", ms=5)
-        ax.plot(line.coo[-1, 0], line.coo[-1, 1], 'r', marker="$e$",
-                mfc='none', ms=8)
+        coo = line.coo
+        ax.plot(coo[:, 0], coo[:, 1], '-r')
+        ax.plot(coo[0, 0], coo[0, 1], 'g', marker="$s$", ms=5)
+        ax.plot(coo[-1, 0], coo[-1, 1], 'r', marker="$e$", mfc='none', ms=8)
     return ax

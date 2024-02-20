@@ -533,7 +533,7 @@ class ClassicalTestCase(CalculatorTestCase):
         hc_id = str(self.calc.datastore.calc_id)
         self.run_calc(case_65.__file__, 'job.ini', hazard_calculation_id=hc_id)
         rates = self.calc.datastore['rup/occurrence_rate'][:]
-        aac(rates, [0.356675, 0.105361], atol=5e-7)
+        aac(rates, [0.105361, 0.356675], atol=5e-7)
 
         [f] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f, delta=1E-5)
@@ -612,15 +612,20 @@ class ClassicalTestCase(CalculatorTestCase):
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
     def test_case_75(self):
+        # test for duplicated section IDs
+        with self.assertRaises(nrml.DuplicatedID):
+            self.run_calc(case_75.__file__, 'job.ini',
+                          source_model_logic_tree_file='wrong_ssmLT.xml')
+
         # test calculation with multi-fault
         self.run_calc(case_75.__file__, 'job.ini')
         [f1] = export(('hcurves/mean', 'csv'), self.calc.datastore)
         self.assertEqualFiles('expected/hcurve-mean.csv', f1)
 
-        # test for duplicated section IDs
-        with self.assertRaises(nrml.DuplicatedID):
-            self.run_calc(case_75.__file__, 'job.ini',
-                          source_model_logic_tree_file='wrong_ssmLT.xml')
+        # test contexts
+        ctx = view('rup:ufc3mean_0', self.calc.datastore)
+        fname = general.gettemp(text_table(ctx, ext='org'))
+        self.assertEqualFiles('expected/context.org', fname)
 
     def test_case_76(self):
         # CanadaSHM6 GMPEs

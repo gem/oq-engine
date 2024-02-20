@@ -139,6 +139,7 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
         self.msfc = MultiSurface([sfc1, sfc2])
 
     def test_get_tor(self):
-        # Testing, coo1 and coo2 are inverted due to the origin inversion
-        aae(self.coo2, self.msfc.tor.coos[0][:, 0:2], decimal=2)
-        aae(self.coo1, self.msfc.tor.coos[1][:, 0:2], decimal=2)
+        aae(self.coo1, self.msfc.tor.lines[0].coo[:, 0:2], decimal=2)
+        aae(self.coo2, self.msfc.tor.lines[1].coo[:, 0:2], decimal=2)
+        aae(self.msfc.tor.soidx, [1, 0])  # there is inversion
+        aae(self.msfc.tor.flipped, [False, False])  # but no flip

@@ -200,7 +200,7 @@ class PmapGetter(object):
                         array = numpy.zeros((self.L, G))
                         self._pmap[sid] = probability_map.ProbabilityCurve(
                             array)
-                    array[df.lid, df.gid] = to_probs(df.rate)
+                    array[df.lid, df.gid] = df.rate
         return self._pmap
 
     # used in risk calculations where there is a single site per getter
@@ -229,7 +229,7 @@ class PmapGetter(object):
             return pc0
         for g, t_rlzs in enumerate(self.trt_rlzs):
             rlzs = t_rlzs % TWO24
-            rates = to_rates(pmap[sid].array[:, g])
+            rates = pmap[sid].array[:, g]
             for rlz in rlzs:
                 pc0.array[:, rlz] += rates
         pc0.array = to_probs(pc0.array)

@@ -1150,7 +1150,7 @@ class SourceConverter(RuptureConverter):
             # NB: the sections will be fixed later on, in source_reader
             mfs = MultiFaultSource(sid, name, trt,
                                    dic['probs_occur'],
-                                   dic['mag'], dic['rake'],
+                                   mags, dic['rake'],
                                    self.investigation_time,
                                    self.infer_occur_rates)
             mfs._rupture_idxs = idxs
