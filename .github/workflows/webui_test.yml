@@ -30,7 +30,6 @@ jobs:
       options: --privileged
     steps:
       - name: Test WebUI and run https calculation
-        env:
         run: |
           set -x
           dnf update -y
