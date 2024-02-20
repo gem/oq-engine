@@ -22,6 +22,7 @@ import time
 import logging
 import warnings
 import itertools
+import operator
 import collections
 from unittest.mock import patch
 import numpy
@@ -72,18 +73,18 @@ cshm_polygon = shapely.geometry.Polygon([(171.6, -43.3), (173.2, -43.3),
                                          (173.2, -43.9), (171.6, -43.9)])
 
 
-def _get(surfaces, param, secdists, mask=slice(None)):
-    arr = numpy.array([secdists[sec.idx, param][mask] for sec in surfaces])
+def _get(surfaces, param, dparam, mask=slice(None)):
+    arr = numpy.array([dparam[sec.idx, param][mask] for sec in surfaces])
     return arr  # shape (S, N, ...)
 
 
-def _get_tu(rup, secdists, mask):
+def _get_tu(rup, dparam, mask):
     tor = rup.surface.tor
-    arr = _get(rup.surface.surfaces, 'tuw', secdists, mask)
+    arr = _get(rup.surface.surfaces, 'tuw', dparam, mask)
     S, N = arr.shape[:2]
     # keep the flipped values and then reorder the surface indices
     # arr has shape (S, N, 2, 3) where 2 refer to the flipping
-    tuw = numpy.zeros((3, S, N))
+    tuw = numpy.zeros((3, S, N), F32)
     for s in range(S):
         idx = tor.soidx[s]
         flip = int(tor.flipped[idx])
@@ -91,11 +92,13 @@ def _get_tu(rup, secdists, mask):
     return multiline._get_tu(tor.shift, tuw)
 
 
-def set_distances(ctx, rup, r_sites, param, secdists, mask):
+def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
     """
-    Set the distance attributes on the context
+    Set the distance attributes on the context; also manages paired
+    attributes like clon_lat and rx_ry0.
     """
-    if secdists is None:
+    if dparam is None:
+        # no multifault
         dists = get_distances(rup, r_sites, param)
         if '_' in param:
             p0, p1 = param.split('_')  # clon_clat
@@ -104,10 +107,10 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
         else:
             setattr(ctx, param, dists)
     else:
-        # fast lane for multifault sources
-        tor = rup.surface.tor  # MultiLine object
+        # use the MultiLine object
+        tor = rup.surface.tor
         if param in ('rx', 'ry0'):
-            tut, uut = _get_tu(rup, secdists, mask)
+            tut, uut = tu
             '''
             # sanity check with the right parameters t, u
             t, u = rup.surface.tor.get_tu(r_sites)
@@ -122,7 +125,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
                 big = uut > tor.u_max
                 ctx.ry0[big] = uut[big] - tor.u_max
         elif param == 'rjb' :
-            rjbs = _get(rup.surface.surfaces, 'rjb', secdists, mask)
+            rjbs = _get(rup.surface.surfaces, 'rjb', dparam, mask)
             ctx['rjb'] = numpy.min(rjbs, axis=0)
             '''
             # sanity check with the right rjb
@@ -130,7 +133,7 @@ def set_distances(ctx, rup, r_sites, param, secdists, mask):
             numpy.testing.assert_allclose(ctx.rjb, rjb)
             '''
         elif param == 'clon_clat':
-            coos = _get(rup.surface.surfaces, 'clon_clat', secdists, mask)
+            coos = _get(rup.surface.surfaces, 'clon_clat', dparam, mask)
             # shape (numsections, numsites, 3)
             m = Mesh(coos[:, :, 0], coos[:, :, 1]).get_closest_points(r_sites)
             # shape (numsites, 3)
@@ -534,7 +537,7 @@ def genctxs_Pp(src, sitecol, cmaker):
             yield ctxt
 
 
-def _build_secdists(src, sitecol, cmaker):
+def _build_dparam(src, sitecol, cmaker):
     dparams = {'rjb', 'tuw'}
     if cmaker.fewsites:
         dparams |= {'clon_clat'}
@@ -545,6 +548,8 @@ def _build_secdists(src, sitecol, cmaker):
         for param in dparams:
             out[sec.idx, param] = get_dparam(sec, sitecol, param)
     # use multi_fault_test to debug this
+    # from openquake.baselib.general import getsizeof
+    # print(getsizeof(out))
     return out
 
 
@@ -704,7 +709,7 @@ class ContextMaker(object):
         self.poe_mon = monitor('get_poes', measuremem=False)
         self.pne_mon = monitor('composing pnes', measuremem=False)
         self.ir_mon = monitor('iter_ruptures', measuremem=False)
-        self.sec_mon = monitor('building secdists', measuremem=True)
+        self.sec_mon = monitor('building dparam', measuremem=True)
         self.delta_mon = monitor('getting delta_rates', measuremem=False)
         self.col_mon = monitor('collapsing contexts', measuremem=False)
         self.task_no = getattr(monitor, 'task_no', 0)
@@ -874,7 +879,7 @@ class ContextMaker(object):
         :returns: a dictionary with the rupture parameters
         """
         dic = {}
-        if hasattr(self, 'secdists') and self.secdists:
+        if hasattr(self, 'dparam') and self.dparam:
             msparam = rup.surface.msparam
         else:
             msparam = None
@@ -953,10 +958,10 @@ class ContextMaker(object):
         :yields: a context array for each rupture
         """
         magdist = self.maximum_distance(same_mag_rups[0].mag)
-        secdists = getattr(self, 'secdists', None)
+        dparam = getattr(self, 'dparam', None)
         for rup in same_mag_rups:
-            if secdists:
-                rrups = _get(rup.surface.surfaces, 'rrup', secdists)
+            if dparam:
+                rrups = _get(rup.surface.surfaces, 'rrup', dparam)
                 rrup = numpy.min(rrups, axis=0)
             else:
                 rrup = get_distances(rup, sites, 'rrup')
@@ -966,9 +971,8 @@ class ContextMaker(object):
 
             r_sites = sites.filter(mask)
             # to debug you can insert here
-            # if rup.rup_id == 0:
-            #     print(rup.surface.get_tuw_df(r_sites))
-            #     import pdb; pdb.set_trace()
+            # print(rup.surface.tor.get_tuw_df(r_sites))
+            # import pdb; pdb.set_trace()
 
             ''' # sanity check
             true_rrup = rup.surface.get_min_distance(r_sites)
@@ -984,18 +988,17 @@ class ContextMaker(object):
 
             ctx.rrup = rrup[mask]
             ctx.sids = r_sites.sids
-            for param in self.REQUIRES_DISTANCES - {'rrup'}:
-                if param == 'clon':
-                    set_distances(ctx, rup, r_sites, 'clon_clat',
-                                  secdists, mask)
-                elif param == 'clat':
-                    pass
-                else:
-                    set_distances(ctx, rup, r_sites, param,
-                                  secdists, mask)
-            if self.fewsites and 'clon' not in self.REQUIRES_DISTANCES:
-                set_distances(ctx, rup, r_sites, 'clon_clat',
-                              secdists, mask)
+            params = self.REQUIRES_DISTANCES - {'rrup'}
+            if self.fewsites or 'clon' in params or 'clat' in params:
+                params.add('clon_clat')
+
+            # compute tu only once
+            if dparam and ('rx' in params or 'ry0' in params):
+                tu = _get_tu(rup, dparam, mask)
+            else:
+                tu = None
+            for param in params - {'clon', 'clat'}:
+                set_distances(ctx, rup, r_sites, param, dparam, mask, tu)
 
             # Equivalent distances
             reqv_obj = (self.reqv.get(self.trt) if self.reqv else None)
@@ -1045,9 +1048,9 @@ class ContextMaker(object):
         elif hasattr(src, 'source_id'):  # other source
             if src.code == b'F' and step == 1:
                 with self.sec_mon:
-                    self.secdists = _build_secdists(src, sitecol, self)
+                    self.dparam = _build_dparam(src, sitecol, self)
             else:
-                self.secdists = None
+                self.dparam = None
             minmag = self.maximum_distance.x[0]
             maxmag = self.maximum_distance.x[-1]
             with self.ir_mon:
@@ -1055,7 +1058,9 @@ class ContextMaker(object):
                     shift_hypo=self.shift_hypo, step=step))
                 for i, rup in enumerate(allrups):
                     rup.rup_id = src.offset + i
-                allrups = [rup for rup in allrups if minmag < rup.mag < maxmag]
+                allrups = sorted([rup for rup in allrups
+                                  if minmag < rup.mag < maxmag],
+                                 key=bymag)
                 if not allrups:
                     return iter([])
                 self.num_rups = len(allrups)
@@ -1066,7 +1071,7 @@ class ContextMaker(object):
             src_id = src.id
         else:  # in event based we get a list with a single rupture
             rups_sites = [(src, sitecol)]
-            self.secdists = None
+            self.dparam = None
             src_id = -1
         ctxs = self.gen_contexts(rups_sites, src_id)
         blocks = block_splitter(ctxs, 10_000, weight=len)

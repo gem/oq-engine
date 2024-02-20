@@ -231,7 +231,7 @@ def get_csm(oq, full_lt, dstore=None):
                      format(changes))
     is_event_based = oq.calculation_mode.startswith(('event_based', 'ebrisk'))
     if oq.sites and len(oq.sites) == 1:
-        # disable wkt in single-site calculations
+        # disable wkt in single-site calculations to avoid excessive slowdown
         set_wkt = False
     else:
         set_wkt = True
@@ -445,14 +445,13 @@ def _get_csm(full_lt, groups, event_based, set_wkt):
                 # dataset); this is slow
                 msg = ('src "{}" has {:_d} underlying meshes with a total '
                        'of {:_d} points!')
-                for src in sources:
-                    # check on MultiFaultSources and NonParametricSources
-                    #mesh_size = getattr(src, 'mesh_size', 0)
-                    #if mesh_size > 1E6:
-                    #    logging.warning(msg.format(
-                    #        src.source_id, src.count_ruptures(), mesh_size))
-                    #src._wkt = src.wkt()
-                    pass
+                for src in [s for s in sources if s.code == b'N']:
+                    # check on NonParametricSources
+                    mesh_size = getattr(src, 'mesh_size', 0)
+                    if mesh_size > 1E6:
+                        logging.warning(msg.format(
+                            src.source_id, src.count_ruptures(), mesh_size))
+                    src._wkt = src.wkt()
             src_groups.append(sourceconverter.SourceGroup(trt, sources))
     if set_wkt:
         for ag in atomic:

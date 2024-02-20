@@ -107,11 +107,11 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
         multiplier = 1
         sf = None
     splits = []
-    mon = monitor('setting msparams', measuremem=False)
+    mon1 = monitor('building top of ruptures', measuremem=True)
+    mon2 = monitor('setting msparams', measuremem=False)
     for src in srcs:
         if src.code == b'F':
-            with mon:
-                src.set_msparams(secparams)
+            src.set_msparams(secparams, mon1, mon2)
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -210,6 +210,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifaults:
+            # this is ultra-fast
             secparams = build_secparams(multifaults[0].get_sections())
             logging.warning('There are %d multiFaultSources, the preclassical '
                             'phase will be slow (secparams=%s)',

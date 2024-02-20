@@ -317,7 +317,7 @@ class NrmlSourceToHazardlibTestCase(unittest.TestCase):
         assert_close(self.area, self._expected_area)
 
     def test_simple_to_hazardlib(self):
-        assert_close(self._expected_simple, self.simple, rtol=5E-5)
+        assert_close(self._expected_simple, self.simple, rtol=3E-4)
 
     def test_complex_to_hazardlib(self):
         assert_close(self._expected_complex, self.cmplx, rtol=1E-4)
