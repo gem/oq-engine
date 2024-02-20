@@ -15,10 +15,8 @@ on:
     - cron: "0 22 * * *"
 
 jobs:
-
   test_ui:
     name: Test on RH based (fedora container)
-    needs: build
     runs-on: ubuntu-latest
     env:
       GITHUB_DEF_BR:  ${{ github.event.repository.default_branch }}
