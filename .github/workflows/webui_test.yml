@@ -27,17 +27,53 @@ jobs:
       image: fedora:39
       options: --privileged
     steps:
+    - name: Clone Repository (Master)
+      uses: actions/checkout@v4
+      if: github.event.inputs.git-ref == ''
+    - name: Clone Repository (Custom Ref)
+      uses: actions/checkout@v4
+      if: github.event.inputs.git-ref != ''
+      with:
+        ref: ${{ github.event.inputs.git-ref }}
+    - name: Set up Python  ${{ matrix.python-version }}
+      run: |
+        set -x
+        dnf update -y
+        dnf install -y ${{ matrix.python-version }}
+        dnf install -y git git-lfs nc procps
+        # define it
+        mypython() {
+           ${{ matrix.python-version }}
+        }
+        #
+        #run it
+        mypython -c "import sys; print(sys.version)"
+        #
+    - name: Install engine with install script
+      env:
+        BRANCH: ${{ github.event.inputs.git-ref }}
+      run: |
+        set -x
+        # define it
+        mypython() {
+           ${{ matrix.python-version }}
+        }
+        #
+        #run it
+        mypython -V
+        export PIP_DEFAULT_TIMEOUT=100
+        #
+        echo "branch to test: ${BRANCH}"
+        if [[ "$BRANCH" != "" ]]
+        then
+          pwd
+          cd ..
+          mypython oq-engine/install.py devel_server --version ${BRANCH}
+        else
+          mypython install.py devel_server
+        fi
       - name: Test WebUI and run https calculation
         run: |
-          set -x
-          dnf update -y
-          #install python3 required from RPM of engine
-          dnf install python3.11 -y
-          sleep 5
-          #
-          pwd
-          ls -lrt
-          python3.11 install.py devel_server
           mkdir /var/log/oq-engine/
           chown -R openquake /var/log/oq-engine/
           runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
@@ -51,7 +87,8 @@ jobs:
           #
           ls -lrt /opt/openquake/venv/lib/python3.11/site-packages
           echo "Add settings for login and logging on webui before to start"
-          cd /opt/openquake/venv/lib/python3.11/site-packages/openquake/server/
+          cd /__w/oq-engine/oq-engine/
+          cd openquake/server
           ls -lrt
           cat > local_settings.py << EOF
           LOCKDOWN = True
