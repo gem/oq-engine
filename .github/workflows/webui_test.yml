@@ -72,8 +72,8 @@ jobs:
         else
           mypython install.py devel_server
         fi
-      - name: Test WebUI and run https calculation
-        run: |
+    - name: Test WebUI and run https calculation
+      run: |
           mkdir /var/log/oq-engine/
           chown -R openquake /var/log/oq-engine/
           runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver start &'
@@ -138,4 +138,3 @@ jobs:
           # Run a calcs using https
           #
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
-
