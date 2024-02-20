@@ -360,7 +360,6 @@ class SourceFilter(object):
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:
-            raise
             raise exc.__class__('source %s: %s' % (src.source_id, exc))
         return bbox
 
