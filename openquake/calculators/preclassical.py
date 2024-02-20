@@ -210,6 +210,7 @@ class PreClassicalCalculator(base.HazardCalculator):
             else:
                 normal_sources.extend(sg)
         if multifaults:
+            # this is ultra-fast
             secparams = build_secparams(multifaults[0].get_sections())
             logging.warning('There are %d multiFaultSources, the preclassical '
                             'phase will be slow (secparams=%s)',
