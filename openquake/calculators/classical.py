@@ -581,7 +581,7 @@ class ClassicalCalculator(base.HazardCalculator):
         logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
         for dic in parallel.Starmap(
-                classical, allargs, h5=self.datastore.hdf5):
+                classical, reversed(allargs), h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]
