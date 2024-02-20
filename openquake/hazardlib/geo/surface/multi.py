@@ -28,13 +28,13 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
-           'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south',
-            'hp0', 'hp1', 'hp2']
-MS_DT = [(p, np.float32) for p in MSPARAMS]
 F32 = np.float32
+MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
+           'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south']
+MS_DT = [(p, np.float32) for p in MSPARAMS] + [('hypo', (F32, 3))]
 
 
+# really fast
 def build_secparams(sections):
     """
     :returns: an array of section parameters
@@ -59,12 +59,11 @@ def build_secparams(sections):
         sparam['south'] = bb[3]
 
         mid = sec.get_middle_point()
-        sparam['hp0'] = mid.x
-        sparam['hp1'] = mid.y
-        sparam['hp2'] = mid.z
+        sparam['hypo'] = (mid.x, mid.y, mid.z)
     return secparams
 
 
+# not fast
 def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
     """
     :returns: a structured array of parameters
