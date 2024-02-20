@@ -239,6 +239,32 @@ class MultiFaultSource(BaseSeismicSource):
         return west - a2, south - a1, east + a2, north + a1
 
 
+class FilteredMultiFaultSource(BaseSeismicSource):
+    code = b'F'
+
+    def __init__(self, src, mask):
+        rupture_idxs = np.array(
+            [U16([idx for idx in idxs if mask[idx]])
+             for idxs in src.rupture_idxs], object)
+        ok = [len(idxs) > 0 for idxs in  rupture_idxs]
+        self.rupture_idxs = rupture_idxs[ok]
+        self.probs_occur = src.probs_occur[ok]
+        self.mags = src.mags[ok]
+        self.rakes = src.rakes[ok]
+        self.source_id = src.source_id
+        self.grp_id = src.grp_id
+        self.tectonic_region_type = src.tectonic_region_type
+        self.investigation_time = src.investigation_time
+        self.infer_occur_rates = src.infer_occur_rates
+
+    MODIFICATIONS = MultiFaultSource.MODIFICATIONS
+    iter_ruptures = MultiFaultSource.iter_ruptures
+    count_ruptures = MultiFaultSource.count_ruptures
+    get_min_max_mag = MultiFaultSource.get_min_max_mag
+    set_msparams = MultiFaultSource.set_msparams
+    get_bounding_box = MultiFaultSource.get_bounding_box
+
+
 # NB: as side effect delete _rupture_idxs and add .hdf5path
 def save(mfsources, sectiondict, hdf5path, msparams=False):
     """

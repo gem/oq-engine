@@ -25,9 +25,10 @@ import h5py
 from openquake.baselib import general, parallel, hdf5
 from openquake.hazardlib import pmf, geo, source_reader
 from openquake.baselib.general import AccumDict, groupby, block_splitter
-from openquake.hazardlib.contexts import read_cmakers
+from openquake.hazardlib.contexts import read_cmakers, MAXMAG
 from openquake.hazardlib.source.point import grid_point_sources, msr_name
-from openquake.hazardlib.source.multi_fault import build_secparams
+from openquake.hazardlib.source.multi_fault import (
+    build_secparams, FilteredMultiFaultSource)
 from openquake.hazardlib.source.base import get_code2cls
 from openquake.hazardlib.sourceconverter import SourceGroup
 from openquake.hazardlib.calc.filters import (
@@ -98,12 +99,15 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     Weight the sources. Also split them if split_sources is true. If
     ps_grid_spacing is set, grid the point sources before weighting them.
     """
+    maxdist = cmaker.maximum_distance(MAXMAG)
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites:
+        N = len(sites)
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
     else:
+        N = 1
         multiplier = 1
         sf = None
     splits = []
@@ -111,6 +115,9 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     mon2 = monitor('setting msparams', measuremem=False)
     for src in srcs:
         if src.code == b'F':
+            if N < cmaker.max_sites_disagg:
+                secmask = sf.get_mask(secparams).sum(axis=0)  # shape S
+                src = FilteredMultiFaultSource(src, secmask)
             src.set_msparams(secparams, mon1, mon2)
         if sites:
             # NB: this is approximate, since the sites are sampled

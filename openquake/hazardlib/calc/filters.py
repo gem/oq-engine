@@ -21,7 +21,7 @@ import sys
 import operator
 from contextlib import contextmanager
 import numpy
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
@@ -444,6 +444,24 @@ class SourceFilter(object):
             sids = self.close_sids(src)
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
+
+    def get_mask(self, wens):
+        """
+        :param wens: an array with fields west, east, north, south
+        """
+        xyz = self.sitecol.xyz
+        w, e, n, s = wens['west'], wens['east'], wens['north'], wens['south']
+        dist_wn = distance.cdist(xyz, spherical_to_cartesian(w, n))
+        dist_ws = distance.cdist(xyz, spherical_to_cartesian(w, s))
+        dist_en = distance.cdist(xyz, spherical_to_cartesian(e, n))
+        dist_es = distance.cdist(xyz, spherical_to_cartesian(e, s))
+        dists = numpy.min([dist_wn, dist_ws, dist_en, dist_es], axis=0)
+        dlon = get_longitudinal_extent(w, e) / 2.
+        dlat = (n - s) / 2.
+        dist = self.integration_distance.y[-1] + numpy.sqrt(
+            dlon**2 + dlat**2) / KM_TO_DEGREES
+        dist += 10  # added 10 km of buffer to guard against numeric errors
+        return dists <= dist
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
