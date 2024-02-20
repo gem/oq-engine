@@ -32,7 +32,7 @@ jobs:
           set -x
           dnf update -y
           #install python3 required from RPM of engine
-          dnf install python3.11
+          dnf install python3.11 -y
           sleep 5
           #
           pwd
