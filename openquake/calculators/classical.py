@@ -256,6 +256,7 @@ class Hazard:
     def __init__(self, dstore, srcidx, gids):
         self.datastore = dstore
         oq = dstore['oqparam']
+        self.itime = oq.investigation_time
         self.weig = dstore['_rates/weig'][:]
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
@@ -275,8 +276,7 @@ class Hazard:
         :returns: an array of rates of shape (N, M, L1)
         """
         gids = self.gids[pmap.grp_id]
-        itime = self.datastore['oqparam'].investigation_time
-        rates = disagg.to_rates(pmap.array, itime) @ self.weig[gids]  # shape (N, L)
+        rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap, the_sids, gid=0):
