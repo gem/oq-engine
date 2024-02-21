@@ -119,6 +119,7 @@ class MultiLine(object):
                 us += (u + self.shift[i]) * w
                 ws += w
             self.u_max = np.abs(us / ws).max()
+        assert self.u_max > 0
         return self.u_max
 
     def gen_tuw(self, mesh):

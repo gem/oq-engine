@@ -101,9 +101,11 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     spacing = cmaker.ps_grid_spacing
     grp_id = srcs[0].grp_id
     if sites:
+        N = len(sites)
         multiplier = 1 + len(sites) // 10_000
         sf = SourceFilter(sites, cmaker.maximum_distance).reduce(multiplier)
     else:
+        N = 1
         multiplier = 1
         sf = None
     splits = []
@@ -111,7 +113,11 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     mon2 = monitor('setting msparams', measuremem=False)
     for src in srcs:
         if src.code == b'F':
-            src.set_msparams(secparams, mon1, mon2)
+            if N <= cmaker.max_sites_disagg:
+                mask = sf.get_close(secparams) > 0  # shape S
+            else:
+                mask = None
+            src.set_msparams(secparams, mask, mon1, mon2)
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0

@@ -64,14 +64,18 @@ def build_secparams(sections):
 
 
 # not fast
-def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
+def build_msparams(rupture_idxs, secparams, close_sec=None,
+                   mon1=Monitor(), mon2=Monitor()):
     """
     :returns: a structured array of parameters
     """
     U = len(rupture_idxs)  # number of ruptures
     msparams = np.zeros(U, MS_DT)
+    if close_sec is None:
+        # NB: in the engine close_sec is computed in the preclassical phase
+        close_sec = np.ones(len(secparams), bool)
 
-    # building lines
+    # building lines, very fast
     with mon1:
         lines = []
         for secparam in secparams:
@@ -79,11 +83,17 @@ def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
             line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
             lines.append(line)
 
+    # building msparams, slow due to the computation of u_max
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
-            secparam = secparams[idxs]
+            # building u_max
+            tors = [lines[idx] for idx in idxs if close_sec[idx]]
+            if not tors:  # all sections are far away
+                continue
+            msparam['u_max'] = geo.MultiLine(tors).set_u_max()
 
             # building simple multisurface params
+            secparam = secparams[idxs]
             areas = secparam['area']
             msparam['area'] = areas.sum()
             ws = areas / msparam['area']  # weights
@@ -92,10 +102,6 @@ def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
             msparam['width'] = ws @ secparam['width']
             msparam['ztor'] = ws @ secparam['ztor']
             msparam['zbot'] = ws @ secparam['zbot']
-
-            # building u_max
-            msparam['u_max'] = geo.MultiLine(
-                [lines[idx] for idx in idxs]).set_u_max()
 
             # building bounding box
             lons = np.concatenate([secparam['west'], secparam['east']])
