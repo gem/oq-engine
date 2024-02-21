@@ -445,24 +445,18 @@ class SourceFilter(object):
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
 
-    def get_close(self, wens):
+    def get_close(self, tors):
         """
-        :param wens: an array with fields west, east, north, south
+        :param tors: a structured array with fields tl0, tl1, tr0, tr1
         :returns: an array with the number of close sites per bbox
         """
         xyz = self.sitecol.xyz
-        w, e, n, s = wens['west'], wens['east'], wens['north'], wens['south']
-        dist_wn = distance.cdist(xyz, spherical_to_cartesian(w, n))
-        dist_ws = distance.cdist(xyz, spherical_to_cartesian(w, s))
-        dist_en = distance.cdist(xyz, spherical_to_cartesian(e, n))
-        dist_es = distance.cdist(xyz, spherical_to_cartesian(e, s))
-        dists = numpy.min([dist_wn, dist_ws, dist_en, dist_es], axis=0)
-        dlon = get_longitudinal_extent(w, e) / 2.
-        dlat = (n - s) / 2.
-        dist = self.integration_distance.y[-1] + numpy.sqrt(
-            dlon**2 + dlat**2) / KM_TO_DEGREES
-        dist += 10  # added 10 km of buffer to guard against numeric errors
-        return (dists <= dist).sum(axis=0) # shape (N, S) => S
+        tl0, tl1, tr0, tr1 = tors['tl0'], tors['tl1'], tors['tr0'], tors['tr1']
+        distl = distance.cdist(xyz, spherical_to_cartesian(tl0, tl1))
+        distr = distance.cdist(xyz, spherical_to_cartesian(tr0, tr1))
+        dists = numpy.min([distl, distr], axis=0)  # shape (N, S)
+        maxdist = self.integration_distance.y[-1]
+        return (dists <= maxdist).sum(axis=0) # shape (N, S) => S
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
