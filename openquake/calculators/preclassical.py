@@ -113,7 +113,7 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     mon2 = monitor('setting msparams', measuremem=False)
     for src in srcs:
         if src.code == b'F':
-            if N < cmaker.max_sites_disagg:
+            if N <= cmaker.max_sites_disagg:
                 mask = sf.get_close(secparams) > 0  # shape S
             else:
                 mask = None
