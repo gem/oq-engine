@@ -31,7 +31,9 @@ jobs:
       if: github.event.inputs.git-ref != ''
       with:
         ref: ${{ github.event.inputs.git-ref }}
-    - name: Set up Python  ${{ matrix.python-version }}
+    - name: Set up Python  ${{ matrix.python-version }} and install OQ
+      env:
+        BRANCH: ${{ github.event.inputs.git-ref }}
       run: |
         set -x
         dnf update -y
@@ -42,18 +44,11 @@ jobs:
         #run it
         eval '$mypython -c "import sys; print(sys.version)"'
         #
-    - name: Install engine with install script
-      env:
-        BRANCH: ${{ github.event.inputs.git-ref }}
-      run: |
-        set -x
         export PIP_DEFAULT_TIMEOUT=100
         #
         echo "branch to test: ${BRANCH}"
         if [[ "$BRANCH" != "" ]]
         then
-          pwd
-          ls -lrt
           eval '$mypython install.py devel_server --version ${BRANCH}'
         else
           eval '$mypython install.py devel_server --version master'
