@@ -204,7 +204,7 @@ def check_duplicates(smdict, strict):
             for sg in sm.src_groups:
                 srcids[sm.fname].extend(src.source_id for src in sg)
             fnames.append(sm.fname)
-        check_unique(srcids, 'in branch %s' % branch, strict=True)
+        check_unique(srcids, 'in branch %s' % branch, strict=strict)
 
     found = find_false_duplicates(smdict)
     if found:
