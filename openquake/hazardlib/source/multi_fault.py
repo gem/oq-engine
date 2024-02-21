@@ -233,7 +233,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        p = self.msparams
+        p = self.msparams[self.msparams['u_max'] > 0]  # non-discarded
         lons = np.concatenate([p['west'], p['east']])
         lats = np.concatenate([p['north'], p['south']])
         west, east, north, south = get_spherical_bounding_box(lons, lats)

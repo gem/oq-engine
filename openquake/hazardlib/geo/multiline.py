@@ -97,13 +97,12 @@ class MultiLine(object):
         olon, olat, self.soidx = get_origin(ep, avg_azim)
 
         # compute the shift with respect to the origins
-        origins = []
-        for idx in self.soidx:
+        origins = np.zeros((len(lines), 2))
+        for i, idx in enumerate(self.soidx):
             flip = int(self.flipped[idx])
             # if the line is flipped take the point 1 instead of 0
-            origins.append(lines[idx].coo[flip])
-        self.shift = get_coordinate_shift(
-            np.array(origins), olon, olat, avg_azim)
+            origins[i] = lines[idx].coo[flip, 0:2]
+        self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
         self.u_max = u_max
 
     def set_u_max(self):
