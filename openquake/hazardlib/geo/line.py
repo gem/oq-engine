@@ -149,6 +149,34 @@ def _get_same_dir(rtra, coo):
     return same_dir
 
 
+@compile('(f8,f8,f8[:,:],f8[:],f8[:],f8[:,:],f8[:,:])')
+def get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that):
+    """
+    Compute the t and u coordinates. ti and ui have shape
+    (num_segments x num_sites).
+    """
+    N = len(lons)
+    L = len(coo)
+
+    # Sites projected coordinates
+    sx, sy = utils.project_direct(lam0, phi0, lons, lats)
+
+    # Polyline projected coordinates
+    tx, ty = utils.project_direct(lam0, phi0, coo[:, 0], coo[:, 1])
+
+    # Initializing ti and ui coordinates
+    ui = np.zeros((L - 1, N))
+    ti = np.zeros((L - 1, N))
+
+    # For each segment
+    for i in range(L-1):
+        dx = sx - tx[i]
+        dy = sy - ty[i]
+        ui[i] = dx * uhat[i, 0] + dy * uhat[i, 1]
+        ti[i] = dx * that[i, 0] + dy * that[i, 1]
+    return ui, ti
+
+
 class Line(object):
     """
     This class represents a geographical line, which is basically
@@ -429,24 +457,8 @@ class Line(object):
         Compute the t and u coordinates. ti and ui have shape
         (num_segments x num_sites).
         """
-        # Sites projected coordinates
-        sxy = self.proj(mesh.lons, mesh.lats).T
-
-        # Polyline projected coordinates
-        txy = self.proj(self.coo[:, 0], self.coo[:, 1]).T
-
-        # Initializing ti and ui coordinates
-        ui = np.zeros((txy.shape[0] - 1, sxy.shape[0]))
-        ti = np.zeros((txy.shape[0] - 1, sxy.shape[0]))
-
-        # For each section
-        for i in range(ui.shape[0]):
-            tmp = np.copy(sxy)
-            tmp[:, 0] -= txy[i, 0]
-            tmp[:, 1] -= txy[i, 1]
-            ui[i, :] = tmp @ uhat[i, 0:2]
-            ti[i, :] = tmp @ that[i, 0:2]
-        return ui, ti
+        return get_ui_ti(self.proj.lam0, self.proj.phi0,
+                         self.coo, mesh.lons, mesh.lats, uhat, that)
 
     @cached_property
     def tu_hat(self):
@@ -524,7 +536,7 @@ def get_ti_weights(ui, ti, segments_len):
 
         # More general case
         cond0 = np.abs(ti[i, :]) >= TOLERANCE
-        if len(cond0):
+        if cond0.any():
             terma[i, cond0] = segments_len[i] - ui[i, cond0]
             term1[i, cond0] = np.arctan(terma[i, cond0] / ti[i, cond0])
             term2[i, cond0] = np.arctan(-ui[i, cond0] / ti[i, cond0])
