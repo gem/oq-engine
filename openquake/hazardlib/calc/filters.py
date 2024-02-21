@@ -445,9 +445,10 @@ class SourceFilter(object):
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
 
-    def get_mask(self, wens):
+    def get_close(self, wens):
         """
         :param wens: an array with fields west, east, north, south
+        :returns: an array with the number of close sites per bbox
         """
         xyz = self.sitecol.xyz
         w, e, n, s = wens['west'], wens['east'], wens['north'], wens['south']
@@ -461,7 +462,7 @@ class SourceFilter(object):
         dist = self.integration_distance.y[-1] + numpy.sqrt(
             dlon**2 + dlat**2) / KM_TO_DEGREES
         dist += 10  # added 10 km of buffer to guard against numeric errors
-        return dists <= dist
+        return (dists <= dist).sum(axis=0) # shape (N, S) => S
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:

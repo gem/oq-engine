@@ -64,23 +64,31 @@ def build_secparams(sections):
 
 
 # not fast
-def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
+def build_msparams(rupture_idxs, secparams, close_sec=None,
+                   mon1=Monitor(), mon2=Monitor()):
     """
     :returns: a structured array of parameters
     """
     U = len(rupture_idxs)  # number of ruptures
     msparams = np.zeros(U, MS_DT)
+    if close_sec is None:
+        close_sec = np.ones(len(secparams), np.uint8)
 
     # building lines
     with mon1:
         lines = []
-        for secparam in secparams:
+        for s, secparam in enumerate(secparams):
+            if not close_sec[s]:
+                continue
             tl0, tl1, tr0, tr1 = secparam[['tl0', 'tl1', 'tr0', 'tr1']]
             line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
             lines.append(line)
 
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
+            idxs = idxs[close_sec[idxs]]
+            if len(idxs) == 0:  # all far away
+                continue
             secparam = secparams[idxs]
 
             # building simple multisurface params
