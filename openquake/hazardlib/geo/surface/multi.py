@@ -72,9 +72,9 @@ def build_msparams(rupture_idxs, secparams, close_sec=None,
     U = len(rupture_idxs)  # number of ruptures
     msparams = np.zeros(U, MS_DT)
     if close_sec is None:
-        close_sec = np.ones(len(secparams), np.uint8)
+        close_sec = np.ones(len(secparams), bool)
 
-    # building lines
+    # building lines, very fast
     with mon1:
         lines = []
         for s, secparam in enumerate(secparams):
@@ -82,14 +82,17 @@ def build_msparams(rupture_idxs, secparams, close_sec=None,
             line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
             lines.append(line)
 
+    # building msparams, slow due to u_max
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
-            idxs = idxs[close_sec[idxs]]
-            if len(idxs) == 0:  # all far away
+            # building u_max
+            tors = [lines[idx] for idx in idxs if close_sec[idx]]
+            if not tors:  # all far away
                 continue
-            secparam = secparams[idxs]
+            msparam['u_max'] = geo.MultiLine(tors).set_u_max()
 
             # building simple multisurface params
+            secparam = secparams[idxs]
             areas = secparam['area']
             msparam['area'] = areas.sum()
             ws = areas / msparam['area']  # weights
@@ -98,10 +101,6 @@ def build_msparams(rupture_idxs, secparams, close_sec=None,
             msparam['width'] = ws @ secparam['width']
             msparam['ztor'] = ws @ secparam['ztor']
             msparam['zbot'] = ws @ secparam['zbot']
-
-            # building u_max
-            msparam['u_max'] = geo.MultiLine(
-                [lines[idx] for idx in idxs]).set_u_max()
 
             # building bounding box
             lons = np.concatenate([secparam['west'], secparam['east']])
