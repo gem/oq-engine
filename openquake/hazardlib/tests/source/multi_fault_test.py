@@ -193,11 +193,8 @@ class MultiFaultTestCase(unittest.TestCase):
             for col in df.columns:
                 if col == 'probs_occur:2':
                     continue
-                try:
-                    aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
-                except Exception:
-                    print('Look at col')
-                    # breakpoint()
+                print(col)
+                aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
 
 
 def main100sites():
