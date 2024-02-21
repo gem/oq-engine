@@ -72,22 +72,23 @@ def build_msparams(rupture_idxs, secparams, close_sec=None,
     U = len(rupture_idxs)  # number of ruptures
     msparams = np.zeros(U, MS_DT)
     if close_sec is None:
+        # NB: in the engine close_sec is computed in the preclassical phase
         close_sec = np.ones(len(secparams), bool)
 
     # building lines, very fast
     with mon1:
         lines = []
-        for s, secparam in enumerate(secparams):
+        for secparam in secparams:
             tl0, tl1, tr0, tr1 = secparam[['tl0', 'tl1', 'tr0', 'tr1']]
             line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
             lines.append(line)
 
-    # building msparams, slow due to u_max
+    # building msparams, slow due to the computation of u_max
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
             # building u_max
             tors = [lines[idx] for idx in idxs if close_sec[idx]]
-            if not tors:  # all far away
+            if not tors:  # all sections are far away
                 continue
             msparam['u_max'] = geo.MultiLine(tors).set_u_max()
 
