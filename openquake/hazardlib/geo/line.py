@@ -177,6 +177,25 @@ def get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that):
     return ui, ti
 
 
+def get_tuws(lam0s, phi0s, coos, slens, uhats, thats, lons, lats):
+    """
+    :returns: array of float32 of shape (L, N, 3)
+    """
+    L = len(lam0s)
+    N = len(lons)
+    out = np.empty((L, N, 3), np.float32)
+    for i, (lam0, phi0, coo, slen, uhat, that) in enumerate(
+            zip(lam0s, phi0s, coos, slens, uhats, thats)):
+        ui, ti = get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that)
+        weights, iot = get_ti_weights(ui, ti, slen)
+        t, u = get_tu(ui, ti, slen, weights)
+        t[iot] = 0.0
+        out[i, :, 0] = t
+        out[i, :, 1] = u
+        out[i, :, 2] = weights.sum(axis=0)
+    return out
+
+
 class Line(object):
     """
     This class represents a geographical line, which is basically
@@ -437,20 +456,10 @@ class Line(object):
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        # Compute u hat and t hat for each segment. tmp has shape
-        # (num_segments x 3)
         slen, uhat, that = self.tu_hat
-
-        # Get local coordinates for the sites
-        ui, ti = self.get_ui_ti(mesh, uhat, that)
-
-        # Compute the weights
-        weights, iot = get_ti_weights(ui, ti, slen)
-
-        # Now compute T and U
-        t_upp, u_upp = get_tuw(ui, ti, slen, weights)
-        t_upp[iot] = 0.0
-        return np.array([t_upp, u_upp, weights.sum(axis=0)], np.float32)
+        tuws = get_tuws([self.proj.lam0], [self.proj.phi0], [self.coo],
+                        [slen], [uhat], [that], mesh.lons, mesh.lats)
+        return tuws[0, :, 0], tuws[0, :, 1], tuws[0, :, 2]
 
     def get_ui_ti(self, mesh, uhat, that):
         """
@@ -489,7 +498,7 @@ class Line(object):
 
 
 @compile('(f8[:,:],f8[:,:],f8[:],f8[:,:])')
-def get_tuw(ui, ti, sl, weights):
+def get_tu(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
 
