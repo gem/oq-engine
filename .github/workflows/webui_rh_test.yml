@@ -68,11 +68,9 @@ jobs:
           sleep 3
           oq --version
           #
-          ls -lrt /opt/openquake/venv/lib/python3.11/site-packages
           echo "Add settings for login and logging on webui before to start"
           cd /__w/oq-engine/oq-engine/
           cd openquake/server
-          ls -lrt
           cat > local_settings.py << EOF
           LOCKDOWN = True
           #
