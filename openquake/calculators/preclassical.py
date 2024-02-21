@@ -118,6 +118,8 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             else:
                 mask = None
             src.set_msparams(secparams, mask, mon1, mon2)
+            if (src.msparams['u_max'] == 0).all():
+                continue # all ruptures are far away
         if sites:
             # NB: this is approximate, since the sites are sampled
             src.nsites = len(sf.close_sids(src))  # can be 0
@@ -130,31 +132,32 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
             splits.extend(split_source(src))
         else:
             splits.append(src)
-    splits = _filter(splits, cmaker.oq.minimum_magnitude)
-    mon = monitor('weighting sources', measuremem=False)
-    if sites is None or spacing == 0:
-        if sites is None:
-            for src in splits:
-                src.weight = .01
-        else:
-            cmaker.set_weight(splits, sf, multiplier, mon)
-        dic = {grp_id: splits}
-        dic['before'] = len(srcs)
-        dic['after'] = len(splits)
-        yield dic
-    else:
-        cnt = 0
-        for msr, block in groupby(splits, msr_name).items():
-            dic = grid_point_sources(block, spacing, msr, cnt, monitor)
-            cnt = dic.pop('cnt')
-            for src in dic[grp_id]:
-                src.num_ruptures = src.count_ruptures()
-            # this is also prefiltering the split sources
-            cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
-            # print(f'{mon.task_no=}, {mon.duration=}')
-            dic['before'] = len(block)
-            dic['after'] = len(dic[grp_id])
+    if splits:
+        splits = _filter(splits, cmaker.oq.minimum_magnitude)
+        mon = monitor('weighting sources', measuremem=False)
+        if sites is None or spacing == 0:
+            if sites is None:
+                for src in splits:
+                    src.weight = .01
+            else:
+                cmaker.set_weight(splits, sf, multiplier, mon)
+            dic = {grp_id: splits}
+            dic['before'] = len(srcs)
+            dic['after'] = len(splits)
             yield dic
+        else:
+            cnt = 0
+            for msr, block in groupby(splits, msr_name).items():
+                dic = grid_point_sources(block, spacing, msr, cnt, monitor)
+                cnt = dic.pop('cnt')
+                for src in dic[grp_id]:
+                    src.num_ruptures = src.count_ruptures()
+                # this is also prefiltering the split sources
+                cmaker.set_weight(dic[grp_id], sf, multiplier, mon)
+                # print(f'{mon.task_no=}, {mon.duration=}')
+                dic['before'] = len(block)
+                dic['after'] = len(dic[grp_id])
+                yield dic
 
 
 @base.calculators.add('preclassical')
