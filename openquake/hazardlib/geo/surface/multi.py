@@ -78,8 +78,6 @@ def build_msparams(rupture_idxs, secparams, close_sec=None,
     with mon1:
         lines = []
         for s, secparam in enumerate(secparams):
-            if not close_sec[s]:
-                continue
             tl0, tl1, tr0, tr1 = secparam[['tl0', 'tl1', 'tr0', 'tr1']]
             line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
             lines.append(line)
