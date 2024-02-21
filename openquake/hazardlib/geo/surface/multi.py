@@ -28,13 +28,13 @@ from openquake.hazardlib.geo import utils
 from openquake.hazardlib import geo
 from openquake.hazardlib.geo.surface import PlanarSurface
 
-MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
-           'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south',
-            'hp0', 'hp1', 'hp2']
-MS_DT = [(p, np.float32) for p in MSPARAMS]
 F32 = np.float32
+MSPARAMS = ['area', 'dip', 'strike', 'u_max', 'width', 'zbot', 'ztor',
+           'tl0', 'tl1', 'tr0', 'tr1', 'west', 'east', 'north', 'south']
+MS_DT = [(p, np.float32) for p in MSPARAMS] + [('hypo', (F32, 3))]
 
 
+# really fast
 def build_secparams(sections):
     """
     :returns: an array of section parameters
@@ -59,20 +59,23 @@ def build_secparams(sections):
         sparam['south'] = bb[3]
 
         mid = sec.get_middle_point()
-        sparam['hp0'] = mid.x
-        sparam['hp1'] = mid.y
-        sparam['hp2'] = mid.z
+        sparam['hypo'] = (mid.x, mid.y, mid.z)
     return secparams
 
 
-def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
+# not fast
+def build_msparams(rupture_idxs, secparams, close_sec=None,
+                   mon1=Monitor(), mon2=Monitor()):
     """
     :returns: a structured array of parameters
     """
     U = len(rupture_idxs)  # number of ruptures
     msparams = np.zeros(U, MS_DT)
+    if close_sec is None:
+        # NB: in the engine close_sec is computed in the preclassical phase
+        close_sec = np.ones(len(secparams), bool)
 
-    # building lines
+    # building lines, very fast
     with mon1:
         lines = []
         for secparam in secparams:
@@ -80,11 +83,17 @@ def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
             line = geo.Line.from_coo(np.array([[tl0, tl1], [tr0, tr1]], float))
             lines.append(line)
 
+    # building msparams, slow due to the computation of u_max
     with mon2:
         for msparam, idxs in zip(msparams, rupture_idxs):
-            secparam = secparams[idxs]
+            # building u_max
+            tors = [lines[idx] for idx in idxs if close_sec[idx]]
+            if not tors:  # all sections are far away
+                continue
+            msparam['u_max'] = geo.MultiLine(tors).set_u_max()
 
             # building simple multisurface params
+            secparam = secparams[idxs]
             areas = secparam['area']
             msparam['area'] = areas.sum()
             ws = areas / msparam['area']  # weights
@@ -93,10 +102,6 @@ def build_msparams(rupture_idxs, secparams, mon1=Monitor(), mon2=Monitor()):
             msparam['width'] = ws @ secparam['width']
             msparam['ztor'] = ws @ secparam['ztor']
             msparam['zbot'] = ws @ secparam['zbot']
-
-            # building u_max
-            msparam['u_max'] = geo.MultiLine(
-                [lines[idx] for idx in idxs]).set_u_max()
 
             # building bounding box
             lons = np.concatenate([secparam['west'], secparam['east']])

@@ -40,7 +40,7 @@ from openquake.hazardlib.source.base import BaseSeismicSource
 U16 = np.uint16
 F32 = np.float32
 F64 = np.float64
-BLOCKSIZE = 2_000
+BLOCKSIZE = 5_000
 # NB: if too large, very few sources will be generated and a lot of
 # memory will be used
 
@@ -110,10 +110,11 @@ class MultiFaultSource(BaseSeismicSource):
         with hdf5.File(self.hdf5path, 'r') as h5:
             return h5[f'{self.source_id}/rupture_idxs'][:]
 
-    def set_msparams(self, secparams,
+    def set_msparams(self, secparams, close_sec=None,
                      mon1=performance.Monitor(),
                      mon2=performance.Monitor()):
-        self.msparams = build_msparams(self.rupture_idxs, secparams, mon1, mon2)
+        self.msparams = build_msparams(
+            self.rupture_idxs, secparams, close_sec, mon1, mon2)
 
     def is_gridded(self):
         return True  # convertible to HDF5
@@ -167,6 +168,8 @@ class MultiFaultSource(BaseSeismicSource):
             occur_rates = self.occur_rates
             tom = PoissonTOM(self.investigation_time)
         for i in range(0, n, step**2):
+            if msparams[i]['u_max'] == 0:  # rupture far away
+                continue
             idxs = rupture_idxs[i]
             sfc = MultiSurface([sec[idx] for idx in idxs], msparams[i])
             rake = self.rakes[i]
@@ -230,7 +233,7 @@ class MultiFaultSource(BaseSeismicSource):
         """
         Bounding box containing the surfaces, enlarged by the maximum distance
         """
-        p = self.msparams
+        p = self.msparams[self.msparams['u_max'] > 0]  # non-discarded
         lons = np.concatenate([p['west'], p['east']])
         lats = np.concatenate([p['north'], p['south']])
         west, east, north, south = get_spherical_bounding_box(lons, lats)

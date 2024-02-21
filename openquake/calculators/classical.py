@@ -256,6 +256,7 @@ class Hazard:
     def __init__(self, dstore, srcidx, gids):
         self.datastore = dstore
         oq = dstore['oqparam']
+        self.itime = oq.investigation_time
         self.weig = dstore['_rates/weig'][:]
         self.imtls = oq.imtls
         self.sids = dstore['sitecol/sids'][:]
@@ -275,8 +276,7 @@ class Hazard:
         :returns: an array of rates of shape (N, M, L1)
         """
         gids = self.gids[pmap.grp_id]
-        itime = self.datastore['oqparam'].investigation_time
-        rates = disagg.to_rates(pmap.array, itime) @ self.weig[gids]  # shape (N, L)
+        rates = disagg.to_rates(pmap.array, self.itime) @ self.weig[gids]
         return rates.reshape((self.N, self.M, self.L1))
 
     def store_rates(self, pnemap, the_sids, gid=0):
@@ -291,11 +291,10 @@ class Hazard:
             if len(idxs) == 0:  # happens in case_60
                 return 0
             sids = the_sids[idxs]
-            rate = rates[idxs, lids, gids]
             hdf5.extend(self.datastore['_rates/sid'], sids)
             hdf5.extend(self.datastore['_rates/gid'], gids + gid)
             hdf5.extend(self.datastore['_rates/lid'], lids + slc.start)
-            hdf5.extend(self.datastore['_rates/rate'], rate)
+            hdf5.extend(self.datastore['_rates/rate'], rates[idxs, lids, gids])
 
             # slice_by_sid contains 3x6=18 slices in classical/case_22
             # which has 6 IMTs each one with 20 levels
@@ -476,7 +475,7 @@ class ClassicalCalculator(base.HazardCalculator):
             self.check_memory(len(self.sitecol), oq.imtls.size, maxw)
             self.execute_reg(maxw)
         else:
-            self.execute_big(maxw)
+            self.execute_big(maxw * .75)
         self.store_info()
         if self.cfactor[0] == 0:
             if self.N == 1:
@@ -580,8 +579,7 @@ class ClassicalCalculator(base.HazardCalculator):
                     self.ntiles.append(len(tiles))
         logging.warning('Generated at most %d tiles', max(self.ntiles))
         self.datastore.swmr_on()  # must come before the Starmap
-        for dic in parallel.Starmap(
-                classical, allargs, h5=self.datastore.hdf5):
+        for dic in parallel.Starmap(classical, allargs, h5=self.datastore.hdf5):
             pnemap = dic['pnemap']
             self.cfactor += dic['cfactor']
             gid = self.gids[dic['grp_id']][0]

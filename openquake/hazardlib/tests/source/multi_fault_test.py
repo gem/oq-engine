@@ -172,11 +172,12 @@ class MultiFaultTestCase(unittest.TestCase):
         sitecol._set('vs30measured', 1)
         sitecol._set('z1pt0', 100.)
         sitecol._set('z2pt5', 5.)
-
         gsim = valid.gsim('AbrahamsonEtAl2014NSHMPMean')
         cmaker = contexts.simple_cmaker([gsim], ['PGA'])
+        sf = calc.filters.SourceFilter(sitecol, cmaker.maximum_distance)
         secparams = build_secparams(src.get_sections())
-        src.set_msparams(secparams)
+        nsites = sf.get_close(secparams)
+        src.set_msparams(secparams, nsites > 0)
         [ctxt] = cmaker.from_srcs([src], sitecol)
         print(cmaker.ir_mon)
         print(cmaker.ctx_mon)
@@ -193,11 +194,8 @@ class MultiFaultTestCase(unittest.TestCase):
             for col in df.columns:
                 if col == 'probs_occur:2':
                     continue
-                try:
-                    aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
-                except Exception:
-                    print('Look at col')
-                    # breakpoint()
+                print(col)
+                aac(df[col].to_numpy(), ctx[col], rtol=1E-5, equal_nan=1)
 
 
 def main100sites():

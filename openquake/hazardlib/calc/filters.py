@@ -21,7 +21,7 @@ import sys
 import operator
 from contextlib import contextmanager
 import numpy
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree, distance
 from scipy.interpolate import interp1d
 
 from openquake.baselib.python3compat import raise_
@@ -360,7 +360,6 @@ class SourceFilter(object):
         try:
             bbox = get_bounding_box(src, maxdist)
         except Exception as exc:
-            raise
             raise exc.__class__('source %s: %s' % (src.source_id, exc))
         return bbox
 
@@ -445,6 +444,19 @@ class SourceFilter(object):
             sids = self.close_sids(src)
             if len(sids):
                 yield src, self.sitecol.filtered(sids)
+
+    def get_close(self, tors):
+        """
+        :param tors: a structured array with fields tl0, tl1, tr0, tr1
+        :returns: an array with the number of close sites per bbox
+        """
+        xyz = self.sitecol.xyz
+        tl0, tl1, tr0, tr1 = tors['tl0'], tors['tl1'], tors['tr0'], tors['tr1']
+        distl = distance.cdist(xyz, spherical_to_cartesian(tl0, tl1))
+        distr = distance.cdist(xyz, spherical_to_cartesian(tr0, tr1))
+        dists = numpy.min([distl, distr], axis=0)  # shape (N, S)
+        maxdist = self.integration_distance.y[-1]
+        return (dists <= maxdist).sum(axis=0) # shape (N, S) => S
 
     def __getitem__(self, slc):
         if slc.start is None and slc.stop is None:
