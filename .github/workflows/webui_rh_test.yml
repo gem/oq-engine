@@ -117,5 +117,4 @@ jobs:
           exit 1
           fi
           # Run a calcs using https
-          #
           oq engine --run https://downloads.openquake.org/jobs/risk_test.zip
