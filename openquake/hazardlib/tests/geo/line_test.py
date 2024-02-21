@@ -235,8 +235,7 @@ class ComputeTUTest(unittest.TestCase):
         # The simplest test. Straight trace going from west to east.
         lons = np.array([0.0, 0.1, 0.2])
         lats = np.array([0.0, 0.0, 0.0])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.2, 0.1]])
@@ -259,8 +258,7 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Prepare the mesh
         coo = np.array([[0.3, 0.0], [0.2, -0.1], [0.4, 0.3]])
@@ -277,8 +275,7 @@ class ComputeTUTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.005)
@@ -425,8 +422,7 @@ class ComputeWeightsTest(unittest.TestCase):
         loa, laa = geo.geodetic.point_at(0.2, 0.0, 45., 20)
         lons = np.array([0.0, 0.1, 0.2, loa])
         lats = np.array([0.0, 0.0, 0.0, laa])
-        line = geo.Line.from_vectors(lons, lats)
-        line.keep_corners(4.0)
+        line = geo.Line.from_vectors(lons, lats).keep_corners(4.0)
 
         # Get the site collection
         mesh, plons, plats = get_mesh(-0.5, 1.0, -0.5, 1.0, 0.01)
