@@ -1,4 +1,5 @@
   [Michele Simionato]
+  * Extended the `region` constraint to discard event based ruptures
   * Added an uniqueness check to source IDs in the same branch
   * Extended the command `oq sample` to multi fault sources
   * Fixed the reading of ruptures with a multisurface with meshes

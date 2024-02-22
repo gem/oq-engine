@@ -23,6 +23,7 @@ import logging
 import operator
 import numpy
 import pandas
+from shapely import wkt
 from openquake.baselib import hdf5, parallel, python3compat
 from openquake.baselib.general import (
     AccumDict, humansize, groupby, block_splitter)
@@ -473,7 +474,9 @@ class EventBasedCalculator(base.HazardCalculator):
         source_data = AccumDict(accum=[])
         allargs = []
         srcfilter = self.srcfilter
-        if oq.mosaic_model:  # 3-letter mosaic model
+        if oq.region:
+            model_geom = wkt.loads(oq.region)
+        elif oq.mosaic_model:  # 3-letter mosaic model
             mosaic_df = readinput.read_mosaic_df(buffer=0).set_index('code')
             model_geom = mosaic_df.loc[oq.mosaic_model].geom
         logging.info('Building ruptures')
@@ -482,7 +485,7 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
             cmaker = ContextMaker(sg.trt, rgb, oq)
-            if oq.mosaic_model:
+            if oq.region or oq.mosaic_model:
                 cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
