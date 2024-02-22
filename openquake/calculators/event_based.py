@@ -485,7 +485,8 @@ class EventBasedCalculator(base.HazardCalculator):
                 continue
             rgb = self.full_lt.get_rlzs_by_gsim(sg.sources[0].trt_smr)
             cmaker = ContextMaker(sg.trt, rgb, oq)
-            if oq.region or oq.mosaic_model:
+            if oq.calculation_mode == 'event_based' and (
+                    oq.region or oq.mosaic_model):
                 cmaker.model_geom = model_geom
             for src_group in sg.split(maxweight):
                 allargs.append((src_group, cmaker, srcfilter.sitecol))
