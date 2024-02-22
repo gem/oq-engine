@@ -96,7 +96,7 @@ AELO_FORM_PLACEHOLDERS = {
     'lon': 'Longitude (max. 5 decimal places)',
     'lat': 'Latitude (max. 5 decimal places)',
     'vs30': 'Vs30 (fixed at 760 m/s)',
-    'siteid': 'Site name (a-zA-Z0-9_-:)',
+    'siteid': f'Site name (max. {settings.MAX_AELO_SITE_NAME_LEN} characters)'
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
@@ -626,7 +626,11 @@ def aelo_run(request):
         validation_errs[AELO_FORM_PLACEHOLDERS['vs30']] = str(exc)
         invalid_inputs.append('vs30')
     try:
-        siteid = valid.simple_id(request.POST.get('siteid'))
+        siteid = request.POST.get('siteid')
+        if len(siteid) > settings.MAX_AELO_SITE_NAME_LEN:
+            raise ValueError(
+                "site name can not be longer than %s characters" %
+                settings.MAX_AELO_SITE_NAME_LEN)
     except Exception as exc:
         validation_errs[AELO_FORM_PLACEHOLDERS['siteid']] = str(exc)
         invalid_inputs.append('siteid')

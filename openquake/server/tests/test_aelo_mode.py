@@ -35,6 +35,7 @@ import logging
 import django
 from django.apps import apps
 from django.test import Client
+from django.conf import settings
 from openquake.commonlib.logs import dbcmd
 from openquake.server.tests.views_test import EngineServerTestCase
 
@@ -202,10 +203,12 @@ class EngineServerAeloModeTestCase(EngineServerTestCase):
         self.aelo_invalid_input(params, 'float -800.0 < 0')
 
     def test_aelo_invalid_siteid(self):
-        params = dict(lon='-86', lat='12', vs30='800', siteid='CCA SITE')
+        siteid = 'a' * (settings.MAX_AELO_SITE_NAME_LEN + 1)
+        params = dict(lon='-86', lat='12', vs30='800', siteid=siteid)
         self.aelo_invalid_input(
-            params, "Invalid ID 'CCA SITE': the only accepted chars are"
-            ' ^[\\w_\\-:]+$')
+            params,
+            "site name can not be longer than %s characters" %
+            settings.MAX_AELO_SITE_NAME_LEN)
 
     def test_aelo_can_not_run_normal_calc(self):
         with open(os.path.join(self.datadir, 'archive_ok.zip'), 'rb') as a:
