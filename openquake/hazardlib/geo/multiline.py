@@ -111,7 +111,7 @@ class MultiLine(object):
         """
         if self.u_max is None:
             N = 2 * len(self.lines)
-            t, u = _get_tu(self.shift, self.get_tuws(self.ep), N)
+            t, u = get_tu(self.shift, self.get_tuws(self.ep), N)
             self.u_max = np.abs(u).max()
         assert self.u_max > 0
         return self.u_max
@@ -159,7 +159,7 @@ class MultiLine(object):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        return _get_tu(self.shift, self.get_tuws(mesh), len(mesh))
+        return get_tu(self.shift, self.get_tuws(mesh), len(mesh))
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -243,12 +243,19 @@ def get_coordinate_shift(origins: list, olon: float, olat: float,
     return np.float32(np.cos(np.radians(overall_strike - azimuths)) * distances)
 
 
-def _get_tu(shift, tuws, N):
+# called by contexts.py
+def get_tu(shift, tuws, N):
+    """
+    :param shift: multiline shift array
+    :param tuws: iterator producing arrays of shape (N, 3)
+    :param N: number of sites
+    """
     # `shift` has shape L and `tuws` shape (L, N, 3)
     ts = np.zeros(N, np.float32)
     us = np.zeros(N, np.float32)
     ws = np.zeros(N, np.float32)
     for i, tuw in enumerate(tuws):
+        assert len(tuw) == N, (len(tuw), N)
         t, u, w = tuw[:, 0], tuw[:, 1], tuw[:, 2]
         ts += t * w
         us += (u + shift[i]) * w

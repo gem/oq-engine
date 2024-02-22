@@ -150,7 +150,7 @@ def _get_same_dir(rtra, coo):
 
 
 @compile('(f8[:,:],f8[:,:],f8[:],f8[:,:])')
-def get_tu(ui, ti, sl, weights):
+def line_get_tu(ui, ti, sl, weights):
     """
     Compute the T and U quantitities.
 
@@ -260,7 +260,7 @@ def get_tuw(lam0, phi0, coo, slen, uhat, that, lons, lats):
     out = np.empty((N, 3), np.float32)
     ui, ti = get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that)
     weights, iot = get_ti_weights(ui, ti, slen)
-    t, u = get_tu(ui, ti, slen, weights)
+    t, u = line_get_tu(ui, ti, slen, weights)
     t[iot] = 0.0
     out[:, 0] = t
     out[:, 1] = u

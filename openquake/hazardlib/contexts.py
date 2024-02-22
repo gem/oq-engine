@@ -90,7 +90,7 @@ def _get_tu(rup, dparam, mask):
         idx = tor.soidx[s]
         flip = int(tor.flipped[idx])
         tuw[s] = arr[idx, :, flip, :]  # shape (N, 3)
-    return multiline._get_tu(tor.shift, tuw, N)
+    return multiline.get_tu(tor.shift, tuw, N)
 
 
 def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
