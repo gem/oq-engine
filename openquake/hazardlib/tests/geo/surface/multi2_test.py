@@ -131,7 +131,7 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
         sfc1 = ffd(trace, usd, lsd, dip, mspc)
 
         # Surface 2
-        self.coo2 = [[-0.15, 0.0], [-0.05, 0.0]]
+        self.coo2 = [[-0.15, 0.0], [-0.05, 0.0], [0.3, -0.05]]
         trace = Line([pnt(co[0], co[1]) for co in self.coo2])
         sfc2 = ffd(trace, usd, lsd, dip, mspc)
 
