@@ -188,6 +188,8 @@ USE_REVERSE_PROXY = False
 # Expose the WebUI interface, otherwise only the REST API will be available
 WEBUI = True
 
+MAX_AELO_SITE_NAME_LEN = 256
+
 # OpenQuake Standalone tools (IPT, Taxtweb, Taxonomy Glossary)
 if STANDALONE and WEBUI:
     INSTALLED_APPS += (
