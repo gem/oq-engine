@@ -111,14 +111,14 @@ class MultiLine(object):
         """
         if self.u_max is None:
             N = 2 * len(self.lines)
-            t, u = get_tu(self.shift, self.get_tuws(self.ep), N)
+            t, u = get_tu(self.shift, self.gen_tuws(self.ep), N)
             self.u_max = np.abs(u).max()
         assert self.u_max > 0
         return self.u_max
 
-    def get_tuws(self, mesh):
+    def gen_tuws(self, mesh):
         """
-        :return: array of shape (L, N, 3)
+        :yields: L arrays of shape (N, 3)
         """
         nsegs = [len(ln) - 1 for ln in self.lines]  # segments per line
         if len(set(nsegs)) == 1:
@@ -159,7 +159,7 @@ class MultiLine(object):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        return get_tu(self.shift, self.get_tuws(mesh), len(mesh))
+        return get_tu(self.shift, self.gen_tuws(mesh), len(mesh))
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -168,7 +168,7 @@ class MultiLine(object):
         ts = []
         us = []
         ws = []
-        for li, tuw in enumerate(self.get_tuws()):
+        for li, tuw in enumerate(self.gen_tuws()):
             for s, sid in enumerate(sites.sids):
                 sids.append(sid)
                 ls.append(li)
