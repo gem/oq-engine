@@ -85,12 +85,12 @@ def _get_tu(rup, dparam, mask):
     S, N = arr.shape[:2]
     # keep the flipped values and then reorder the surface indices
     # arr has shape (S, N, 2, 3) where 2 refer to the flipping
-    tuw = numpy.zeros((3, S, N), F32)
+    tuw = numpy.zeros((S, N, 3), F32)
     for s in range(S):
         idx = tor.soidx[s]
         flip = int(tor.flipped[idx])
-        tuw[:, s, :] = arr[idx, :, flip, :].T  # shape (3, N)
-    return multiline._get_tu(tor.shift, tuw)
+        tuw[s] = arr[idx, :, flip, :]  # shape (N, 3)
+    return multiline._get_tu(tor.shift, tuw, N)
 
 
 def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):

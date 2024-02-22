@@ -251,6 +251,23 @@ def get_ti_weights(ui, ti, segments_len):
     return weights, idx_on_trace
 
 
+@compile('(f8,f8,f8[:,:],f8[:],f8[:,:],f8[:,:],f8[:],f8[:])')
+def get_tuw(lam0, phi0, coo, slen, uhat, that, lons, lats):
+    """
+    :returns: array of float32 of shape (N, 3)
+    """
+    N = len(lons)
+    out = np.empty((N, 3), np.float32)
+    ui, ti = get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that)
+    weights, iot = get_ti_weights(ui, ti, slen)
+    t, u = get_tu(ui, ti, slen, weights)
+    t[iot] = 0.0
+    out[:, 0] = t
+    out[:, 1] = u
+    out[:, 2] = weights.sum(axis=0)
+    return out
+
+
 @compile('(f8[:],f8[:],f8[:,:,:],f8[:,:],f8[:,:,:],f8[:,:,:],f8[:],f8[:])')
 def get_tuws(lam0s, phi0s, coos, slens, uhats, thats, lons, lats):
     """
@@ -261,13 +278,7 @@ def get_tuws(lam0s, phi0s, coos, slens, uhats, thats, lons, lats):
     out = np.empty((L, N, 3), np.float32)
     for i, (lam0, phi0, coo, slen, uhat, that) in enumerate(
             zip(lam0s, phi0s, coos, slens, uhats, thats)):
-        ui, ti = get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that)
-        weights, iot = get_ti_weights(ui, ti, slen)
-        t, u = get_tu(ui, ti, slen, weights)
-        t[iot] = 0.0
-        out[i, :, 0] = t
-        out[i, :, 1] = u
-        out[i, :, 2] = weights.sum(axis=0)
+        out[i] = get_tuw(lam0, phi0, coo, slen, uhat, that, lons, lats)
     return out
 
 
@@ -532,17 +543,10 @@ class Line(object):
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
         slen, uhat, that = self.tu_hat
-        S1, S2 = uhat.shape
-        lam0 = np.array([self.proj.lam0])
-        phi0 = np.array([self.proj.phi0])
-        shp = (1,) + self.coo.shape
-        tuws = get_tuws(lam0, phi0,
-                        self.coo.reshape(shp),
-                        slen.reshape(1, S1),
-                        uhat.reshape(1, S1, S2),
-                        that.reshape(1, S1, S2),
-                        mesh.lons, mesh.lats)
-        return tuws[0, :, 0], tuws[0, :, 1], tuws[0, :, 2]
+        tuw = get_tuw(self.proj.lam0, self.proj.phi0,
+                      self.coo, slen, uhat, that,
+                      mesh.lons, mesh.lats)
+        return tuw[:, 0], tuw[:, 1], tuw[:, 2]
 
     def get_ui_ti(self, mesh, uhat, that):
         """

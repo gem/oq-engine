@@ -24,7 +24,7 @@ import pandas as pd
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
-from openquake.hazardlib.geo.line import get_tuws
+from openquake.hazardlib.geo.line import get_tuws, get_tuw
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
@@ -112,13 +112,8 @@ class MultiLine(object):
         """
         if self.u_max is None:
             N = 2 * len(self.lines)
-            us = np.zeros(N, np.float32)
-            ws = np.zeros(N, np.float32)
-            for i, tuw in enumerate(self.get_tuws(self.ep)):
-                _, u, w = tuw[:, 0], tuw[:, 1], tuw[:, 2]
-                us += (u + self.shift[i]) * w
-                ws += w
-            self.u_max = np.abs(us / ws).max()
+            t, u = _get_tu(self.shift, self.get_tuws(self.ep), N)
+            self.u_max = np.abs(u).max()
         assert self.u_max > 0
         return self.u_max
 
@@ -126,34 +121,46 @@ class MultiLine(object):
         """
         :return: array of shape (L, N, 3)
         """
-        L = len(self.lines)
-        lam0s = np.empty(L)
-        phi0s = np.empty(L)
-        coos = np.empty((L, 2, 2))
-        slens = np.empty((L, 1))
-        uhats = np.empty((L, 1, 3))
-        thats = np.empty((L, 1, 3))
-        for i, idx in enumerate(self.soidx):
-            line = self.lines[idx]
-            if self.flipped[idx]:
-                line = line.flipped
-            lam0s[i] = line.proj.lam0
-            phi0s[i] = line.proj.phi0
-            coos[i] = line.coo[:, 0:2]
-            slen, uhat, that = line.tu_hat
-            slens[i] = slen
-            uhats[i] = uhat
-            thats[i] = that
-        return get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
-                        mesh.lons, mesh.lats)
+        nsegs = [len(ln) - 1 for ln in self.lines]  # segments per line
+        if len(set(nsegs)) == 1:
+            # fast lane, when the number of segments is constant
+            ns = nsegs[0]
+            L = len(self.lines)
+            lam0s = np.empty(L)
+            phi0s = np.empty(L)
+            coos = np.empty((L, ns + 1, 2))
+            slens = np.empty((L, ns))
+            uhats = np.empty((L, ns, 3))
+            thats = np.empty((L, ns, 3))
+            for i, idx in enumerate(self.soidx):
+                line = self.lines[idx]
+                if self.flipped[idx]:
+                    line = line.flipped
+                lam0s[i] = line.proj.lam0
+                phi0s[i] = line.proj.phi0
+                coos[i] = line.coo[:, 0:2]
+                slen, uhat, that = line.tu_hat
+                slens[i] = slen
+                uhats[i] = uhat
+                thats[i] = that
+            yield from get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+                                mesh.lons, mesh.lats)
+        else:
+            # slow lane, happens only in hazardlib
+            for idx in self.soidx:
+                line = self.lines[idx]
+                if self.flipped[idx]:
+                    line = line.flipped
+                slen, uhat, that = line.tu_hat
+                yield get_tuw(line.proj.lam0, line.proj.phi0, line.coo[:, :2],
+                              slen, uhat, that,  mesh.lons, mesh.lats)
 
     # used in event based too
     def get_tu(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        tuws = self.get_tuws(mesh).transpose(2, 0, 1)  # shape (3, L, N)
-        return _get_tu(self.shift, tuws)
+        return _get_tu(self.shift, self.get_tuws(mesh), len(mesh))
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -237,14 +244,14 @@ def get_coordinate_shift(origins: list, olon: float, olat: float,
     return np.float32(np.cos(np.radians(overall_strike - azimuths)) * distances)
 
 
-@compile('f4[:],f4[:,:,:]')
-def _get_tu(shift, tuw):
-    # `shift` has shape L and `tuw` shape (3, L, N)
-    L, N = tuw.shape[1:]
-    tN, uN = np.zeros(N), np.zeros(N)
-    W = tuw[2].sum(axis=0)  # shape N
-    for s in range(L):
-        t, u, w = tuw[:, s]  # shape N
-        tN += t * w
-        uN += (u + shift[s]) * w
-    return tN / W, uN / W
+def _get_tu(shift, tuws, N):
+    # `shift` has shape L and `tuws` shape (L, N, 3)
+    ts = np.zeros(N, np.float32)
+    us = np.zeros(N, np.float32)
+    ws = np.zeros(N, np.float32)
+    for i, tuw in enumerate(tuws):
+        t, u, w = tuw[:, 0], tuw[:, 1], tuw[:, 2]
+        ts += t * w
+        us += (u + shift[i]) * w
+        ws += w
+    return ts / ws, us / ws
