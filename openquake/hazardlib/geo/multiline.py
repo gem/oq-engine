@@ -24,6 +24,7 @@ import pandas as pd
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.line import get_tuws
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
@@ -93,8 +94,8 @@ class MultiLine(object):
     def __init__(self, lines, u_max=None):
         self.lines = lines
         avg_azim, self.flipped = get_avg_azim_flipped(lines)
-        ep = get_endpoints(lines)
-        olon, olat, self.soidx = get_origin(ep, avg_azim)
+        self.ep = get_endpoints(lines)
+        olon, olat, self.soidx = get_origin(self.ep, avg_azim)
 
         # compute the shift with respect to the origins
         origins = np.zeros((len(lines), 2))
@@ -110,38 +111,49 @@ class MultiLine(object):
         If not already computed, compute .u_max, set it and return it.
         """
         if self.u_max is None:
-            mesh = get_endpoints(self.lines)
-            N = len(mesh)  # 2 * number of lines
+            N = 2 * len(self.lines)
             us = np.zeros(N, np.float32)
             ws = np.zeros(N, np.float32)
-            for i, (t, u, w) in enumerate(self.gen_tuw(mesh)):
+            for i, tuw in enumerate(self.get_tuws(self.ep)):
+                _, u, w = tuw[:, 0], tuw[:, 1], tuw[:, 2]
                 us += (u + self.shift[i]) * w
                 ws += w
             self.u_max = np.abs(us / ws).max()
         assert self.u_max > 0
         return self.u_max
 
-    def gen_tuw(self, mesh):
+    def get_tuws(self, mesh):
         """
-        :yields: tuw arrays
+        :return: array of shape (L, N, 3)
         """
-        for idx in self.soidx:
+        L = len(self.lines)
+        lam0s = np.empty(L)
+        phi0s = np.empty(L)
+        coos = np.empty((L, 2, 2))
+        slens = np.empty((L, 1))
+        uhats = np.empty((L, 1, 3))
+        thats = np.empty((L, 1, 3))
+        for i, idx in enumerate(self.soidx):
             line = self.lines[idx]
             if self.flipped[idx]:
                 line = line.flipped
-            yield line.get_tuw(mesh)
+            lam0s[i] = line.proj.lam0
+            phi0s[i] = line.proj.phi0
+            coos[i] = line.coo[:, 0:2]
+            slen, uhat, that = line.tu_hat
+            slens[i] = slen
+            uhats[i] = uhat
+            thats[i] = that
+        return get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+                        mesh.lons, mesh.lats)
 
     # used in event based too
     def get_tu(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        L = len(self.lines)  # number of lines
-        N = len(mesh)
-        tuw = np.zeros((3, L, N), np.float32)
-        for i, tuw_i in enumerate(self.gen_tuw(mesh)):
-            tuw[:, i] = tuw_i
-        return _get_tu(self.shift, tuw)
+        tuws = self.get_tuws(mesh).transpose(2, 0, 1)  # shape (3, L, N)
+        return _get_tu(self.shift, tuws)
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -150,13 +162,13 @@ class MultiLine(object):
         ts = []
         us = []
         ws = []
-        for li, (t, u, w) in enumerate(self.gen_tuw()):
+        for li, tuw in enumerate(self.get_tuws()):
             for s, sid in enumerate(sites.sids):
                 sids.append(sid)
                 ls.append(li)
-                ts.append(t[s])
-                us.append(u[s])
-                ws.append(w[s])
+                ts.append(tuw[s, 0])
+                us.append(tuw[s, 1])
+                ws.append(tuw[s, 2])
         dic = dict(sid=sids, li=ls, t=ts, u=us, w=ws)
         return pd.DataFrame(dic)
 
