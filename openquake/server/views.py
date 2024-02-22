@@ -93,10 +93,10 @@ KUBECTL = "kubectl apply -f -".split()
 ENGINE = "python -m openquake.engine.engine".split()
 
 AELO_FORM_PLACEHOLDERS = {
-    'lon': 'Longitude',
-    'lat': 'Latitude',
+    'lon': 'Longitude (max. 5 decimal places)',
+    'lat': 'Latitude (max. 5 decimal places)',
     'vs30': 'Vs30 (fixed at 760 m/s)',
-    'siteid': 'Site name',
+    'siteid': 'Site name (a-zA-Z0-9_-:)',
 }
 
 # disable check on the export_dir, since the WebUI exports in a tmpdir
