@@ -21,9 +21,9 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 
 import numpy as np
 import pandas as pd
-from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
+from openquake.hazardlib.geo.line import get_tuws, get_tuw
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
 
@@ -93,14 +93,14 @@ class MultiLine(object):
     def __init__(self, lines, u_max=None):
         self.lines = lines
         avg_azim, self.flipped = get_avg_azim_flipped(lines)
-        ep = get_endpoints(lines)
-        olon, olat, self.soidx = get_origin(ep, avg_azim)
+        self.ep = get_endpoints(lines)
+        olon, olat, self.soidx = get_origin(self.ep, avg_azim)
 
         # compute the shift with respect to the origins
         origins = np.zeros((len(lines), 2))
         for i, idx in enumerate(self.soidx):
-            flip = int(self.flipped[idx])
-            # if the line is flipped take the point 1 instead of 0
+            flip = -1 if self.flipped[idx] else 0
+            # if the line is flipped take the final point as origin
             origins[i] = lines[idx].coo[flip, 0:2]
         self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
         self.u_max = u_max
@@ -110,38 +110,56 @@ class MultiLine(object):
         If not already computed, compute .u_max, set it and return it.
         """
         if self.u_max is None:
-            mesh = get_endpoints(self.lines)
-            N = len(mesh)  # 2 * number of lines
-            us = np.zeros(N, np.float32)
-            ws = np.zeros(N, np.float32)
-            for i, (t, u, w) in enumerate(self.gen_tuw(mesh)):
-                us += (u + self.shift[i]) * w
-                ws += w
-            self.u_max = np.abs(us / ws).max()
+            N = 2 * len(self.lines)
+            t, u = get_tu(self.shift, self.gen_tuws(self.ep), N)
+            self.u_max = np.abs(u).max()
         assert self.u_max > 0
         return self.u_max
 
-    def gen_tuw(self, mesh):
+    def gen_tuws(self, mesh):
         """
-        :yields: tuw arrays
+        :yields: L arrays of shape (N, 3)
         """
-        for idx in self.soidx:
-            line = self.lines[idx]
-            if self.flipped[idx]:
-                line = line.flipped
-            yield line.get_tuw(mesh)
+        nsegs = [len(ln) - 1 for ln in self.lines]  # segments per line
+        if len(set(nsegs)) == 1:
+            # fast lane, when the number of segments is constant
+            ns = nsegs[0]
+            L = len(self.lines)
+            lam0s = np.empty(L)
+            phi0s = np.empty(L)
+            coos = np.empty((L, ns + 1, 2))
+            slens = np.empty((L, ns))
+            uhats = np.empty((L, ns, 3))
+            thats = np.empty((L, ns, 3))
+            for i, idx in enumerate(self.soidx):
+                line = self.lines[idx]
+                if self.flipped[idx]:
+                    line = line.flipped
+                lam0s[i] = line.proj.lam0
+                phi0s[i] = line.proj.phi0
+                coos[i] = line.coo[:, 0:2]
+                slen, uhat, that = line.tu_hat
+                slens[i] = slen
+                uhats[i] = uhat
+                thats[i] = that
+            yield from get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+                                mesh.lons, mesh.lats)
+        else:
+            # slow lane, happens only in hazardlib
+            for idx in self.soidx:
+                line = self.lines[idx]
+                if self.flipped[idx]:
+                    line = line.flipped
+                slen, uhat, that = line.tu_hat
+                yield get_tuw(line.proj.lam0, line.proj.phi0, line.coo[:, :2],
+                              slen, uhat, that,  mesh.lons, mesh.lats)
 
     # used in event based too
     def get_tu(self, mesh):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        L = len(self.lines)  # number of lines
-        N = len(mesh)
-        tuw = np.zeros((3, L, N), np.float32)
-        for i, tuw_i in enumerate(self.gen_tuw(mesh)):
-            tuw[:, i] = tuw_i
-        return _get_tu(self.shift, tuw)
+        return get_tu(self.shift, self.gen_tuws(mesh), len(mesh))
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -150,13 +168,13 @@ class MultiLine(object):
         ts = []
         us = []
         ws = []
-        for li, (t, u, w) in enumerate(self.gen_tuw()):
+        for li, tuw in enumerate(self.gen_tuws()):
             for s, sid in enumerate(sites.sids):
                 sids.append(sid)
                 ls.append(li)
-                ts.append(t[s])
-                us.append(u[s])
-                ws.append(w[s])
+                ts.append(tuw[s, 0])
+                us.append(tuw[s, 1])
+                ws.append(tuw[s, 2])
         dic = dict(sid=sids, li=ls, t=ts, u=us, w=ws)
         return pd.DataFrame(dic)
 
@@ -225,14 +243,21 @@ def get_coordinate_shift(origins: list, olon: float, olat: float,
     return np.float32(np.cos(np.radians(overall_strike - azimuths)) * distances)
 
 
-@compile('f4[:],f4[:,:,:]')
-def _get_tu(shift, tuw):
-    # `shift` has shape L and `tuw` shape (3, L, N)
-    L, N = tuw.shape[1:]
-    tN, uN = np.zeros(N), np.zeros(N)
-    W = tuw[2].sum(axis=0)  # shape N
-    for s in range(L):
-        t, u, w = tuw[:, s]  # shape N
-        tN += t * w
-        uN += (u + shift[s]) * w
-    return tN / W, uN / W
+# called by contexts.py
+def get_tu(shift, tuws, N):
+    """
+    :param shift: multiline shift array
+    :param tuws: iterator producing arrays of shape (N, 3)
+    :param N: number of sites
+    """
+    # `shift` has shape L and `tuws` shape (L, N, 3)
+    ts = np.zeros(N, np.float32)
+    us = np.zeros(N, np.float32)
+    ws = np.zeros(N, np.float32)
+    for i, tuw in enumerate(tuws):
+        assert len(tuw) == N, (len(tuw), N)
+        t, u, w = tuw[:, 0], tuw[:, 1], tuw[:, 2]
+        ts += t * w
+        us += (u + shift[i]) * w
+        ws += w
+    return ts / ws, us / ws

@@ -149,6 +149,38 @@ def _get_same_dir(rtra, coo):
     return same_dir
 
 
+@compile('(f8[:,:],f8[:,:],f8[:],f8[:,:])')
+def line_get_tu(ui, ti, sl, weights):
+    """
+    Compute the T and U quantitities.
+
+    :param ui:
+        A :class:`numpy.ndarray` instance of cardinality (num segments x num
+        sites)
+    :param ti:
+        A :class:`numpy.ndarray` instance of cardinality (num segments x num
+        sites)
+    :param sl:
+        A :class:`numpy.ndarray` instance with the segments' length
+    :param weights:
+        A :class:`numpy.ndarray` instance of cardinality (num segments x num
+        sites)
+    """
+    # Sum of weights - This has shape equal to the number of sites
+    weight_sum = weights.sum(axis=0)
+
+    # Compute T
+    t_upp = (ti * weights / weight_sum.T).sum(axis=0)
+
+    # Compute U
+    u_upp = ui[0] * weights[0]
+    for i in range(1, len(sl)):
+        delta = np.sum(sl[:i])
+        u_upp += ((ui[i] + delta) * weights[i])
+    u_upp = (u_upp / weight_sum.T).T
+    return t_upp, u_upp
+
+
 @compile('(f8,f8,f8[:,:],f8[:],f8[:],f8[:,:],f8[:,:])')
 def get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that):
     """
@@ -175,6 +207,79 @@ def get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that):
         ui[i] = dx * uhat[i, 0] + dy * uhat[i, 1]
         ti[i] = dx * that[i, 0] + dy * that[i, 1]
     return ui, ti
+
+
+@compile('(f8[:,:],f8[:,:],f8[:])')
+def get_ti_weights(ui, ti, segments_len):
+    """
+    Compute the weights
+    """
+    S1, S2 = ui.shape
+    weights = np.zeros_like(ui)
+    terma = np.zeros_like(ui)
+    term1 = np.zeros_like(ui)
+    term2 = np.zeros_like(ui)
+    idx_on_trace = np.zeros(S2, dtype=np.bool_)
+
+    for i in range(S1):
+
+        # More general case
+        cond0 = np.abs(ti[i, :]) >= TOLERANCE
+        if cond0.any():
+            terma[i, cond0] = segments_len[i] - ui[i, cond0]
+            term1[i, cond0] = np.arctan(terma[i, cond0] / ti[i, cond0])
+            term2[i, cond0] = np.arctan(-ui[i, cond0] / ti[i, cond0])
+            weights[i, cond0] = ((term1[i, cond0] - term2[i, cond0]) /
+                                 ti[i, cond0])
+
+        # Case for sites on the extension of one segment
+        cond1 = np.abs(ti[i, :]) < TOLERANCE
+        cond2 = np.logical_or(ui[i, :] < (0. - TOLERANCE),
+                              ui[i, :] > (segments_len[i] + TOLERANCE))
+        iii = np.logical_and(cond1, cond2)
+        if len(iii):
+            weights[i, iii] = (1. / (ui[i, iii] - segments_len[i])
+                               - 1. / ui[i, iii])
+
+        # Case for sites on one segment
+        cond3 = np.logical_and(ui[i, :] >= (0. - TOLERANCE),
+                               ui[i, :] <= (segments_len[i] + TOLERANCE))
+        jjj = np.logical_and(cond1, cond3)
+        weights[i, jjj] = 1 / (-0.01 - segments_len[i]) + 1 / 0.01
+        idx_on_trace[jjj] = 1.0
+
+    return weights, idx_on_trace
+
+
+@compile('(f8,f8,f8[:,:],f8[:],f8[:,:],f8[:,:],f8[:],f8[:])')
+def get_tuw(lam0, phi0, coo, slen, uhat, that, lons, lats):
+    """
+    :returns: array of float32 of shape (N, 3)
+    """
+    N = len(lons)
+    out = np.empty((N, 3), np.float32)
+    ui, ti = get_ui_ti(lam0, phi0, coo, lons, lats, uhat, that)
+    weights, iot = get_ti_weights(ui, ti, slen)
+    t, u = line_get_tu(ui, ti, slen, weights)
+    t[iot] = 0.0
+    out[:, 0] = t
+    out[:, 1] = u
+    out[:, 2] = weights.sum(axis=0)
+    return out
+
+
+@compile('(f8[:],f8[:],f8[:,:,:],f8[:,:],f8[:,:,:],f8[:,:,:],f8[:],f8[:])')
+def get_tuws(lam0s, phi0s, coos, slens, uhats, thats, lons, lats):
+    """
+    :returns: array of float32 of shape (L, N, 3)
+    """
+    L = len(lam0s)
+    N = len(lons)
+    out = np.empty((L, N, 3), np.float32)
+    for i, (lam0, phi0, coo, slen, uhat, that) in enumerate(
+            zip(lam0s, phi0s, coos, slens, uhats, thats)):
+        out[i] = get_tuw(lam0, phi0, coo, slen, uhat, that, lons, lats)
+    return out
 
 
 class Line(object):
@@ -437,20 +542,11 @@ class Line(object):
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        # Compute u hat and t hat for each segment. tmp has shape
-        # (num_segments x 3)
         slen, uhat, that = self.tu_hat
-
-        # Get local coordinates for the sites
-        ui, ti = self.get_ui_ti(mesh, uhat, that)
-
-        # Compute the weights
-        weights, iot = get_ti_weights(ui, ti, slen)
-
-        # Now compute T and U
-        t_upp, u_upp = get_tuw(ui, ti, slen, weights)
-        t_upp[iot] = 0.0
-        return np.array([t_upp, u_upp, weights.sum(axis=0)], np.float32)
+        tuw = get_tuw(self.proj.lam0, self.proj.phi0,
+                      self.coo, slen, uhat, that,
+                      mesh.lons, mesh.lats)
+        return tuw[:, 0], tuw[:, 1], tuw[:, 2]
 
     def get_ui_ti(self, mesh, uhat, that):
         """
@@ -486,80 +582,6 @@ class Line(object):
 
     def __str__(self):
         return utils.geohash5(self.coo)
-
-
-@compile('(f8[:,:],f8[:,:],f8[:],f8[:,:])')
-def get_tuw(ui, ti, sl, weights):
-    """
-    Compute the T and U quantitities.
-
-    :param ui:
-        A :class:`numpy.ndarray` instance of cardinality (num segments x num
-        sites)
-    :param ti:
-        A :class:`numpy.ndarray` instance of cardinality (num segments x num
-        sites)
-    :param sl:
-        A :class:`numpy.ndarray` instance with the segments' length
-    :param weights:
-        A :class:`numpy.ndarray` instance of cardinality (num segments x num
-        sites)
-    """
-    # Sum of weights - This has shape equal to the number of sites
-    weight_sum = weights.sum(axis=0)
-
-    # Compute T
-    t_upp = (ti * weights / weight_sum.T).sum(axis=0)
-
-    # Compute U
-    u_upp = ui[0] * weights[0]
-    for i in range(1, len(sl)):
-        delta = np.sum(sl[:i])
-        u_upp += ((ui[i] + delta) * weights[i])
-    u_upp = (u_upp / weight_sum.T).T
-    return t_upp, u_upp
-
-
-@compile('(f8[:,:],f8[:,:],f8[:])')
-def get_ti_weights(ui, ti, segments_len):
-    """
-    Compute the weights
-    """
-    S1, S2 = ui.shape
-    weights = np.zeros_like(ui)
-    terma = np.zeros_like(ui)
-    term1 = np.zeros_like(ui)
-    term2 = np.zeros_like(ui)
-    idx_on_trace = np.zeros(S2, dtype=np.bool_)
-
-    for i in range(S1):
-
-        # More general case
-        cond0 = np.abs(ti[i, :]) >= TOLERANCE
-        if cond0.any():
-            terma[i, cond0] = segments_len[i] - ui[i, cond0]
-            term1[i, cond0] = np.arctan(terma[i, cond0] / ti[i, cond0])
-            term2[i, cond0] = np.arctan(-ui[i, cond0] / ti[i, cond0])
-            weights[i, cond0] = ((term1[i, cond0] - term2[i, cond0]) /
-                                 ti[i, cond0])
-
-        # Case for sites on the extension of one segment
-        cond1 = np.abs(ti[i, :]) < TOLERANCE
-        cond2 = np.logical_or(ui[i, :] < (0. - TOLERANCE),
-                              ui[i, :] > (segments_len[i] + TOLERANCE))
-        iii = np.logical_and(cond1, cond2)
-        if len(iii):
-            weights[i, iii] = (1. / (ui[i, iii] - segments_len[i])
-                               - 1. / ui[i, iii])
-
-        # Case for sites on one segment
-        cond3 = np.logical_and(ui[i, :] >= (0. - TOLERANCE),
-                               ui[i, :] <= (segments_len[i] + TOLERANCE))
-        jjj = np.logical_and(cond1, cond3)
-        weights[i, jjj] = 1 / (-0.01 - segments_len[i]) + 1 / 0.01
-        idx_on_trace[jjj] = 1.0
-
-    return weights, idx_on_trace
 
 
 def get_versor(arr):

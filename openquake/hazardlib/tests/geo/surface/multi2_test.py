@@ -93,6 +93,7 @@ class Ry0TestCase(unittest.TestCase):
         aae(er['ry0'], ry0, decimal=1)
 
     def test_ry0c(self):
+        # this is a test where len(sfc.tor) == 4, i.e. there are 4 segments
         pro1 = Line([Point(0.5, 0.05, 0.0), Point(0.5, 0.1, 15.0)])
         pro2 = Line([Point(0.4, 0.05, 0.0), Point(0.4, 0.1, 15.0)])
         pro3 = Line([Point(0.35, 0.0, 0.0), Point(0.3, 0.05, 15.0)])
@@ -116,7 +117,6 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
     surfaces
     """
     def setUp(self):
-
         mspc = 1.0
         usd = 0.0
         lsd = 15.0
@@ -126,12 +126,12 @@ class MultiSurfaceSimpleFaultSurfaceTestCase(unittest.TestCase):
 
         # Surface 1
         p1 = point_at(0.0, 0.0, 90.0, 20.0)
-        self.coo1 = [[0, 0], [p1[0], p1[1]], [0.3, -0.05]]
+        self.coo1 = [[0, 0], [p1[0], p1[1]]]
         trace = Line([pnt(co[0], co[1]) for co in self.coo1])
         sfc1 = ffd(trace, usd, lsd, dip, mspc)
 
         # Surface 2
-        self.coo2 = [[-0.15, 0.0], [-0.05, 0.0]]
+        self.coo2 = [[-0.15, 0.0], [-0.05, 0.0], [0.3, -0.05]]
         trace = Line([pnt(co[0], co[1]) for co in self.coo2])
         sfc2 = ffd(trace, usd, lsd, dip, mspc)
 

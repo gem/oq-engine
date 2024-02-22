@@ -168,7 +168,7 @@ class MultiFaultSource(BaseSeismicSource):
             occur_rates = self.occur_rates
             tom = PoissonTOM(self.investigation_time)
         for i in range(0, n, step**2):
-            if msparams[i]['u_max'] == 0:  # rupture far away
+            if msparams[i]['area'] == 0:  # rupture far away
                 continue
             idxs = rupture_idxs[i]
             sfc = MultiSurface([sec[idx] for idx in idxs], msparams[i])
