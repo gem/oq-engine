@@ -21,7 +21,6 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 
 import numpy as np
 import pandas as pd
-from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.line import get_tuws, get_tuw
