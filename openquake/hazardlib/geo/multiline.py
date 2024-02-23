@@ -83,51 +83,29 @@ def get_avg_azim_flipped(lines):
     return avg_azim, flipped
 
 
-def MultiLine(lines, u_max=None):
-    avg_azim, flipped = get_avg_azim_flipped(lines)
-    lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
-    lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
-    olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
-    
-    # if the line is flipped take the last point instead of the first
-    olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
-    olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
-
-    # Distances and azimuths between the origin of the multiline and the
-    # first endpoint
-    distances = fast_distance(olon, olat, olons, olats)
-    azimuths = fast_azimuth(olon, olat, olons, olats)
-
-    # Calculate the shift along the average strike direction
-    shift = np.float32(np.cos(np.radians(avg_azim - azimuths)) * distances)
-
-    nsegs = [len(ln) - 1 for ln in lines]  # segments per line
-    if len(set(nsegs)) == 1:
-        # fast lane, when the number of segments is constant
-        return MultiLineFast(lines, soidx, flipped, shift, u_max)
-    else:
-        # slow lane
-        return MultiLineSlow(lines, soidx, flipped, shift, u_max)
-
-
-class MultiLineBase(object):
-    """
-    A collection of polylines with associated methods and attributes. For the
-    most part, these are used to compute distances according to the GC2
-    method.
-    """
-    def __init__(self, lines, soidx, flipped, shift, u_max):
+class MultiLine(object):
+    def __init__(self, lines, u_max=None, ry0=False):
         self.lines = lines
-        self.soidx = soidx
-        self.flipped = flipped
-        self.shift = shift
         self.u_max = u_max
+        avg_azim, flipped = get_avg_azim_flipped(lines)
+        lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
+        lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
+        olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
 
-    def gen_tuws(self, lons, lats):
-        pass
+        # if the line is flipped take the last point instead of the first
+        olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
+        olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
 
-    def set_u_max(self):
-        pass
+        # Distances and azimuths between the origin of the multiline and the
+        # first endpoint
+        distances = fast_distance(olon, olat, olons, olats)
+        azimuths = fast_azimuth(olon, olat, olons, olats)
+
+        # Calculate the shift along the average strike direction
+        self.shift = np.float32(
+            np.cos(np.radians(avg_azim - azimuths)) * distances)
+        self.flipped = flipped
+        self.soidx = soidx
 
     # used in event based too
     def get_tu(self, lons, lats):
@@ -139,8 +117,6 @@ class MultiLineBase(object):
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
 
-
-class MultiLineSlow(MultiLineBase):
     def set_u_max(self):
         """
         If not already computed, compute .u_max, set it and return it.
@@ -155,15 +131,44 @@ class MultiLineSlow(MultiLineBase):
 
     def gen_tuws(self, lons, lats):
         """
-        :yields: L arrays of shape (N, 3)
+        :returns: L arrays of shape (N, 2) or a single array (L, N, 2)
         """
-        for idx in self.soidx:
-            line = self.lines[idx]
-            if self.flipped[idx]:
-                line = line.flipped
-            slen, uhat, that = line.tu_hat
-            yield get_tuw(line.proj.lam0, line.proj.phi0, line.coo[:, :2],
-                          slen, uhat, that,  lons, lats)
+        nsegs = [len(ln) - 1 for ln in self.lines]  # segments per line
+        if len(set(nsegs)) == 1:
+            # fast lane, when the number of segments is constant
+            ns = len(self.lines[0]) - 1
+            L = len(self.lines)
+            lam0s = np.empty(L)
+            phi0s = np.empty(L)
+            coos = np.empty((L, ns + 1, 2))
+            slens = np.empty((L, ns))
+            uhats = np.empty((L, ns, 3))
+            thats = np.empty((L, ns, 3))
+            for i, idx in enumerate(self.soidx):
+                line = self.lines[idx]
+                if self.flipped[idx]:
+                    line = line.flipped
+                lam0s[i] = line.proj.lam0
+                phi0s[i] = line.proj.phi0
+                coos[i] = line.coo[:, 0:2]
+                slen, uhat, that = line.tu_hat
+                slens[i] = slen
+                uhats[i] = uhat
+                thats[i] = that
+            out = get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+                           lons, lats)
+        else:
+            # slow lane
+            out = []
+            for idx in self.soidx:
+                line = self.lines[idx]
+                if self.flipped[idx]:
+                    line = line.flipped
+                slen, uhat, that = line.tu_hat
+                tuw = get_tuw(line.proj.lam0, line.proj.phi0, line.coo[:, :2],
+                              slen, uhat, that,  lons, lats)
+                out.append(tuw)
+        return out
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -181,47 +186,6 @@ class MultiLineSlow(MultiLineBase):
                 ws.append(tuw[s, 2])
         dic = dict(sid=sids, li=ls, t=ts, u=us, w=ws)
         return pd.DataFrame(dic)
-
-
-class MultiLineFast(MultiLineBase):
-    def set_u_max(self):
-        """
-        If not already computed, compute .u_max, set it and return it.
-        """
-        if self.u_max is None:
-            lons, lats = get_endpoints(self.lines)
-            N = 2 * len(self.lines)
-            t, u = get_tu(self.shift, self.gen_tuws(lons, lats), N)
-            self.u_max = np.abs(u).max()
-        assert self.u_max > 0
-        return self.u_max
-
-    def gen_tuws(self, lons, lats):
-        """
-        :yields: L arrays of shape (N, 3)
-        """
-        # fast lane, when the number of segments is constant
-        ns = len(self.lines[0]) - 1
-        L = len(self.lines)
-        lam0s = np.empty(L)
-        phi0s = np.empty(L)
-        coos = np.empty((L, ns + 1, 2))
-        slens = np.empty((L, ns))
-        uhats = np.empty((L, ns, 3))
-        thats = np.empty((L, ns, 3))
-        for i, idx in enumerate(self.soidx):
-            line = self.lines[idx]
-            if self.flipped[idx]:
-                line = line.flipped
-            lam0s[i] = line.proj.lam0
-            phi0s[i] = line.proj.phi0
-            coos[i] = line.coo[:, 0:2]
-            slen, uhat, that = line.tu_hat
-            slens[i] = slen
-            uhats[i] = uhat
-            thats[i] = that
-        return get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
-                        lons, lats)
 
 
 def get_origin(lons, lats, avg_strike):
