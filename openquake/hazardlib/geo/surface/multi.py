@@ -64,7 +64,7 @@ def build_secparams(sections):
 
 
 # not fast
-def build_msparams(rupture_idxs, secparams, close_sec=None,
+def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
                    mon1=Monitor(), mon2=Monitor()):
     """
     :returns: a structured array of parameters
@@ -90,7 +90,7 @@ def build_msparams(rupture_idxs, secparams, close_sec=None,
             tors = [lines[idx] for idx in idxs if close_sec[idx]]
             if not tors:  # all sections are far away
                 continue
-            msparam['u_max'] = geo.MultiLine(tors, ry0=True).u_max
+            msparam['u_max'] = geo.MultiLine(tors, ry0=ry0).u_max
 
             # building simple multisurface params
             secparam = secparams[idxs]

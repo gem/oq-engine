@@ -110,11 +110,11 @@ class MultiFaultSource(BaseSeismicSource):
         with hdf5.File(self.hdf5path, 'r') as h5:
             return h5[f'{self.source_id}/rupture_idxs'][:]
 
-    def set_msparams(self, secparams, close_sec=None,
+    def set_msparams(self, secparams, close_sec=None, ry0=False,
                      mon1=performance.Monitor(),
                      mon2=performance.Monitor()):
         self.msparams = build_msparams(
-            self.rupture_idxs, secparams, close_sec, mon1, mon2)
+            self.rupture_idxs, secparams, close_sec, ry0, mon1, mon2)
 
     def is_gridded(self):
         return True  # convertible to HDF5
