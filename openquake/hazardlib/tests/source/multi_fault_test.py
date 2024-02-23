@@ -84,8 +84,7 @@ class MultiFaultTestCase(unittest.TestCase):
     def test_ok(self):
         # test instantiation
         src = MultiFaultSource("01", "test", "Moon Crust",
-                               self.pmfs, self.mags, self.rakes)
-        src._rupture_idxs = self.rup_idxs
+                               self.rup_idxs, self.pmfs, self.mags, self.rakes)
         src.mutex_weight = 1.
 
         # test conversion into XML
@@ -157,8 +156,7 @@ class MultiFaultTestCase(unittest.TestCase):
         # test invalid section IDs
         rup_idxs = [[0], [1], [3], [0], [1], [3], [0]]
         mfs = MultiFaultSource("01", "test", "Moon Crust",
-                               self.pmfs, self.mags, self.rakes)
-        mfs._rupture_idxs = rup_idxs
+                               rup_idxs, self.pmfs, self.mags, self.rakes)
         with self.assertRaises(IndexError) as ctx:
             save([mfs], self.sections, 'dummy.hdf5')
         self.assertEqual(str(ctx.exception),
