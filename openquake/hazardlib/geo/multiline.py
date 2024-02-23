@@ -157,17 +157,6 @@ class MultiLine(object):
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
 
-    def set_u_max(self, lons, lats):
-        """
-        If not already computed, compute .u_max, set it and return it.
-        """
-        if self.u_max is None:
-            lons, lats = get_endpoints(self.lines)
-            t, u = get_tu(self.shift, self.gen_tuws(lons, lats))
-            self.u_max = np.abs(u).max()
-        assert self.u_max > 0
-        return self.u_max
-
     def gen_tuws(self, lons, lats):
         """
         :returns: L arrays of shape (N, 2) or a single array (L, N, 2)
