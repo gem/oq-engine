@@ -22,7 +22,6 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 import numpy as np
 import pandas as pd
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.line import get_tuws, get_tuw
 from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
 
@@ -86,7 +85,13 @@ def get_avg_azim_flipped(lines):
 
 def MultiLine(lines, u_max=None):
     avg_azim, flipped = get_avg_azim_flipped(lines)
-    lons, lats = get_endpoints(lines)
+    nsegs = [len(ln) - 1 for ln in lines]  # segments per line
+    if len(set(nsegs)) == 1:
+        coos = np.array([ln.coo[:, :2] for ln in lines])  # shape (L, P, 2)
+        lons = coos[:, [0, -1], 0].flatten()
+        lats = coos[:, [0, -1], 1].flatten()
+    else:
+        lons, lats = get_endpoints(lines)
     olon, olat, soidx = get_origin(lons, lats, avg_azim)
     
     # compute the shift with respect to the origins
