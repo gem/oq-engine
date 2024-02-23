@@ -138,7 +138,9 @@ def angular_mean(degrees, weights=None):
     >>> angular_mean([-179, 179], [.75, .25])
     -179.4999619199226
     """
-    if weights is None:
+    if len(degrees) == 1:
+        return degrees
+    elif weights is None:
         rads = numpy.radians(degrees)
         sin = numpy.sin(rads)
         cos = numpy.cos(rads)
