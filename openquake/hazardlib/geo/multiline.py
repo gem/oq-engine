@@ -35,7 +35,7 @@ def get_endpoints(lines):
     return lons.flatten(), lats.flatten()
 
 
-def get_avg_azim_flipped(llenghts, azimuths):
+def _flipped_soidx_shift(llenghts, azimuths, lons, lats):
 
     # Find general azimuth trend
     ave = utils.angular_mean(azimuths, llenghts) % 360
@@ -65,7 +65,21 @@ def get_avg_azim_flipped(llenghts, azimuths):
     for i in np.nonzero(flipped)[0]:
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean(azimuths, llenghts) % 360
-    return avg_azim, flipped
+    olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
+
+    # if the line is flipped take the last point instead of the first
+    olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
+    olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
+    
+    # Distances and azimuths between the origin of the multiline and the
+    # first endpoint
+    distances = fast_distance(olon, olat, olons, olats)
+    azimuths = fast_azimuth(olon, olat, olons, olats)
+    
+    # Calculate the shift along the average strike direction
+    shift = np.float32(np.cos(np.radians(avg_azim - azimuths)) * distances)
+    
+    return flipped, soidx, shift
 
 
 class MultiLine(object):
@@ -74,26 +88,10 @@ class MultiLine(object):
         self.u_max = u_max
         llenghts = np.array([ln.length for ln in lines])
         azimuths = np.array([line.azimuth for line in lines])
-        avg_azim, flipped = get_avg_azim_flipped(llenghts, azimuths)
         lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
         lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
-        olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
-
-        # if the line is flipped take the last point instead of the first
-        olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
-        olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
-
-        # Distances and azimuths between the origin of the multiline and the
-        # first endpoint
-        distances = fast_distance(olon, olat, olons, olats)
-        azimuths = fast_azimuth(olon, olat, olons, olats)
-
-        # Calculate the shift along the average strike direction
-        self.shift = np.float32(
-            np.cos(np.radians(avg_azim - azimuths)) * distances)
-        self.flipped = flipped
-        self.soidx = soidx
-
+        self.flipped, self.soidx, self.shift = _flipped_soidx_shift(
+            llenghts, azimuths, lons, lats)
         if ry0:
             self.set_u_max(lons.flatten(), lats.flatten())
 
