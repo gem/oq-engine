@@ -66,6 +66,11 @@ def test_PAC():
     warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
     assert sum([len(w) for w in warnings]) == 0
 
+    # check all plots created
+    assert 'png/governing_mce.png' not in calc.datastore
+    assert 'png/hcurves.png' not in calc.datastore
+    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
 
 def test_KOR():
     # another test with same name sources, no semicolon convention, sampling
@@ -79,6 +84,11 @@ def test_KOR():
         s = calc.datastore['asce07'][0].decode('ascii')
         asce07 = json.loads(s)
         aac(asce07['PGA'], 0.618, atol=5E-5)
+
+    # check all plots created
+    assert 'png/governing_mce.png' in calc.datastore
+    assert 'png/hcurves.png' in calc.datastore
+    assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
 
 def test_CCA():
@@ -123,8 +133,14 @@ def test_CCA():
     assert len(warnings) == 1
     assert warnings[0].startswith('Zero hazard')
 
+    # check no plots created
+    assert 'png/governing_mce.png' not in calc.datastore
+    assert 'png/hcurves.png' not in calc.datastore
+    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
+
 def test_WAF():
-    # test with mutex sources
+    # test of site with very low hazard
     job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
     dic = dict(sites='9 9', site='WAF-site', vs30='760')
     with logs.init(job_ini) as log:
@@ -137,6 +153,30 @@ def test_WAF():
     assert len(warnings) == 1
     assert warnings[0].startswith('Very low')
 
+    # check no plots created
+    assert 'png/governing_mce.png' not in calc.datastore
+    assert 'png/hcurves.png' not in calc.datastore
+    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
+    # test of site with very low hazard, but high enough to compute ASCE
+    job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
+    dic = dict(sites='10.93 5.65', site='WAF-site', vs30='760')
+    with logs.init(job_ini) as log:
+        log.params.update(get_params_from(
+            dic, MOSAIC_DIR, exclude=['USA']))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    # check that warning indicates very low hazard
+    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+    assert len(warnings) == 1
+    assert warnings[0].startswith('The MCE')
+
+    # check that 2/3 plots created
+    assert 'png/governing_mce.png' in calc.datastore
+    assert 'png/hcurves.png' in calc.datastore
+    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+
+
 def test_JPN():
     # test with mutex sources
     job_ini = os.path.join(MOSAIC_DIR, 'JPN/in/job_vs30.ini')
@@ -146,6 +186,12 @@ def test_JPN():
             dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
+
+    # check all plots created
+    assert 'png/governing_mce.png' in calc.datastore
+    assert 'png/hcurves.png' in calc.datastore
+    assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
+
     #if rtgmpy:
     #    # sanity check: only possible without !-sources
     #    df = views.view('compare_disagg_rates', calc.datastore)

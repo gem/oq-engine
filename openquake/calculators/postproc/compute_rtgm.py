@@ -414,8 +414,16 @@ def process_sites(dstore, csm):
                        ' ASCE 41-17 parameters cannot be computed.')
             yield site, None, warning
 
+        elif (rtgm_df.ProbMCE.to_numpy()[1] < 0.11) or \
+                (rtgm_df.ProbMCE.to_numpy()[2] < 0.04):
+            warning = ('The MCE at the site is very low. Users may need '
+                       'to increase the parameter values to user-specific '
+                       'minimums.')
+            yield site, rtgm_df, warning
+
         elif (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
             yield site, rtgm_df, 'Only probabilistic MCE'
+
         else:
             yield site, rtgm_df, ''
 
@@ -471,7 +479,7 @@ def main(dstore, csm):
         if warning.startswith(('Zero hazard', 'Very low hazard')):
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
-        elif warning.startswith('Only probabilistic MCE'):
+        elif warning.startswith(('The MCE', 'Only probabilistic MCE')):
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
                 dummy_det, DLLs, rtgm_df, low_haz=True)
@@ -493,17 +501,20 @@ def main(dstore, csm):
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
 
+    if rtgm_dfs:
+        dstore.create_df('rtgm', pd.concat(rtgm_dfs))
+
+    if rtgm_dfs and N == 1:# and not warnings[sid]:
+        sid = 0
+        if not warnings[sid].startswith(('Zero hazard', 'Very low hazard')):
+            plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
+            plot_governing_mce(dstore, sid, update_dstore=True)
+            if not warnings[sid]:
+                plot_disagg_by_src(dstore, sid, update_dstore=True)
+
     # if warnings are meaningful, and/or there are 2+ sites add them to the ds
     if len(warnings) == 1:
         if not warnings[0].startswith('Only probabilistic MCE'):
             dstore['warnings'] = to_array(warnings)
     else:
         dstore['warnings'] = to_array(warnings)
-
-    if rtgm_dfs:
-        dstore.create_df('rtgm', pd.concat(rtgm_dfs))
-    if rtgm_dfs and N == 1 and not warnings[sid]:
-        sid = 0
-        plot_mean_hcurves_rtgm(dstore, sid, update_dstore=True)
-        plot_disagg_by_src(dstore, sid, update_dstore=True)
-        plot_governing_mce(dstore, sid, update_dstore=True)
