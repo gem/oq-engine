@@ -62,6 +62,10 @@ def test_PAC():
         a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
         aac([r0, r1, a7['PGA']], [0.032720476, 0.040302116, 0.7959], atol=1E-6)
 
+    # check that there are not warnings about results
+    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+    assert sum([len(w) for w in warnings]) == 0
+
 
 def test_KOR():
     # another test with same name sources, no semicolon convention, sampling
@@ -107,6 +111,31 @@ def test_CCA():
         df = pandas.read_csv(fname, skiprows=1)
         aac(df.value, ASCE41, atol=5E-5)
 
+    # test no close ruptures
+    dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
+    with logs.init(job_ini) as log:
+            log.params.update(get_params_from(
+                dic, MOSAIC_DIR, exclude=['USA']))
+            calc = base.calculators(log.get_oqparam(), log.calc_id)
+            calc.run()
+    # check that the warning announces no closeby ruptures
+    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+    assert len(warnings) == 1
+    assert warnings[0].startswith('Zero hazard')
+
+def test_WAF():
+    # test with mutex sources
+    job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
+    dic = dict(sites='9 9', site='WAF-site', vs30='760')
+    with logs.init(job_ini) as log:
+        log.params.update(get_params_from(
+            dic, MOSAIC_DIR, exclude=['USA']))
+        calc = base.calculators(log.get_oqparam(), log.calc_id)
+        calc.run()
+    # check that warning indicates very low hazard
+    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+    assert len(warnings) == 1
+    assert warnings[0].startswith('Very low')
 
 def test_JPN():
     # test with mutex sources
