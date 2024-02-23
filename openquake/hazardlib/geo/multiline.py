@@ -107,6 +107,9 @@ class MultiLine(object):
         self.flipped = flipped
         self.soidx = soidx
 
+        if ry0:
+            self.set_u_max(lons.flatten(), lats.flatten())
+
     # used in event based too
     def get_tu(self, lons, lats):
         """
@@ -117,7 +120,7 @@ class MultiLine(object):
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
 
-    def set_u_max(self):
+    def set_u_max(self, lons, lats):
         """
         If not already computed, compute .u_max, set it and return it.
         """
@@ -233,8 +236,8 @@ def get_origin(lons, lats, avg_strike):
 # called by contexts.py
 def get_tu(shift, tuws, N):
     """
-    :param shift: multiline shift array
-    :param tuws: iterator producing arrays of shape (N, 3)
+    :param shift: multiline shift array of float32
+    :param tuws: list of float32 arrays of shape (N, 3)
     :param N: number of sites
     """
     # `shift` has shape L and `tuws` shape (L, N, 3)
@@ -242,7 +245,6 @@ def get_tu(shift, tuws, N):
     us = np.zeros(N, np.float32)
     ws = np.zeros(N, np.float32)
     for i, tuw in enumerate(tuws):
-        assert len(tuw) == N, (len(tuw), N)
         t, u, w = tuw[:, 0], tuw[:, 1], tuw[:, 2]
         ts += t * w
         us += (u + shift[i]) * w

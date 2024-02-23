@@ -29,14 +29,14 @@ class OneLineTestCase(unittest.TestCase):
 
     def setUp(self):
         self.line = geo.Line([geo.Point(0.2, 0.05), geo.Point(0.0, 0.05)])
-        self.ml = MultiLine([self.line])
+        self.ml = MultiLine([self.line], ry0=True)
 
     def test_u_max(self):
         dst = geo.geodetic.geodetic_distance([self.line.points[0].longitude],
                                              [self.line.points[0].latitude],
                                              [self.line.points[1].longitude],
                                              [self.line.points[1].latitude])
-        np.testing.assert_allclose(self.ml.set_u_max(), dst, atol=1e-4)
+        np.testing.assert_allclose(self.ml.u_max, dst, atol=1e-4)
 
   
 class MultiLineTestCase(unittest.TestCase):
