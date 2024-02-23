@@ -30,9 +30,9 @@ def get_endpoints(lines):
     """
     :returns a mesh of shape 2L
     """
-    lons = np.concatenate([ln.coo[[0, -1], 0] for ln in lines])  # shape 2L
-    lats = np.concatenate([ln.coo[[0, -1], 1] for ln in lines])  # shape 2L
-    return lons, lats
+    lons = np.array([ln.coo[[0, -1], 0] for ln in lines])  # shape (L, 2)
+    lats = np.array([ln.coo[[0, -1], 1] for ln in lines])  # shape (L, 2)
+    return lons.flatten(), lats.flatten()
 
 
 def get_flipped(llens, azimuths):
