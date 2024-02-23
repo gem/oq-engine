@@ -21,6 +21,7 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 
 import numpy as np
 import pandas as pd
+from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.line import get_tuws, get_tuw
 from openquake.hazardlib.geo.geodetic import fast_distance, fast_azimuth
@@ -35,14 +36,56 @@ def get_endpoints(lines):
     return lons.flatten(), lats.flatten()
 
 
-def _flipped_soidx_shift(llenghts, azimuths, lons, lats):
+@compile('(f8,f8,f8[:],f8[:],f8)')
+def get_origin(lam0, phi0, lons, lats, avg_strike):
+    """
+    Compute the origin necessary to calculate the coordinate shift
+
+    :returns:
+        The longitude and latitude coordinates of the origin and an array with
+        the indexes used to sort the lines according to the origin
+    """
+    # Project the endpoints
+    px, py = utils.project_direct(lam0, phi0, lons, lats)
+
+    # Find the index of the eastmost (or westmost) point depending on the
+    # prevalent direction of the strike
+    DELTA = 0.1
+    strike_to_east = (avg_strike > 0) & (avg_strike <= 180)
+    if strike_to_east or abs(avg_strike) < DELTA:
+        idx = np.argmin(px)
+    else:
+        idx = np.argmax(px)
+
+    # Find for each 'line' the endpoint closest to the origin
+    eps = np.zeros(len(lons) // 2)
+    for i, j in enumerate(range(0, len(px), 2)):
+        eps[i] = min([px[j], px[j + 1]])
+
+    # Find the indexes needed to sort the segments according to the prevalent
+    # direction of the strike
+    sort_idxs = np.argsort(eps)
+    if not (strike_to_east or abs(avg_strike) < DELTA):
+        sort_idxs = np.flipud(sort_idxs)
+
+    # Set the origin to be used later for the calculation of the
+    # coordinate shift
+    x = np.array([px[idx]])
+    y = np.array([py[idx]])
+    olon, olat = utils.project_reverse(lam0, phi0, x, y)
+
+    return olon[0], olat[0], sort_idxs
+
+
+@compile('(f8[:],f8[:],f8,f8,f8[:,:],f8[:,:])')
+def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
 
     # Find general azimuth trend
-    ave = utils.angular_mean(azimuths, llenghts) % 360
+    ave = utils.angular_mean_weighted(azimuths, llenghts) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
-    flipped = np.zeros((len(azimuths)), dtype=bool)
+    flipped = np.zeros((len(azimuths)), dtype=np.bool_)
     if (ave >= 90) & (ave <= 270):
         # This is the case where the average azimuth in the second or third
         # quadrant
@@ -51,7 +94,7 @@ def _flipped_soidx_shift(llenghts, azimuths, lons, lats):
         # In this case the average azimuth points toward the northern emisphere
         idx = (azimuths >= (ave - 90) % 360) | (azimuths < (ave + 90) % 360)
 
-    delta = abs(azimuths - ave)
+    delta = np.abs(azimuths - ave)
     scale = np.abs(np.cos(np.radians(delta)))
     ratio = np.sum(llenghts[idx] * scale[idx]) / np.sum(llenghts * scale)
 
@@ -64,8 +107,9 @@ def _flipped_soidx_shift(llenghts, azimuths, lons, lats):
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
-    avg_azim = utils.angular_mean(azimuths, llenghts) % 360
-    olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
+    avg_azim = utils.angular_mean_weighted(azimuths, llenghts) % 360
+    olon, olat, soidx = get_origin(
+        lam0, phi0, lons.flatten(), lats.flatten(), avg_azim)
 
     # if the line is flipped take the last point instead of the first
     olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
@@ -77,12 +121,17 @@ def _flipped_soidx_shift(llenghts, azimuths, lons, lats):
     azimuths = fast_azimuth(olon, olat, olons, olats)
     
     # Calculate the shift along the average strike direction
-    shift = np.float32(np.cos(np.radians(avg_azim - azimuths)) * distances)
+    shift = np.cos(np.radians(avg_azim - azimuths)) * distances
     
-    return flipped, soidx, shift
+    return flipped, soidx, shift.astype(np.float32)
 
 
 class MultiLine(object):
+    """
+    A collection of polylines with associated methods and attributes. For the
+    most part, these are used to compute distances according to the GC2
+    method.
+    """
     def __init__(self, lines, u_max=None, ry0=False):
         self.lines = lines
         self.u_max = u_max
@@ -90,32 +139,23 @@ class MultiLine(object):
         azimuths = np.array([line.azimuth for line in lines])
         lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
         lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
+        proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
         self.flipped, self.soidx, self.shift = _flipped_soidx_shift(
-            llenghts, azimuths, lons, lats)
-        if ry0:
-            self.set_u_max(lons.flatten(), lats.flatten())
+            llenghts, azimuths, proj.lam0, proj.phi0, lons, lats)
+        if u_max is None and ry0:
+            t, u = get_tu(
+                self.shift, self.gen_tuws(lons.flatten(), lats.flatten()))
+            self.u_max = np.abs(u).max()
 
     # used in event based too
     def get_tu(self, lons, lats):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        return get_tu(self.shift, self.gen_tuws(lons, lats), len(lons))
+        return get_tu(self.shift, self.gen_tuws(lons, lats))
 
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
-
-    def set_u_max(self, lons, lats):
-        """
-        If not already computed, compute .u_max, set it and return it.
-        """
-        if self.u_max is None:
-            lons, lats = get_endpoints(self.lines)
-            N = 2 * len(self.lines)
-            t, u = get_tu(self.shift, self.gen_tuws(lons, lats), N)
-            self.u_max = np.abs(u).max()
-        assert self.u_max > 0
-        return self.u_max
 
     def gen_tuws(self, lons, lats):
         """
@@ -182,56 +222,15 @@ class MultiLine(object):
         return pd.DataFrame(dic)
 
 
-def get_origin(lons, lats, avg_strike):
-    """
-    Compute the origin necessary to calculate the coordinate shift
-
-    :returns:
-        The longitude and latitude coordinates of the origin and an array with
-        the indexes used to sort the lines according to the origin
-    """
-
-    # Project the endpoints
-    proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
-    px, py = proj(lons, lats)
-
-    # Find the index of the eastmost (or westmost) point depending on the
-    # prevalent direction of the strike
-    DELTA = 0.1
-    strike_to_east = (avg_strike > 0) & (avg_strike <= 180)
-    if strike_to_east or abs(avg_strike) < DELTA:
-        idx = np.argmin(px)
-    else:
-        idx = np.argmax(px)
-
-    # Find for each 'line' the endpoint closest to the origin
-    eps = []
-    for i in range(0, len(px), 2):
-        eps.append(min([px[i], px[i+1]]))
-
-    # Find the indexes needed to sort the segments according to the prevalent
-    # direction of the strike
-    sort_idxs = np.argsort(eps)
-    if not (strike_to_east or abs(avg_strike) < DELTA):
-        sort_idxs = np.flipud(sort_idxs)
-
-    # Set the origin to be used later for the calculation of the
-    # coordinate shift
-    x = np.array([px[idx]])
-    y = np.array([py[idx]])
-    olon, olat = proj(x, y, reverse=True)
-
-    return olon[0], olat[0], sort_idxs
-
-
 # called by contexts.py
-def get_tu(shift, tuws, N):
+def get_tu(shift, tuws):
     """
     :param shift: multiline shift array of float32
     :param tuws: list of float32 arrays of shape (N, 3)
     :param N: number of sites
     """
     # `shift` has shape L and `tuws` shape (L, N, 3)
+    N = len(tuws[0])
     ts = np.zeros(N, np.float32)
     us = np.zeros(N, np.float32)
     ws = np.zeros(N, np.float32)
