@@ -258,7 +258,7 @@ def save(mfsources, sectiondict, hdf5path, msparams=False):
             raise IndexError('The section index %s in source %r is invalid'
                              % (exc.args[0], src.source_id))
         all_ridxs.append(rids)
-        delattr(src, '_rupture_idxs')  # was set by the SourceConverter
+        delattr(src, '_rupture_idxs')  # save memory
         src.hdf5path = hdf5path
 
     # store data
