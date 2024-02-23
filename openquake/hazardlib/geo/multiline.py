@@ -36,7 +36,7 @@ def get_endpoints(lines):
     return lons.flatten(), lats.flatten()
 
 
-#@compile('(f8[:],f8[:],f8)')
+@compile('(f8,f8,f8[:],f8[:],f8)')
 def get_origin(lam0, phi0, lons, lats, avg_strike):
     """
     Compute the origin necessary to calculate the coordinate shift
@@ -58,9 +58,9 @@ def get_origin(lam0, phi0, lons, lats, avg_strike):
         idx = np.argmax(px)
 
     # Find for each 'line' the endpoint closest to the origin
-    eps = []
-    for i in range(0, len(px), 2):
-        eps.append(min([px[i], px[i+1]]))
+    eps = np.zeros(len(lons) // 2)
+    for i, j in enumerate(range(0, len(px), 2)):
+        eps[i] = min([px[j], px[j + 1]])
 
     # Find the indexes needed to sort the segments according to the prevalent
     # direction of the strike
