@@ -268,20 +268,6 @@ def get_tuw(lam0, phi0, coo, slen, uhat, that, lons, lats):
     return out
 
 
-@compile('(f8[:],f8[:],f8[:,:,:],f8[:,:],f8[:,:,:],f8[:,:,:],f8[:],f8[:])')
-def get_tuws(lam0s, phi0s, coos, slens, uhats, thats, lons, lats):
-    """
-    :returns: array of float32 of shape (L, N, 3)
-    """
-    L = len(lam0s)
-    N = len(lons)
-    out = np.empty((L, N, 3), np.float32)
-    for i, (lam0, phi0, coo, slen, uhat, that) in enumerate(
-            zip(lam0s, phi0s, coos, slens, uhats, thats)):
-        out[i] = get_tuw(lam0, phi0, coo, slen, uhat, that, lons, lats)
-    return out
-
-
 class Line(object):
     """
     This class represents a geographical line, which is basically
@@ -542,7 +528,7 @@ class Line(object):
         :param mesh:
             An instance of :class:`openquake.hazardlib.geo.mesh.Mesh`
         """
-        slen, uhat, that = self.tu_hat
+        slen, uhat, that = self.sut_hat
         tuw = get_tuw(self.proj.lam0, self.proj.phi0,
                       self.coo, slen, uhat, that,
                       mesh.lons, mesh.lats)
@@ -557,7 +543,7 @@ class Line(object):
                          self.coo, mesh.lons, mesh.lats, uhat, that)
 
     @cached_property
-    def tu_hat(self):
+    def sut_hat(self):
         """
         Return the unit vectors defining the local origin for each segment of
         the trace.

@@ -23,17 +23,51 @@ import numpy as np
 import pandas as pd
 from openquake.baselib.performance import compile
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.line import get_tuws, get_tuw
+from openquake.hazardlib.geo.line import get_tuw
 from openquake.hazardlib.geo.geodetic import fast_distance, fast_azimuth
 
 
-def get_endpoints(lines):
+def build_line_params(lines):
+    # return lam0s, phi0s, coos, slens, uhats, thats
+    L = len(lines)
+    ns = len(lines[0]) - 1
+    lam0s = np.empty(L)
+    phi0s = np.empty(L)
+    coos = np.empty((L, ns + 1, 2))
+    slens = np.empty((L, ns))
+    uhats = np.empty((L, ns, 3))
+    thats = np.empty((L, ns, 3))
+    for i, line in enumerate(lines):
+        slen, uhat, that = line.sut_hat
+        lam0s[i] = line.proj.lam0
+        phi0s[i] = line.proj.phi0
+        coos[i] = line.coo[:, :2]
+        slens[i] = slen
+        uhats[i] = uhat
+        thats[i] = that
+    return lam0s, phi0s, coos, slens, uhats, thats
+
+
+@compile('(f8[:],f8[:],f8[:,:,:],f8[:,:],f8[:,:,:],f8[:,:,:],'
+         'i8[:],boolean[:],f8[:],f8[:])')
+def get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+             soidx, flipped, lons, lats):
     """
-    :returns a mesh of shape 2L
+    :returns: array of float32 of shape (L, N, 3)
     """
-    lons = np.array([ln.coo[[0, -1], 0] for ln in lines])  # shape (L, 2)
-    lats = np.array([ln.coo[[0, -1], 1] for ln in lines])  # shape (L, 2)
-    return lons.flatten(), lats.flatten()
+    L = len(lam0s)
+    N = len(lons)
+    out = np.empty((L, N, 3), np.float32)
+    for i, idx in enumerate(soidx):
+        if flipped[idx]:
+            out[i] = get_tuw(lam0s[idx], phi0s[idx], np.flipud(coos[idx]),
+                             slens[idx], -uhats[idx], -thats[idx],
+                             lons, lats)
+        else:
+            out[i] = get_tuw(lam0s[idx], phi0s[idx], coos[idx],
+                             slens[idx], uhats[idx], thats[idx],
+                             lons, lats)
+    return out
 
 
 @compile('(f8,f8,f8[:],f8[:],f8)')
@@ -164,35 +198,16 @@ class MultiLine(object):
         nsegs = [len(ln) - 1 for ln in self.lines]  # segments per line
         if len(set(nsegs)) == 1:
             # fast lane, when the number of segments is constant
-            ns = len(self.lines[0]) - 1
-            L = len(self.lines)
-            lam0s = np.empty(L)
-            phi0s = np.empty(L)
-            coos = np.empty((L, ns + 1, 2))
-            slens = np.empty((L, ns))
-            uhats = np.empty((L, ns, 3))
-            thats = np.empty((L, ns, 3))
-            for i, idx in enumerate(self.soidx):
-                line = self.lines[idx]
-                lam0s[i] = line.proj.lam0
-                phi0s[i] = line.proj.phi0
-                slens[i], uhat, that = line.tu_hat
-                if self.flipped[idx]:
-                    coos[i] = np.flipud(line.coo[:, 0:2])
-                    uhats[i] = -uhat
-                    thats[i] = -that
-                else:
-                    coos[i] = line.coo[:, 0:2]
-                    uhats[i] = uhat
-                    thats[i] = that
+            lam0s, phi0s, coos, slens, uhats, thats = build_line_params(
+                self.lines)
             out = get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
-                           lons, lats)
+                           self.soidx, self.flipped, lons, lats)
         else:
             # slow lane
             out = []
             for idx in self.soidx:
                 line = self.lines[idx]
-                slen, uhat, that = line.tu_hat
+                slen, uhat, that = line.sut_hat
                 if self.flipped[idx]:
                     coo = np.flipud(line.coo[:, 0:2])
                     uhat = -uhat
