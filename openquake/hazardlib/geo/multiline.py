@@ -35,12 +35,10 @@ def get_endpoints(lines):
     return lons.flatten(), lats.flatten()
 
 
-def get_flipped(llens, azimuths):
-    """
-    :returns: a boolean array with the flipped lines
-    """
+def get_avg_azim_flipped(llenghts, azimuths):
+
     # Find general azimuth trend
-    ave = utils.angular_mean(azimuths, llens) % 360
+    ave = utils.angular_mean(azimuths, llenghts) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
@@ -55,24 +53,13 @@ def get_flipped(llens, azimuths):
 
     delta = abs(azimuths - ave)
     scale = np.abs(np.cos(np.radians(delta)))
-    ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
+    ratio = np.sum(llenghts[idx] * scale[idx]) / np.sum(llenghts * scale)
 
     strike_to_east = ratio > 0.5
     if strike_to_east:
         flipped[~idx] = True
     else:
         flipped[idx] = True
-    return flipped
-
-
-def get_avg_azim_flipped(lines):
-    # compute the overall strike and the origin of the multiline
-    # get lenghts and average azimuths
-    llenghts = np.array([ln.length for ln in lines])
-    azimuths = np.array([line.azimuth for line in lines])
-
-    # determine the flipped lines
-    flipped = get_flipped(llenghts, azimuths)
 
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
@@ -85,7 +72,9 @@ class MultiLine(object):
     def __init__(self, lines, u_max=None, ry0=False):
         self.lines = lines
         self.u_max = u_max
-        avg_azim, flipped = get_avg_azim_flipped(lines)
+        llenghts = np.array([ln.length for ln in lines])
+        azimuths = np.array([line.azimuth for line in lines])
+        avg_azim, flipped = get_avg_azim_flipped(llenghts, azimuths)
         lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
         lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
         olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
