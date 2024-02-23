@@ -22,26 +22,23 @@ Module :mod:`openquake.hazardlib.geo.multiline` defines
 import numpy as np
 import pandas as pd
 from openquake.hazardlib.geo import utils
-from openquake.hazardlib.geo.mesh import Mesh
 from openquake.hazardlib.geo.line import get_tuws, get_tuw
-from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
+from openquake.hazardlib.geo.geodetic import fast_distance, fast_azimuth
 
 
 def get_endpoints(lines):
     """
     :returns a mesh of shape 2L
     """
-    lons = np.concatenate([ln.coo[[0, -1], 0] for ln in lines])  # shape 2L
-    lats = np.concatenate([ln.coo[[0, -1], 1] for ln in lines])  # shape 2L
-    return Mesh(lons, lats)
+    lons = np.array([ln.coo[[0, -1], 0] for ln in lines])  # shape (L, 2)
+    lats = np.array([ln.coo[[0, -1], 1] for ln in lines])  # shape (L, 2)
+    return lons.flatten(), lats.flatten()
 
 
-def get_flipped(llens, azimuths):
-    """
-    :returns: a boolean array with the flipped lines
-    """
+def _flipped_soidx_shift(llenghts, azimuths, lons, lats):
+
     # Find general azimuth trend
-    ave = utils.angular_mean(azimuths, llens) % 360
+    ave = utils.angular_mean(azimuths, llenghts) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
@@ -56,74 +53,78 @@ def get_flipped(llens, azimuths):
 
     delta = abs(azimuths - ave)
     scale = np.abs(np.cos(np.radians(delta)))
-    ratio = np.sum(llens[idx] * scale[idx]) / np.sum(llens * scale)
+    ratio = np.sum(llenghts[idx] * scale[idx]) / np.sum(llenghts * scale)
 
     strike_to_east = ratio > 0.5
     if strike_to_east:
         flipped[~idx] = True
     else:
         flipped[idx] = True
-    return flipped
 
-
-def get_avg_azim_flipped(lines):
-    # compute the overall strike and the origin of the multiline
-    # get lenghts and average azimuths
-    llenghts = np.array([ln.length for ln in lines])
-    azimuths = np.array([line.azimuth for line in lines])
-
-    # determine the flipped lines
-    flipped = get_flipped(llenghts, azimuths)
-    
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
-        if not hasattr(lines[i], 'flipped'):
-            lines[i].flipped = lines[i].flip()
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean(azimuths, llenghts) % 360
-    return avg_azim, flipped
+    olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
+
+    # if the line is flipped take the last point instead of the first
+    olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
+    olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
+    
+    # Distances and azimuths between the origin of the multiline and the
+    # first endpoint
+    distances = fast_distance(olon, olat, olons, olats)
+    azimuths = fast_azimuth(olon, olat, olons, olats)
+    
+    # Calculate the shift along the average strike direction
+    shift = np.float32(np.cos(np.radians(avg_azim - azimuths)) * distances)
+    
+    return flipped, soidx, shift
 
 
 class MultiLine(object):
-    """
-    A collection of polylines with associated methods and attributes. For the
-    most part, these are used to compute distances according to the GC2
-    method.
-    """
-    def __init__(self, lines, u_max=None):
+    def __init__(self, lines, u_max=None, ry0=False):
         self.lines = lines
-        avg_azim, self.flipped = get_avg_azim_flipped(lines)
-        self.ep = get_endpoints(lines)
-        olon, olat, self.soidx = get_origin(self.ep, avg_azim)
-
-        # compute the shift with respect to the origins
-        origins = np.zeros((len(lines), 2))
-        for i, idx in enumerate(self.soidx):
-            flip = -1 if self.flipped[idx] else 0
-            # if the line is flipped take the final point as origin
-            origins[i] = lines[idx].coo[flip, 0:2]
-        self.shift = get_coordinate_shift(origins, olon, olat, avg_azim)
         self.u_max = u_max
+        llenghts = np.array([ln.length for ln in lines])
+        azimuths = np.array([line.azimuth for line in lines])
+        lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
+        lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
+        self.flipped, self.soidx, self.shift = _flipped_soidx_shift(
+            llenghts, azimuths, lons, lats)
+        if ry0:
+            self.set_u_max(lons.flatten(), lats.flatten())
 
-    def set_u_max(self):
+    # used in event based too
+    def get_tu(self, lons, lats):
+        """
+        Given a mesh, computes the T and U coordinates for the multiline
+        """
+        return get_tu(self.shift, self.gen_tuws(lons, lats), len(lons))
+
+    def __str__(self):
+        return ';'.join(str(ln) for ln in self.lines)
+
+    def set_u_max(self, lons, lats):
         """
         If not already computed, compute .u_max, set it and return it.
         """
         if self.u_max is None:
+            lons, lats = get_endpoints(self.lines)
             N = 2 * len(self.lines)
-            t, u = get_tu(self.shift, self.gen_tuws(self.ep), N)
+            t, u = get_tu(self.shift, self.gen_tuws(lons, lats), N)
             self.u_max = np.abs(u).max()
         assert self.u_max > 0
         return self.u_max
 
-    def gen_tuws(self, mesh):
+    def gen_tuws(self, lons, lats):
         """
-        :yields: L arrays of shape (N, 3)
+        :returns: L arrays of shape (N, 2) or a single array (L, N, 2)
         """
         nsegs = [len(ln) - 1 for ln in self.lines]  # segments per line
         if len(set(nsegs)) == 1:
             # fast lane, when the number of segments is constant
-            ns = nsegs[0]
+            ns = len(self.lines[0]) - 1
             L = len(self.lines)
             lam0s = np.empty(L)
             phi0s = np.empty(L)
@@ -133,33 +134,35 @@ class MultiLine(object):
             thats = np.empty((L, ns, 3))
             for i, idx in enumerate(self.soidx):
                 line = self.lines[idx]
-                if self.flipped[idx]:
-                    line = line.flipped
                 lam0s[i] = line.proj.lam0
                 phi0s[i] = line.proj.phi0
-                coos[i] = line.coo[:, 0:2]
-                slen, uhat, that = line.tu_hat
-                slens[i] = slen
-                uhats[i] = uhat
-                thats[i] = that
-            yield from get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
-                                mesh.lons, mesh.lats)
+                slens[i], uhat, that = line.tu_hat
+                if self.flipped[idx]:
+                    coos[i] = np.flipud(line.coo[:, 0:2])
+                    uhats[i] = -uhat
+                    thats[i] = -that
+                else:
+                    coos[i] = line.coo[:, 0:2]
+                    uhats[i] = uhat
+                    thats[i] = that
+            out = get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
+                           lons, lats)
         else:
-            # slow lane, happens only in hazardlib
+            # slow lane
+            out = []
             for idx in self.soidx:
                 line = self.lines[idx]
-                if self.flipped[idx]:
-                    line = line.flipped
                 slen, uhat, that = line.tu_hat
-                yield get_tuw(line.proj.lam0, line.proj.phi0, line.coo[:, :2],
-                              slen, uhat, that,  mesh.lons, mesh.lats)
-
-    # used in event based too
-    def get_tu(self, mesh):
-        """
-        Given a mesh, computes the T and U coordinates for the multiline
-        """
-        return get_tu(self.shift, self.gen_tuws(mesh), len(mesh))
+                if self.flipped[idx]:
+                    coo = np.flipud(line.coo[:, 0:2])
+                    uhat = -uhat
+                    that = -that
+                else:
+                    coo = line.coo[:, :2]
+                tuw = get_tuw(line.proj.lam0, line.proj.phi0, coo,
+                              slen, uhat, that,  lons, lats)
+                out.append(tuw)
+        return out
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -178,11 +181,8 @@ class MultiLine(object):
         dic = dict(sid=sids, li=ls, t=ts, u=us, w=ws)
         return pd.DataFrame(dic)
 
-    def __str__(self):
-        return ';'.join(str(ln) for ln in self.lines)
 
-
-def get_origin(ep: Mesh, avg_strike: float):
+def get_origin(lons, lats, avg_strike):
     """
     Compute the origin necessary to calculate the coordinate shift
 
@@ -192,8 +192,8 @@ def get_origin(ep: Mesh, avg_strike: float):
     """
 
     # Project the endpoints
-    proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)
-    px, py = proj(ep.lons, ep.lats)
+    proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
+    px, py = proj(lons, lats)
 
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
@@ -224,30 +224,11 @@ def get_origin(ep: Mesh, avg_strike: float):
     return olon[0], olat[0], sort_idxs
 
 
-def get_coordinate_shift(origins: list, olon: float, olat: float,
-                         overall_strike: float) -> np.ndarray:
-    """
-    Computes the coordinate shift for each line in the multiline. This is
-    used to compute coordinates in the GC2 system
-
-    :returns:
-        A :class:`np.ndarray`instance with cardinality equal to the number of
-        sections (i.e. the length of the lines list in input)
-    """
-    # Distances and azimuths between the origin of the multiline and the
-    # first endpoint
-    distances = geodetic_distance(olon, olat, origins[:, 0], origins[:, 1])
-    azimuths = azimuth(olon, olat, origins[:, 0], origins[:, 1])
-
-    # Calculate the shift along the average strike direction
-    return np.float32(np.cos(np.radians(overall_strike - azimuths)) * distances)
-
-
 # called by contexts.py
 def get_tu(shift, tuws, N):
     """
-    :param shift: multiline shift array
-    :param tuws: iterator producing arrays of shape (N, 3)
+    :param shift: multiline shift array of float32
+    :param tuws: list of float32 arrays of shape (N, 3)
     :param N: number of sites
     """
     # `shift` has shape L and `tuws` shape (L, N, 3)
@@ -255,7 +236,6 @@ def get_tu(shift, tuws, N):
     us = np.zeros(N, np.float32)
     ws = np.zeros(N, np.float32)
     for i, tuw in enumerate(tuws):
-        assert len(tuw) == N, (len(tuw), N)
         t, u, w = tuw[:, 0], tuw[:, 1], tuw[:, 2]
         ts += t * w
         us += (u + shift[i]) * w

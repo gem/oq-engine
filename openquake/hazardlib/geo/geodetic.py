@@ -87,7 +87,18 @@ def geodetic_distance(lons1, lats1, lons2, lats2, diameter=2*EARTH_RADIUS):
     return diameter * distance
 
 
-@compile("f8[:](f8, f8, f8[:], f8[:])")
+@compile("(f8, f8, f8[:], f8[:])")
+def fast_distance(lon, lat, lons, lats):
+    lon, lat = math.radians(lon), math.radians(lat)
+    lons, lats = np.radians(lons), np.radians(lats)
+    distance = np.arcsin(np.sqrt(
+        np.sin((lat - lats) / 2.0) ** 2.0
+        + np.cos(lat) * np.cos(lats)
+        * np.sin((lon - lons) / 2.0) ** 2.0))
+    return 2 * EARTH_RADIUS * distance
+
+
+@compile("(f8, f8, f8[:], f8[:])")
 def fast_azimuth(lon, lat, lons, lats):
     """
     Calculate the azimuths of a collection of points with respect to a
