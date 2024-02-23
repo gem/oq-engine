@@ -77,15 +77,15 @@ def get_origin(lam0, phi0, lons, lats, avg_strike):
     return olon[0], olat[0], sort_idxs
 
 
-#@compile('(f8[:],f8[:],f8[:,:],f8[:,:])')
+#@compile('(f8[:],f8[:],f8[:,:],f8,f8,f8[:,:])')
 def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
 
     # Find general azimuth trend
-    ave = utils.angular_mean(azimuths, llenghts) % 360
+    ave = utils.angular_mean_weighted(azimuths, llenghts) % 360
 
     # Find the sections whose azimuth direction is not consistent with the
     # average one
-    flipped = np.zeros((len(azimuths)), dtype=bool)
+    flipped = np.zeros((len(azimuths)), dtype=np.bool_)
     if (ave >= 90) & (ave <= 270):
         # This is the case where the average azimuth in the second or third
         # quadrant
@@ -94,7 +94,7 @@ def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
         # In this case the average azimuth points toward the northern emisphere
         idx = (azimuths >= (ave - 90) % 360) | (azimuths < (ave + 90) % 360)
 
-    delta = abs(azimuths - ave)
+    delta = np.abs(azimuths - ave)
     scale = np.abs(np.cos(np.radians(delta)))
     ratio = np.sum(llenghts[idx] * scale[idx]) / np.sum(llenghts * scale)
 
@@ -107,7 +107,7 @@ def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
-    avg_azim = utils.angular_mean(azimuths, llenghts) % 360
+    avg_azim = utils.angular_mean_weighted(azimuths, llenghts) % 360
     olon, olat, soidx = get_origin(
         lam0, phi0, lons.flatten(), lats.flatten(), avg_azim)
 
