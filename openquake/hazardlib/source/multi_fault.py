@@ -76,11 +76,12 @@ class MultiFaultSource(BaseSeismicSource):
     hdf5path = ''
 
     def __init__(self, source_id: str, name: str, tectonic_region_type: str,
-                 occurrence_probs: Union[list, np.ndarray],
+                 rupture_idxs: list, occurrence_probs: Union[list, np.ndarray],
                  magnitudes: list, rakes: list, investigation_time=0,
                  infer_occur_rates=False):
         nrups = len(magnitudes)
         assert len(occurrence_probs) == len(rakes) == nrups
+        self._rupture_idxs = rupture_idxs
         # NB: using 32 bits for the occurrence_probs would be a disaster:
         # the results are STRONGLY dependent on the precision,
         # in particular the AELO tests for CHN would break
@@ -257,7 +258,7 @@ def save(mfsources, sectiondict, hdf5path, msparams=False):
             raise IndexError('The section index %s in source %r is invalid'
                              % (exc.args[0], src.source_id))
         all_ridxs.append(rids)
-        delattr(src, '_rupture_idxs')  # was set by the SourceConverter
+        delattr(src, '_rupture_idxs')  # save memory
         src.hdf5path = hdf5path
 
     # store data
@@ -302,9 +303,10 @@ def load(hdf5path):
             mags = data['mags'][:]
             rakes = data['rakes'][:]
             probs = data['probs_occur'][:]
-            src = MultiFaultSource(key, name, trt, probs, mags, rakes,
+            src = MultiFaultSource(key, name, trt,
+                                   data['rupture_idxs'][:],
+                                   probs, mags, rakes,
                                    itime, infer)
-            src._rupture_idxs = data['rupture_idxs'][:]
             src.hdf5path = hdf5path
             srcs.append(src)
     return srcs
