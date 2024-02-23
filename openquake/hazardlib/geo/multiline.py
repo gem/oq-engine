@@ -33,7 +33,7 @@ def get_endpoints(lines):
     """
     lons = np.concatenate([ln.coo[[0, -1], 0] for ln in lines])  # shape 2L
     lats = np.concatenate([ln.coo[[0, -1], 1] for ln in lines])  # shape 2L
-    return Mesh(lons, lats)
+    return lons, lats
 
 
 def get_flipped(llens, azimuths):
@@ -93,8 +93,8 @@ class MultiLine(object):
     def __init__(self, lines, u_max=None):
         self.lines = lines
         avg_azim, self.flipped = get_avg_azim_flipped(lines)
-        self.ep = get_endpoints(lines)
-        olon, olat, self.soidx = get_origin(self.ep, avg_azim)
+        self.lons, self.lats = get_endpoints(lines)
+        olon, olat, self.soidx = get_origin(self.lons, self.lats, avg_azim)
 
         # compute the shift with respect to the origins
         origins = np.zeros((len(lines), 2))
@@ -111,12 +111,12 @@ class MultiLine(object):
         """
         if self.u_max is None:
             N = 2 * len(self.lines)
-            t, u = get_tu(self.shift, self.gen_tuws(self.ep), N)
+            t, u = get_tu(self.shift, self.gen_tuws(self.lons, self.lats), N)
             self.u_max = np.abs(u).max()
         assert self.u_max > 0
         return self.u_max
 
-    def gen_tuws(self, mesh):
+    def gen_tuws(self, lons, lats):
         """
         :yields: L arrays of shape (N, 3)
         """
@@ -143,7 +143,7 @@ class MultiLine(object):
                 uhats[i] = uhat
                 thats[i] = that
             yield from get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
-                                mesh.lons, mesh.lats)
+                                lons, lats)
         else:
             # slow lane, happens only in hazardlib
             for idx in self.soidx:
@@ -152,14 +152,14 @@ class MultiLine(object):
                     line = line.flipped
                 slen, uhat, that = line.tu_hat
                 yield get_tuw(line.proj.lam0, line.proj.phi0, line.coo[:, :2],
-                              slen, uhat, that,  mesh.lons, mesh.lats)
+                              slen, uhat, that,  lons, lats)
 
     # used in event based too
-    def get_tu(self, mesh):
+    def get_tu(self, lons, lats):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        return get_tu(self.shift, self.gen_tuws(mesh), len(mesh))
+        return get_tu(self.shift, self.gen_tuws(lons, lats), len(lons))
 
     def get_tuw_df(self, sites):
         # debug method to be called in genctxs
@@ -182,7 +182,7 @@ class MultiLine(object):
         return ';'.join(str(ln) for ln in self.lines)
 
 
-def get_origin(ep: Mesh, avg_strike: float):
+def get_origin(lons, lats, avg_strike):
     """
     Compute the origin necessary to calculate the coordinate shift
 
@@ -192,8 +192,8 @@ def get_origin(ep: Mesh, avg_strike: float):
     """
 
     # Project the endpoints
-    proj = utils.OrthographicProjection.from_lons_lats(ep.lons, ep.lats)
-    px, py = proj(ep.lons, ep.lats)
+    proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
+    px, py = proj(lons, lats)
 
     # Find the index of the eastmost (or westmost) point depending on the
     # prevalent direction of the strike
