@@ -73,11 +73,9 @@ def get_avg_azim_flipped(lines):
 
     # determine the flipped lines
     flipped = get_flipped(llenghts, azimuths)
-    
+
     # Compute the average azimuth
     for i in np.nonzero(flipped)[0]:
-        if not hasattr(lines[i], 'flipped'):
-            lines[i].flipped = lines[i].flip()
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean(azimuths, llenghts) % 360
     return avg_azim, flipped
@@ -149,15 +147,17 @@ class MultiLine(object):
             thats = np.empty((L, ns, 3))
             for i, idx in enumerate(self.soidx):
                 line = self.lines[idx]
-                if self.flipped[idx]:
-                    line = line.flipped
                 lam0s[i] = line.proj.lam0
                 phi0s[i] = line.proj.phi0
-                coos[i] = line.coo[:, 0:2]
-                slen, uhat, that = line.tu_hat
-                slens[i] = slen
-                uhats[i] = uhat
-                thats[i] = that
+                slens[i], uhat, that = line.tu_hat
+                if self.flipped[idx]:
+                    coos[i] = np.flipud(line.coo[:, 0:2])
+                    uhats[i] = -uhat
+                    thats[i] = -that
+                else:
+                    coos[i] = line.coo[:, 0:2]
+                    uhats[i] = uhat
+                    thats[i] = that
             out = get_tuws(lam0s, phi0s, coos, slens, uhats, thats,
                            lons, lats)
         else:
@@ -165,10 +165,14 @@ class MultiLine(object):
             out = []
             for idx in self.soidx:
                 line = self.lines[idx]
-                if self.flipped[idx]:
-                    line = line.flipped
                 slen, uhat, that = line.tu_hat
-                tuw = get_tuw(line.proj.lam0, line.proj.phi0, line.coo[:, :2],
+                if self.flipped[idx]:
+                    coo = np.flipud(line.coo[:, 0:2])
+                    uhat = -uhat
+                    that = -that
+                else:
+                    coo = line.coo[:, :2]
+                tuw = get_tuw(line.proj.lam0, line.proj.phi0, coo,
                               slen, uhat, that,  lons, lats)
                 out.append(tuw)
         return out
