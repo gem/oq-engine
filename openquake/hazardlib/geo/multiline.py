@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from openquake.hazardlib.geo import utils
 from openquake.hazardlib.geo.line import get_tuws, get_tuw
-from openquake.hazardlib.geo.geodetic import geodetic_distance, azimuth
+from openquake.hazardlib.geo.geodetic import fast_distance, fast_azimuth
 
 
 def get_endpoints(lines):
@@ -95,8 +95,8 @@ def MultiLine(lines, u_max=None):
 
     # Distances and azimuths between the origin of the multiline and the
     # first endpoint
-    distances = geodetic_distance(olon, olat, olons, olats)
-    azimuths = azimuth(olon, olat, olons, olats)
+    distances = fast_distance(olon, olat, olons, olats)
+    azimuths = fast_azimuth(olon, olat, olons, olats)
 
     # Calculate the shift along the average strike direction
     shift = np.float32(np.cos(np.radians(avg_azim - azimuths)) * distances)
