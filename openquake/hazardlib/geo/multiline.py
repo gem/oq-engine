@@ -142,15 +142,17 @@ class MultiLine(object):
         proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
         self.flipped, self.soidx, self.shift = _flipped_soidx_shift(
             llenghts, azimuths, proj.lam0, proj.phi0, lons, lats)
-        if ry0:
-            self.set_u_max(lons.flatten(), lats.flatten())
+        if u_max is None and ry0:
+            t, u = get_tu(
+                self.shift, self.gen_tuws(lons.flatten(), lats.flatten()))
+            self.u_max = np.abs(u).max()
 
     # used in event based too
     def get_tu(self, lons, lats):
         """
         Given a mesh, computes the T and U coordinates for the multiline
         """
-        return get_tu(self.shift, self.gen_tuws(lons, lats), len(lons))
+        return get_tu(self.shift, self.gen_tuws(lons, lats))
 
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
