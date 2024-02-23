@@ -161,8 +161,7 @@ class MultiLine(object):
         """
         if self.u_max is None:
             lons, lats = get_endpoints(self.lines)
-            N = 2 * len(self.lines)
-            t, u = get_tu(self.shift, self.gen_tuws(lons, lats), N)
+            t, u = get_tu(self.shift, self.gen_tuws(lons, lats))
             self.u_max = np.abs(u).max()
         assert self.u_max > 0
         return self.u_max
@@ -233,13 +232,14 @@ class MultiLine(object):
 
 
 # called by contexts.py
-def get_tu(shift, tuws, N):
+def get_tu(shift, tuws):
     """
     :param shift: multiline shift array of float32
     :param tuws: list of float32 arrays of shape (N, 3)
     :param N: number of sites
     """
     # `shift` has shape L and `tuws` shape (L, N, 3)
+    N = len(tuws[0])
     ts = np.zeros(N, np.float32)
     us = np.zeros(N, np.float32)
     ws = np.zeros(N, np.float32)
