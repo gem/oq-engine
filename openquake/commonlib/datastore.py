@@ -207,6 +207,12 @@ class DataStore(collections.abc.MutableMapping):
                 self.hdf5 = hdf5.File(self.filename, mode)
             except OSError as exc:
                 raise OSError('%s in %s' % (exc, self.filename))
+            try:
+                hc_id = self.hdf5['oqparam'].hazard_calculation_id
+            except KeyError:
+                hc_id = None
+            if hc_id:
+                self.parent = read(hc_id)
         return self
 
     @property
