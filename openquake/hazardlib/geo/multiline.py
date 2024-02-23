@@ -85,14 +85,9 @@ def get_avg_azim_flipped(lines):
 
 def MultiLine(lines, u_max=None):
     avg_azim, flipped = get_avg_azim_flipped(lines)
-    nsegs = [len(ln) - 1 for ln in lines]  # segments per line
-    if len(set(nsegs)) == 1:
-        coos = np.array([ln.coo[:, :2] for ln in lines])  # shape (L, P, 2)
-        lons = coos[:, [0, -1], 0].flatten()
-        lats = coos[:, [0, -1], 1].flatten()
-    else:
-        lons, lats = get_endpoints(lines)
-    olon, olat, soidx = get_origin(lons, lats, avg_azim)
+    lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
+    lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
+    olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
     
     # compute the shift with respect to the origins
     origins = np.zeros((len(lines), 2))
