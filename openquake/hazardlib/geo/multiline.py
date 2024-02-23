@@ -77,7 +77,7 @@ def get_origin(lam0, phi0, lons, lats, avg_strike):
     return olon[0], olat[0], sort_idxs
 
 
-#@compile('(f8[:],f8[:],f8[:,:],f8,f8,f8[:,:])')
+@compile('(f8[:],f8[:],f8,f8,f8[:,:],f8[:,:])')
 def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
 
     # Find general azimuth trend
@@ -121,12 +121,17 @@ def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
     azimuths = fast_azimuth(olon, olat, olons, olats)
     
     # Calculate the shift along the average strike direction
-    shift = np.float32(np.cos(np.radians(avg_azim - azimuths)) * distances)
+    shift = np.cos(np.radians(avg_azim - azimuths)) * distances
     
-    return flipped, soidx, shift
+    return flipped, soidx, shift.astype(np.float32)
 
 
 class MultiLine(object):
+    """
+    A collection of polylines with associated methods and attributes. For the
+    most part, these are used to compute distances according to the GC2
+    method.
+    """
     def __init__(self, lines, u_max=None, ry0=False):
         self.lines = lines
         self.u_max = u_max
