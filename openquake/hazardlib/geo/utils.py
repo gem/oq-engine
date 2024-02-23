@@ -131,9 +131,9 @@ def angular_mean(degrees, weights=None):
     Given an array of angles in degrees, returns its angular mean.
     If weights are passed, assume sum(weights) == 1.
 
-    >>> angular_mean([179., -179])
+    >>> angular_mean([179, -179])
     180.0
-    >>> angular_mean([-179., 179])
+    >>> angular_mean([-179, 179])
     180.0
     >>> angular_mean([-179, 179], [.75, .25])
     -179.4999619199226
@@ -144,8 +144,9 @@ def angular_mean(degrees, weights=None):
         cos = numpy.cos(rads)
         return numpy.degrees(numpy.arctan2(sin.mean(), cos.mean()))
     else:
-        assert len(weights) == len(degrees), (len(weights), len(degrees))
-        return angular_mean_weighted(degrees, weights)
+        ds, ws = numpy.float64(degrees), numpy.float64(weights)
+        assert len(ws) == len(ds), (len(ws), len(ds))
+        return angular_mean_weighted(ds, ws)
 
 
 class SiteAssociationError(Exception):
