@@ -393,16 +393,7 @@ def process_sites(dstore, csm):
     for site in dstore['sitecol']:
         sid = site.id
         mrs = dstore['mean_rates_by_src'][sid]
-        if mrs.sum() == 0:
-            warning = ('Zero hazard: there are no ruptures close to the site. '
-                       'ASCE 7-16 and ASCE 41-17 parameters cannot be computed')
-            yield site, None, warning
-
         mean_rates = to_rates(dstore['hcurves-stats'][sid, 0])
-        if mean_rates.max() < MIN_AFE:
-            warning = ('Very low hazard: ASCE 7-16 and'
-                       ' ASCE 41-17 parameters cannot be computed.')
-            yield site, None, warning
 
         oq = dstore['oqparam']
         stats = list(oq.hazard_stats())
@@ -413,10 +404,21 @@ def process_sites(dstore, csm):
         rtgm_df = calc_rtgm_df(hcurves, site, sid, oq)
         logging.info('(%.1f,%.1f) Computed RTGM\n%s', loc.x, loc.y, rtgm_df)
 
-        if (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
-            yield site, rtgm_df, 'Low hazard'
+        if mrs.sum() == 0:
+            warning = ('Zero hazard: there are no ruptures close to the site. '
+                       'ASCE 7-16 and ASCE 41-17 parameters cannot be computed')
+            yield site, None, warning
+
+        elif mean_rates.max() < MIN_AFE:
+            warning = ('Very low hazard: ASCE 7-16 and'
+                       ' ASCE 41-17 parameters cannot be computed.')
+            yield site, None, warning
+
+        elif (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
+            yield site, rtgm_df, 'Only probabilistic MCE'
         else:
             yield site, rtgm_df, ''
+
 
 
 def calc_asce(dstore, csm, rtgm):
@@ -469,7 +471,7 @@ def main(dstore, csm):
         if warning.startswith(('Zero hazard', 'Very low hazard')):
             asce07[sid] = hdf5.dumps(get_zero_hazard_asce07())
             asce41[sid] = hdf5.dumps(get_zero_hazard_asce41())
-        elif warning.startswith('Low hazard'):
+        elif warning.startswith('Only probabilistic MCE'):
             dummy_det = {'PGA': '', 'SA(0.2)': '', 'SA(1.0)': ''}
             prob_mce_out, mce, det_mce, a07 = get_mce_asce07(
                 dummy_det, DLLs, rtgm_df, low_haz=True)
@@ -490,7 +492,14 @@ def main(dstore, csm):
 
     dstore['asce07'] = to_array(asce07)
     dstore['asce41'] = to_array(asce41)
-    dstore['warnings'] = to_array(warnings)
+
+    # if warnings are meaningful, and/or there are 2+ sites add them to the ds
+    if len(warnings) == 1:
+        if not warnings[0].startswith('Only probabilistic MCE'):
+            dstore['warnings'] = to_array(warnings)
+    else:
+        dstore['warnings'] = to_array(warnings)
+
     if rtgm_dfs:
         dstore.create_df('rtgm', pd.concat(rtgm_dfs))
     if rtgm_dfs and N == 1 and not warnings[sid]:
