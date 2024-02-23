@@ -89,14 +89,17 @@ def MultiLine(lines, u_max=None):
     lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
     olon, olat, soidx = get_origin(lons.flatten(), lats.flatten(), avg_azim)
     
-    # compute the shift with respect to the origins
-    origins = np.zeros((len(lines), 2))
-    for i, idx in enumerate(soidx):
-        flip = -1 if flipped[idx] else 0
-        # if the line is flipped take the final point as origin
-        origins[i] = lines[idx].coo[flip, 0:2]
-    shift = get_coordinate_shift(origins, olon, olat, avg_azim)
-    u_max = u_max
+    # if the line is flipped take the last point instead of the first
+    olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
+    olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
+
+    # Distances and azimuths between the origin of the multiline and the
+    # first endpoint
+    distances = geodetic_distance(olon, olat, olons, olats)
+    azimuths = azimuth(olon, olat, olons, olats)
+
+    # Calculate the shift along the average strike direction
+    shift = np.float32(np.cos(np.radians(avg_azim - azimuths)) * distances)
 
     nsegs = [len(ln) - 1 for ln in lines]  # segments per line
     if len(set(nsegs)) == 1:
@@ -261,25 +264,6 @@ def get_origin(lons, lats, avg_strike):
     olon, olat = proj(x, y, reverse=True)
 
     return olon[0], olat[0], sort_idxs
-
-
-def get_coordinate_shift(origins: list, olon: float, olat: float,
-                         overall_strike: float) -> np.ndarray:
-    """
-    Computes the coordinate shift for each line in the multiline. This is
-    used to compute coordinates in the GC2 system
-
-    :returns:
-        A :class:`np.ndarray`instance with cardinality equal to the number of
-        sections (i.e. the length of the lines list in input)
-    """
-    # Distances and azimuths between the origin of the multiline and the
-    # first endpoint
-    distances = geodetic_distance(olon, olat, origins[:, 0], origins[:, 1])
-    azimuths = azimuth(olon, olat, origins[:, 0], origins[:, 1])
-
-    # Calculate the shift along the average strike direction
-    return np.float32(np.cos(np.radians(overall_strike - azimuths)) * distances)
 
 
 # called by contexts.py
