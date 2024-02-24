@@ -203,6 +203,7 @@ class MultiFaultSource(BaseSeismicSource):
                 srcid,
                 self.name,
                 self.tectonic_region_type,
+                [],
                 self.probs_occur[slc],
                 self.mags[slc],
                 self.rakes[slc],
