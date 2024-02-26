@@ -260,13 +260,13 @@ def get_tu(shift, tuws):
 @compile('(f4[:],f4[:,:,:])')
 def get_u_max(shift, tuws):
     """
-    :param shift: multiline shift array of float32
-    :param tuws: list of float32 arrays of shape (N, 3)
+    :param shift: shift array of float32 of length L
+    :param tuws: float32 array of shape (L, L*2, 3)
     """
-    # `shift` has shape L and `tuws` shape (L, N, 3)
-    N = len(tuws[0])
-    us = np.zeros(N, np.float32)
-    ws = np.zeros(N, np.float32)
+    # `shift` has shape L and `tuws` shape (L, L*2, 3)
+    L2 = len(tuws[0])
+    us = np.zeros(L2, np.float32)
+    ws = np.zeros(L2, np.float32)
     for i, tuw in enumerate(tuws):
         u, w = tuw[:, 1], tuw[:, 2]
         us += (u + shift[i]) * w
