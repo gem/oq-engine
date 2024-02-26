@@ -406,19 +406,21 @@ def process_sites(dstore, csm):
 
         if mrs.sum() == 0:
             warning = ('Zero hazard: there are no ruptures close to the site. '
-                       'ASCE 7-16 and ASCE 41-17 parameters cannot be computed')
+                       'ASCE 7-16 and ASCE 41-17 parameters cannot be computed.'
+                       ' See User Guide.')
             yield site, None, warning
 
         elif mean_rates.max() < MIN_AFE:
-            warning = ('Very low hazard: ASCE 7-16 and'
-                       ' ASCE 41-17 parameters cannot be computed.')
+            warning = ('Very low hazard: ASCE 7-16 and ASCE 41-17'
+                       ' parameters cannot be computed. See User Guide.')
             yield site, None, warning
 
         elif (rtgm_df.ProbMCE.to_numpy()[1] < 0.11) or \
                 (rtgm_df.ProbMCE.to_numpy()[2] < 0.04):
-            warning = ('The MCE at the site is very low. Users may need '
-                       'to increase the parameter values to user-specific '
-                       'minimums.')
+            warning = ('The MCE at the site is very low. Users may need to '
+                       ' increase the ASCE 7-16 and ASCE 41-17 parameter values'
+                       ' to user-specified minimums (e.g., Ss=0.11g and '
+                       ' S1=0.04g). See User Guide.')
             yield site, rtgm_df, warning
 
         elif (rtgm_df.ProbMCE < DLLs).all():  # do not disaggregate by rel sources
