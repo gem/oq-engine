@@ -111,8 +111,8 @@ def get_origin(lam0, phi0, lons, lats, avg_strike):
     return olon[0], olat[0], sort_idxs
 
 
-@compile('(f8[:],f8[:],f8,f8,f8[:,:],f8[:,:])')
-def _build5(llenghts, azimuths, lam0, phi0, lons, lats):
+@compile('(f8[:],f8[:],f8,f8,f8[:,:,:])')
+def _build3(llenghts, azimuths, lam0, phi0, coos):
 
     # Find general azimuth trend
     ave = utils.angular_mean_weighted(azimuths, llenghts) % 360
@@ -142,12 +142,12 @@ def _build5(llenghts, azimuths, lam0, phi0, lons, lats):
     for i in np.nonzero(flipped)[0]:
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean_weighted(azimuths, llenghts) % 360
-    flatlons, flatlats = lons.flatten(), lats.flatten()
+    flatlons, flatlats = coos[:, :, 0].flatten(), coos[:, :, 1].flatten()
     olon, olat, soidx = get_origin(lam0, phi0, flatlons, flatlats, avg_azim)
 
     # if the line is flipped take the last point instead of the first
-    olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
-    olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
+    olons = np.array([coos[idx, int(flipped[idx]), 0] for idx in soidx])
+    olats = np.array([coos[idx, int(flipped[idx]), 1] for idx in soidx])
     
     # Distances and azimuths between the origin of the multiline and the
     # first endpoint
@@ -157,7 +157,7 @@ def _build5(llenghts, azimuths, lam0, phi0, lons, lats):
     # Calculate the shift along the average strike direction
     shift = np.cos(np.radians(avg_azim - azimuths)) * distances
     
-    return flipped, soidx, shift.astype(np.float32), flatlons, flatlats
+    return flipped, soidx, shift.astype(np.float32)
 
 
 class MultiLine(object):
@@ -170,11 +170,11 @@ class MultiLine(object):
         self.lines = lines
         llenghts = np.array([ln.length for ln in lines])
         azimuths = np.array([line.azimuth for line in lines])
-        lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
-        lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
-        proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
-        self.flipped, self.soidx, self.shift, self.lons, self.lats = \
-            _build5(llenghts, azimuths, proj.lam0, proj.phi0, lons, lats)
+        self.coos = np.array([ln.coo[[0, -1], 0:2] for ln in lines])
+        proj = utils.OrthographicProjection.from_lons_lats(
+            self.coos[:, :, 0], self.coos[:, :, 1])
+        self.flipped, self.soidx, self.shift = _build3(
+            llenghts, azimuths, proj.lam0, proj.phi0, self.coos)
 
     # used in event based too
     def get_tu(self, lons, lats):
@@ -187,7 +187,8 @@ class MultiLine(object):
         """
         :returns: u_max parameter
         """
-        return get_u_max(self.shift, self.gen_tuws(self.lons, self.lats))
+        return get_u_max(self.shift, self.gen_tuws(
+            self.coos[:, :, 0].flatten(), self.coos[:, :, 1].flatten()))
 
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
