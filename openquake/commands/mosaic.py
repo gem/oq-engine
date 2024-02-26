@@ -46,7 +46,7 @@ def engine_profile(jobctx, nrows):
 
 def fix(asce, siteid):
     dic = json.loads(asce.decode('ascii'))
-    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
+    dic = {k: v if isinstance(v, str) else round(v, 2)
            for k, v in dic.items()}
     dic['siteid'] = siteid
     return dic
