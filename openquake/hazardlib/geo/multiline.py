@@ -187,8 +187,7 @@ class MultiLine(object):
         """
         :returns: u_max parameter
         """
-        t, u = get_tu(self.shift, self.gen_tuws(self.lons, self.lats))
-        return np.abs(u).max()
+        return get_u_max(self.shift, self.gen_tuws(self.lons, self.lats))
 
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
@@ -244,7 +243,6 @@ def get_tu(shift, tuws):
     """
     :param shift: multiline shift array of float32
     :param tuws: list of float32 arrays of shape (N, 3)
-    :param N: number of sites
     """
     # `shift` has shape L and `tuws` shape (L, N, 3)
     N = len(tuws[0])
@@ -257,3 +255,20 @@ def get_tu(shift, tuws):
         us += (u + shift[i]) * w
         ws += w
     return ts / ws, us / ws
+
+
+@compile('(f4[:],f4[:,:,:])')
+def get_u_max(shift, tuws):
+    """
+    :param shift: multiline shift array of float32
+    :param tuws: list of float32 arrays of shape (N, 3)
+    """
+    # `shift` has shape L and `tuws` shape (L, N, 3)
+    N = len(tuws[0])
+    us = np.zeros(N, np.float32)
+    ws = np.zeros(N, np.float32)
+    for i, tuw in enumerate(tuws):
+        u, w = tuw[:, 1], tuw[:, 2]
+        us += (u + shift[i]) * w
+        ws += w
+    return np.abs(us / ws).max()

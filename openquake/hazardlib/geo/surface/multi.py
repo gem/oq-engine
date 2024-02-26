@@ -90,7 +90,8 @@ def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
             tors = [lines[idx] for idx in idxs if close_sec[idx]]
             if not tors:  # all sections are far away
                 continue
-            msparam['u_max'] = geo.MultiLine(tors).get_u_max()
+            if ry0:
+                msparam['u_max'] = geo.MultiLine(tors).get_u_max()
 
             # building simple multisurface params
             secparam = secparams[idxs]
@@ -98,7 +99,8 @@ def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
             msparam['area'] = areas.sum()
             ws = areas / msparam['area']  # weights
             msparam['dip'] = ws @ secparam['dip']
-            msparam['strike'] = utils.angular_mean(secparam['strike'], ws) % 360
+            msparam['strike'] = utils.angular_mean_weighted(
+                secparam['strike'], ws) % 360
             msparam['width'] = ws @ secparam['width']
             msparam['ztor'] = ws @ secparam['ztor']
             msparam['zbot'] = ws @ secparam['zbot']
