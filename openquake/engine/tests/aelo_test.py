@@ -62,14 +62,14 @@ def test_PAC():
         a7 = json.loads(calc.datastore['asce07'][1].decode('ascii'))
         aac([r0, r1, a7['PGA']], [0.032720476, 0.040302116, 0.7959], atol=1E-6)
 
-    # check that there are not warnings about results
-    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
-    assert sum([len(w) for w in warnings]) == 0
+        # check that there are not warnings about results
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert sum([len(w) for w in warnings]) == 0
 
-    # check all plots created
-    assert 'png/governing_mce.png' not in calc.datastore
-    assert 'png/hcurves.png' not in calc.datastore
-    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+        # check all plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
 def test_KOR():
@@ -85,10 +85,10 @@ def test_KOR():
         asce07 = json.loads(s)
         aac(asce07['PGA'], 0.618, atol=5E-5)
 
-    # check all plots created
-    assert 'png/governing_mce.png' in calc.datastore
-    assert 'png/hcurves.png' in calc.datastore
-    assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
+        # check all plots created
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
 
 
 def test_CCA():
@@ -121,22 +121,22 @@ def test_CCA():
         df = pandas.read_csv(fname, skiprows=1)
         aac(df.value, ASCE41, atol=5E-5)
 
-    # test no close ruptures
-    dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
-    with logs.init(job_ini) as log:
-            log.params.update(get_params_from(
-                dic, MOSAIC_DIR, exclude=['USA']))
-            calc = base.calculators(log.get_oqparam(), log.calc_id)
-            calc.run()
-    # check that the warning announces no closeby ruptures
-    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
-    assert len(warnings) == 1
-    assert warnings[0].startswith('Zero hazard')
+        # test no close ruptures
+        dic = dict(sites='%s %s' % (-83.37, 15.15), site='wayfar', vs30='760')
+        with logs.init(job_ini) as log:
+                log.params.update(get_params_from(
+                    dic, MOSAIC_DIR, exclude=['USA']))
+                calc = base.calculators(log.get_oqparam(), log.calc_id)
+                calc.run()
+        # check that the warning announces no close ruptures
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert len(warnings) == 1
+        assert warnings[0].startswith('Zero hazard')
 
-    # check no plots created
-    assert 'png/governing_mce.png' not in calc.datastore
-    assert 'png/hcurves.png' not in calc.datastore
-    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+        # check no plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
 def test_WAF():
@@ -148,33 +148,34 @@ def test_WAF():
             dic, MOSAIC_DIR, exclude=['USA']))
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
-    # check that warning indicates very low hazard
-    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
-    assert len(warnings) == 1
-    assert warnings[0].startswith('Very low')
+    if rtgmpy:
+        # check that warning indicates very low hazard
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert len(warnings) == 1
+        assert warnings[0].startswith('Very low')
 
-    # check no plots created
-    assert 'png/governing_mce.png' not in calc.datastore
-    assert 'png/hcurves.png' not in calc.datastore
-    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+        # check no plots created
+        assert 'png/governing_mce.png' not in calc.datastore
+        assert 'png/hcurves.png' not in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
-    # test of site with very low hazard, but high enough to compute ASCE
-    job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
-    dic = dict(sites='10.93 5.65', site='WAF-site', vs30='760')
-    with logs.init(job_ini) as log:
-        log.params.update(get_params_from(
-            dic, MOSAIC_DIR, exclude=['USA']))
-        calc = base.calculators(log.get_oqparam(), log.calc_id)
-        calc.run()
-    # check that warning indicates very low hazard
-    warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
-    assert len(warnings) == 1
-    assert warnings[0].startswith('The MCE')
+        # test of site with very low hazard, but high enough to compute ASCE
+        job_ini = os.path.join(MOSAIC_DIR, 'WAF/in/job_vs30.ini')
+        dic = dict(sites='10.93 5.65', site='WAF-site', vs30='760')
+        with logs.init(job_ini) as log:
+            log.params.update(get_params_from(
+                dic, MOSAIC_DIR, exclude=['USA']))
+            calc = base.calculators(log.get_oqparam(), log.calc_id)
+            calc.run()
+        # check that warning indicates very low hazard
+        warnings = [s.decode('utf8') for s in calc.datastore['warnings']]
+        assert len(warnings) == 1
+        assert warnings[0].startswith('The MCE')
 
-    # check that 2/3 plots created
-    assert 'png/governing_mce.png' in calc.datastore
-    assert 'png/hcurves.png' in calc.datastore
-    assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
+        # check that 2/3 plots created
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' not in calc.datastore
 
 
 def test_JPN():
@@ -187,12 +188,8 @@ def test_JPN():
         calc = base.calculators(log.get_oqparam(), log.calc_id)
         calc.run()
 
-    # check all plots created
-    assert 'png/governing_mce.png' in calc.datastore
-    assert 'png/hcurves.png' in calc.datastore
-    assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
-
-    #if rtgmpy:
-    #    # sanity check: only possible without !-sources
-    #    df = views.view('compare_disagg_rates', calc.datastore)
-    #    aac(df.disagg_rate, df.interp_rate, rtol=.01)
+    if rtgmpy:
+        # check all plots created
+        assert 'png/governing_mce.png' in calc.datastore
+        assert 'png/hcurves.png' in calc.datastore
+        assert 'png/disagg_by_src-All-IMTs.png' in calc.datastore
