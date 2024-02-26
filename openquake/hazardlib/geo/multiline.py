@@ -170,11 +170,11 @@ class MultiLine(object):
         self.lines = lines
         llenghts = np.array([ln.length for ln in lines])
         azimuths = np.array([line.azimuth for line in lines])
-        self.coos = np.array([ln.coo[[0, -1], 0:2] for ln in lines])
+        self.ends = np.array([ln.coo[[0, -1], 0:2] for ln in lines])  # (L,2,2)
         proj = utils.OrthographicProjection.from_lons_lats(
-            self.coos[:, :, 0], self.coos[:, :, 1])
+            self.ends[:, :, 0], self.ends[:, :, 1])
         self.flipped, self.soidx, self.shift = _build3(
-            llenghts, azimuths, proj.lam0, proj.phi0, self.coos)
+            llenghts, azimuths, proj.lam0, proj.phi0, self.ends)
 
     # used in event based too
     def get_tu(self, lons, lats):
@@ -188,7 +188,7 @@ class MultiLine(object):
         :returns: u_max parameter
         """
         return get_u_max(self.shift, self.gen_tuws(
-            self.coos[:, :, 0].flatten(), self.coos[:, :, 1].flatten()))
+            self.ends[:, :, 0].flatten(), self.ends[:, :, 1].flatten()))
 
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)

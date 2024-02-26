@@ -90,6 +90,7 @@ def build_msparams(rupture_idxs, secparams, close_sec=None, ry0=False,
             tors = [lines[idx] for idx in idxs if close_sec[idx]]
             if not tors:  # all sections are far away
                 continue
+
             if ry0:
                 msparam['u_max'] = geo.MultiLine(tors).get_u_max()
 

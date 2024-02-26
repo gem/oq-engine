@@ -245,7 +245,7 @@ class MultiFaultSource(BaseSeismicSource):
 
 
 # NB: as side effect delete _rupture_idxs and add .hdf5path
-def save(mfsources, sectiondict, hdf5path, msparams=False):
+def save(mfsources, sectiondict, hdf5path):
     """
     Utility to serialize MultiFaultSources and optionally computing msparams
     """
@@ -279,12 +279,6 @@ def save(mfsources, sectiondict, hdf5path, msparams=False):
                 attrs['infer_occur_rates'] = src.infer_occur_rates
         h5.save_vlen('multi_fault_sections',
                      [kite_to_geom(sec) for sec in sectiondict.values()])
-
-    # optionally set .msparams
-    if msparams:
-        secparams = build_secparams(sectiondict.values())
-        for src in mfsources:
-            src.set_msparams(secparams)
 
 
 def load(hdf5path):
