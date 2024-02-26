@@ -190,7 +190,7 @@ class ESHM20SubductionAliasesTestCase(unittest.TestCase):
                 alias = "ESHM20SInter{:s}Stress{:s}Atten".format(stress, atten)
                 alias_gmm = valid.gsim(alias)
                 gmm = BCHydroESHM20SInter(sigma_mu_epsilon=stress_adj,
-                                          theta6_adjustment=theta6,
+                                          theta_6_adjustment=theta6,
                                           faba_taper_model="SFunc",
                                           a=-100.0, b=100.0)
                 compare_gmms(alias_gmm, gmm, self.ctx, self.imts)
@@ -202,7 +202,7 @@ class ESHM20SubductionAliasesTestCase(unittest.TestCase):
                 alias = "ESHM20SSlab{:s}Stress{:s}Atten".format(stress, atten)
                 alias_gmm = valid.gsim(alias)
                 gmm = BCHydroESHM20SSlab(sigma_mu_epsilon=stress_adj,
-                                         theta6_adjustment=theta6,
+                                         theta_6_adjustment=theta6,
                                          faba_taper_model="SFunc",
                                          a=-100.0, b=100.0)
                 compare_gmms(alias_gmm, gmm, self.ctx, self.imts)

@@ -97,7 +97,7 @@ class BCHydroESHM20SInterFastTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SINTER_FAST_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
-                   theta6_adjustment=-0.0015)
+                   theta_6_adjustment=-0.0015)
 
 
 class BCHydroESHM20SInterHighSigmaMuTestCase(BaseGSIMTestCase):
@@ -172,7 +172,7 @@ class BCHydroESHM20SSlabFastTestCase(BaseGSIMTestCase):
     def test_mean(self):
         self.check("eshm20_bchydro/BCHydroESHM20_SSLAB_FAST_MEAN.csv",
                    max_discrep_percentage=MAX_DISCREP,
-                   theta6_adjustment=-0.0015)
+                   theta_6_adjustment=-0.0015)
 
 
 class BCHydroESHM20SSlabHighSigmaMuTestCase(BaseGSIMTestCase):

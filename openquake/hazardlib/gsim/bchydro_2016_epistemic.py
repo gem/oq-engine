@@ -205,7 +205,7 @@ class BCHydroESHM20SInter(AbrahamsonEtAl2015SInter):
 
     Introduces several configurable parameters:
 
-    :param float theta6_adjustment:
+    :param float theta_6_adjustment:
         The amount to increase or decrease the theta6 - should be +0.0015 (for
         slower attenuation) and -0.0015 (for faster attenuation)
 
@@ -460,9 +460,9 @@ for stress, eps1 in zip(STRESS_BRANCHES, MILLER_RICE_GAUSS_5PNT):
         alias_sslab = "ESHM20SSlab{:s}Stress{:s}Atten".format(stress, atten)
         # Subduction Interface
         add_alias(alias_sinter, BCHydroESHM20SInter, sigma_mu_epsilon=eps1,
-                  theta6_adjustment=theta6adj, faba_taper_model="SFunc",
+                  theta_6_adjustment=theta6adj, faba_taper_model="SFunc",
                   a=-100, b=100)
         # Subduction Slab
         add_alias(alias_sslab, BCHydroESHM20SSlab, sigma_mu_epsilon=eps1,
-                  theta6_adjustment=theta6adj, faba_taper_model="SFunc",
+                  theta_6_adjustment=theta6adj, faba_taper_model="SFunc",
                   a=-100, b=100)

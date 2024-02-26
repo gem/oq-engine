@@ -19,7 +19,7 @@ xmlns:gml="http://www.opengis.net/gml"
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
+theta_6_adjustment = -0.0015
 sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
@@ -31,7 +31,7 @@ sigma_mu_epsilon = -1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
+theta_6_adjustment = -0.0015
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.11112222
@@ -42,7 +42,7 @@ theta6_adjustment = -0.0015
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = -0.0015
+theta_6_adjustment = -0.0015
 sigma_mu_epsilon = 1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
@@ -86,7 +86,7 @@ sigma_mu_epsilon = 1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
+theta_6_adjustment = 0.0015
 sigma_mu_epsilon = -1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>
@@ -98,7 +98,7 @@ sigma_mu_epsilon = -1.732051
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
+theta_6_adjustment = 0.0015
                     </uncertaintyModel>
                     <uncertaintyWeight>
                         0.11112222
@@ -109,7 +109,7 @@ theta6_adjustment = 0.0015
                 >
                     <uncertaintyModel>
                         [BCHydroESHM20SInter]
-theta6_adjustment = 0.0015
+theta_6_adjustment = 0.0015
 sigma_mu_epsilon = 1.732051
                     </uncertaintyModel>
                     <uncertaintyWeight>

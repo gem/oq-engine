@@ -287,7 +287,7 @@ class AbrahamsonEtAl2015SInter(GMPE):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ergodic = kwargs.get('ergodic', True)
-        self.theta6_adj = kwargs.get("theta6_adjustment", 0.0)
+        self.theta6_adj = kwargs.get("theta_6_adjustment", 0.0)
         self.sigma_mu_epsilon = kwargs.get("sigma_mu_epsilon", 0.0)
         faba_type = kwargs.get("faba_taper_model", "Step")
         if 'xvf' in self.REQUIRES_SITES_PARAMETERS:  # BCHydro subclasses
