@@ -1382,6 +1382,8 @@ def get_input_files(oqparam):
             csv = ~node.reinsuranceModel.policies
             fnames.add(xml)
             fnames.add(os.path.join(os.path.dirname(xml), csv))
+        elif key == 'geometry':
+            fnames.add(fname)
         elif isinstance(fname, dict):
             for key, val in fname.items():
                 if isinstance(val, list):  # list of files

@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
-# Copyright (C) 2019-2023 GEM Foundation
+# Copyright (C) 2010-2023 GEM Foundation
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
 # under the terms of the GNU Affero General Public License as published
@@ -13,20 +15,3 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake. If not, see <http://www.gnu.org/licenses/>.
-
-FROM rockylinux:8
-LABEL maintainer="GEM Foundation <devops@openquake.org>" \
-      vendor="GEM Foundation"
-
-ARG repo=openquake
-
-RUN dnf install -y dnf-plugins-core && \
-    dnf copr enable -y gem/$repo && \
-    dnf install -y oq-python39 && \
-    dnf clean all
-
-RUN useradd -u 1000 openquake && \
-    mkdir /etc/openquake
-ENV LANG en_US.UTF-8
-
-ENTRYPOINT ["/bin/bash"]

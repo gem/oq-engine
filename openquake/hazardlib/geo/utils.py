@@ -117,6 +117,15 @@ def angular_distance(km, lat=0, lat2=None):
     return km * KM_TO_DEGREES / math.cos(lat * DEGREES_TO_RAD)
 
 
+@compile(['(f8[:],f8[:])' ,'(f4[:],f4[:])'])
+def angular_mean_weighted(degrees, weights):
+    rads = numpy.radians(degrees)
+    sin = numpy.sin(rads)
+    cos = numpy.cos(rads)
+    mean = numpy.arctan2(sin @ weights, cos @ weights)
+    return numpy.degrees(mean)
+
+
 def angular_mean(degrees, weights=None):
     """
     Given an array of angles in degrees, returns its angular mean.
@@ -129,15 +138,17 @@ def angular_mean(degrees, weights=None):
     >>> angular_mean([-179, 179], [.75, .25])
     -179.4999619199226
     """
-    rads = numpy.radians(degrees)
-    sin = numpy.sin(rads)
-    cos = numpy.cos(rads)
-    if weights is None:
-        mean = numpy.arctan2(sin.mean(), cos.mean())
+    if len(degrees) == 1:
+        return degrees
+    elif weights is None:
+        rads = numpy.radians(degrees)
+        sin = numpy.sin(rads)
+        cos = numpy.cos(rads)
+        return numpy.degrees(numpy.arctan2(sin.mean(), cos.mean()))
     else:
-        assert len(weights) == len(degrees), (len(weights), len(degrees))
-        mean = numpy.arctan2(sin @ weights, cos @ weights)
-    return numpy.degrees(mean)
+        ds, ws = numpy.float64(degrees), numpy.float64(weights)
+        assert len(ws) == len(ds), (len(ws), len(ds))
+        return angular_mean_weighted(ds, ws)
 
 
 class SiteAssociationError(Exception):
