@@ -111,8 +111,8 @@ def get_origin(lam0, phi0, lons, lats, avg_strike):
     return olon[0], olat[0], sort_idxs
 
 
-@compile('(f8[:],f8[:],f8,f8,f8[:,:],f8[:,:])')
-def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
+@compile('(f8[:],f8[:],f8,f8,f8[:,:,:])')
+def _build3(llenghts, azimuths, lam0, phi0, coos):
 
     # Find general azimuth trend
     ave = utils.angular_mean_weighted(azimuths, llenghts) % 360
@@ -142,12 +142,12 @@ def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
     for i in np.nonzero(flipped)[0]:
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean_weighted(azimuths, llenghts) % 360
-    olon, olat, soidx = get_origin(
-        lam0, phi0, lons.flatten(), lats.flatten(), avg_azim)
+    flatlons, flatlats = coos[:, :, 0].flatten(), coos[:, :, 1].flatten()
+    olon, olat, soidx = get_origin(lam0, phi0, flatlons, flatlats, avg_azim)
 
     # if the line is flipped take the last point instead of the first
-    olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
-    olats = np.array([lats[idx, int(flipped[idx])] for idx in soidx])
+    olons = np.array([coos[idx, int(flipped[idx]), 0] for idx in soidx])
+    olats = np.array([coos[idx, int(flipped[idx]), 1] for idx in soidx])
     
     # Distances and azimuths between the origin of the multiline and the
     # first endpoint
@@ -166,20 +166,15 @@ class MultiLine(object):
     most part, these are used to compute distances according to the GC2
     method.
     """
-    def __init__(self, lines, u_max=None, ry0=False):
+    def __init__(self, lines):
         self.lines = lines
-        self.u_max = u_max
         llenghts = np.array([ln.length for ln in lines])
         azimuths = np.array([line.azimuth for line in lines])
-        lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
-        lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
-        proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
-        self.flipped, self.soidx, self.shift = _flipped_soidx_shift(
-            llenghts, azimuths, proj.lam0, proj.phi0, lons, lats)
-        if u_max is None and ry0:
-            t, u = get_tu(
-                self.shift, self.gen_tuws(lons.flatten(), lats.flatten()))
-            self.u_max = np.abs(u).max()
+        self.ends = np.array([ln.coo[[0, -1], 0:2] for ln in lines])  # (L,2,2)
+        proj = utils.OrthographicProjection.from_lons_lats(
+            self.ends[:, :, 0], self.ends[:, :, 1])
+        self.flipped, self.soidx, self.shift = _build3(
+            llenghts, azimuths, proj.lam0, proj.phi0, self.ends)
 
     # used in event based too
     def get_tu(self, lons, lats):
@@ -187,6 +182,13 @@ class MultiLine(object):
         Given a mesh, computes the T and U coordinates for the multiline
         """
         return get_tu(self.shift, self.gen_tuws(lons, lats))
+
+    def get_u_max(self):
+        """
+        :returns: u_max parameter
+        """
+        return get_u_max(self.shift, self.gen_tuws(
+            self.ends[:, :, 0].flatten(), self.ends[:, :, 1].flatten()))
 
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
@@ -242,7 +244,6 @@ def get_tu(shift, tuws):
     """
     :param shift: multiline shift array of float32
     :param tuws: list of float32 arrays of shape (N, 3)
-    :param N: number of sites
     """
     # `shift` has shape L and `tuws` shape (L, N, 3)
     N = len(tuws[0])
@@ -255,3 +256,20 @@ def get_tu(shift, tuws):
         us += (u + shift[i]) * w
         ws += w
     return ts / ws, us / ws
+
+
+@compile('(f4[:],f4[:,:,:])')
+def get_u_max(shift, tuws):
+    """
+    :param shift: shift array of float32 of length L
+    :param tuws: float32 array of shape (L, L*2, 3)
+    """
+    # `shift` has shape L and `tuws` shape (L, L*2, 3)
+    L2 = len(tuws[0])
+    us = np.zeros(L2, np.float32)
+    ws = np.zeros(L2, np.float32)
+    for i, tuw in enumerate(tuws):
+        u, w = tuw[:, 1], tuw[:, 2]
+        us += (u + shift[i]) * w
+        ws += w
+    return np.abs(us / ws).max()
