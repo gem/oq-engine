@@ -109,7 +109,7 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
             setattr(ctx, param, dists)
     else:
         # use the MultiLine object
-        tor = rup.surface.tor
+        u_max = rup.surface.msparam['u_max']
         if param in ('rx', 'ry0'):
             tut, uut = tu
             '''
@@ -123,8 +123,8 @@ def set_distances(ctx, rup, r_sites, param, dparam, mask, tu):
             elif param == 'ry0':
                 neg = uut < 0
                 ctx.ry0[neg] = numpy.abs(uut[neg])
-                big = uut > tor.u_max
-                ctx.ry0[big] = uut[big] - tor.u_max
+                big = uut > u_max
+                ctx.ry0[big] = uut[big] - u_max
         elif param == 'rjb' :
             rjbs = _get(rup.surface.surfaces, 'rjb', dparam, mask)
             ctx['rjb'] = numpy.min(rjbs, axis=0)

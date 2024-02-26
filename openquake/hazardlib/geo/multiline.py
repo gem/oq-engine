@@ -112,7 +112,7 @@ def get_origin(lam0, phi0, lons, lats, avg_strike):
 
 
 @compile('(f8[:],f8[:],f8,f8,f8[:,:],f8[:,:])')
-def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
+def _build5(llenghts, azimuths, lam0, phi0, lons, lats):
 
     # Find general azimuth trend
     ave = utils.angular_mean_weighted(azimuths, llenghts) % 360
@@ -142,8 +142,8 @@ def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
     for i in np.nonzero(flipped)[0]:
         azimuths[i] = (azimuths[i] + 180) % 360  # opposite azimuth
     avg_azim = utils.angular_mean_weighted(azimuths, llenghts) % 360
-    olon, olat, soidx = get_origin(
-        lam0, phi0, lons.flatten(), lats.flatten(), avg_azim)
+    flatlons, flatlats = lons.flatten(), lats.flatten()
+    olon, olat, soidx = get_origin(lam0, phi0, flatlons, flatlats, avg_azim)
 
     # if the line is flipped take the last point instead of the first
     olons = np.array([lons[idx, int(flipped[idx])] for idx in soidx])
@@ -157,7 +157,7 @@ def _flipped_soidx_shift(llenghts, azimuths, lam0, phi0, lons, lats):
     # Calculate the shift along the average strike direction
     shift = np.cos(np.radians(avg_azim - azimuths)) * distances
     
-    return flipped, soidx, shift.astype(np.float32)
+    return flipped, soidx, shift.astype(np.float32), flatlons, flatlats
 
 
 class MultiLine(object):
@@ -166,20 +166,15 @@ class MultiLine(object):
     most part, these are used to compute distances according to the GC2
     method.
     """
-    def __init__(self, lines, u_max=None, ry0=False):
+    def __init__(self, lines):
         self.lines = lines
-        self.u_max = u_max
         llenghts = np.array([ln.length for ln in lines])
         azimuths = np.array([line.azimuth for line in lines])
         lons = np.array([ln.coo[[0, -1], 0] for ln in lines])
         lats = np.array([ln.coo[[0, -1], 1] for ln in lines])
         proj = utils.OrthographicProjection.from_lons_lats(lons, lats)
-        self.flipped, self.soidx, self.shift = _flipped_soidx_shift(
-            llenghts, azimuths, proj.lam0, proj.phi0, lons, lats)
-        if u_max is None and ry0:
-            t, u = get_tu(
-                self.shift, self.gen_tuws(lons.flatten(), lats.flatten()))
-            self.u_max = np.abs(u).max()
+        self.flipped, self.soidx, self.shift, self.lons, self.lats = \
+            _build5(llenghts, azimuths, proj.lam0, proj.phi0, lons, lats)
 
     # used in event based too
     def get_tu(self, lons, lats):
@@ -187,6 +182,13 @@ class MultiLine(object):
         Given a mesh, computes the T and U coordinates for the multiline
         """
         return get_tu(self.shift, self.gen_tuws(lons, lats))
+
+    def get_u_max(self):
+        """
+        :returns: u_max parameter
+        """
+        t, u = get_tu(self.shift, self.gen_tuws(self.lons, self.lats))
+        return np.abs(u).max()
 
     def __str__(self):
         return ';'.join(str(ln) for ln in self.lines)
