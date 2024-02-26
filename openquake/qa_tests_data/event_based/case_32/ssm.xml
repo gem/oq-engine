@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml
+xmlns="http://openquake.org/xmlns/nrml/0.5"
+xmlns:gml="http://www.opengis.net/gml"
+>
+    <sourceModel investigation_time="50" name="test">
+        <sourceGroup
+        grp_probability="0.01"
+        name="Test"
+        rup_interdep="indep"
+        src_interdep="mutex"
+        srcs_weights="0.2 0.5 0.3"
+        tectonicRegion="Subduction Interface">
+
+            <nonParametricSeismicSource id="case:01" name="CASE 1">
+                <singlePlaneRupture probs_occur="0.0 1.0">
+                    <magnitude>9.0</magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="26.101" lat="38.726" lon="143.0"/>
+                    <planarSurface>
+                        <topLeft depth="9.0" lat="39.6" lon="143.1"/>
+                        <topRight depth="9.0" lat="38.2" lon="143.91"/>
+                        <bottomLeft depth="43.202" lat="39.252" lon="142.07"/>
+                        <bottomRight depth="43.202" lat="37.852" lon="142.91"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+            </nonParametricSeismicSource>
+
+            <nonParametricSeismicSource id="case:02" name="CASE 2">
+                <singlePlaneRupture probs_occur="0.0 1.0">
+                    <magnitude>9.0</magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="26.101" lat="40.726" lon="143.0"/>
+                    <planarSurface>
+                        <topLeft depth="9.0" lat="41.6" lon="143.1"/>
+                        <topRight depth="9.0" lat="40.2" lon="143.91"/>
+                        <bottomLeft depth="43.202" lat="41.252" lon="142.07"/>
+                        <bottomRight depth="43.202" lat="39.852" lon="142.91"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+            </nonParametricSeismicSource>
+
+            <nonParametricSeismicSource id="case:03" name="CASE 3">
+                <singlePlaneRupture probs_occur="0.0 1.0">
+                    <magnitude>9.0</magnitude>
+                    <rake>90.0</rake>
+                    <hypocenter depth="26.101" lat="40.726" lon="143.0"/>
+                    <planarSurface>
+                        <topLeft depth="9.0" lat="41.6" lon="143.1"/>
+                        <topRight depth="9.0" lat="40.2" lon="143.91"/>
+                        <bottomLeft depth="43.202" lat="41.252" lon="142.07"/>
+                        <bottomRight depth="43.202" lat="39.852" lon="142.91"/>
+                    </planarSurface>
+                </singlePlaneRupture>
+            </nonParametricSeismicSource>
+
+        </sourceGroup>
+    </sourceModel>
+</nrml>

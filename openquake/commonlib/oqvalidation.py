@@ -905,7 +905,7 @@ class OqParam(valid.ParamSet):
     KNOWN_INPUTS = {
         'rupture_model', 'exposure', 'site_model', 'delta_rates',
         'source_model', 'shakemap', 'gmfs', 'gsim_logic_tree',
-        'source_model_logic_tree', 'hazard_curves',
+        'source_model_logic_tree', 'geometry', 'hazard_curves',
         'insurance', 'reinsurance', 'ins_loss',
         'job_ini', 'multi_peril', 'taxonomy_mapping',
         'fragility', 'consequence', 'reqv', 'input_zip',
