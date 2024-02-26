@@ -111,14 +111,15 @@ def preclassical(srcs, sites, cmaker, secparams, monitor):
     splits = []
     mon1 = monitor('building top of ruptures', measuremem=True)
     mon2 = monitor('setting msparams', measuremem=False)
+    ry0 = 'ry0' in cmaker.REQUIRES_DISTANCES
     for src in srcs:
         if src.code == b'F':
             if N <= cmaker.max_sites_disagg:
                 mask = sf.get_close(secparams) > 0  # shape S
             else:
                 mask = None
-            src.set_msparams(secparams, mask, mon1, mon2)
-            if (src.msparams['u_max'] == 0).all():
+            src.set_msparams(secparams, mask, ry0, mon1, mon2)
+            if (src.msparams['area'] == 0).all():
                 continue # all ruptures are far away
         if sites:
             # NB: this is approximate, since the sites are sampled

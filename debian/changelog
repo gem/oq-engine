@@ -1,4 +1,8 @@
+  [Paolo Tormene, Michele Simionato]
+  * Added geometry_file to discard ruptures
+
   [Michele Simionato]
+  * Fixed exporting from calculations with a grand parent
   * Added an uniqueness check to source IDs in the same branch
   * Extended the command `oq sample` to multi fault sources
   * Fixed the reading of ruptures with a multisurface with meshes

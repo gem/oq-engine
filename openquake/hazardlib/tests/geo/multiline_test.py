@@ -36,7 +36,7 @@ class OneLineTestCase(unittest.TestCase):
                                              [self.line.points[0].latitude],
                                              [self.line.points[1].longitude],
                                              [self.line.points[1].latitude])
-        np.testing.assert_allclose(self.ml.set_u_max(), dst, atol=1e-4)
+        np.testing.assert_allclose(self.ml.get_u_max(), dst, atol=1e-4)
 
   
 class MultiLineTestCase(unittest.TestCase):
@@ -54,13 +54,11 @@ class MultiLineTestCase(unittest.TestCase):
 
         lonsa = np.array([0.0, 0.1, 0.2, loa])
         latsa = np.array([0.0, 0.0, 0.0, laa])
-        linea = geo.Line.from_vectors(lonsa, latsa)
-        linea.keep_corners(4.0)
+        linea = geo.Line.from_vectors(lonsa, latsa).keep_corners(4.0)
 
         lonsb = np.array([loc, lob])
         latsb = np.array([lac, lab])
-        lineb = geo.Line.from_vectors(lonsb, latsb)
-        lineb.keep_corners(4.0)
+        lineb = geo.Line.from_vectors(lonsb, latsb).keep_corners(4.0)
 
         self.lines = [linea, lineb]
 
@@ -77,7 +75,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(self.lines)
-        ts, us = ml.get_tu(mesh)
+        ts, us = ml.get_tu(mesh.lons, mesh.lats)
 
         if PLOTTING:
             num = 10
@@ -100,7 +98,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        ts, us = ml.get_tu(mesh)
+        ts, us = ml.get_tu(mesh.lons, mesh.lats)
 
         if PLOTTING:
             num = 10
@@ -123,7 +121,7 @@ class MultiLineTestCase(unittest.TestCase):
 
         # Create the multiline and calculate the T and U coordinates
         ml = MultiLine(lines)
-        ts, us = ml.get_tu(mesh)
+        ts, us = ml.get_tu(mesh.lons, mesh.lats)
 
         if PLOTTING:
             num = 10
@@ -137,9 +135,9 @@ class MultiLineTestCase(unittest.TestCase):
             plot_pattern(lons, lats, z, plons, plats, label, num)
 
     def test_string_representation(self):
-        # there is a line with 4 points and then one with 2 points
+        # there is a line with 3 points and then one with 2 points
         self.assertEqual(str(MultiLine(self.lines)),
-                         '7zzzz_kpbpf_kpbpu_s000m;s003p_s0030')
+                         '7zzzz_kpbpu_s000m;s003p_s0030')
 
 
 def get_lines_figure09():

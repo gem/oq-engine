@@ -46,17 +46,23 @@ def engine_profile(jobctx, nrows):
 
 def fix(asce, siteid):
     dic = json.loads(asce.decode('ascii'))
-    dic = {k: numpy.nan if isinstance(v, str) else round(v, 2)
+    dic = {k: v if isinstance(v, str) else round(v, 2)
            for k, v in dic.items()}
     dic['siteid'] = siteid
     return dic
 
 
-def get_asce41(calc_id, ids):
+def get_from(calc_id, key, ids):
+    """
+    :param calc_id: calculation ID
+    :param key: "asce41" or "asce07"
+    :param ids: site IDs
+    :returns: a list of dictionaries, one per site
+    """
     dstore = datastore.read(calc_id)
     model = dstore['oqparam'].description[9:12]
     return [fix(a, model + str(id))
-            for id, a in zip(ids[model], dstore['asce41'])]
+            for id, a in zip(ids[model], dstore[key])]
 
 
 # ########################## run_site ############################## #
@@ -123,7 +129,7 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     engine.run_jobs(logctxs, concurrent_jobs=concurrent_jobs)
     out = []
     count_errors = 0
-    results = []
+    a07dics, a41dics = [], []
     for logctx in logctxs:
         job = logs.dbcmd('get_job', logctx.calc_id)
         tb = logs.dbcmd('get_traceback', logctx.calc_id)
@@ -131,9 +137,10 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
         if tb:
             count_errors += 1
         try:
-            results.extend(get_asce41(logctx.calc_id, ids))
+            a07dics.extend(get_from(logctx.calc_id, 'asce07', ids))
+            a41dics.extend(get_from(logctx.calc_id, 'asce41', ids))
         except KeyError:
-            # asce41 could not be computed due to some error
+            # AELO results could not be computed due to some error
             continue
 
     # printing/saving results
@@ -141,15 +148,16 @@ def from_file(fname, mosaic_dir, concurrent_jobs):
     print(views.text_table(out, header, ext='org'))
     dt = (time.time() - t0) / 60
     print('Total time: %.1f minutes' % dt) 
-    if not results:
+    if not a07dics or not a41dics:
         # serious problem to debug
         breakpoint()
-    header = sorted(results[0])
-    rows = [[row[k] for k in header] for row in results]
-    fname = os.path.abspath('asce41.csv')
-    with open(fname, 'w') as f:
-        print(views.text_table(rows, header, ext='csv'), file=f)
-    print(f'Stored {fname}')
+    for name, dics in zip(['asce07', 'asce41'], [a07dics, a41dics]):
+        header = sorted(dics[0])
+        rows = [[dic[k] for k in header] for dic in dics]
+        fname = os.path.abspath(name + '.csv')
+        with open(fname, 'w') as f:
+            print(views.text_table(rows, header, ext='csv'), file=f)
+        print(f'Stored {fname}')
     if count_errors:
         sys.exit(f'{count_errors} error(s) occurred')
 

@@ -12,14 +12,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-22.04]
-        python-version: ["3.11"]
+        python-version: ["3.9"]
     env:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -42,14 +42,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.11"]
+        python-version: ["3.9"]
     env:
       GITHUB_HEAD_REF: ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -80,9 +80,9 @@ jobs:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -108,9 +108,9 @@ jobs:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
@@ -136,9 +136,9 @@ jobs:
       GITHUB_HEAD_REF:  ${{ github.head_ref }}
       FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up Python  ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version:  ${{ matrix.python-version }}
     - name: Install dependencies
