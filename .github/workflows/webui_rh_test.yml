@@ -81,11 +81,11 @@ jobs:
          chown -R openquake /var/log/oq-engine/
          runuser -l openquake -c '/opt/openquake/venv/bin/oq dbserver upgrade &'
          # Wait the DbServer to come up
-         echo "Waiting DBServer up on port 1907...."
-         while ! nc -z localhost 1907; do
-           sleep 2 # wait for 1/10 of the second before check again
-         done
-         sleep 3
+         #echo "Waiting DBServer up on port 1907...."
+         #while ! nc -z localhost 1907; do
+         #  sleep 2 # wait for 1/10 of the second before check again
+         #done
+         #sleep 3
          oq --version
          #
          echo "Add settings for login and logging on webui before to start"
