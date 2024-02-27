@@ -107,7 +107,7 @@
   * Added `extract/ruptures?threshold=` functionality
   * Disabling the DbServer with dbserver.host = local
   * Fixed `disagg_source` for same ID sources
-  * Disambiguated same ID sources by appending the file name after
+  * Disambiguated same ID sources by appending the branch ID after
     the exclamation mark and fixed disagg_by_src accordingly
   * Fixed another bug in disaggregation for mutex sources
   * Fixed a bug in `disagg_source` for mutex sources: src_mutex
