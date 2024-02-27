@@ -102,8 +102,8 @@ jobs:
           # -v 2 also logs the test names
           OQ_APPLICATION_MODE=public ./openquake/server/manage.py test -v 2 tests.test_public_mode
 
-     - name: Test WebUI and run https calculation
-       run: |
+      - name: Test WebUI and run https calculation
+        run: |
           set -x
           source ~/openquake/bin/activate
           mkdir /var/log/oq-engine/
