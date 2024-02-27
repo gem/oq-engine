@@ -20,7 +20,6 @@ jobs:
         os: [m1]
         python-version: ["3.11.8"]
     steps:
-    # This Checkout use git-ref keyword from dispatch
       - name: Clone Repository (Master)
         uses: actions/checkout@v4
         if: github.event.inputs.git-ref == ''
