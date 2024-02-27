@@ -19,6 +19,7 @@ jobs:
     strategy:
       matrix:
         python-version: [python3.11]
+        req-version: [py311]
     container:
       image: fedora:39
       options: --privileged
@@ -41,18 +42,17 @@ jobs:
         dnf install -y git git-lfs nc procps
         # define it
         mypython=${{ matrix.python-version }}
+        reqpython=${{ matrix.req-version }}
         #run it
         eval '$mypython -c "import sys; print(sys.version)"'
         #
         export PIP_DEFAULT_TIMEOUT=100
         #
         echo "branch to test: ${BRANCH}"
-        if [[ "$BRANCH" != "" ]]
-        then
-          eval '$mypython install.py devel_server --version ${BRANCH}'
-        else
-          eval '$mypython install.py devel_server --version master'
-        fi
+        cd /__w/oq-engine/oq-engine/
+        eval '$mypython -m pip install -U pip setuptools wheel'
+        eval '$mypython -m pip install -r "requirements-$reqpython-linux64.txt"'
+        eval '$mypython -m pip install -e . '
     - name: Test WebUI and run https calculation
       run: |
           set -x
