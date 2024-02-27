@@ -46,6 +46,8 @@ jobs:
         #run it
         eval '$mypython -c "import sys; print(sys.version)"'
         #
+        # Add PIP to $mypython
+        eval '$mypython -m ensurepip --upgrade'
         export PIP_DEFAULT_TIMEOUT=100
         #
         echo "branch to test: ${BRANCH}"
